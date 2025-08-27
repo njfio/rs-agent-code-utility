@@ -1,12 +1,41 @@
-:root{--bg:#0b0f17;--fg:#e6e9ef;--muted:#9aa4b2;--accent:#7aa2f7;--card:#111826}
+:root{--bg:#0b0f17;--fg:#e6e9ef;--muted:#9aa4b2;--accent:#7aa2f7;--card:#111826;--security-critical:#ef4444;--security-high:#f97316;--security-medium:#eab308;--security-low:#22c55e;--security-info:#6b7280}
 body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0}
 header{background:#0d1320;border-bottom:1px solid #1f2937;padding:1rem 1.25rem;position:sticky;top:0;z-index:1}
 main{display:flex}
 nav{width:260px;min-height:100vh;background:#0d1524;border-right:1px solid #1f2937;padding:1rem}
 nav a{display:block;color:var(--muted);text-decoration:none;padding:.25rem 0}
 nav a:hover{color:var(--fg)}
+nav hr{border-color:#334155;margin:1rem 0}
+nav h4{margin:.5rem 0;margin-top:1rem;font-size:.9em;color:var(--accent)}
 .article{flex:1;padding:1.5rem;max-width:1100px}
 .card{background:var(--card);border:1px solid #1f2937;border-radius:8px;padding:1rem;margin:.75rem 0}
 pre{background:#0a1220;border:1px solid #1f2937;border-radius:6px;padding:.75rem;overflow:auto}
 .mermaid{background:#0a1220;border:1px solid #1f2937;border-radius:6px;padding:.5rem}
 input.search{width:100%;padding:.5rem .75rem;border-radius:6px;border:1px solid #334155;background:#0a1220;color:var(--fg)}
+
+/* Security-specific styles */
+.security-score{color:var(--accent);font-size:2em;font-weight:bold}
+.security-critical{color:var(--security-critical)}
+.security-high{color:var(--security-high)}
+.security-medium{color:var(--security-medium)}
+.security-low{color:var(--security-low)}
+.security-info{color:var(--security-info)}
+
+.security-vulnerability{background:#1f1826;border-left:4px solid var(--security-critical);padding:1rem;margin:.5rem 0}
+.security-hotspot{background:#1e2530;border-left:4px solid var(--security-high);padding:1rem;margin:.5rem 0}
+
+.vulnerability-count{background:#dc2626;color:white;padding:.25rem .5rem;border-radius:4px;font-size:.8em}
+.risk-score{background:#ea580c;color:white;padding:.25rem .5rem;border-radius:4px;font-size:.8em}
+
+.owasp-category{background:#2563eb;color:white;padding:.25rem .5rem;border-radius:4px;display:inline-block;margin:.25rem}
+.owasp-a01{background:#7c2d12;color:white}
+.owasp-a02{background:#dc2626;color:white}
+.owasp-a03{background:#ea580c;color:white}
+.owasp-a04{background:#ca8a04;color:white}
+.owasp-a05{background:#65a30d;color:white}
+
+.trace-path{background:#181a25;border:1px solid #374151;border-radius:6px;padding:.75rem;margin:.5rem 0}
+.trace-node{background:#2d3748;color:#fbbf24;border:1px solid #4b5563;padding:.25rem .5rem;border-radius:4px;display:inline-block;margin:.1rem}
+
+.security-hotspot-diagram-node{stroke:#f97316;fill:#f97316}
+.security-trace-flow{stroke:#ef4444;stroke-width:3}

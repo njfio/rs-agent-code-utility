@@ -6,12 +6,17 @@
 //! - Mermaid diagrams (flowchart, class relationships, dependency overview)
 //! - Search index and client-side search
 //! - Cross-references between modules/files
+//! - Security trace analysis and vulnerability visualization
+//! - OWASP recommendations and security hotspot identification
 //!
 //! The API follows Result<T,E> patterns with comprehensive error handling
 //! and uses a builder for configuration.
 
+pub mod security_enhancements;
+
 use crate::analyzer::{AnalysisConfig, AnalysisDepth, AnalysisResult};
 use crate::{CodebaseAnalyzer, Result};
+use security_enhancements::SecurityWikiGenerator;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::fmt::Write as FmtWrite;
@@ -189,13 +194,36 @@ impl WikiGenerator {
         self.write_style_css(&assets.join("style.css"))?;
         self.write_search_js(&assets.join("search.js"))?;
 
+        // Initialize security analysis if enabled
+        let security_analysis = if self.config.security_insights_enabled {
+            // Create security wiki generator
+            let security_config = crate::wiki::security_enhancements::SecurityWikiConfig {
+                enable_trace_analysis: true,
+                enable_propagation_diagrams: self.config.diagram_annotations_enabled,
+                enable_owasp_recommendations: true,
+                enable_hotspot_visualization: true,
+                min_hotspot_severity: crate::advanced_security::SecuritySeverity::Medium,
+            };
+
+            let security_generator = SecurityWikiGenerator::new_with_config(security_config)?;
+            Some(security_generator.analyze_security(analysis)?)
+        } else {
+            None
+        };
+
         // Pages and search index
         let mut page_count = 0usize;
         let mut index_entries: Vec<SearchEntry> = Vec::new();
 
         // Index.html
-        self.write_index_html(out, analysis)?;
+        self.write_index_html(out, analysis, &security_analysis)?;
         page_count += 1;
+
+        // Security overview page if security analysis is enabled
+        if let Some(ref security) = security_analysis {
+            self.write_security_overview_page(out, security)?;
+            page_count += 1;
+        }
 
         // Per-file pages
         for file in &analysis.files {
@@ -204,7 +232,30 @@ impl WikiGenerator {
 
             let title = format!("{}", file.path.display());
             let desc = format!("{} symbols, {} lines", file.symbols.len(), file.lines);
-            self.write_file_page(&page_path, &title, &desc, file, &analysis.root_path)?;
+
+            // Generate security enhancements for this file if enabled
+            let security_block = if let Some(ref security) = security_analysis {
+                // Find this file in security hotspots
+                let file_hotspots: Vec<_> = security.security_hotspots.iter()
+                    .filter(|h| h.location.file == file.path)
+                    .cloned()
+                    .collect();
+
+                // Generate OWASP recommendations for this file
+                let owasp_rec = if self.config.security_insights_enabled {
+                    let temp_generator = SecurityWikiGenerator::new()?;
+                    temp_generator.generate_owasp_recommendations(file)
+                } else {
+                    String::new()
+                };
+
+                // Create security block
+                self.generate_file_security_block(file, &file_hotspots, &owasp_rec)
+            } else {
+                String::new()
+            };
+
+            self.write_file_page(&page_path, &title, &desc, file, &analysis.root_path, &security_block)?;
             page_count += 1;
 
             // Add to search index (with anchors for first symbol if present)
@@ -221,6 +272,12 @@ impl WikiGenerator {
         self.write_global_symbols(out, &analysis.files)?;
         page_count += 1;
 
+        // Security hotspots page if security analysis is enabled
+        if let Some(ref security) = security_analysis {
+            self.write_security_hotspots_page(out, security)?;
+            page_count += 1;
+        }
+
         // Write search index JSON
         self.write_search_index(&assets.join("search_index.json"), &index_entries)?;
 
@@ -229,20 +286,65 @@ impl WikiGenerator {
 
     // Add other methods here as needed...
     fn write_style_css(&self, path: &Path) -> Result<()> {
-        let css = r#":root{--bg:#0b0f17;--fg:#e6e9ef;--muted:#9aa4b2;--accent:#7aa2f7;--card:#111826}
+        let css = r#":root{--bg:#0b0f17;--fg:#e6e9ef;--muted:#9aa4b2;--accent:#7aa2f7;--card:#111826;--security-critical:#ef4444;--security-high:#f97316;--security-medium:#eab308;--security-low:#22c55e;--security-info:#6b7280}
 body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0}
 header{background:#0d1320;border-bottom:1px solid #1f2937;padding:1rem 1.25rem;position:sticky;top:0;z-index:1}
 main{display:flex}
 nav{width:260px;min-height:100vh;background:#0d1524;border-right:1px solid #1f2937;padding:1rem}
 nav a{display:block;color:var(--muted);text-decoration:none;padding:.25rem 0}
 nav a:hover{color:var(--fg)}
+nav hr{border-color:#334155;margin:1rem 0}
+nav h4{margin:.5rem 0;margin-top:1rem;font-size:.9em;color:var(--accent)}
 .article{flex:1;padding:1.5rem;max-width:1100px}
 .card{background:var(--card);border:1px solid #1f2937;border-radius:8px;padding:1rem;margin:.75rem 0}
 pre{background:#0a1220;border:1px solid #1f2937;border-radius:6px;padding:.75rem;overflow:auto}
 .mermaid{background:#0a1220;border:1px solid #1f2937;border-radius:6px;padding:.5rem}
 input.search{width:100%;padding:.5rem .75rem;border-radius:6px;border:1px solid #334155;background:#0a1220;color:var(--fg)}
+
+/* Security-specific styles */
+.security-score{color:var(--accent);font-size:2em;font-weight:bold}
+.security-critical{color:var(--security-critical)}
+.security-high{color:var(--security-high)}
+.security-medium{color:var(--security-medium)}
+.security-low{color:var(--security-low)}
+.security-info{color:var(--security-info)}
+
+.security-vulnerability{background:#1f1826;border-left:4px solid var(--security-critical);padding:1rem;margin:.5rem 0}
+.security-hotspot{background:#1e2530;border-left:4px solid var(--security-high);padding:1rem;margin:.5rem 0}
+
+.vulnerability-count{background:#dc2626;color:white;padding:.25rem .5rem;border-radius:4px;font-size:.8em}
+.risk-score{background:#ea580c;color:white;padding:.25rem .5rem;border-radius:4px;font-size:.8em}
+
+.owasp-category{background:#2563eb;color:white;padding:.25rem .5rem;border-radius:4px;display:inline-block;margin:.25rem}
+.owasp-a01{background:#7c2d12;color:white}
+.owasp-a02{background:#dc2626;color:white}
+.owasp-a03{background:#ea580c;color:white}
+.owasp-a04{background:#ca8a04;color:white}
+.owasp-a05{background:#65a30d;color:white}
+
+.trace-path{background:#181a25;border:1px solid #374151;border-radius:6px;padding:.75rem;margin:.5rem 0}
+.trace-node{background:#2d3748;color:#fbbf24;border:1px solid #4b5563;padding:.25rem .5rem;border-radius:4px;display:inline-block;margin:.1rem}
+
+.security-hotspot-diagram-node{stroke:#f97316;fill:#f97316}
+.security-trace-flow{stroke:#ef4444;stroke-width:3}
 "#;
-        fs::write(path, css).map_err(|e| e.into())
+
+        let mut enhanced_css = css.to_string();
+
+        // Add dynamic CSS for security hotspot severity colors
+        if self.config.security_insights_enabled {
+            enhanced_css.push_str(
+                r#"
+/* Dynamic security styles */
+.severity-critical{background:#dc2626;color:white;padding:.2rem .5rem;border-radius:4px}
+.severity-high{background:#ea580c;color:white;padding:.2rem .5rem;border-radius:4px}
+.severity-medium{background:#eab308;color:#1f2937;padding:.2rem .5rem;border-radius:4px}
+.severity-low{background:#22c55e;color:white;padding:.2rem .5rem;border-radius:4px}
+.severity-info{background:#6b7280;color:white;padding:.2rem .5rem;border-radius:4px}"#
+            );
+        }
+
+        fs::write(path, enhanced_css).map_err(|e| e.into())
     }
 
     fn write_search_js(&self, path: &Path) -> Result<()> {
@@ -262,13 +364,32 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
         fs::write(path, js).map_err(|e| e.into())
     }
 
-    fn write_index_html(&self, out: &Path, analysis: &AnalysisResult) -> Result<()> {
+    fn write_index_html(&self, out: &Path, analysis: &AnalysisResult, security_analysis: &Option<security_enhancements::SecurityAnalysisResult>) -> Result<()> {
         let nav = self.build_nav(&analysis.files);
+        let mut nav_content = String::new();
+        let _ = writeln!(&mut nav_content, "<input class=\"search\" id=\"q\" type=\"search\" placeholder=\"Search...\" />");
+        let _ = writeln!(&mut nav_content, "{}", nav);
+
+        // Add security links if security analysis is enabled
+        if let Some(ref _security) = security_analysis {
+            let _ = writeln!(&mut nav_content, "<hr style=\"border-color: #334155; margin: 1rem 0;\"/>");
+            let _ = writeln!(&mut nav_content, "<h4>Security</h4>");
+            let _ = writeln!(&mut nav_content, "<a href=\"security.html\">Security Overview</a>");
+            let _ = writeln!(&mut nav_content, "<a href=\"security_hotspots.html\">Security Hotspots</a>");
+        }
+
         let ai_block = if self.config.ai_enabled {
             Self::generate_ai_insights_sync(analysis, self.config.ai_use_mock, self.config.ai_config_path.as_ref())
                 .unwrap_or_else(|_| "<div class=\"card\"><h3>AI Insights</h3><p>AI generation failed. Showing defaults.</p></div>".to_string())
         } else {
             "<div class=\"card\"><h3>AI Insights</h3><p>Enable AI to generate rich documentation.</p></div>".to_string()
+        };
+
+        // Add security overview if available
+        let security_block = if let Some(ref security) = security_analysis {
+            self.generate_security_overview_block(security)
+        } else {
+            String::new()
         };
 
         let content = format!(
@@ -287,7 +408,6 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
 <header><h1>{title}</h1></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
 {nav}
 </nav>
 <section class="article">
@@ -299,6 +419,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
 {dep}
 </div>
 </div>
+{security_block}
 <div class="card"><h2>Documentation Insights</h2>
 <p>Automatic summaries are generated from symbols and structure. Public functions and modules include heuristic descriptions and cross-references.</p>
 </div>
@@ -310,69 +431,14 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
             title = self.config.site_title,
             files = analysis.total_files,
             lines = analysis.total_lines,
-            nav = nav,
+            nav = nav_content,
             dep = build_simple_dependency_graph(analysis),
+            security_block = security_block,
         );
         fs::write(out.join("index.html"), content).map_err(|e| e.into())
     }
 
-    fn write_file_page(&self, page_path: &Path, title: &str, description: &str, file: &crate::analyzer::FileInfo, root_path: &Path) -> Result<()> {
-        let mut rels = String::new();
-        for sym in &file.symbols {
-            // Simple relationship lines in mermaid classDiagram
-            let _ = writeln!(&mut rels, "  class {} {{}}", sym.name.replace(':', "_"));
-        }
-        let mut sym_list = String::new();
-        for sym in &file.symbols {
-            let _ = writeln!(
-                &mut sym_list,
-                "<li id=\"symbol-{id}\"><code>{name}</code> <small>{kind}</small></li>",
-                id = Self::anchorize(&sym.name),
-                name = html_escape(&sym.name),
-                kind = html_escape(&sym.kind),
-            );
-        }
-        let diag_blocks = Self::build_sequence_or_flow_blocks(file, &rels, root_path);
 
-        let content = format!(
-            r#"<!doctype html>
-<html>
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title}</title>
-<link rel="stylesheet" href="../assets/style.css">
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});</script>
-</head>
-<body>
-<header><h1>{title}</h1></header>
-<main>
-<section class="article">
-<p>{description}</p>
-{diag_blocks}
-<div class="card"><h3>Symbols</h3>
-<ul>
-{symbols}
-</ul>
-</div>
-{ai_block}
-</section>
-</main>
-</body>
-</html>"#,
-            title = html_escape(title),
-            description = html_escape(description),
-            diag_blocks = diag_blocks,
-            symbols = sym_list,
-            ai_block = {
-                if self.config.ai_enabled {
-                    self.generate_file_ai_insights_sync(file)
-                        .unwrap_or_else(|_| "<div class=\"card\"><h3>AI Insights</h3><p>AI generation failed.</p></div>".to_string())
-                } else { String::new() }
-            },
-        );
-        fs::write(page_path, content).map_err(|e| e.into())
-    }
 
     fn write_global_symbols(&self, out: &Path, files: &[crate::analyzer::FileInfo]) -> Result<()> {
         let mut items = String::new();
@@ -644,6 +710,209 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
     fn write_search_index(&self, path: &Path, entries: &[SearchEntry]) -> Result<()> {
         let json = serde_json::to_string(entries).map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("serde error: {}", e), context: None })?;
         fs::write(path, json).map_err(|e| e.into())
+    }
+
+    /// Write a security overview page
+    fn write_security_overview_page(&self, out: &Path, security: &security_enhancements::SecurityAnalysisResult) -> Result<()> {
+        let mut content = String::new();
+        let _ = writeln!(&mut content, "<!doctype html>");
+        let _ = writeln!(&mut content, "<html>");
+        let _ = writeln!(&mut content, "<head>");
+        let _ = writeln!(&mut content, "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+        let _ = writeln!(&mut content, "<title>Security Overview - {}</title>", html_escape(&self.config.site_title));
+        let _ = writeln!(&mut content, "<link rel=\"stylesheet\" href=\"assets/style.css\">");
+        let _ = writeln!(&mut content, "</head>");
+        let _ = writeln!(&mut content, "<body>");
+        let _ = writeln!(&mut content, "<header><h1>Security Overview</h1></header>");
+        let _ = writeln!(&mut content, "<main><section class=\"article\">");
+
+        // Security score card
+        let _ = writeln!(&mut content, "<div class=\"card\">");
+        let _ = writeln!(&mut content, "<h2>Security Score: {}/100</h2>", security.security_result.security_score);
+        let security_rating = if security.security_result.security_score >= 80 {
+            "Excellent"
+        } else if security.security_result.security_score >= 60 {
+            "Good"
+        } else if security.security_result.security_score >= 40 {
+            "Needs Improvement"
+        } else {
+            "Critical Issues"
+        };
+        let _ = writeln!(&mut content, "<p>Rating: <strong>{}</strong></p>", security_rating);
+        let _ = writeln!(&mut content, "</div>");
+
+        // Vulnerabilities summary
+        let _ = writeln!(&mut content, "<div class=\"card\">");
+        let _ = writeln!(&mut content, "<h3>Vulnerability Summary</h3>");
+        let _ = writeln!(&mut content, "<p>Total Vulnerabilities: <strong>{}</strong></p>", security.security_result.total_vulnerabilities);
+
+        let mut vuln_by_severity = String::new();
+        for (severity, count) in &security.security_result.vulnerabilities_by_severity {
+            let _ = writeln!(&mut vuln_by_severity, "<li>{:?}: {}</li>", severity, count);
+        }
+        let _ = writeln!(&mut content, "<ul>{}</ul>", vuln_by_severity);
+        let _ = writeln!(&mut content, "</div>");
+
+        // Security traces
+        if !security.security_traces.is_empty() {
+            let _ = writeln!(&mut content, "<div class=\"card\">");
+            let _ = writeln!(&mut content, "<h3>Security Traces</h3>");
+            for trace in &security.security_traces {
+                let _ = writeln!(&mut content, "<h4>Vulnerability: {}</h4>", html_escape(&trace.source.title));
+                let _ = writeln!(&mut content, "<p>Severity: {:?}</p>", trace.source.severity);
+                let _ = writeln!(&mut content, "<div class=\"mermaid\">{}</div>", SecurityWikiGenerator::new()?.generate_trace_diagram(trace));
+            }
+            let _ = writeln!(&mut content, "</div>");
+        }
+
+        let _ = writeln!(&mut content, "</section></main></body></html>");
+        fs::write(out.join("security.html"), content).map_err(|e| e.into())
+    }
+
+    /// Write security hotspots page
+    fn write_security_hotspots_page(&self, out: &Path, security: &security_enhancements::SecurityAnalysisResult) -> Result<()> {
+        let mut content = String::new();
+        let _ = writeln!(&mut content, "<!doctype html>");
+        let _ = writeln!(&mut content, "<html>");
+        let _ = writeln!(&mut content, "<head>");
+        let _ = writeln!(&mut content, "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+        let _ = writeln!(&mut content, "<title>Security Hotspots - {}</title>", html_escape(&self.config.site_title));
+        let _ = writeln!(&mut content, "<link rel=\"stylesheet\" href=\"assets/style.css\">");
+        let _ = writeln!(&mut content, "</head>");
+        let _ = writeln!(&mut content, "<body>");
+        let _ = writeln!(&mut content, "<header><h1>Security Hotspots</h1></header>");
+        let _ = writeln!(&mut content, "<main><section class=\"article\">");
+
+        if !security.security_hotspots.is_empty() {
+            let _ = writeln!(&mut content, "<div class=\"card\">");
+            let _ = writeln!(&mut content, "<h2>Security Hotspots Visualization</h2>");
+            let _ = writeln!(&mut content, "<div class=\"mermaid\">{}</div>", SecurityWikiGenerator::new()?.generate_hotspot_diagram(&security.security_hotspots));
+            let _ = writeln!(&mut content, "</div>");
+
+            let _ = writeln!(&mut content, "<div class=\"card\">");
+            let _ = writeln!(&mut content, "<h3>Detailed Hotspots</h3>");
+            let _ = writeln!(&mut content, "<ul>");
+            for hotspot in &security.security_hotspots {
+                let _ = writeln!(&mut content, "<li><strong>{}</strong>", html_escape(&hotspot.location.file.display().to_string()));
+                let _ = writeln!(&mut content, "<br>Risk Score: {:.1}", hotspot.risk_score);
+                let _ = writeln!(&mut content, "<br>Vulnerabilities: {} ({:?})", hotspot.vulnerability_count, hotspot.severity);
+                let _ = writeln!(&mut content, "<br>Description: {}</li>", html_escape(&hotspot.description));
+            }
+            let _ = writeln!(&mut content, "</ul>");
+            let _ = writeln!(&mut content, "</div>");
+        } else {
+            let _ = writeln!(&mut content, "<div class=\"card\">");
+            let _ = writeln!(&mut content, "<h3>No Security Hotspots Found</h3>");
+            let _ = writeln!(&mut content, "<p>Your codebase appears to be secure based on current analysis.</p>");
+            let _ = writeln!(&mut content, "</div>");
+        }
+
+        let _ = writeln!(&mut content, "</section></main></body></html>");
+        fs::write(out.join("security_hotspots.html"), content).map_err(|e| e.into())
+    }
+
+    /// Generate security overview block for inclusion in main page
+    fn generate_security_overview_block(&self, security: &security_enhancements::SecurityAnalysisResult) -> String {
+        let mut block = String::new();
+        let _ = writeln!(&mut block, "<div class=\"card\">");
+        let _ = writeln!(&mut block, "<h2>Security Analysis</h2>");
+        let _ = writeln!(&mut block, "<p><strong>Security Score:</strong> {} / 100</p>", security.security_result.security_score);
+        let _ = writeln!(&mut block, "<p><strong>Total Vulnerabilities:</strong> {}</p>", security.security_result.total_vulnerabilities);
+        if !security.security_hotspots.is_empty() {
+            let _ = writeln!(&mut block, "<p><strong>High-Risk Files:</strong> {}</p>", security.security_hotspots.len());
+        }
+        let _ = writeln!(&mut block, "<div class=\"mermaid\">{}</div>", SecurityWikiGenerator::new().unwrap().generate_hotspot_diagram(&security.security_hotspots.iter().take(5).cloned().collect::<Vec<_>>()));
+        let _ = writeln!(&mut block, "</div>");
+        block
+    }
+
+    /// Update write_file_page signature and implementation
+    fn write_file_page(&self, page_path: &Path, title: &str, description: &str, file: &crate::analyzer::FileInfo, root_path: &Path, security_block: &str) -> Result<()> {
+        let mut rels = String::new();
+        for sym in &file.symbols {
+            // Simple relationship lines in mermaid classDiagram
+            let _ = writeln!(&mut rels, "  class {} {{}}", sym.name.replace(':', "_"));
+        }
+        let mut sym_list = String::new();
+        for sym in &file.symbols {
+            let _ = writeln!(
+                &mut sym_list,
+                "<li id=\"symbol-{id}\"><code>{name}</code> <small>{kind}</small></li>",
+                id = Self::anchorize(&sym.name),
+                name = html_escape(&sym.name),
+                kind = html_escape(&sym.kind),
+            );
+        }
+        let diag_blocks = Self::build_sequence_or_flow_blocks(file, &rels, root_path);
+
+        let content = format!(
+            r#"<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title}</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});</script>
+</head>
+<body>
+<header><h1>{title}</h1></header>
+<main>
+<section class="article">
+<p>{description}</p>
+{diag_blocks}
+<div class="card"><h3>Symbols</h3>
+<ul>
+{symbols}
+</ul>
+</div>
+{security_block}
+{ai_block}
+</section>
+</main>
+</body>
+</html>"#,
+            title = html_escape(title),
+            description = html_escape(description),
+            diag_blocks = diag_blocks,
+            symbols = sym_list,
+            security_block = security_block,
+            ai_block = if self.config.ai_enabled {
+                self.generate_file_ai_insights_sync(file)
+                    .unwrap_or_else(|_| "<div class=\"card\"><h3>AI Insights</h3><p>AI generation failed.</p></div>".to_string())
+            } else {
+                String::new()
+            },
+        );
+        fs::write(page_path, content).map_err(|e| e.into())
+    }
+
+    /// Generate security enhancements block for a file
+    fn generate_file_security_block(&self, file: &crate::analyzer::FileInfo, hotspots: &[security_enhancements::SecurityHotspot], owasp_rec: &str) -> String {
+        if hotspots.is_empty() && owasp_rec.is_empty() {
+            return String::new();
+        }
+
+        let mut block = String::new();
+        let _ = writeln!(&mut block, "<div class=\"card\">");
+        let _ = writeln!(&mut block, "<h3>Security Analysis</h3>");
+
+        if !hotspots.is_empty() {
+            for hotspot in hotspots {
+                let _ = writeln!(&mut block, "<h4>File Security: {}</h4>", hotspot.location.file.display());
+                let _ = writeln!(&mut block, "<p>Risk Score: {:.1}</p>", hotspot.risk_score);
+                let _ = writeln!(&mut block, "<p>Vulnerabilities: {} ({:?})</p>", hotspot.vulnerability_count, hotspot.severity);
+                let _ = writeln!(&mut block, "<p>{}</p>", html_escape(&hotspot.description));
+            }
+        }
+
+        if !owasp_rec.is_empty() {
+            let _ = writeln!(&mut block, "<h4>OWASP Recommendations</h4>");
+            let _ = writeln!(&mut block, "{}", owasp_rec);
+        }
+
+        let _ = writeln!(&mut block, "</div>");
+        block
     }
 }
 
