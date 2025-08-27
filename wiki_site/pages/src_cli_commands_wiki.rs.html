@@ -11,7 +11,7 @@
 <header><h1>src/cli/commands/wiki.rs</h1></header>
 <main>
 <section class="article">
-<p>6 symbols, 38 lines</p>
+<p>6 symbols, 56 lines</p>
 <div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
   start(["Start"])
   end(["End"])
@@ -104,75 +104,150 @@
   N29(["type_identifier"])
   N28 -->|true| N29
   N28 -->|false| N29
-  N30(["type_identifier"])
+  N30(["identifier"])
   N29 -->|true| N30
   N29 -->|false| N30
   N31(["identifier"])
   N30 -->|true| N31
   N30 -->|false| N31
-  N32(["call:unwrap_or_else"])
-  N31 --> N32
-  N33(["mutable_specifier"])
+  N32(["identifier"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["identifier"])
   N32 -->|true| N33
   N32 -->|false| N33
   N34(["identifier"])
   N33 -->|true| N34
   N33 -->|false| N34
-  N35(["call:with_ai_mock"])
-  N34 --> N35
-  N36(["if_expression"])
+  N35(["type_identifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["identifier"])
   N35 -->|true| N36
   N35 -->|false| N36
-  N37(["if"])
-  N36 -->|true| N37
-  N36 -->|false| N37
-  N38(["identifier"])
+  N37(["call:unwrap_or_else"])
+  N36 --> N37
+  N38(["mutable_specifier"])
   N37 -->|true| N38
   N37 -->|false| N38
   N39(["identifier"])
   N38 -->|true| N39
   N38 -->|false| N39
-  N40(["identifier"])
-  N39 -->|true| N40
-  N39 -->|false| N40
-  N41(["identifier"])
+  N40(["call:with_refactoring_hints"])
+  N39 --> N40
+  N41(["if_expression"])
   N40 -->|true| N41
   N40 -->|false| N41
-  N42(["call:with_ai_config_path"])
-  N41 --> N42
+  N42(["if"])
+  N41 -->|true| N42
+  N41 -->|false| N42
   N43(["identifier"])
   N42 -->|true| N43
   N42 -->|false| N43
-  N44(["call:map_err"])
-  N43 --> N44
+  N44(["identifier"])
+  N43 -->|true| N44
+  N43 -->|false| N44
   N45(["identifier"])
   N44 -->|true| N45
   N44 -->|false| N45
-  N46(["call:new"])
-  N45 --> N46
-  N47(["identifier"])
-  N46 -->|true| N47
-  N46 -->|false| N47
-  N48(["call:map_err"])
-  N47 --> N48
-  N49(["identifier"])
-  N48 -->|true| N49
-  N48 -->|false| N49
+  N46(["identifier"])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47(["call:with_ai_config_path"])
+  N46 --> N47
+  N48(["identifier"])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49(["call:map_err"])
+  N48 --> N49
   N50(["identifier"])
   N49 -->|true| N50
   N49 -->|false| N50
-  N51(["identifier"])
-  N50 -->|true| N51
-  N50 -->|false| N51
+  N51(["call:new"])
+  N50 --> N51
   N52(["identifier"])
   N51 -->|true| N52
   N51 -->|false| N52
-  N53(["identifier"])
-  N52 -->|true| N53
-  N52 -->|false| N53
-  N54(["call:Ok"])
-  N53 --> N54
-  N54 --> end
+  N53(["call:map_err"])
+  N52 --> N53
+  N54(["identifier"])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55(["identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["identifier"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["identifier"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["if_expression"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["if"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["identifier"])
+  N61 -->|true| N62
+  N61 -->|false| N62
+  N63(["if_expression"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["if"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["identifier"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["identifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["if_expression"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["if"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["if_expression"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["if"])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73(["identifier"])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74(["identifier"])
+  N73 -->|true| N74
+  N73 -->|false| N74
+  N75(["if_expression"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["if"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["identifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["identifier"])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79(["call:Ok"])
+  N78 --> N79
+  N79 --> end
 
 </div></div>
 <div class="card"><h3>Symbols</h3>

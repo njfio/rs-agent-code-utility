@@ -11,7 +11,7 @@
 <header><h1>tests/wiki_sequence_methods.rs</h1></header>
 <main>
 <section class="article">
-<p>10 symbols, 45 lines</p>
+<p>11 symbols, 62 lines</p>
 <div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
   start(["Start"])
   end(["End"])
@@ -168,38 +168,38 @@
   N53 -->|false| N54
   N55(["call:new"])
   N54 --> N55
-  N56(["for_expression"])
-  N56 -->|repeat| N56
-  N55 --> N56
-  N57(["for"])
-  N57 -->|repeat| N57
-  N56 --> N57
-  N58(["identifier"])
-  N57 -->|true| N58
-  N57 -->|false| N58
-  N59(["call:read_dir"])
+  N56(["identifier"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["identifier"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["for_expression"])
+  N58 -->|repeat| N58
+  N57 --> N58
+  N59(["for"])
+  N59 -->|repeat| N59
   N58 --> N59
   N60(["identifier"])
   N59 -->|true| N60
   N59 -->|false| N60
-  N61(["identifier"])
-  N60 -->|true| N61
-  N60 -->|false| N61
+  N61(["call:read_dir"])
+  N60 --> N61
   N62(["identifier"])
   N61 -->|true| N62
   N61 -->|false| N62
-  N63(["call:read_to_string"])
-  N62 --> N63
-  N64(["if_expression"])
+  N63(["identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["identifier"])
   N63 -->|true| N64
   N63 -->|false| N64
-  N65(["if"])
-  N64 -->|true| N65
-  N64 -->|false| N65
+  N65(["call:read_to_string"])
+  N64 --> N65
   N66(["identifier"])
   N65 -->|true| N66
   N65 -->|false| N66
-  N67(["field_identifier"])
+  N67(["identifier"])
   N66 -->|true| N67
   N66 -->|false| N67
   N68(["identifier"])
@@ -211,16 +211,16 @@
   N70(["identifier"])
   N69 -->|true| N70
   N69 -->|false| N70
-  N71(["identifier"])
+  N71(["if_expression"])
   N70 -->|true| N71
   N70 -->|false| N71
-  N72(["identifier"])
+  N72(["if"])
   N71 -->|true| N72
   N71 -->|false| N72
   N73(["identifier"])
   N72 -->|true| N73
   N72 -->|false| N73
-  N74(["identifier"])
+  N74(["field_identifier"])
   N73 -->|true| N74
   N73 -->|false| N74
   N75(["identifier"])
@@ -235,9 +235,48 @@
   N78(["identifier"])
   N77 -->|true| N78
   N77 -->|false| N78
-  N79(["call:Ok"])
-  N78 --> N79
-  N79 --> end
+  N79(["identifier"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["identifier"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["identifier"])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82(["identifier"])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83(["identifier"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["identifier"])
+  N83 -->|true| N84
+  N83 -->|false| N84
+  N85(["identifier"])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86(["identifier"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["identifier"])
+  N86 -->|true| N87
+  N86 -->|false| N87
+  N88(["identifier"])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89(["identifier"])
+  N88 -->|true| N89
+  N88 -->|false| N89
+  N90(["identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["identifier"])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92(["call:Ok"])
+  N91 --> N92
+  N92 --> end
 
 </div></div>
 <div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
@@ -272,6 +311,7 @@
 <li id="symbol-pages"><code>pages</code> <small>variable</small></li>
 <li id="symbol-content"><code>content</code> <small>variable</small></li>
 <li id="symbol-e"><code>e</code> <small>variable</small></li>
+<li id="symbol-file_content"><code>file_content</code> <small>variable</small></li>
 
 </ul>
 </div>

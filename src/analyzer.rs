@@ -20,23 +20,21 @@
 //! ### Basic File Analysis
 //!
 //! ```rust
-//! use rust_tree_sitter::{CodeAnalyzer, AnalysisConfig, AnalysisDepth};
-//!
+//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
+
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
 //! // Create analyzer with custom configuration
 //! let config = AnalysisConfig {
 //!     depth: AnalysisDepth::Full,
-//!     max_depth: 10,
-//!     include_tests: true,
-//!     parallel_processing: true,
+//!     max_depth: Some(10),
+//!     enable_parallel: true,
 //!     ..Default::default()
 //! };
 //!
-//! let analyzer = CodeAnalyzer::new(config);
-//!
+//! let analyzer = CodebaseAnalyzer::with_config(config);
+
 //! // Analyze a single file
-//! let result = analyzer.analyze_file("src/main.rs")?;
-//! println!("Found {} functions", result.symbols.functions.len());
+//! let mut analyzer = analyzer?;
 //! # Ok(())
 //! # }
 //! ```
@@ -44,18 +42,18 @@
 //! ### Directory Analysis
 //!
 //! ```rust
-//! use rust_tree_sitter::{CodeAnalyzer, AnalysisConfig};
+//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
-//! let analyzer = CodeAnalyzer::new(AnalysisConfig::default());
+//! let mut analyzer = CodebaseAnalyzer::new()?;
 //!
 //! // Analyze entire directory
-//! let results = analyzer.analyze_directory("src/")?;
+//! let result = analyzer.analyze_directory("src/")?;
 //!
-//! for (file_path, result) in results {
-//!     println!("File: {}", file_path.display());
-//!     println!("  Functions: {}", result.symbols.functions.len());
-//!     println!("  Security issues: {}", result.security_issues.len());
+//! for file_info in &result.files {
+//!     println!("File: {}", file_info.path.display());
+//!     println!("  Functions: {}", file_info.symbols.len());
+//!     println!("  Security issues: {}", file_info.security_vulnerabilities.len());
 //! }
 //! # Ok(())
 //! # }
@@ -64,26 +62,24 @@
 //! ### Advanced Analysis with Filtering
 //!
 //! ```rust
-//! use rust_tree_sitter::{CodeAnalyzer, AnalysisConfig, AnalysisDepth};
+//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
 //! let config = AnalysisConfig {
 //!     depth: AnalysisDepth::Full,
-//!     include_tests: false,
-//!     file_extensions: vec!["rs".to_string(), "py".to_string()],
-//!     exclude_patterns: vec!["target/".to_string(), "node_modules/".to_string()],
+//!     include_extensions: Some(vec!["rs".to_string(), "py".to_string()]),
+//!     exclude_dirs: vec!["target".to_string(), "node_modules".to_string()],
 //!     max_file_size: Some(1024 * 1024), // 1MB limit
 //!     ..Default::default()
 //! };
 //!
-//! let analyzer = CodeAnalyzer::new(config);
-//! let results = analyzer.analyze_directory(".")?;
+//! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
+//! let result = analyzer.analyze_directory(".")?;
 //!
-//! // Generate summary report
-//! let summary = analyzer.generate_summary(&results)?;
-//! println!("Total files analyzed: {}", summary.total_files);
-//! println!("Total functions: {}", summary.total_functions);
-//! println!("Security issues found: {}", summary.security_issues);
+//! // Access results directly
+//! println!("Total files analyzed: {}", result.total_files);
+//! println!("Total functions: {}", result.files.iter().map(|f| f.symbols.len()).sum::<usize>());
+//! println!("Security issues found: {}", result.files.iter().map(|f| f.security_vulnerabilities.len()).sum::<usize>());
 //! # Ok(())
 //! # }
 //! ```

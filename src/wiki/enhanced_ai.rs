@@ -100,7 +100,7 @@ impl Default for EnhancedAIConfig {
     }
 }
 
-/// Enhanced AI service for wiki generation
+/// Enhanced AI service for wiki generation with integrated security and refactoring analysis
 pub struct WikiAIEnhancer {
     ai_service: AIService,
     config: EnhancedAIConfig,
@@ -108,7 +108,7 @@ pub struct WikiAIEnhancer {
 }
 
 impl WikiAIEnhancer {
-    /// Create a new AI enhancer
+    /// Create a simple AI enhancer (basic mode)
     pub async fn new(config: EnhancedAIConfig) -> Result<Self> {
         let mut builder = crate::ai::service::AIServiceBuilder::new()
             .with_default_provider(config.ai_provider.clone());
@@ -188,7 +188,7 @@ impl WikiAIEnhancer {
         Ok(context)
     }
 
-    /// Generate enriched documentation for a function
+    /// Generate enriched documentation for a function using AIFeature::DocumentationGeneration
     fn generate_function_documentation(&self, symbol: &crate::analyzer::Symbol, file_info: &FileInfo) -> Result<String> {
         let content = format!(
             "Generate comprehensive documentation for the function '{}':\n\
@@ -224,7 +224,7 @@ impl WikiAIEnhancer {
         Ok(response.content)
     }
 
-    /// Generate refactoring suggestions for a function
+    /// Generate refactoring suggestions using AIFeature::RefactoringSuggestions
     fn generate_refactoring_suggestions(&self, symbol: &crate::analyzer::Symbol, file_info: &FileInfo) -> Result<Vec<String>> {
         let content = format!(
             "Analyze the function '{}' for potential refactoring improvements:\n\
@@ -264,7 +264,7 @@ impl WikiAIEnhancer {
         Ok(suggestions)
     }
 
-    /// Generate security insights for a vulnerability
+    /// Generate security insights using AIFeature::SecurityAnalysis
     fn generate_security_insights(&self, vulnerability: &SecurityVulnerability) -> Result<SecurityAIInsights> {
         let content = format!(
             "Provide security insights for this vulnerability:\n\
@@ -330,7 +330,7 @@ impl WikiAIEnhancer {
         })
     }
 
-    /// Assess overall module quality
+    /// Assess overall module quality using AIFeature::CodeQualityAssessment
     fn assess_module_quality(&self, file_info: &FileInfo) -> Result<ModuleAssessment> {
         let content = format!(
             "Assess the overall quality of this code module:\n\

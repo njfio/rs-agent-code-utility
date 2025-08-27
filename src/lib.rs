@@ -48,20 +48,20 @@
 //!
 //! ### Basic Parsing
 //!
-//! ```rust
-//! use rust_tree_sitter::{Parser, Language};
+//! ```rust,no_run
+//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisResult, AnalysisConfig};
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Create a parser for Rust code
-//! let parser = Parser::new(Language::Rust)?;
+//! # fn main() -> Result<(), rust_tree_sitter::Error> {
+//! let mut analyzer = CodebaseAnalyzer::new()?;
 //!
-//! // Parse source code
-//! let source = "fn main() { println!(\"Hello, world!\"); }";
-//! let tree = parser.parse(source, None)?;
+//! // Analyze entire directory
+//! let result = analyzer.analyze_directory("src/")?;
 //!
-//! // Navigate the syntax tree
-//! println!("Root node: {}", tree.root_node().kind());
-//! println!("Tree structure: {}", tree.root_node().to_sexp());
+//! for file_info in &result.files {
+//!     println!("File: {}", file_info.path.display());
+//!     println!("  Functions: {}", file_info.symbols.len());
+//!     println!("  Security issues: {}", file_info.security_vulnerabilities.len());
+//! }
 //! # Ok(())
 //! # }
 //! ```
@@ -69,26 +69,21 @@
 //! ### Code Analysis
 //!
 //! ```rust
-//! use rust_tree_sitter::{CodeAnalyzer, AnalysisConfig};
+//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisResult};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
 //! // Create analyzer with custom configuration
 //! let config = AnalysisConfig {
-//!     max_depth: 10,
-//!     include_tests: true,
-//!     parallel_processing: true,
+//!     max_depth: Some(10),
 //!     ..Default::default()
 //! };
-//! let analyzer = CodeAnalyzer::new(config);
+//! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //!
 //! // Analyze a Rust file
 //! let result = analyzer.analyze_file("src/main.rs")?;
-//!
+
 //! // Access analysis results
-//! println!("Functions found: {}", result.symbols.functions.len());
-//! println!("Dependencies: {}", result.dependencies.len());
-//! println!("Security issues: {}", result.security_issues.len());
-//! println!("Code quality score: {:.2}", result.quality_metrics.overall_score);
+//! println!("Functions found: {}", result.files[0].symbols.len());
 //! # Ok(())
 //! # }
 //! ```
@@ -109,7 +104,7 @@
 //! let request = AIRequest::new(
 //!     AIFeature::SecurityAnalysis,
 //!     "Please analyze this Rust code for security vulnerabilities: \
-//!      fn unsafe_function() { let password = \"admin123\"; }"
+//!      fn unsafe_function() { let password = \"admin123\"; }".to_string()
 //! );
 //!
 //! let response = ai_service.process_request(request).await?;
@@ -122,21 +117,24 @@
 //! ### Security Scanning
 //!
 //! ```rust
-//! use rust_tree_sitter::security::OwaspDetector;
+//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
-//! // Create security scanner with OWASP rules
-//! let detector = OwaspDetector::new();
+//! // Create analyzer with security enabled
+//! let config = AnalysisConfig {
+//!     enable_security: true,
+//!     ..Default::default()
+//! };
+//! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //!
-//! // Scan file for vulnerabilities
-//! let vulnerabilities = detector.scan_file("src/main.rs")?;
+//! // Analyze file for vulnerabilities
+//! let result = analyzer.analyze_file("src/main.rs")?;
 //!
-//! // Report findings
-//! for vuln in vulnerabilities {
+//! // Report security findings
+//! for vuln in &result.files[0].security_vulnerabilities {
 //!     println!("🚨 Security Issue: {} (Severity: {})",
 //!              vuln.description, vuln.severity);
-//!     println!("   Location: {}:{}", vuln.file_path.display(), vuln.line);
-//!     println!("   Recommendation: {}", vuln.recommendation);
+//!     println!("   Location: {}:{}", vuln.location.file.display(), vuln.location.start_line);
 //! }
 //! # Ok(())
 //! # }
