@@ -1,0 +1,275 @@
+[package]
+name = "rust_tree_sitter"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "A Rust library for processing source code with tree-sitter"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/rust_tree_sitter"
+keywords = ["parsing", "tree-sitter", "syntax", "ast", "source-code"]
+categories = ["parsing", "development-tools"]
+
+[dependencies]
+tree-sitter = "0.22"
+tree-sitter-rust = "0.21"
+tree-sitter-javascript = "0.21"
+tree-sitter-python = "0.21"
+tree-sitter-c = "0.21"
+tree-sitter-cpp = "0.22"
+tree-sitter-typescript = "0.21"
+tree-sitter-go = "0.21"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_yaml = "0.9"
+clap = { version = "4.0", features = ["derive"] }
+colored = "2.0"
+indicatif = "0.17"
+serde_json = "1.0"
+toml = "0.8"
+tabled = "0.15"
+regex = "1.10"
+sha2 = "0.10"
+rand = "0.8"
+rayon = "1.8"
+petgraph = "0.6"
+ignore = "0.4"
+crc32fast = "1.4"
+
+# Security fixes - ring will be updated via dependency resolution
+
+# Phase A: Infrastructure Dependencies
+tokio = { version = "1.0", features = ["full"], optional = true }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], optional = true }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"], optional = true }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+async-trait = "0.1"
+config = "0.14"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+dashmap = "5.5"
+governor = "0.6"
+tower = { version = "0.4", features = ["timeout", "retry"] }
+# backoff = "0.4"  # Replaced with exponential-backoff due to maintenance issues
+exponential-backoff = "2.0"
+dirs = "5.0"
+num_cpus = "1.0"
+
+# Machine Learning Dependencies for Intent Mapping
+candle-core = { version = "0.9.1", optional = true }
+candle-nn = { version = "0.9.1", optional = true }
+candle-transformers = { version = "0.9.1", optional = true }
+hf-hub = { version = "0.3", features = ["tokio"], optional = true }
+tokenizers = { version = "0.19", optional = true }
+
+[build-dependencies]
+cc = "1.0"
+
+[dev-dependencies]
+tempfile = "3.0"
+wiremock = "0.5"
+criterion = "0.5"
+assert_cmd = "2.0"
+predicates = "3.0"
+
+[features]
+default = ["std", "serde", "ml", "net", "db"]
+std = []
+serde = ["dep:serde"]
+wasm = []
+
+# Demo feature gates all examples
+# Enable with: cargo build --examples --features demo
+# or run a specific example with: cargo run --example NAME --features demo
+# This keeps CI and normal builds free from example-related breakages.
+demo = []
+
+# Optional capability flags
+ml = [
+    "dep:candle-core",
+    "dep:candle-nn",
+    "dep:candle-transformers",
+    "dep:tokenizers",
+    "dep:hf-hub",
+]
+net = [
+    "dep:reqwest",
+    "dep:tokio",
+]
+db = [
+    "dep:sqlx",
+]
+
+# Gate all examples behind the optional "demo" feature
+[[example]]
+name = "basic_usage"
+path = "examples/basic_usage.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "incremental_parsing"
+path = "examples/incremental_parsing.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "analyze_codebase"
+path = "examples/analyze_codebase.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "ai_service_demo"
+path = "examples/ai_service_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "ai_code_reviewer"
+path = "examples/ai_code_reviewer.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "ai_powered_cli"
+path = "examples/ai_powered_cli.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "ai_showcase"
+path = "examples/ai_showcase.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "ast_transformation_demo"
+path = "examples/ast_transformation_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "basic_analysis"
+path = "examples/basic_analysis.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "code_map"
+path = "examples/code_map.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "code_migration_assistant"
+path = "examples/code_migration_assistant.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "comprehensive_demo"
+path = "examples/comprehensive_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "debug_response"
+path = "examples/debug_response.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "direct_anthropic_test"
+path = "examples/direct_anthropic_test.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "direct_openai_test"
+path = "examples/direct_openai_test.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "gpt4o_advanced_demo"
+path = "examples/gpt4o_advanced_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "gpt4o_simple_test"
+path = "examples/gpt4o_simple_test.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "gpt5_real_analysis"
+path = "examples/gpt5_real_analysis.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "gpt5_ultimate_demo"
+path = "examples/gpt5_ultimate_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "improvements_demo"
+path = "examples/improvements_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "intelligent_architect"
+path = "examples/intelligent_architect.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "provider_comparison"
+path = "examples/provider_comparison.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "real_ai_demo"
+path = "examples/real_ai_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "real_api_validation"
+path = "examples/real_api_validation.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "real_code_analysis"
+path = "examples/real_code_analysis.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "real_file_analysis"
+path = "examples/real_file_analysis.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "real_openai_demo"
+path = "examples/real_openai_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "reasoning_engine_demo"
+path = "examples/reasoning_engine_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "security_analysis"
+path = "examples/security_analysis.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "simple_ai_demo"
+path = "examples/simple_ai_demo.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "simple_validation"
+path = "examples/simple_validation.rs"
+required-features = ["demo"]
+
+[[example]]
+name = "tdd_minimal"
+path = "examples/tdd_minimal.rs"
+required-features = ["demo"]
+
+[lib]
+name = "rust_tree_sitter"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tree-sitter-cli"
+path = "src/bin/main.rs"
+
+[[bin]]
+name = "rts-cli"
+path = "src/bin/rts.rs"

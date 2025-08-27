@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>site/assets/search.js</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>site/assets/search.js</h1></header>
+<main>
+<section class="article">
+<p>2 symbols, 13 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["identifier"])
+  N1(["call:getElementById"])
+  N0 --> N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["call:getElementById"])
+  N2 --> N3
+  N4(["identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["call:fetch"])
+  N4 --> N5
+  N6(["identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["call:json"])
+  N6 --> N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["formal_parameters"])
+  N9 -->|repeat| N9
+  N8 --> N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["property_identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["call:forEach"])
+  N12 --> N13
+  N14(["call:addEventListener"])
+  N13 --> N14
+  N14 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant runsearch
+  participant render
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>fetch: call
+  runsearch->>json: call
+  runsearch->>addeventlistener: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-runsearch"><code>runSearch</code> <small>function</small></li>
+<li id="symbol-render"><code>render</code> <small>function</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

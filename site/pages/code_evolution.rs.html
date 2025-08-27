@@ -1,0 +1,567 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>code_evolution.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>code_evolution.rs</h1></header>
+<main>
+<section class="article">
+<p>152 symbols, 1140 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["with_config"])
+  F2 --> F3
+  F3(["create_file_change"])
+  F3 --> F4
+  F4(["analyze_evolution"])
+  F4 --> F5
+  F5(["analyze_files"])
+  F5 --> F6
+  F6(["extract_git_history"])
+  F6 --> F7
+  F7(["extract_file_history"])
+  F7 --> F8
+  F8(["parse_git_log"])
+  F8 --> F9
+  F9(["parse_commit_line"])
+  F9 --> F10
+  F10(["parse_numstat_line"])
+  F10 --> F11
+  F11(["classify_change_type"])
+  F11 --> F12
+  F12(["detect_patterns"])
+  F12 --> F13
+  F13(["detect_file_patterns"])
+  F13 --> F14
+  F14(["detect_hotspots"])
+  F14 --> F15
+  F15(["detect_hotspots_for_files"])
+  F15 --> F16
+  F16(["detect_coupled_changes"])
+  F16 --> F17
+  F17(["detect_coupled_changes_for_files"])
+  F17 --> F18
+  F18(["detect_knowledge_silos"])
+  F18 --> F19
+  F19(["detect_knowledge_silos_for_files"])
+  F19 --> F20
+  F20(["detect_technical_debt_patterns"])
+  F20 --> F21
+  F21(["calculate_metrics"])
+  F21 --> F22
+  F22(["generate_file_insights"])
+  F22 --> F23
+  F23(["generate_specific_file_insights"])
+  F23 --> F24
+  F24(["generate_file_insight"])
+  F24 --> F25
+  F25(["generate_recommendations"])
+  F25 --> F26
+  F26(["generate_targeted_recommendations"])
+  F26 --> F27
+  F27(["get_time_range_for_file"])
+  F27 --> F28
+  F28(["calculate_time_range_for_files"])
+  F28 --> F29
+  F29(["count_unique_commits"])
+  F29 --> F30
+  F30(["count_active_contributors"])
+  F30 --> F31
+  F31(["calculate_commit_frequency"])
+  F31 --> F32
+  F32(["calculate_churn_rate"])
+  F32 --> F33
+  F33(["calculate_bus_factor"])
+  F33 --> F34
+  F34(["calculate_average_coupling_strength"])
+  F34 --> F35
+  F35(["calculate_debt_trend"])
+  F35 --> F36
+  F36(["calculate_coverage_trend"])
+  F36 --> F37
+  F37(["find_coupled_files"])
+  F37 --> F38
+  F38(["assess_risk_level"])
+  F38 --> F39
+  F39(["default"])
+  F39 --> F40
+  F40(["CodeEvolutionTracker"])
+  F40 --> F41
+  F41(["FileChange"])
+  F41 --> F42
+  F42(["ChangePattern"])
+  F42 --> F43
+  F43(["EvolutionMetrics"])
+  F43 --> F44
+  F44(["EvolutionConfig"])
+  F44 --> F45
+  F45(["EvolutionAnalysisResult"])
+  F45 --> F46
+  F46(["FileInsight"])
+  F46 --> F47
+  F47(["EvolutionRecommendation"])
+  F47 --> F48
+  F48(["ChangeType"])
+  F48 --> F49
+  F49(["PatternType"])
+  F49 --> F50
+  F50(["TrendDirection"])
+  F50 --> F51
+  F51(["RecommendationType"])
+  F51 --> F52
+  F52(["EvolutionConfig"])
+  F52 --> F53
+  F53(["CodeEvolutionTracker"])
+  F53 --> F54
+  F54(["EvolutionMetrics"])
+  F54 --> F55
+  F55(["repo_path"])
+  F55 --> F56
+  F56(["tracker"])
+  F56 --> F57
+  F57(["file_insights"])
+  F57 --> F58
+  F58(["recommendations"])
+  F58 --> F59
+  F59(["file_insights"])
+  F59 --> F60
+  F60(["recommendations"])
+  F60 --> F61
+  F61(["output"])
+  F61 --> F62
+  F62(["log_output"])
+  F62 --> F63
+  F63(["output"])
+  F63 --> F64
+  F64(["log_output"])
+  F64 --> F65
+  F65(["lines"])
+  F65 --> F66
+  F66(["i"])
+  F66 --> F67
+  F67(["related_files"])
+  F67 --> F68
+  F68(["change"])
+  F68 --> F69
+  F69(["parts"])
+  F69 --> F70
+  F70(["hash"])
+  F70 --> F71
+  F71(["author"])
+  F71 --> F72
+  F72(["timestamp"])
+  F72 --> F73
+  F73(["message"])
+  F73 --> F74
+  F74(["parts"])
+  F74 --> F75
+  F75(["added"])
+  F75 --> F76
+  F76(["removed"])
+  F76 --> F77
+  F77(["file_path"])
+  F77 --> F78
+  F78(["message_lower"])
+  F78 --> F79
+  F79(["change_counts"])
+  F79 --> F80
+  F80(["time_range"])
+  F80 --> F81
+  F81(["pattern"])
+  F81 --> F82
+  F82(["count"])
+  F82 --> F83
+  F83(["pattern"])
+  F83 --> F84
+  F84(["coupling_matrix"])
+  F84 --> F85
+  F85(["file_change_counts"])
+  F85 --> F86
+  F86(["file1"])
+  F86 --> F87
+  F87(["file2"])
+  F87 --> F88
+  F88(["key"])
+  F88 --> F89
+  F89(["file1_changes"])
+  F89 --> F90
+  F90(["file2_changes"])
+  F90 --> F91
+  F91(["coupling_strength"])
+  F91 --> F92
+  F92(["time_range"])
+  F92 --> F93
+  F93(["pattern"])
+  F93 --> F94
+  F94(["coupling_matrix"])
+  F94 --> F95
+  F95(["file_change_counts"])
+  F95 --> F96
+  F96(["key"])
+  F96 --> F97
+  F97(["file1_changes"])
+  F97 --> F98
+  F98(["file2_changes"])
+  F98 --> F99
+  F99(["coupling_strength"])
+  F99 --> F100
+  F100(["time_range"])
+  F100 --> F101
+  F101(["pattern"])
+  F101 --> F102
+  F102(["authors"])
+  F102 --> F103
+  F103(["pattern"])
+  F103 --> F104
+  F104(["authors"])
+  F104 --> F105
+  F105(["pattern"])
+  F105 --> F106
+  F106(["refactor_count"])
+  F106 --> F107
+  F107(["bug_fix_count"])
+  F107 --> F108
+  F108(["total_changes"])
+  F108 --> F109
+  F109(["debt_ratio"])
+  F109 --> F110
+  F110(["pattern"])
+  F110 --> F111
+  F111(["total_commits"])
+  F111 --> F112
+  F112(["total_files"])
+  F112 --> F113
+  F113(["active_contributors"])
+  F113 --> F114
+  F114(["commit_frequency"])
+  F114 --> F115
+  F115(["churn_rate"])
+  F115 --> F116
+  F116(["bus_factor"])
+  F116 --> F117
+  F117(["coupling_strength"])
+  F117 --> F118
+  F118(["debt_trend"])
+  F118 --> F119
+  F119(["coverage_trend"])
+  F119 --> F120
+  F120(["insights"])
+  F120 --> F121
+  F121(["insight"])
+  F121 --> F122
+  F122(["insights"])
+  F122 --> F123
+  F123(["insight"])
+  F123 --> F124
+  F124(["change_frequency"])
+  F124 --> F125
+  F125(["contributors"])
+  F125 --> F126
+  F126(["change_types"])
+  F126 --> F127
+  F127(["primary_contributors"])
+  F127 --> F128
+  F128(["coupled_files"])
+  F128 --> F129
+  F129(["risk_level"])
+  F129 --> F130
+  F130(["last_significant_change"])
+  F130 --> F131
+  F131(["recommendations"])
+  F131 --> F132
+  F132(["recommendations"])
+  F132 --> F133
+  F133(["min_time"])
+  F133 --> F134
+  F134(["max_time"])
+  F134 --> F135
+  F135(["min_time"])
+  F135 --> F136
+  F136(["max_time"])
+  F136 --> F137
+  F137(["found_changes"])
+  F137 --> F138
+  F138(["commits"])
+  F138 --> F139
+  F139(["contributors"])
+  F139 --> F140
+  F140(["total_commits"])
+  F140 --> F141
+  F141(["total_lines_changed"])
+  F141 --> F142
+  F142(["total_commits"])
+  F142 --> F143
+  F143(["contributors"])
+  F143 --> F144
+  F144(["coupling_patterns"])
+  F144 --> F145
+  F145(["total_confidence"])
+  F145 --> F146
+  F146(["debt_patterns"])
+  F146 --> F147
+  F147(["test_changes"])
+  F147 --> F148
+  F148(["total_changes"])
+  F148 --> F149
+  F149(["test_ratio"])
+  F149 --> F150
+  F150(["change_count"])
+  F150 --> F151
+  F151(["coupling_count"])
+  F151 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant with_config
+  participant create_file_change
+  participant analyze_evolution
+  participant analyze_files
+  participant extract_git_history
+  participant extract_file_history
+  participant parse_git_log
+  participant parse_commit_line
+  participant parse_numstat_line
+  participant classify_change_type
+  participant detect_patterns
+  participant detect_file_patterns
+  participant detect_hotspots
+  participant detect_hotspots_for_files
+  participant detect_coupled_changes
+  participant detect_coupled_changes_for_files
+  participant detect_knowledge_silos
+  participant detect_knowledge_silos_for_files
+  participant detect_technical_debt_patterns
+  participant calculate_metrics
+  participant generate_file_insights
+  participant generate_specific_file_insights
+  participant generate_file_insight
+  participant generate_recommendations
+  participant generate_targeted_recommendations
+  participant get_time_range_for_file
+  participant calculate_time_range_for_files
+  participant count_unique_commits
+  participant count_active_contributors
+  participant calculate_commit_frequency
+  participant calculate_churn_rate
+  participant calculate_bus_factor
+  participant calculate_average_coupling_strength
+  participant calculate_debt_trend
+  participant calculate_coverage_trend
+  participant find_coupled_files
+  participant assess_risk_level
+  participant default
+  default->>new: call
+  new->>with_config: call
+  with_config->>create_file_change: call
+  create_file_change->>analyze_evolution: call
+  analyze_evolution->>analyze_files: call
+  analyze_files->>extract_git_history: call
+  extract_git_history->>extract_file_history: call
+  extract_file_history->>parse_git_log: call
+  parse_git_log->>parse_commit_line: call
+  parse_commit_line->>parse_numstat_line: call
+  parse_numstat_line->>classify_change_type: call
+  classify_change_type->>detect_patterns: call
+  detect_patterns->>detect_file_patterns: call
+  detect_file_patterns->>detect_hotspots: call
+  detect_hotspots->>detect_hotspots_for_files: call
+  detect_hotspots_for_files->>detect_coupled_changes: call
+  detect_coupled_changes->>detect_coupled_changes_for_files: call
+  detect_coupled_changes_for_files->>detect_knowledge_silos: call
+  detect_knowledge_silos->>detect_knowledge_silos_for_files: call
+  detect_knowledge_silos_for_files->>detect_technical_debt_patterns: call
+  detect_technical_debt_patterns->>calculate_metrics: call
+  calculate_metrics->>generate_file_insights: call
+  generate_file_insights->>generate_specific_file_insights: call
+  generate_specific_file_insights->>generate_file_insight: call
+  generate_file_insight->>generate_recommendations: call
+  generate_recommendations->>generate_targeted_recommendations: call
+  generate_targeted_recommendations->>get_time_range_for_file: call
+  get_time_range_for_file->>calculate_time_range_for_files: call
+  calculate_time_range_for_files->>count_unique_commits: call
+  count_unique_commits->>count_active_contributors: call
+  count_active_contributors->>calculate_commit_frequency: call
+  calculate_commit_frequency->>calculate_churn_rate: call
+  calculate_churn_rate->>calculate_bus_factor: call
+  calculate_bus_factor->>calculate_average_coupling_strength: call
+  calculate_average_coupling_strength->>calculate_debt_trend: call
+  calculate_debt_trend->>calculate_coverage_trend: call
+  calculate_coverage_trend->>find_coupled_files: call
+  find_coupled_files->>assess_risk_level: call
+  assess_risk_level->>default: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-create_file_change"><code>create_file_change</code> <small>function</small></li>
+<li id="symbol-analyze_evolution"><code>analyze_evolution</code> <small>function</small></li>
+<li id="symbol-analyze_files"><code>analyze_files</code> <small>function</small></li>
+<li id="symbol-extract_git_history"><code>extract_git_history</code> <small>function</small></li>
+<li id="symbol-extract_file_history"><code>extract_file_history</code> <small>function</small></li>
+<li id="symbol-parse_git_log"><code>parse_git_log</code> <small>function</small></li>
+<li id="symbol-parse_commit_line"><code>parse_commit_line</code> <small>function</small></li>
+<li id="symbol-parse_numstat_line"><code>parse_numstat_line</code> <small>function</small></li>
+<li id="symbol-classify_change_type"><code>classify_change_type</code> <small>function</small></li>
+<li id="symbol-detect_patterns"><code>detect_patterns</code> <small>function</small></li>
+<li id="symbol-detect_file_patterns"><code>detect_file_patterns</code> <small>function</small></li>
+<li id="symbol-detect_hotspots"><code>detect_hotspots</code> <small>function</small></li>
+<li id="symbol-detect_hotspots_for_files"><code>detect_hotspots_for_files</code> <small>function</small></li>
+<li id="symbol-detect_coupled_changes"><code>detect_coupled_changes</code> <small>function</small></li>
+<li id="symbol-detect_coupled_changes_for_files"><code>detect_coupled_changes_for_files</code> <small>function</small></li>
+<li id="symbol-detect_knowledge_silos"><code>detect_knowledge_silos</code> <small>function</small></li>
+<li id="symbol-detect_knowledge_silos_for_files"><code>detect_knowledge_silos_for_files</code> <small>function</small></li>
+<li id="symbol-detect_technical_debt_patterns"><code>detect_technical_debt_patterns</code> <small>function</small></li>
+<li id="symbol-calculate_metrics"><code>calculate_metrics</code> <small>function</small></li>
+<li id="symbol-generate_file_insights"><code>generate_file_insights</code> <small>function</small></li>
+<li id="symbol-generate_specific_file_insights"><code>generate_specific_file_insights</code> <small>function</small></li>
+<li id="symbol-generate_file_insight"><code>generate_file_insight</code> <small>function</small></li>
+<li id="symbol-generate_recommendations"><code>generate_recommendations</code> <small>function</small></li>
+<li id="symbol-generate_targeted_recommendations"><code>generate_targeted_recommendations</code> <small>function</small></li>
+<li id="symbol-get_time_range_for_file"><code>get_time_range_for_file</code> <small>function</small></li>
+<li id="symbol-calculate_time_range_for_files"><code>calculate_time_range_for_files</code> <small>function</small></li>
+<li id="symbol-count_unique_commits"><code>count_unique_commits</code> <small>function</small></li>
+<li id="symbol-count_active_contributors"><code>count_active_contributors</code> <small>function</small></li>
+<li id="symbol-calculate_commit_frequency"><code>calculate_commit_frequency</code> <small>function</small></li>
+<li id="symbol-calculate_churn_rate"><code>calculate_churn_rate</code> <small>function</small></li>
+<li id="symbol-calculate_bus_factor"><code>calculate_bus_factor</code> <small>function</small></li>
+<li id="symbol-calculate_average_coupling_strength"><code>calculate_average_coupling_strength</code> <small>function</small></li>
+<li id="symbol-calculate_debt_trend"><code>calculate_debt_trend</code> <small>function</small></li>
+<li id="symbol-calculate_coverage_trend"><code>calculate_coverage_trend</code> <small>function</small></li>
+<li id="symbol-find_coupled_files"><code>find_coupled_files</code> <small>function</small></li>
+<li id="symbol-assess_risk_level"><code>assess_risk_level</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-codeevolutiontracker"><code>CodeEvolutionTracker</code> <small>struct</small></li>
+<li id="symbol-filechange"><code>FileChange</code> <small>struct</small></li>
+<li id="symbol-changepattern"><code>ChangePattern</code> <small>struct</small></li>
+<li id="symbol-evolutionmetrics"><code>EvolutionMetrics</code> <small>struct</small></li>
+<li id="symbol-evolutionconfig"><code>EvolutionConfig</code> <small>struct</small></li>
+<li id="symbol-evolutionanalysisresult"><code>EvolutionAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-fileinsight"><code>FileInsight</code> <small>struct</small></li>
+<li id="symbol-evolutionrecommendation"><code>EvolutionRecommendation</code> <small>struct</small></li>
+<li id="symbol-changetype"><code>ChangeType</code> <small>enum</small></li>
+<li id="symbol-patterntype"><code>PatternType</code> <small>enum</small></li>
+<li id="symbol-trenddirection"><code>TrendDirection</code> <small>enum</small></li>
+<li id="symbol-recommendationtype"><code>RecommendationType</code> <small>enum</small></li>
+<li id="symbol-evolutionconfig"><code>EvolutionConfig</code> <small>impl</small></li>
+<li id="symbol-codeevolutiontracker"><code>CodeEvolutionTracker</code> <small>impl</small></li>
+<li id="symbol-evolutionmetrics"><code>EvolutionMetrics</code> <small>impl</small></li>
+<li id="symbol-repo_path"><code>repo_path</code> <small>variable</small></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small></li>
+<li id="symbol-file_insights"><code>file_insights</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-file_insights"><code>file_insights</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-output"><code>output</code> <small>variable</small></li>
+<li id="symbol-log_output"><code>log_output</code> <small>variable</small></li>
+<li id="symbol-output"><code>output</code> <small>variable</small></li>
+<li id="symbol-log_output"><code>log_output</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-i"><code>i</code> <small>variable</small></li>
+<li id="symbol-related_files"><code>related_files</code> <small>variable</small></li>
+<li id="symbol-change"><code>change</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-hash"><code>hash</code> <small>variable</small></li>
+<li id="symbol-author"><code>author</code> <small>variable</small></li>
+<li id="symbol-timestamp"><code>timestamp</code> <small>variable</small></li>
+<li id="symbol-message"><code>message</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-added"><code>added</code> <small>variable</small></li>
+<li id="symbol-removed"><code>removed</code> <small>variable</small></li>
+<li id="symbol-file_path"><code>file_path</code> <small>variable</small></li>
+<li id="symbol-message_lower"><code>message_lower</code> <small>variable</small></li>
+<li id="symbol-change_counts"><code>change_counts</code> <small>variable</small></li>
+<li id="symbol-time_range"><code>time_range</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-coupling_matrix"><code>coupling_matrix</code> <small>variable</small></li>
+<li id="symbol-file_change_counts"><code>file_change_counts</code> <small>variable</small></li>
+<li id="symbol-file1"><code>file1</code> <small>variable</small></li>
+<li id="symbol-file2"><code>file2</code> <small>variable</small></li>
+<li id="symbol-key"><code>key</code> <small>variable</small></li>
+<li id="symbol-file1_changes"><code>file1_changes</code> <small>variable</small></li>
+<li id="symbol-file2_changes"><code>file2_changes</code> <small>variable</small></li>
+<li id="symbol-coupling_strength"><code>coupling_strength</code> <small>variable</small></li>
+<li id="symbol-time_range"><code>time_range</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-coupling_matrix"><code>coupling_matrix</code> <small>variable</small></li>
+<li id="symbol-file_change_counts"><code>file_change_counts</code> <small>variable</small></li>
+<li id="symbol-key"><code>key</code> <small>variable</small></li>
+<li id="symbol-file1_changes"><code>file1_changes</code> <small>variable</small></li>
+<li id="symbol-file2_changes"><code>file2_changes</code> <small>variable</small></li>
+<li id="symbol-coupling_strength"><code>coupling_strength</code> <small>variable</small></li>
+<li id="symbol-time_range"><code>time_range</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-authors"><code>authors</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-authors"><code>authors</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-refactor_count"><code>refactor_count</code> <small>variable</small></li>
+<li id="symbol-bug_fix_count"><code>bug_fix_count</code> <small>variable</small></li>
+<li id="symbol-total_changes"><code>total_changes</code> <small>variable</small></li>
+<li id="symbol-debt_ratio"><code>debt_ratio</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-total_commits"><code>total_commits</code> <small>variable</small></li>
+<li id="symbol-total_files"><code>total_files</code> <small>variable</small></li>
+<li id="symbol-active_contributors"><code>active_contributors</code> <small>variable</small></li>
+<li id="symbol-commit_frequency"><code>commit_frequency</code> <small>variable</small></li>
+<li id="symbol-churn_rate"><code>churn_rate</code> <small>variable</small></li>
+<li id="symbol-bus_factor"><code>bus_factor</code> <small>variable</small></li>
+<li id="symbol-coupling_strength"><code>coupling_strength</code> <small>variable</small></li>
+<li id="symbol-debt_trend"><code>debt_trend</code> <small>variable</small></li>
+<li id="symbol-coverage_trend"><code>coverage_trend</code> <small>variable</small></li>
+<li id="symbol-insights"><code>insights</code> <small>variable</small></li>
+<li id="symbol-insight"><code>insight</code> <small>variable</small></li>
+<li id="symbol-insights"><code>insights</code> <small>variable</small></li>
+<li id="symbol-insight"><code>insight</code> <small>variable</small></li>
+<li id="symbol-change_frequency"><code>change_frequency</code> <small>variable</small></li>
+<li id="symbol-contributors"><code>contributors</code> <small>variable</small></li>
+<li id="symbol-change_types"><code>change_types</code> <small>variable</small></li>
+<li id="symbol-primary_contributors"><code>primary_contributors</code> <small>variable</small></li>
+<li id="symbol-coupled_files"><code>coupled_files</code> <small>variable</small></li>
+<li id="symbol-risk_level"><code>risk_level</code> <small>variable</small></li>
+<li id="symbol-last_significant_change"><code>last_significant_change</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-min_time"><code>min_time</code> <small>variable</small></li>
+<li id="symbol-max_time"><code>max_time</code> <small>variable</small></li>
+<li id="symbol-min_time"><code>min_time</code> <small>variable</small></li>
+<li id="symbol-max_time"><code>max_time</code> <small>variable</small></li>
+<li id="symbol-found_changes"><code>found_changes</code> <small>variable</small></li>
+<li id="symbol-commits"><code>commits</code> <small>variable</small></li>
+<li id="symbol-contributors"><code>contributors</code> <small>variable</small></li>
+<li id="symbol-total_commits"><code>total_commits</code> <small>variable</small></li>
+<li id="symbol-total_lines_changed"><code>total_lines_changed</code> <small>variable</small></li>
+<li id="symbol-total_commits"><code>total_commits</code> <small>variable</small></li>
+<li id="symbol-contributors"><code>contributors</code> <small>variable</small></li>
+<li id="symbol-coupling_patterns"><code>coupling_patterns</code> <small>variable</small></li>
+<li id="symbol-total_confidence"><code>total_confidence</code> <small>variable</small></li>
+<li id="symbol-debt_patterns"><code>debt_patterns</code> <small>variable</small></li>
+<li id="symbol-test_changes"><code>test_changes</code> <small>variable</small></li>
+<li id="symbol-total_changes"><code>total_changes</code> <small>variable</small></li>
+<li id="symbol-test_ratio"><code>test_ratio</code> <small>variable</small></li>
+<li id="symbol-change_count"><code>change_count</code> <small>variable</small></li>
+<li id="symbol-coupling_count"><code>coupling_count</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

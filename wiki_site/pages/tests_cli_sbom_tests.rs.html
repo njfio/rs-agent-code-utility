@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tests/cli_sbom_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>tests/cli_sbom_tests.rs</h1></header>
+<main>
+<section class="article">
+<p>5 symbols, 19 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["scoped_identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["scoped_identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["scoped_identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["scoped_identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["identifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["call:unwrap"])
+  N16 --> N17
+  N18(["identifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["call:join"])
+  N18 --> N19
+  N20(["mutable_specifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["call:expect"])
+  N21 --> N22
+  N23(["call:arg"])
+  N22 --> N23
+  N24(["call:success"])
+  N23 --> N24
+  N25(["identifier"])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26(["call:expect"])
+  N25 --> N26
+  N27(["identifier"])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28(["identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["identifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N29 --> end
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-dependencies_emits_sbom_when_output_ends_with_sbom_json"><code>dependencies_emits_sbom_when_output_ends_with_sbom_json</code> <small>function</small></li>
+<li id="symbol-tmp"><code>tmp</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-cmd"><code>cmd</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

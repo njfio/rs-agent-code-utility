@@ -1,0 +1,687 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>advanced_ai_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>advanced_ai_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>194 symbols, 2109 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["with_config"])
+  F2 --> F3
+  F3(["analyze"])
+  F3 --> F4
+  F4(["perform_semantic_analysis"])
+  F4 --> F5
+  F5(["identify_semantic_concepts"])
+  F5 --> F6
+  F6(["analyze_code_abstractions"])
+  F6 --> F7
+  F7(["calculate_abstraction_level"])
+  F7 --> F8
+  F8(["create_semantic_clusters"])
+  F8 --> F9
+  F9(["generate_domain_insights"])
+  F9 --> F10
+  F10(["calculate_semantic_complexity"])
+  F10 --> F11
+  F11(["detect_architecture_patterns"])
+  F11 --> F12
+  F12(["detect_mvc_pattern"])
+  F12 --> F13
+  F13(["detect_repository_pattern"])
+  F13 --> F14
+  F14(["detect_factory_pattern"])
+  F14 --> F15
+  F15(["assess_code_quality"])
+  F15 --> F16
+  F16(["calculate_maintainability_metrics"])
+  F16 --> F17
+  F17(["assess_readability"])
+  F17 --> F18
+  F18(["evaluate_design_quality"])
+  F18 --> F19
+  F19(["analyze_technical_debt"])
+  F19 --> F20
+  F20(["detect_code_smells"])
+  F20 --> F21
+  F21(["calculate_overall_quality_score"])
+  F21 --> F22
+  F22(["generate_learning_paths"])
+  F22 --> F23
+  F23(["analyze_relationships"])
+  F23 --> F24
+  F24(["generate_documentation_insights"])
+  F24 --> F25
+  F25(["infer_module_purpose"])
+  F25 --> F26
+  F26(["infer_function_purpose"])
+  F26 --> F27
+  F27(["generate_ai_recommendations"])
+  F27 --> F28
+  F28(["calculate_intelligence_score"])
+  F28 --> F29
+  F29(["calculate_real_average_complexity"])
+  F29 --> F30
+  F30(["calculate_real_average_function_length"])
+  F30 --> F31
+  F31(["calculate_file_complexity_ast"])
+  F31 --> F32
+  F32(["calculate_cyclomatic_complexity_ast"])
+  F32 --> F33
+  F33(["calculate_smell_debt_weight"])
+  F33 --> F34
+  F34(["calculate_debt_effort_impact"])
+  F34 --> F35
+  F35(["default"])
+  F35 --> F36
+  F36(["default"])
+  F36 --> F37
+  F37(["AdvancedAIAnalyzer"])
+  F37 --> F38
+  F38(["AdvancedAIConfig"])
+  F38 --> F39
+  F39(["AdvancedAIResult"])
+  F39 --> F40
+  F40(["SemanticAnalysis"])
+  F40 --> F41
+  F41(["SemanticConcept"])
+  F41 --> F42
+  F42(["CodeAbstraction"])
+  F42 --> F43
+  F43(["AbstractionQuality"])
+  F43 --> F44
+  F44(["SemanticCluster"])
+  F44 --> F45
+  F45(["DomainInsight"])
+  F45 --> F46
+  F46(["ArchitecturePattern"])
+  F46 --> F47
+  F47(["PatternComponent"])
+  F47 --> F48
+  F48(["PatternQuality"])
+  F48 --> F49
+  F49(["QualityAssessment"])
+  F49 --> F50
+  F50(["MaintainabilityMetrics"])
+  F50 --> F51
+  F51(["ReadabilityAssessment"])
+  F51 --> F52
+  F52(["DesignQuality"])
+  F52 --> F53
+  F53(["TechnicalDebtAnalysis"])
+  F53 --> F54
+  F54(["DebtItem"])
+  F54 --> F55
+  F55(["DebtTrends"])
+  F55 --> F56
+  F56(["CodeSmell"])
+  F56 --> F57
+  F57(["LearningPath"])
+  F57 --> F58
+  F58(["LearningStep"])
+  F58 --> F59
+  F59(["LearningResource"])
+  F59 --> F60
+  F60(["CodeRelationship"])
+  F60 --> F61
+  F61(["DocumentationInsight"])
+  F61 --> F62
+  F62(["AIRecommendation"])
+  F62 --> F63
+  F63(["ConceptCategory"])
+  F63 --> F64
+  F64(["AbstractionType"])
+  F64 --> F65
+  F65(["PatternType"])
+  F65 --> F66
+  F66(["DebtSeverity"])
+  F66 --> F67
+  F67(["SmellCategory"])
+  F67 --> F68
+  F68(["SmellSeverity"])
+  F68 --> F69
+  F69(["SkillLevel"])
+  F69 --> F70
+  F70(["ResourceType"])
+  F70 --> F71
+  F71(["RelationshipType"])
+  F71 --> F72
+  F72(["ChangeImpact"])
+  F72 --> F73
+  F73(["InsightType"])
+  F73 --> F74
+  F74(["RecommendationPriority"])
+  F74 --> F75
+  F75(["AdvancedAIConfig"])
+  F75 --> F76
+  F76(["AdvancedAIAnalyzer"])
+  F76 --> F77
+  F77(["SemanticAnalysis"])
+  F77 --> F78
+  F78(["QualityAssessment"])
+  F78 --> F79
+  F79(["semantic_analysis"])
+  F79 --> F80
+  F80(["architecture_patterns"])
+  F80 --> F81
+  F81(["quality_assessment"])
+  F81 --> F82
+  F82(["learning_paths"])
+  F82 --> F83
+  F83(["relationships"])
+  F83 --> F84
+  F84(["documentation_insights"])
+  F84 --> F85
+  F85(["ai_recommendations"])
+  F85 --> F86
+  F86(["intelligence_score"])
+  F86 --> F87
+  F87(["concepts"])
+  F87 --> F88
+  F88(["abstractions"])
+  F88 --> F89
+  F89(["clusters"])
+  F89 --> F90
+  F90(["domain_insights"])
+  F90 --> F91
+  F91(["complexity_score"])
+  F91 --> F92
+  F92(["concepts"])
+  F92 --> F93
+  F93(["file_name"])
+  F93 --> F94
+  F94(["abstractions"])
+  F94 --> F95
+  F95(["name_lower"])
+  F95 --> F96
+  F96(["clusters"])
+  F96 --> F97
+  F97(["auth_files"])
+  F97 --> F98
+  F98(["data_files"])
+  F98 --> F99
+  F99(["ui_files"])
+  F99 --> F100
+  F100(["file_name"])
+  F100 --> F101
+  F101(["insights"])
+  F101 --> F102
+  F102(["total_files"])
+  F102 --> F103
+  F103(["languages"])
+  F103 --> F104
+  F104(["concept_complexity"])
+  F104 --> F105
+  F105(["abstraction_complexity"])
+  F105 --> F106
+  F106(["patterns"])
+  F106 --> F107
+  F107(["model_files"])
+  F107 --> F108
+  F108(["view_files"])
+  F108 --> F109
+  F109(["controller_files"])
+  F109 --> F110
+  F110(["file_name"])
+  F110 --> F111
+  F111(["components"])
+  F111 --> F112
+  F112(["all_files"])
+  F112 --> F113
+  F113(["repository_files"])
+  F113 --> F114
+  F114(["file_name"])
+  F114 --> F115
+  F115(["components"])
+  F115 --> F116
+  F116(["factory_files"])
+  F116 --> F117
+  F117(["file_name"])
+  F117 --> F118
+  F118(["components"])
+  F118 --> F119
+  F119(["maintainability"])
+  F119 --> F120
+  F120(["readability"])
+  F120 --> F121
+  F121(["design_quality"])
+  F121 --> F122
+  F122(["technical_debt"])
+  F122 --> F123
+  F123(["code_smells"])
+  F123 --> F124
+  F124(["overall_score"])
+  F124 --> F125
+  F125(["total_functions"])
+  F125 --> F126
+  F126(["avg_complexity"])
+  F126 --> F127
+  F127(["avg_function_length"])
+  F127 --> F128
+  F128(["maintainability_index"])
+  F128 --> F129
+  F129(["naming_quality"])
+  F129 --> F130
+  F130(["comment_quality"])
+  F130 --> F131
+  F131(["total_functions"])
+  F131 --> F132
+  F132(["public_functions"])
+  F132 --> F133
+  F133(["total_function_lines"])
+  F133 --> F134
+  F134(["total_symbols"])
+  F134 --> F135
+  F135(["documented_symbols"])
+  F135 --> F136
+  F136(["name_counts"])
+  F136 --> F137
+  F137(["pub_ratio"])
+  F137 --> F138
+  F138(["duplicate_symbols"])
+  F138 --> F139
+  F139(["duplicate_ratio"])
+  F139 --> F140
+  F140(["avg_function_length"])
+  F140 --> F141
+  F141(["avg_functions_per_file"])
+  F141 --> F142
+  F142(["doc_ratio"])
+  F142 --> F143
+  F143(["debt_items"])
+  F143 --> F144
+  F144(["documentation_debt"])
+  F144 --> F145
+  F145(["smells"])
+  F145 --> F146
+  F146(["code_quality_debt"])
+  F146 --> F147
+  F147(["architecture_debt"])
+  F147 --> F148
+  F148(["debt_weight"])
+  F148 --> F149
+  F149(["severity"])
+  F149 --> F150
+  F150(["effort"])
+  F150 --> F151
+  F151(["debt_by_category"])
+  F151 --> F152
+  F152(["total_debt"])
+  F152 --> F153
+  F153(["estimated_effort"])
+  F153 --> F154
+  F154(["smells"])
+  F154 --> F155
+  F155(["function_count"])
+  F155 --> F156
+  F156(["maintainability_score"])
+  F156 --> F157
+  F157(["readability_score"])
+  F157 --> F158
+  F158(["design_score"])
+  F158 --> F159
+  F159(["debt_penalty"])
+  F159 --> F160
+  F160(["total_score"])
+  F160 --> F161
+  F161(["paths"])
+  F161 --> F162
+  F162(["relationships"])
+  F162 --> F163
+  F163(["file_name"])
+  F163 --> F164
+  F164(["other_name"])
+  F164 --> F165
+  F165(["insights"])
+  F165 --> F166
+  F166(["file_name"])
+  F166 --> F167
+  F167(["name_lower"])
+  F167 --> F168
+  F168(["recommendations"])
+  F168 --> F169
+  F169(["semantic_score"])
+  F169 --> F170
+  F170(["quality_score"])
+  F170 --> F171
+  F171(["pattern_score"])
+  F171 --> F172
+  F172(["total_score"])
+  F172 --> F173
+  F173(["total_complexity"])
+  F173 --> F174
+  F174(["function_count"])
+  F174 --> F175
+  F175(["file_complexity"])
+  F175 --> F176
+  F176(["file_functions"])
+  F176 --> F177
+  F177(["total_length"])
+  F177 --> F178
+  F178(["function_count"])
+  F178 --> F179
+  F179(["length"])
+  F179 --> F180
+  F180(["lang"])
+  F180 --> F181
+  F181(["parser"])
+  F181 --> F182
+  F182(["tree"])
+  F182 --> F183
+  F183(["complexity"])
+  F183 --> F184
+  F184(["control_patterns"])
+  F184 --> F185
+  F185(["nodes"])
+  F185 --> F186
+  F186(["base_weight"])
+  F186 --> F187
+  F187(["category_multiplier"])
+  F187 --> F188
+  F188(["file_info"])
+  F188 --> F189
+  F189(["effort"])
+  F189 --> F190
+  F190(["size_factor"])
+  F190 --> F191
+  F191(["symbol_factor"])
+  F191 --> F192
+  F192(["function_count"])
+  F192 --> F193
+  F193(["impact"])
+  F193 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant with_config
+  participant analyze
+  participant perform_semantic_analysis
+  participant identify_semantic_concepts
+  participant analyze_code_abstractions
+  participant calculate_abstraction_level
+  participant create_semantic_clusters
+  participant generate_domain_insights
+  participant calculate_semantic_complexity
+  participant detect_architecture_patterns
+  participant detect_mvc_pattern
+  participant detect_repository_pattern
+  participant detect_factory_pattern
+  participant assess_code_quality
+  participant calculate_maintainability_metrics
+  participant assess_readability
+  participant evaluate_design_quality
+  participant analyze_technical_debt
+  participant detect_code_smells
+  participant calculate_overall_quality_score
+  participant generate_learning_paths
+  participant analyze_relationships
+  participant generate_documentation_insights
+  participant infer_module_purpose
+  participant infer_function_purpose
+  participant generate_ai_recommendations
+  participant calculate_intelligence_score
+  participant calculate_real_average_complexity
+  participant calculate_real_average_function_length
+  participant calculate_file_complexity_ast
+  participant calculate_cyclomatic_complexity_ast
+  participant calculate_smell_debt_weight
+  participant calculate_debt_effort_impact
+  participant default
+  participant default
+  default->>new: call
+  new->>with_config: call
+  with_config->>analyze: call
+  analyze->>perform_semantic_analysis: call
+  perform_semantic_analysis->>identify_semantic_concepts: call
+  identify_semantic_concepts->>analyze_code_abstractions: call
+  analyze_code_abstractions->>calculate_abstraction_level: call
+  calculate_abstraction_level->>create_semantic_clusters: call
+  create_semantic_clusters->>generate_domain_insights: call
+  generate_domain_insights->>calculate_semantic_complexity: call
+  calculate_semantic_complexity->>detect_architecture_patterns: call
+  detect_architecture_patterns->>detect_mvc_pattern: call
+  detect_mvc_pattern->>detect_repository_pattern: call
+  detect_repository_pattern->>detect_factory_pattern: call
+  detect_factory_pattern->>assess_code_quality: call
+  assess_code_quality->>calculate_maintainability_metrics: call
+  calculate_maintainability_metrics->>assess_readability: call
+  assess_readability->>evaluate_design_quality: call
+  evaluate_design_quality->>analyze_technical_debt: call
+  analyze_technical_debt->>detect_code_smells: call
+  detect_code_smells->>calculate_overall_quality_score: call
+  calculate_overall_quality_score->>generate_learning_paths: call
+  generate_learning_paths->>analyze_relationships: call
+  analyze_relationships->>generate_documentation_insights: call
+  generate_documentation_insights->>infer_module_purpose: call
+  infer_module_purpose->>infer_function_purpose: call
+  infer_function_purpose->>generate_ai_recommendations: call
+  generate_ai_recommendations->>calculate_intelligence_score: call
+  calculate_intelligence_score->>calculate_real_average_complexity: call
+  calculate_real_average_complexity->>calculate_real_average_function_length: call
+  calculate_real_average_function_length->>calculate_file_complexity_ast: call
+  calculate_file_complexity_ast->>calculate_cyclomatic_complexity_ast: call
+  calculate_cyclomatic_complexity_ast->>calculate_smell_debt_weight: call
+  calculate_smell_debt_weight->>calculate_debt_effort_impact: call
+  calculate_debt_effort_impact->>default: call
+  default->>default: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-perform_semantic_analysis"><code>perform_semantic_analysis</code> <small>function</small></li>
+<li id="symbol-identify_semantic_concepts"><code>identify_semantic_concepts</code> <small>function</small></li>
+<li id="symbol-analyze_code_abstractions"><code>analyze_code_abstractions</code> <small>function</small></li>
+<li id="symbol-calculate_abstraction_level"><code>calculate_abstraction_level</code> <small>function</small></li>
+<li id="symbol-create_semantic_clusters"><code>create_semantic_clusters</code> <small>function</small></li>
+<li id="symbol-generate_domain_insights"><code>generate_domain_insights</code> <small>function</small></li>
+<li id="symbol-calculate_semantic_complexity"><code>calculate_semantic_complexity</code> <small>function</small></li>
+<li id="symbol-detect_architecture_patterns"><code>detect_architecture_patterns</code> <small>function</small></li>
+<li id="symbol-detect_mvc_pattern"><code>detect_mvc_pattern</code> <small>function</small></li>
+<li id="symbol-detect_repository_pattern"><code>detect_repository_pattern</code> <small>function</small></li>
+<li id="symbol-detect_factory_pattern"><code>detect_factory_pattern</code> <small>function</small></li>
+<li id="symbol-assess_code_quality"><code>assess_code_quality</code> <small>function</small></li>
+<li id="symbol-calculate_maintainability_metrics"><code>calculate_maintainability_metrics</code> <small>function</small></li>
+<li id="symbol-assess_readability"><code>assess_readability</code> <small>function</small></li>
+<li id="symbol-evaluate_design_quality"><code>evaluate_design_quality</code> <small>function</small></li>
+<li id="symbol-analyze_technical_debt"><code>analyze_technical_debt</code> <small>function</small></li>
+<li id="symbol-detect_code_smells"><code>detect_code_smells</code> <small>function</small></li>
+<li id="symbol-calculate_overall_quality_score"><code>calculate_overall_quality_score</code> <small>function</small></li>
+<li id="symbol-generate_learning_paths"><code>generate_learning_paths</code> <small>function</small></li>
+<li id="symbol-analyze_relationships"><code>analyze_relationships</code> <small>function</small></li>
+<li id="symbol-generate_documentation_insights"><code>generate_documentation_insights</code> <small>function</small></li>
+<li id="symbol-infer_module_purpose"><code>infer_module_purpose</code> <small>function</small></li>
+<li id="symbol-infer_function_purpose"><code>infer_function_purpose</code> <small>function</small></li>
+<li id="symbol-generate_ai_recommendations"><code>generate_ai_recommendations</code> <small>function</small></li>
+<li id="symbol-calculate_intelligence_score"><code>calculate_intelligence_score</code> <small>function</small></li>
+<li id="symbol-calculate_real_average_complexity"><code>calculate_real_average_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_real_average_function_length"><code>calculate_real_average_function_length</code> <small>function</small></li>
+<li id="symbol-calculate_file_complexity_ast"><code>calculate_file_complexity_ast</code> <small>function</small></li>
+<li id="symbol-calculate_cyclomatic_complexity_ast"><code>calculate_cyclomatic_complexity_ast</code> <small>function</small></li>
+<li id="symbol-calculate_smell_debt_weight"><code>calculate_smell_debt_weight</code> <small>function</small></li>
+<li id="symbol-calculate_debt_effort_impact"><code>calculate_debt_effort_impact</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-advancedaianalyzer"><code>AdvancedAIAnalyzer</code> <small>struct</small></li>
+<li id="symbol-advancedaiconfig"><code>AdvancedAIConfig</code> <small>struct</small></li>
+<li id="symbol-advancedairesult"><code>AdvancedAIResult</code> <small>struct</small></li>
+<li id="symbol-semanticanalysis"><code>SemanticAnalysis</code> <small>struct</small></li>
+<li id="symbol-semanticconcept"><code>SemanticConcept</code> <small>struct</small></li>
+<li id="symbol-codeabstraction"><code>CodeAbstraction</code> <small>struct</small></li>
+<li id="symbol-abstractionquality"><code>AbstractionQuality</code> <small>struct</small></li>
+<li id="symbol-semanticcluster"><code>SemanticCluster</code> <small>struct</small></li>
+<li id="symbol-domaininsight"><code>DomainInsight</code> <small>struct</small></li>
+<li id="symbol-architecturepattern"><code>ArchitecturePattern</code> <small>struct</small></li>
+<li id="symbol-patterncomponent"><code>PatternComponent</code> <small>struct</small></li>
+<li id="symbol-patternquality"><code>PatternQuality</code> <small>struct</small></li>
+<li id="symbol-qualityassessment"><code>QualityAssessment</code> <small>struct</small></li>
+<li id="symbol-maintainabilitymetrics"><code>MaintainabilityMetrics</code> <small>struct</small></li>
+<li id="symbol-readabilityassessment"><code>ReadabilityAssessment</code> <small>struct</small></li>
+<li id="symbol-designquality"><code>DesignQuality</code> <small>struct</small></li>
+<li id="symbol-technicaldebtanalysis"><code>TechnicalDebtAnalysis</code> <small>struct</small></li>
+<li id="symbol-debtitem"><code>DebtItem</code> <small>struct</small></li>
+<li id="symbol-debttrends"><code>DebtTrends</code> <small>struct</small></li>
+<li id="symbol-codesmell"><code>CodeSmell</code> <small>struct</small></li>
+<li id="symbol-learningpath"><code>LearningPath</code> <small>struct</small></li>
+<li id="symbol-learningstep"><code>LearningStep</code> <small>struct</small></li>
+<li id="symbol-learningresource"><code>LearningResource</code> <small>struct</small></li>
+<li id="symbol-coderelationship"><code>CodeRelationship</code> <small>struct</small></li>
+<li id="symbol-documentationinsight"><code>DocumentationInsight</code> <small>struct</small></li>
+<li id="symbol-airecommendation"><code>AIRecommendation</code> <small>struct</small></li>
+<li id="symbol-conceptcategory"><code>ConceptCategory</code> <small>enum</small></li>
+<li id="symbol-abstractiontype"><code>AbstractionType</code> <small>enum</small></li>
+<li id="symbol-patterntype"><code>PatternType</code> <small>enum</small></li>
+<li id="symbol-debtseverity"><code>DebtSeverity</code> <small>enum</small></li>
+<li id="symbol-smellcategory"><code>SmellCategory</code> <small>enum</small></li>
+<li id="symbol-smellseverity"><code>SmellSeverity</code> <small>enum</small></li>
+<li id="symbol-skilllevel"><code>SkillLevel</code> <small>enum</small></li>
+<li id="symbol-resourcetype"><code>ResourceType</code> <small>enum</small></li>
+<li id="symbol-relationshiptype"><code>RelationshipType</code> <small>enum</small></li>
+<li id="symbol-changeimpact"><code>ChangeImpact</code> <small>enum</small></li>
+<li id="symbol-insighttype"><code>InsightType</code> <small>enum</small></li>
+<li id="symbol-recommendationpriority"><code>RecommendationPriority</code> <small>enum</small></li>
+<li id="symbol-advancedaiconfig"><code>AdvancedAIConfig</code> <small>impl</small></li>
+<li id="symbol-advancedaianalyzer"><code>AdvancedAIAnalyzer</code> <small>impl</small></li>
+<li id="symbol-semanticanalysis"><code>SemanticAnalysis</code> <small>impl</small></li>
+<li id="symbol-qualityassessment"><code>QualityAssessment</code> <small>impl</small></li>
+<li id="symbol-semantic_analysis"><code>semantic_analysis</code> <small>variable</small></li>
+<li id="symbol-architecture_patterns"><code>architecture_patterns</code> <small>variable</small></li>
+<li id="symbol-quality_assessment"><code>quality_assessment</code> <small>variable</small></li>
+<li id="symbol-learning_paths"><code>learning_paths</code> <small>variable</small></li>
+<li id="symbol-relationships"><code>relationships</code> <small>variable</small></li>
+<li id="symbol-documentation_insights"><code>documentation_insights</code> <small>variable</small></li>
+<li id="symbol-ai_recommendations"><code>ai_recommendations</code> <small>variable</small></li>
+<li id="symbol-intelligence_score"><code>intelligence_score</code> <small>variable</small></li>
+<li id="symbol-concepts"><code>concepts</code> <small>variable</small></li>
+<li id="symbol-abstractions"><code>abstractions</code> <small>variable</small></li>
+<li id="symbol-clusters"><code>clusters</code> <small>variable</small></li>
+<li id="symbol-domain_insights"><code>domain_insights</code> <small>variable</small></li>
+<li id="symbol-complexity_score"><code>complexity_score</code> <small>variable</small></li>
+<li id="symbol-concepts"><code>concepts</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-abstractions"><code>abstractions</code> <small>variable</small></li>
+<li id="symbol-name_lower"><code>name_lower</code> <small>variable</small></li>
+<li id="symbol-clusters"><code>clusters</code> <small>variable</small></li>
+<li id="symbol-auth_files"><code>auth_files</code> <small>variable</small></li>
+<li id="symbol-data_files"><code>data_files</code> <small>variable</small></li>
+<li id="symbol-ui_files"><code>ui_files</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-insights"><code>insights</code> <small>variable</small></li>
+<li id="symbol-total_files"><code>total_files</code> <small>variable</small></li>
+<li id="symbol-languages"><code>languages</code> <small>variable</small></li>
+<li id="symbol-concept_complexity"><code>concept_complexity</code> <small>variable</small></li>
+<li id="symbol-abstraction_complexity"><code>abstraction_complexity</code> <small>variable</small></li>
+<li id="symbol-patterns"><code>patterns</code> <small>variable</small></li>
+<li id="symbol-model_files"><code>model_files</code> <small>variable</small></li>
+<li id="symbol-view_files"><code>view_files</code> <small>variable</small></li>
+<li id="symbol-controller_files"><code>controller_files</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-components"><code>components</code> <small>variable</small></li>
+<li id="symbol-all_files"><code>all_files</code> <small>variable</small></li>
+<li id="symbol-repository_files"><code>repository_files</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-components"><code>components</code> <small>variable</small></li>
+<li id="symbol-factory_files"><code>factory_files</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-components"><code>components</code> <small>variable</small></li>
+<li id="symbol-maintainability"><code>maintainability</code> <small>variable</small></li>
+<li id="symbol-readability"><code>readability</code> <small>variable</small></li>
+<li id="symbol-design_quality"><code>design_quality</code> <small>variable</small></li>
+<li id="symbol-technical_debt"><code>technical_debt</code> <small>variable</small></li>
+<li id="symbol-code_smells"><code>code_smells</code> <small>variable</small></li>
+<li id="symbol-overall_score"><code>overall_score</code> <small>variable</small></li>
+<li id="symbol-total_functions"><code>total_functions</code> <small>variable</small></li>
+<li id="symbol-avg_complexity"><code>avg_complexity</code> <small>variable</small></li>
+<li id="symbol-avg_function_length"><code>avg_function_length</code> <small>variable</small></li>
+<li id="symbol-maintainability_index"><code>maintainability_index</code> <small>variable</small></li>
+<li id="symbol-naming_quality"><code>naming_quality</code> <small>variable</small></li>
+<li id="symbol-comment_quality"><code>comment_quality</code> <small>variable</small></li>
+<li id="symbol-total_functions"><code>total_functions</code> <small>variable</small></li>
+<li id="symbol-public_functions"><code>public_functions</code> <small>variable</small></li>
+<li id="symbol-total_function_lines"><code>total_function_lines</code> <small>variable</small></li>
+<li id="symbol-total_symbols"><code>total_symbols</code> <small>variable</small></li>
+<li id="symbol-documented_symbols"><code>documented_symbols</code> <small>variable</small></li>
+<li id="symbol-name_counts"><code>name_counts</code> <small>variable</small></li>
+<li id="symbol-pub_ratio"><code>pub_ratio</code> <small>variable</small></li>
+<li id="symbol-duplicate_symbols"><code>duplicate_symbols</code> <small>variable</small></li>
+<li id="symbol-duplicate_ratio"><code>duplicate_ratio</code> <small>variable</small></li>
+<li id="symbol-avg_function_length"><code>avg_function_length</code> <small>variable</small></li>
+<li id="symbol-avg_functions_per_file"><code>avg_functions_per_file</code> <small>variable</small></li>
+<li id="symbol-doc_ratio"><code>doc_ratio</code> <small>variable</small></li>
+<li id="symbol-debt_items"><code>debt_items</code> <small>variable</small></li>
+<li id="symbol-documentation_debt"><code>documentation_debt</code> <small>variable</small></li>
+<li id="symbol-smells"><code>smells</code> <small>variable</small></li>
+<li id="symbol-code_quality_debt"><code>code_quality_debt</code> <small>variable</small></li>
+<li id="symbol-architecture_debt"><code>architecture_debt</code> <small>variable</small></li>
+<li id="symbol-debt_weight"><code>debt_weight</code> <small>variable</small></li>
+<li id="symbol-severity"><code>severity</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-debt_by_category"><code>debt_by_category</code> <small>variable</small></li>
+<li id="symbol-total_debt"><code>total_debt</code> <small>variable</small></li>
+<li id="symbol-estimated_effort"><code>estimated_effort</code> <small>variable</small></li>
+<li id="symbol-smells"><code>smells</code> <small>variable</small></li>
+<li id="symbol-function_count"><code>function_count</code> <small>variable</small></li>
+<li id="symbol-maintainability_score"><code>maintainability_score</code> <small>variable</small></li>
+<li id="symbol-readability_score"><code>readability_score</code> <small>variable</small></li>
+<li id="symbol-design_score"><code>design_score</code> <small>variable</small></li>
+<li id="symbol-debt_penalty"><code>debt_penalty</code> <small>variable</small></li>
+<li id="symbol-total_score"><code>total_score</code> <small>variable</small></li>
+<li id="symbol-paths"><code>paths</code> <small>variable</small></li>
+<li id="symbol-relationships"><code>relationships</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-other_name"><code>other_name</code> <small>variable</small></li>
+<li id="symbol-insights"><code>insights</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-name_lower"><code>name_lower</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-semantic_score"><code>semantic_score</code> <small>variable</small></li>
+<li id="symbol-quality_score"><code>quality_score</code> <small>variable</small></li>
+<li id="symbol-pattern_score"><code>pattern_score</code> <small>variable</small></li>
+<li id="symbol-total_score"><code>total_score</code> <small>variable</small></li>
+<li id="symbol-total_complexity"><code>total_complexity</code> <small>variable</small></li>
+<li id="symbol-function_count"><code>function_count</code> <small>variable</small></li>
+<li id="symbol-file_complexity"><code>file_complexity</code> <small>variable</small></li>
+<li id="symbol-file_functions"><code>file_functions</code> <small>variable</small></li>
+<li id="symbol-total_length"><code>total_length</code> <small>variable</small></li>
+<li id="symbol-function_count"><code>function_count</code> <small>variable</small></li>
+<li id="symbol-length"><code>length</code> <small>variable</small></li>
+<li id="symbol-lang"><code>lang</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-control_patterns"><code>control_patterns</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-base_weight"><code>base_weight</code> <small>variable</small></li>
+<li id="symbol-category_multiplier"><code>category_multiplier</code> <small>variable</small></li>
+<li id="symbol-file_info"><code>file_info</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-size_factor"><code>size_factor</code> <small>variable</small></li>
+<li id="symbol-symbol_factor"><code>symbol_factor</code> <small>variable</small></li>
+<li id="symbol-function_count"><code>function_count</code> <small>variable</small></li>
+<li id="symbol-impact"><code>impact</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

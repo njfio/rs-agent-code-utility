@@ -1,0 +1,1171 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tests/file_cache_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>tests/file_cache_tests.rs</h1></header>
+<main>
+<section class="article">
+<p>57 symbols, 261 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["scoped_identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["scoped_identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["call:new"])
+  N11 --> N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["identifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["identifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["identifier"])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23(["identifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["call:with_capacity"])
+  N24 --> N25
+  N26(["identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["identifier"])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28(["identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["identifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["identifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["identifier"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["identifier"])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34(["type_identifier"])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35(["type_identifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["scoped_type_identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["scoped_identifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["identifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["identifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["type_identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["identifier"])
+  N40 -->|true| N41
+  N40 -->|false| N41
+  N42(["call:new"])
+  N41 --> N42
+  N43(["identifier"])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44(["call:new"])
+  N43 --> N44
+  N45(["identifier"])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46(["call:join"])
+  N45 --> N46
+  N47(["identifier"])
+  N46 -->|true| N47
+  N46 -->|false| N47
+  N48(["call:write"])
+  N47 --> N48
+  N49(["identifier"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["identifier"])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52(["identifier"])
+  N51 -->|true| N52
+  N51 -->|false| N52
+  N53(["identifier"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["identifier"])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55(["identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["identifier"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["call:read_to_string"])
+  N56 --> N57
+  N58(["identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["identifier"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["identifier"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["identifier"])
+  N61 -->|true| N62
+  N61 -->|false| N62
+  N63(["identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["identifier"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["identifier"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["identifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["identifier"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["identifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["call:read_to_string"])
+  N68 --> N69
+  N70(["identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["identifier"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["identifier"])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73(["call:Ok"])
+  N72 --> N73
+  N74(["identifier"])
+  N73 -->|true| N74
+  N73 -->|false| N74
+  N75(["identifier"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["type_identifier"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["type_identifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["scoped_type_identifier"])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79(["scoped_identifier"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["identifier"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["identifier"])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82(["type_identifier"])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83(["identifier"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["call:new"])
+  N83 --> N84
+  N85(["identifier"])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86(["call:new"])
+  N85 --> N86
+  N87(["identifier"])
+  N86 -->|true| N87
+  N86 -->|false| N87
+  N88(["call:join"])
+  N87 --> N88
+  N89(["call:write"])
+  N88 --> N89
+  N90(["identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["call:stats"])
+  N90 --> N91
+  N92(["identifier"])
+  N91 -->|true| N92
+  N91 -->|false| N92
+  N93(["identifier"])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94(["identifier"])
+  N93 -->|true| N94
+  N93 -->|false| N94
+  N95(["identifier"])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96(["identifier"])
+  N95 -->|true| N96
+  N95 -->|false| N96
+  N97(["identifier"])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98(["identifier"])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99(["identifier"])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100(["identifier"])
+  N99 -->|true| N100
+  N99 -->|false| N100
+  N101(["call:read_to_string"])
+  N100 --> N101
+  N102(["identifier"])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103(["call:stats"])
+  N102 --> N103
+  N104(["identifier"])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105(["identifier"])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106(["identifier"])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107(["identifier"])
+  N106 -->|true| N107
+  N106 -->|false| N107
+  N108(["identifier"])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109(["identifier"])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110(["identifier"])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111(["identifier"])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112(["identifier"])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113(["call:read_to_string"])
+  N112 --> N113
+  N114(["identifier"])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115(["call:stats"])
+  N114 --> N115
+  N116(["identifier"])
+  N115 -->|true| N116
+  N115 -->|false| N116
+  N117(["identifier"])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118(["identifier"])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119(["identifier"])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120(["identifier"])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121(["identifier"])
+  N120 -->|true| N121
+  N120 -->|false| N121
+  N122(["identifier"])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123(["identifier"])
+  N122 -->|true| N123
+  N122 -->|false| N123
+  N124(["identifier"])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125(["call:Ok"])
+  N124 --> N125
+  N126(["identifier"])
+  N125 -->|true| N126
+  N125 -->|false| N126
+  N127(["identifier"])
+  N126 -->|true| N127
+  N126 -->|false| N127
+  N128(["type_identifier"])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129(["type_identifier"])
+  N128 -->|true| N129
+  N128 -->|false| N129
+  N130(["scoped_type_identifier"])
+  N129 -->|true| N130
+  N129 -->|false| N130
+  N131(["scoped_identifier"])
+  N130 -->|true| N131
+  N130 -->|false| N131
+  N132(["identifier"])
+  N131 -->|true| N132
+  N131 -->|false| N132
+  N133(["identifier"])
+  N132 -->|true| N133
+  N132 -->|false| N133
+  N134(["type_identifier"])
+  N133 -->|true| N134
+  N133 -->|false| N134
+  N135(["identifier"])
+  N134 -->|true| N135
+  N134 -->|false| N135
+  N136(["call:new"])
+  N135 --> N136
+  N137(["identifier"])
+  N136 -->|true| N137
+  N136 -->|false| N137
+  N138(["call:new"])
+  N137 --> N138
+  N139(["identifier"])
+  N138 -->|true| N139
+  N138 -->|false| N139
+  N140(["call:join"])
+  N139 --> N140
+  N141(["call:write"])
+  N140 --> N141
+  N142(["identifier"])
+  N141 -->|true| N142
+  N141 -->|false| N142
+  N143(["identifier"])
+  N142 -->|true| N143
+  N142 -->|false| N143
+  N144(["identifier"])
+  N143 -->|true| N144
+  N143 -->|false| N144
+  N145(["call:read_to_string"])
+  N144 --> N145
+  N146(["identifier"])
+  N145 -->|true| N146
+  N145 -->|false| N146
+  N147(["identifier"])
+  N146 -->|true| N147
+  N146 -->|false| N147
+  N148(["identifier"])
+  N147 -->|true| N148
+  N147 -->|false| N148
+  N149(["call:read_to_string"])
+  N148 --> N149
+  N150(["identifier"])
+  N149 -->|true| N150
+  N149 -->|false| N150
+  N151(["identifier"])
+  N150 -->|true| N151
+  N150 -->|false| N151
+  N152(["identifier"])
+  N151 -->|true| N152
+  N151 -->|false| N152
+  N153(["call:read_to_string"])
+  N152 --> N153
+  N154(["identifier"])
+  N153 -->|true| N154
+  N153 -->|false| N154
+  N155(["identifier"])
+  N154 -->|true| N155
+  N154 -->|false| N155
+  N156(["identifier"])
+  N155 -->|true| N156
+  N155 -->|false| N156
+  N157(["identifier"])
+  N156 -->|true| N157
+  N156 -->|false| N157
+  N158(["call:Ok"])
+  N157 --> N158
+  N159(["identifier"])
+  N158 -->|true| N159
+  N158 -->|false| N159
+  N160(["identifier"])
+  N159 -->|true| N160
+  N159 -->|false| N160
+  N161(["type_identifier"])
+  N160 -->|true| N161
+  N160 -->|false| N161
+  N162(["type_identifier"])
+  N161 -->|true| N162
+  N161 -->|false| N162
+  N163(["scoped_type_identifier"])
+  N162 -->|true| N163
+  N162 -->|false| N163
+  N164(["scoped_identifier"])
+  N163 -->|true| N164
+  N163 -->|false| N164
+  N165(["identifier"])
+  N164 -->|true| N165
+  N164 -->|false| N165
+  N166(["identifier"])
+  N165 -->|true| N166
+  N165 -->|false| N166
+  N167(["type_identifier"])
+  N166 -->|true| N167
+  N166 -->|false| N167
+  N168(["identifier"])
+  N167 -->|true| N168
+  N167 -->|false| N168
+  N169(["call:new"])
+  N168 --> N169
+  N170(["identifier"])
+  N169 -->|true| N170
+  N169 -->|false| N170
+  N171(["call:new"])
+  N170 --> N171
+  N172(["identifier"])
+  N171 -->|true| N172
+  N171 -->|false| N172
+  N173(["call:join"])
+  N172 --> N173
+  N174(["call:write"])
+  N173 --> N174
+  N175(["call:read_to_string"])
+  N174 --> N175
+  N176(["identifier"])
+  N175 -->|true| N176
+  N175 -->|false| N176
+  N177(["identifier"])
+  N176 -->|true| N177
+  N176 -->|false| N177
+  N178(["identifier"])
+  N177 -->|true| N178
+  N177 -->|false| N178
+  N179(["identifier"])
+  N178 -->|true| N179
+  N178 -->|false| N179
+  N180(["identifier"])
+  N179 -->|true| N180
+  N179 -->|false| N180
+  N181(["identifier"])
+  N180 -->|true| N181
+  N180 -->|false| N181
+  N182(["identifier"])
+  N181 -->|true| N182
+  N181 -->|false| N182
+  N183(["call:clear"])
+  N182 --> N183
+  N184(["identifier"])
+  N183 -->|true| N184
+  N183 -->|false| N184
+  N185(["identifier"])
+  N184 -->|true| N185
+  N184 -->|false| N185
+  N186(["identifier"])
+  N185 -->|true| N186
+  N185 -->|false| N186
+  N187(["identifier"])
+  N186 -->|true| N187
+  N186 -->|false| N187
+  N188(["identifier"])
+  N187 -->|true| N188
+  N187 -->|false| N188
+  N189(["identifier"])
+  N188 -->|true| N189
+  N188 -->|false| N189
+  N190(["identifier"])
+  N189 -->|true| N190
+  N189 -->|false| N190
+  N191(["identifier"])
+  N190 -->|true| N191
+  N190 -->|false| N191
+  N192(["identifier"])
+  N191 -->|true| N192
+  N191 -->|false| N192
+  N193(["identifier"])
+  N192 -->|true| N193
+  N192 -->|false| N193
+  N194(["call:Ok"])
+  N193 --> N194
+  N195(["identifier"])
+  N194 -->|true| N195
+  N194 -->|false| N195
+  N196(["identifier"])
+  N195 -->|true| N196
+  N195 -->|false| N196
+  N197(["type_identifier"])
+  N196 -->|true| N197
+  N196 -->|false| N197
+  N198(["type_identifier"])
+  N197 -->|true| N198
+  N197 -->|false| N198
+  N199(["scoped_type_identifier"])
+  N198 -->|true| N199
+  N198 -->|false| N199
+  N200(["scoped_identifier"])
+  N199 -->|true| N200
+  N199 -->|false| N200
+  N201(["identifier"])
+  N200 -->|true| N201
+  N200 -->|false| N201
+  N202(["identifier"])
+  N201 -->|true| N202
+  N201 -->|false| N202
+  N203(["type_identifier"])
+  N202 -->|true| N203
+  N202 -->|false| N203
+  N204(["identifier"])
+  N203 -->|true| N204
+  N203 -->|false| N204
+  N205(["call:new"])
+  N204 --> N205
+  N206(["identifier"])
+  N205 -->|true| N206
+  N205 -->|false| N206
+  N207(["call:new"])
+  N206 --> N207
+  N208(["identifier"])
+  N207 -->|true| N208
+  N207 -->|false| N208
+  N209(["call:join"])
+  N208 --> N209
+  N210(["identifier"])
+  N209 -->|true| N210
+  N209 -->|false| N210
+  N211(["call:join"])
+  N210 --> N211
+  N212(["identifier"])
+  N211 -->|true| N212
+  N211 -->|false| N212
+  N213(["call:join"])
+  N212 --> N213
+  N214(["call:write"])
+  N213 --> N214
+  N215(["call:write"])
+  N214 --> N215
+  N216(["call:write"])
+  N215 --> N216
+  N217(["identifier"])
+  N216 -->|true| N217
+  N216 -->|false| N217
+  N218(["call:read_to_string"])
+  N217 --> N218
+  N219(["identifier"])
+  N218 -->|true| N219
+  N218 -->|false| N219
+  N220(["call:read_to_string"])
+  N219 --> N220
+  N221(["identifier"])
+  N220 -->|true| N221
+  N220 -->|false| N221
+  N222(["call:read_to_string"])
+  N221 --> N222
+  N223(["identifier"])
+  N222 -->|true| N223
+  N222 -->|false| N223
+  N224(["identifier"])
+  N223 -->|true| N224
+  N223 -->|false| N224
+  N225(["identifier"])
+  N224 -->|true| N225
+  N224 -->|false| N225
+  N226(["identifier"])
+  N225 -->|true| N226
+  N225 -->|false| N226
+  N227(["identifier"])
+  N226 -->|true| N227
+  N226 -->|false| N227
+  N228(["identifier"])
+  N227 -->|true| N228
+  N227 -->|false| N228
+  N229(["identifier"])
+  N228 -->|true| N229
+  N228 -->|false| N229
+  N230(["identifier"])
+  N229 -->|true| N230
+  N229 -->|false| N230
+  N231(["identifier"])
+  N230 -->|true| N231
+  N230 -->|false| N231
+  N232(["identifier"])
+  N231 -->|true| N232
+  N231 -->|false| N232
+  N233(["identifier"])
+  N232 -->|true| N233
+  N232 -->|false| N233
+  N234(["identifier"])
+  N233 -->|true| N234
+  N233 -->|false| N234
+  N235(["identifier"])
+  N234 -->|true| N235
+  N234 -->|false| N235
+  N236(["identifier"])
+  N235 -->|true| N236
+  N235 -->|false| N236
+  N237(["identifier"])
+  N236 -->|true| N237
+  N236 -->|false| N237
+  N238(["identifier"])
+  N237 -->|true| N238
+  N237 -->|false| N238
+  N239(["identifier"])
+  N238 -->|true| N239
+  N238 -->|false| N239
+  N240(["identifier"])
+  N239 -->|true| N240
+  N239 -->|false| N240
+  N241(["identifier"])
+  N240 -->|true| N241
+  N240 -->|false| N241
+  N242(["identifier"])
+  N241 -->|true| N242
+  N241 -->|false| N242
+  N243(["identifier"])
+  N242 -->|true| N243
+  N242 -->|false| N243
+  N244(["identifier"])
+  N243 -->|true| N244
+  N243 -->|false| N244
+  N245(["call:stats"])
+  N244 --> N245
+  N246(["identifier"])
+  N245 -->|true| N246
+  N245 -->|false| N246
+  N247(["identifier"])
+  N246 -->|true| N247
+  N246 -->|false| N247
+  N248(["identifier"])
+  N247 -->|true| N248
+  N247 -->|false| N248
+  N249(["identifier"])
+  N248 -->|true| N249
+  N248 -->|false| N249
+  N250(["identifier"])
+  N249 -->|true| N250
+  N249 -->|false| N250
+  N251(["identifier"])
+  N250 -->|true| N251
+  N250 -->|false| N251
+  N252(["identifier"])
+  N251 -->|true| N252
+  N251 -->|false| N252
+  N253(["identifier"])
+  N252 -->|true| N253
+  N252 -->|false| N253
+  N254(["identifier"])
+  N253 -->|true| N254
+  N253 -->|false| N254
+  N255(["call:Ok"])
+  N254 --> N255
+  N256(["identifier"])
+  N255 -->|true| N256
+  N255 -->|false| N256
+  N257(["identifier"])
+  N256 -->|true| N257
+  N256 -->|false| N257
+  N258(["type_identifier"])
+  N257 -->|true| N258
+  N257 -->|false| N258
+  N259(["type_identifier"])
+  N258 -->|true| N259
+  N258 -->|false| N259
+  N260(["scoped_type_identifier"])
+  N259 -->|true| N260
+  N259 -->|false| N260
+  N261(["scoped_identifier"])
+  N260 -->|true| N261
+  N260 -->|false| N261
+  N262(["identifier"])
+  N261 -->|true| N262
+  N261 -->|false| N262
+  N263(["identifier"])
+  N262 -->|true| N263
+  N262 -->|false| N263
+  N264(["type_identifier"])
+  N263 -->|true| N264
+  N263 -->|false| N264
+  N265(["identifier"])
+  N264 -->|true| N265
+  N264 -->|false| N265
+  N266(["call:new"])
+  N265 --> N266
+  N267(["identifier"])
+  N266 -->|true| N267
+  N266 -->|false| N267
+  N268(["call:new"])
+  N267 --> N268
+  N269(["identifier"])
+  N268 -->|true| N269
+  N268 -->|false| N269
+  N270(["call:join"])
+  N269 --> N270
+  N271(["call:write"])
+  N270 --> N271
+  N272(["call:read_to_string"])
+  N271 --> N272
+  N273(["call:read_to_string"])
+  N272 --> N273
+  N274(["call:read_to_string"])
+  N273 --> N274
+  N275(["identifier"])
+  N274 -->|true| N275
+  N274 -->|false| N275
+  N276(["call:stats"])
+  N275 --> N276
+  N277(["identifier"])
+  N276 -->|true| N277
+  N276 -->|false| N277
+  N278(["call:efficiency"])
+  N277 --> N278
+  N279(["identifier"])
+  N278 -->|true| N279
+  N278 -->|false| N279
+  N280(["identifier"])
+  N279 -->|true| N280
+  N279 -->|false| N280
+  N281(["identifier"])
+  N280 -->|true| N281
+  N280 -->|false| N281
+  N282(["call:Ok"])
+  N281 --> N282
+  N283(["identifier"])
+  N282 -->|true| N283
+  N282 -->|false| N283
+  N284(["identifier"])
+  N283 -->|true| N284
+  N283 -->|false| N284
+  N285(["type_identifier"])
+  N284 -->|true| N285
+  N284 -->|false| N285
+  N286(["type_identifier"])
+  N285 -->|true| N286
+  N285 -->|false| N286
+  N287(["scoped_type_identifier"])
+  N286 -->|true| N287
+  N286 -->|false| N287
+  N288(["scoped_identifier"])
+  N287 -->|true| N288
+  N287 -->|false| N288
+  N289(["identifier"])
+  N288 -->|true| N289
+  N288 -->|false| N289
+  N290(["identifier"])
+  N289 -->|true| N290
+  N289 -->|false| N290
+  N291(["type_identifier"])
+  N290 -->|true| N291
+  N290 -->|false| N291
+  N292(["identifier"])
+  N291 -->|true| N292
+  N291 -->|false| N292
+  N293(["call:new"])
+  N292 --> N293
+  N294(["identifier"])
+  N293 -->|true| N294
+  N293 -->|false| N294
+  N295(["call:new"])
+  N294 --> N295
+  N296(["identifier"])
+  N295 -->|true| N296
+  N295 -->|false| N296
+  N297(["call:join"])
+  N296 --> N297
+  N298(["identifier"])
+  N297 -->|true| N298
+  N297 -->|false| N298
+  N299(["call:join"])
+  N298 --> N299
+  N300(["call:write"])
+  N299 --> N300
+  N301(["call:write"])
+  N300 --> N301
+  N302(["call:read_to_string"])
+  N301 --> N302
+  N303(["call:read_to_string"])
+  N302 --> N303
+  N304(["identifier"])
+  N303 -->|true| N304
+  N303 -->|false| N304
+  N305(["call:stats"])
+  N304 --> N305
+  N306(["identifier"])
+  N305 -->|true| N306
+  N305 -->|false| N306
+  N307(["call:average_file_size"])
+  N306 --> N307
+  N308(["identifier"])
+  N307 -->|true| N308
+  N307 -->|false| N308
+  N309(["identifier"])
+  N308 -->|true| N309
+  N308 -->|false| N309
+  N310(["identifier"])
+  N309 -->|true| N310
+  N309 -->|false| N310
+  N311(["call:Ok"])
+  N310 --> N311
+  N312(["identifier"])
+  N311 -->|true| N312
+  N311 -->|false| N312
+  N313(["identifier"])
+  N312 -->|true| N313
+  N312 -->|false| N313
+  N314(["identifier"])
+  N313 -->|true| N314
+  N313 -->|false| N314
+  N315(["call:new"])
+  N314 --> N315
+  N316(["identifier"])
+  N315 -->|true| N316
+  N315 -->|false| N316
+  N317(["identifier"])
+  N316 -->|true| N317
+  N316 -->|false| N317
+  N318(["call:read_to_string"])
+  N317 --> N318
+  N319(["identifier"])
+  N318 -->|true| N319
+  N318 -->|false| N319
+  N320(["identifier"])
+  N319 -->|true| N320
+  N319 -->|false| N320
+  N321(["identifier"])
+  N320 -->|true| N321
+  N320 -->|false| N321
+  N322(["identifier"])
+  N321 -->|true| N322
+  N321 -->|false| N322
+  N323(["identifier"])
+  N322 -->|true| N323
+  N322 -->|false| N323
+  N324(["identifier"])
+  N323 -->|true| N324
+  N323 -->|false| N324
+  N325(["identifier"])
+  N324 -->|true| N325
+  N324 -->|false| N325
+  N326(["identifier"])
+  N325 -->|true| N326
+  N325 -->|false| N326
+  N327(["identifier"])
+  N326 -->|true| N327
+  N326 -->|false| N327
+  N328(["identifier"])
+  N327 -->|true| N328
+  N327 -->|false| N328
+  N329(["identifier"])
+  N328 -->|true| N329
+  N328 -->|false| N329
+  N330(["identifier"])
+  N329 -->|true| N330
+  N329 -->|false| N330
+  N331(["type_identifier"])
+  N330 -->|true| N331
+  N330 -->|false| N331
+  N332(["type_identifier"])
+  N331 -->|true| N332
+  N331 -->|false| N332
+  N333(["scoped_type_identifier"])
+  N332 -->|true| N333
+  N332 -->|false| N333
+  N334(["scoped_identifier"])
+  N333 -->|true| N334
+  N333 -->|false| N334
+  N335(["identifier"])
+  N334 -->|true| N335
+  N334 -->|false| N335
+  N336(["identifier"])
+  N335 -->|true| N336
+  N335 -->|false| N336
+  N337(["type_identifier"])
+  N336 -->|true| N337
+  N336 -->|false| N337
+  N338(["identifier"])
+  N337 -->|true| N338
+  N337 -->|false| N338
+  N339(["call:new"])
+  N338 --> N339
+  N340(["identifier"])
+  N339 -->|true| N340
+  N339 -->|false| N340
+  N341(["identifier"])
+  N340 -->|true| N341
+  N340 -->|false| N341
+  N342(["identifier"])
+  N341 -->|true| N342
+  N341 -->|false| N342
+  N343(["identifier"])
+  N342 -->|true| N343
+  N342 -->|false| N343
+  N344(["call:new"])
+  N343 --> N344
+  N345(["identifier"])
+  N344 -->|true| N345
+  N344 -->|false| N345
+  N346(["call:join"])
+  N345 --> N346
+  N347(["call:write"])
+  N346 --> N347
+  N348(["call:read_to_string"])
+  N347 --> N348
+  N349(["identifier"])
+  N348 -->|true| N349
+  N348 -->|false| N349
+  N350(["identifier"])
+  N349 -->|true| N350
+  N349 -->|false| N350
+  N351(["identifier"])
+  N350 -->|true| N351
+  N350 -->|false| N351
+  N352(["call:clear"])
+  N351 --> N352
+  N353(["identifier"])
+  N352 -->|true| N353
+  N352 -->|false| N353
+  N354(["identifier"])
+  N353 -->|true| N354
+  N353 -->|false| N354
+  N355(["identifier"])
+  N354 -->|true| N355
+  N354 -->|false| N355
+  N356(["call:Ok"])
+  N355 --> N356
+  N356 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant test_file_cache_creation
+  participant test_file_cache_with_capacity
+  participant test_read_to_string_and_caching
+  participant test_cache_statistics
+  participant test_hit_ratio
+  participant test_cache_clear
+  participant test_multiple_files
+  participant test_cache_efficiency
+  participant test_average_file_size
+  participant test_nonexistent_file
+  participant test_is_empty
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>with_capacity: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>ok: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>stats: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>stats: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>stats: call
+  test_file_cache_creation->>ok: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>ok: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>clear: call
+  test_file_cache_creation->>ok: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>stats: call
+  test_file_cache_creation->>ok: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>stats: call
+  test_file_cache_creation->>efficiency: call
+  test_file_cache_creation->>ok: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>stats: call
+  test_file_cache_creation->>average_file_size: call
+  test_file_cache_creation->>ok: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>new: call
+  test_file_cache_creation->>join: call
+  test_file_cache_creation->>write: call
+  test_file_cache_creation->>read_to_string: call
+  test_file_cache_creation->>clear: call
+  test_file_cache_creation->>ok: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-test_file_cache_creation"><code>test_file_cache_creation</code> <small>function</small></li>
+<li id="symbol-test_file_cache_with_capacity"><code>test_file_cache_with_capacity</code> <small>function</small></li>
+<li id="symbol-test_read_to_string_and_caching"><code>test_read_to_string_and_caching</code> <small>function</small></li>
+<li id="symbol-test_cache_statistics"><code>test_cache_statistics</code> <small>function</small></li>
+<li id="symbol-test_hit_ratio"><code>test_hit_ratio</code> <small>function</small></li>
+<li id="symbol-test_cache_clear"><code>test_cache_clear</code> <small>function</small></li>
+<li id="symbol-test_multiple_files"><code>test_multiple_files</code> <small>function</small></li>
+<li id="symbol-test_cache_efficiency"><code>test_cache_efficiency</code> <small>function</small></li>
+<li id="symbol-test_average_file_size"><code>test_average_file_size</code> <small>function</small></li>
+<li id="symbol-test_nonexistent_file"><code>test_nonexistent_file</code> <small>function</small></li>
+<li id="symbol-test_is_empty"><code>test_is_empty</code> <small>function</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-read_content"><code>read_content</code> <small>variable</small></li>
+<li id="symbol-read_content2"><code>read_content2</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+<li id="symbol-initial_stats"><code>initial_stats</code> <small>variable</small></li>
+<li id="symbol-stats_after_miss"><code>stats_after_miss</code> <small>variable</small></li>
+<li id="symbol-stats_after_hit"><code>stats_after_hit</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-file1"><code>file1</code> <small>variable</small></li>
+<li id="symbol-file2"><code>file2</code> <small>variable</small></li>
+<li id="symbol-file3"><code>file3</code> <small>variable</small></li>
+<li id="symbol-content1"><code>content1</code> <small>variable</small></li>
+<li id="symbol-content2"><code>content2</code> <small>variable</small></li>
+<li id="symbol-content3"><code>content3</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-efficiency"><code>efficiency</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-file1"><code>file1</code> <small>variable</small></li>
+<li id="symbol-file2"><code>file2</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-avg_size"><code>avg_size</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-nonexistent_path"><code>nonexistent_path</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-cache"><code>cache</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,672 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>languages/python.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>languages/python.rs</h1></header>
+<main>
+<section class="article">
+<p>177 symbols, 1119 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["is_function_definition"])
+  F0 --> F1
+  F1(["is_async_function_definition"])
+  F1 --> F2
+  F2(["is_class_definition"])
+  F2 --> F3
+  F3(["is_method_definition"])
+  F3 --> F4
+  F4(["is_lambda"])
+  F4 --> F5
+  F5(["is_import_statement"])
+  F5 --> F6
+  F6(["is_decorator"])
+  F6 --> F7
+  F7(["is_global_statement"])
+  F7 --> F8
+  F8(["is_nonlocal_statement"])
+  F8 --> F9
+  F9(["function_name"])
+  F9 --> F10
+  F10(["class_name"])
+  F10 --> F11
+  F11(["function_parameters"])
+  F11 --> F12
+  F12(["class_bases"])
+  F12 --> F13
+  F13(["get_decorators"])
+  F13 --> F14
+  F14(["is_special_method"])
+  F14 --> F15
+  F15(["is_property"])
+  F15 --> F16
+  F16(["is_static_method"])
+  F16 --> F17
+  F17(["is_class_method"])
+  F17 --> F18
+  F18(["get_docstring"])
+  F18 --> F19
+  F19(["find_functions"])
+  F19 --> F20
+  F20(["find_classes"])
+  F20 --> F21
+  F21(["find_imports"])
+  F21 --> F22
+  F22(["find_global_variables"])
+  F22 --> F23
+  F23(["functions_query"])
+  F23 --> F24
+  F24(["classes_query"])
+  F24 --> F25
+  F25(["methods_query"])
+  F25 --> F26
+  F26(["imports_query"])
+  F26 --> F27
+  F27(["decorators_query"])
+  F27 --> F28
+  F28(["async_functions_query"])
+  F28 --> F29
+  F29(["detect_python_features"])
+  F29 --> F30
+  F30(["analyze_complexity"])
+  F30 --> F31
+  F31(["check_naming_conventions"])
+  F31 --> F32
+  F32(["is_snake_case"])
+  F32 --> F33
+  F33(["is_pascal_case"])
+  F33 --> F34
+  F34(["is_special_method_name"])
+  F34 --> F35
+  F35(["get_method_resolution_order"])
+  F35 --> F36
+  F36(["find_class_methods"])
+  F36 --> F37
+  F37(["has_type_hints"])
+  F37 --> F38
+  F38(["extract_docstring"])
+  F38 --> F39
+  F39(["find_methods"])
+  F39 --> F40
+  F40(["find_async_functions"])
+  F40 --> F41
+  F41(["find_context_managers"])
+  F41 --> F42
+  F42(["find_metaclasses"])
+  F42 --> F43
+  F43(["find_dataclasses"])
+  F43 --> F44
+  F44(["find_typed_functions"])
+  F44 --> F45
+  F45(["find_property_decorators"])
+  F45 --> F46
+  F46(["find_lambda_functions"])
+  F46 --> F47
+  F47(["test_python_function_detection"])
+  F47 --> F48
+  F48(["test_python_class_detection"])
+  F48 --> F49
+  F49(["test_python_decorators"])
+  F49 --> F50
+  F50(["test_python_features_detection"])
+  F50 --> F51
+  F51(["test_function_parameters"])
+  F51 --> F52
+  F52(["test_class_inheritance"])
+  F52 --> F53
+  F53(["test_naming_conventions"])
+  F53 --> F54
+  F54(["test_special_methods"])
+  F54 --> F55
+  F55(["PythonSyntax"])
+  F55 --> F56
+  F56(["PythonSyntax"])
+  F56 --> F57
+  F57(["current"])
+  F57 --> F58
+  F58(["parameters"])
+  F58 --> F59
+  F59(["bases"])
+  F59 --> F60
+  F60(["decorators"])
+  F60 --> F61
+  F61(["decorators"])
+  F61 --> F62
+  F62(["decorators"])
+  F62 --> F63
+  F63(["decorators"])
+  F63 --> F64
+  F64(["cleaned"])
+  F64 --> F65
+  F65(["functions"])
+  F65 --> F66
+  F66(["function_nodes"])
+  F66 --> F67
+  F67(["ts_node"])
+  F67 --> F68
+  F68(["classes"])
+  F68 --> F69
+  F69(["class_nodes"])
+  F69 --> F70
+  F70(["ts_node"])
+  F70 --> F71
+  F71(["imports"])
+  F71 --> F72
+  F72(["import_nodes"])
+  F72 --> F73
+  F73(["import_from_nodes"])
+  F73 --> F74
+  F74(["globals"])
+  F74 --> F75
+  F75(["assignment_nodes"])
+  F75 --> F76
+  F76(["is_global"])
+  F76 --> F77
+  F77(["current"])
+  F77 --> F78
+  F78(["query_str"])
+  F78 --> F79
+  F79(["query_str"])
+  F79 --> F80
+  F80(["query_str"])
+  F80 --> F81
+  F81(["query_str"])
+  F81 --> F82
+  F82(["query_str"])
+  F82 --> F83
+  F83(["query_str"])
+  F83 --> F84
+  F84(["features"])
+  F84 --> F85
+  F85(["complexity"])
+  F85 --> F86
+  F86(["violations"])
+  F86 --> F87
+  F87(["functions"])
+  F87 --> F88
+  F88(["classes"])
+  F88 --> F89
+  F89(["mro"])
+  F89 --> F90
+  F90(["bases"])
+  F90 --> F91
+  F91(["methods"])
+  F91 --> F92
+  F92(["lines"])
+  F92 --> F93
+  F93(["j"])
+  F93 --> F94
+  F94(["next_line"])
+  F94 --> F95
+  F95(["quote_type"])
+  F95 --> F96
+  F96(["docstring"])
+  F96 --> F97
+  F97(["content"])
+  F97 --> F98
+  F98(["start_content"])
+  F98 --> F99
+  F99(["doc_line"])
+  F99 --> F100
+  F100(["end_content"])
+  F100 --> F101
+  F101(["methods"])
+  F101 --> F102
+  F102(["class_nodes"])
+  F102 --> F103
+  F103(["cursor"])
+  F103 --> F104
+  F104(["node"])
+  F104 --> F105
+  F105(["async_functions"])
+  F105 --> F106
+  F106(["function_nodes"])
+  F106 --> F107
+  F107(["cursor"])
+  F107 --> F108
+  F108(["node"])
+  F108 --> F109
+  F109(["ts_node"])
+  F109 --> F110
+  F110(["context_managers"])
+  F110 --> F111
+  F111(["with_nodes"])
+  F111 --> F112
+  F112(["ts_node"])
+  F112 --> F113
+  F113(["context_expr"])
+  F113 --> F114
+  F114(["metaclasses"])
+  F114 --> F115
+  F115(["class_nodes"])
+  F115 --> F116
+  F116(["metaclass_part"])
+  F116 --> F117
+  F117(["metaclass_name"])
+  F117 --> F118
+  F118(["ts_node"])
+  F118 --> F119
+  F119(["dataclasses"])
+  F119 --> F120
+  F120(["class_nodes"])
+  F120 --> F121
+  F121(["decorators"])
+  F121 --> F122
+  F122(["has_dataclass"])
+  F122 --> F123
+  F123(["ts_node"])
+  F123 --> F124
+  F124(["typed_functions"])
+  F124 --> F125
+  F125(["function_nodes"])
+  F125 --> F126
+  F126(["param_types"])
+  F126 --> F127
+  F127(["return_type"])
+  F127 --> F128
+  F128(["ts_node"])
+  F128 --> F129
+  F129(["property_decorators"])
+  F129 --> F130
+  F130(["function_nodes"])
+  F130 --> F131
+  F131(["decorators"])
+  F131 --> F132
+  F132(["property_decorators_list"])
+  F132 --> F133
+  F133(["ts_node"])
+  F133 --> F134
+  F134(["lambdas"])
+  F134 --> F135
+  F135(["lambda_nodes"])
+  F135 --> F136
+  F136(["ts_node"])
+  F136 --> F137
+  F137(["source"])
+  F137 --> F138
+  F138(["parser"])
+  F138 --> F139
+  F139(["tree"])
+  F139 --> F140
+  F140(["functions"])
+  F140 --> F141
+  F141(["function_names"])
+  F141 --> F142
+  F142(["source"])
+  F142 --> F143
+  F143(["parser"])
+  F143 --> F144
+  F144(["tree"])
+  F144 --> F145
+  F145(["classes"])
+  F145 --> F146
+  F146(["class_names"])
+  F146 --> F147
+  F147(["source"])
+  F147 --> F148
+  F148(["parser"])
+  F148 --> F149
+  F149(["tree"])
+  F149 --> F150
+  F150(["function_nodes"])
+  F150 --> F151
+  F151(["decorators"])
+  F151 --> F152
+  F152(["source"])
+  F152 --> F153
+  F153(["parser"])
+  F153 --> F154
+  F154(["tree"])
+  F154 --> F155
+  F155(["features"])
+  F155 --> F156
+  F156(["source"])
+  F156 --> F157
+  F157(["parser"])
+  F157 --> F158
+  F158(["tree"])
+  F158 --> F159
+  F159(["function_nodes"])
+  F159 --> F160
+  F160(["params"])
+  F160 --> F161
+  F161(["source"])
+  F161 --> F162
+  F162(["parser"])
+  F162 --> F163
+  F163(["tree"])
+  F163 --> F164
+  F164(["class_nodes"])
+  F164 --> F165
+  F165(["child_bases"])
+  F165 --> F166
+  F166(["multiple_bases"])
+  F166 --> F167
+  F167(["source"])
+  F167 --> F168
+  F168(["parser"])
+  F168 --> F169
+  F169(["tree"])
+  F169 --> F170
+  F170(["violations"])
+  F170 --> F171
+  F171(["source"])
+  F171 --> F172
+  F172(["parser"])
+  F172 --> F173
+  F173(["tree"])
+  F173 --> F174
+  F174(["class_nodes"])
+  F174 --> F175
+  F175(["methods"])
+  F175 --> F176
+  F176(["method_names"])
+  F176 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant is_function_definition
+  participant is_async_function_definition
+  participant is_class_definition
+  participant is_method_definition
+  participant is_lambda
+  participant is_import_statement
+  participant is_decorator
+  participant is_global_statement
+  participant is_nonlocal_statement
+  participant function_name
+  participant class_name
+  participant function_parameters
+  participant class_bases
+  participant get_decorators
+  participant is_special_method
+  participant is_property
+  participant is_static_method
+  participant is_class_method
+  participant get_docstring
+  participant find_functions
+  participant find_classes
+  participant find_imports
+  participant find_global_variables
+  participant functions_query
+  participant classes_query
+  participant methods_query
+  participant imports_query
+  participant decorators_query
+  participant async_functions_query
+  participant detect_python_features
+  participant analyze_complexity
+  participant check_naming_conventions
+  participant is_snake_case
+  participant is_pascal_case
+  participant is_special_method_name
+  participant get_method_resolution_order
+  participant find_class_methods
+  participant has_type_hints
+  participant extract_docstring
+  participant find_methods
+  participant find_async_functions
+  participant find_context_managers
+  participant find_metaclasses
+  participant find_dataclasses
+  participant find_typed_functions
+  participant find_property_decorators
+  participant find_lambda_functions
+  participant test_python_function_detection
+  participant test_python_class_detection
+  participant test_python_decorators
+  participant test_python_features_detection
+  participant test_function_parameters
+  participant test_class_inheritance
+  participant test_naming_conventions
+  participant test_special_methods
+  is_function_definition->>is_async_function_definition: call
+  is_async_function_definition->>is_class_definition: call
+  is_class_definition->>is_method_definition: call
+  is_method_definition->>is_lambda: call
+  is_lambda->>is_import_statement: call
+  is_import_statement->>is_decorator: call
+  is_decorator->>is_global_statement: call
+  is_global_statement->>is_nonlocal_statement: call
+  is_nonlocal_statement->>function_name: call
+  function_name->>class_name: call
+  class_name->>function_parameters: call
+  function_parameters->>class_bases: call
+  class_bases->>get_decorators: call
+  get_decorators->>is_special_method: call
+  is_special_method->>is_property: call
+  is_property->>is_static_method: call
+  is_static_method->>is_class_method: call
+  is_class_method->>get_docstring: call
+  get_docstring->>find_functions: call
+  find_functions->>find_classes: call
+  find_classes->>find_imports: call
+  find_imports->>find_global_variables: call
+  find_global_variables->>functions_query: call
+  functions_query->>classes_query: call
+  classes_query->>methods_query: call
+  methods_query->>imports_query: call
+  imports_query->>decorators_query: call
+  decorators_query->>async_functions_query: call
+  async_functions_query->>detect_python_features: call
+  detect_python_features->>analyze_complexity: call
+  analyze_complexity->>check_naming_conventions: call
+  check_naming_conventions->>is_snake_case: call
+  is_snake_case->>is_pascal_case: call
+  is_pascal_case->>is_special_method_name: call
+  is_special_method_name->>get_method_resolution_order: call
+  get_method_resolution_order->>find_class_methods: call
+  find_class_methods->>has_type_hints: call
+  has_type_hints->>extract_docstring: call
+  extract_docstring->>find_methods: call
+  find_methods->>find_async_functions: call
+  find_async_functions->>find_context_managers: call
+  find_context_managers->>find_metaclasses: call
+  find_metaclasses->>find_dataclasses: call
+  find_dataclasses->>find_typed_functions: call
+  find_typed_functions->>find_property_decorators: call
+  find_property_decorators->>find_lambda_functions: call
+  find_lambda_functions->>test_python_function_detection: call
+  test_python_function_detection->>test_python_class_detection: call
+  test_python_class_detection->>test_python_decorators: call
+  test_python_decorators->>test_python_features_detection: call
+  test_python_features_detection->>test_function_parameters: call
+  test_function_parameters->>test_class_inheritance: call
+  test_class_inheritance->>test_naming_conventions: call
+  test_naming_conventions->>test_special_methods: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-is_function_definition"><code>is_function_definition</code> <small>function</small></li>
+<li id="symbol-is_async_function_definition"><code>is_async_function_definition</code> <small>function</small></li>
+<li id="symbol-is_class_definition"><code>is_class_definition</code> <small>function</small></li>
+<li id="symbol-is_method_definition"><code>is_method_definition</code> <small>function</small></li>
+<li id="symbol-is_lambda"><code>is_lambda</code> <small>function</small></li>
+<li id="symbol-is_import_statement"><code>is_import_statement</code> <small>function</small></li>
+<li id="symbol-is_decorator"><code>is_decorator</code> <small>function</small></li>
+<li id="symbol-is_global_statement"><code>is_global_statement</code> <small>function</small></li>
+<li id="symbol-is_nonlocal_statement"><code>is_nonlocal_statement</code> <small>function</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>function</small></li>
+<li id="symbol-class_name"><code>class_name</code> <small>function</small></li>
+<li id="symbol-function_parameters"><code>function_parameters</code> <small>function</small></li>
+<li id="symbol-class_bases"><code>class_bases</code> <small>function</small></li>
+<li id="symbol-get_decorators"><code>get_decorators</code> <small>function</small></li>
+<li id="symbol-is_special_method"><code>is_special_method</code> <small>function</small></li>
+<li id="symbol-is_property"><code>is_property</code> <small>function</small></li>
+<li id="symbol-is_static_method"><code>is_static_method</code> <small>function</small></li>
+<li id="symbol-is_class_method"><code>is_class_method</code> <small>function</small></li>
+<li id="symbol-get_docstring"><code>get_docstring</code> <small>function</small></li>
+<li id="symbol-find_functions"><code>find_functions</code> <small>function</small></li>
+<li id="symbol-find_classes"><code>find_classes</code> <small>function</small></li>
+<li id="symbol-find_imports"><code>find_imports</code> <small>function</small></li>
+<li id="symbol-find_global_variables"><code>find_global_variables</code> <small>function</small></li>
+<li id="symbol-functions_query"><code>functions_query</code> <small>function</small></li>
+<li id="symbol-classes_query"><code>classes_query</code> <small>function</small></li>
+<li id="symbol-methods_query"><code>methods_query</code> <small>function</small></li>
+<li id="symbol-imports_query"><code>imports_query</code> <small>function</small></li>
+<li id="symbol-decorators_query"><code>decorators_query</code> <small>function</small></li>
+<li id="symbol-async_functions_query"><code>async_functions_query</code> <small>function</small></li>
+<li id="symbol-detect_python_features"><code>detect_python_features</code> <small>function</small></li>
+<li id="symbol-analyze_complexity"><code>analyze_complexity</code> <small>function</small></li>
+<li id="symbol-check_naming_conventions"><code>check_naming_conventions</code> <small>function</small></li>
+<li id="symbol-is_snake_case"><code>is_snake_case</code> <small>function</small></li>
+<li id="symbol-is_pascal_case"><code>is_pascal_case</code> <small>function</small></li>
+<li id="symbol-is_special_method_name"><code>is_special_method_name</code> <small>function</small></li>
+<li id="symbol-get_method_resolution_order"><code>get_method_resolution_order</code> <small>function</small></li>
+<li id="symbol-find_class_methods"><code>find_class_methods</code> <small>function</small></li>
+<li id="symbol-has_type_hints"><code>has_type_hints</code> <small>function</small></li>
+<li id="symbol-extract_docstring"><code>extract_docstring</code> <small>function</small></li>
+<li id="symbol-find_methods"><code>find_methods</code> <small>function</small></li>
+<li id="symbol-find_async_functions"><code>find_async_functions</code> <small>function</small></li>
+<li id="symbol-find_context_managers"><code>find_context_managers</code> <small>function</small></li>
+<li id="symbol-find_metaclasses"><code>find_metaclasses</code> <small>function</small></li>
+<li id="symbol-find_dataclasses"><code>find_dataclasses</code> <small>function</small></li>
+<li id="symbol-find_typed_functions"><code>find_typed_functions</code> <small>function</small></li>
+<li id="symbol-find_property_decorators"><code>find_property_decorators</code> <small>function</small></li>
+<li id="symbol-find_lambda_functions"><code>find_lambda_functions</code> <small>function</small></li>
+<li id="symbol-test_python_function_detection"><code>test_python_function_detection</code> <small>function</small></li>
+<li id="symbol-test_python_class_detection"><code>test_python_class_detection</code> <small>function</small></li>
+<li id="symbol-test_python_decorators"><code>test_python_decorators</code> <small>function</small></li>
+<li id="symbol-test_python_features_detection"><code>test_python_features_detection</code> <small>function</small></li>
+<li id="symbol-test_function_parameters"><code>test_function_parameters</code> <small>function</small></li>
+<li id="symbol-test_class_inheritance"><code>test_class_inheritance</code> <small>function</small></li>
+<li id="symbol-test_naming_conventions"><code>test_naming_conventions</code> <small>function</small></li>
+<li id="symbol-test_special_methods"><code>test_special_methods</code> <small>function</small></li>
+<li id="symbol-pythonsyntax"><code>PythonSyntax</code> <small>struct</small></li>
+<li id="symbol-pythonsyntax"><code>PythonSyntax</code> <small>impl</small></li>
+<li id="symbol-current"><code>current</code> <small>variable</small></li>
+<li id="symbol-parameters"><code>parameters</code> <small>variable</small></li>
+<li id="symbol-bases"><code>bases</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-cleaned"><code>cleaned</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-classes"><code>classes</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-imports"><code>imports</code> <small>variable</small></li>
+<li id="symbol-import_nodes"><code>import_nodes</code> <small>variable</small></li>
+<li id="symbol-import_from_nodes"><code>import_from_nodes</code> <small>variable</small></li>
+<li id="symbol-globals"><code>globals</code> <small>variable</small></li>
+<li id="symbol-assignment_nodes"><code>assignment_nodes</code> <small>variable</small></li>
+<li id="symbol-is_global"><code>is_global</code> <small>variable</small></li>
+<li id="symbol-current"><code>current</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-features"><code>features</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-violations"><code>violations</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-classes"><code>classes</code> <small>variable</small></li>
+<li id="symbol-mro"><code>mro</code> <small>variable</small></li>
+<li id="symbol-bases"><code>bases</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-j"><code>j</code> <small>variable</small></li>
+<li id="symbol-next_line"><code>next_line</code> <small>variable</small></li>
+<li id="symbol-quote_type"><code>quote_type</code> <small>variable</small></li>
+<li id="symbol-docstring"><code>docstring</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-start_content"><code>start_content</code> <small>variable</small></li>
+<li id="symbol-doc_line"><code>doc_line</code> <small>variable</small></li>
+<li id="symbol-end_content"><code>end_content</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-async_functions"><code>async_functions</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-context_managers"><code>context_managers</code> <small>variable</small></li>
+<li id="symbol-with_nodes"><code>with_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-context_expr"><code>context_expr</code> <small>variable</small></li>
+<li id="symbol-metaclasses"><code>metaclasses</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-metaclass_part"><code>metaclass_part</code> <small>variable</small></li>
+<li id="symbol-metaclass_name"><code>metaclass_name</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-dataclasses"><code>dataclasses</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-has_dataclass"><code>has_dataclass</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-typed_functions"><code>typed_functions</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-param_types"><code>param_types</code> <small>variable</small></li>
+<li id="symbol-return_type"><code>return_type</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-property_decorators"><code>property_decorators</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-property_decorators_list"><code>property_decorators_list</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-lambdas"><code>lambdas</code> <small>variable</small></li>
+<li id="symbol-lambda_nodes"><code>lambda_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_names"><code>function_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-classes"><code>classes</code> <small>variable</small></li>
+<li id="symbol-class_names"><code>class_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-features"><code>features</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-params"><code>params</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-child_bases"><code>child_bases</code> <small>variable</small></li>
+<li id="symbol-multiple_bases"><code>multiple_bases</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-violations"><code>violations</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-method_names"><code>method_names</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

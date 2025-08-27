@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tests/cli_determinism.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>tests/cli_determinism.rs</h1></header>
+<main>
+<section class="article">
+<p>9 symbols, 32 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["scoped_identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["scoped_identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["scoped_identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["mutable_specifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["call:expect"])
+  N14 --> N15
+  N16(["call:args"])
+  N15 --> N16
+  N17(["identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["call:clone"])
+  N17 --> N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["scoped_type_identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["type_identifier"])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23(["call:expect"])
+  N22 --> N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["call:expect"])
+  N24 --> N25
+  N26(["mutable_specifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["identifier"])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28(["type_identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["type_identifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["call:collect"])
+  N29 --> N30
+  N31(["mutable_specifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["identifier"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["call:clone"])
+  N32 --> N33
+  N34(["call:sort"])
+  N33 --> N34
+  N35(["identifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["identifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["identifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["identifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["mutable_specifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["identifier"])
+  N40 -->|true| N41
+  N40 -->|false| N41
+  N42(["call:expect"])
+  N41 --> N42
+  N43(["call:args"])
+  N42 --> N43
+  N44(["call:stdout"])
+  N43 --> N44
+  N44 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant analyze_outputs_sorted_files_json
+  participant analyze_prints_schema_v1
+  analyze_outputs_sorted_files_json->>expect: call
+  analyze_outputs_sorted_files_json->>args: call
+  analyze_outputs_sorted_files_json->>clone: call
+  analyze_outputs_sorted_files_json->>expect: call
+  analyze_outputs_sorted_files_json->>expect: call
+  analyze_outputs_sorted_files_json->>collect: call
+  analyze_outputs_sorted_files_json->>clone: call
+  analyze_outputs_sorted_files_json->>sort: call
+  analyze_outputs_sorted_files_json->>expect: call
+  analyze_outputs_sorted_files_json->>args: call
+  analyze_outputs_sorted_files_json->>stdout: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-analyze_outputs_sorted_files_json"><code>analyze_outputs_sorted_files_json</code> <small>function</small></li>
+<li id="symbol-analyze_prints_schema_v1"><code>analyze_prints_schema_v1</code> <small>function</small></li>
+<li id="symbol-cmd"><code>cmd</code> <small>variable</small></li>
+<li id="symbol-output"><code>output</code> <small>variable</small></li>
+<li id="symbol-v"><code>v</code> <small>variable</small></li>
+<li id="symbol-files"><code>files</code> <small>variable</small></li>
+<li id="symbol-paths"><code>paths</code> <small>variable</small></li>
+<li id="symbol-sorted"><code>sorted</code> <small>variable</small></li>
+<li id="symbol-cmd"><code>cmd</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

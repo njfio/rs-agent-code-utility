@@ -1,0 +1,634 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>languages/go.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>languages/go.rs</h1></header>
+<main>
+<section class="article">
+<p>167 symbols, 1162 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["is_function_declaration"])
+  F0 --> F1
+  F1(["is_method_declaration"])
+  F1 --> F2
+  F2(["is_type_declaration"])
+  F2 --> F3
+  F3(["is_struct_type"])
+  F3 --> F4
+  F4(["is_interface_type"])
+  F4 --> F5
+  F5(["is_package_clause"])
+  F5 --> F6
+  F6(["is_import_declaration"])
+  F6 --> F7
+  F7(["is_const_declaration"])
+  F7 --> F8
+  F8(["is_var_declaration"])
+  F8 --> F9
+  F9(["function_name"])
+  F9 --> F10
+  F10(["method_name"])
+  F10 --> F11
+  F11(["method_receiver_type"])
+  F11 --> F12
+  F12(["type_name"])
+  F12 --> F13
+  F13(["package_name"])
+  F13 --> F14
+  F14(["function_parameters"])
+  F14 --> F15
+  F15(["function_return_types"])
+  F15 --> F16
+  F16(["struct_fields"])
+  F16 --> F17
+  F17(["interface_methods"])
+  F17 --> F18
+  F18(["is_exported"])
+  F18 --> F19
+  F19(["is_main_function"])
+  F19 --> F20
+  F20(["is_init_function"])
+  F20 --> F21
+  F21(["get_import_paths"])
+  F21 --> F22
+  F22(["find_functions"])
+  F22 --> F23
+  F23(["find_methods"])
+  F23 --> F24
+  F24(["find_types"])
+  F24 --> F25
+  F25(["find_structs"])
+  F25 --> F26
+  F26(["functions_query"])
+  F26 --> F27
+  F27(["methods_query"])
+  F27 --> F28
+  F28(["types_query"])
+  F28 --> F29
+  F29(["structs_query"])
+  F29 --> F30
+  F30(["interfaces_query"])
+  F30 --> F31
+  F31(["detect_go_features"])
+  F31 --> F32
+  F32(["analyze_complexity"])
+  F32 --> F33
+  F33(["analyze_package"])
+  F33 --> F34
+  F34(["find_constants"])
+  F34 --> F35
+  F35(["find_variables"])
+  F35 --> F36
+  F36(["find_interfaces"])
+  F36 --> F37
+  F37(["find_channels"])
+  F37 --> F38
+  F38(["find_goroutines"])
+  F38 --> F39
+  F39(["find_embedded_types"])
+  F39 --> F40
+  F40(["find_type_assertions"])
+  F40 --> F41
+  F41(["test_go_function_detection"])
+  F41 --> F42
+  F42(["test_go_method_detection"])
+  F42 --> F43
+  F43(["test_go_struct_detection"])
+  F43 --> F44
+  F44(["test_go_interface_detection"])
+  F44 --> F45
+  F45(["test_go_package_analysis"])
+  F45 --> F46
+  F46(["test_go_features_detection"])
+  F46 --> F47
+  F47(["test_function_parameters_and_returns"])
+  F47 --> F48
+  F48(["test_struct_fields"])
+  F48 --> F49
+  F49(["test_exported_vs_private"])
+  F49 --> F50
+  F50(["test_special_functions"])
+  F50 --> F51
+  F51(["GoSyntax"])
+  F51 --> F52
+  F52(["PackageAnalysis"])
+  F52 --> F53
+  F53(["GoSyntax"])
+  F53 --> F54
+  F54(["parameters"])
+  F54 --> F55
+  F55(["return_types"])
+  F55 --> F56
+  F56(["fields"])
+  F56 --> F57
+  F57(["field_names"])
+  F57 --> F58
+  F58(["field_type"])
+  F58 --> F59
+  F59(["methods"])
+  F59 --> F60
+  F60(["imports"])
+  F60 --> F61
+  F61(["import_nodes"])
+  F61 --> F62
+  F62(["cleaned_path"])
+  F62 --> F63
+  F63(["cleaned_path"])
+  F63 --> F64
+  F64(["functions"])
+  F64 --> F65
+  F65(["function_nodes"])
+  F65 --> F66
+  F66(["ts_node"])
+  F66 --> F67
+  F67(["methods"])
+  F67 --> F68
+  F68(["method_nodes"])
+  F68 --> F69
+  F69(["receiver_type"])
+  F69 --> F70
+  F70(["ts_node"])
+  F70 --> F71
+  F71(["types"])
+  F71 --> F72
+  F72(["type_nodes"])
+  F72 --> F73
+  F73(["ts_node"])
+  F73 --> F74
+  F74(["structs"])
+  F74 --> F75
+  F75(["type_nodes"])
+  F75 --> F76
+  F76(["query_str"])
+  F76 --> F77
+  F77(["query_str"])
+  F77 --> F78
+  F78(["query_str"])
+  F78 --> F79
+  F79(["query_str"])
+  F79 --> F80
+  F80(["query_str"])
+  F80 --> F81
+  F81(["features"])
+  F81 --> F82
+  F82(["function_nodes"])
+  F82 --> F83
+  F83(["complexity"])
+  F83 --> F84
+  F84(["package_nodes"])
+  F84 --> F85
+  F85(["package_name"])
+  F85 --> F86
+  F86(["imports"])
+  F86 --> F87
+  F87(["functions"])
+  F87 --> F88
+  F88(["methods"])
+  F88 --> F89
+  F89(["types"])
+  F89 --> F90
+  F90(["exported_functions"])
+  F90 --> F91
+  F91(["exported_types"])
+  F91 --> F92
+  F92(["constants"])
+  F92 --> F93
+  F93(["const_nodes"])
+  F93 --> F94
+  F94(["cursor"])
+  F94 --> F95
+  F95(["node"])
+  F95 --> F96
+  F96(["variables"])
+  F96 --> F97
+  F97(["var_nodes"])
+  F97 --> F98
+  F98(["cursor"])
+  F98 --> F99
+  F99(["node"])
+  F99 --> F100
+  F100(["interfaces"])
+  F100 --> F101
+  F101(["interface_nodes"])
+  F101 --> F102
+  F102(["methods"])
+  F102 --> F103
+  F103(["cursor"])
+  F103 --> F104
+  F104(["node"])
+  F104 --> F105
+  F105(["method_cursor"])
+  F105 --> F106
+  F106(["child"])
+  F106 --> F107
+  F107(["ts_node"])
+  F107 --> F108
+  F108(["channels"])
+  F108 --> F109
+  F109(["channel_nodes"])
+  F109 --> F110
+  F110(["ts_node"])
+  F110 --> F111
+  F111(["call_nodes"])
+  F111 --> F112
+  F112(["ts_node"])
+  F112 --> F113
+  F113(["goroutines"])
+  F113 --> F114
+  F114(["go_nodes"])
+  F114 --> F115
+  F115(["ts_node"])
+  F115 --> F116
+  F116(["embedded_structs"])
+  F116 --> F117
+  F117(["struct_nodes"])
+  F117 --> F118
+  F118(["embedded_types"])
+  F118 --> F119
+  F119(["cursor"])
+  F119 --> F120
+  F120(["node"])
+  F120 --> F121
+  F121(["field_cursor"])
+  F121 --> F122
+  F122(["field_node"])
+  F122 --> F123
+  F123(["children"])
+  F123 --> F124
+  F124(["ts_node"])
+  F124 --> F125
+  F125(["type_assertions"])
+  F125 --> F126
+  F126(["assertion_nodes"])
+  F126 --> F127
+  F127(["ts_node"])
+  F127 --> F128
+  F128(["source"])
+  F128 --> F129
+  F129(["parser"])
+  F129 --> F130
+  F130(["tree"])
+  F130 --> F131
+  F131(["functions"])
+  F131 --> F132
+  F132(["function_names"])
+  F132 --> F133
+  F133(["source"])
+  F133 --> F134
+  F134(["parser"])
+  F134 --> F135
+  F135(["tree"])
+  F135 --> F136
+  F136(["methods"])
+  F136 --> F137
+  F137(["source"])
+  F137 --> F138
+  F138(["parser"])
+  F138 --> F139
+  F139(["tree"])
+  F139 --> F140
+  F140(["structs"])
+  F140 --> F141
+  F141(["struct_names"])
+  F141 --> F142
+  F142(["source"])
+  F142 --> F143
+  F143(["parser"])
+  F143 --> F144
+  F144(["tree"])
+  F144 --> F145
+  F145(["interfaces"])
+  F145 --> F146
+  F146(["interface_names"])
+  F146 --> F147
+  F147(["source"])
+  F147 --> F148
+  F148(["parser"])
+  F148 --> F149
+  F149(["tree"])
+  F149 --> F150
+  F150(["analysis"])
+  F150 --> F151
+  F151(["source"])
+  F151 --> F152
+  F152(["parser"])
+  F152 --> F153
+  F153(["tree"])
+  F153 --> F154
+  F154(["features"])
+  F154 --> F155
+  F155(["source"])
+  F155 --> F156
+  F156(["parser"])
+  F156 --> F157
+  F157(["tree"])
+  F157 --> F158
+  F158(["function_nodes"])
+  F158 --> F159
+  F159(["source"])
+  F159 --> F160
+  F160(["parser"])
+  F160 --> F161
+  F161(["tree"])
+  F161 --> F162
+  F162(["struct_nodes"])
+  F162 --> F163
+  F163(["source"])
+  F163 --> F164
+  F164(["parser"])
+  F164 --> F165
+  F165(["tree"])
+  F165 --> F166
+  F166(["function_nodes"])
+  F166 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant is_function_declaration
+  participant is_method_declaration
+  participant is_type_declaration
+  participant is_struct_type
+  participant is_interface_type
+  participant is_package_clause
+  participant is_import_declaration
+  participant is_const_declaration
+  participant is_var_declaration
+  participant function_name
+  participant method_name
+  participant method_receiver_type
+  participant type_name
+  participant package_name
+  participant function_parameters
+  participant function_return_types
+  participant struct_fields
+  participant interface_methods
+  participant is_exported
+  participant is_main_function
+  participant is_init_function
+  participant get_import_paths
+  participant find_functions
+  participant find_methods
+  participant find_types
+  participant find_structs
+  participant functions_query
+  participant methods_query
+  participant types_query
+  participant structs_query
+  participant interfaces_query
+  participant detect_go_features
+  participant analyze_complexity
+  participant analyze_package
+  participant find_constants
+  participant find_variables
+  participant find_interfaces
+  participant find_channels
+  participant find_goroutines
+  participant find_embedded_types
+  participant find_type_assertions
+  participant test_go_function_detection
+  participant test_go_method_detection
+  participant test_go_struct_detection
+  participant test_go_interface_detection
+  participant test_go_package_analysis
+  participant test_go_features_detection
+  participant test_function_parameters_and_returns
+  participant test_struct_fields
+  participant test_exported_vs_private
+  participant test_special_functions
+  is_function_declaration->>is_method_declaration: call
+  is_method_declaration->>is_type_declaration: call
+  is_type_declaration->>is_struct_type: call
+  is_struct_type->>is_interface_type: call
+  is_interface_type->>is_package_clause: call
+  is_package_clause->>is_import_declaration: call
+  is_import_declaration->>is_const_declaration: call
+  is_const_declaration->>is_var_declaration: call
+  is_var_declaration->>function_name: call
+  function_name->>method_name: call
+  method_name->>method_receiver_type: call
+  method_receiver_type->>type_name: call
+  type_name->>package_name: call
+  package_name->>function_parameters: call
+  function_parameters->>function_return_types: call
+  function_return_types->>struct_fields: call
+  struct_fields->>interface_methods: call
+  interface_methods->>is_exported: call
+  is_exported->>is_main_function: call
+  is_main_function->>is_init_function: call
+  is_init_function->>get_import_paths: call
+  get_import_paths->>find_functions: call
+  find_functions->>find_methods: call
+  find_methods->>find_types: call
+  find_types->>find_structs: call
+  find_structs->>functions_query: call
+  functions_query->>methods_query: call
+  methods_query->>types_query: call
+  types_query->>structs_query: call
+  structs_query->>interfaces_query: call
+  interfaces_query->>detect_go_features: call
+  detect_go_features->>analyze_complexity: call
+  analyze_complexity->>analyze_package: call
+  analyze_package->>find_constants: call
+  find_constants->>find_variables: call
+  find_variables->>find_interfaces: call
+  find_interfaces->>find_channels: call
+  find_channels->>find_goroutines: call
+  find_goroutines->>find_embedded_types: call
+  find_embedded_types->>find_type_assertions: call
+  find_type_assertions->>test_go_function_detection: call
+  test_go_function_detection->>test_go_method_detection: call
+  test_go_method_detection->>test_go_struct_detection: call
+  test_go_struct_detection->>test_go_interface_detection: call
+  test_go_interface_detection->>test_go_package_analysis: call
+  test_go_package_analysis->>test_go_features_detection: call
+  test_go_features_detection->>test_function_parameters_and_returns: call
+  test_function_parameters_and_returns->>test_struct_fields: call
+  test_struct_fields->>test_exported_vs_private: call
+  test_exported_vs_private->>test_special_functions: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-is_function_declaration"><code>is_function_declaration</code> <small>function</small></li>
+<li id="symbol-is_method_declaration"><code>is_method_declaration</code> <small>function</small></li>
+<li id="symbol-is_type_declaration"><code>is_type_declaration</code> <small>function</small></li>
+<li id="symbol-is_struct_type"><code>is_struct_type</code> <small>function</small></li>
+<li id="symbol-is_interface_type"><code>is_interface_type</code> <small>function</small></li>
+<li id="symbol-is_package_clause"><code>is_package_clause</code> <small>function</small></li>
+<li id="symbol-is_import_declaration"><code>is_import_declaration</code> <small>function</small></li>
+<li id="symbol-is_const_declaration"><code>is_const_declaration</code> <small>function</small></li>
+<li id="symbol-is_var_declaration"><code>is_var_declaration</code> <small>function</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>function</small></li>
+<li id="symbol-method_name"><code>method_name</code> <small>function</small></li>
+<li id="symbol-method_receiver_type"><code>method_receiver_type</code> <small>function</small></li>
+<li id="symbol-type_name"><code>type_name</code> <small>function</small></li>
+<li id="symbol-package_name"><code>package_name</code> <small>function</small></li>
+<li id="symbol-function_parameters"><code>function_parameters</code> <small>function</small></li>
+<li id="symbol-function_return_types"><code>function_return_types</code> <small>function</small></li>
+<li id="symbol-struct_fields"><code>struct_fields</code> <small>function</small></li>
+<li id="symbol-interface_methods"><code>interface_methods</code> <small>function</small></li>
+<li id="symbol-is_exported"><code>is_exported</code> <small>function</small></li>
+<li id="symbol-is_main_function"><code>is_main_function</code> <small>function</small></li>
+<li id="symbol-is_init_function"><code>is_init_function</code> <small>function</small></li>
+<li id="symbol-get_import_paths"><code>get_import_paths</code> <small>function</small></li>
+<li id="symbol-find_functions"><code>find_functions</code> <small>function</small></li>
+<li id="symbol-find_methods"><code>find_methods</code> <small>function</small></li>
+<li id="symbol-find_types"><code>find_types</code> <small>function</small></li>
+<li id="symbol-find_structs"><code>find_structs</code> <small>function</small></li>
+<li id="symbol-functions_query"><code>functions_query</code> <small>function</small></li>
+<li id="symbol-methods_query"><code>methods_query</code> <small>function</small></li>
+<li id="symbol-types_query"><code>types_query</code> <small>function</small></li>
+<li id="symbol-structs_query"><code>structs_query</code> <small>function</small></li>
+<li id="symbol-interfaces_query"><code>interfaces_query</code> <small>function</small></li>
+<li id="symbol-detect_go_features"><code>detect_go_features</code> <small>function</small></li>
+<li id="symbol-analyze_complexity"><code>analyze_complexity</code> <small>function</small></li>
+<li id="symbol-analyze_package"><code>analyze_package</code> <small>function</small></li>
+<li id="symbol-find_constants"><code>find_constants</code> <small>function</small></li>
+<li id="symbol-find_variables"><code>find_variables</code> <small>function</small></li>
+<li id="symbol-find_interfaces"><code>find_interfaces</code> <small>function</small></li>
+<li id="symbol-find_channels"><code>find_channels</code> <small>function</small></li>
+<li id="symbol-find_goroutines"><code>find_goroutines</code> <small>function</small></li>
+<li id="symbol-find_embedded_types"><code>find_embedded_types</code> <small>function</small></li>
+<li id="symbol-find_type_assertions"><code>find_type_assertions</code> <small>function</small></li>
+<li id="symbol-test_go_function_detection"><code>test_go_function_detection</code> <small>function</small></li>
+<li id="symbol-test_go_method_detection"><code>test_go_method_detection</code> <small>function</small></li>
+<li id="symbol-test_go_struct_detection"><code>test_go_struct_detection</code> <small>function</small></li>
+<li id="symbol-test_go_interface_detection"><code>test_go_interface_detection</code> <small>function</small></li>
+<li id="symbol-test_go_package_analysis"><code>test_go_package_analysis</code> <small>function</small></li>
+<li id="symbol-test_go_features_detection"><code>test_go_features_detection</code> <small>function</small></li>
+<li id="symbol-test_function_parameters_and_returns"><code>test_function_parameters_and_returns</code> <small>function</small></li>
+<li id="symbol-test_struct_fields"><code>test_struct_fields</code> <small>function</small></li>
+<li id="symbol-test_exported_vs_private"><code>test_exported_vs_private</code> <small>function</small></li>
+<li id="symbol-test_special_functions"><code>test_special_functions</code> <small>function</small></li>
+<li id="symbol-gosyntax"><code>GoSyntax</code> <small>struct</small></li>
+<li id="symbol-packageanalysis"><code>PackageAnalysis</code> <small>struct</small></li>
+<li id="symbol-gosyntax"><code>GoSyntax</code> <small>impl</small></li>
+<li id="symbol-parameters"><code>parameters</code> <small>variable</small></li>
+<li id="symbol-return_types"><code>return_types</code> <small>variable</small></li>
+<li id="symbol-fields"><code>fields</code> <small>variable</small></li>
+<li id="symbol-field_names"><code>field_names</code> <small>variable</small></li>
+<li id="symbol-field_type"><code>field_type</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-imports"><code>imports</code> <small>variable</small></li>
+<li id="symbol-import_nodes"><code>import_nodes</code> <small>variable</small></li>
+<li id="symbol-cleaned_path"><code>cleaned_path</code> <small>variable</small></li>
+<li id="symbol-cleaned_path"><code>cleaned_path</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-method_nodes"><code>method_nodes</code> <small>variable</small></li>
+<li id="symbol-receiver_type"><code>receiver_type</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-types"><code>types</code> <small>variable</small></li>
+<li id="symbol-type_nodes"><code>type_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-structs"><code>structs</code> <small>variable</small></li>
+<li id="symbol-type_nodes"><code>type_nodes</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-features"><code>features</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-package_nodes"><code>package_nodes</code> <small>variable</small></li>
+<li id="symbol-package_name"><code>package_name</code> <small>variable</small></li>
+<li id="symbol-imports"><code>imports</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-types"><code>types</code> <small>variable</small></li>
+<li id="symbol-exported_functions"><code>exported_functions</code> <small>variable</small></li>
+<li id="symbol-exported_types"><code>exported_types</code> <small>variable</small></li>
+<li id="symbol-constants"><code>constants</code> <small>variable</small></li>
+<li id="symbol-const_nodes"><code>const_nodes</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-variables"><code>variables</code> <small>variable</small></li>
+<li id="symbol-var_nodes"><code>var_nodes</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-interfaces"><code>interfaces</code> <small>variable</small></li>
+<li id="symbol-interface_nodes"><code>interface_nodes</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-method_cursor"><code>method_cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-channels"><code>channels</code> <small>variable</small></li>
+<li id="symbol-channel_nodes"><code>channel_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-call_nodes"><code>call_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-goroutines"><code>goroutines</code> <small>variable</small></li>
+<li id="symbol-go_nodes"><code>go_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-embedded_structs"><code>embedded_structs</code> <small>variable</small></li>
+<li id="symbol-struct_nodes"><code>struct_nodes</code> <small>variable</small></li>
+<li id="symbol-embedded_types"><code>embedded_types</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-field_cursor"><code>field_cursor</code> <small>variable</small></li>
+<li id="symbol-field_node"><code>field_node</code> <small>variable</small></li>
+<li id="symbol-children"><code>children</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-type_assertions"><code>type_assertions</code> <small>variable</small></li>
+<li id="symbol-assertion_nodes"><code>assertion_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_names"><code>function_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-structs"><code>structs</code> <small>variable</small></li>
+<li id="symbol-struct_names"><code>struct_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-interfaces"><code>interfaces</code> <small>variable</small></li>
+<li id="symbol-interface_names"><code>interface_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-features"><code>features</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-struct_nodes"><code>struct_nodes</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

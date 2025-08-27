@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai/providers/mod.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>ai/providers/mod.rs</h1></header>
+<main>
+<section class="article">
+<p>20 symbols, 193 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["supports_feature"])
+  F0 --> F1
+  F1(["create_provider"])
+  F1 --> F2
+  F2(["new"])
+  F2 --> F3
+  F3(["provider"])
+  F3 --> F4
+  F4(["capabilities"])
+  F4 --> F5
+  F5(["validate_connection"])
+  F5 --> F6
+  F6(["process_request"])
+  F6 --> F7
+  F7(["best_model_for_feature"])
+  F7 --> F8
+  F8(["rate_limit_info"])
+  F8 --> F9
+  F9(["RateLimitInfo"])
+  F9 --> F10
+  F10(["MockProvider"])
+  F10 --> F11
+  F11(["MockProvider"])
+  F11 --> F12
+  F12(["MockProvider"])
+  F12 --> F13
+  F13(["provider"])
+  F13 --> F14
+  F14(["provider"])
+  F14 --> F15
+  F15(["provider"])
+  F15 --> F16
+  F16(["provider"])
+  F16 --> F17
+  F17(["provider"])
+  F17 --> F18
+  F18(["provider"])
+  F18 --> F19
+  F19(["content"])
+  F19 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant supports_feature
+  participant create_provider
+  participant new
+  participant provider
+  participant capabilities
+  participant validate_connection
+  participant process_request
+  participant best_model_for_feature
+  participant rate_limit_info
+  supports_feature->>create_provider: call
+  create_provider->>new: call
+  new->>provider: call
+  provider->>capabilities: call
+  capabilities->>validate_connection: call
+  validate_connection->>process_request: call
+  process_request->>best_model_for_feature: call
+  best_model_for_feature->>rate_limit_info: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-supports_feature"><code>supports_feature</code> <small>function</small></li>
+<li id="symbol-create_provider"><code>create_provider</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-provider"><code>provider</code> <small>function</small></li>
+<li id="symbol-capabilities"><code>capabilities</code> <small>function</small></li>
+<li id="symbol-validate_connection"><code>validate_connection</code> <small>function</small></li>
+<li id="symbol-process_request"><code>process_request</code> <small>function</small></li>
+<li id="symbol-best_model_for_feature"><code>best_model_for_feature</code> <small>function</small></li>
+<li id="symbol-rate_limit_info"><code>rate_limit_info</code> <small>function</small></li>
+<li id="symbol-ratelimitinfo"><code>RateLimitInfo</code> <small>struct</small></li>
+<li id="symbol-mockprovider"><code>MockProvider</code> <small>struct</small></li>
+<li id="symbol-mockprovider"><code>MockProvider</code> <small>impl</small></li>
+<li id="symbol-mockprovider"><code>MockProvider</code> <small>impl</small></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

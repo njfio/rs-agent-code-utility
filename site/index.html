@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Project Wiki</title>
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/search.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Project Wiki</h1></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<a href="pages/advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="pages/advanced_security.rs.html">advanced_security.rs</a>
+<a href="pages/ai_cache.rs.html">ai/cache.rs</a>
+<a href="pages/ai_config.rs.html">ai/config.rs</a>
+<a href="pages/ai_error.rs.html">ai/error.rs</a>
+<a href="pages/ai_mod.rs.html">ai/mod.rs</a>
+<a href="pages/ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="pages/ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="pages/ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="pages/ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="pages/ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="pages/ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="pages/ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+<a href="pages/ai_service.rs.html">ai/service.rs</a>
+<a href="pages/ai_types.rs.html">ai/types.rs</a>
+<a href="pages/ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="pages/analysis_common.rs.html">analysis_common.rs</a>
+<a href="pages/analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="pages/analyzer.rs.html">analyzer.rs</a>
+<a href="pages/ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="pages/bin_main.rs.html">bin/main.rs</a>
+<a href="pages/bin_rts.rs.html">bin/rts.rs</a>
+<a href="pages/cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="pages/cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="pages/cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="pages/cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="pages/cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="pages/cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="pages/cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="pages/cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="pages/cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="pages/cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="pages/cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="pages/cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="pages/cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="pages/cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="pages/cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="pages/cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+<a href="pages/cli_error.rs.html">cli/error.rs</a>
+<a href="pages/cli_mod.rs.html">cli/mod.rs</a>
+<a href="pages/cli_output.rs.html">cli/output.rs</a>
+<a href="pages/cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="pages/cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="pages/cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="pages/cli_utils.rs.html">cli/utils.rs</a>
+<a href="pages/code_evolution.rs.html">code_evolution.rs</a>
+<a href="pages/code_map.rs.html">code_map.rs</a>
+<a href="pages/command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="pages/complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="pages/constants.rs.html">constants.rs</a>
+<a href="pages/control_flow.rs.html">control_flow.rs</a>
+<a href="pages/dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="pages/embeddings.rs.html">embeddings.rs</a>
+<a href="pages/enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="pages/error.rs.html">error.rs</a>
+<a href="pages/file_cache.rs.html">file_cache.rs</a>
+<a href="pages/infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="pages/infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="pages/infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="pages/infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="pages/infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="pages/infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+<a href="pages/intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="pages/intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="pages/languages_c.rs.html">languages/c.rs</a>
+<a href="pages/languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="pages/languages_go.rs.html">languages/go.rs</a>
+<a href="pages/languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="pages/languages_mod.rs.html">languages/mod.rs</a>
+<a href="pages/languages_python.rs.html">languages/python.rs</a>
+<a href="pages/languages_rust.rs.html">languages/rust.rs</a>
+<a href="pages/languages_typescript.rs.html">languages/typescript.rs</a>
+<a href="pages/lib.rs.html">lib.rs</a>
+<a href="pages/memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="pages/parser.rs.html">parser.rs</a>
+<a href="pages/performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="pages/query.rs.html">query.rs</a>
+<a href="pages/reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="pages/refactoring.rs.html">refactoring.rs</a>
+<a href="pages/security_mod.rs.html">security/mod.rs</a>
+<a href="pages/security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="pages/security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="pages/security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+<a href="pages/semantic_context.rs.html">semantic_context.rs</a>
+<a href="pages/semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="pages/smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="pages/sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="pages/symbol_table.rs.html">symbol_table.rs</a>
+<a href="pages/taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="pages/test_coverage.rs.html">test_coverage.rs</a>
+<a href="pages/tree.rs.html">tree.rs</a>
+<a href="pages/wiki_mod.rs.html">wiki/mod.rs</a>
+
+</nav>
+<section class="article">
+<div class="card"><h2>Overview</h2>
+<p>Total files: 92, Lines: 61714</p>
+</div>
+<div class="card"><h2>Dependency Overview</h2>
+<div class="mermaid">graph LR
+  N2646740908["advanced_ai_analysis.rs"]
+  N1337003021["advanced_security.rs"]
+  N2646740908 --> N1337003021
+  N885943428["ai/cache.rs"]
+  N1337003021 --> N885943428
+  N3773384959["ai/config.rs"]
+  N885943428 --> N3773384959
+  N334725464["ai/error.rs"]
+  N3773384959 --> N334725464
+  N2799353848["ai/mod.rs"]
+  N334725464 --> N2799353848
+  N3007568230["ai/providers/anthropic.rs"]
+  N2799353848 --> N3007568230
+  N964422086["ai/providers/azure.rs"]
+  N3007568230 --> N964422086
+  N2205982418["ai/providers/google.rs"]
+  N964422086 --> N2205982418
+  N408882208["ai/providers/local.rs"]
+  N2205982418 --> N408882208
+  N2058798637["ai/providers/mod.rs"]
+  N408882208 --> N2058798637
+  N3818421326["ai/providers/ollama.rs"]
+  N2058798637 --> N3818421326
+  N2886101698["ai/providers/openai.rs"]
+  N3818421326 --> N2886101698
+  N227468667["ai/service.rs"]
+  N2886101698 --> N227468667
+  N505494232["ai/types.rs"]
+  N227468667 --> N505494232
+  N1794179002["ai_analysis.rs"]
+  N505494232 --> N1794179002
+  N14746615["analysis_common.rs"]
+  N1794179002 --> N14746615
+  N2630441794["analysis_utils.rs"]
+  N14746615 --> N2630441794
+  N1557436329["analyzer.rs"]
+  N2630441794 --> N1557436329
+  N2360317279["ast_transformation.rs"]
+  N1557436329 --> N2360317279
+  N2063511469["bin/main.rs"]
+  N2360317279 --> N2063511469
+  N4012426647["bin/rts.rs"]
+  N2063511469 --> N4012426647
+  N684595628["cli/commands/analyze.rs"]
+  N4012426647 --> N684595628
+  N710081529["cli/commands/dependencies.rs"]
+  N684595628 --> N710081529
+  N1361729853["cli/commands/explain.rs"]
+  N710081529 --> N1361729853
+  N3024088926["cli/commands/find.rs"]
+  N1361729853 --> N3024088926
+  N3589710044["cli/commands/insights.rs"]
+  N3024088926 --> N3589710044
+  N1426963231["cli/commands/interactive.rs"]
+  N3589710044 --> N1426963231
+  N21603632["cli/commands/languages.rs"]
+  N1426963231 --> N21603632
+  N3444484319["cli/commands/map.rs"]
+  N21603632 --> N3444484319
+  N2902840950["cli/commands/mod.rs"]
+  N3444484319 --> N2902840950
+  N3999859184["cli/commands/query.rs"]
+  N2902840950 --> N3999859184
+  N3131319082["cli/commands/refactor.rs"]
+  N3999859184 --> N3131319082
+  N2006720985["cli/commands/security.rs"]
+  N3131319082 --> N2006720985
+  N1901550315["cli/commands/stats.rs"]
+  N2006720985 --> N1901550315
+  N2348384820["cli/commands/symbols.rs"]
+  N1901550315 --> N2348384820
+  N3325620060["cli/commands/watch.rs"]
+  N2348384820 --> N3325620060
+  N1327247241["cli/commands/wiki.rs"]
+  N3325620060 --> N1327247241
+  N2549679396["cli/error.rs"]
+  N1327247241 --> N2549679396
+  N1757846276["cli/mod.rs"]
+  N2549679396 --> N1757846276
+  N1124860271["cli/output.rs"]
+  N1757846276 --> N1124860271
+  N723553971["cli/sarif.rs"]
+  N1124860271 --> N723553971
+  N364386707["cli/sbom.rs"]
+  N723553971 --> N364386707
+  N950393789["cli/schemas.rs"]
+  N364386707 --> N950393789
+  N513797848["cli/utils.rs"]
+  N950393789 --> N513797848
+  N2030149381["code_evolution.rs"]
+  N513797848 --> N2030149381
+  N1402293244["code_map.rs"]
+  N2030149381 --> N1402293244
+  N2169054984["command_injection_detector.rs"]
+  N1402293244 --> N2169054984
+  N339352449["complexity_analysis.rs"]
+  N2169054984 --> N339352449
+  N1159626446["constants.rs"]
+  N339352449 --> N1159626446
+  N2709504653["control_flow.rs"]
+  N1159626446 --> N2709504653
+  N1055617859["dependency_analysis.rs"]
+  N2709504653 --> N1055617859
+  N1486049062["embeddings.rs"]
+  N1055617859 --> N1486049062
+  N1271378609["enhanced_security.rs"]
+  N1486049062 --> N1271378609
+  N4239836397["error.rs"]
+  N1271378609 --> N4239836397
+  N1792779948["file_cache.rs"]
+  N4239836397 --> N1792779948
+  N1449560134["infrastructure/cache.rs"]
+  N1792779948 --> N1449560134
+  N2514568071["infrastructure/config.rs"]
+  N1449560134 --> N2514568071
+  N3076860116["infrastructure/database.rs"]
+  N2514568071 --> N3076860116
+  N2477744299["infrastructure/http_client.rs"]
+  N3076860116 --> N2477744299
+  N895778618["infrastructure/mod.rs"]
+  N2477744299 --> N895778618
+  N4119036851["infrastructure/rate_limiter.rs"]
+  N895778618 --> N4119036851
+  N416879054["intent_mapping.rs"]
+  N4119036851 --> N416879054
+  N3852643734["intent_mapping_stub.rs"]
+  N416879054 --> N3852643734
+  N1170245153["languages/c.rs"]
+  N3852643734 --> N1170245153
+  N1423334393["languages/cpp.rs"]
+  N1170245153 --> N1423334393
+  N4256653534["languages/go.rs"]
+  N1423334393 --> N4256653534
+  N463489725["languages/javascript.rs"]
+  N4256653534 --> N463489725
+  N1394080274["languages/mod.rs"]
+  N463489725 --> N1394080274
+  N137512691["languages/python.rs"]
+  N1394080274 --> N137512691
+  N3522307746["languages/rust.rs"]
+  N137512691 --> N3522307746
+  N3188396524["languages/typescript.rs"]
+  N3522307746 --> N3188396524
+  N758060078["lib.rs"]
+  N3188396524 --> N758060078
+  N2486240527["memory_tracker.rs"]
+  N758060078 --> N2486240527
+  N2325219585["parser.rs"]
+  N2486240527 --> N2325219585
+  N1736727194["performance_analysis.rs"]
+  N2325219585 --> N1736727194
+  N2420253603["query.rs"]
+  N1736727194 --> N2420253603
+  N2180576558["reasoning_engine.rs"]
+  N2420253603 --> N2180576558
+  N858698193["refactoring.rs"]
+  N2180576558 --> N858698193
+  N2531216329["security/mod.rs"]
+  N858698193 --> N2531216329
+  N2660871181["security/owasp_detector.rs"]
+  N2531216329 --> N2660871181
+  N1495382041["security/secrets_detector.rs"]
+  N2660871181 --> N1495382041
+  N998472272["security/vulnerability_db.rs"]
+  N1495382041 --> N998472272
+  N1659727018["semantic_context.rs"]
+  N998472272 --> N1659727018
+  N4263985923["semantic_graph.rs"]
+  N1659727018 --> N4263985923
+  N3101407070["smart_refactoring.rs"]
+  N4263985923 --> N3101407070
+  N1626471869["sql_injection_detector.rs"]
+  N3101407070 --> N1626471869
+  N1516897320["symbol_table.rs"]
+  N1626471869 --> N1516897320
+  N1673700020["taint_analysis.rs"]
+  N1516897320 --> N1673700020
+  N3220328607["test_coverage.rs"]
+  N1673700020 --> N3220328607
+  N2019371160["tree.rs"]
+  N3220328607 --> N2019371160
+  N1150417134["wiki/mod.rs"]
+  N2019371160 --> N1150417134
+
+</div>
+</div>
+<div class="card"><h2>Documentation Insights</h2>
+<p>Automatic summaries are generated from symbols and structure. Public functions and modules include heuristic descriptions and cross-references.</p>
+</div>
+<div class="card"><h3>AI Insights</h3><p>Enable AI to generate rich documentation.</p></div>
+</section>
+</main>
+</body>
+</html>

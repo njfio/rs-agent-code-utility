@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AnalyzeResultV1",
+  "type": "object",
+  "required": [
+    "root_path",
+    "total_files",
+    "parsed_files",
+    "error_files",
+    "total_lines",
+    "languages",
+    "files",
+    "config"
+  ],
+  "properties": {
+    "root_path": { "type": "string" },
+    "total_files": { "type": "integer", "minimum": 0 },
+    "parsed_files": { "type": "integer", "minimum": 0 },
+    "error_files": { "type": "integer", "minimum": 0 },
+    "total_lines": { "type": "integer", "minimum": 0 },
+    "languages": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path", "language", "size", "lines",
+          "parsed_successfully", "parse_errors", "symbols", "security_vulnerabilities"
+        ],
+        "properties": {
+          "path": { "type": "string" },
+          "language": { "type": "string" },
+          "size": { "type": "integer", "minimum": 0 },
+          "lines": { "type": "integer", "minimum": 0 },
+          "parsed_successfully": { "type": "boolean" },
+          "parse_errors": { "type": "array", "items": { "type": "string" } },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name", "kind", "start_line", "end_line",
+                "start_column", "end_column", "visibility"
+              ],
+              "properties": {
+                "name": { "type": "string" },
+                "kind": { "type": "string" },
+                "start_line": { "type": "integer", "minimum": 1 },
+                "end_line": { "type": "integer", "minimum": 1 },
+                "start_column": { "type": "integer", "minimum": 0 },
+                "end_column": { "type": "integer", "minimum": 0 },
+                "visibility": { "type": "string" },
+                "documentation": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "security_vulnerabilities": { "type": "array" }
+        }
+      }
+    },
+    "config": { "type": "object" }
+  }
+}
+

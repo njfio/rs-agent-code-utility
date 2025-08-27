@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SymbolsResultV1",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    ".*": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name", "kind", "start_line", "end_line",
+          "start_column", "end_column", "visibility"
+        ],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string" },
+          "start_line": { "type": "integer", "minimum": 1 },
+          "end_line": { "type": "integer", "minimum": 1 },
+          "start_column": { "type": "integer", "minimum": 0 },
+          "end_column": { "type": "integer", "minimum": 0 },
+          "visibility": { "type": "string" },
+          "documentation": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}
+

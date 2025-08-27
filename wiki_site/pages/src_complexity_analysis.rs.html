@@ -1,0 +1,6088 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>src/complexity_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>src/complexity_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>290 symbols, 2047 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["scoped_identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["scoped_identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["scoped_identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["type_identifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["identifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["identifier"])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23(["identifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["identifier"])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26(["identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["visibility_modifier"])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28(["type_identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["visibility_modifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["field_identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["visibility_modifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["field_identifier"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["visibility_modifier"])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34(["field_identifier"])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35(["visibility_modifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["field_identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["visibility_modifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["field_identifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["visibility_modifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["field_identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["visibility_modifier"])
+  N40 -->|true| N41
+  N40 -->|false| N41
+  N42(["field_identifier"])
+  N41 -->|true| N42
+  N41 -->|false| N42
+  N43(["visibility_modifier"])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44(["field_identifier"])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45(["visibility_modifier"])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46(["field_identifier"])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47(["type_identifier"])
+  N46 -->|true| N47
+  N46 -->|false| N47
+  N48(["for"])
+  N48 -->|repeat| N48
+  N47 --> N48
+  N49(["type_identifier"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["type_identifier"])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52(["type_identifier"])
+  N51 -->|true| N52
+  N51 -->|false| N52
+  N53(["field_identifier"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["field_identifier"])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55(["field_identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["field_identifier"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["field_identifier"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["field_identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["field_identifier"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["field_identifier"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["field_identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["identifier"])
+  N61 -->|true| N62
+  N61 -->|false| N62
+  N63(["identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["identifier"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["identifier"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["visibility_modifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["type_identifier"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["visibility_modifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["field_identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["visibility_modifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["field_identifier"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["visibility_modifier"])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73(["field_identifier"])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74(["visibility_modifier"])
+  N73 -->|true| N74
+  N73 -->|false| N74
+  N75(["field_identifier"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["type_identifier"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["visibility_modifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["identifier"])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79(["identifier"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["field_identifier"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["field_identifier"])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82(["identifier"])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83(["field_identifier"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["field_identifier"])
+  N83 -->|true| N84
+  N83 -->|false| N84
+  N85(["if_expression"])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86(["if"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["identifier"])
+  N86 -->|true| N87
+  N86 -->|false| N87
+  N88(["identifier"])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89(["call:log2"])
+  N88 --> N89
+  N90(["visibility_modifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["identifier"])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92(["if_expression"])
+  N91 -->|true| N92
+  N91 -->|false| N92
+  N93(["if"])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94(["field_identifier"])
+  N93 -->|true| N94
+  N93 -->|false| N94
+  N95(["field_identifier"])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96(["field_identifier"])
+  N95 -->|true| N96
+  N95 -->|false| N96
+  N97(["field_identifier"])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98(["visibility_modifier"])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99(["identifier"])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100(["call:difficulty"])
+  N99 --> N100
+  N101(["call:volume"])
+  N100 --> N101
+  N102(["visibility_modifier"])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103(["type_identifier"])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104(["field_identifier"])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105(["type_identifier"])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106(["type_identifier"])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107(["visibility_modifier"])
+  N106 -->|true| N107
+  N106 -->|false| N107
+  N108(["identifier"])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109(["identifier"])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110(["type_identifier"])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111(["type_identifier"])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112(["field_identifier"])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113(["call:to_string"])
+  N112 --> N113
+  N114(["visibility_modifier"])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115(["identifier"])
+  N114 -->|true| N115
+  N114 -->|false| N115
+  N116(["identifier"])
+  N115 -->|true| N116
+  N115 -->|false| N116
+  N117(["type_identifier"])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118(["type_identifier"])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119(["type_identifier"])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120(["identifier"])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121(["call:new"])
+  N120 --> N121
+  N122(["identifier"])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123(["call:build_cfg"])
+  N122 --> N123
+  N124(["identifier"])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125(["call:calculate_mccabe_complexity"])
+  N124 --> N125
+  N126(["identifier"])
+  N125 -->|true| N126
+  N125 -->|false| N126
+  N127(["call:calculate_cognitive_complexity"])
+  N126 --> N127
+  N128(["identifier"])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129(["call:calculate_halstead_metrics"])
+  N128 --> N129
+  N130(["identifier"])
+  N129 -->|true| N130
+  N129 -->|false| N130
+  N131(["call:calculate_npath_complexity"])
+  N130 --> N131
+  N132(["identifier"])
+  N131 -->|true| N132
+  N131 -->|false| N132
+  N133(["call:count_lines_of_code"])
+  N132 --> N133
+  N134(["identifier"])
+  N133 -->|true| N134
+  N133 -->|false| N134
+  N135(["call:len"])
+  N134 --> N135
+  N136(["identifier"])
+  N135 -->|true| N136
+  N135 -->|false| N136
+  N137(["call:calculate_max_nesting_depth"])
+  N136 --> N137
+  N138(["call:Ok"])
+  N137 --> N138
+  N139(["identifier"])
+  N138 -->|true| N139
+  N138 -->|false| N139
+  N140(["identifier"])
+  N139 -->|true| N140
+  N139 -->|false| N140
+  N141(["type_identifier"])
+  N140 -->|true| N141
+  N140 -->|false| N141
+  N142(["call:cyclomatic_complexity"])
+  N141 --> N142
+  N143(["identifier"])
+  N142 -->|true| N143
+  N142 -->|false| N143
+  N144(["identifier"])
+  N143 -->|true| N144
+  N143 -->|false| N144
+  N145(["type_identifier"])
+  N144 -->|true| N145
+  N144 -->|false| N145
+  N146(["type_identifier"])
+  N145 -->|true| N146
+  N145 -->|false| N146
+  N147(["mutable_specifier"])
+  N146 -->|true| N147
+  N146 -->|false| N147
+  N148(["identifier"])
+  N147 -->|true| N148
+  N147 -->|false| N148
+  N149(["mutable_specifier"])
+  N148 -->|true| N149
+  N148 -->|false| N149
+  N150(["identifier"])
+  N149 -->|true| N150
+  N149 -->|false| N150
+  N151(["call:traverse_for_cognitive_complexity"])
+  N150 --> N151
+  N152(["call:Ok"])
+  N151 --> N152
+  N153(["identifier"])
+  N152 -->|true| N153
+  N152 -->|false| N153
+  N154(["identifier"])
+  N153 -->|true| N154
+  N153 -->|false| N154
+  N155(["type_identifier"])
+  N154 -->|true| N155
+  N154 -->|false| N155
+  N156(["identifier"])
+  N155 -->|true| N156
+  N155 -->|false| N156
+  N157(["mutable_specifier"])
+  N156 -->|true| N157
+  N156 -->|false| N157
+  N158(["identifier"])
+  N157 -->|true| N158
+  N157 -->|false| N158
+  N159(["mutable_specifier"])
+  N158 -->|true| N159
+  N158 -->|false| N159
+  N160(["identifier"])
+  N159 -->|true| N160
+  N159 -->|false| N160
+  N161(["call:kind"])
+  N160 --> N161
+  N162(["identifier"])
+  N161 -->|true| N162
+  N161 -->|false| N162
+  N163(["call:get_cognitive_complexity_impact"])
+  N162 --> N163
+  N164(["identifier"])
+  N163 -->|true| N164
+  N163 -->|false| N164
+  N165(["scoped_identifier"])
+  N164 -->|true| N165
+  N164 -->|false| N165
+  N166(["identifier"])
+  N165 -->|true| N166
+  N165 -->|false| N166
+  N167(["identifier"])
+  N166 -->|true| N167
+  N166 -->|false| N167
+  N168(["identifier"])
+  N167 -->|true| N168
+  N167 -->|false| N168
+  N169(["scoped_identifier"])
+  N168 -->|true| N169
+  N168 -->|false| N169
+  N170(["identifier"])
+  N169 -->|true| N170
+  N169 -->|false| N170
+  N171(["identifier"])
+  N170 -->|true| N171
+  N170 -->|false| N171
+  N172(["identifier"])
+  N171 -->|true| N172
+  N171 -->|false| N172
+  N173(["identifier"])
+  N172 -->|true| N173
+  N172 -->|false| N173
+  N174(["scoped_identifier"])
+  N173 -->|true| N174
+  N173 -->|false| N174
+  N175(["identifier"])
+  N174 -->|true| N175
+  N174 -->|false| N175
+  N176(["identifier"])
+  N175 -->|true| N176
+  N175 -->|false| N176
+  N177(["identifier"])
+  N176 -->|true| N177
+  N176 -->|false| N177
+  N178(["identifier"])
+  N177 -->|true| N178
+  N177 -->|false| N178
+  N179(["scoped_identifier"])
+  N178 -->|true| N179
+  N178 -->|false| N179
+  N180(["identifier"])
+  N179 -->|true| N180
+  N179 -->|false| N180
+  N181(["identifier"])
+  N180 -->|true| N181
+  N180 -->|false| N181
+  N182(["identifier"])
+  N181 -->|true| N182
+  N181 -->|false| N182
+  N183(["identifier"])
+  N182 -->|true| N183
+  N182 -->|false| N183
+  N184(["identifier"])
+  N183 -->|true| N184
+  N183 -->|false| N184
+  N185(["scoped_identifier"])
+  N184 -->|true| N185
+  N184 -->|false| N185
+  N186(["identifier"])
+  N185 -->|true| N186
+  N185 -->|false| N186
+  N187(["identifier"])
+  N186 -->|true| N187
+  N186 -->|false| N187
+  N188(["identifier"])
+  N187 -->|true| N188
+  N187 -->|false| N188
+  N189(["scoped_identifier"])
+  N188 -->|true| N189
+  N188 -->|false| N189
+  N190(["identifier"])
+  N189 -->|true| N190
+  N189 -->|false| N190
+  N191(["identifier"])
+  N190 -->|true| N191
+  N190 -->|false| N191
+  N192(["mutable_specifier"])
+  N191 -->|true| N192
+  N191 -->|false| N192
+  N193(["identifier"])
+  N192 -->|true| N193
+  N192 -->|false| N193
+  N194(["call:walk"])
+  N193 --> N194
+  N195(["if_expression"])
+  N194 -->|true| N195
+  N194 -->|false| N195
+  N196(["if"])
+  N195 -->|true| N196
+  N195 -->|false| N196
+  N197(["identifier"])
+  N196 -->|true| N197
+  N196 -->|false| N197
+  N198(["field_identifier"])
+  N197 -->|true| N198
+  N197 -->|false| N198
+  N199(["loop_expression"])
+  N199 -->|repeat| N199
+  N198 --> N199
+  N200(["loop"])
+  N200 -->|repeat| N200
+  N199 --> N200
+  N201(["call:traverse_for_cognitive_complexity"])
+  N200 --> N201
+  N202(["if_expression"])
+  N201 -->|true| N202
+  N201 -->|false| N202
+  N203(["if"])
+  N202 -->|true| N203
+  N202 -->|false| N203
+  N204(["call:goto_next_sibling"])
+  N203 --> N204
+  N205(["identifier"])
+  N204 -->|true| N205
+  N204 -->|false| N205
+  N206(["scoped_identifier"])
+  N205 -->|true| N206
+  N205 -->|false| N206
+  N207(["identifier"])
+  N206 -->|true| N207
+  N206 -->|false| N207
+  N208(["identifier"])
+  N207 -->|true| N208
+  N207 -->|false| N208
+  N209(["scoped_identifier"])
+  N208 -->|true| N209
+  N208 -->|false| N209
+  N210(["identifier"])
+  N209 -->|true| N210
+  N209 -->|false| N210
+  N211(["identifier"])
+  N210 -->|true| N211
+  N210 -->|false| N211
+  N212(["scoped_identifier"])
+  N211 -->|true| N212
+  N211 -->|false| N212
+  N213(["identifier"])
+  N212 -->|true| N213
+  N212 -->|false| N213
+  N214(["identifier"])
+  N213 -->|true| N214
+  N213 -->|false| N214
+  N215(["identifier"])
+  N214 -->|true| N215
+  N214 -->|false| N215
+  N216(["identifier"])
+  N215 -->|true| N216
+  N215 -->|false| N216
+  N217(["identifier"])
+  N216 -->|true| N217
+  N216 -->|false| N217
+  N218(["type_identifier"])
+  N217 -->|true| N218
+  N217 -->|false| N218
+  N219(["identifier"])
+  N218 -->|true| N219
+  N218 -->|false| N219
+  N220(["type_identifier"])
+  N219 -->|true| N220
+  N219 -->|false| N220
+  N221(["call:as_str"])
+  N220 --> N221
+  N222(["call:get_rust_cognitive_impact"])
+  N221 --> N222
+  N223(["call:get_javascript_cognitive_impact"])
+  N222 --> N223
+  N224(["call:get_python_cognitive_impact"])
+  N223 --> N224
+  N225(["call:get_c_cognitive_impact"])
+  N224 --> N225
+  N226(["call:get_go_cognitive_impact"])
+  N225 --> N226
+  N227(["scoped_identifier"])
+  N226 -->|true| N227
+  N226 -->|false| N227
+  N228(["identifier"])
+  N227 -->|true| N228
+  N227 -->|false| N228
+  N229(["identifier"])
+  N228 -->|true| N229
+  N228 -->|false| N229
+  N230(["identifier"])
+  N229 -->|true| N230
+  N229 -->|false| N230
+  N231(["identifier"])
+  N230 -->|true| N231
+  N230 -->|false| N231
+  N232(["type_identifier"])
+  N231 -->|true| N232
+  N231 -->|false| N232
+  N233(["identifier"])
+  N232 -->|true| N233
+  N232 -->|false| N233
+  N234(["type_identifier"])
+  N233 -->|true| N234
+  N233 -->|false| N234
+  N235(["identifier"])
+  N234 -->|true| N235
+  N234 -->|false| N235
+  N236(["scoped_identifier"])
+  N235 -->|true| N236
+  N235 -->|false| N236
+  N237(["identifier"])
+  N236 -->|true| N237
+  N236 -->|false| N237
+  N238(["identifier"])
+  N237 -->|true| N238
+  N237 -->|false| N238
+  N239(["scoped_identifier"])
+  N238 -->|true| N239
+  N238 -->|false| N239
+  N240(["identifier"])
+  N239 -->|true| N240
+  N239 -->|false| N240
+  N241(["identifier"])
+  N240 -->|true| N241
+  N240 -->|false| N241
+  N242(["scoped_identifier"])
+  N241 -->|true| N242
+  N241 -->|false| N242
+  N243(["identifier"])
+  N242 -->|true| N243
+  N242 -->|false| N243
+  N244(["identifier"])
+  N243 -->|true| N244
+  N243 -->|false| N244
+  N245(["scoped_identifier"])
+  N244 -->|true| N245
+  N244 -->|false| N245
+  N246(["identifier"])
+  N245 -->|true| N246
+  N245 -->|false| N246
+  N247(["identifier"])
+  N246 -->|true| N247
+  N246 -->|false| N247
+  N248(["scoped_identifier"])
+  N247 -->|true| N248
+  N247 -->|false| N248
+  N249(["identifier"])
+  N248 -->|true| N249
+  N248 -->|false| N249
+  N250(["identifier"])
+  N249 -->|true| N250
+  N249 -->|false| N250
+  N251(["scoped_identifier"])
+  N250 -->|true| N251
+  N250 -->|false| N251
+  N252(["identifier"])
+  N251 -->|true| N252
+  N251 -->|false| N252
+  N253(["identifier"])
+  N252 -->|true| N253
+  N252 -->|false| N253
+  N254(["scoped_identifier"])
+  N253 -->|true| N254
+  N253 -->|false| N254
+  N255(["identifier"])
+  N254 -->|true| N255
+  N254 -->|false| N255
+  N256(["identifier"])
+  N255 -->|true| N256
+  N255 -->|false| N256
+  N257(["scoped_identifier"])
+  N256 -->|true| N257
+  N256 -->|false| N257
+  N258(["identifier"])
+  N257 -->|true| N258
+  N257 -->|false| N258
+  N259(["identifier"])
+  N258 -->|true| N259
+  N258 -->|false| N259
+  N260(["scoped_identifier"])
+  N259 -->|true| N260
+  N259 -->|false| N260
+  N261(["identifier"])
+  N260 -->|true| N261
+  N260 -->|false| N261
+  N262(["identifier"])
+  N261 -->|true| N262
+  N261 -->|false| N262
+  N263(["identifier"])
+  N262 -->|true| N263
+  N262 -->|false| N263
+  N264(["identifier"])
+  N263 -->|true| N264
+  N263 -->|false| N264
+  N265(["type_identifier"])
+  N264 -->|true| N265
+  N264 -->|false| N265
+  N266(["identifier"])
+  N265 -->|true| N266
+  N265 -->|false| N266
+  N267(["type_identifier"])
+  N266 -->|true| N267
+  N266 -->|false| N267
+  N268(["identifier"])
+  N267 -->|true| N268
+  N267 -->|false| N268
+  N269(["scoped_identifier"])
+  N268 -->|true| N269
+  N268 -->|false| N269
+  N270(["identifier"])
+  N269 -->|true| N270
+  N269 -->|false| N270
+  N271(["identifier"])
+  N270 -->|true| N271
+  N270 -->|false| N271
+  N272(["scoped_identifier"])
+  N271 -->|true| N272
+  N271 -->|false| N272
+  N273(["identifier"])
+  N272 -->|true| N273
+  N272 -->|false| N273
+  N274(["identifier"])
+  N273 -->|true| N274
+  N273 -->|false| N274
+  N275(["scoped_identifier"])
+  N274 -->|true| N275
+  N274 -->|false| N275
+  N276(["identifier"])
+  N275 -->|true| N276
+  N275 -->|false| N276
+  N277(["identifier"])
+  N276 -->|true| N277
+  N276 -->|false| N277
+  N278(["scoped_identifier"])
+  N277 -->|true| N278
+  N277 -->|false| N278
+  N279(["identifier"])
+  N278 -->|true| N279
+  N278 -->|false| N279
+  N280(["identifier"])
+  N279 -->|true| N280
+  N279 -->|false| N280
+  N281(["scoped_identifier"])
+  N280 -->|true| N281
+  N280 -->|false| N281
+  N282(["identifier"])
+  N281 -->|true| N282
+  N281 -->|false| N282
+  N283(["identifier"])
+  N282 -->|true| N283
+  N282 -->|false| N283
+  N284(["scoped_identifier"])
+  N283 -->|true| N284
+  N283 -->|false| N284
+  N285(["identifier"])
+  N284 -->|true| N285
+  N284 -->|false| N285
+  N286(["identifier"])
+  N285 -->|true| N286
+  N285 -->|false| N286
+  N287(["scoped_identifier"])
+  N286 -->|true| N287
+  N286 -->|false| N287
+  N288(["identifier"])
+  N287 -->|true| N288
+  N287 -->|false| N288
+  N289(["identifier"])
+  N288 -->|true| N289
+  N288 -->|false| N289
+  N290(["if_expression"])
+  N289 -->|true| N290
+  N289 -->|false| N290
+  N291(["if"])
+  N290 -->|true| N291
+  N290 -->|false| N291
+  N292(["field_identifier"])
+  N291 -->|true| N292
+  N291 -->|false| N292
+  N293(["identifier"])
+  N292 -->|true| N293
+  N292 -->|false| N293
+  N294(["scoped_identifier"])
+  N293 -->|true| N294
+  N293 -->|false| N294
+  N295(["identifier"])
+  N294 -->|true| N295
+  N294 -->|false| N295
+  N296(["identifier"])
+  N295 -->|true| N296
+  N295 -->|false| N296
+  N297(["scoped_identifier"])
+  N296 -->|true| N297
+  N296 -->|false| N297
+  N298(["identifier"])
+  N297 -->|true| N298
+  N297 -->|false| N298
+  N299(["identifier"])
+  N298 -->|true| N299
+  N298 -->|false| N299
+  N300(["scoped_identifier"])
+  N299 -->|true| N300
+  N299 -->|false| N300
+  N301(["identifier"])
+  N300 -->|true| N301
+  N300 -->|false| N301
+  N302(["identifier"])
+  N301 -->|true| N302
+  N301 -->|false| N302
+  N303(["scoped_identifier"])
+  N302 -->|true| N303
+  N302 -->|false| N303
+  N304(["identifier"])
+  N303 -->|true| N304
+  N303 -->|false| N304
+  N305(["identifier"])
+  N304 -->|true| N305
+  N304 -->|false| N305
+  N306(["identifier"])
+  N305 -->|true| N306
+  N305 -->|false| N306
+  N307(["identifier"])
+  N306 -->|true| N307
+  N306 -->|false| N307
+  N308(["type_identifier"])
+  N307 -->|true| N308
+  N307 -->|false| N308
+  N309(["identifier"])
+  N308 -->|true| N309
+  N308 -->|false| N309
+  N310(["type_identifier"])
+  N309 -->|true| N310
+  N309 -->|false| N310
+  N311(["identifier"])
+  N310 -->|true| N311
+  N310 -->|false| N311
+  N312(["scoped_identifier"])
+  N311 -->|true| N312
+  N311 -->|false| N312
+  N313(["identifier"])
+  N312 -->|true| N313
+  N312 -->|false| N313
+  N314(["identifier"])
+  N313 -->|true| N314
+  N313 -->|false| N314
+  N315(["scoped_identifier"])
+  N314 -->|true| N315
+  N314 -->|false| N315
+  N316(["identifier"])
+  N315 -->|true| N316
+  N315 -->|false| N316
+  N317(["identifier"])
+  N316 -->|true| N317
+  N316 -->|false| N317
+  N318(["scoped_identifier"])
+  N317 -->|true| N318
+  N317 -->|false| N318
+  N319(["identifier"])
+  N318 -->|true| N319
+  N318 -->|false| N319
+  N320(["identifier"])
+  N319 -->|true| N320
+  N319 -->|false| N320
+  N321(["scoped_identifier"])
+  N320 -->|true| N321
+  N320 -->|false| N321
+  N322(["identifier"])
+  N321 -->|true| N322
+  N321 -->|false| N322
+  N323(["identifier"])
+  N322 -->|true| N323
+  N322 -->|false| N323
+  N324(["scoped_identifier"])
+  N323 -->|true| N324
+  N323 -->|false| N324
+  N325(["identifier"])
+  N324 -->|true| N325
+  N324 -->|false| N325
+  N326(["identifier"])
+  N325 -->|true| N326
+  N325 -->|false| N326
+  N327(["scoped_identifier"])
+  N326 -->|true| N327
+  N326 -->|false| N327
+  N328(["identifier"])
+  N327 -->|true| N328
+  N327 -->|false| N328
+  N329(["identifier"])
+  N328 -->|true| N329
+  N328 -->|false| N329
+  N330(["scoped_identifier"])
+  N329 -->|true| N330
+  N329 -->|false| N330
+  N331(["identifier"])
+  N330 -->|true| N331
+  N330 -->|false| N331
+  N332(["identifier"])
+  N331 -->|true| N332
+  N331 -->|false| N332
+  N333(["scoped_identifier"])
+  N332 -->|true| N333
+  N332 -->|false| N333
+  N334(["identifier"])
+  N333 -->|true| N334
+  N333 -->|false| N334
+  N335(["identifier"])
+  N334 -->|true| N335
+  N334 -->|false| N335
+  N336(["scoped_identifier"])
+  N335 -->|true| N336
+  N335 -->|false| N336
+  N337(["identifier"])
+  N336 -->|true| N337
+  N336 -->|false| N337
+  N338(["identifier"])
+  N337 -->|true| N338
+  N337 -->|false| N338
+  N339(["scoped_identifier"])
+  N338 -->|true| N339
+  N338 -->|false| N339
+  N340(["identifier"])
+  N339 -->|true| N340
+  N339 -->|false| N340
+  N341(["identifier"])
+  N340 -->|true| N341
+  N340 -->|false| N341
+  N342(["identifier"])
+  N341 -->|true| N342
+  N341 -->|false| N342
+  N343(["identifier"])
+  N342 -->|true| N343
+  N342 -->|false| N343
+  N344(["type_identifier"])
+  N343 -->|true| N344
+  N343 -->|false| N344
+  N345(["identifier"])
+  N344 -->|true| N345
+  N344 -->|false| N345
+  N346(["type_identifier"])
+  N345 -->|true| N346
+  N345 -->|false| N346
+  N347(["identifier"])
+  N346 -->|true| N347
+  N346 -->|false| N347
+  N348(["scoped_identifier"])
+  N347 -->|true| N348
+  N347 -->|false| N348
+  N349(["identifier"])
+  N348 -->|true| N349
+  N348 -->|false| N349
+  N350(["identifier"])
+  N349 -->|true| N350
+  N349 -->|false| N350
+  N351(["scoped_identifier"])
+  N350 -->|true| N351
+  N350 -->|false| N351
+  N352(["identifier"])
+  N351 -->|true| N352
+  N351 -->|false| N352
+  N353(["identifier"])
+  N352 -->|true| N353
+  N352 -->|false| N353
+  N354(["scoped_identifier"])
+  N353 -->|true| N354
+  N353 -->|false| N354
+  N355(["identifier"])
+  N354 -->|true| N355
+  N354 -->|false| N355
+  N356(["identifier"])
+  N355 -->|true| N356
+  N355 -->|false| N356
+  N357(["scoped_identifier"])
+  N356 -->|true| N357
+  N356 -->|false| N357
+  N358(["identifier"])
+  N357 -->|true| N358
+  N357 -->|false| N358
+  N359(["identifier"])
+  N358 -->|true| N359
+  N358 -->|false| N359
+  N360(["scoped_identifier"])
+  N359 -->|true| N360
+  N359 -->|false| N360
+  N361(["identifier"])
+  N360 -->|true| N361
+  N360 -->|false| N361
+  N362(["identifier"])
+  N361 -->|true| N362
+  N361 -->|false| N362
+  N363(["scoped_identifier"])
+  N362 -->|true| N363
+  N362 -->|false| N363
+  N364(["identifier"])
+  N363 -->|true| N364
+  N363 -->|false| N364
+  N365(["identifier"])
+  N364 -->|true| N365
+  N364 -->|false| N365
+  N366(["scoped_identifier"])
+  N365 -->|true| N366
+  N365 -->|false| N366
+  N367(["identifier"])
+  N366 -->|true| N367
+  N366 -->|false| N367
+  N368(["identifier"])
+  N367 -->|true| N368
+  N367 -->|false| N368
+  N369(["scoped_identifier"])
+  N368 -->|true| N369
+  N368 -->|false| N369
+  N370(["identifier"])
+  N369 -->|true| N370
+  N369 -->|false| N370
+  N371(["identifier"])
+  N370 -->|true| N371
+  N370 -->|false| N371
+  N372(["scoped_identifier"])
+  N371 -->|true| N372
+  N371 -->|false| N372
+  N373(["identifier"])
+  N372 -->|true| N373
+  N372 -->|false| N373
+  N374(["identifier"])
+  N373 -->|true| N374
+  N373 -->|false| N374
+  N375(["identifier"])
+  N374 -->|true| N375
+  N374 -->|false| N375
+  N376(["identifier"])
+  N375 -->|true| N376
+  N375 -->|false| N376
+  N377(["type_identifier"])
+  N376 -->|true| N377
+  N376 -->|false| N377
+  N378(["identifier"])
+  N377 -->|true| N378
+  N377 -->|false| N378
+  N379(["type_identifier"])
+  N378 -->|true| N379
+  N378 -->|false| N379
+  N380(["identifier"])
+  N379 -->|true| N380
+  N379 -->|false| N380
+  N381(["scoped_identifier"])
+  N380 -->|true| N381
+  N380 -->|false| N381
+  N382(["identifier"])
+  N381 -->|true| N382
+  N381 -->|false| N382
+  N383(["identifier"])
+  N382 -->|true| N383
+  N382 -->|false| N383
+  N384(["scoped_identifier"])
+  N383 -->|true| N384
+  N383 -->|false| N384
+  N385(["identifier"])
+  N384 -->|true| N385
+  N384 -->|false| N385
+  N386(["identifier"])
+  N385 -->|true| N386
+  N385 -->|false| N386
+  N387(["scoped_identifier"])
+  N386 -->|true| N387
+  N386 -->|false| N387
+  N388(["identifier"])
+  N387 -->|true| N388
+  N387 -->|false| N388
+  N389(["identifier"])
+  N388 -->|true| N389
+  N388 -->|false| N389
+  N390(["scoped_identifier"])
+  N389 -->|true| N390
+  N389 -->|false| N390
+  N391(["identifier"])
+  N390 -->|true| N391
+  N390 -->|false| N391
+  N392(["identifier"])
+  N391 -->|true| N392
+  N391 -->|false| N392
+  N393(["scoped_identifier"])
+  N392 -->|true| N393
+  N392 -->|false| N393
+  N394(["identifier"])
+  N393 -->|true| N394
+  N393 -->|false| N394
+  N395(["identifier"])
+  N394 -->|true| N395
+  N394 -->|false| N395
+  N396(["scoped_identifier"])
+  N395 -->|true| N396
+  N395 -->|false| N396
+  N397(["identifier"])
+  N396 -->|true| N397
+  N396 -->|false| N397
+  N398(["identifier"])
+  N397 -->|true| N398
+  N397 -->|false| N398
+  N399(["scoped_identifier"])
+  N398 -->|true| N399
+  N398 -->|false| N399
+  N400(["identifier"])
+  N399 -->|true| N400
+  N399 -->|false| N400
+  N401(["identifier"])
+  N400 -->|true| N401
+  N400 -->|false| N401
+  N402(["scoped_identifier"])
+  N401 -->|true| N402
+  N401 -->|false| N402
+  N403(["identifier"])
+  N402 -->|true| N403
+  N402 -->|false| N403
+  N404(["identifier"])
+  N403 -->|true| N404
+  N403 -->|false| N404
+  N405(["identifier"])
+  N404 -->|true| N405
+  N404 -->|false| N405
+  N406(["identifier"])
+  N405 -->|true| N406
+  N405 -->|false| N406
+  N407(["type_identifier"])
+  N406 -->|true| N407
+  N406 -->|false| N407
+  N408(["identifier"])
+  N407 -->|true| N408
+  N407 -->|false| N408
+  N409(["identifier"])
+  N408 -->|true| N409
+  N408 -->|false| N409
+  N410(["type_identifier"])
+  N409 -->|true| N410
+  N409 -->|false| N410
+  N411(["type_identifier"])
+  N410 -->|true| N411
+  N410 -->|false| N411
+  N412(["type_identifier"])
+  N411 -->|true| N412
+  N411 -->|false| N412
+  N413(["mutable_specifier"])
+  N412 -->|true| N413
+  N412 -->|false| N413
+  N414(["identifier"])
+  N413 -->|true| N414
+  N413 -->|false| N414
+  N415(["call:new"])
+  N414 --> N415
+  N416(["mutable_specifier"])
+  N415 -->|true| N416
+  N415 -->|false| N416
+  N417(["identifier"])
+  N416 -->|true| N417
+  N416 -->|false| N417
+  N418(["call:new"])
+  N417 --> N418
+  N419(["call:traverse_for_halstead"])
+  N418 --> N419
+  N420(["identifier"])
+  N419 -->|true| N420
+  N419 -->|false| N420
+  N421(["call:len"])
+  N420 --> N421
+  N422(["identifier"])
+  N421 -->|true| N422
+  N421 -->|false| N422
+  N423(["call:len"])
+  N422 --> N423
+  N424(["identifier"])
+  N423 -->|true| N424
+  N423 -->|false| N424
+  N425(["call:sum"])
+  N424 --> N425
+  N426(["identifier"])
+  N425 -->|true| N426
+  N425 -->|false| N426
+  N427(["call:sum"])
+  N426 --> N427
+  N428(["call:Ok"])
+  N427 --> N428
+  N429(["identifier"])
+  N428 -->|true| N429
+  N428 -->|false| N429
+  N430(["identifier"])
+  N429 -->|true| N430
+  N429 -->|false| N430
+  N431(["type_identifier"])
+  N430 -->|true| N431
+  N430 -->|false| N431
+  N432(["identifier"])
+  N431 -->|true| N432
+  N431 -->|false| N432
+  N433(["mutable_specifier"])
+  N432 -->|true| N433
+  N432 -->|false| N433
+  N434(["type_identifier"])
+  N433 -->|true| N434
+  N433 -->|false| N434
+  N435(["type_identifier"])
+  N434 -->|true| N435
+  N434 -->|false| N435
+  N436(["identifier"])
+  N435 -->|true| N436
+  N435 -->|false| N436
+  N437(["mutable_specifier"])
+  N436 -->|true| N437
+  N436 -->|false| N437
+  N438(["type_identifier"])
+  N437 -->|true| N438
+  N437 -->|false| N438
+  N439(["type_identifier"])
+  N438 -->|true| N439
+  N438 -->|false| N439
+  N440(["identifier"])
+  N439 -->|true| N440
+  N439 -->|false| N440
+  N441(["call:kind"])
+  N440 --> N441
+  N442(["if_expression"])
+  N441 -->|true| N442
+  N441 -->|false| N442
+  N443(["if"])
+  N442 -->|true| N443
+  N442 -->|false| N443
+  N444(["field_identifier"])
+  N443 -->|true| N444
+  N443 -->|false| N444
+  N445(["identifier"])
+  N444 -->|true| N445
+  N444 -->|false| N445
+  N446(["call:or_insert"])
+  N445 --> N446
+  N447(["if_expression"])
+  N446 -->|true| N447
+  N446 -->|false| N447
+  N448(["if"])
+  N447 -->|true| N448
+  N447 -->|false| N448
+  N449(["field_identifier"])
+  N448 -->|true| N449
+  N448 -->|false| N449
+  N450(["identifier"])
+  N449 -->|true| N450
+  N449 -->|false| N450
+  N451(["call:or_insert"])
+  N450 --> N451
+  N452(["mutable_specifier"])
+  N451 -->|true| N452
+  N451 -->|false| N452
+  N453(["identifier"])
+  N452 -->|true| N453
+  N452 -->|false| N453
+  N454(["call:walk"])
+  N453 --> N454
+  N455(["if_expression"])
+  N454 -->|true| N455
+  N454 -->|false| N455
+  N456(["if"])
+  N455 -->|true| N456
+  N455 -->|false| N456
+  N457(["identifier"])
+  N456 -->|true| N457
+  N456 -->|false| N457
+  N458(["field_identifier"])
+  N457 -->|true| N458
+  N457 -->|false| N458
+  N459(["loop_expression"])
+  N459 -->|repeat| N459
+  N458 --> N459
+  N460(["loop"])
+  N460 -->|repeat| N460
+  N459 --> N460
+  N461(["call:traverse_for_halstead"])
+  N460 --> N461
+  N462(["if_expression"])
+  N461 -->|true| N462
+  N461 -->|false| N462
+  N463(["if"])
+  N462 -->|true| N463
+  N462 -->|false| N463
+  N464(["call:goto_next_sibling"])
+  N463 --> N464
+  N465(["identifier"])
+  N464 -->|true| N465
+  N464 -->|false| N465
+  N466(["identifier"])
+  N465 -->|true| N466
+  N465 -->|false| N466
+  N467(["call:as_str"])
+  N466 --> N467
+  N468(["identifier"])
+  N467 -->|true| N468
+  N467 -->|false| N468
+  N469(["identifier"])
+  N468 -->|true| N469
+  N468 -->|false| N469
+  N470(["identifier"])
+  N469 -->|true| N470
+  N469 -->|false| N470
+  N471(["identifier"])
+  N470 -->|true| N471
+  N470 -->|false| N471
+  N472(["identifier"])
+  N471 -->|true| N472
+  N471 -->|false| N472
+  N473(["identifier"])
+  N472 -->|true| N473
+  N472 -->|false| N473
+  N474(["identifier"])
+  N473 -->|true| N474
+  N473 -->|false| N474
+  N475(["identifier"])
+  N474 -->|true| N475
+  N474 -->|false| N475
+  N476(["identifier"])
+  N475 -->|true| N476
+  N475 -->|false| N476
+  N477(["identifier"])
+  N476 -->|true| N477
+  N476 -->|false| N477
+  N478(["identifier"])
+  N477 -->|true| N478
+  N477 -->|false| N478
+  N479(["identifier"])
+  N478 -->|true| N479
+  N478 -->|false| N479
+  N480(["call:as_str"])
+  N479 --> N480
+  N481(["identifier"])
+  N480 -->|true| N481
+  N480 -->|false| N481
+  N482(["identifier"])
+  N481 -->|true| N482
+  N481 -->|false| N482
+  N483(["identifier"])
+  N482 -->|true| N483
+  N482 -->|false| N483
+  N484(["identifier"])
+  N483 -->|true| N484
+  N483 -->|false| N484
+  N485(["identifier"])
+  N484 -->|true| N485
+  N484 -->|false| N485
+  N486(["identifier"])
+  N485 -->|true| N486
+  N485 -->|false| N486
+  N487(["identifier"])
+  N486 -->|true| N487
+  N486 -->|false| N487
+  N488(["identifier"])
+  N487 -->|true| N488
+  N487 -->|false| N488
+  N489(["identifier"])
+  N488 -->|true| N489
+  N488 -->|false| N489
+  N490(["identifier"])
+  N489 -->|true| N490
+  N489 -->|false| N490
+  N491(["identifier"])
+  N490 -->|true| N491
+  N490 -->|false| N491
+  N492(["identifier"])
+  N491 -->|true| N492
+  N491 -->|false| N492
+  N493(["type_identifier"])
+  N492 -->|true| N493
+  N492 -->|false| N493
+  N494(["type_identifier"])
+  N493 -->|true| N494
+  N493 -->|false| N494
+  N495(["call:Ok"])
+  N494 --> N495
+  N496(["identifier"])
+  N495 -->|true| N496
+  N495 -->|false| N496
+  N497(["identifier"])
+  N496 -->|true| N497
+  N496 -->|false| N497
+  N498(["type_identifier"])
+  N497 -->|true| N498
+  N497 -->|false| N498
+  N499(["identifier"])
+  N498 -->|true| N499
+  N498 -->|false| N499
+  N500(["call:kind"])
+  N499 --> N500
+  N501(["call:as_str"])
+  N500 --> N501
+  N502(["call:calculate_rust_npath"])
+  N501 --> N502
+  N503(["call:calculate_js_npath"])
+  N502 --> N503
+  N504(["call:calculate_python_npath"])
+  N503 --> N504
+  N505(["call:calculate_c_npath"])
+  N504 --> N505
+  N506(["call:calculate_go_npath"])
+  N505 --> N506
+  N507(["call:calculate_default_npath"])
+  N506 --> N507
+  N508(["identifier"])
+  N507 -->|true| N508
+  N507 -->|false| N508
+  N509(["identifier"])
+  N508 -->|true| N509
+  N508 -->|false| N509
+  N510(["type_identifier"])
+  N509 -->|true| N510
+  N509 -->|false| N510
+  N511(["identifier"])
+  N510 -->|true| N511
+  N510 -->|false| N511
+  N512(["identifier"])
+  N511 -->|true| N512
+  N511 -->|false| N512
+  N513(["mutable_specifier"])
+  N512 -->|true| N513
+  N512 -->|false| N513
+  N514(["identifier"])
+  N513 -->|true| N514
+  N513 -->|false| N514
+  N515(["mutable_specifier"])
+  N514 -->|true| N515
+  N514 -->|false| N515
+  N516(["identifier"])
+  N515 -->|true| N516
+  N515 -->|false| N516
+  N517(["call:walk"])
+  N516 --> N517
+  N518(["if_expression"])
+  N517 -->|true| N518
+  N517 -->|false| N518
+  N519(["if"])
+  N518 -->|true| N519
+  N518 -->|false| N519
+  N520(["identifier"])
+  N519 -->|true| N520
+  N519 -->|false| N520
+  N521(["field_identifier"])
+  N520 -->|true| N521
+  N520 -->|false| N521
+  N522(["identifier"])
+  N521 -->|true| N522
+  N521 -->|false| N522
+  N523(["call:calculate_expression_npath"])
+  N522 --> N523
+  N524(["if_expression"])
+  N523 -->|true| N524
+  N523 -->|false| N524
+  N525(["if"])
+  N524 -->|true| N525
+  N524 -->|false| N525
+  N526(["identifier"])
+  N525 -->|true| N526
+  N525 -->|false| N526
+  N527(["field_identifier"])
+  N526 -->|true| N527
+  N526 -->|false| N527
+  N528(["identifier"])
+  N527 -->|true| N528
+  N527 -->|false| N528
+  N529(["call:traverse_for_npath"])
+  N528 --> N529
+  N530(["if_expression"])
+  N529 -->|true| N530
+  N529 -->|false| N530
+  N531(["if"])
+  N530 -->|true| N531
+  N530 -->|false| N531
+  N532(["call:goto_next_sibling"])
+  N531 --> N532
+  N533(["call:kind"])
+  N532 --> N533
+  N534(["identifier"])
+  N533 -->|true| N534
+  N533 -->|false| N534
+  N535(["call:traverse_for_npath"])
+  N534 --> N535
+  N536(["identifier"])
+  N535 -->|true| N536
+  N535 -->|false| N536
+  N537(["mutable_specifier"])
+  N536 -->|true| N537
+  N536 -->|false| N537
+  N538(["identifier"])
+  N537 -->|true| N538
+  N537 -->|false| N538
+  N539(["mutable_specifier"])
+  N538 -->|true| N539
+  N538 -->|false| N539
+  N540(["identifier"])
+  N539 -->|true| N540
+  N539 -->|false| N540
+  N541(["call:walk"])
+  N540 --> N541
+  N542(["if_expression"])
+  N541 -->|true| N542
+  N541 -->|false| N542
+  N543(["if"])
+  N542 -->|true| N543
+  N542 -->|false| N543
+  N544(["identifier"])
+  N543 -->|true| N544
+  N543 -->|false| N544
+  N545(["field_identifier"])
+  N544 -->|true| N545
+  N544 -->|false| N545
+  N546(["if_expression"])
+  N545 -->|true| N546
+  N545 -->|false| N546
+  N547(["if"])
+  N546 -->|true| N547
+  N546 -->|false| N547
+  N548(["identifier"])
+  N547 -->|true| N548
+  N547 -->|false| N548
+  N549(["identifier"])
+  N548 -->|true| N549
+  N548 -->|false| N549
+  N550(["call:calculate_expression_npath"])
+  N549 --> N550
+  N551(["call:goto_next_sibling"])
+  N550 --> N551
+  N552(["if_expression"])
+  N551 -->|true| N552
+  N551 -->|false| N552
+  N553(["if"])
+  N552 -->|true| N553
+  N552 -->|false| N553
+  N554(["call:kind"])
+  N553 --> N554
+  N555(["identifier"])
+  N554 -->|true| N555
+  N554 -->|false| N555
+  N556(["call:traverse_for_npath"])
+  N555 --> N556
+  N557(["identifier"])
+  N556 -->|true| N557
+  N556 -->|false| N557
+  N558(["mutable_specifier"])
+  N557 -->|true| N558
+  N557 -->|false| N558
+  N559(["identifier"])
+  N558 -->|true| N559
+  N558 -->|false| N559
+  N560(["mutable_specifier"])
+  N559 -->|true| N560
+  N559 -->|false| N560
+  N561(["identifier"])
+  N560 -->|true| N561
+  N560 -->|false| N561
+  N562(["call:walk"])
+  N561 --> N562
+  N563(["if_expression"])
+  N562 -->|true| N563
+  N562 -->|false| N563
+  N564(["if"])
+  N563 -->|true| N564
+  N563 -->|false| N564
+  N565(["identifier"])
+  N564 -->|true| N565
+  N564 -->|false| N565
+  N566(["field_identifier"])
+  N565 -->|true| N566
+  N565 -->|false| N566
+  N567(["identifier"])
+  N566 -->|true| N567
+  N566 -->|false| N567
+  N568(["call:traverse_for_npath"])
+  N567 --> N568
+  N569(["while_expression"])
+  N569 -->|repeat| N569
+  N568 --> N569
+  N570(["while"])
+  N570 -->|repeat| N570
+  N569 --> N570
+  N571(["identifier"])
+  N570 -->|true| N571
+  N570 -->|false| N571
+  N572(["field_identifier"])
+  N571 -->|true| N572
+  N571 -->|false| N572
+  N573(["identifier"])
+  N572 -->|true| N573
+  N572 -->|false| N573
+  N574(["call:kind"])
+  N573 --> N574
+  N575(["if_expression"])
+  N574 -->|true| N575
+  N574 -->|false| N575
+  N576(["if"])
+  N575 -->|true| N576
+  N575 -->|false| N576
+  N577(["identifier"])
+  N576 -->|true| N577
+  N576 -->|false| N577
+  N578(["identifier"])
+  N577 -->|true| N578
+  N577 -->|false| N578
+  N579(["identifier"])
+  N578 -->|true| N579
+  N578 -->|false| N579
+  N580(["call:traverse_for_npath"])
+  N579 --> N580
+  N581(["identifier"])
+  N580 -->|true| N581
+  N580 -->|false| N581
+  N582(["mutable_specifier"])
+  N581 -->|true| N582
+  N581 -->|false| N582
+  N583(["identifier"])
+  N582 -->|true| N583
+  N582 -->|false| N583
+  N584(["mutable_specifier"])
+  N583 -->|true| N584
+  N583 -->|false| N584
+  N585(["identifier"])
+  N584 -->|true| N585
+  N584 -->|false| N585
+  N586(["call:walk"])
+  N585 --> N586
+  N587(["if_expression"])
+  N586 -->|true| N587
+  N586 -->|false| N587
+  N588(["if"])
+  N587 -->|true| N588
+  N587 -->|false| N588
+  N589(["identifier"])
+  N588 -->|true| N589
+  N588 -->|false| N589
+  N590(["field_identifier"])
+  N589 -->|true| N590
+  N589 -->|false| N590
+  N591(["while_expression"])
+  N591 -->|repeat| N591
+  N590 --> N591
+  N592(["while"])
+  N592 -->|repeat| N592
+  N591 --> N592
+  N593(["identifier"])
+  N592 -->|true| N593
+  N592 -->|false| N593
+  N594(["field_identifier"])
+  N593 -->|true| N594
+  N593 -->|false| N594
+  N595(["if_expression"])
+  N594 -->|true| N595
+  N594 -->|false| N595
+  N596(["if"])
+  N595 -->|true| N596
+  N595 -->|false| N596
+  N597(["call:kind"])
+  N596 --> N597
+  N598(["call:kind"])
+  N597 --> N598
+  N599(["identifier"])
+  N598 -->|true| N599
+  N598 -->|false| N599
+  N600(["call:traverse_for_npath"])
+  N599 --> N600
+  N601(["identifier"])
+  N600 -->|true| N601
+  N600 -->|false| N601
+  N602(["mutable_specifier"])
+  N601 -->|true| N602
+  N601 -->|false| N602
+  N603(["identifier"])
+  N602 -->|true| N603
+  N602 -->|false| N603
+  N604(["mutable_specifier"])
+  N603 -->|true| N604
+  N603 -->|false| N604
+  N605(["identifier"])
+  N604 -->|true| N605
+  N604 -->|false| N605
+  N606(["call:walk"])
+  N605 --> N606
+  N607(["if_expression"])
+  N606 -->|true| N607
+  N606 -->|false| N607
+  N608(["if"])
+  N607 -->|true| N608
+  N607 -->|false| N608
+  N609(["identifier"])
+  N608 -->|true| N609
+  N608 -->|false| N609
+  N610(["field_identifier"])
+  N609 -->|true| N610
+  N609 -->|false| N610
+  N611(["identifier"])
+  N610 -->|true| N611
+  N610 -->|false| N611
+  N612(["call:traverse_for_npath"])
+  N611 --> N612
+  N613(["identifier"])
+  N612 -->|true| N613
+  N612 -->|false| N613
+  N614(["mutable_specifier"])
+  N613 -->|true| N614
+  N613 -->|false| N614
+  N615(["identifier"])
+  N614 -->|true| N615
+  N614 -->|false| N615
+  N616(["mutable_specifier"])
+  N615 -->|true| N616
+  N615 -->|false| N616
+  N617(["identifier"])
+  N616 -->|true| N617
+  N616 -->|false| N617
+  N618(["mutable_specifier"])
+  N617 -->|true| N618
+  N617 -->|false| N618
+  N619(["identifier"])
+  N618 -->|true| N619
+  N618 -->|false| N619
+  N620(["call:walk"])
+  N619 --> N620
+  N621(["if_expression"])
+  N620 -->|true| N621
+  N620 -->|false| N621
+  N622(["if"])
+  N621 -->|true| N622
+  N621 -->|false| N622
+  N623(["identifier"])
+  N622 -->|true| N623
+  N622 -->|false| N623
+  N624(["field_identifier"])
+  N623 -->|true| N624
+  N623 -->|false| N624
+  N625(["identifier"])
+  N624 -->|true| N625
+  N624 -->|false| N625
+  N626(["call:calculate_expression_npath"])
+  N625 --> N626
+  N627(["while_expression"])
+  N627 -->|repeat| N627
+  N626 --> N627
+  N628(["while"])
+  N628 -->|repeat| N628
+  N627 --> N628
+  N629(["identifier"])
+  N628 -->|true| N629
+  N628 -->|false| N629
+  N630(["field_identifier"])
+  N629 -->|true| N630
+  N629 -->|false| N630
+  N631(["if_expression"])
+  N630 -->|true| N631
+  N630 -->|false| N631
+  N632(["if"])
+  N631 -->|true| N632
+  N631 -->|false| N632
+  N633(["call:kind"])
+  N632 --> N633
+  N634(["mutable_specifier"])
+  N633 -->|true| N634
+  N633 -->|false| N634
+  N635(["identifier"])
+  N634 -->|true| N635
+  N634 -->|false| N635
+  N636(["call:walk"])
+  N635 --> N636
+  N637(["if_expression"])
+  N636 -->|true| N637
+  N636 -->|false| N637
+  N638(["if"])
+  N637 -->|true| N638
+  N637 -->|false| N638
+  N639(["identifier"])
+  N638 -->|true| N639
+  N638 -->|false| N639
+  N640(["field_identifier"])
+  N639 -->|true| N640
+  N639 -->|false| N640
+  N641(["loop_expression"])
+  N641 -->|repeat| N641
+  N640 --> N641
+  N642(["loop"])
+  N642 -->|repeat| N642
+  N641 --> N642
+  N643(["if_expression"])
+  N642 -->|true| N643
+  N642 -->|false| N643
+  N644(["if"])
+  N643 -->|true| N644
+  N643 -->|false| N644
+  N645(["call:kind"])
+  N644 --> N645
+  N646(["identifier"])
+  N645 -->|true| N646
+  N645 -->|false| N646
+  N647(["identifier"])
+  N646 -->|true| N647
+  N646 -->|false| N647
+  N648(["call:traverse_for_npath"])
+  N647 --> N648
+  N649(["if_expression"])
+  N648 -->|true| N649
+  N648 -->|false| N649
+  N650(["if"])
+  N649 -->|true| N650
+  N649 -->|false| N650
+  N651(["call:goto_next_sibling"])
+  N650 --> N651
+  N652(["if_expression"])
+  N651 -->|true| N652
+  N651 -->|false| N652
+  N653(["if"])
+  N652 -->|true| N653
+  N652 -->|false| N653
+  N654(["identifier"])
+  N653 -->|true| N654
+  N653 -->|false| N654
+  N655(["identifier"])
+  N654 -->|true| N655
+  N654 -->|false| N655
+  N656(["identifier"])
+  N655 -->|true| N656
+  N655 -->|false| N656
+  N657(["mutable_specifier"])
+  N656 -->|true| N657
+  N656 -->|false| N657
+  N658(["identifier"])
+  N657 -->|true| N658
+  N657 -->|false| N658
+  N659(["mutable_specifier"])
+  N658 -->|true| N659
+  N658 -->|false| N659
+  N660(["identifier"])
+  N659 -->|true| N660
+  N659 -->|false| N660
+  N661(["call:walk"])
+  N660 --> N661
+  N662(["if_expression"])
+  N661 -->|true| N662
+  N661 -->|false| N662
+  N663(["if"])
+  N662 -->|true| N663
+  N662 -->|false| N663
+  N664(["identifier"])
+  N663 -->|true| N664
+  N663 -->|false| N664
+  N665(["field_identifier"])
+  N664 -->|true| N665
+  N664 -->|false| N665
+  N666(["loop_expression"])
+  N666 -->|repeat| N666
+  N665 --> N666
+  N667(["loop"])
+  N667 -->|repeat| N667
+  N666 --> N667
+  N668(["identifier"])
+  N667 -->|true| N668
+  N667 -->|false| N668
+  N669(["call:traverse_for_npath"])
+  N668 --> N669
+  N670(["identifier"])
+  N669 -->|true| N670
+  N669 -->|false| N670
+  N671(["call:kind"])
+  N670 --> N671
+  N672(["if_expression"])
+  N671 -->|true| N672
+  N671 -->|false| N672
+  N673(["if"])
+  N672 -->|true| N673
+  N672 -->|false| N673
+  N674(["call:is_control_flow_node"])
+  N673 --> N674
+  N675(["identifier"])
+  N674 -->|true| N675
+  N674 -->|false| N675
+  N676(["identifier"])
+  N675 -->|true| N676
+  N675 -->|false| N676
+  N677(["identifier"])
+  N676 -->|true| N677
+  N676 -->|false| N677
+  N678(["if_expression"])
+  N677 -->|true| N678
+  N677 -->|false| N678
+  N679(["if"])
+  N678 -->|true| N679
+  N678 -->|false| N679
+  N680(["identifier"])
+  N679 -->|true| N680
+  N679 -->|false| N680
+  N681(["identifier"])
+  N680 -->|true| N681
+  N680 -->|false| N681
+  N682(["identifier"])
+  N681 -->|true| N682
+  N681 -->|false| N682
+  N683(["if_expression"])
+  N682 -->|true| N683
+  N682 -->|false| N683
+  N684(["if"])
+  N683 -->|true| N684
+  N683 -->|false| N684
+  N685(["call:goto_next_sibling"])
+  N684 --> N685
+  N686(["identifier"])
+  N685 -->|true| N686
+  N685 -->|false| N686
+  N687(["mutable_specifier"])
+  N686 -->|true| N687
+  N686 -->|false| N687
+  N688(["identifier"])
+  N687 -->|true| N688
+  N687 -->|false| N688
+  N689(["mutable_specifier"])
+  N688 -->|true| N689
+  N688 -->|false| N689
+  N690(["identifier"])
+  N689 -->|true| N690
+  N689 -->|false| N690
+  N691(["call:walk"])
+  N690 --> N691
+  N692(["if_expression"])
+  N691 -->|true| N692
+  N691 -->|false| N692
+  N693(["if"])
+  N692 -->|true| N693
+  N692 -->|false| N693
+  N694(["identifier"])
+  N693 -->|true| N694
+  N693 -->|false| N694
+  N695(["field_identifier"])
+  N694 -->|true| N695
+  N694 -->|false| N695
+  N696(["loop_expression"])
+  N696 -->|repeat| N696
+  N695 --> N696
+  N697(["loop"])
+  N697 -->|repeat| N697
+  N696 --> N697
+  N698(["identifier"])
+  N697 -->|true| N698
+  N697 -->|false| N698
+  N699(["call:traverse_for_npath"])
+  N698 --> N699
+  N700(["if_expression"])
+  N699 -->|true| N700
+  N699 -->|false| N700
+  N701(["if"])
+  N700 -->|true| N701
+  N700 -->|false| N701
+  N702(["identifier"])
+  N701 -->|true| N702
+  N701 -->|false| N702
+  N703(["identifier"])
+  N702 -->|true| N703
+  N702 -->|false| N703
+  N704(["identifier"])
+  N703 -->|true| N704
+  N703 -->|false| N704
+  N705(["if_expression"])
+  N704 -->|true| N705
+  N704 -->|false| N705
+  N706(["if"])
+  N705 -->|true| N706
+  N705 -->|false| N706
+  N707(["call:goto_next_sibling"])
+  N706 --> N707
+  N708(["identifier"])
+  N707 -->|true| N708
+  N707 -->|false| N708
+  N709(["identifier"])
+  N708 -->|true| N709
+  N708 -->|false| N709
+  N710(["identifier"])
+  N709 -->|true| N710
+  N709 -->|false| N710
+  N711(["type_identifier"])
+  N710 -->|true| N711
+  N710 -->|false| N711
+  N712(["identifier"])
+  N711 -->|true| N712
+  N711 -->|false| N712
+  N713(["identifier"])
+  N712 -->|true| N713
+  N712 -->|false| N713
+  N714(["mutable_specifier"])
+  N713 -->|true| N714
+  N713 -->|false| N714
+  N715(["identifier"])
+  N714 -->|true| N715
+  N714 -->|false| N715
+  N716(["mutable_specifier"])
+  N715 -->|true| N716
+  N715 -->|false| N716
+  N717(["identifier"])
+  N716 -->|true| N717
+  N716 -->|false| N717
+  N718(["call:walk"])
+  N717 --> N718
+  N719(["if_expression"])
+  N718 -->|true| N719
+  N718 -->|false| N719
+  N720(["if"])
+  N719 -->|true| N720
+  N719 -->|false| N720
+  N721(["identifier"])
+  N720 -->|true| N721
+  N720 -->|false| N721
+  N722(["field_identifier"])
+  N721 -->|true| N722
+  N721 -->|false| N722
+  N723(["identifier"])
+  N722 -->|true| N723
+  N722 -->|false| N723
+  N724(["call:calculate_expression_npath"])
+  N723 --> N724
+  N725(["if_expression"])
+  N724 -->|true| N725
+  N724 -->|false| N725
+  N726(["if"])
+  N725 -->|true| N726
+  N725 -->|false| N726
+  N727(["identifier"])
+  N726 -->|true| N727
+  N726 -->|false| N727
+  N728(["field_identifier"])
+  N727 -->|true| N728
+  N727 -->|false| N728
+  N729(["identifier"])
+  N728 -->|true| N729
+  N728 -->|false| N729
+  N730(["call:traverse_for_npath"])
+  N729 --> N730
+  N731(["if_expression"])
+  N730 -->|true| N731
+  N730 -->|false| N731
+  N732(["if"])
+  N731 -->|true| N732
+  N731 -->|false| N732
+  N733(["call:goto_next_sibling"])
+  N732 --> N733
+  N734(["call:kind"])
+  N733 --> N734
+  N735(["identifier"])
+  N734 -->|true| N735
+  N734 -->|false| N735
+  N736(["call:traverse_for_npath"])
+  N735 --> N736
+  N737(["identifier"])
+  N736 -->|true| N737
+  N736 -->|false| N737
+  N738(["mutable_specifier"])
+  N737 -->|true| N738
+  N737 -->|false| N738
+  N739(["identifier"])
+  N738 -->|true| N739
+  N738 -->|false| N739
+  N740(["mutable_specifier"])
+  N739 -->|true| N740
+  N739 -->|false| N740
+  N741(["identifier"])
+  N740 -->|true| N741
+  N740 -->|false| N741
+  N742(["call:walk"])
+  N741 --> N742
+  N743(["if_expression"])
+  N742 -->|true| N743
+  N742 -->|false| N743
+  N744(["if"])
+  N743 -->|true| N744
+  N743 -->|false| N744
+  N745(["identifier"])
+  N744 -->|true| N745
+  N744 -->|false| N745
+  N746(["field_identifier"])
+  N745 -->|true| N746
+  N745 -->|false| N746
+  N747(["identifier"])
+  N746 -->|true| N747
+  N746 -->|false| N747
+  N748(["call:calculate_expression_npath"])
+  N747 --> N748
+  N749(["if_expression"])
+  N748 -->|true| N749
+  N748 -->|false| N749
+  N750(["if"])
+  N749 -->|true| N750
+  N749 -->|false| N750
+  N751(["call:goto_next_sibling"])
+  N750 --> N751
+  N752(["call:kind"])
+  N751 --> N752
+  N753(["mutable_specifier"])
+  N752 -->|true| N753
+  N752 -->|false| N753
+  N754(["identifier"])
+  N753 -->|true| N754
+  N753 -->|false| N754
+  N755(["call:walk"])
+  N754 --> N755
+  N756(["if_expression"])
+  N755 -->|true| N756
+  N755 -->|false| N756
+  N757(["if"])
+  N756 -->|true| N757
+  N756 -->|false| N757
+  N758(["identifier"])
+  N757 -->|true| N758
+  N757 -->|false| N758
+  N759(["field_identifier"])
+  N758 -->|true| N759
+  N758 -->|false| N759
+  N760(["loop_expression"])
+  N760 -->|repeat| N760
+  N759 --> N760
+  N761(["loop"])
+  N761 -->|repeat| N761
+  N760 --> N761
+  N762(["if_expression"])
+  N761 -->|true| N762
+  N761 -->|false| N762
+  N763(["if"])
+  N762 -->|true| N763
+  N762 -->|false| N763
+  N764(["call:kind"])
+  N763 --> N764
+  N765(["call:kind"])
+  N764 --> N765
+  N766(["identifier"])
+  N765 -->|true| N766
+  N765 -->|false| N766
+  N767(["call:traverse_for_npath"])
+  N766 --> N767
+  N768(["if_expression"])
+  N767 -->|true| N768
+  N767 -->|false| N768
+  N769(["if"])
+  N768 -->|true| N769
+  N768 -->|false| N769
+  N770(["call:goto_next_sibling"])
+  N769 --> N770
+  N771(["call:max"])
+  N770 --> N771
+  N772(["mutable_specifier"])
+  N771 -->|true| N772
+  N771 -->|false| N772
+  N773(["identifier"])
+  N772 -->|true| N773
+  N772 -->|false| N773
+  N774(["mutable_specifier"])
+  N773 -->|true| N774
+  N773 -->|false| N774
+  N775(["identifier"])
+  N774 -->|true| N775
+  N774 -->|false| N775
+  N776(["call:walk"])
+  N775 --> N776
+  N777(["if_expression"])
+  N776 -->|true| N777
+  N776 -->|false| N777
+  N778(["if"])
+  N777 -->|true| N778
+  N777 -->|false| N778
+  N779(["identifier"])
+  N778 -->|true| N779
+  N778 -->|false| N779
+  N780(["field_identifier"])
+  N779 -->|true| N780
+  N779 -->|false| N780
+  N781(["identifier"])
+  N780 -->|true| N781
+  N780 -->|false| N781
+  N782(["call:calculate_expression_npath"])
+  N781 --> N782
+  N783(["if_expression"])
+  N782 -->|true| N783
+  N782 -->|false| N783
+  N784(["if"])
+  N783 -->|true| N784
+  N783 -->|false| N784
+  N785(["identifier"])
+  N784 -->|true| N785
+  N784 -->|false| N785
+  N786(["field_identifier"])
+  N785 -->|true| N786
+  N785 -->|false| N786
+  N787(["identifier"])
+  N786 -->|true| N787
+  N786 -->|false| N787
+  N788(["call:traverse_for_npath"])
+  N787 --> N788
+  N789(["identifier"])
+  N788 -->|true| N789
+  N788 -->|false| N789
+  N790(["mutable_specifier"])
+  N789 -->|true| N790
+  N789 -->|false| N790
+  N791(["identifier"])
+  N790 -->|true| N791
+  N790 -->|false| N791
+  N792(["mutable_specifier"])
+  N791 -->|true| N792
+  N791 -->|false| N792
+  N793(["identifier"])
+  N792 -->|true| N793
+  N792 -->|false| N793
+  N794(["call:walk"])
+  N793 --> N794
+  N795(["if_expression"])
+  N794 -->|true| N795
+  N794 -->|false| N795
+  N796(["if"])
+  N795 -->|true| N796
+  N795 -->|false| N796
+  N797(["identifier"])
+  N796 -->|true| N797
+  N796 -->|false| N797
+  N798(["field_identifier"])
+  N797 -->|true| N798
+  N797 -->|false| N798
+  N799(["identifier"])
+  N798 -->|true| N799
+  N798 -->|false| N799
+  N800(["call:calculate_expression_npath"])
+  N799 --> N800
+  N801(["if_expression"])
+  N800 -->|true| N801
+  N800 -->|false| N801
+  N802(["if"])
+  N801 -->|true| N802
+  N801 -->|false| N802
+  N803(["identifier"])
+  N802 -->|true| N803
+  N802 -->|false| N803
+  N804(["field_identifier"])
+  N803 -->|true| N804
+  N803 -->|false| N804
+  N805(["identifier"])
+  N804 -->|true| N805
+  N804 -->|false| N805
+  N806(["call:calculate_expression_npath"])
+  N805 --> N806
+  N807(["if_expression"])
+  N806 -->|true| N807
+  N806 -->|false| N807
+  N808(["if"])
+  N807 -->|true| N808
+  N807 -->|false| N808
+  N809(["identifier"])
+  N808 -->|true| N809
+  N808 -->|false| N809
+  N810(["field_identifier"])
+  N809 -->|true| N810
+  N809 -->|false| N810
+  N811(["identifier"])
+  N810 -->|true| N811
+  N810 -->|false| N811
+  N812(["call:calculate_expression_npath"])
+  N811 --> N812
+  N813(["identifier"])
+  N812 -->|true| N813
+  N812 -->|false| N813
+  N814(["mutable_specifier"])
+  N813 -->|true| N814
+  N813 -->|false| N814
+  N815(["identifier"])
+  N814 -->|true| N815
+  N814 -->|false| N815
+  N816(["mutable_specifier"])
+  N815 -->|true| N816
+  N815 -->|false| N816
+  N817(["identifier"])
+  N816 -->|true| N817
+  N816 -->|false| N817
+  N818(["call:walk"])
+  N817 --> N818
+  N819(["if_expression"])
+  N818 -->|true| N819
+  N818 -->|false| N819
+  N820(["if"])
+  N819 -->|true| N820
+  N819 -->|false| N820
+  N821(["identifier"])
+  N820 -->|true| N821
+  N820 -->|false| N821
+  N822(["field_identifier"])
+  N821 -->|true| N822
+  N821 -->|false| N822
+  N823(["loop_expression"])
+  N823 -->|repeat| N823
+  N822 --> N823
+  N824(["loop"])
+  N824 -->|repeat| N824
+  N823 --> N824
+  N825(["identifier"])
+  N824 -->|true| N825
+  N824 -->|false| N825
+  N826(["call:traverse_for_npath"])
+  N825 --> N826
+  N827(["identifier"])
+  N826 -->|true| N827
+  N826 -->|false| N827
+  N828(["identifier"])
+  N827 -->|true| N828
+  N827 -->|false| N828
+  N829(["if_expression"])
+  N828 -->|true| N829
+  N828 -->|false| N829
+  N830(["if"])
+  N829 -->|true| N830
+  N829 -->|false| N830
+  N831(["call:goto_next_sibling"])
+  N830 --> N831
+  N832(["identifier"])
+  N831 -->|true| N832
+  N831 -->|false| N832
+  N833(["mutable_specifier"])
+  N832 -->|true| N833
+  N832 -->|false| N833
+  N834(["identifier"])
+  N833 -->|true| N834
+  N833 -->|false| N834
+  N835(["mutable_specifier"])
+  N834 -->|true| N835
+  N834 -->|false| N835
+  N836(["identifier"])
+  N835 -->|true| N836
+  N835 -->|false| N836
+  N837(["call:walk"])
+  N836 --> N837
+  N838(["if_expression"])
+  N837 -->|true| N838
+  N837 -->|false| N838
+  N839(["if"])
+  N838 -->|true| N839
+  N838 -->|false| N839
+  N840(["identifier"])
+  N839 -->|true| N840
+  N839 -->|false| N840
+  N841(["field_identifier"])
+  N840 -->|true| N841
+  N840 -->|false| N841
+  N842(["loop_expression"])
+  N842 -->|repeat| N842
+  N841 --> N842
+  N843(["loop"])
+  N843 -->|repeat| N843
+  N842 --> N843
+  N844(["identifier"])
+  N843 -->|true| N844
+  N843 -->|false| N844
+  N845(["call:traverse_for_npath"])
+  N844 --> N845
+  N846(["identifier"])
+  N845 -->|true| N846
+  N845 -->|false| N846
+  N847(["call:max"])
+  N846 --> N847
+  N848(["if_expression"])
+  N847 -->|true| N848
+  N847 -->|false| N848
+  N849(["if"])
+  N848 -->|true| N849
+  N848 -->|false| N849
+  N850(["call:goto_next_sibling"])
+  N849 --> N850
+  N851(["identifier"])
+  N850 -->|true| N851
+  N850 -->|false| N851
+  N852(["identifier"])
+  N851 -->|true| N852
+  N851 -->|false| N852
+  N853(["identifier"])
+  N852 -->|true| N853
+  N852 -->|false| N853
+  N854(["type_identifier"])
+  N853 -->|true| N854
+  N853 -->|false| N854
+  N855(["identifier"])
+  N854 -->|true| N855
+  N854 -->|false| N855
+  N856(["identifier"])
+  N855 -->|true| N856
+  N855 -->|false| N856
+  N857(["mutable_specifier"])
+  N856 -->|true| N857
+  N856 -->|false| N857
+  N858(["identifier"])
+  N857 -->|true| N858
+  N857 -->|false| N858
+  N859(["mutable_specifier"])
+  N858 -->|true| N859
+  N858 -->|false| N859
+  N860(["identifier"])
+  N859 -->|true| N860
+  N859 -->|false| N860
+  N861(["call:walk"])
+  N860 --> N861
+  N862(["if_expression"])
+  N861 -->|true| N862
+  N861 -->|false| N862
+  N863(["if"])
+  N862 -->|true| N863
+  N862 -->|false| N863
+  N864(["identifier"])
+  N863 -->|true| N864
+  N863 -->|false| N864
+  N865(["field_identifier"])
+  N864 -->|true| N865
+  N864 -->|false| N865
+  N866(["identifier"])
+  N865 -->|true| N866
+  N865 -->|false| N866
+  N867(["call:calculate_expression_npath"])
+  N866 --> N867
+  N868(["if_expression"])
+  N867 -->|true| N868
+  N867 -->|false| N868
+  N869(["if"])
+  N868 -->|true| N869
+  N868 -->|false| N869
+  N870(["identifier"])
+  N869 -->|true| N870
+  N869 -->|false| N870
+  N871(["field_identifier"])
+  N870 -->|true| N871
+  N870 -->|false| N871
+  N872(["identifier"])
+  N871 -->|true| N872
+  N871 -->|false| N872
+  N873(["call:traverse_for_npath"])
+  N872 --> N873
+  N874(["while_expression"])
+  N874 -->|repeat| N874
+  N873 --> N874
+  N875(["while"])
+  N875 -->|repeat| N875
+  N874 --> N875
+  N876(["identifier"])
+  N875 -->|true| N876
+  N875 -->|false| N876
+  N877(["field_identifier"])
+  N876 -->|true| N877
+  N876 -->|false| N877
+  N878(["identifier"])
+  N877 -->|true| N878
+  N877 -->|false| N878
+  N879(["call:traverse_for_npath"])
+  N878 --> N879
+  N880(["identifier"])
+  N879 -->|true| N880
+  N879 -->|false| N880
+  N881(["mutable_specifier"])
+  N880 -->|true| N881
+  N880 -->|false| N881
+  N882(["identifier"])
+  N881 -->|true| N882
+  N881 -->|false| N882
+  N883(["mutable_specifier"])
+  N882 -->|true| N883
+  N882 -->|false| N883
+  N884(["identifier"])
+  N883 -->|true| N884
+  N883 -->|false| N884
+  N885(["call:walk"])
+  N884 --> N885
+  N886(["if_expression"])
+  N885 -->|true| N886
+  N885 -->|false| N886
+  N887(["if"])
+  N886 -->|true| N887
+  N886 -->|false| N887
+  N888(["identifier"])
+  N887 -->|true| N888
+  N887 -->|false| N888
+  N889(["field_identifier"])
+  N888 -->|true| N889
+  N888 -->|false| N889
+  N890(["identifier"])
+  N889 -->|true| N890
+  N889 -->|false| N890
+  N891(["call:calculate_expression_npath"])
+  N890 --> N891
+  N892(["if_expression"])
+  N891 -->|true| N892
+  N891 -->|false| N892
+  N893(["if"])
+  N892 -->|true| N893
+  N892 -->|false| N893
+  N894(["identifier"])
+  N893 -->|true| N894
+  N893 -->|false| N894
+  N895(["field_identifier"])
+  N894 -->|true| N895
+  N894 -->|false| N895
+  N896(["identifier"])
+  N895 -->|true| N896
+  N895 -->|false| N896
+  N897(["call:traverse_for_npath"])
+  N896 --> N897
+  N898(["identifier"])
+  N897 -->|true| N898
+  N897 -->|false| N898
+  N899(["call:calculate_default_npath"])
+  N898 --> N899
+  N900(["identifier"])
+  N899 -->|true| N900
+  N899 -->|false| N900
+  N901(["identifier"])
+  N900 -->|true| N901
+  N900 -->|false| N901
+  N902(["type_identifier"])
+  N901 -->|true| N902
+  N901 -->|false| N902
+  N903(["identifier"])
+  N902 -->|true| N903
+  N902 -->|false| N903
+  N904(["identifier"])
+  N903 -->|true| N904
+  N903 -->|false| N904
+  N905(["mutable_specifier"])
+  N904 -->|true| N905
+  N904 -->|false| N905
+  N906(["identifier"])
+  N905 -->|true| N906
+  N905 -->|false| N906
+  N907(["mutable_specifier"])
+  N906 -->|true| N907
+  N906 -->|false| N907
+  N908(["identifier"])
+  N907 -->|true| N908
+  N907 -->|false| N908
+  N909(["call:walk"])
+  N908 --> N909
+  N910(["if_expression"])
+  N909 -->|true| N910
+  N909 -->|false| N910
+  N911(["if"])
+  N910 -->|true| N911
+  N910 -->|false| N911
+  N912(["identifier"])
+  N911 -->|true| N912
+  N911 -->|false| N912
+  N913(["field_identifier"])
+  N912 -->|true| N913
+  N912 -->|false| N913
+  N914(["identifier"])
+  N913 -->|true| N914
+  N913 -->|false| N914
+  N915(["call:calculate_expression_npath"])
+  N914 --> N915
+  N916(["if_expression"])
+  N915 -->|true| N916
+  N915 -->|false| N916
+  N917(["if"])
+  N916 -->|true| N917
+  N916 -->|false| N917
+  N918(["identifier"])
+  N917 -->|true| N918
+  N917 -->|false| N918
+  N919(["field_identifier"])
+  N918 -->|true| N919
+  N918 -->|false| N919
+  N920(["identifier"])
+  N919 -->|true| N920
+  N919 -->|false| N920
+  N921(["call:traverse_for_npath"])
+  N920 --> N921
+  N922(["if_expression"])
+  N921 -->|true| N922
+  N921 -->|false| N922
+  N923(["if"])
+  N922 -->|true| N923
+  N922 -->|false| N923
+  N924(["identifier"])
+  N923 -->|true| N924
+  N923 -->|false| N924
+  N925(["field_identifier"])
+  N924 -->|true| N925
+  N924 -->|false| N925
+  N926(["identifier"])
+  N925 -->|true| N926
+  N925 -->|false| N926
+  N927(["call:traverse_for_npath"])
+  N926 --> N927
+  N928(["identifier"])
+  N927 -->|true| N928
+  N927 -->|false| N928
+  N929(["mutable_specifier"])
+  N928 -->|true| N929
+  N928 -->|false| N929
+  N930(["identifier"])
+  N929 -->|true| N930
+  N929 -->|false| N930
+  N931(["mutable_specifier"])
+  N930 -->|true| N931
+  N930 -->|false| N931
+  N932(["identifier"])
+  N931 -->|true| N932
+  N931 -->|false| N932
+  N933(["call:walk"])
+  N932 --> N933
+  N934(["if_expression"])
+  N933 -->|true| N934
+  N933 -->|false| N934
+  N935(["if"])
+  N934 -->|true| N935
+  N934 -->|false| N935
+  N936(["identifier"])
+  N935 -->|true| N936
+  N935 -->|false| N936
+  N937(["field_identifier"])
+  N936 -->|true| N937
+  N936 -->|false| N937
+  N938(["identifier"])
+  N937 -->|true| N938
+  N937 -->|false| N938
+  N939(["call:calculate_expression_npath"])
+  N938 --> N939
+  N940(["while_expression"])
+  N940 -->|repeat| N940
+  N939 --> N940
+  N941(["while"])
+  N941 -->|repeat| N941
+  N940 --> N941
+  N942(["identifier"])
+  N941 -->|true| N942
+  N941 -->|false| N942
+  N943(["field_identifier"])
+  N942 -->|true| N943
+  N942 -->|false| N943
+  N944(["if_expression"])
+  N943 -->|true| N944
+  N943 -->|false| N944
+  N945(["if"])
+  N944 -->|true| N945
+  N944 -->|false| N945
+  N946(["call:kind"])
+  N945 --> N946
+  N947(["identifier"])
+  N946 -->|true| N947
+  N946 -->|false| N947
+  N948(["call:traverse_for_npath"])
+  N947 --> N948
+  N949(["call:max"])
+  N948 --> N949
+  N950(["mutable_specifier"])
+  N949 -->|true| N950
+  N949 -->|false| N950
+  N951(["identifier"])
+  N950 -->|true| N951
+  N950 -->|false| N951
+  N952(["mutable_specifier"])
+  N951 -->|true| N952
+  N951 -->|false| N952
+  N953(["identifier"])
+  N952 -->|true| N953
+  N952 -->|false| N953
+  N954(["call:walk"])
+  N953 --> N954
+  N955(["if_expression"])
+  N954 -->|true| N955
+  N954 -->|false| N955
+  N956(["if"])
+  N955 -->|true| N956
+  N955 -->|false| N956
+  N957(["identifier"])
+  N956 -->|true| N957
+  N956 -->|false| N957
+  N958(["field_identifier"])
+  N957 -->|true| N958
+  N957 -->|false| N958
+  N959(["identifier"])
+  N958 -->|true| N959
+  N958 -->|false| N959
+  N960(["call:calculate_expression_npath"])
+  N959 --> N960
+  N961(["if_expression"])
+  N960 -->|true| N961
+  N960 -->|false| N961
+  N962(["if"])
+  N961 -->|true| N962
+  N961 -->|false| N962
+  N963(["identifier"])
+  N962 -->|true| N963
+  N962 -->|false| N963
+  N964(["field_identifier"])
+  N963 -->|true| N964
+  N963 -->|false| N964
+  N965(["identifier"])
+  N964 -->|true| N965
+  N964 -->|false| N965
+  N966(["call:traverse_for_npath"])
+  N965 --> N966
+  N967(["identifier"])
+  N966 -->|true| N967
+  N966 -->|false| N967
+  N968(["call:calculate_default_npath"])
+  N967 --> N968
+  N969(["identifier"])
+  N968 -->|true| N969
+  N968 -->|false| N969
+  N970(["identifier"])
+  N969 -->|true| N970
+  N969 -->|false| N970
+  N971(["type_identifier"])
+  N970 -->|true| N971
+  N970 -->|false| N971
+  N972(["identifier"])
+  N971 -->|true| N972
+  N971 -->|false| N972
+  N973(["identifier"])
+  N972 -->|true| N973
+  N972 -->|false| N973
+  N974(["mutable_specifier"])
+  N973 -->|true| N974
+  N973 -->|false| N974
+  N975(["identifier"])
+  N974 -->|true| N975
+  N974 -->|false| N975
+  N976(["mutable_specifier"])
+  N975 -->|true| N976
+  N975 -->|false| N976
+  N977(["identifier"])
+  N976 -->|true| N977
+  N976 -->|false| N977
+  N978(["call:walk"])
+  N977 --> N978
+  N979(["if_expression"])
+  N978 -->|true| N979
+  N978 -->|false| N979
+  N980(["if"])
+  N979 -->|true| N980
+  N979 -->|false| N980
+  N981(["identifier"])
+  N980 -->|true| N981
+  N980 -->|false| N981
+  N982(["field_identifier"])
+  N981 -->|true| N982
+  N981 -->|false| N982
+  N983(["identifier"])
+  N982 -->|true| N983
+  N982 -->|false| N983
+  N984(["call:calculate_expression_npath"])
+  N983 --> N984
+  N985(["if_expression"])
+  N984 -->|true| N985
+  N984 -->|false| N985
+  N986(["if"])
+  N985 -->|true| N986
+  N985 -->|false| N986
+  N987(["identifier"])
+  N986 -->|true| N987
+  N986 -->|false| N987
+  N988(["field_identifier"])
+  N987 -->|true| N988
+  N987 -->|false| N988
+  N989(["identifier"])
+  N988 -->|true| N989
+  N988 -->|false| N989
+  N990(["call:traverse_for_npath"])
+  N989 --> N990
+  N991(["if_expression"])
+  N990 -->|true| N991
+  N990 -->|false| N991
+  N992(["if"])
+  N991 -->|true| N992
+  N991 -->|false| N992
+  N993(["identifier"])
+  N992 -->|true| N993
+  N992 -->|false| N993
+  N994(["field_identifier"])
+  N993 -->|true| N994
+  N993 -->|false| N994
+  N995(["identifier"])
+  N994 -->|true| N995
+  N994 -->|false| N995
+  N996(["call:traverse_for_npath"])
+  N995 --> N996
+  N997(["identifier"])
+  N996 -->|true| N997
+  N996 -->|false| N997
+  N998(["mutable_specifier"])
+  N997 -->|true| N998
+  N997 -->|false| N998
+  N999(["identifier"])
+  N998 -->|true| N999
+  N998 -->|false| N999
+  N1000(["mutable_specifier"])
+  N999 -->|true| N1000
+  N999 -->|false| N1000
+  N1001(["identifier"])
+  N1000 -->|true| N1001
+  N1000 -->|false| N1001
+  N1002(["call:walk"])
+  N1001 --> N1002
+  N1003(["if_expression"])
+  N1002 -->|true| N1003
+  N1002 -->|false| N1003
+  N1004(["if"])
+  N1003 -->|true| N1004
+  N1003 -->|false| N1004
+  N1005(["identifier"])
+  N1004 -->|true| N1005
+  N1004 -->|false| N1005
+  N1006(["field_identifier"])
+  N1005 -->|true| N1006
+  N1005 -->|false| N1006
+  N1007(["identifier"])
+  N1006 -->|true| N1007
+  N1006 -->|false| N1007
+  N1008(["call:calculate_expression_npath"])
+  N1007 --> N1008
+  N1009(["while_expression"])
+  N1009 -->|repeat| N1009
+  N1008 --> N1009
+  N1010(["while"])
+  N1010 -->|repeat| N1010
+  N1009 --> N1010
+  N1011(["identifier"])
+  N1010 -->|true| N1011
+  N1010 -->|false| N1011
+  N1012(["field_identifier"])
+  N1011 -->|true| N1012
+  N1011 -->|false| N1012
+  N1013(["identifier"])
+  N1012 -->|true| N1013
+  N1012 -->|false| N1013
+  N1014(["call:traverse_for_npath"])
+  N1013 --> N1014
+  N1015(["call:max"])
+  N1014 --> N1015
+  N1016(["mutable_specifier"])
+  N1015 -->|true| N1016
+  N1015 -->|false| N1016
+  N1017(["identifier"])
+  N1016 -->|true| N1017
+  N1016 -->|false| N1017
+  N1018(["mutable_specifier"])
+  N1017 -->|true| N1018
+  N1017 -->|false| N1018
+  N1019(["identifier"])
+  N1018 -->|true| N1019
+  N1018 -->|false| N1019
+  N1020(["call:walk"])
+  N1019 --> N1020
+  N1021(["if_expression"])
+  N1020 -->|true| N1021
+  N1020 -->|false| N1021
+  N1022(["if"])
+  N1021 -->|true| N1022
+  N1021 -->|false| N1022
+  N1023(["identifier"])
+  N1022 -->|true| N1023
+  N1022 -->|false| N1023
+  N1024(["field_identifier"])
+  N1023 -->|true| N1024
+  N1023 -->|false| N1024
+  N1025(["identifier"])
+  N1024 -->|true| N1025
+  N1024 -->|false| N1025
+  N1026(["call:calculate_expression_npath"])
+  N1025 --> N1026
+  N1027(["if_expression"])
+  N1026 -->|true| N1027
+  N1026 -->|false| N1027
+  N1028(["if"])
+  N1027 -->|true| N1028
+  N1027 -->|false| N1028
+  N1029(["identifier"])
+  N1028 -->|true| N1029
+  N1028 -->|false| N1029
+  N1030(["field_identifier"])
+  N1029 -->|true| N1030
+  N1029 -->|false| N1030
+  N1031(["identifier"])
+  N1030 -->|true| N1031
+  N1030 -->|false| N1031
+  N1032(["call:traverse_for_npath"])
+  N1031 --> N1032
+  N1033(["identifier"])
+  N1032 -->|true| N1033
+  N1032 -->|false| N1033
+  N1034(["call:calculate_default_npath"])
+  N1033 --> N1034
+  N1035(["identifier"])
+  N1034 -->|true| N1035
+  N1034 -->|false| N1035
+  N1036(["identifier"])
+  N1035 -->|true| N1036
+  N1035 -->|false| N1036
+  N1037(["type_identifier"])
+  N1036 -->|true| N1037
+  N1036 -->|false| N1037
+  N1038(["mutable_specifier"])
+  N1037 -->|true| N1038
+  N1037 -->|false| N1038
+  N1039(["identifier"])
+  N1038 -->|true| N1039
+  N1038 -->|false| N1039
+  N1040(["mutable_specifier"])
+  N1039 -->|true| N1040
+  N1039 -->|false| N1040
+  N1041(["identifier"])
+  N1040 -->|true| N1041
+  N1040 -->|false| N1041
+  N1042(["call:walk"])
+  N1041 --> N1042
+  N1043(["if_expression"])
+  N1042 -->|true| N1043
+  N1042 -->|false| N1043
+  N1044(["if"])
+  N1043 -->|true| N1044
+  N1043 -->|false| N1044
+  N1045(["identifier"])
+  N1044 -->|true| N1045
+  N1044 -->|false| N1045
+  N1046(["field_identifier"])
+  N1045 -->|true| N1046
+  N1045 -->|false| N1046
+  N1047(["loop_expression"])
+  N1047 -->|repeat| N1047
+  N1046 --> N1047
+  N1048(["loop"])
+  N1048 -->|repeat| N1048
+  N1047 --> N1048
+  N1049(["identifier"])
+  N1048 -->|true| N1049
+  N1048 -->|false| N1049
+  N1050(["call:traverse_for_npath"])
+  N1049 --> N1050
+  N1051(["identifier"])
+  N1050 -->|true| N1051
+  N1050 -->|false| N1051
+  N1052(["call:max"])
+  N1051 --> N1052
+  N1053(["if_expression"])
+  N1052 -->|true| N1053
+  N1052 -->|false| N1053
+  N1054(["if"])
+  N1053 -->|true| N1054
+  N1053 -->|false| N1054
+  N1055(["call:goto_next_sibling"])
+  N1054 --> N1055
+  N1056(["identifier"])
+  N1055 -->|true| N1056
+  N1055 -->|false| N1056
+  N1057(["identifier"])
+  N1056 -->|true| N1057
+  N1056 -->|false| N1057
+  N1058(["identifier"])
+  N1057 -->|true| N1058
+  N1057 -->|false| N1058
+  N1059(["call:as_str"])
+  N1058 --> N1059
+  N1060(["identifier"])
+  N1059 -->|true| N1060
+  N1059 -->|false| N1060
+  N1061(["identifier"])
+  N1060 -->|true| N1061
+  N1060 -->|false| N1061
+  N1062(["identifier"])
+  N1061 -->|true| N1062
+  N1061 -->|false| N1062
+  N1063(["identifier"])
+  N1062 -->|true| N1063
+  N1062 -->|false| N1063
+  N1064(["identifier"])
+  N1063 -->|true| N1064
+  N1063 -->|false| N1064
+  N1065(["identifier"])
+  N1064 -->|true| N1065
+  N1064 -->|false| N1065
+  N1066(["identifier"])
+  N1065 -->|true| N1066
+  N1065 -->|false| N1066
+  N1067(["identifier"])
+  N1066 -->|true| N1067
+  N1066 -->|false| N1067
+  N1068(["identifier"])
+  N1067 -->|true| N1068
+  N1067 -->|false| N1068
+  N1069(["identifier"])
+  N1068 -->|true| N1069
+  N1068 -->|false| N1069
+  N1070(["identifier"])
+  N1069 -->|true| N1070
+  N1069 -->|false| N1070
+  N1071(["identifier"])
+  N1070 -->|true| N1071
+  N1070 -->|false| N1071
+  N1072(["type_identifier"])
+  N1071 -->|true| N1072
+  N1071 -->|false| N1072
+  N1073(["mutable_specifier"])
+  N1072 -->|true| N1073
+  N1072 -->|false| N1073
+  N1074(["identifier"])
+  N1073 -->|true| N1074
+  N1073 -->|false| N1074
+  N1075(["identifier"])
+  N1074 -->|true| N1075
+  N1074 -->|false| N1075
+  N1076(["call:kind"])
+  N1075 --> N1076
+  N1077(["call:as_str"])
+  N1076 --> N1077
+  N1078(["call:calculate_rust_expression_npath"])
+  N1077 --> N1078
+  N1079(["call:calculate_js_expression_npath"])
+  N1078 --> N1079
+  N1080(["call:calculate_python_expression_npath"])
+  N1079 --> N1080
+  N1081(["call:calculate_c_expression_npath"])
+  N1080 --> N1081
+  N1082(["call:calculate_go_expression_npath"])
+  N1081 --> N1082
+  N1083(["mutable_specifier"])
+  N1082 -->|true| N1083
+  N1082 -->|false| N1083
+  N1084(["identifier"])
+  N1083 -->|true| N1084
+  N1083 -->|false| N1084
+  N1085(["call:walk"])
+  N1084 --> N1085
+  N1086(["if_expression"])
+  N1085 -->|true| N1086
+  N1085 -->|false| N1086
+  N1087(["if"])
+  N1086 -->|true| N1087
+  N1086 -->|false| N1087
+  N1088(["identifier"])
+  N1087 -->|true| N1088
+  N1087 -->|false| N1088
+  N1089(["field_identifier"])
+  N1088 -->|true| N1089
+  N1088 -->|false| N1089
+  N1090(["loop_expression"])
+  N1090 -->|repeat| N1090
+  N1089 --> N1090
+  N1091(["loop"])
+  N1091 -->|repeat| N1091
+  N1090 --> N1091
+  N1092(["identifier"])
+  N1091 -->|true| N1092
+  N1091 -->|false| N1092
+  N1093(["call:kind"])
+  N1092 --> N1093
+  N1094(["if_expression"])
+  N1093 -->|true| N1094
+  N1093 -->|false| N1094
+  N1095(["if"])
+  N1094 -->|true| N1095
+  N1094 -->|false| N1095
+  N1096(["identifier"])
+  N1095 -->|true| N1096
+  N1095 -->|false| N1096
+  N1097(["identifier"])
+  N1096 -->|true| N1097
+  N1096 -->|false| N1097
+  N1098(["identifier"])
+  N1097 -->|true| N1098
+  N1097 -->|false| N1098
+  N1099(["identifier"])
+  N1098 -->|true| N1099
+  N1098 -->|false| N1099
+  N1100(["call:calculate_expression_npath"])
+  N1099 --> N1100
+  N1101(["if_expression"])
+  N1100 -->|true| N1101
+  N1100 -->|false| N1101
+  N1102(["if"])
+  N1101 -->|true| N1102
+  N1101 -->|false| N1102
+  N1103(["call:goto_next_sibling"])
+  N1102 --> N1103
+  N1104(["identifier"])
+  N1103 -->|true| N1104
+  N1103 -->|false| N1104
+  N1105(["identifier"])
+  N1104 -->|true| N1105
+  N1104 -->|false| N1105
+  N1106(["identifier"])
+  N1105 -->|true| N1106
+  N1105 -->|false| N1106
+  N1107(["type_identifier"])
+  N1106 -->|true| N1107
+  N1106 -->|false| N1107
+  N1108(["identifier"])
+  N1107 -->|true| N1108
+  N1107 -->|false| N1108
+  N1109(["mutable_specifier"])
+  N1108 -->|true| N1109
+  N1108 -->|false| N1109
+  N1110(["identifier"])
+  N1109 -->|true| N1110
+  N1109 -->|false| N1110
+  N1111(["identifier"])
+  N1110 -->|true| N1111
+  N1110 -->|false| N1111
+  N1112(["mutable_specifier"])
+  N1111 -->|true| N1112
+  N1111 -->|false| N1112
+  N1113(["identifier"])
+  N1112 -->|true| N1113
+  N1112 -->|false| N1113
+  N1114(["call:walk"])
+  N1113 --> N1114
+  N1115(["if_expression"])
+  N1114 -->|true| N1115
+  N1114 -->|false| N1115
+  N1116(["if"])
+  N1115 -->|true| N1116
+  N1115 -->|false| N1116
+  N1117(["identifier"])
+  N1116 -->|true| N1117
+  N1116 -->|false| N1117
+  N1118(["field_identifier"])
+  N1117 -->|true| N1118
+  N1117 -->|false| N1118
+  N1119(["identifier"])
+  N1118 -->|true| N1119
+  N1118 -->|false| N1119
+  N1120(["call:calculate_expression_npath"])
+  N1119 --> N1120
+  N1121(["if_expression"])
+  N1120 -->|true| N1121
+  N1120 -->|false| N1121
+  N1122(["if"])
+  N1121 -->|true| N1122
+  N1121 -->|false| N1122
+  N1123(["identifier"])
+  N1122 -->|true| N1123
+  N1122 -->|false| N1123
+  N1124(["field_identifier"])
+  N1123 -->|true| N1124
+  N1123 -->|false| N1124
+  N1125(["identifier"])
+  N1124 -->|true| N1125
+  N1124 -->|false| N1125
+  N1126(["call:kind"])
+  N1125 --> N1126
+  N1127(["if_expression"])
+  N1126 -->|true| N1127
+  N1126 -->|false| N1127
+  N1128(["if"])
+  N1127 -->|true| N1128
+  N1127 -->|false| N1128
+  N1129(["identifier"])
+  N1128 -->|true| N1129
+  N1128 -->|false| N1129
+  N1130(["identifier"])
+  N1129 -->|true| N1130
+  N1129 -->|false| N1130
+  N1131(["identifier"])
+  N1130 -->|true| N1131
+  N1130 -->|false| N1131
+  N1132(["if_expression"])
+  N1131 -->|true| N1132
+  N1131 -->|false| N1132
+  N1133(["if"])
+  N1132 -->|true| N1133
+  N1132 -->|false| N1133
+  N1134(["identifier"])
+  N1133 -->|true| N1134
+  N1133 -->|false| N1134
+  N1135(["field_identifier"])
+  N1134 -->|true| N1135
+  N1134 -->|false| N1135
+  N1136(["identifier"])
+  N1135 -->|true| N1136
+  N1135 -->|false| N1136
+  N1137(["call:calculate_expression_npath"])
+  N1136 --> N1137
+  N1138(["identifier"])
+  N1137 -->|true| N1138
+  N1137 -->|false| N1138
+  N1139(["mutable_specifier"])
+  N1138 -->|true| N1139
+  N1138 -->|false| N1139
+  N1140(["identifier"])
+  N1139 -->|true| N1140
+  N1139 -->|false| N1140
+  N1141(["call:walk"])
+  N1140 --> N1141
+  N1142(["if_expression"])
+  N1141 -->|true| N1142
+  N1141 -->|false| N1142
+  N1143(["if"])
+  N1142 -->|true| N1143
+  N1142 -->|false| N1143
+  N1144(["identifier"])
+  N1143 -->|true| N1144
+  N1143 -->|false| N1144
+  N1145(["field_identifier"])
+  N1144 -->|true| N1145
+  N1144 -->|false| N1145
+  N1146(["loop_expression"])
+  N1146 -->|repeat| N1146
+  N1145 --> N1146
+  N1147(["loop"])
+  N1147 -->|repeat| N1147
+  N1146 --> N1147
+  N1148(["identifier"])
+  N1147 -->|true| N1148
+  N1147 -->|false| N1148
+  N1149(["call:calculate_expression_npath"])
+  N1148 --> N1149
+  N1150(["if_expression"])
+  N1149 -->|true| N1150
+  N1149 -->|false| N1150
+  N1151(["if"])
+  N1150 -->|true| N1151
+  N1150 -->|false| N1151
+  N1152(["call:goto_next_sibling"])
+  N1151 --> N1152
+  N1153(["call:max"])
+  N1152 --> N1153
+  N1154(["mutable_specifier"])
+  N1153 -->|true| N1154
+  N1153 -->|false| N1154
+  N1155(["identifier"])
+  N1154 -->|true| N1155
+  N1154 -->|false| N1155
+  N1156(["call:walk"])
+  N1155 --> N1156
+  N1157(["if_expression"])
+  N1156 -->|true| N1157
+  N1156 -->|false| N1157
+  N1158(["if"])
+  N1157 -->|true| N1158
+  N1157 -->|false| N1158
+  N1159(["identifier"])
+  N1158 -->|true| N1159
+  N1158 -->|false| N1159
+  N1160(["field_identifier"])
+  N1159 -->|true| N1160
+  N1159 -->|false| N1160
+  N1161(["loop_expression"])
+  N1161 -->|repeat| N1161
+  N1160 --> N1161
+  N1162(["loop"])
+  N1162 -->|repeat| N1162
+  N1161 --> N1162
+  N1163(["identifier"])
+  N1162 -->|true| N1163
+  N1162 -->|false| N1163
+  N1164(["call:calculate_expression_npath"])
+  N1163 --> N1164
+  N1165(["if_expression"])
+  N1164 -->|true| N1165
+  N1164 -->|false| N1165
+  N1166(["if"])
+  N1165 -->|true| N1166
+  N1165 -->|false| N1166
+  N1167(["call:goto_next_sibling"])
+  N1166 --> N1167
+  N1168(["identifier"])
+  N1167 -->|true| N1168
+  N1167 -->|false| N1168
+  N1169(["identifier"])
+  N1168 -->|true| N1169
+  N1168 -->|false| N1169
+  N1170(["identifier"])
+  N1169 -->|true| N1170
+  N1169 -->|false| N1170
+  N1171(["type_identifier"])
+  N1170 -->|true| N1171
+  N1170 -->|false| N1171
+  N1172(["identifier"])
+  N1171 -->|true| N1172
+  N1171 -->|false| N1172
+  N1173(["mutable_specifier"])
+  N1172 -->|true| N1173
+  N1172 -->|false| N1173
+  N1174(["identifier"])
+  N1173 -->|true| N1174
+  N1173 -->|false| N1174
+  N1175(["identifier"])
+  N1174 -->|true| N1175
+  N1174 -->|false| N1175
+  N1176(["mutable_specifier"])
+  N1175 -->|true| N1176
+  N1175 -->|false| N1176
+  N1177(["identifier"])
+  N1176 -->|true| N1177
+  N1176 -->|false| N1177
+  N1178(["call:walk"])
+  N1177 --> N1178
+  N1179(["if_expression"])
+  N1178 -->|true| N1179
+  N1178 -->|false| N1179
+  N1180(["if"])
+  N1179 -->|true| N1180
+  N1179 -->|false| N1180
+  N1181(["identifier"])
+  N1180 -->|true| N1181
+  N1180 -->|false| N1181
+  N1182(["field_identifier"])
+  N1181 -->|true| N1182
+  N1181 -->|false| N1182
+  N1183(["identifier"])
+  N1182 -->|true| N1183
+  N1182 -->|false| N1183
+  N1184(["call:calculate_expression_npath"])
+  N1183 --> N1184
+  N1185(["if_expression"])
+  N1184 -->|true| N1185
+  N1184 -->|false| N1185
+  N1186(["if"])
+  N1185 -->|true| N1186
+  N1185 -->|false| N1186
+  N1187(["identifier"])
+  N1186 -->|true| N1187
+  N1186 -->|false| N1187
+  N1188(["field_identifier"])
+  N1187 -->|true| N1188
+  N1187 -->|false| N1188
+  N1189(["identifier"])
+  N1188 -->|true| N1189
+  N1188 -->|false| N1189
+  N1190(["call:kind"])
+  N1189 --> N1190
+  N1191(["if_expression"])
+  N1190 -->|true| N1191
+  N1190 -->|false| N1191
+  N1192(["if"])
+  N1191 -->|true| N1192
+  N1191 -->|false| N1192
+  N1193(["identifier"])
+  N1192 -->|true| N1193
+  N1192 -->|false| N1193
+  N1194(["identifier"])
+  N1193 -->|true| N1194
+  N1193 -->|false| N1194
+  N1195(["identifier"])
+  N1194 -->|true| N1195
+  N1194 -->|false| N1195
+  N1196(["if_expression"])
+  N1195 -->|true| N1196
+  N1195 -->|false| N1196
+  N1197(["if"])
+  N1196 -->|true| N1197
+  N1196 -->|false| N1197
+  N1198(["identifier"])
+  N1197 -->|true| N1198
+  N1197 -->|false| N1198
+  N1199(["field_identifier"])
+  N1198 -->|true| N1199
+  N1198 -->|false| N1199
+  N1200(["identifier"])
+  N1199 -->|true| N1200
+  N1199 -->|false| N1200
+  N1201(["call:calculate_expression_npath"])
+  N1200 --> N1201
+  N1202(["identifier"])
+  N1201 -->|true| N1202
+  N1201 -->|false| N1202
+  N1203(["mutable_specifier"])
+  N1202 -->|true| N1203
+  N1202 -->|false| N1203
+  N1204(["identifier"])
+  N1203 -->|true| N1204
+  N1203 -->|false| N1204
+  N1205(["call:walk"])
+  N1204 --> N1205
+  N1206(["if_expression"])
+  N1205 -->|true| N1206
+  N1205 -->|false| N1206
+  N1207(["if"])
+  N1206 -->|true| N1207
+  N1206 -->|false| N1207
+  N1208(["identifier"])
+  N1207 -->|true| N1208
+  N1207 -->|false| N1208
+  N1209(["field_identifier"])
+  N1208 -->|true| N1209
+  N1208 -->|false| N1209
+  N1210(["loop_expression"])
+  N1210 -->|repeat| N1210
+  N1209 --> N1210
+  N1211(["loop"])
+  N1211 -->|repeat| N1211
+  N1210 --> N1211
+  N1212(["identifier"])
+  N1211 -->|true| N1212
+  N1211 -->|false| N1212
+  N1213(["call:calculate_expression_npath"])
+  N1212 --> N1213
+  N1214(["if_expression"])
+  N1213 -->|true| N1214
+  N1213 -->|false| N1214
+  N1215(["if"])
+  N1214 -->|true| N1215
+  N1214 -->|false| N1215
+  N1216(["call:goto_next_sibling"])
+  N1215 --> N1216
+  N1217(["call:max"])
+  N1216 --> N1217
+  N1218(["mutable_specifier"])
+  N1217 -->|true| N1218
+  N1217 -->|false| N1218
+  N1219(["identifier"])
+  N1218 -->|true| N1219
+  N1218 -->|false| N1219
+  N1220(["call:walk"])
+  N1219 --> N1220
+  N1221(["if_expression"])
+  N1220 -->|true| N1221
+  N1220 -->|false| N1221
+  N1222(["if"])
+  N1221 -->|true| N1222
+  N1221 -->|false| N1222
+  N1223(["identifier"])
+  N1222 -->|true| N1223
+  N1222 -->|false| N1223
+  N1224(["field_identifier"])
+  N1223 -->|true| N1224
+  N1223 -->|false| N1224
+  N1225(["loop_expression"])
+  N1225 -->|repeat| N1225
+  N1224 --> N1225
+  N1226(["loop"])
+  N1226 -->|repeat| N1226
+  N1225 --> N1226
+  N1227(["identifier"])
+  N1226 -->|true| N1227
+  N1226 -->|false| N1227
+  N1228(["call:calculate_expression_npath"])
+  N1227 --> N1228
+  N1229(["if_expression"])
+  N1228 -->|true| N1229
+  N1228 -->|false| N1229
+  N1230(["if"])
+  N1229 -->|true| N1230
+  N1229 -->|false| N1230
+  N1231(["call:goto_next_sibling"])
+  N1230 --> N1231
+  N1232(["identifier"])
+  N1231 -->|true| N1232
+  N1231 -->|false| N1232
+  N1233(["identifier"])
+  N1232 -->|true| N1233
+  N1232 -->|false| N1233
+  N1234(["identifier"])
+  N1233 -->|true| N1234
+  N1233 -->|false| N1234
+  N1235(["type_identifier"])
+  N1234 -->|true| N1235
+  N1234 -->|false| N1235
+  N1236(["identifier"])
+  N1235 -->|true| N1236
+  N1235 -->|false| N1236
+  N1237(["mutable_specifier"])
+  N1236 -->|true| N1237
+  N1236 -->|false| N1237
+  N1238(["identifier"])
+  N1237 -->|true| N1238
+  N1237 -->|false| N1238
+  N1239(["identifier"])
+  N1238 -->|true| N1239
+  N1238 -->|false| N1239
+  N1240(["mutable_specifier"])
+  N1239 -->|true| N1240
+  N1239 -->|false| N1240
+  N1241(["identifier"])
+  N1240 -->|true| N1241
+  N1240 -->|false| N1241
+  N1242(["call:walk"])
+  N1241 --> N1242
+  N1243(["if_expression"])
+  N1242 -->|true| N1243
+  N1242 -->|false| N1243
+  N1244(["if"])
+  N1243 -->|true| N1244
+  N1243 -->|false| N1244
+  N1245(["identifier"])
+  N1244 -->|true| N1245
+  N1244 -->|false| N1245
+  N1246(["field_identifier"])
+  N1245 -->|true| N1246
+  N1245 -->|false| N1246
+  N1247(["identifier"])
+  N1246 -->|true| N1247
+  N1246 -->|false| N1247
+  N1248(["call:calculate_expression_npath"])
+  N1247 --> N1248
+  N1249(["if_expression"])
+  N1248 -->|true| N1249
+  N1248 -->|false| N1249
+  N1250(["if"])
+  N1249 -->|true| N1250
+  N1249 -->|false| N1250
+  N1251(["identifier"])
+  N1250 -->|true| N1251
+  N1250 -->|false| N1251
+  N1252(["field_identifier"])
+  N1251 -->|true| N1252
+  N1251 -->|false| N1252
+  N1253(["identifier"])
+  N1252 -->|true| N1253
+  N1252 -->|false| N1253
+  N1254(["if_expression"])
+  N1253 -->|true| N1254
+  N1253 -->|false| N1254
+  N1255(["if"])
+  N1254 -->|true| N1255
+  N1254 -->|false| N1255
+  N1256(["identifier"])
+  N1255 -->|true| N1256
+  N1255 -->|false| N1256
+  N1257(["field_identifier"])
+  N1256 -->|true| N1257
+  N1256 -->|false| N1257
+  N1258(["identifier"])
+  N1257 -->|true| N1258
+  N1257 -->|false| N1258
+  N1259(["call:calculate_expression_npath"])
+  N1258 --> N1259
+  N1260(["identifier"])
+  N1259 -->|true| N1260
+  N1259 -->|false| N1260
+  N1261(["mutable_specifier"])
+  N1260 -->|true| N1261
+  N1260 -->|false| N1261
+  N1262(["identifier"])
+  N1261 -->|true| N1262
+  N1261 -->|false| N1262
+  N1263(["call:walk"])
+  N1262 --> N1263
+  N1264(["if_expression"])
+  N1263 -->|true| N1264
+  N1263 -->|false| N1264
+  N1265(["if"])
+  N1264 -->|true| N1265
+  N1264 -->|false| N1265
+  N1266(["identifier"])
+  N1265 -->|true| N1266
+  N1265 -->|false| N1266
+  N1267(["field_identifier"])
+  N1266 -->|true| N1267
+  N1266 -->|false| N1267
+  N1268(["loop_expression"])
+  N1268 -->|repeat| N1268
+  N1267 --> N1268
+  N1269(["loop"])
+  N1269 -->|repeat| N1269
+  N1268 --> N1269
+  N1270(["identifier"])
+  N1269 -->|true| N1270
+  N1269 -->|false| N1270
+  N1271(["call:calculate_expression_npath"])
+  N1270 --> N1271
+  N1272(["if_expression"])
+  N1271 -->|true| N1272
+  N1271 -->|false| N1272
+  N1273(["if"])
+  N1272 -->|true| N1273
+  N1272 -->|false| N1273
+  N1274(["call:goto_next_sibling"])
+  N1273 --> N1274
+  N1275(["call:max"])
+  N1274 --> N1275
+  N1276(["mutable_specifier"])
+  N1275 -->|true| N1276
+  N1275 -->|false| N1276
+  N1277(["identifier"])
+  N1276 -->|true| N1277
+  N1276 -->|false| N1277
+  N1278(["call:walk"])
+  N1277 --> N1278
+  N1279(["if_expression"])
+  N1278 -->|true| N1279
+  N1278 -->|false| N1279
+  N1280(["if"])
+  N1279 -->|true| N1280
+  N1279 -->|false| N1280
+  N1281(["identifier"])
+  N1280 -->|true| N1281
+  N1280 -->|false| N1281
+  N1282(["field_identifier"])
+  N1281 -->|true| N1282
+  N1281 -->|false| N1282
+  N1283(["loop_expression"])
+  N1283 -->|repeat| N1283
+  N1282 --> N1283
+  N1284(["loop"])
+  N1284 -->|repeat| N1284
+  N1283 --> N1284
+  N1285(["identifier"])
+  N1284 -->|true| N1285
+  N1284 -->|false| N1285
+  N1286(["call:calculate_expression_npath"])
+  N1285 --> N1286
+  N1287(["if_expression"])
+  N1286 -->|true| N1287
+  N1286 -->|false| N1287
+  N1288(["if"])
+  N1287 -->|true| N1288
+  N1287 -->|false| N1288
+  N1289(["call:goto_next_sibling"])
+  N1288 --> N1289
+  N1290(["identifier"])
+  N1289 -->|true| N1290
+  N1289 -->|false| N1290
+  N1291(["identifier"])
+  N1290 -->|true| N1291
+  N1290 -->|false| N1291
+  N1292(["identifier"])
+  N1291 -->|true| N1292
+  N1291 -->|false| N1292
+  N1293(["type_identifier"])
+  N1292 -->|true| N1293
+  N1292 -->|false| N1293
+  N1294(["identifier"])
+  N1293 -->|true| N1294
+  N1293 -->|false| N1294
+  N1295(["mutable_specifier"])
+  N1294 -->|true| N1295
+  N1294 -->|false| N1295
+  N1296(["identifier"])
+  N1295 -->|true| N1296
+  N1295 -->|false| N1296
+  N1297(["identifier"])
+  N1296 -->|true| N1297
+  N1296 -->|false| N1297
+  N1298(["mutable_specifier"])
+  N1297 -->|true| N1298
+  N1297 -->|false| N1298
+  N1299(["identifier"])
+  N1298 -->|true| N1299
+  N1298 -->|false| N1299
+  N1300(["call:walk"])
+  N1299 --> N1300
+  N1301(["if_expression"])
+  N1300 -->|true| N1301
+  N1300 -->|false| N1301
+  N1302(["if"])
+  N1301 -->|true| N1302
+  N1301 -->|false| N1302
+  N1303(["identifier"])
+  N1302 -->|true| N1303
+  N1302 -->|false| N1303
+  N1304(["field_identifier"])
+  N1303 -->|true| N1304
+  N1303 -->|false| N1304
+  N1305(["identifier"])
+  N1304 -->|true| N1305
+  N1304 -->|false| N1305
+  N1306(["call:calculate_expression_npath"])
+  N1305 --> N1306
+  N1307(["if_expression"])
+  N1306 -->|true| N1307
+  N1306 -->|false| N1307
+  N1308(["if"])
+  N1307 -->|true| N1308
+  N1307 -->|false| N1308
+  N1309(["identifier"])
+  N1308 -->|true| N1309
+  N1308 -->|false| N1309
+  N1310(["field_identifier"])
+  N1309 -->|true| N1310
+  N1309 -->|false| N1310
+  N1311(["identifier"])
+  N1310 -->|true| N1311
+  N1310 -->|false| N1311
+  N1312(["call:kind"])
+  N1311 --> N1312
+  N1313(["if_expression"])
+  N1312 -->|true| N1313
+  N1312 -->|false| N1313
+  N1314(["if"])
+  N1313 -->|true| N1314
+  N1313 -->|false| N1314
+  N1315(["identifier"])
+  N1314 -->|true| N1315
+  N1314 -->|false| N1315
+  N1316(["identifier"])
+  N1315 -->|true| N1316
+  N1315 -->|false| N1316
+  N1317(["identifier"])
+  N1316 -->|true| N1317
+  N1316 -->|false| N1317
+  N1318(["if_expression"])
+  N1317 -->|true| N1318
+  N1317 -->|false| N1318
+  N1319(["if"])
+  N1318 -->|true| N1319
+  N1318 -->|false| N1319
+  N1320(["identifier"])
+  N1319 -->|true| N1320
+  N1319 -->|false| N1320
+  N1321(["field_identifier"])
+  N1320 -->|true| N1321
+  N1320 -->|false| N1321
+  N1322(["identifier"])
+  N1321 -->|true| N1322
+  N1321 -->|false| N1322
+  N1323(["call:calculate_expression_npath"])
+  N1322 --> N1323
+  N1324(["identifier"])
+  N1323 -->|true| N1324
+  N1323 -->|false| N1324
+  N1325(["mutable_specifier"])
+  N1324 -->|true| N1325
+  N1324 -->|false| N1325
+  N1326(["identifier"])
+  N1325 -->|true| N1326
+  N1325 -->|false| N1326
+  N1327(["call:walk"])
+  N1326 --> N1327
+  N1328(["if_expression"])
+  N1327 -->|true| N1328
+  N1327 -->|false| N1328
+  N1329(["if"])
+  N1328 -->|true| N1329
+  N1328 -->|false| N1329
+  N1330(["identifier"])
+  N1329 -->|true| N1330
+  N1329 -->|false| N1330
+  N1331(["field_identifier"])
+  N1330 -->|true| N1331
+  N1330 -->|false| N1331
+  N1332(["loop_expression"])
+  N1332 -->|repeat| N1332
+  N1331 --> N1332
+  N1333(["loop"])
+  N1333 -->|repeat| N1333
+  N1332 --> N1333
+  N1334(["identifier"])
+  N1333 -->|true| N1334
+  N1333 -->|false| N1334
+  N1335(["call:calculate_expression_npath"])
+  N1334 --> N1335
+  N1336(["if_expression"])
+  N1335 -->|true| N1336
+  N1335 -->|false| N1336
+  N1337(["if"])
+  N1336 -->|true| N1337
+  N1336 -->|false| N1337
+  N1338(["call:goto_next_sibling"])
+  N1337 --> N1338
+  N1339(["call:max"])
+  N1338 --> N1339
+  N1340(["mutable_specifier"])
+  N1339 -->|true| N1340
+  N1339 -->|false| N1340
+  N1341(["identifier"])
+  N1340 -->|true| N1341
+  N1340 -->|false| N1341
+  N1342(["call:walk"])
+  N1341 --> N1342
+  N1343(["if_expression"])
+  N1342 -->|true| N1343
+  N1342 -->|false| N1343
+  N1344(["if"])
+  N1343 -->|true| N1344
+  N1343 -->|false| N1344
+  N1345(["identifier"])
+  N1344 -->|true| N1345
+  N1344 -->|false| N1345
+  N1346(["field_identifier"])
+  N1345 -->|true| N1346
+  N1345 -->|false| N1346
+  N1347(["loop_expression"])
+  N1347 -->|repeat| N1347
+  N1346 --> N1347
+  N1348(["loop"])
+  N1348 -->|repeat| N1348
+  N1347 --> N1348
+  N1349(["identifier"])
+  N1348 -->|true| N1349
+  N1348 -->|false| N1349
+  N1350(["call:calculate_expression_npath"])
+  N1349 --> N1350
+  N1351(["if_expression"])
+  N1350 -->|true| N1351
+  N1350 -->|false| N1351
+  N1352(["if"])
+  N1351 -->|true| N1352
+  N1351 -->|false| N1352
+  N1353(["call:goto_next_sibling"])
+  N1352 --> N1353
+  N1354(["identifier"])
+  N1353 -->|true| N1354
+  N1353 -->|false| N1354
+  N1355(["identifier"])
+  N1354 -->|true| N1355
+  N1354 -->|false| N1355
+  N1356(["identifier"])
+  N1355 -->|true| N1356
+  N1355 -->|false| N1356
+  N1357(["type_identifier"])
+  N1356 -->|true| N1357
+  N1356 -->|false| N1357
+  N1358(["identifier"])
+  N1357 -->|true| N1358
+  N1357 -->|false| N1358
+  N1359(["mutable_specifier"])
+  N1358 -->|true| N1359
+  N1358 -->|false| N1359
+  N1360(["identifier"])
+  N1359 -->|true| N1360
+  N1359 -->|false| N1360
+  N1361(["identifier"])
+  N1360 -->|true| N1361
+  N1360 -->|false| N1361
+  N1362(["mutable_specifier"])
+  N1361 -->|true| N1362
+  N1361 -->|false| N1362
+  N1363(["identifier"])
+  N1362 -->|true| N1363
+  N1362 -->|false| N1363
+  N1364(["call:walk"])
+  N1363 --> N1364
+  N1365(["if_expression"])
+  N1364 -->|true| N1365
+  N1364 -->|false| N1365
+  N1366(["if"])
+  N1365 -->|true| N1366
+  N1365 -->|false| N1366
+  N1367(["identifier"])
+  N1366 -->|true| N1367
+  N1366 -->|false| N1367
+  N1368(["field_identifier"])
+  N1367 -->|true| N1368
+  N1367 -->|false| N1368
+  N1369(["identifier"])
+  N1368 -->|true| N1369
+  N1368 -->|false| N1369
+  N1370(["call:calculate_expression_npath"])
+  N1369 --> N1370
+  N1371(["if_expression"])
+  N1370 -->|true| N1371
+  N1370 -->|false| N1371
+  N1372(["if"])
+  N1371 -->|true| N1372
+  N1371 -->|false| N1372
+  N1373(["identifier"])
+  N1372 -->|true| N1373
+  N1372 -->|false| N1373
+  N1374(["field_identifier"])
+  N1373 -->|true| N1374
+  N1373 -->|false| N1374
+  N1375(["identifier"])
+  N1374 -->|true| N1375
+  N1374 -->|false| N1375
+  N1376(["call:kind"])
+  N1375 --> N1376
+  N1377(["if_expression"])
+  N1376 -->|true| N1377
+  N1376 -->|false| N1377
+  N1378(["if"])
+  N1377 -->|true| N1378
+  N1377 -->|false| N1378
+  N1379(["identifier"])
+  N1378 -->|true| N1379
+  N1378 -->|false| N1379
+  N1380(["identifier"])
+  N1379 -->|true| N1380
+  N1379 -->|false| N1380
+  N1381(["identifier"])
+  N1380 -->|true| N1381
+  N1380 -->|false| N1381
+  N1382(["if_expression"])
+  N1381 -->|true| N1382
+  N1381 -->|false| N1382
+  N1383(["if"])
+  N1382 -->|true| N1383
+  N1382 -->|false| N1383
+  N1384(["identifier"])
+  N1383 -->|true| N1384
+  N1383 -->|false| N1384
+  N1385(["field_identifier"])
+  N1384 -->|true| N1385
+  N1384 -->|false| N1385
+  N1386(["identifier"])
+  N1385 -->|true| N1386
+  N1385 -->|false| N1386
+  N1387(["call:calculate_expression_npath"])
+  N1386 --> N1387
+  N1388(["identifier"])
+  N1387 -->|true| N1388
+  N1387 -->|false| N1388
+  N1389(["mutable_specifier"])
+  N1388 -->|true| N1389
+  N1388 -->|false| N1389
+  N1390(["identifier"])
+  N1389 -->|true| N1390
+  N1389 -->|false| N1390
+  N1391(["call:walk"])
+  N1390 --> N1391
+  N1392(["if_expression"])
+  N1391 -->|true| N1392
+  N1391 -->|false| N1392
+  N1393(["if"])
+  N1392 -->|true| N1393
+  N1392 -->|false| N1393
+  N1394(["identifier"])
+  N1393 -->|true| N1394
+  N1393 -->|false| N1394
+  N1395(["field_identifier"])
+  N1394 -->|true| N1395
+  N1394 -->|false| N1395
+  N1396(["loop_expression"])
+  N1396 -->|repeat| N1396
+  N1395 --> N1396
+  N1397(["loop"])
+  N1397 -->|repeat| N1397
+  N1396 --> N1397
+  N1398(["identifier"])
+  N1397 -->|true| N1398
+  N1397 -->|false| N1398
+  N1399(["call:calculate_expression_npath"])
+  N1398 --> N1399
+  N1400(["if_expression"])
+  N1399 -->|true| N1400
+  N1399 -->|false| N1400
+  N1401(["if"])
+  N1400 -->|true| N1401
+  N1400 -->|false| N1401
+  N1402(["call:goto_next_sibling"])
+  N1401 --> N1402
+  N1403(["call:max"])
+  N1402 --> N1403
+  N1404(["mutable_specifier"])
+  N1403 -->|true| N1404
+  N1403 -->|false| N1404
+  N1405(["identifier"])
+  N1404 -->|true| N1405
+  N1404 -->|false| N1405
+  N1406(["call:walk"])
+  N1405 --> N1406
+  N1407(["if_expression"])
+  N1406 -->|true| N1407
+  N1406 -->|false| N1407
+  N1408(["if"])
+  N1407 -->|true| N1408
+  N1407 -->|false| N1408
+  N1409(["identifier"])
+  N1408 -->|true| N1409
+  N1408 -->|false| N1409
+  N1410(["field_identifier"])
+  N1409 -->|true| N1410
+  N1409 -->|false| N1410
+  N1411(["loop_expression"])
+  N1411 -->|repeat| N1411
+  N1410 --> N1411
+  N1412(["loop"])
+  N1412 -->|repeat| N1412
+  N1411 --> N1412
+  N1413(["identifier"])
+  N1412 -->|true| N1413
+  N1412 -->|false| N1413
+  N1414(["call:calculate_expression_npath"])
+  N1413 --> N1414
+  N1415(["if_expression"])
+  N1414 -->|true| N1415
+  N1414 -->|false| N1415
+  N1416(["if"])
+  N1415 -->|true| N1416
+  N1415 -->|false| N1416
+  N1417(["call:goto_next_sibling"])
+  N1416 --> N1417
+  N1418(["identifier"])
+  N1417 -->|true| N1418
+  N1417 -->|false| N1418
+  N1419(["identifier"])
+  N1418 -->|true| N1419
+  N1418 -->|false| N1419
+  N1420(["identifier"])
+  N1419 -->|true| N1420
+  N1419 -->|false| N1420
+  N1421(["type_identifier"])
+  N1420 -->|true| N1421
+  N1420 -->|false| N1421
+  N1422(["identifier"])
+  N1421 -->|true| N1422
+  N1421 -->|false| N1422
+  N1423(["call:root_node"])
+  N1422 --> N1423
+  N1424(["if_expression"])
+  N1423 -->|true| N1424
+  N1423 -->|false| N1424
+  N1425(["if"])
+  N1424 -->|true| N1425
+  N1424 -->|false| N1425
+  N1426(["call:start_position"])
+  N1425 --> N1426
+  N1427(["field_identifier"])
+  N1426 -->|true| N1427
+  N1426 -->|false| N1427
+  N1428(["call:end_position"])
+  N1427 --> N1428
+  N1429(["field_identifier"])
+  N1428 -->|true| N1429
+  N1428 -->|false| N1429
+  N1430(["call:end_position"])
+  N1429 --> N1430
+  N1431(["field_identifier"])
+  N1430 -->|true| N1431
+  N1430 -->|false| N1431
+  N1432(["call:start_position"])
+  N1431 --> N1432
+  N1433(["field_identifier"])
+  N1432 -->|true| N1433
+  N1432 -->|false| N1433
+  N1434(["identifier"])
+  N1433 -->|true| N1434
+  N1433 -->|false| N1434
+  N1435(["identifier"])
+  N1434 -->|true| N1435
+  N1434 -->|false| N1435
+  N1436(["type_identifier"])
+  N1435 -->|true| N1436
+  N1435 -->|false| N1436
+  N1437(["type_identifier"])
+  N1436 -->|true| N1437
+  N1436 -->|false| N1437
+  N1438(["call:Ok"])
+  N1437 --> N1438
+  N1439(["identifier"])
+  N1438 -->|true| N1439
+  N1438 -->|false| N1439
+  N1440(["identifier"])
+  N1439 -->|true| N1440
+  N1439 -->|false| N1440
+  N1441(["type_identifier"])
+  N1440 -->|true| N1441
+  N1440 -->|false| N1441
+  N1442(["identifier"])
+  N1441 -->|true| N1442
+  N1441 -->|false| N1442
+  N1443(["identifier"])
+  N1442 -->|true| N1443
+  N1442 -->|false| N1443
+  N1444(["call:kind"])
+  N1443 --> N1444
+  N1445(["identifier"])
+  N1444 -->|true| N1445
+  N1444 -->|false| N1445
+  N1446(["if_expression"])
+  N1445 -->|true| N1446
+  N1445 -->|false| N1446
+  N1447(["if"])
+  N1446 -->|true| N1447
+  N1446 -->|false| N1447
+  N1448(["field_identifier"])
+  N1447 -->|true| N1448
+  N1447 -->|false| N1448
+  N1449(["identifier"])
+  N1448 -->|true| N1449
+  N1448 -->|false| N1449
+  N1450(["identifier"])
+  N1449 -->|true| N1450
+  N1449 -->|false| N1450
+  N1451(["identifier"])
+  N1450 -->|true| N1451
+  N1450 -->|false| N1451
+  N1452(["mutable_specifier"])
+  N1451 -->|true| N1452
+  N1451 -->|false| N1452
+  N1453(["identifier"])
+  N1452 -->|true| N1453
+  N1452 -->|false| N1453
+  N1454(["identifier"])
+  N1453 -->|true| N1454
+  N1453 -->|false| N1454
+  N1455(["mutable_specifier"])
+  N1454 -->|true| N1455
+  N1454 -->|false| N1455
+  N1456(["identifier"])
+  N1455 -->|true| N1456
+  N1455 -->|false| N1456
+  N1457(["call:walk"])
+  N1456 --> N1457
+  N1458(["if_expression"])
+  N1457 -->|true| N1458
+  N1457 -->|false| N1458
+  N1459(["if"])
+  N1458 -->|true| N1459
+  N1458 -->|false| N1459
+  N1460(["identifier"])
+  N1459 -->|true| N1460
+  N1459 -->|false| N1460
+  N1461(["field_identifier"])
+  N1460 -->|true| N1461
+  N1460 -->|false| N1461
+  N1462(["loop_expression"])
+  N1462 -->|repeat| N1462
+  N1461 --> N1462
+  N1463(["loop"])
+  N1463 -->|repeat| N1463
+  N1462 --> N1463
+  N1464(["identifier"])
+  N1463 -->|true| N1464
+  N1463 -->|false| N1464
+  N1465(["call:traverse_for_max_depth"])
+  N1464 --> N1465
+  N1466(["identifier"])
+  N1465 -->|true| N1466
+  N1465 -->|false| N1466
+  N1467(["call:max"])
+  N1466 --> N1467
+  N1468(["if_expression"])
+  N1467 -->|true| N1468
+  N1467 -->|false| N1468
+  N1469(["if"])
+  N1468 -->|true| N1469
+  N1468 -->|false| N1469
+  N1470(["call:goto_next_sibling"])
+  N1469 --> N1470
+  N1471(["identifier"])
+  N1470 -->|true| N1471
+  N1470 -->|false| N1471
+  N1472(["identifier"])
+  N1471 -->|true| N1472
+  N1471 -->|false| N1472
+  N1473(["identifier"])
+  N1472 -->|true| N1473
+  N1472 -->|false| N1473
+  N1474(["call:as_str"])
+  N1473 --> N1474
+  N1475(["identifier"])
+  N1474 -->|true| N1475
+  N1474 -->|false| N1475
+  N1476(["identifier"])
+  N1475 -->|true| N1476
+  N1475 -->|false| N1476
+  N1477(["identifier"])
+  N1476 -->|true| N1477
+  N1476 -->|false| N1477
+  N1478(["identifier"])
+  N1477 -->|true| N1478
+  N1477 -->|false| N1478
+  N1479(["identifier"])
+  N1478 -->|true| N1479
+  N1478 -->|false| N1479
+  N1480(["identifier"])
+  N1479 -->|true| N1480
+  N1479 -->|false| N1480
+  N1481(["identifier"])
+  N1480 -->|true| N1481
+  N1480 -->|false| N1481
+  N1482(["identifier"])
+  N1481 -->|true| N1482
+  N1481 -->|false| N1482
+  N1483(["identifier"])
+  N1482 -->|true| N1483
+  N1482 -->|false| N1483
+  N1484(["identifier"])
+  N1483 -->|true| N1484
+  N1483 -->|false| N1484
+  N1485(["identifier"])
+  N1484 -->|true| N1485
+  N1484 -->|false| N1485
+  N1486(["identifier"])
+  N1485 -->|true| N1486
+  N1485 -->|false| N1486
+  N1487(["identifier"])
+  N1486 -->|true| N1487
+  N1486 -->|false| N1487
+  N1488(["scoped_identifier"])
+  N1487 -->|true| N1488
+  N1487 -->|false| N1488
+  N1489(["identifier"])
+  N1488 -->|true| N1489
+  N1488 -->|false| N1489
+  N1490(["identifier"])
+  N1489 -->|true| N1490
+  N1489 -->|false| N1490
+  N1491(["identifier"])
+  N1490 -->|true| N1491
+  N1490 -->|false| N1491
+  N1492(["type_identifier"])
+  N1491 -->|true| N1492
+  N1491 -->|false| N1492
+  N1493(["identifier"])
+  N1492 -->|true| N1493
+  N1492 -->|false| N1493
+  N1494(["call:new"])
+  N1493 --> N1494
+  N1495(["identifier"])
+  N1494 -->|true| N1495
+  N1494 -->|false| N1495
+  N1496(["identifier"])
+  N1495 -->|true| N1496
+  N1495 -->|false| N1496
+  N1497(["call:parse"])
+  N1496 --> N1497
+  N1498(["identifier"])
+  N1497 -->|true| N1498
+  N1497 -->|false| N1498
+  N1499(["call:new"])
+  N1498 --> N1499
+  N1500(["identifier"])
+  N1499 -->|true| N1500
+  N1499 -->|false| N1500
+  N1501(["call:analyze_complexity"])
+  N1500 --> N1501
+  N1502(["identifier"])
+  N1501 -->|true| N1502
+  N1501 -->|false| N1502
+  N1503(["identifier"])
+  N1502 -->|true| N1503
+  N1502 -->|false| N1503
+  N1504(["identifier"])
+  N1503 -->|true| N1504
+  N1503 -->|false| N1504
+  N1505(["identifier"])
+  N1504 -->|true| N1505
+  N1504 -->|false| N1505
+  N1506(["identifier"])
+  N1505 -->|true| N1506
+  N1505 -->|false| N1506
+  N1507(["identifier"])
+  N1506 -->|true| N1507
+  N1506 -->|false| N1507
+  N1508(["identifier"])
+  N1507 -->|true| N1508
+  N1507 -->|false| N1508
+  N1509(["identifier"])
+  N1508 -->|true| N1509
+  N1508 -->|false| N1509
+  N1510(["identifier"])
+  N1509 -->|true| N1510
+  N1509 -->|false| N1510
+  N1511(["identifier"])
+  N1510 -->|true| N1511
+  N1510 -->|false| N1511
+  N1512(["identifier"])
+  N1511 -->|true| N1512
+  N1511 -->|false| N1512
+  N1513(["identifier"])
+  N1512 -->|true| N1513
+  N1512 -->|false| N1513
+  N1514(["call:Ok"])
+  N1513 --> N1514
+  N1515(["identifier"])
+  N1514 -->|true| N1515
+  N1514 -->|false| N1515
+  N1516(["identifier"])
+  N1515 -->|true| N1516
+  N1515 -->|false| N1516
+  N1517(["type_identifier"])
+  N1516 -->|true| N1517
+  N1516 -->|false| N1517
+  N1518(["identifier"])
+  N1517 -->|true| N1518
+  N1517 -->|false| N1518
+  N1519(["call:new"])
+  N1518 --> N1519
+  N1520(["identifier"])
+  N1519 -->|true| N1520
+  N1519 -->|false| N1520
+  N1521(["identifier"])
+  N1520 -->|true| N1521
+  N1520 -->|false| N1521
+  N1522(["call:parse"])
+  N1521 --> N1522
+  N1523(["identifier"])
+  N1522 -->|true| N1523
+  N1522 -->|false| N1523
+  N1524(["call:new"])
+  N1523 --> N1524
+  N1525(["identifier"])
+  N1524 -->|true| N1525
+  N1524 -->|false| N1525
+  N1526(["call:analyze_complexity"])
+  N1525 --> N1526
+  N1527(["identifier"])
+  N1526 -->|true| N1527
+  N1526 -->|false| N1527
+  N1528(["identifier"])
+  N1527 -->|true| N1528
+  N1527 -->|false| N1528
+  N1529(["identifier"])
+  N1528 -->|true| N1529
+  N1528 -->|false| N1529
+  N1530(["identifier"])
+  N1529 -->|true| N1530
+  N1529 -->|false| N1530
+  N1531(["identifier"])
+  N1530 -->|true| N1531
+  N1530 -->|false| N1531
+  N1532(["identifier"])
+  N1531 -->|true| N1532
+  N1531 -->|false| N1532
+  N1533(["identifier"])
+  N1532 -->|true| N1533
+  N1532 -->|false| N1533
+  N1534(["identifier"])
+  N1533 -->|true| N1534
+  N1533 -->|false| N1534
+  N1535(["identifier"])
+  N1534 -->|true| N1535
+  N1534 -->|false| N1535
+  N1536(["identifier"])
+  N1535 -->|true| N1536
+  N1535 -->|false| N1536
+  N1537(["identifier"])
+  N1536 -->|true| N1537
+  N1536 -->|false| N1537
+  N1538(["identifier"])
+  N1537 -->|true| N1538
+  N1537 -->|false| N1538
+  N1539(["identifier"])
+  N1538 -->|true| N1539
+  N1538 -->|false| N1539
+  N1540(["identifier"])
+  N1539 -->|true| N1540
+  N1539 -->|false| N1540
+  N1541(["identifier"])
+  N1540 -->|true| N1541
+  N1540 -->|false| N1541
+  N1542(["call:Ok"])
+  N1541 --> N1542
+  N1543(["identifier"])
+  N1542 -->|true| N1543
+  N1542 -->|false| N1543
+  N1544(["identifier"])
+  N1543 -->|true| N1544
+  N1543 -->|false| N1544
+  N1545(["type_identifier"])
+  N1544 -->|true| N1545
+  N1544 -->|false| N1545
+  N1546(["identifier"])
+  N1545 -->|true| N1546
+  N1545 -->|false| N1546
+  N1547(["call:new"])
+  N1546 --> N1547
+  N1548(["identifier"])
+  N1547 -->|true| N1548
+  N1547 -->|false| N1548
+  N1549(["identifier"])
+  N1548 -->|true| N1549
+  N1548 -->|false| N1549
+  N1550(["call:parse"])
+  N1549 --> N1550
+  N1551(["identifier"])
+  N1550 -->|true| N1551
+  N1550 -->|false| N1551
+  N1552(["call:new"])
+  N1551 --> N1552
+  N1553(["identifier"])
+  N1552 -->|true| N1553
+  N1552 -->|false| N1553
+  N1554(["call:calculate_halstead_metrics"])
+  N1553 --> N1554
+  N1555(["identifier"])
+  N1554 -->|true| N1555
+  N1554 -->|false| N1555
+  N1556(["identifier"])
+  N1555 -->|true| N1556
+  N1555 -->|false| N1556
+  N1557(["identifier"])
+  N1556 -->|true| N1557
+  N1556 -->|false| N1557
+  N1558(["identifier"])
+  N1557 -->|true| N1558
+  N1557 -->|false| N1558
+  N1559(["identifier"])
+  N1558 -->|true| N1559
+  N1558 -->|false| N1559
+  N1560(["identifier"])
+  N1559 -->|true| N1560
+  N1559 -->|false| N1560
+  N1561(["identifier"])
+  N1560 -->|true| N1561
+  N1560 -->|false| N1561
+  N1562(["identifier"])
+  N1561 -->|true| N1562
+  N1561 -->|false| N1562
+  N1563(["identifier"])
+  N1562 -->|true| N1563
+  N1562 -->|false| N1563
+  N1564(["identifier"])
+  N1563 -->|true| N1564
+  N1563 -->|false| N1564
+  N1565(["identifier"])
+  N1564 -->|true| N1565
+  N1564 -->|false| N1565
+  N1566(["identifier"])
+  N1565 -->|true| N1566
+  N1565 -->|false| N1566
+  N1567(["identifier"])
+  N1566 -->|true| N1567
+  N1566 -->|false| N1567
+  N1568(["call:volume"])
+  N1567 --> N1568
+  N1569(["identifier"])
+  N1568 -->|true| N1569
+  N1568 -->|false| N1569
+  N1570(["call:difficulty"])
+  N1569 --> N1570
+  N1571(["identifier"])
+  N1570 -->|true| N1571
+  N1570 -->|false| N1571
+  N1572(["call:effort"])
+  N1571 --> N1572
+  N1573(["identifier"])
+  N1572 -->|true| N1573
+  N1572 -->|false| N1573
+  N1574(["identifier"])
+  N1573 -->|true| N1574
+  N1573 -->|false| N1574
+  N1575(["identifier"])
+  N1574 -->|true| N1575
+  N1574 -->|false| N1575
+  N1576(["identifier"])
+  N1575 -->|true| N1576
+  N1575 -->|false| N1576
+  N1577(["identifier"])
+  N1576 -->|true| N1577
+  N1576 -->|false| N1577
+  N1578(["identifier"])
+  N1577 -->|true| N1578
+  N1577 -->|false| N1578
+  N1579(["identifier"])
+  N1578 -->|true| N1579
+  N1578 -->|false| N1579
+  N1580(["identifier"])
+  N1579 -->|true| N1580
+  N1579 -->|false| N1580
+  N1581(["identifier"])
+  N1580 -->|true| N1581
+  N1580 -->|false| N1581
+  N1582(["call:Ok"])
+  N1581 --> N1582
+  N1583(["identifier"])
+  N1582 -->|true| N1583
+  N1582 -->|false| N1583
+  N1584(["identifier"])
+  N1583 -->|true| N1584
+  N1583 -->|false| N1584
+  N1585(["type_identifier"])
+  N1584 -->|true| N1585
+  N1584 -->|false| N1585
+  N1586(["identifier"])
+  N1585 -->|true| N1586
+  N1585 -->|false| N1586
+  N1587(["call:new"])
+  N1586 --> N1587
+  N1588(["identifier"])
+  N1587 -->|true| N1588
+  N1587 -->|false| N1588
+  N1589(["identifier"])
+  N1588 -->|true| N1589
+  N1588 -->|false| N1589
+  N1590(["call:parse"])
+  N1589 --> N1590
+  N1591(["identifier"])
+  N1590 -->|true| N1591
+  N1590 -->|false| N1591
+  N1592(["call:new"])
+  N1591 --> N1592
+  N1593(["identifier"])
+  N1592 -->|true| N1593
+  N1592 -->|false| N1593
+  N1594(["call:calculate_halstead_metrics"])
+  N1593 --> N1594
+  N1595(["identifier"])
+  N1594 -->|true| N1595
+  N1594 -->|false| N1595
+  N1596(["identifier"])
+  N1595 -->|true| N1596
+  N1595 -->|false| N1596
+  N1597(["identifier"])
+  N1596 -->|true| N1597
+  N1596 -->|false| N1597
+  N1598(["identifier"])
+  N1597 -->|true| N1598
+  N1597 -->|false| N1598
+  N1599(["identifier"])
+  N1598 -->|true| N1599
+  N1598 -->|false| N1599
+  N1600(["identifier"])
+  N1599 -->|true| N1600
+  N1599 -->|false| N1600
+  N1601(["identifier"])
+  N1600 -->|true| N1601
+  N1600 -->|false| N1601
+  N1602(["identifier"])
+  N1601 -->|true| N1602
+  N1601 -->|false| N1602
+  N1603(["identifier"])
+  N1602 -->|true| N1603
+  N1602 -->|false| N1603
+  N1604(["identifier"])
+  N1603 -->|true| N1604
+  N1603 -->|false| N1604
+  N1605(["identifier"])
+  N1604 -->|true| N1605
+  N1604 -->|false| N1605
+  N1606(["identifier"])
+  N1605 -->|true| N1606
+  N1605 -->|false| N1606
+  N1607(["field_identifier"])
+  N1606 -->|true| N1607
+  N1606 -->|false| N1607
+  N1608(["identifier"])
+  N1607 -->|true| N1608
+  N1607 -->|false| N1608
+  N1609(["field_identifier"])
+  N1608 -->|true| N1609
+  N1608 -->|false| N1609
+  N1610(["identifier"])
+  N1609 -->|true| N1610
+  N1609 -->|false| N1610
+  N1611(["identifier"])
+  N1610 -->|true| N1611
+  N1610 -->|false| N1611
+  N1612(["field_identifier"])
+  N1611 -->|true| N1612
+  N1611 -->|false| N1612
+  N1613(["identifier"])
+  N1612 -->|true| N1613
+  N1612 -->|false| N1613
+  N1614(["field_identifier"])
+  N1613 -->|true| N1614
+  N1613 -->|false| N1614
+  N1615(["identifier"])
+  N1614 -->|true| N1615
+  N1614 -->|false| N1615
+  N1616(["identifier"])
+  N1615 -->|true| N1616
+  N1615 -->|false| N1616
+  N1617(["call:log2"])
+  N1616 --> N1617
+  N1618(["identifier"])
+  N1617 -->|true| N1618
+  N1617 -->|false| N1618
+  N1619(["identifier"])
+  N1618 -->|true| N1619
+  N1618 -->|false| N1619
+  N1620(["identifier"])
+  N1619 -->|true| N1620
+  N1619 -->|false| N1620
+  N1621(["identifier"])
+  N1620 -->|true| N1621
+  N1620 -->|false| N1621
+  N1622(["identifier"])
+  N1621 -->|true| N1622
+  N1621 -->|false| N1622
+  N1623(["identifier"])
+  N1622 -->|true| N1623
+  N1622 -->|false| N1623
+  N1624(["identifier"])
+  N1623 -->|true| N1624
+  N1623 -->|false| N1624
+  N1625(["field_identifier"])
+  N1624 -->|true| N1625
+  N1624 -->|false| N1625
+  N1626(["identifier"])
+  N1625 -->|true| N1626
+  N1625 -->|false| N1626
+  N1627(["field_identifier"])
+  N1626 -->|true| N1627
+  N1626 -->|false| N1627
+  N1628(["identifier"])
+  N1627 -->|true| N1628
+  N1627 -->|false| N1628
+  N1629(["field_identifier"])
+  N1628 -->|true| N1629
+  N1628 -->|false| N1629
+  N1630(["identifier"])
+  N1629 -->|true| N1630
+  N1629 -->|false| N1630
+  N1631(["identifier"])
+  N1630 -->|true| N1631
+  N1630 -->|false| N1631
+  N1632(["identifier"])
+  N1631 -->|true| N1632
+  N1631 -->|false| N1632
+  N1633(["identifier"])
+  N1632 -->|true| N1633
+  N1632 -->|false| N1633
+  N1634(["identifier"])
+  N1633 -->|true| N1634
+  N1633 -->|false| N1634
+  N1635(["call:Ok"])
+  N1634 --> N1635
+  N1636(["identifier"])
+  N1635 -->|true| N1636
+  N1635 -->|false| N1636
+  N1637(["identifier"])
+  N1636 -->|true| N1637
+  N1636 -->|false| N1637
+  N1638(["type_identifier"])
+  N1637 -->|true| N1638
+  N1637 -->|false| N1638
+  N1639(["identifier"])
+  N1638 -->|true| N1639
+  N1638 -->|false| N1639
+  N1640(["call:new"])
+  N1639 --> N1640
+  N1641(["identifier"])
+  N1640 -->|true| N1641
+  N1640 -->|false| N1641
+  N1642(["identifier"])
+  N1641 -->|true| N1642
+  N1641 -->|false| N1642
+  N1643(["call:parse"])
+  N1642 --> N1643
+  N1644(["identifier"])
+  N1643 -->|true| N1644
+  N1643 -->|false| N1644
+  N1645(["call:new"])
+  N1644 --> N1645
+  N1646(["identifier"])
+  N1645 -->|true| N1646
+  N1645 -->|false| N1646
+  N1647(["call:calculate_halstead_metrics"])
+  N1646 --> N1647
+  N1648(["identifier"])
+  N1647 -->|true| N1648
+  N1647 -->|false| N1648
+  N1649(["identifier"])
+  N1648 -->|true| N1649
+  N1648 -->|false| N1649
+  N1650(["identifier"])
+  N1649 -->|true| N1650
+  N1649 -->|false| N1650
+  N1651(["identifier"])
+  N1650 -->|true| N1651
+  N1650 -->|false| N1651
+  N1652(["call:volume"])
+  N1651 --> N1652
+  N1653(["call:Ok"])
+  N1652 --> N1653
+  N1654(["identifier"])
+  N1653 -->|true| N1654
+  N1653 -->|false| N1654
+  N1655(["identifier"])
+  N1654 -->|true| N1655
+  N1654 -->|false| N1655
+  N1656(["type_identifier"])
+  N1655 -->|true| N1656
+  N1655 -->|false| N1656
+  N1657(["identifier"])
+  N1656 -->|true| N1657
+  N1656 -->|false| N1657
+  N1658(["call:new"])
+  N1657 --> N1658
+  N1659(["identifier"])
+  N1658 -->|true| N1659
+  N1658 -->|false| N1659
+  N1660(["identifier"])
+  N1659 -->|true| N1660
+  N1659 -->|false| N1660
+  N1661(["call:parse"])
+  N1660 --> N1661
+  N1662(["identifier"])
+  N1661 -->|true| N1662
+  N1661 -->|false| N1662
+  N1663(["call:new"])
+  N1662 --> N1663
+  N1664(["identifier"])
+  N1663 -->|true| N1664
+  N1663 -->|false| N1664
+  N1665(["call:calculate_halstead_metrics"])
+  N1664 --> N1665
+  N1666(["identifier"])
+  N1665 -->|true| N1666
+  N1665 -->|false| N1666
+  N1667(["identifier"])
+  N1666 -->|true| N1667
+  N1666 -->|false| N1667
+  N1668(["identifier"])
+  N1667 -->|true| N1668
+  N1667 -->|false| N1668
+  N1669(["identifier"])
+  N1668 -->|true| N1669
+  N1668 -->|false| N1669
+  N1670(["identifier"])
+  N1669 -->|true| N1670
+  N1669 -->|false| N1670
+  N1671(["identifier"])
+  N1670 -->|true| N1671
+  N1670 -->|false| N1671
+  N1672(["identifier"])
+  N1671 -->|true| N1672
+  N1671 -->|false| N1672
+  N1673(["identifier"])
+  N1672 -->|true| N1673
+  N1672 -->|false| N1673
+  N1674(["identifier"])
+  N1673 -->|true| N1674
+  N1673 -->|false| N1674
+  N1675(["identifier"])
+  N1674 -->|true| N1675
+  N1674 -->|false| N1675
+  N1676(["identifier"])
+  N1675 -->|true| N1676
+  N1675 -->|false| N1676
+  N1677(["identifier"])
+  N1676 -->|true| N1677
+  N1676 -->|false| N1677
+  N1678(["identifier"])
+  N1677 -->|true| N1678
+  N1677 -->|false| N1678
+  N1679(["identifier"])
+  N1678 -->|true| N1679
+  N1678 -->|false| N1679
+  N1680(["identifier"])
+  N1679 -->|true| N1680
+  N1679 -->|false| N1680
+  N1681(["identifier"])
+  N1680 -->|true| N1681
+  N1680 -->|false| N1681
+  N1682(["identifier"])
+  N1681 -->|true| N1682
+  N1681 -->|false| N1682
+  N1683(["identifier"])
+  N1682 -->|true| N1683
+  N1682 -->|false| N1683
+  N1684(["identifier"])
+  N1683 -->|true| N1684
+  N1683 -->|false| N1684
+  N1685(["identifier"])
+  N1684 -->|true| N1685
+  N1684 -->|false| N1685
+  N1686(["call:Ok"])
+  N1685 --> N1686
+  N1687(["identifier"])
+  N1686 -->|true| N1687
+  N1686 -->|false| N1687
+  N1688(["identifier"])
+  N1687 -->|true| N1688
+  N1687 -->|false| N1688
+  N1689(["type_identifier"])
+  N1688 -->|true| N1689
+  N1688 -->|false| N1689
+  N1690(["identifier"])
+  N1689 -->|true| N1690
+  N1689 -->|false| N1690
+  N1691(["call:new"])
+  N1690 --> N1691
+  N1692(["identifier"])
+  N1691 -->|true| N1692
+  N1691 -->|false| N1692
+  N1693(["identifier"])
+  N1692 -->|true| N1693
+  N1692 -->|false| N1693
+  N1694(["call:parse"])
+  N1693 --> N1694
+  N1695(["identifier"])
+  N1694 -->|true| N1695
+  N1694 -->|false| N1695
+  N1696(["call:new"])
+  N1695 --> N1696
+  N1697(["identifier"])
+  N1696 -->|true| N1697
+  N1696 -->|false| N1697
+  N1698(["call:analyze_complexity"])
+  N1697 --> N1698
+  N1699(["identifier"])
+  N1698 -->|true| N1699
+  N1698 -->|false| N1699
+  N1700(["identifier"])
+  N1699 -->|true| N1700
+  N1699 -->|false| N1700
+  N1701(["identifier"])
+  N1700 -->|true| N1701
+  N1700 -->|false| N1701
+  N1702(["call:Ok"])
+  N1701 --> N1702
+  N1703(["identifier"])
+  N1702 -->|true| N1703
+  N1702 -->|false| N1703
+  N1704(["identifier"])
+  N1703 -->|true| N1704
+  N1703 -->|false| N1704
+  N1705(["type_identifier"])
+  N1704 -->|true| N1705
+  N1704 -->|false| N1705
+  N1706(["identifier"])
+  N1705 -->|true| N1706
+  N1705 -->|false| N1706
+  N1707(["call:new"])
+  N1706 --> N1707
+  N1708(["identifier"])
+  N1707 -->|true| N1708
+  N1707 -->|false| N1708
+  N1709(["identifier"])
+  N1708 -->|true| N1709
+  N1708 -->|false| N1709
+  N1710(["call:parse"])
+  N1709 --> N1710
+  N1711(["identifier"])
+  N1710 -->|true| N1711
+  N1710 -->|false| N1711
+  N1712(["call:new"])
+  N1711 --> N1712
+  N1713(["identifier"])
+  N1712 -->|true| N1713
+  N1712 -->|false| N1713
+  N1714(["call:analyze_complexity"])
+  N1713 --> N1714
+  N1715(["identifier"])
+  N1714 -->|true| N1715
+  N1714 -->|false| N1715
+  N1716(["identifier"])
+  N1715 -->|true| N1716
+  N1715 -->|false| N1716
+  N1717(["identifier"])
+  N1716 -->|true| N1717
+  N1716 -->|false| N1717
+  N1718(["call:Ok"])
+  N1717 --> N1718
+  N1719(["identifier"])
+  N1718 -->|true| N1719
+  N1718 -->|false| N1719
+  N1720(["identifier"])
+  N1719 -->|true| N1720
+  N1719 -->|false| N1720
+  N1721(["type_identifier"])
+  N1720 -->|true| N1721
+  N1720 -->|false| N1721
+  N1722(["identifier"])
+  N1721 -->|true| N1722
+  N1721 -->|false| N1722
+  N1723(["call:new"])
+  N1722 --> N1723
+  N1724(["identifier"])
+  N1723 -->|true| N1724
+  N1723 -->|false| N1724
+  N1725(["identifier"])
+  N1724 -->|true| N1725
+  N1724 -->|false| N1725
+  N1726(["call:parse"])
+  N1725 --> N1726
+  N1727(["identifier"])
+  N1726 -->|true| N1727
+  N1726 -->|false| N1727
+  N1728(["call:new"])
+  N1727 --> N1728
+  N1729(["identifier"])
+  N1728 -->|true| N1729
+  N1728 -->|false| N1729
+  N1730(["call:analyze_complexity"])
+  N1729 --> N1730
+  N1731(["identifier"])
+  N1730 -->|true| N1731
+  N1730 -->|false| N1731
+  N1732(["identifier"])
+  N1731 -->|true| N1732
+  N1731 -->|false| N1732
+  N1733(["identifier"])
+  N1732 -->|true| N1733
+  N1732 -->|false| N1733
+  N1734(["call:Ok"])
+  N1733 --> N1734
+  N1735(["identifier"])
+  N1734 -->|true| N1735
+  N1734 -->|false| N1735
+  N1736(["identifier"])
+  N1735 -->|true| N1736
+  N1735 -->|false| N1736
+  N1737(["type_identifier"])
+  N1736 -->|true| N1737
+  N1736 -->|false| N1737
+  N1738(["identifier"])
+  N1737 -->|true| N1738
+  N1737 -->|false| N1738
+  N1739(["call:new"])
+  N1738 --> N1739
+  N1740(["identifier"])
+  N1739 -->|true| N1740
+  N1739 -->|false| N1740
+  N1741(["identifier"])
+  N1740 -->|true| N1741
+  N1740 -->|false| N1741
+  N1742(["call:parse"])
+  N1741 --> N1742
+  N1743(["identifier"])
+  N1742 -->|true| N1743
+  N1742 -->|false| N1743
+  N1744(["call:new"])
+  N1743 --> N1744
+  N1745(["identifier"])
+  N1744 -->|true| N1745
+  N1744 -->|false| N1745
+  N1746(["call:analyze_complexity"])
+  N1745 --> N1746
+  N1747(["identifier"])
+  N1746 -->|true| N1747
+  N1746 -->|false| N1747
+  N1748(["identifier"])
+  N1747 -->|true| N1748
+  N1747 -->|false| N1748
+  N1749(["identifier"])
+  N1748 -->|true| N1749
+  N1748 -->|false| N1749
+  N1750(["call:Ok"])
+  N1749 --> N1750
+  N1751(["identifier"])
+  N1750 -->|true| N1751
+  N1750 -->|false| N1751
+  N1752(["identifier"])
+  N1751 -->|true| N1752
+  N1751 -->|false| N1752
+  N1753(["type_identifier"])
+  N1752 -->|true| N1753
+  N1752 -->|false| N1753
+  N1754(["identifier"])
+  N1753 -->|true| N1754
+  N1753 -->|false| N1754
+  N1755(["call:new"])
+  N1754 --> N1755
+  N1756(["identifier"])
+  N1755 -->|true| N1756
+  N1755 -->|false| N1756
+  N1757(["identifier"])
+  N1756 -->|true| N1757
+  N1756 -->|false| N1757
+  N1758(["call:parse"])
+  N1757 --> N1758
+  N1759(["identifier"])
+  N1758 -->|true| N1759
+  N1758 -->|false| N1759
+  N1760(["call:new"])
+  N1759 --> N1760
+  N1761(["identifier"])
+  N1760 -->|true| N1761
+  N1760 -->|false| N1761
+  N1762(["call:analyze_complexity"])
+  N1761 --> N1762
+  N1763(["identifier"])
+  N1762 -->|true| N1763
+  N1762 -->|false| N1763
+  N1764(["identifier"])
+  N1763 -->|true| N1764
+  N1763 -->|false| N1764
+  N1765(["identifier"])
+  N1764 -->|true| N1765
+  N1764 -->|false| N1765
+  N1766(["call:Ok"])
+  N1765 --> N1766
+  N1767(["identifier"])
+  N1766 -->|true| N1767
+  N1766 -->|false| N1767
+  N1768(["identifier"])
+  N1767 -->|true| N1768
+  N1767 -->|false| N1768
+  N1769(["type_identifier"])
+  N1768 -->|true| N1769
+  N1768 -->|false| N1769
+  N1770(["identifier"])
+  N1769 -->|true| N1770
+  N1769 -->|false| N1770
+  N1771(["call:new"])
+  N1770 --> N1771
+  N1772(["identifier"])
+  N1771 -->|true| N1772
+  N1771 -->|false| N1772
+  N1773(["identifier"])
+  N1772 -->|true| N1773
+  N1772 -->|false| N1773
+  N1774(["call:parse"])
+  N1773 --> N1774
+  N1775(["identifier"])
+  N1774 -->|true| N1775
+  N1774 -->|false| N1775
+  N1776(["call:new"])
+  N1775 --> N1776
+  N1777(["identifier"])
+  N1776 -->|true| N1777
+  N1776 -->|false| N1777
+  N1778(["call:analyze_complexity"])
+  N1777 --> N1778
+  N1779(["identifier"])
+  N1778 -->|true| N1779
+  N1778 -->|false| N1779
+  N1780(["identifier"])
+  N1779 -->|true| N1780
+  N1779 -->|false| N1780
+  N1781(["identifier"])
+  N1780 -->|true| N1781
+  N1780 -->|false| N1781
+  N1782(["call:Ok"])
+  N1781 --> N1782
+  N1783(["identifier"])
+  N1782 -->|true| N1783
+  N1782 -->|false| N1783
+  N1784(["identifier"])
+  N1783 -->|true| N1784
+  N1783 -->|false| N1784
+  N1785(["type_identifier"])
+  N1784 -->|true| N1785
+  N1784 -->|false| N1785
+  N1786(["identifier"])
+  N1785 -->|true| N1786
+  N1785 -->|false| N1786
+  N1787(["call:new"])
+  N1786 --> N1787
+  N1788(["identifier"])
+  N1787 -->|true| N1788
+  N1787 -->|false| N1788
+  N1789(["identifier"])
+  N1788 -->|true| N1789
+  N1788 -->|false| N1789
+  N1790(["call:parse"])
+  N1789 --> N1790
+  N1791(["identifier"])
+  N1790 -->|true| N1791
+  N1790 -->|false| N1791
+  N1792(["call:new"])
+  N1791 --> N1792
+  N1793(["identifier"])
+  N1792 -->|true| N1793
+  N1792 -->|false| N1793
+  N1794(["call:analyze_complexity"])
+  N1793 --> N1794
+  N1795(["identifier"])
+  N1794 -->|true| N1795
+  N1794 -->|false| N1795
+  N1796(["identifier"])
+  N1795 -->|true| N1796
+  N1795 -->|false| N1796
+  N1797(["identifier"])
+  N1796 -->|true| N1797
+  N1796 -->|false| N1797
+  N1798(["call:Ok"])
+  N1797 --> N1798
+  N1799(["identifier"])
+  N1798 -->|true| N1799
+  N1798 -->|false| N1799
+  N1800(["identifier"])
+  N1799 -->|true| N1800
+  N1799 -->|false| N1800
+  N1801(["type_identifier"])
+  N1800 -->|true| N1801
+  N1800 -->|false| N1801
+  N1802(["identifier"])
+  N1801 -->|true| N1802
+  N1801 -->|false| N1802
+  N1803(["call:new"])
+  N1802 --> N1803
+  N1804(["identifier"])
+  N1803 -->|true| N1804
+  N1803 -->|false| N1804
+  N1805(["identifier"])
+  N1804 -->|true| N1805
+  N1804 -->|false| N1805
+  N1806(["call:parse"])
+  N1805 --> N1806
+  N1807(["identifier"])
+  N1806 -->|true| N1807
+  N1806 -->|false| N1807
+  N1808(["call:new"])
+  N1807 --> N1808
+  N1809(["identifier"])
+  N1808 -->|true| N1809
+  N1808 -->|false| N1809
+  N1810(["call:analyze_complexity"])
+  N1809 --> N1810
+  N1811(["identifier"])
+  N1810 -->|true| N1811
+  N1810 -->|false| N1811
+  N1812(["identifier"])
+  N1811 -->|true| N1812
+  N1811 -->|false| N1812
+  N1813(["identifier"])
+  N1812 -->|true| N1813
+  N1812 -->|false| N1813
+  N1814(["call:Ok"])
+  N1813 --> N1814
+  N1815(["identifier"])
+  N1814 -->|true| N1815
+  N1814 -->|false| N1815
+  N1816(["identifier"])
+  N1815 -->|true| N1816
+  N1815 -->|false| N1816
+  N1817(["type_identifier"])
+  N1816 -->|true| N1817
+  N1816 -->|false| N1817
+  N1818(["identifier"])
+  N1817 -->|true| N1818
+  N1817 -->|false| N1818
+  N1819(["call:new"])
+  N1818 --> N1819
+  N1820(["identifier"])
+  N1819 -->|true| N1820
+  N1819 -->|false| N1820
+  N1821(["identifier"])
+  N1820 -->|true| N1821
+  N1820 -->|false| N1821
+  N1822(["call:parse"])
+  N1821 --> N1822
+  N1823(["identifier"])
+  N1822 -->|true| N1823
+  N1822 -->|false| N1823
+  N1824(["call:new"])
+  N1823 --> N1824
+  N1825(["identifier"])
+  N1824 -->|true| N1825
+  N1824 -->|false| N1825
+  N1826(["call:analyze_complexity"])
+  N1825 --> N1826
+  N1827(["identifier"])
+  N1826 -->|true| N1827
+  N1826 -->|false| N1827
+  N1828(["identifier"])
+  N1827 -->|true| N1828
+  N1827 -->|false| N1828
+  N1829(["identifier"])
+  N1828 -->|true| N1829
+  N1828 -->|false| N1829
+  N1830(["identifier"])
+  N1829 -->|true| N1830
+  N1829 -->|false| N1830
+  N1831(["identifier"])
+  N1830 -->|true| N1831
+  N1830 -->|false| N1831
+  N1832(["call:Ok"])
+  N1831 --> N1832
+  N1833(["identifier"])
+  N1832 -->|true| N1833
+  N1832 -->|false| N1833
+  N1834(["identifier"])
+  N1833 -->|true| N1834
+  N1833 -->|false| N1834
+  N1835(["type_identifier"])
+  N1834 -->|true| N1835
+  N1834 -->|false| N1835
+  N1836(["identifier"])
+  N1835 -->|true| N1836
+  N1835 -->|false| N1836
+  N1837(["call:new"])
+  N1836 --> N1837
+  N1838(["identifier"])
+  N1837 -->|true| N1838
+  N1837 -->|false| N1838
+  N1839(["identifier"])
+  N1838 -->|true| N1839
+  N1838 -->|false| N1839
+  N1840(["call:parse"])
+  N1839 --> N1840
+  N1841(["identifier"])
+  N1840 -->|true| N1841
+  N1840 -->|false| N1841
+  N1842(["call:new"])
+  N1841 --> N1842
+  N1843(["identifier"])
+  N1842 -->|true| N1843
+  N1842 -->|false| N1843
+  N1844(["call:analyze_complexity"])
+  N1843 --> N1844
+  N1845(["identifier"])
+  N1844 -->|true| N1845
+  N1844 -->|false| N1845
+  N1846(["identifier"])
+  N1845 -->|true| N1846
+  N1845 -->|false| N1846
+  N1847(["identifier"])
+  N1846 -->|true| N1847
+  N1846 -->|false| N1847
+  N1848(["identifier"])
+  N1847 -->|true| N1848
+  N1847 -->|false| N1848
+  N1849(["identifier"])
+  N1848 -->|true| N1849
+  N1848 -->|false| N1849
+  N1850(["call:Ok"])
+  N1849 --> N1850
+  N1851(["identifier"])
+  N1850 -->|true| N1851
+  N1850 -->|false| N1851
+  N1852(["identifier"])
+  N1851 -->|true| N1852
+  N1851 -->|false| N1852
+  N1853(["type_identifier"])
+  N1852 -->|true| N1853
+  N1852 -->|false| N1853
+  N1854(["identifier"])
+  N1853 -->|true| N1854
+  N1853 -->|false| N1854
+  N1855(["call:new"])
+  N1854 --> N1855
+  N1856(["identifier"])
+  N1855 -->|true| N1856
+  N1855 -->|false| N1856
+  N1857(["identifier"])
+  N1856 -->|true| N1857
+  N1856 -->|false| N1857
+  N1858(["call:parse"])
+  N1857 --> N1858
+  N1859(["identifier"])
+  N1858 -->|true| N1859
+  N1858 -->|false| N1859
+  N1860(["call:new"])
+  N1859 --> N1860
+  N1861(["identifier"])
+  N1860 -->|true| N1861
+  N1860 -->|false| N1861
+  N1862(["call:analyze_complexity"])
+  N1861 --> N1862
+  N1863(["identifier"])
+  N1862 -->|true| N1863
+  N1862 -->|false| N1863
+  N1864(["identifier"])
+  N1863 -->|true| N1864
+  N1863 -->|false| N1864
+  N1865(["identifier"])
+  N1864 -->|true| N1865
+  N1864 -->|false| N1865
+  N1866(["identifier"])
+  N1865 -->|true| N1866
+  N1865 -->|false| N1866
+  N1867(["identifier"])
+  N1866 -->|true| N1867
+  N1866 -->|false| N1867
+  N1868(["call:Ok"])
+  N1867 --> N1868
+  N1869(["identifier"])
+  N1868 -->|true| N1869
+  N1868 -->|false| N1869
+  N1870(["identifier"])
+  N1869 -->|true| N1870
+  N1869 -->|false| N1870
+  N1871(["type_identifier"])
+  N1870 -->|true| N1871
+  N1870 -->|false| N1871
+  N1872(["identifier"])
+  N1871 -->|true| N1872
+  N1871 -->|false| N1872
+  N1873(["call:new"])
+  N1872 --> N1873
+  N1874(["identifier"])
+  N1873 -->|true| N1874
+  N1873 -->|false| N1874
+  N1875(["identifier"])
+  N1874 -->|true| N1875
+  N1874 -->|false| N1875
+  N1876(["call:parse"])
+  N1875 --> N1876
+  N1877(["identifier"])
+  N1876 -->|true| N1877
+  N1876 -->|false| N1877
+  N1878(["call:new"])
+  N1877 --> N1878
+  N1879(["identifier"])
+  N1878 -->|true| N1879
+  N1878 -->|false| N1879
+  N1880(["call:analyze_complexity"])
+  N1879 --> N1880
+  N1881(["identifier"])
+  N1880 -->|true| N1881
+  N1880 -->|false| N1881
+  N1882(["identifier"])
+  N1881 -->|true| N1882
+  N1881 -->|false| N1882
+  N1883(["identifier"])
+  N1882 -->|true| N1883
+  N1882 -->|false| N1883
+  N1884(["identifier"])
+  N1883 -->|true| N1884
+  N1883 -->|false| N1884
+  N1885(["identifier"])
+  N1884 -->|true| N1885
+  N1884 -->|false| N1885
+  N1886(["call:Ok"])
+  N1885 --> N1886
+  N1887(["identifier"])
+  N1886 -->|true| N1887
+  N1886 -->|false| N1887
+  N1888(["identifier"])
+  N1887 -->|true| N1888
+  N1887 -->|false| N1888
+  N1889(["type_identifier"])
+  N1888 -->|true| N1889
+  N1888 -->|false| N1889
+  N1890(["identifier"])
+  N1889 -->|true| N1890
+  N1889 -->|false| N1890
+  N1891(["call:new"])
+  N1890 --> N1891
+  N1892(["identifier"])
+  N1891 -->|true| N1892
+  N1891 -->|false| N1892
+  N1893(["identifier"])
+  N1892 -->|true| N1893
+  N1892 -->|false| N1893
+  N1894(["call:parse"])
+  N1893 --> N1894
+  N1895(["identifier"])
+  N1894 -->|true| N1895
+  N1894 -->|false| N1895
+  N1896(["call:new"])
+  N1895 --> N1896
+  N1897(["identifier"])
+  N1896 -->|true| N1897
+  N1896 -->|false| N1897
+  N1898(["call:analyze_complexity"])
+  N1897 --> N1898
+  N1899(["identifier"])
+  N1898 -->|true| N1899
+  N1898 -->|false| N1899
+  N1900(["identifier"])
+  N1899 -->|true| N1900
+  N1899 -->|false| N1900
+  N1901(["identifier"])
+  N1900 -->|true| N1901
+  N1900 -->|false| N1901
+  N1902(["identifier"])
+  N1901 -->|true| N1902
+  N1901 -->|false| N1902
+  N1903(["identifier"])
+  N1902 -->|true| N1903
+  N1902 -->|false| N1903
+  N1904(["call:Ok"])
+  N1903 --> N1904
+  N1905(["identifier"])
+  N1904 -->|true| N1905
+  N1904 -->|false| N1905
+  N1906(["identifier"])
+  N1905 -->|true| N1906
+  N1905 -->|false| N1906
+  N1907(["type_identifier"])
+  N1906 -->|true| N1907
+  N1906 -->|false| N1907
+  N1908(["identifier"])
+  N1907 -->|true| N1908
+  N1907 -->|false| N1908
+  N1909(["call:new"])
+  N1908 --> N1909
+  N1910(["identifier"])
+  N1909 -->|true| N1910
+  N1909 -->|false| N1910
+  N1911(["identifier"])
+  N1910 -->|true| N1911
+  N1910 -->|false| N1911
+  N1912(["call:parse"])
+  N1911 --> N1912
+  N1913(["identifier"])
+  N1912 -->|true| N1913
+  N1912 -->|false| N1913
+  N1914(["call:new"])
+  N1913 --> N1914
+  N1915(["identifier"])
+  N1914 -->|true| N1915
+  N1914 -->|false| N1915
+  N1916(["call:analyze_complexity"])
+  N1915 --> N1916
+  N1917(["identifier"])
+  N1916 -->|true| N1917
+  N1916 -->|false| N1917
+  N1918(["identifier"])
+  N1917 -->|true| N1918
+  N1917 -->|false| N1918
+  N1919(["identifier"])
+  N1918 -->|true| N1919
+  N1918 -->|false| N1919
+  N1920(["identifier"])
+  N1919 -->|true| N1920
+  N1919 -->|false| N1920
+  N1921(["identifier"])
+  N1920 -->|true| N1921
+  N1920 -->|false| N1921
+  N1922(["call:Ok"])
+  N1921 --> N1922
+  N1922 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant volume
+  participant difficulty
+  participant effort
+  participant new
+  participant analyze_complexity
+  participant calculate_mccabe_complexity
+  participant calculate_cognitive_complexity
+  participant traverse_for_cognitive_complexity
+  participant get_cognitive_complexity_impact
+  participant get_rust_cognitive_impact
+  participant get_javascript_cognitive_impact
+  participant get_python_cognitive_impact
+  participant get_c_cognitive_impact
+  participant get_go_cognitive_impact
+  participant is_logical_operator
+  participant calculate_halstead_metrics
+  participant traverse_for_halstead
+  participant is_operator
+  participant is_operand
+  participant calculate_npath_complexity
+  participant traverse_for_npath
+  participant calculate_rust_npath
+  participant calculate_js_npath
+  participant calculate_python_npath
+  participant calculate_c_npath
+  participant calculate_go_npath
+  participant calculate_default_npath
+  participant is_control_flow_node
+  participant calculate_expression_npath
+  participant calculate_rust_expression_npath
+  participant calculate_js_expression_npath
+  participant calculate_python_expression_npath
+  participant calculate_c_expression_npath
+  participant calculate_go_expression_npath
+  participant count_lines_of_code
+  participant calculate_max_nesting_depth
+  participant traverse_for_max_depth
+  participant increases_nesting_depth
+  participant test_mccabe_complexity_simple
+  participant test_mccabe_complexity_with_conditions
+  participant test_halstead_metrics_basic
+  participant test_halstead_metrics_detailed
+  participant test_halstead_metrics_empty_function
+  participant test_halstead_metrics_complex_function
+  participant test_cognitive_complexity_simple
+  participant test_cognitive_complexity_basic_increment
+  participant test_cognitive_complexity_nesting_penalty
+  participant test_cognitive_complexity_logical_operators
+  participant test_cognitive_complexity_loops
+  participant test_cognitive_complexity_match_expression
+  participant test_cognitive_complexity_break_continue
+  participant test_npath_complexity_simple
+  participant test_npath_complexity_if_statement
+  participant test_npath_complexity_if_else
+  participant test_npath_complexity_nested_conditions
+  participant test_npath_complexity_loops
+  participant test_npath_complexity_match_expression
+  participant test_npath_complexity_complex_function
+  default->>log2: call
+  default->>difficulty: call
+  default->>volume: call
+  default->>to_string: call
+  default->>new: call
+  default->>build_cfg: call
+  default->>calculate_mccabe_complexity: call
+  default->>calculate_cognitive_complexity: call
+  default->>calculate_halstead_metrics: call
+  default->>calculate_npath_complexity: call
+  default->>count_lines_of_code: call
+  default->>len: call
+  default->>calculate_max_nesting_depth: call
+  default->>ok: call
+  default->>cyclomatic_complexity: call
+  default->>traverse_for_cognitive_complexity: call
+  default->>ok: call
+  default->>kind: call
+  default->>get_cognitive_complexity_impact: call
+  default->>walk: call
+  default->>as_str: call
+  default->>get_rust_cognitive_impact: call
+  default->>get_javascript_cognitive_impact: call
+  default->>get_python_cognitive_impact: call
+  default->>get_c_cognitive_impact: call
+  default->>get_go_cognitive_impact: call
+  default->>new: call
+  default->>new: call
+  default->>traverse_for_halstead: call
+  default->>len: call
+  default->>len: call
+  default->>sum: call
+  default->>sum: call
+  default->>ok: call
+  default->>kind: call
+  default->>or_insert: call
+  default->>or_insert: call
+  default->>walk: call
+  default->>as_str: call
+  default->>as_str: call
+  default->>ok: call
+  default->>kind: call
+  default->>as_str: call
+  default->>calculate_rust_npath: call
+  default->>calculate_js_npath: call
+  default->>calculate_python_npath: call
+  default->>calculate_c_npath: call
+  default->>calculate_go_npath: call
+  default->>calculate_default_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>goto_next_sibling: call
+  default->>kind: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>goto_next_sibling: call
+  default->>kind: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>walk: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>walk: call
+  default->>walk: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>goto_next_sibling: call
+  default->>kind: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>goto_next_sibling: call
+  default->>kind: call
+  default->>walk: call
+  default->>max: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>calculate_expression_npath: call
+  default->>calculate_expression_npath: call
+  default->>walk: call
+  default->>walk: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>calculate_default_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>max: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>calculate_default_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>traverse_for_npath: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>max: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>traverse_for_npath: call
+  default->>calculate_default_npath: call
+  default->>walk: call
+  default->>as_str: call
+  default->>kind: call
+  default->>as_str: call
+  default->>calculate_rust_expression_npath: call
+  default->>calculate_js_expression_npath: call
+  default->>calculate_python_expression_npath: call
+  default->>calculate_c_expression_npath: call
+  default->>calculate_go_expression_npath: call
+  default->>walk: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>kind: call
+  default->>calculate_expression_npath: call
+  default->>walk: call
+  default->>max: call
+  default->>walk: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>kind: call
+  default->>calculate_expression_npath: call
+  default->>walk: call
+  default->>max: call
+  default->>walk: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>calculate_expression_npath: call
+  default->>walk: call
+  default->>max: call
+  default->>walk: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>kind: call
+  default->>calculate_expression_npath: call
+  default->>walk: call
+  default->>max: call
+  default->>walk: call
+  default->>walk: call
+  default->>calculate_expression_npath: call
+  default->>kind: call
+  default->>calculate_expression_npath: call
+  default->>walk: call
+  default->>max: call
+  default->>walk: call
+  default->>root_node: call
+  default->>start_position: call
+  default->>end_position: call
+  default->>end_position: call
+  default->>start_position: call
+  default->>ok: call
+  default->>kind: call
+  default->>walk: call
+  default->>as_str: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>calculate_halstead_metrics: call
+  default->>volume: call
+  default->>difficulty: call
+  default->>effort: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>calculate_halstead_metrics: call
+  default->>log2: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>calculate_halstead_metrics: call
+  default->>volume: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>calculate_halstead_metrics: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+  default->>new: call
+  default->>parse: call
+  default->>new: call
+  default->>analyze_complexity: call
+  default->>ok: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-volume"><code>volume</code> <small>function</small></li>
+<li id="symbol-difficulty"><code>difficulty</code> <small>function</small></li>
+<li id="symbol-effort"><code>effort</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-analyze_complexity"><code>analyze_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_mccabe_complexity"><code>calculate_mccabe_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_cognitive_complexity"><code>calculate_cognitive_complexity</code> <small>function</small></li>
+<li id="symbol-traverse_for_cognitive_complexity"><code>traverse_for_cognitive_complexity</code> <small>function</small></li>
+<li id="symbol-get_cognitive_complexity_impact"><code>get_cognitive_complexity_impact</code> <small>function</small></li>
+<li id="symbol-get_rust_cognitive_impact"><code>get_rust_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_javascript_cognitive_impact"><code>get_javascript_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_python_cognitive_impact"><code>get_python_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_c_cognitive_impact"><code>get_c_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_go_cognitive_impact"><code>get_go_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-is_logical_operator"><code>is_logical_operator</code> <small>function</small></li>
+<li id="symbol-calculate_halstead_metrics"><code>calculate_halstead_metrics</code> <small>function</small></li>
+<li id="symbol-traverse_for_halstead"><code>traverse_for_halstead</code> <small>function</small></li>
+<li id="symbol-is_operator"><code>is_operator</code> <small>function</small></li>
+<li id="symbol-is_operand"><code>is_operand</code> <small>function</small></li>
+<li id="symbol-calculate_npath_complexity"><code>calculate_npath_complexity</code> <small>function</small></li>
+<li id="symbol-traverse_for_npath"><code>traverse_for_npath</code> <small>function</small></li>
+<li id="symbol-calculate_rust_npath"><code>calculate_rust_npath</code> <small>function</small></li>
+<li id="symbol-calculate_js_npath"><code>calculate_js_npath</code> <small>function</small></li>
+<li id="symbol-calculate_python_npath"><code>calculate_python_npath</code> <small>function</small></li>
+<li id="symbol-calculate_c_npath"><code>calculate_c_npath</code> <small>function</small></li>
+<li id="symbol-calculate_go_npath"><code>calculate_go_npath</code> <small>function</small></li>
+<li id="symbol-calculate_default_npath"><code>calculate_default_npath</code> <small>function</small></li>
+<li id="symbol-is_control_flow_node"><code>is_control_flow_node</code> <small>function</small></li>
+<li id="symbol-calculate_expression_npath"><code>calculate_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_rust_expression_npath"><code>calculate_rust_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_js_expression_npath"><code>calculate_js_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_python_expression_npath"><code>calculate_python_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_c_expression_npath"><code>calculate_c_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_go_expression_npath"><code>calculate_go_expression_npath</code> <small>function</small></li>
+<li id="symbol-count_lines_of_code"><code>count_lines_of_code</code> <small>function</small></li>
+<li id="symbol-calculate_max_nesting_depth"><code>calculate_max_nesting_depth</code> <small>function</small></li>
+<li id="symbol-traverse_for_max_depth"><code>traverse_for_max_depth</code> <small>function</small></li>
+<li id="symbol-increases_nesting_depth"><code>increases_nesting_depth</code> <small>function</small></li>
+<li id="symbol-test_mccabe_complexity_simple"><code>test_mccabe_complexity_simple</code> <small>function</small></li>
+<li id="symbol-test_mccabe_complexity_with_conditions"><code>test_mccabe_complexity_with_conditions</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_basic"><code>test_halstead_metrics_basic</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_detailed"><code>test_halstead_metrics_detailed</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_empty_function"><code>test_halstead_metrics_empty_function</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_complex_function"><code>test_halstead_metrics_complex_function</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_simple"><code>test_cognitive_complexity_simple</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_basic_increment"><code>test_cognitive_complexity_basic_increment</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_nesting_penalty"><code>test_cognitive_complexity_nesting_penalty</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_logical_operators"><code>test_cognitive_complexity_logical_operators</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_loops"><code>test_cognitive_complexity_loops</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_match_expression"><code>test_cognitive_complexity_match_expression</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_break_continue"><code>test_cognitive_complexity_break_continue</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_simple"><code>test_npath_complexity_simple</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_if_statement"><code>test_npath_complexity_if_statement</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_if_else"><code>test_npath_complexity_if_else</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_nested_conditions"><code>test_npath_complexity_nested_conditions</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_loops"><code>test_npath_complexity_loops</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_match_expression"><code>test_npath_complexity_match_expression</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_complex_function"><code>test_npath_complexity_complex_function</code> <small>function</small></li>
+<li id="symbol-complexitymetrics"><code>ComplexityMetrics</code> <small>struct</small></li>
+<li id="symbol-halsteadmetrics"><code>HalsteadMetrics</code> <small>struct</small></li>
+<li id="symbol-complexityanalyzer"><code>ComplexityAnalyzer</code> <small>struct</small></li>
+<li id="symbol-cognitivecomplexityimpact"><code>CognitiveComplexityImpact</code> <small>enum</small></li>
+<li id="symbol-complexitymetrics"><code>ComplexityMetrics</code> <small>impl</small></li>
+<li id="symbol-halsteadmetrics"><code>HalsteadMetrics</code> <small>impl</small></li>
+<li id="symbol-complexityanalyzer"><code>ComplexityAnalyzer</code> <small>impl</small></li>
+<li id="symbol-n"><code>n</code> <small>variable</small></li>
+<li id="symbol-big_n"><code>big_n</code> <small>variable</small></li>
+<li id="symbol-cfg_builder"><code>cfg_builder</code> <small>variable</small></li>
+<li id="symbol-cfg"><code>cfg</code> <small>variable</small></li>
+<li id="symbol-cyclomatic_complexity"><code>cyclomatic_complexity</code> <small>variable</small></li>
+<li id="symbol-cognitive_complexity"><code>cognitive_complexity</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-npath_complexity"><code>npath_complexity</code> <small>variable</small></li>
+<li id="symbol-lines_of_code"><code>lines_of_code</code> <small>variable</small></li>
+<li id="symbol-decision_points"><code>decision_points</code> <small>variable</small></li>
+<li id="symbol-max_nesting_depth"><code>max_nesting_depth</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-nesting_level"><code>nesting_level</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-impact"><code>impact</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-operators"><code>operators</code> <small>variable</small></li>
+<li id="symbol-operands"><code>operands</code> <small>variable</small></li>
+<li id="symbol-unique_operators"><code>unique_operators</code> <small>variable</small></li>
+<li id="symbol-unique_operands"><code>unique_operands</code> <small>variable</small></li>
+<li id="symbol-total_operators"><code>total_operators</code> <small>variable</small></li>
+<li id="symbol-total_operands"><code>total_operands</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_kind"><code>child_kind</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-arm_count"><code>arm_count</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-arm_cursor"><code>arm_cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-child_kind"><code>child_kind</code> <small>variable</small></li>
+<li id="symbol-total_complexity"><code>total_complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-case_cursor"><code>case_cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-max_complexity"><code>max_complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-max_complexity"><code>max_complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_kind"><code>child_kind</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-new_depth"><code>new_depth</code> <small>variable</small></li>
+<li id="symbol-max_depth"><code>max_depth</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_depth"><code>child_depth</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-volume"><code>volume</code> <small>variable</small></li>
+<li id="symbol-difficulty"><code>difficulty</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-expected_effort"><code>expected_effort</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-n"><code>n</code> <small>variable</small></li>
+<li id="symbol-big_n"><code>big_n</code> <small>variable</small></li>
+<li id="symbol-expected_volume"><code>expected_volume</code> <small>variable</small></li>
+<li id="symbol-expected_difficulty"><code>expected_difficulty</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-_volume"><code>_volume</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

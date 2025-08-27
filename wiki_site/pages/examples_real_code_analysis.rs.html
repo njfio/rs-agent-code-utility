@@ -1,0 +1,428 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>examples/real_code_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>examples/real_code_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>17 symbols, 110 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["scoped_identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["scoped_identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["scoped_identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["function_modifiers"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["type_identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["type_identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["scoped_type_identifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["scoped_identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["identifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["type_identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["identifier"])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23(["identifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["call:expect"])
+  N24 --> N25
+  N26(["identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["call:expect"])
+  N26 --> N27
+  N28(["identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["call:expect"])
+  N28 --> N29
+  N30(["identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["identifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["identifier"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["identifier"])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34(["identifier"])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35(["identifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["identifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["identifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["call:String"])
+  N38 --> N39
+  N40(["identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["call:String"])
+  N40 --> N41
+  N42(["identifier"])
+  N41 -->|true| N42
+  N41 -->|false| N42
+  N43(["identifier"])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44(["identifier"])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45(["identifier"])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46(["identifier"])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47(["call:new"])
+  N46 --> N47
+  N48(["identifier"])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49(["identifier"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["identifier"])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52(["identifier"])
+  N51 -->|true| N52
+  N51 -->|false| N52
+  N53(["identifier"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["call:now"])
+  N53 --> N54
+  N55(["identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["call:send"])
+  N55 --> N56
+  N57(["identifier"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["call:elapsed"])
+  N57 --> N58
+  N59(["identifier"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["identifier"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["identifier"])
+  N61 -->|true| N62
+  N61 -->|false| N62
+  N63(["identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["if_expression"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["if"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["call:status"])
+  N65 --> N66
+  N67(["field_identifier"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["identifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["scoped_type_identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["type_identifier"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["call:json"])
+  N71 --> N72
+  N73(["if_expression"])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74(["if"])
+  N73 -->|true| N74
+  N73 -->|false| N74
+  N75(["identifier"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["identifier"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["call:as_array"])
+  N76 --> N77
+  N78(["if_expression"])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79(["if"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["identifier"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["identifier"])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82(["call:first"])
+  N81 --> N82
+  N83(["if_expression"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["if"])
+  N83 -->|true| N84
+  N83 -->|false| N84
+  N85(["identifier"])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86(["identifier"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["call:as_object"])
+  N86 --> N87
+  N88(["if_expression"])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89(["if"])
+  N88 -->|true| N89
+  N88 -->|false| N89
+  N90(["identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["identifier"])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92(["call:as_str"])
+  N91 --> N92
+  N93(["identifier"])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94(["identifier"])
+  N93 -->|true| N94
+  N93 -->|false| N94
+  N95(["identifier"])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96(["identifier"])
+  N95 -->|true| N96
+  N95 -->|false| N96
+  N97(["if_expression"])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98(["if"])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99(["identifier"])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100(["identifier"])
+  N99 -->|true| N100
+  N99 -->|false| N100
+  N101(["call:as_object"])
+  N100 --> N101
+  N102(["identifier"])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103(["identifier"])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104(["identifier"])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105(["identifier"])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106(["identifier"])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107(["identifier"])
+  N106 -->|true| N107
+  N106 -->|false| N107
+  N108(["identifier"])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109(["identifier"])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110(["identifier"])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111(["identifier"])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112(["identifier"])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113(["identifier"])
+  N112 -->|true| N113
+  N112 -->|false| N113
+  N114(["identifier"])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115(["identifier"])
+  N114 -->|true| N115
+  N114 -->|false| N115
+  N116(["call:unwrap_or"])
+  N115 --> N116
+  N117(["identifier"])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118(["call:unwrap_or"])
+  N117 --> N118
+  N119(["identifier"])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120(["identifier"])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121(["identifier"])
+  N120 -->|true| N121
+  N120 -->|false| N121
+  N122(["identifier"])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123(["identifier"])
+  N122 -->|true| N123
+  N122 -->|false| N123
+  N124(["identifier"])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125(["identifier"])
+  N124 -->|true| N125
+  N124 -->|false| N125
+  N126(["identifier"])
+  N125 -->|true| N126
+  N125 -->|false| N126
+  N127(["identifier"])
+  N126 -->|true| N127
+  N126 -->|false| N127
+  N128(["identifier"])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129(["identifier"])
+  N128 -->|true| N129
+  N128 -->|false| N129
+  N130(["call:text"])
+  N129 --> N130
+  N131(["identifier"])
+  N130 -->|true| N131
+  N130 -->|false| N131
+  N132(["identifier"])
+  N131 -->|true| N132
+  N131 -->|false| N132
+  N133(["call:Ok"])
+  N132 --> N133
+  N133 --> end
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-main"><code>main</code> <small>function</small></li>
+<li id="symbol-api_key"><code>api_key</code> <small>variable</small></li>
+<li id="symbol-lib_content"><code>lib_content</code> <small>variable</small></li>
+<li id="symbol-analyzer_content"><code>analyzer_content</code> <small>variable</small></li>
+<li id="symbol-lib_sample"><code>lib_sample</code> <small>variable</small></li>
+<li id="symbol-analyzer_sample"><code>analyzer_sample</code> <small>variable</small></li>
+<li id="symbol-combined_code"><code>combined_code</code> <small>variable</small></li>
+<li id="symbol-client"><code>client</code> <small>variable</small></li>
+<li id="symbol-request"><code>request</code> <small>variable</small></li>
+<li id="symbol-start_time"><code>start_time</code> <small>variable</small></li>
+<li id="symbol-response"><code>response</code> <small>variable</small></li>
+<li id="symbol-duration"><code>duration</code> <small>variable</small></li>
+<li id="symbol-response_body"><code>response_body</code> <small>variable</small></li>
+<li id="symbol-prompt_tokens"><code>prompt_tokens</code> <small>variable</small></li>
+<li id="symbol-completion_tokens"><code>completion_tokens</code> <small>variable</small></li>
+<li id="symbol-estimated_cost"><code>estimated_cost</code> <small>variable</small></li>
+<li id="symbol-error_text"><code>error_text</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

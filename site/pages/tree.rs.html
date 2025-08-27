@@ -1,0 +1,358 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tree.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>tree.rs</h1></header>
+<main>
+<section class="article">
+<p>75 symbols, 383 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["inner"])
+  F1 --> F2
+  F2(["source"])
+  F2 --> F3
+  F3(["root_node"])
+  F3 --> F4
+  F4(["walk"])
+  F4 --> F5
+  F5(["edit"])
+  F5 --> F6
+  F6(["language"])
+  F6 --> F7
+  F7(["has_error"])
+  F7 --> F8
+  F8(["error_nodes"])
+  F8 --> F9
+  F9(["collect_error_nodes"])
+  F9 --> F10
+  F10(["find_nodes_by_kind"])
+  F10 --> F11
+  F11(["collect_nodes_by_kind"])
+  F11 --> F12
+  F12(["text_for_range"])
+  F12 --> F13
+  F13(["changed_ranges"])
+  F13 --> F14
+  F14(["new"])
+  F14 --> F15
+  F15(["inner"])
+  F15 --> F16
+  F16(["kind"])
+  F16 --> F17
+  F17(["text"])
+  F17 --> F18
+  F18(["byte_range"])
+  F18 --> F19
+  F19(["start_position"])
+  F19 --> F20
+  F20(["end_position"])
+  F20 --> F21
+  F21(["start_byte"])
+  F21 --> F22
+  F22(["end_byte"])
+  F22 --> F23
+  F23(["has_error"])
+  F23 --> F24
+  F24(["is_error"])
+  F24 --> F25
+  F25(["is_missing"])
+  F25 --> F26
+  F26(["is_named"])
+  F26 --> F27
+  F27(["parent"])
+  F27 --> F28
+  F28(["child_count"])
+  F28 --> F29
+  F29(["child"])
+  F29 --> F30
+  F30(["child_by_field_name"])
+  F30 --> F31
+  F31(["children"])
+  F31 --> F32
+  F32(["named_children"])
+  F32 --> F33
+  F33(["next_sibling"])
+  F33 --> F34
+  F34(["prev_sibling"])
+  F34 --> F35
+  F35(["walk"])
+  F35 --> F36
+  F36(["to_sexp"])
+  F36 --> F37
+  F37(["find_descendant"])
+  F37 --> F38
+  F38(["find_descendant_impl"])
+  F38 --> F39
+  F39(["find_descendants"])
+  F39 --> F40
+  F40(["collect_descendants"])
+  F40 --> F41
+  F41(["new"])
+  F41 --> F42
+  F42(["node"])
+  F42 --> F43
+  F43(["goto_first_child"])
+  F43 --> F44
+  F44(["goto_next_sibling"])
+  F44 --> F45
+  F45(["goto_parent"])
+  F45 --> F46
+  F46(["reset"])
+  F46 --> F47
+  F47(["field_name"])
+  F47 --> F48
+  F48(["test_syntax_tree_basic"])
+  F48 --> F49
+  F49(["test_node_navigation"])
+  F49 --> F50
+  F50(["test_find_nodes_by_kind"])
+  F50 --> F51
+  F51(["SyntaxTree"])
+  F51 --> F52
+  F52(["Node"])
+  F52 --> F53
+  F53(["TreeCursor"])
+  F53 --> F54
+  F54(["SyntaxTree"])
+  F54 --> F55
+  F55(["Node"])
+  F55 --> F56
+  F56(["TreeCursor"])
+  F56 --> F57
+  F57(["errors"])
+  F57 --> F58
+  F58(["nodes"])
+  F58 --> F59
+  F59(["start"])
+  F59 --> F60
+  F60(["end"])
+  F60 --> F61
+  F61(["results"])
+  F61 --> F62
+  F62(["parser"])
+  F62 --> F63
+  F63(["source"])
+  F63 --> F64
+  F64(["tree"])
+  F64 --> F65
+  F65(["parser"])
+  F65 --> F66
+  F66(["source"])
+  F66 --> F67
+  F67(["tree"])
+  F67 --> F68
+  F68(["root"])
+  F68 --> F69
+  F69(["function"])
+  F69 --> F70
+  F70(["name"])
+  F70 --> F71
+  F71(["parser"])
+  F71 --> F72
+  F72(["source"])
+  F72 --> F73
+  F73(["tree"])
+  F73 --> F74
+  F74(["functions"])
+  F74 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant inner
+  participant source
+  participant root_node
+  participant walk
+  participant edit
+  participant language
+  participant has_error
+  participant error_nodes
+  participant collect_error_nodes
+  participant find_nodes_by_kind
+  participant collect_nodes_by_kind
+  participant text_for_range
+  participant changed_ranges
+  participant new
+  participant inner
+  participant kind
+  participant text
+  participant byte_range
+  participant start_position
+  participant end_position
+  participant start_byte
+  participant end_byte
+  participant has_error
+  participant is_error
+  participant is_missing
+  participant is_named
+  participant parent
+  participant child_count
+  participant child
+  participant child_by_field_name
+  participant children
+  participant named_children
+  participant next_sibling
+  participant prev_sibling
+  participant walk
+  participant to_sexp
+  participant find_descendant
+  participant find_descendant_impl
+  participant find_descendants
+  participant collect_descendants
+  participant new
+  participant node
+  participant goto_first_child
+  participant goto_next_sibling
+  participant goto_parent
+  participant reset
+  participant field_name
+  participant test_syntax_tree_basic
+  participant test_node_navigation
+  participant test_find_nodes_by_kind
+  new->>inner: call
+  inner->>source: call
+  source->>root_node: call
+  root_node->>walk: call
+  walk->>edit: call
+  edit->>language: call
+  language->>has_error: call
+  has_error->>error_nodes: call
+  error_nodes->>collect_error_nodes: call
+  collect_error_nodes->>find_nodes_by_kind: call
+  find_nodes_by_kind->>collect_nodes_by_kind: call
+  collect_nodes_by_kind->>text_for_range: call
+  text_for_range->>changed_ranges: call
+  changed_ranges->>new: call
+  new->>inner: call
+  inner->>kind: call
+  kind->>text: call
+  text->>byte_range: call
+  byte_range->>start_position: call
+  start_position->>end_position: call
+  end_position->>start_byte: call
+  start_byte->>end_byte: call
+  end_byte->>has_error: call
+  has_error->>is_error: call
+  is_error->>is_missing: call
+  is_missing->>is_named: call
+  is_named->>parent: call
+  parent->>child_count: call
+  child_count->>child: call
+  child->>child_by_field_name: call
+  child_by_field_name->>children: call
+  children->>named_children: call
+  named_children->>next_sibling: call
+  next_sibling->>prev_sibling: call
+  prev_sibling->>walk: call
+  walk->>to_sexp: call
+  to_sexp->>find_descendant: call
+  find_descendant->>find_descendant_impl: call
+  find_descendant_impl->>find_descendants: call
+  find_descendants->>collect_descendants: call
+  collect_descendants->>new: call
+  new->>node: call
+  node->>goto_first_child: call
+  goto_first_child->>goto_next_sibling: call
+  goto_next_sibling->>goto_parent: call
+  goto_parent->>reset: call
+  reset->>field_name: call
+  field_name->>test_syntax_tree_basic: call
+  test_syntax_tree_basic->>test_node_navigation: call
+  test_node_navigation->>test_find_nodes_by_kind: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-inner"><code>inner</code> <small>function</small></li>
+<li id="symbol-source"><code>source</code> <small>function</small></li>
+<li id="symbol-root_node"><code>root_node</code> <small>function</small></li>
+<li id="symbol-walk"><code>walk</code> <small>function</small></li>
+<li id="symbol-edit"><code>edit</code> <small>function</small></li>
+<li id="symbol-language"><code>language</code> <small>function</small></li>
+<li id="symbol-has_error"><code>has_error</code> <small>function</small></li>
+<li id="symbol-error_nodes"><code>error_nodes</code> <small>function</small></li>
+<li id="symbol-collect_error_nodes"><code>collect_error_nodes</code> <small>function</small></li>
+<li id="symbol-find_nodes_by_kind"><code>find_nodes_by_kind</code> <small>function</small></li>
+<li id="symbol-collect_nodes_by_kind"><code>collect_nodes_by_kind</code> <small>function</small></li>
+<li id="symbol-text_for_range"><code>text_for_range</code> <small>function</small></li>
+<li id="symbol-changed_ranges"><code>changed_ranges</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-inner"><code>inner</code> <small>function</small></li>
+<li id="symbol-kind"><code>kind</code> <small>function</small></li>
+<li id="symbol-text"><code>text</code> <small>function</small></li>
+<li id="symbol-byte_range"><code>byte_range</code> <small>function</small></li>
+<li id="symbol-start_position"><code>start_position</code> <small>function</small></li>
+<li id="symbol-end_position"><code>end_position</code> <small>function</small></li>
+<li id="symbol-start_byte"><code>start_byte</code> <small>function</small></li>
+<li id="symbol-end_byte"><code>end_byte</code> <small>function</small></li>
+<li id="symbol-has_error"><code>has_error</code> <small>function</small></li>
+<li id="symbol-is_error"><code>is_error</code> <small>function</small></li>
+<li id="symbol-is_missing"><code>is_missing</code> <small>function</small></li>
+<li id="symbol-is_named"><code>is_named</code> <small>function</small></li>
+<li id="symbol-parent"><code>parent</code> <small>function</small></li>
+<li id="symbol-child_count"><code>child_count</code> <small>function</small></li>
+<li id="symbol-child"><code>child</code> <small>function</small></li>
+<li id="symbol-child_by_field_name"><code>child_by_field_name</code> <small>function</small></li>
+<li id="symbol-children"><code>children</code> <small>function</small></li>
+<li id="symbol-named_children"><code>named_children</code> <small>function</small></li>
+<li id="symbol-next_sibling"><code>next_sibling</code> <small>function</small></li>
+<li id="symbol-prev_sibling"><code>prev_sibling</code> <small>function</small></li>
+<li id="symbol-walk"><code>walk</code> <small>function</small></li>
+<li id="symbol-to_sexp"><code>to_sexp</code> <small>function</small></li>
+<li id="symbol-find_descendant"><code>find_descendant</code> <small>function</small></li>
+<li id="symbol-find_descendant_impl"><code>find_descendant_impl</code> <small>function</small></li>
+<li id="symbol-find_descendants"><code>find_descendants</code> <small>function</small></li>
+<li id="symbol-collect_descendants"><code>collect_descendants</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-node"><code>node</code> <small>function</small></li>
+<li id="symbol-goto_first_child"><code>goto_first_child</code> <small>function</small></li>
+<li id="symbol-goto_next_sibling"><code>goto_next_sibling</code> <small>function</small></li>
+<li id="symbol-goto_parent"><code>goto_parent</code> <small>function</small></li>
+<li id="symbol-reset"><code>reset</code> <small>function</small></li>
+<li id="symbol-field_name"><code>field_name</code> <small>function</small></li>
+<li id="symbol-test_syntax_tree_basic"><code>test_syntax_tree_basic</code> <small>function</small></li>
+<li id="symbol-test_node_navigation"><code>test_node_navigation</code> <small>function</small></li>
+<li id="symbol-test_find_nodes_by_kind"><code>test_find_nodes_by_kind</code> <small>function</small></li>
+<li id="symbol-syntaxtree"><code>SyntaxTree</code> <small>struct</small></li>
+<li id="symbol-node"><code>Node</code> <small>struct</small></li>
+<li id="symbol-treecursor"><code>TreeCursor</code> <small>struct</small></li>
+<li id="symbol-syntaxtree"><code>SyntaxTree</code> <small>impl</small></li>
+<li id="symbol-node"><code>Node</code> <small>impl</small></li>
+<li id="symbol-treecursor"><code>TreeCursor</code> <small>impl</small></li>
+<li id="symbol-errors"><code>errors</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-end"><code>end</code> <small>variable</small></li>
+<li id="symbol-results"><code>results</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-function"><code>function</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

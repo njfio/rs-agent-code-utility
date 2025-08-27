@@ -1,0 +1,2428 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>src/languages/rust.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>src/languages/rust.rs</h1></header>
+<main>
+<section class="article">
+<p>90 symbols, 556 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["scoped_identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["scoped_identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["scoped_identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["scoped_identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["scoped_identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["scoped_identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["visibility_modifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["type_identifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["type_identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["visibility_modifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["type_identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["call:kind"])
+  N21 --> N22
+  N23(["visibility_modifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["identifier"])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26(["type_identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["call:kind"])
+  N26 --> N27
+  N28(["visibility_modifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["identifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["type_identifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["call:kind"])
+  N31 --> N32
+  N33(["visibility_modifier"])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34(["identifier"])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35(["identifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["type_identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["call:kind"])
+  N36 --> N37
+  N38(["visibility_modifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["identifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["type_identifier"])
+  N40 -->|true| N41
+  N40 -->|false| N41
+  N42(["call:kind"])
+  N41 --> N42
+  N43(["visibility_modifier"])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44(["identifier"])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45(["identifier"])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46(["type_identifier"])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47(["call:kind"])
+  N46 --> N47
+  N48(["visibility_modifier"])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49(["identifier"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["type_identifier"])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52(["call:kind"])
+  N51 --> N52
+  N53(["visibility_modifier"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["identifier"])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55(["identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["type_identifier"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["identifier"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["type_identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["type_identifier"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["if_expression"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["if"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["call:is_function"])
+  N61 --> N62
+  N63(["call:map"])
+  N62 --> N63
+  N64(["visibility_modifier"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["identifier"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["identifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["type_identifier"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["identifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["type_identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["type_identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["if_expression"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["if"])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73(["call:is_struct"])
+  N72 --> N73
+  N74(["call:map"])
+  N73 --> N74
+  N75(["visibility_modifier"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["identifier"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["identifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["type_identifier"])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79(["identifier"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["type_identifier"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["type_identifier"])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82(["if_expression"])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83(["if"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["call:is_enum"])
+  N83 --> N84
+  N85(["call:map"])
+  N84 --> N85
+  N86(["visibility_modifier"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["identifier"])
+  N86 -->|true| N87
+  N86 -->|false| N87
+  N88(["identifier"])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89(["type_identifier"])
+  N88 -->|true| N89
+  N88 -->|false| N89
+  N90(["identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["type_identifier"])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92(["type_identifier"])
+  N91 -->|true| N92
+  N91 -->|false| N92
+  N93(["if_expression"])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94(["if"])
+  N93 -->|true| N94
+  N93 -->|false| N94
+  N95(["call:is_trait"])
+  N94 --> N95
+  N96(["call:map"])
+  N95 --> N96
+  N97(["visibility_modifier"])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98(["identifier"])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99(["identifier"])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100(["type_identifier"])
+  N99 -->|true| N100
+  N99 -->|false| N100
+  N101(["identifier"])
+  N100 -->|true| N101
+  N100 -->|false| N101
+  N102(["type_identifier"])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103(["type_identifier"])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104(["if_expression"])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105(["if"])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106(["call:is_module"])
+  N105 --> N106
+  N107(["call:map"])
+  N106 --> N107
+  N108(["visibility_modifier"])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109(["identifier"])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110(["identifier"])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111(["type_identifier"])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112(["identifier"])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113(["type_identifier"])
+  N112 -->|true| N113
+  N112 -->|false| N113
+  N114(["type_identifier"])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115(["scoped_type_identifier"])
+  N114 -->|true| N115
+  N114 -->|false| N115
+  N116(["identifier"])
+  N115 -->|true| N116
+  N115 -->|false| N116
+  N117(["type_identifier"])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118(["scoped_type_identifier"])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119(["identifier"])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120(["type_identifier"])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121(["mutable_specifier"])
+  N120 -->|true| N121
+  N120 -->|false| N121
+  N122(["identifier"])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123(["call:new"])
+  N122 --> N123
+  N124(["identifier"])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125(["call:find_nodes_by_kind"])
+  N124 --> N125
+  N126(["for_expression"])
+  N126 -->|repeat| N126
+  N125 --> N126
+  N127(["for"])
+  N127 -->|repeat| N127
+  N126 --> N127
+  N128(["identifier"])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129(["identifier"])
+  N128 -->|true| N129
+  N128 -->|false| N129
+  N130(["identifier"])
+  N129 -->|true| N130
+  N129 -->|false| N130
+  N131(["call:inner"])
+  N130 --> N131
+  N132(["if_expression"])
+  N131 -->|true| N132
+  N131 -->|false| N132
+  N133(["if"])
+  N132 -->|true| N133
+  N132 -->|false| N133
+  N134(["identifier"])
+  N133 -->|true| N134
+  N133 -->|false| N134
+  N135(["identifier"])
+  N134 -->|true| N135
+  N134 -->|false| N135
+  N136(["call:function_name"])
+  N135 --> N136
+  N137(["call:push"])
+  N136 --> N137
+  N138(["identifier"])
+  N137 -->|true| N138
+  N137 -->|false| N138
+  N139(["visibility_modifier"])
+  N138 -->|true| N139
+  N138 -->|false| N139
+  N140(["identifier"])
+  N139 -->|true| N140
+  N139 -->|false| N140
+  N141(["identifier"])
+  N140 -->|true| N141
+  N140 -->|false| N141
+  N142(["type_identifier"])
+  N141 -->|true| N142
+  N141 -->|false| N142
+  N143(["identifier"])
+  N142 -->|true| N143
+  N142 -->|false| N143
+  N144(["type_identifier"])
+  N143 -->|true| N144
+  N143 -->|false| N144
+  N145(["type_identifier"])
+  N144 -->|true| N145
+  N144 -->|false| N145
+  N146(["scoped_type_identifier"])
+  N145 -->|true| N146
+  N145 -->|false| N146
+  N147(["identifier"])
+  N146 -->|true| N147
+  N146 -->|false| N147
+  N148(["type_identifier"])
+  N147 -->|true| N148
+  N147 -->|false| N148
+  N149(["scoped_type_identifier"])
+  N148 -->|true| N149
+  N148 -->|false| N149
+  N150(["identifier"])
+  N149 -->|true| N150
+  N149 -->|false| N150
+  N151(["type_identifier"])
+  N150 -->|true| N151
+  N150 -->|false| N151
+  N152(["mutable_specifier"])
+  N151 -->|true| N152
+  N151 -->|false| N152
+  N153(["identifier"])
+  N152 -->|true| N153
+  N152 -->|false| N153
+  N154(["call:new"])
+  N153 --> N154
+  N155(["identifier"])
+  N154 -->|true| N155
+  N154 -->|false| N155
+  N156(["call:find_nodes_by_kind"])
+  N155 --> N156
+  N157(["for_expression"])
+  N157 -->|repeat| N157
+  N156 --> N157
+  N158(["for"])
+  N158 -->|repeat| N158
+  N157 --> N158
+  N159(["identifier"])
+  N158 -->|true| N159
+  N158 -->|false| N159
+  N160(["identifier"])
+  N159 -->|true| N160
+  N159 -->|false| N160
+  N161(["identifier"])
+  N160 -->|true| N161
+  N160 -->|false| N161
+  N162(["call:inner"])
+  N161 --> N162
+  N163(["if_expression"])
+  N162 -->|true| N163
+  N162 -->|false| N163
+  N164(["if"])
+  N163 -->|true| N164
+  N163 -->|false| N164
+  N165(["identifier"])
+  N164 -->|true| N165
+  N164 -->|false| N165
+  N166(["identifier"])
+  N165 -->|true| N166
+  N165 -->|false| N166
+  N167(["call:struct_name"])
+  N166 --> N167
+  N168(["call:push"])
+  N167 --> N168
+  N169(["identifier"])
+  N168 -->|true| N169
+  N168 -->|false| N169
+  N170(["visibility_modifier"])
+  N169 -->|true| N170
+  N169 -->|false| N170
+  N171(["identifier"])
+  N170 -->|true| N171
+  N170 -->|false| N171
+  N172(["type_identifier"])
+  N171 -->|true| N172
+  N171 -->|false| N172
+  N173(["type_identifier"])
+  N172 -->|true| N173
+  N172 -->|false| N173
+  N174(["identifier"])
+  N173 -->|true| N174
+  N173 -->|false| N174
+  N175(["call:new"])
+  N174 --> N175
+  N176(["visibility_modifier"])
+  N175 -->|true| N176
+  N175 -->|false| N176
+  N177(["identifier"])
+  N176 -->|true| N177
+  N176 -->|false| N177
+  N178(["type_identifier"])
+  N177 -->|true| N178
+  N177 -->|false| N178
+  N179(["type_identifier"])
+  N178 -->|true| N179
+  N178 -->|false| N179
+  N180(["identifier"])
+  N179 -->|true| N180
+  N179 -->|false| N180
+  N181(["call:new"])
+  N180 --> N181
+  N182(["visibility_modifier"])
+  N181 -->|true| N182
+  N181 -->|false| N182
+  N183(["identifier"])
+  N182 -->|true| N183
+  N182 -->|false| N183
+  N184(["type_identifier"])
+  N183 -->|true| N184
+  N183 -->|false| N184
+  N185(["type_identifier"])
+  N184 -->|true| N185
+  N184 -->|false| N185
+  N186(["identifier"])
+  N185 -->|true| N186
+  N185 -->|false| N186
+  N187(["call:new"])
+  N186 --> N187
+  N188(["visibility_modifier"])
+  N187 -->|true| N188
+  N187 -->|false| N188
+  N189(["identifier"])
+  N188 -->|true| N189
+  N188 -->|false| N189
+  N190(["identifier"])
+  N189 -->|true| N190
+  N189 -->|false| N190
+  N191(["identifier"])
+  N190 -->|true| N191
+  N190 -->|false| N191
+  N192(["for_expression"])
+  N192 -->|repeat| N192
+  N191 --> N192
+  N193(["for"])
+  N193 -->|repeat| N193
+  N192 --> N193
+  N194(["identifier"])
+  N193 -->|true| N194
+  N193 -->|false| N194
+  N195(["identifier"])
+  N194 -->|true| N195
+  N194 -->|false| N195
+  N196(["field_identifier"])
+  N195 -->|true| N196
+  N195 -->|false| N196
+  N197(["if_expression"])
+  N196 -->|true| N197
+  N196 -->|false| N197
+  N198(["if"])
+  N197 -->|true| N198
+  N197 -->|false| N198
+  N199(["identifier"])
+  N198 -->|true| N199
+  N198 -->|false| N199
+  N200(["field_identifier"])
+  N199 -->|true| N200
+  N199 -->|false| N200
+  N201(["identifier"])
+  N200 -->|true| N201
+  N200 -->|false| N201
+  N202(["identifier"])
+  N201 -->|true| N202
+  N201 -->|false| N202
+  N203(["visibility_modifier"])
+  N202 -->|true| N203
+  N202 -->|false| N203
+  N204(["identifier"])
+  N203 -->|true| N204
+  N203 -->|false| N204
+  N205(["identifier"])
+  N204 -->|true| N205
+  N204 -->|false| N205
+  N206(["identifier"])
+  N205 -->|true| N206
+  N205 -->|false| N206
+  N207(["for_expression"])
+  N207 -->|repeat| N207
+  N206 --> N207
+  N208(["for"])
+  N208 -->|repeat| N208
+  N207 --> N208
+  N209(["identifier"])
+  N208 -->|true| N209
+  N208 -->|false| N209
+  N210(["identifier"])
+  N209 -->|true| N210
+  N209 -->|false| N210
+  N211(["field_identifier"])
+  N210 -->|true| N211
+  N210 -->|false| N211
+  N212(["if_expression"])
+  N211 -->|true| N212
+  N211 -->|false| N212
+  N213(["if"])
+  N212 -->|true| N213
+  N212 -->|false| N213
+  N214(["identifier"])
+  N213 -->|true| N214
+  N213 -->|false| N214
+  N215(["field_identifier"])
+  N214 -->|true| N215
+  N214 -->|false| N215
+  N216(["identifier"])
+  N215 -->|true| N216
+  N215 -->|false| N216
+  N217(["identifier"])
+  N216 -->|true| N217
+  N216 -->|false| N217
+  N218(["visibility_modifier"])
+  N217 -->|true| N218
+  N217 -->|false| N218
+  N219(["identifier"])
+  N218 -->|true| N219
+  N218 -->|false| N219
+  N220(["identifier"])
+  N219 -->|true| N220
+  N219 -->|false| N220
+  N221(["identifier"])
+  N220 -->|true| N221
+  N220 -->|false| N221
+  N222(["type_identifier"])
+  N221 -->|true| N222
+  N221 -->|false| N222
+  N223(["type_identifier"])
+  N222 -->|true| N223
+  N222 -->|false| N223
+  N224(["identifier"])
+  N223 -->|true| N224
+  N223 -->|false| N224
+  N225(["type_identifier"])
+  N224 -->|true| N225
+  N224 -->|false| N225
+  N226(["call:collect"])
+  N225 --> N226
+  N227(["for_expression"])
+  N227 -->|repeat| N227
+  N226 --> N227
+  N228(["for"])
+  N228 -->|repeat| N228
+  N227 --> N228
+  N229(["identifier"])
+  N228 -->|true| N229
+  N228 -->|false| N229
+  N230(["identifier"])
+  N229 -->|true| N230
+  N229 -->|false| N230
+  N231(["call:iter"])
+  N230 --> N231
+  N232(["field_identifier"])
+  N231 -->|true| N232
+  N231 -->|false| N232
+  N233(["if_expression"])
+  N232 -->|true| N233
+  N232 -->|false| N233
+  N234(["if"])
+  N233 -->|true| N234
+  N233 -->|false| N234
+  N235(["call:contains"])
+  N234 --> N235
+  N236(["call:contains"])
+  N235 --> N236
+  N237(["mutable_specifier"])
+  N236 -->|true| N237
+  N236 -->|false| N237
+  N238(["identifier"])
+  N237 -->|true| N238
+  N237 -->|false| N238
+  N239(["call:new"])
+  N238 --> N239
+  N240(["mutable_specifier"])
+  N239 -->|true| N240
+  N239 -->|false| N240
+  N241(["identifier"])
+  N240 -->|true| N241
+  N240 -->|false| N241
+  N242(["identifier"])
+  N241 -->|true| N242
+  N241 -->|false| N242
+  N243(["while_expression"])
+  N243 -->|repeat| N243
+  N242 --> N243
+  N244(["while"])
+  N244 -->|repeat| N244
+  N243 --> N244
+  N245(["identifier"])
+  N244 -->|true| N245
+  N244 -->|false| N245
+  N246(["identifier"])
+  N245 -->|true| N246
+  N245 -->|false| N246
+  N247(["identifier"])
+  N246 -->|true| N247
+  N246 -->|false| N247
+  N248(["call:trim"])
+  N247 --> N248
+  N249(["if_expression"])
+  N248 -->|true| N249
+  N248 -->|false| N249
+  N250(["if"])
+  N249 -->|true| N250
+  N249 -->|false| N250
+  N251(["identifier"])
+  N250 -->|true| N251
+  N250 -->|false| N251
+  N252(["field_identifier"])
+  N251 -->|true| N252
+  N251 -->|false| N252
+  N253(["call:insert"])
+  N252 --> N253
+  N254(["if_expression"])
+  N253 -->|true| N254
+  N253 -->|false| N254
+  N255(["if"])
+  N254 -->|true| N255
+  N254 -->|false| N255
+  N256(["identifier"])
+  N255 -->|true| N256
+  N255 -->|false| N256
+  N257(["field_identifier"])
+  N256 -->|true| N257
+  N256 -->|false| N257
+  N258(["if_expression"])
+  N257 -->|true| N258
+  N257 -->|false| N258
+  N259(["if"])
+  N258 -->|true| N259
+  N258 -->|false| N259
+  N260(["call:is_empty"])
+  N259 --> N260
+  N261(["identifier"])
+  N260 -->|true| N261
+  N260 -->|false| N261
+  N262(["visibility_modifier"])
+  N261 -->|true| N262
+  N261 -->|false| N262
+  N263(["identifier"])
+  N262 -->|true| N263
+  N262 -->|false| N263
+  N264(["identifier"])
+  N263 -->|true| N264
+  N263 -->|false| N264
+  N265(["type_identifier"])
+  N264 -->|true| N265
+  N264 -->|false| N265
+  N266(["identifier"])
+  N265 -->|true| N266
+  N265 -->|false| N266
+  N267(["type_identifier"])
+  N266 -->|true| N267
+  N266 -->|false| N267
+  N268(["type_identifier"])
+  N267 -->|true| N268
+  N267 -->|false| N268
+  N269(["type_identifier"])
+  N268 -->|true| N269
+  N268 -->|false| N269
+  N270(["type_identifier"])
+  N269 -->|true| N270
+  N269 -->|false| N270
+  N271(["scoped_type_identifier"])
+  N270 -->|true| N271
+  N270 -->|false| N271
+  N272(["identifier"])
+  N271 -->|true| N272
+  N271 -->|false| N272
+  N273(["type_identifier"])
+  N272 -->|true| N273
+  N272 -->|false| N273
+  N274(["scoped_type_identifier"])
+  N273 -->|true| N274
+  N273 -->|false| N274
+  N275(["identifier"])
+  N274 -->|true| N275
+  N274 -->|false| N275
+  N276(["type_identifier"])
+  N275 -->|true| N276
+  N275 -->|false| N276
+  N277(["mutable_specifier"])
+  N276 -->|true| N277
+  N276 -->|false| N277
+  N278(["identifier"])
+  N277 -->|true| N278
+  N277 -->|false| N278
+  N279(["call:new"])
+  N278 --> N279
+  N280(["identifier"])
+  N279 -->|true| N280
+  N279 -->|false| N280
+  N281(["call:find_nodes_by_kind"])
+  N280 --> N281
+  N282(["for_expression"])
+  N282 -->|repeat| N282
+  N281 --> N282
+  N283(["for"])
+  N283 -->|repeat| N283
+  N282 --> N283
+  N284(["identifier"])
+  N283 -->|true| N284
+  N283 -->|false| N284
+  N285(["identifier"])
+  N284 -->|true| N285
+  N284 -->|false| N285
+  N286(["identifier"])
+  N285 -->|true| N286
+  N285 -->|false| N286
+  N287(["call:inner"])
+  N286 --> N287
+  N288(["if_expression"])
+  N287 -->|true| N288
+  N287 -->|false| N288
+  N289(["if"])
+  N288 -->|true| N289
+  N288 -->|false| N289
+  N290(["identifier"])
+  N289 -->|true| N290
+  N289 -->|false| N290
+  N291(["identifier"])
+  N290 -->|true| N291
+  N290 -->|false| N291
+  N292(["call:trait_name"])
+  N291 --> N292
+  N293(["mutable_specifier"])
+  N292 -->|true| N293
+  N292 -->|false| N293
+  N294(["identifier"])
+  N293 -->|true| N294
+  N293 -->|false| N294
+  N295(["call:new"])
+  N294 --> N295
+  N296(["if_expression"])
+  N295 -->|true| N296
+  N295 -->|false| N296
+  N297(["if"])
+  N296 -->|true| N297
+  N296 -->|false| N297
+  N298(["identifier"])
+  N297 -->|true| N298
+  N297 -->|false| N298
+  N299(["identifier"])
+  N298 -->|true| N299
+  N298 -->|false| N299
+  N300(["call:child_by_field_name"])
+  N299 --> N300
+  N301(["mutable_specifier"])
+  N300 -->|true| N301
+  N300 -->|false| N301
+  N302(["identifier"])
+  N301 -->|true| N302
+  N301 -->|false| N302
+  N303(["call:walk"])
+  N302 --> N303
+  N304(["if_expression"])
+  N303 -->|true| N304
+  N303 -->|false| N304
+  N305(["if"])
+  N304 -->|true| N305
+  N304 -->|false| N305
+  N306(["identifier"])
+  N305 -->|true| N306
+  N305 -->|false| N306
+  N307(["field_identifier"])
+  N306 -->|true| N307
+  N306 -->|false| N307
+  N308(["loop_expression"])
+  N308 -->|repeat| N308
+  N307 --> N308
+  N309(["loop"])
+  N309 -->|repeat| N309
+  N308 --> N309
+  N310(["identifier"])
+  N309 -->|true| N310
+  N309 -->|false| N310
+  N311(["call:node"])
+  N310 --> N311
+  N312(["if_expression"])
+  N311 -->|true| N312
+  N311 -->|false| N312
+  N313(["if"])
+  N312 -->|true| N313
+  N312 -->|false| N313
+  N314(["call:kind"])
+  N313 --> N314
+  N315(["if_expression"])
+  N314 -->|true| N315
+  N314 -->|false| N315
+  N316(["if"])
+  N315 -->|true| N316
+  N315 -->|false| N316
+  N317(["identifier"])
+  N316 -->|true| N317
+  N316 -->|false| N317
+  N318(["identifier"])
+  N317 -->|true| N318
+  N317 -->|false| N318
+  N319(["call:child_by_field_name"])
+  N318 --> N319
+  N320(["if_expression"])
+  N319 -->|true| N320
+  N319 -->|false| N320
+  N321(["if"])
+  N320 -->|true| N321
+  N320 -->|false| N321
+  N322(["identifier"])
+  N321 -->|true| N322
+  N321 -->|false| N322
+  N323(["identifier"])
+  N322 -->|true| N323
+  N322 -->|false| N323
+  N324(["call:utf8_text"])
+  N323 --> N324
+  N325(["call:push"])
+  N324 --> N325
+  N326(["if_expression"])
+  N325 -->|true| N326
+  N325 -->|false| N326
+  N327(["if"])
+  N326 -->|true| N327
+  N326 -->|false| N327
+  N328(["call:kind"])
+  N327 --> N328
+  N329(["if_expression"])
+  N328 -->|true| N329
+  N328 -->|false| N329
+  N330(["if"])
+  N329 -->|true| N330
+  N329 -->|false| N330
+  N331(["identifier"])
+  N330 -->|true| N331
+  N330 -->|false| N331
+  N332(["identifier"])
+  N331 -->|true| N332
+  N331 -->|false| N332
+  N333(["call:function_name"])
+  N332 --> N333
+  N334(["call:push"])
+  N333 --> N334
+  N335(["if_expression"])
+  N334 -->|true| N335
+  N334 -->|false| N335
+  N336(["if"])
+  N335 -->|true| N336
+  N335 -->|false| N336
+  N337(["call:goto_next_sibling"])
+  N336 --> N337
+  N338(["call:push"])
+  N337 --> N338
+  N339(["identifier"])
+  N338 -->|true| N339
+  N338 -->|false| N339
+  N340(["visibility_modifier"])
+  N339 -->|true| N340
+  N339 -->|false| N340
+  N341(["identifier"])
+  N340 -->|true| N341
+  N340 -->|false| N341
+  N342(["identifier"])
+  N341 -->|true| N342
+  N341 -->|false| N342
+  N343(["type_identifier"])
+  N342 -->|true| N343
+  N342 -->|false| N343
+  N344(["identifier"])
+  N343 -->|true| N344
+  N343 -->|false| N344
+  N345(["type_identifier"])
+  N344 -->|true| N345
+  N344 -->|false| N345
+  N346(["type_identifier"])
+  N345 -->|true| N346
+  N345 -->|false| N346
+  N347(["type_identifier"])
+  N346 -->|true| N347
+  N346 -->|false| N347
+  N348(["type_identifier"])
+  N347 -->|true| N348
+  N347 -->|false| N348
+  N349(["type_identifier"])
+  N348 -->|true| N349
+  N348 -->|false| N349
+  N350(["type_identifier"])
+  N349 -->|true| N350
+  N349 -->|false| N350
+  N351(["scoped_type_identifier"])
+  N350 -->|true| N351
+  N350 -->|false| N351
+  N352(["identifier"])
+  N351 -->|true| N352
+  N351 -->|false| N352
+  N353(["type_identifier"])
+  N352 -->|true| N353
+  N352 -->|false| N353
+  N354(["scoped_type_identifier"])
+  N353 -->|true| N354
+  N353 -->|false| N354
+  N355(["identifier"])
+  N354 -->|true| N355
+  N354 -->|false| N355
+  N356(["type_identifier"])
+  N355 -->|true| N356
+  N355 -->|false| N356
+  N357(["mutable_specifier"])
+  N356 -->|true| N357
+  N356 -->|false| N357
+  N358(["identifier"])
+  N357 -->|true| N358
+  N357 -->|false| N358
+  N359(["call:new"])
+  N358 --> N359
+  N360(["identifier"])
+  N359 -->|true| N360
+  N359 -->|false| N360
+  N361(["call:find_nodes_by_kind"])
+  N360 --> N361
+  N362(["for_expression"])
+  N362 -->|repeat| N362
+  N361 --> N362
+  N363(["for"])
+  N363 -->|repeat| N363
+  N362 --> N363
+  N364(["identifier"])
+  N363 -->|true| N364
+  N363 -->|false| N364
+  N365(["identifier"])
+  N364 -->|true| N365
+  N364 -->|false| N365
+  N366(["identifier"])
+  N365 -->|true| N366
+  N365 -->|false| N366
+  N367(["call:inner"])
+  N366 --> N367
+  N368(["mutable_specifier"])
+  N367 -->|true| N368
+  N367 -->|false| N368
+  N369(["identifier"])
+  N368 -->|true| N369
+  N368 -->|false| N369
+  N370(["identifier"])
+  N369 -->|true| N370
+  N369 -->|false| N370
+  N371(["mutable_specifier"])
+  N370 -->|true| N371
+  N370 -->|false| N371
+  N372(["identifier"])
+  N371 -->|true| N372
+  N371 -->|false| N372
+  N373(["identifier"])
+  N372 -->|true| N373
+  N372 -->|false| N373
+  N374(["mutable_specifier"])
+  N373 -->|true| N374
+  N373 -->|false| N374
+  N375(["identifier"])
+  N374 -->|true| N375
+  N374 -->|false| N375
+  N376(["call:new"])
+  N375 --> N376
+  N377(["if_expression"])
+  N376 -->|true| N377
+  N376 -->|false| N377
+  N378(["if"])
+  N377 -->|true| N378
+  N377 -->|false| N378
+  N379(["identifier"])
+  N378 -->|true| N379
+  N378 -->|false| N379
+  N380(["identifier"])
+  N379 -->|true| N380
+  N379 -->|false| N380
+  N381(["call:child_by_field_name"])
+  N380 --> N381
+  N382(["if_expression"])
+  N381 -->|true| N382
+  N381 -->|false| N382
+  N383(["if"])
+  N382 -->|true| N383
+  N382 -->|false| N383
+  N384(["identifier"])
+  N383 -->|true| N384
+  N383 -->|false| N384
+  N385(["identifier"])
+  N384 -->|true| N385
+  N384 -->|false| N385
+  N386(["call:utf8_text"])
+  N385 --> N386
+  N387(["identifier"])
+  N386 -->|true| N387
+  N386 -->|false| N387
+  N388(["if_expression"])
+  N387 -->|true| N388
+  N387 -->|false| N388
+  N389(["if"])
+  N388 -->|true| N389
+  N388 -->|false| N389
+  N390(["identifier"])
+  N389 -->|true| N390
+  N389 -->|false| N390
+  N391(["identifier"])
+  N390 -->|true| N391
+  N390 -->|false| N391
+  N392(["call:find"])
+  N391 --> N392
+  N393(["call:trim"])
+  N392 --> N393
+  N394(["call:trim"])
+  N393 --> N394
+  N395(["identifier"])
+  N394 -->|true| N395
+  N394 -->|false| N395
+  N396(["call:Some"])
+  N395 --> N396
+  N397(["if_expression"])
+  N396 -->|true| N397
+  N396 -->|false| N397
+  N398(["if"])
+  N397 -->|true| N398
+  N397 -->|false| N398
+  N399(["identifier"])
+  N398 -->|true| N399
+  N398 -->|false| N399
+  N400(["identifier"])
+  N399 -->|true| N400
+  N399 -->|false| N400
+  N401(["call:child_by_field_name"])
+  N400 --> N401
+  N402(["if_expression"])
+  N401 -->|true| N402
+  N401 -->|false| N402
+  N403(["if"])
+  N402 -->|true| N403
+  N402 -->|false| N403
+  N404(["identifier"])
+  N403 -->|true| N404
+  N403 -->|false| N404
+  N405(["identifier"])
+  N404 -->|true| N405
+  N404 -->|false| N405
+  N406(["call:utf8_text"])
+  N405 --> N406
+  N407(["identifier"])
+  N406 -->|true| N407
+  N406 -->|false| N407
+  N408(["if_expression"])
+  N407 -->|true| N408
+  N407 -->|false| N408
+  N409(["if"])
+  N408 -->|true| N409
+  N408 -->|false| N409
+  N410(["identifier"])
+  N409 -->|true| N410
+  N409 -->|false| N410
+  N411(["identifier"])
+  N410 -->|true| N411
+  N410 -->|false| N411
+  N412(["call:rfind"])
+  N411 --> N412
+  N413(["identifier"])
+  N412 -->|true| N413
+  N412 -->|false| N413
+  N414(["identifier"])
+  N413 -->|true| N414
+  N413 -->|false| N414
+  N415(["call:trim"])
+  N414 --> N415
+  N416(["identifier"])
+  N415 -->|true| N416
+  N415 -->|false| N416
+  N417(["call:Some"])
+  N416 --> N417
+  N418(["if_expression"])
+  N417 -->|true| N418
+  N417 -->|false| N418
+  N419(["if"])
+  N418 -->|true| N419
+  N418 -->|false| N419
+  N420(["identifier"])
+  N419 -->|true| N420
+  N419 -->|false| N420
+  N421(["identifier"])
+  N420 -->|true| N421
+  N420 -->|false| N421
+  N422(["call:child_by_field_name"])
+  N421 --> N422
+  N423(["mutable_specifier"])
+  N422 -->|true| N423
+  N422 -->|false| N423
+  N424(["identifier"])
+  N423 -->|true| N424
+  N423 -->|false| N424
+  N425(["call:walk"])
+  N424 --> N425
+  N426(["if_expression"])
+  N425 -->|true| N426
+  N425 -->|false| N426
+  N427(["if"])
+  N426 -->|true| N427
+  N426 -->|false| N427
+  N428(["identifier"])
+  N427 -->|true| N428
+  N427 -->|false| N428
+  N429(["field_identifier"])
+  N428 -->|true| N429
+  N428 -->|false| N429
+  N430(["loop_expression"])
+  N430 -->|repeat| N430
+  N429 --> N430
+  N431(["loop"])
+  N431 -->|repeat| N431
+  N430 --> N431
+  N432(["identifier"])
+  N431 -->|true| N432
+  N431 -->|false| N432
+  N433(["call:node"])
+  N432 --> N433
+  N434(["if_expression"])
+  N433 -->|true| N434
+  N433 -->|false| N434
+  N435(["if"])
+  N434 -->|true| N435
+  N434 -->|false| N435
+  N436(["call:kind"])
+  N435 --> N436
+  N437(["if_expression"])
+  N436 -->|true| N437
+  N436 -->|false| N437
+  N438(["if"])
+  N437 -->|true| N438
+  N437 -->|false| N438
+  N439(["identifier"])
+  N438 -->|true| N439
+  N438 -->|false| N439
+  N440(["identifier"])
+  N439 -->|true| N440
+  N439 -->|false| N440
+  N441(["call:function_name"])
+  N440 --> N441
+  N442(["call:push"])
+  N441 --> N442
+  N443(["if_expression"])
+  N442 -->|true| N443
+  N442 -->|false| N443
+  N444(["if"])
+  N443 -->|true| N444
+  N443 -->|false| N444
+  N445(["call:goto_next_sibling"])
+  N444 --> N445
+  N446(["if_expression"])
+  N445 -->|true| N446
+  N445 -->|false| N446
+  N447(["if"])
+  N446 -->|true| N447
+  N446 -->|false| N447
+  N448(["identifier"])
+  N447 -->|true| N448
+  N447 -->|false| N448
+  N449(["identifier"])
+  N448 -->|true| N449
+  N448 -->|false| N449
+  N450(["identifier"])
+  N449 -->|true| N450
+  N449 -->|false| N450
+  N451(["call:push"])
+  N450 --> N451
+  N452(["identifier"])
+  N451 -->|true| N452
+  N451 -->|false| N452
+  N453(["visibility_modifier"])
+  N452 -->|true| N453
+  N452 -->|false| N453
+  N454(["identifier"])
+  N453 -->|true| N454
+  N453 -->|false| N454
+  N455(["identifier"])
+  N454 -->|true| N455
+  N454 -->|false| N455
+  N456(["type_identifier"])
+  N455 -->|true| N456
+  N455 -->|false| N456
+  N457(["identifier"])
+  N456 -->|true| N457
+  N456 -->|false| N457
+  N458(["type_identifier"])
+  N457 -->|true| N458
+  N457 -->|false| N458
+  N459(["type_identifier"])
+  N458 -->|true| N459
+  N458 -->|false| N459
+  N460(["type_identifier"])
+  N459 -->|true| N460
+  N459 -->|false| N460
+  N461(["scoped_type_identifier"])
+  N460 -->|true| N461
+  N460 -->|false| N461
+  N462(["identifier"])
+  N461 -->|true| N462
+  N461 -->|false| N462
+  N463(["type_identifier"])
+  N462 -->|true| N463
+  N462 -->|false| N463
+  N464(["scoped_type_identifier"])
+  N463 -->|true| N464
+  N463 -->|false| N464
+  N465(["identifier"])
+  N464 -->|true| N465
+  N464 -->|false| N465
+  N466(["type_identifier"])
+  N465 -->|true| N466
+  N465 -->|false| N466
+  N467(["mutable_specifier"])
+  N466 -->|true| N467
+  N466 -->|false| N467
+  N468(["identifier"])
+  N467 -->|true| N468
+  N467 -->|false| N468
+  N469(["call:new"])
+  N468 --> N469
+  N470(["identifier"])
+  N469 -->|true| N470
+  N469 -->|false| N470
+  N471(["call:find_nodes_by_kind"])
+  N470 --> N471
+  N472(["for_expression"])
+  N472 -->|repeat| N472
+  N471 --> N472
+  N473(["for"])
+  N473 -->|repeat| N473
+  N472 --> N473
+  N474(["identifier"])
+  N473 -->|true| N474
+  N473 -->|false| N474
+  N475(["identifier"])
+  N474 -->|true| N475
+  N474 -->|false| N475
+  N476(["identifier"])
+  N475 -->|true| N476
+  N475 -->|false| N476
+  N477(["call:inner"])
+  N476 --> N477
+  N478(["if_expression"])
+  N477 -->|true| N478
+  N477 -->|false| N478
+  N479(["if"])
+  N478 -->|true| N479
+  N478 -->|false| N479
+  N480(["identifier"])
+  N479 -->|true| N480
+  N479 -->|false| N480
+  N481(["identifier"])
+  N480 -->|true| N481
+  N480 -->|false| N481
+  N482(["call:child_by_field_name"])
+  N481 --> N482
+  N483(["if_expression"])
+  N482 -->|true| N483
+  N482 -->|false| N483
+  N484(["if"])
+  N483 -->|true| N484
+  N483 -->|false| N484
+  N485(["identifier"])
+  N484 -->|true| N485
+  N484 -->|false| N485
+  N486(["identifier"])
+  N485 -->|true| N486
+  N485 -->|false| N486
+  N487(["call:utf8_text"])
+  N486 --> N487
+  N488(["if_expression"])
+  N487 -->|true| N488
+  N487 -->|false| N488
+  N489(["if"])
+  N488 -->|true| N489
+  N488 -->|false| N489
+  N490(["identifier"])
+  N489 -->|true| N490
+  N489 -->|false| N490
+  N491(["identifier"])
+  N490 -->|true| N491
+  N490 -->|false| N491
+  N492(["call:utf8_text"])
+  N491 --> N492
+  N493(["call:push"])
+  N492 --> N493
+  N494(["identifier"])
+  N493 -->|true| N494
+  N493 -->|false| N494
+  N495(["call:find_nodes_by_kind"])
+  N494 --> N495
+  N496(["for_expression"])
+  N496 -->|repeat| N496
+  N495 --> N496
+  N497(["for"])
+  N497 -->|repeat| N497
+  N496 --> N497
+  N498(["identifier"])
+  N497 -->|true| N498
+  N497 -->|false| N498
+  N499(["identifier"])
+  N498 -->|true| N499
+  N498 -->|false| N499
+  N500(["identifier"])
+  N499 -->|true| N500
+  N499 -->|false| N500
+  N501(["call:inner"])
+  N500 --> N501
+  N502(["if_expression"])
+  N501 -->|true| N502
+  N501 -->|false| N502
+  N503(["if"])
+  N502 -->|true| N503
+  N502 -->|false| N503
+  N504(["identifier"])
+  N503 -->|true| N504
+  N503 -->|false| N504
+  N505(["identifier"])
+  N504 -->|true| N505
+  N504 -->|false| N505
+  N506(["call:utf8_text"])
+  N505 --> N506
+  N507(["if_expression"])
+  N506 -->|true| N507
+  N506 -->|false| N507
+  N508(["if"])
+  N507 -->|true| N508
+  N507 -->|false| N508
+  N509(["identifier"])
+  N508 -->|true| N509
+  N508 -->|false| N509
+  N510(["identifier"])
+  N509 -->|true| N510
+  N509 -->|false| N510
+  N511(["call:find"])
+  N510 --> N511
+  N512(["identifier"])
+  N511 -->|true| N512
+  N511 -->|false| N512
+  N513(["identifier"])
+  N512 -->|true| N513
+  N512 -->|false| N513
+  N514(["identifier"])
+  N513 -->|true| N514
+  N513 -->|false| N514
+  N515(["if_expression"])
+  N514 -->|true| N515
+  N514 -->|false| N515
+  N516(["if"])
+  N515 -->|true| N516
+  N515 -->|false| N516
+  N517(["identifier"])
+  N516 -->|true| N517
+  N516 -->|false| N517
+  N518(["identifier"])
+  N517 -->|true| N518
+  N517 -->|false| N518
+  N519(["call:find"])
+  N518 --> N519
+  N520(["identifier"])
+  N519 -->|true| N520
+  N519 -->|false| N520
+  N521(["call:trim"])
+  N520 --> N521
+  N522(["call:push"])
+  N521 --> N522
+  N523(["identifier"])
+  N522 -->|true| N523
+  N522 -->|false| N523
+  N524(["visibility_modifier"])
+  N523 -->|true| N524
+  N523 -->|false| N524
+  N525(["identifier"])
+  N524 -->|true| N525
+  N524 -->|false| N525
+  N526(["identifier"])
+  N525 -->|true| N526
+  N525 -->|false| N526
+  N527(["type_identifier"])
+  N526 -->|true| N527
+  N526 -->|false| N527
+  N528(["identifier"])
+  N527 -->|true| N528
+  N527 -->|false| N528
+  N529(["type_identifier"])
+  N528 -->|true| N529
+  N528 -->|false| N529
+  N530(["type_identifier"])
+  N529 -->|true| N530
+  N529 -->|false| N530
+  N531(["type_identifier"])
+  N530 -->|true| N531
+  N530 -->|false| N531
+  N532(["scoped_type_identifier"])
+  N531 -->|true| N532
+  N531 -->|false| N532
+  N533(["identifier"])
+  N532 -->|true| N533
+  N532 -->|false| N533
+  N534(["type_identifier"])
+  N533 -->|true| N534
+  N533 -->|false| N534
+  N535(["scoped_type_identifier"])
+  N534 -->|true| N535
+  N534 -->|false| N535
+  N536(["identifier"])
+  N535 -->|true| N536
+  N535 -->|false| N536
+  N537(["type_identifier"])
+  N536 -->|true| N537
+  N536 -->|false| N537
+  N538(["mutable_specifier"])
+  N537 -->|true| N538
+  N537 -->|false| N538
+  N539(["identifier"])
+  N538 -->|true| N539
+  N538 -->|false| N539
+  N540(["call:new"])
+  N539 --> N540
+  N541(["identifier"])
+  N540 -->|true| N541
+  N540 -->|false| N541
+  N542(["call:find_nodes_by_kind"])
+  N541 --> N542
+  N543(["for_expression"])
+  N543 -->|repeat| N543
+  N542 --> N543
+  N544(["for"])
+  N544 -->|repeat| N544
+  N543 --> N544
+  N545(["identifier"])
+  N544 -->|true| N545
+  N544 -->|false| N545
+  N546(["identifier"])
+  N545 -->|true| N546
+  N545 -->|false| N546
+  N547(["identifier"])
+  N546 -->|true| N547
+  N546 -->|false| N547
+  N548(["call:inner"])
+  N547 --> N548
+  N549(["if_expression"])
+  N548 -->|true| N549
+  N548 -->|false| N549
+  N550(["if"])
+  N549 -->|true| N550
+  N549 -->|false| N550
+  N551(["identifier"])
+  N550 -->|true| N551
+  N550 -->|false| N551
+  N552(["identifier"])
+  N551 -->|true| N552
+  N551 -->|false| N552
+  N553(["call:function_name"])
+  N552 --> N553
+  N554(["if_expression"])
+  N553 -->|true| N554
+  N553 -->|false| N554
+  N555(["if"])
+  N554 -->|true| N555
+  N554 -->|false| N555
+  N556(["identifier"])
+  N555 -->|true| N556
+  N555 -->|false| N556
+  N557(["identifier"])
+  N556 -->|true| N557
+  N556 -->|false| N557
+  N558(["call:child_by_field_name"])
+  N557 --> N558
+  N559(["mutable_specifier"])
+  N558 -->|true| N559
+  N558 -->|false| N559
+  N560(["identifier"])
+  N559 -->|true| N560
+  N559 -->|false| N560
+  N561(["call:walk"])
+  N560 --> N561
+  N562(["if_expression"])
+  N561 -->|true| N562
+  N561 -->|false| N562
+  N563(["if"])
+  N562 -->|true| N563
+  N562 -->|false| N563
+  N564(["identifier"])
+  N563 -->|true| N564
+  N563 -->|false| N564
+  N565(["field_identifier"])
+  N564 -->|true| N565
+  N564 -->|false| N565
+  N566(["loop_expression"])
+  N566 -->|repeat| N566
+  N565 --> N566
+  N567(["loop"])
+  N567 -->|repeat| N567
+  N566 --> N567
+  N568(["identifier"])
+  N567 -->|true| N568
+  N567 -->|false| N568
+  N569(["call:node"])
+  N568 --> N569
+  N570(["if_expression"])
+  N569 -->|true| N570
+  N569 -->|false| N570
+  N571(["if"])
+  N570 -->|true| N571
+  N570 -->|false| N571
+  N572(["call:kind"])
+  N571 --> N572
+  N573(["if_expression"])
+  N572 -->|true| N573
+  N572 -->|false| N573
+  N574(["if"])
+  N573 -->|true| N574
+  N573 -->|false| N574
+  N575(["identifier"])
+  N574 -->|true| N575
+  N574 -->|false| N575
+  N576(["identifier"])
+  N575 -->|true| N576
+  N575 -->|false| N576
+  N577(["call:utf8_text"])
+  N576 --> N577
+  N578(["call:push"])
+  N577 --> N578
+  N579(["if_expression"])
+  N578 -->|true| N579
+  N578 -->|false| N579
+  N580(["if"])
+  N579 -->|true| N580
+  N579 -->|false| N580
+  N581(["call:goto_next_sibling"])
+  N580 --> N581
+  N582(["identifier"])
+  N581 -->|true| N582
+  N581 -->|false| N582
+  N583(["visibility_modifier"])
+  N582 -->|true| N583
+  N582 -->|false| N583
+  N584(["identifier"])
+  N583 -->|true| N584
+  N583 -->|false| N584
+  N585(["identifier"])
+  N584 -->|true| N585
+  N584 -->|false| N585
+  N586(["type_identifier"])
+  N585 -->|true| N586
+  N585 -->|false| N586
+  N587(["identifier"])
+  N586 -->|true| N587
+  N586 -->|false| N587
+  N588(["type_identifier"])
+  N587 -->|true| N588
+  N587 -->|false| N588
+  N589(["type_identifier"])
+  N588 -->|true| N589
+  N588 -->|false| N589
+  N590(["type_identifier"])
+  N589 -->|true| N590
+  N589 -->|false| N590
+  N591(["scoped_type_identifier"])
+  N590 -->|true| N591
+  N590 -->|false| N591
+  N592(["identifier"])
+  N591 -->|true| N592
+  N591 -->|false| N592
+  N593(["type_identifier"])
+  N592 -->|true| N593
+  N592 -->|false| N593
+  N594(["scoped_type_identifier"])
+  N593 -->|true| N594
+  N593 -->|false| N594
+  N595(["identifier"])
+  N594 -->|true| N595
+  N594 -->|false| N595
+  N596(["type_identifier"])
+  N595 -->|true| N596
+  N595 -->|false| N596
+  N597(["mutable_specifier"])
+  N596 -->|true| N597
+  N596 -->|false| N597
+  N598(["identifier"])
+  N597 -->|true| N598
+  N597 -->|false| N598
+  N599(["call:new"])
+  N598 --> N599
+  N600(["identifier"])
+  N599 -->|true| N600
+  N599 -->|false| N600
+  N601(["call:find_nodes_by_kind"])
+  N600 --> N601
+  N602(["for_expression"])
+  N602 -->|repeat| N602
+  N601 --> N602
+  N603(["for"])
+  N603 -->|repeat| N603
+  N602 --> N603
+  N604(["identifier"])
+  N603 -->|true| N604
+  N603 -->|false| N604
+  N605(["identifier"])
+  N604 -->|true| N605
+  N604 -->|false| N605
+  N606(["identifier"])
+  N605 -->|true| N606
+  N605 -->|false| N606
+  N607(["call:inner"])
+  N606 --> N607
+  N608(["if_expression"])
+  N607 -->|true| N608
+  N607 -->|false| N608
+  N609(["if"])
+  N608 -->|true| N609
+  N608 -->|false| N609
+  N610(["identifier"])
+  N609 -->|true| N610
+  N609 -->|false| N610
+  N611(["identifier"])
+  N610 -->|true| N611
+  N610 -->|false| N611
+  N612(["call:trait_name"])
+  N611 --> N612
+  N613(["if_expression"])
+  N612 -->|true| N613
+  N612 -->|false| N613
+  N614(["if"])
+  N613 -->|true| N614
+  N613 -->|false| N614
+  N615(["identifier"])
+  N614 -->|true| N615
+  N614 -->|false| N615
+  N616(["identifier"])
+  N615 -->|true| N616
+  N615 -->|false| N616
+  N617(["call:child_by_field_name"])
+  N616 --> N617
+  N618(["mutable_specifier"])
+  N617 -->|true| N618
+  N617 -->|false| N618
+  N619(["identifier"])
+  N618 -->|true| N619
+  N618 -->|false| N619
+  N620(["call:walk"])
+  N619 --> N620
+  N621(["if_expression"])
+  N620 -->|true| N621
+  N620 -->|false| N621
+  N622(["if"])
+  N621 -->|true| N622
+  N621 -->|false| N622
+  N623(["identifier"])
+  N622 -->|true| N623
+  N622 -->|false| N623
+  N624(["field_identifier"])
+  N623 -->|true| N624
+  N623 -->|false| N624
+  N625(["loop_expression"])
+  N625 -->|repeat| N625
+  N624 --> N625
+  N626(["loop"])
+  N626 -->|repeat| N626
+  N625 --> N626
+  N627(["identifier"])
+  N626 -->|true| N627
+  N626 -->|false| N627
+  N628(["call:node"])
+  N627 --> N628
+  N629(["if_expression"])
+  N628 -->|true| N629
+  N628 -->|false| N629
+  N630(["if"])
+  N629 -->|true| N630
+  N629 -->|false| N630
+  N631(["call:kind"])
+  N630 --> N631
+  N632(["if_expression"])
+  N631 -->|true| N632
+  N631 -->|false| N632
+  N633(["if"])
+  N632 -->|true| N633
+  N632 -->|false| N633
+  N634(["identifier"])
+  N633 -->|true| N634
+  N633 -->|false| N634
+  N635(["identifier"])
+  N634 -->|true| N635
+  N634 -->|false| N635
+  N636(["call:child_by_field_name"])
+  N635 --> N636
+  N637(["if_expression"])
+  N636 -->|true| N637
+  N636 -->|false| N637
+  N638(["if"])
+  N637 -->|true| N638
+  N637 -->|false| N638
+  N639(["identifier"])
+  N638 -->|true| N639
+  N638 -->|false| N639
+  N640(["identifier"])
+  N639 -->|true| N640
+  N639 -->|false| N640
+  N641(["call:utf8_text"])
+  N640 --> N641
+  N642(["call:push"])
+  N641 --> N642
+  N643(["if_expression"])
+  N642 -->|true| N643
+  N642 -->|false| N643
+  N644(["if"])
+  N643 -->|true| N644
+  N643 -->|false| N644
+  N645(["call:goto_next_sibling"])
+  N644 --> N645
+  N646(["identifier"])
+  N645 -->|true| N646
+  N645 -->|false| N646
+  N647(["visibility_modifier"])
+  N646 -->|true| N647
+  N646 -->|false| N647
+  N648(["identifier"])
+  N647 -->|true| N648
+  N647 -->|false| N648
+  N649(["identifier"])
+  N648 -->|true| N649
+  N648 -->|false| N649
+  N650(["type_identifier"])
+  N649 -->|true| N650
+  N649 -->|false| N650
+  N651(["identifier"])
+  N650 -->|true| N651
+  N650 -->|false| N651
+  N652(["type_identifier"])
+  N651 -->|true| N652
+  N651 -->|false| N652
+  N653(["type_identifier"])
+  N652 -->|true| N653
+  N652 -->|false| N653
+  N654(["type_identifier"])
+  N653 -->|true| N654
+  N653 -->|false| N654
+  N655(["scoped_type_identifier"])
+  N654 -->|true| N655
+  N654 -->|false| N655
+  N656(["identifier"])
+  N655 -->|true| N656
+  N655 -->|false| N656
+  N657(["type_identifier"])
+  N656 -->|true| N657
+  N656 -->|false| N657
+  N658(["scoped_type_identifier"])
+  N657 -->|true| N658
+  N657 -->|false| N658
+  N659(["identifier"])
+  N658 -->|true| N659
+  N658 -->|false| N659
+  N660(["type_identifier"])
+  N659 -->|true| N660
+  N659 -->|false| N660
+  N661(["mutable_specifier"])
+  N660 -->|true| N661
+  N660 -->|false| N661
+  N662(["identifier"])
+  N661 -->|true| N662
+  N661 -->|false| N662
+  N663(["call:new"])
+  N662 --> N663
+  N664(["identifier"])
+  N663 -->|true| N664
+  N663 -->|false| N664
+  N665(["call:find_nodes_by_kind"])
+  N664 --> N665
+  N666(["for_expression"])
+  N666 -->|repeat| N666
+  N665 --> N666
+  N667(["for"])
+  N667 -->|repeat| N667
+  N666 --> N667
+  N668(["identifier"])
+  N667 -->|true| N668
+  N667 -->|false| N668
+  N669(["identifier"])
+  N668 -->|true| N669
+  N668 -->|false| N669
+  N670(["identifier"])
+  N669 -->|true| N670
+  N669 -->|false| N670
+  N671(["call:inner"])
+  N670 --> N671
+  N672(["if_expression"])
+  N671 -->|true| N672
+  N671 -->|false| N672
+  N673(["if"])
+  N672 -->|true| N673
+  N672 -->|false| N673
+  N674(["identifier"])
+  N673 -->|true| N674
+  N673 -->|false| N674
+  N675(["identifier"])
+  N674 -->|true| N675
+  N674 -->|false| N675
+  N676(["call:struct_name"])
+  N675 --> N676
+  N677(["if_expression"])
+  N676 -->|true| N677
+  N676 -->|false| N677
+  N678(["if"])
+  N677 -->|true| N678
+  N677 -->|false| N678
+  N679(["identifier"])
+  N678 -->|true| N679
+  N678 -->|false| N679
+  N680(["identifier"])
+  N679 -->|true| N680
+  N679 -->|false| N680
+  N681(["call:child_by_field_name"])
+  N680 --> N681
+  N682(["mutable_specifier"])
+  N681 -->|true| N682
+  N681 -->|false| N682
+  N683(["identifier"])
+  N682 -->|true| N683
+  N682 -->|false| N683
+  N684(["call:walk"])
+  N683 --> N684
+  N685(["if_expression"])
+  N684 -->|true| N685
+  N684 -->|false| N685
+  N686(["if"])
+  N685 -->|true| N686
+  N685 -->|false| N686
+  N687(["identifier"])
+  N686 -->|true| N687
+  N686 -->|false| N687
+  N688(["field_identifier"])
+  N687 -->|true| N688
+  N687 -->|false| N688
+  N689(["loop_expression"])
+  N689 -->|repeat| N689
+  N688 --> N689
+  N690(["loop"])
+  N690 -->|repeat| N690
+  N689 --> N690
+  N691(["identifier"])
+  N690 -->|true| N691
+  N690 -->|false| N691
+  N692(["call:node"])
+  N691 --> N692
+  N693(["if_expression"])
+  N692 -->|true| N693
+  N692 -->|false| N693
+  N694(["if"])
+  N693 -->|true| N694
+  N693 -->|false| N694
+  N695(["call:kind"])
+  N694 --> N695
+  N696(["if_expression"])
+  N695 -->|true| N696
+  N695 -->|false| N696
+  N697(["if"])
+  N696 -->|true| N697
+  N696 -->|false| N697
+  N698(["identifier"])
+  N697 -->|true| N698
+  N697 -->|false| N698
+  N699(["identifier"])
+  N698 -->|true| N699
+  N698 -->|false| N699
+  N700(["call:utf8_text"])
+  N699 --> N700
+  N701(["call:push"])
+  N700 --> N701
+  N702(["if_expression"])
+  N701 -->|true| N702
+  N701 -->|false| N702
+  N703(["if"])
+  N702 -->|true| N703
+  N702 -->|false| N703
+  N704(["call:goto_next_sibling"])
+  N703 --> N704
+  N705(["identifier"])
+  N704 -->|true| N705
+  N704 -->|false| N705
+  N706(["identifier"])
+  N705 -->|true| N706
+  N705 -->|false| N706
+  N707(["identifier"])
+  N706 -->|true| N707
+  N706 -->|false| N707
+  N708(["identifier"])
+  N707 -->|true| N708
+  N707 -->|false| N708
+  N709(["scoped_identifier"])
+  N708 -->|true| N709
+  N708 -->|false| N709
+  N710(["identifier"])
+  N709 -->|true| N710
+  N709 -->|false| N710
+  N711(["identifier"])
+  N710 -->|true| N711
+  N710 -->|false| N711
+  N712(["identifier"])
+  N711 -->|true| N712
+  N711 -->|false| N712
+  N713(["identifier"])
+  N712 -->|true| N713
+  N712 -->|false| N713
+  N714(["identifier"])
+  N713 -->|true| N714
+  N713 -->|false| N714
+  N715(["call:unwrap"])
+  N714 --> N715
+  N716(["identifier"])
+  N715 -->|true| N716
+  N715 -->|false| N716
+  N717(["call:unwrap"])
+  N716 --> N717
+  N718(["identifier"])
+  N717 -->|true| N718
+  N717 -->|false| N718
+  N719(["call:root_node"])
+  N718 --> N719
+  N720(["mutable_specifier"])
+  N719 -->|true| N720
+  N719 -->|false| N720
+  N721(["identifier"])
+  N720 -->|true| N721
+  N720 -->|false| N721
+  N722(["mutable_specifier"])
+  N721 -->|true| N722
+  N721 -->|false| N722
+  N723(["identifier"])
+  N722 -->|true| N723
+  N722 -->|false| N723
+  N724(["mutable_specifier"])
+  N723 -->|true| N724
+  N723 -->|false| N724
+  N725(["identifier"])
+  N724 -->|true| N725
+  N724 -->|false| N725
+  N726(["mutable_specifier"])
+  N725 -->|true| N726
+  N725 -->|false| N726
+  N727(["identifier"])
+  N726 -->|true| N727
+  N726 -->|false| N727
+  N728(["call:walk"])
+  N727 --> N728
+  N729(["if_expression"])
+  N728 -->|true| N729
+  N728 -->|false| N729
+  N730(["if"])
+  N729 -->|true| N730
+  N729 -->|false| N730
+  N731(["identifier"])
+  N730 -->|true| N731
+  N730 -->|false| N731
+  N732(["field_identifier"])
+  N731 -->|true| N732
+  N731 -->|false| N732
+  N733(["loop_expression"])
+  N733 -->|repeat| N733
+  N732 --> N733
+  N734(["loop"])
+  N734 -->|repeat| N734
+  N733 --> N734
+  N735(["identifier"])
+  N734 -->|true| N735
+  N734 -->|false| N735
+  N736(["call:node"])
+  N735 --> N736
+  N737(["identifier"])
+  N736 -->|true| N737
+  N736 -->|false| N737
+  N738(["call:inner"])
+  N737 --> N738
+  N739(["if_expression"])
+  N738 -->|true| N739
+  N738 -->|false| N739
+  N740(["if"])
+  N739 -->|true| N740
+  N739 -->|false| N740
+  N741(["scoped_identifier"])
+  N740 -->|true| N741
+  N740 -->|false| N741
+  N742(["identifier"])
+  N741 -->|true| N742
+  N741 -->|false| N742
+  N743(["identifier"])
+  N742 -->|true| N743
+  N742 -->|false| N743
+  N744(["identifier"])
+  N743 -->|true| N744
+  N743 -->|false| N744
+  N745(["identifier"])
+  N744 -->|true| N745
+  N744 -->|false| N745
+  N746(["identifier"])
+  N745 -->|true| N746
+  N745 -->|false| N746
+  N747(["identifier"])
+  N746 -->|true| N747
+  N746 -->|false| N747
+  N748(["identifier"])
+  N747 -->|true| N748
+  N747 -->|false| N748
+  N749(["identifier"])
+  N748 -->|true| N749
+  N748 -->|false| N749
+  N750(["identifier"])
+  N749 -->|true| N750
+  N749 -->|false| N750
+  N751(["identifier"])
+  N750 -->|true| N751
+  N750 -->|false| N751
+  N752(["identifier"])
+  N751 -->|true| N752
+  N751 -->|false| N752
+  N753(["if_expression"])
+  N752 -->|true| N753
+  N752 -->|false| N753
+  N754(["if"])
+  N753 -->|true| N754
+  N753 -->|false| N754
+  N755(["scoped_identifier"])
+  N754 -->|true| N755
+  N754 -->|false| N755
+  N756(["identifier"])
+  N755 -->|true| N756
+  N755 -->|false| N756
+  N757(["identifier"])
+  N756 -->|true| N757
+  N756 -->|false| N757
+  N758(["identifier"])
+  N757 -->|true| N758
+  N757 -->|false| N758
+  N759(["identifier"])
+  N758 -->|true| N759
+  N758 -->|false| N759
+  N760(["identifier"])
+  N759 -->|true| N760
+  N759 -->|false| N760
+  N761(["identifier"])
+  N760 -->|true| N761
+  N760 -->|false| N761
+  N762(["identifier"])
+  N761 -->|true| N762
+  N761 -->|false| N762
+  N763(["identifier"])
+  N762 -->|true| N763
+  N762 -->|false| N763
+  N764(["identifier"])
+  N763 -->|true| N764
+  N763 -->|false| N764
+  N765(["identifier"])
+  N764 -->|true| N765
+  N764 -->|false| N765
+  N766(["identifier"])
+  N765 -->|true| N766
+  N765 -->|false| N766
+  N767(["if_expression"])
+  N766 -->|true| N767
+  N766 -->|false| N767
+  N768(["if"])
+  N767 -->|true| N768
+  N767 -->|false| N768
+  N769(["scoped_identifier"])
+  N768 -->|true| N769
+  N768 -->|false| N769
+  N770(["identifier"])
+  N769 -->|true| N770
+  N769 -->|false| N770
+  N771(["identifier"])
+  N770 -->|true| N771
+  N770 -->|false| N771
+  N772(["identifier"])
+  N771 -->|true| N772
+  N771 -->|false| N772
+  N773(["identifier"])
+  N772 -->|true| N773
+  N772 -->|false| N773
+  N774(["identifier"])
+  N773 -->|true| N774
+  N773 -->|false| N774
+  N775(["identifier"])
+  N774 -->|true| N775
+  N774 -->|false| N775
+  N776(["identifier"])
+  N775 -->|true| N776
+  N775 -->|false| N776
+  N777(["identifier"])
+  N776 -->|true| N777
+  N776 -->|false| N777
+  N778(["identifier"])
+  N777 -->|true| N778
+  N777 -->|false| N778
+  N779(["identifier"])
+  N778 -->|true| N779
+  N778 -->|false| N779
+  N780(["identifier"])
+  N779 -->|true| N780
+  N779 -->|false| N780
+  N781(["if_expression"])
+  N780 -->|true| N781
+  N780 -->|false| N781
+  N782(["if"])
+  N781 -->|true| N782
+  N781 -->|false| N782
+  N783(["call:goto_next_sibling"])
+  N782 --> N783
+  N784(["identifier"])
+  N783 -->|true| N784
+  N783 -->|false| N784
+  N785(["identifier"])
+  N784 -->|true| N785
+  N784 -->|false| N785
+  N786(["identifier"])
+  N785 -->|true| N786
+  N785 -->|false| N786
+  N787(["identifier"])
+  N786 -->|true| N787
+  N786 -->|false| N787
+  N788(["identifier"])
+  N787 -->|true| N788
+  N787 -->|false| N788
+  N789(["identifier"])
+  N788 -->|true| N789
+  N788 -->|false| N789
+  N789 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant is_function
+  participant is_struct
+  participant is_enum
+  participant is_impl
+  participant is_trait
+  participant is_module
+  participant is_use_statement
+  participant function_name
+  participant struct_name
+  participant enum_name
+  participant trait_name
+  participant module_name
+  participant find_functions
+  participant find_structs
+  participant public_functions_query
+  participant structs_query
+  participant impl_blocks_query
+  participant is_public_function
+  participant is_public_struct
+  participant extract_doc_comment
+  participant find_traits
+  participant find_impl_blocks
+  participant find_macros
+  participant find_lifetimes
+  participant find_associated_types
+  participant find_const_generics
+  participant test_rust_syntax_detection
+  is_function->>kind: call
+  is_function->>kind: call
+  is_function->>kind: call
+  is_function->>kind: call
+  is_function->>kind: call
+  is_function->>kind: call
+  is_function->>kind: call
+  is_function->>is_function: call
+  is_function->>map: call
+  is_function->>is_struct: call
+  is_function->>map: call
+  is_function->>is_enum: call
+  is_function->>map: call
+  is_function->>is_trait: call
+  is_function->>map: call
+  is_function->>is_module: call
+  is_function->>map: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>new: call
+  is_function->>new: call
+  is_function->>new: call
+  is_function->>collect: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>new: call
+  is_function->>find_nodes_by_kind: call
+  is_function->>unwrap: call
+  is_function->>unwrap: call
+  is_function->>root_node: call
+  is_function->>walk: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-is_function"><code>is_function</code> <small>function</small></li>
+<li id="symbol-is_struct"><code>is_struct</code> <small>function</small></li>
+<li id="symbol-is_enum"><code>is_enum</code> <small>function</small></li>
+<li id="symbol-is_impl"><code>is_impl</code> <small>function</small></li>
+<li id="symbol-is_trait"><code>is_trait</code> <small>function</small></li>
+<li id="symbol-is_module"><code>is_module</code> <small>function</small></li>
+<li id="symbol-is_use_statement"><code>is_use_statement</code> <small>function</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>function</small></li>
+<li id="symbol-struct_name"><code>struct_name</code> <small>function</small></li>
+<li id="symbol-enum_name"><code>enum_name</code> <small>function</small></li>
+<li id="symbol-trait_name"><code>trait_name</code> <small>function</small></li>
+<li id="symbol-module_name"><code>module_name</code> <small>function</small></li>
+<li id="symbol-find_functions"><code>find_functions</code> <small>function</small></li>
+<li id="symbol-find_structs"><code>find_structs</code> <small>function</small></li>
+<li id="symbol-public_functions_query"><code>public_functions_query</code> <small>function</small></li>
+<li id="symbol-structs_query"><code>structs_query</code> <small>function</small></li>
+<li id="symbol-impl_blocks_query"><code>impl_blocks_query</code> <small>function</small></li>
+<li id="symbol-is_public_function"><code>is_public_function</code> <small>function</small></li>
+<li id="symbol-is_public_struct"><code>is_public_struct</code> <small>function</small></li>
+<li id="symbol-extract_doc_comment"><code>extract_doc_comment</code> <small>function</small></li>
+<li id="symbol-find_traits"><code>find_traits</code> <small>function</small></li>
+<li id="symbol-find_impl_blocks"><code>find_impl_blocks</code> <small>function</small></li>
+<li id="symbol-find_macros"><code>find_macros</code> <small>function</small></li>
+<li id="symbol-find_lifetimes"><code>find_lifetimes</code> <small>function</small></li>
+<li id="symbol-find_associated_types"><code>find_associated_types</code> <small>function</small></li>
+<li id="symbol-find_const_generics"><code>find_const_generics</code> <small>function</small></li>
+<li id="symbol-test_rust_syntax_detection"><code>test_rust_syntax_detection</code> <small>function</small></li>
+<li id="symbol-rustsyntax"><code>RustSyntax</code> <small>struct</small></li>
+<li id="symbol-rustsyntax"><code>RustSyntax</code> <small>impl</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-structs"><code>structs</code> <small>variable</small></li>
+<li id="symbol-struct_nodes"><code>struct_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-doc_lines"><code>doc_lines</code> <small>variable</small></li>
+<li id="symbol-j"><code>j</code> <small>variable</small></li>
+<li id="symbol-prev_line"><code>prev_line</code> <small>variable</small></li>
+<li id="symbol-traits"><code>traits</code> <small>variable</small></li>
+<li id="symbol-trait_nodes"><code>trait_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-impl_blocks"><code>impl_blocks</code> <small>variable</small></li>
+<li id="symbol-impl_nodes"><code>impl_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-type_name"><code>type_name</code> <small>variable</small></li>
+<li id="symbol-trait_name"><code>trait_name</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-base_type"><code>base_type</code> <small>variable</small></li>
+<li id="symbol-base_trait"><code>base_trait</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-macros"><code>macros</code> <small>variable</small></li>
+<li id="symbol-macro_nodes"><code>macro_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-declarative_macro_nodes"><code>declarative_macro_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-after_macro_rules"><code>after_macro_rules</code> <small>variable</small></li>
+<li id="symbol-macro_name"><code>macro_name</code> <small>variable</small></li>
+<li id="symbol-lifetimes"><code>lifetimes</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-associated_types"><code>associated_types</code> <small>variable</small></li>
+<li id="symbol-trait_nodes"><code>trait_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-const_generics"><code>const_generics</code> <small>variable</small></li>
+<li id="symbol-struct_nodes"><code>struct_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-found_function"><code>found_function</code> <small>variable</small></li>
+<li id="symbol-found_struct"><code>found_struct</code> <small>variable</small></li>
+<li id="symbol-found_enum"><code>found_enum</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure/rate_limiter.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>infrastructure/rate_limiter.rs</h1></header>
+<main>
+<section class="article">
+<p>78 symbols, 471 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["default"])
+  F1 --> F2
+  F2(["new"])
+  F2 --> F3
+  F3(["add_service"])
+  F3 --> F4
+  F4(["wait_for_permit"])
+  F4 --> F5
+  F5(["check_permit"])
+  F5 --> F6
+  F6(["get_stats"])
+  F6 --> F7
+  F7(["get_services"])
+  F7 --> F8
+  F8(["new"])
+  F8 --> F9
+  F9(["wait_for_permit"])
+  F9 --> F10
+  F10(["check_permit"])
+  F10 --> F11
+  F11(["get_stats"])
+  F11 --> F12
+  F12(["reset_stats"])
+  F12 --> F13
+  F13(["service_name"])
+  F13 --> F14
+  F14(["record_success"])
+  F14 --> F15
+  F15(["record_failure"])
+  F15 --> F16
+  F16(["calculate_backoff_delay"])
+  F16 --> F17
+  F17(["wait_with_backoff"])
+  F17 --> F18
+  F18(["new"])
+  F18 --> F19
+  F19(["adjust_rate"])
+  F19 --> F20
+  F20(["get_current_rate"])
+  F20 --> F21
+  F21(["nvd_limiter"])
+  F21 --> F22
+  F22(["nvd_limiter_with_key"])
+  F22 --> F23
+  F23(["osv_limiter"])
+  F23 --> F24
+  F24(["github_limiter"])
+  F24 --> F25
+  F25(["github_limiter_with_token"])
+  F25 --> F26
+  F26(["create_default_multi_limiter"])
+  F26 --> F27
+  F27(["MultiServiceRateLimiter"])
+  F27 --> F28
+  F28(["ServiceRateLimiter"])
+  F28 --> F29
+  F29(["ServiceStats"])
+  F29 --> F30
+  F30(["RateLimitConfig"])
+  F30 --> F31
+  F31(["BackoffConfig"])
+  F31 --> F32
+  F32(["RateLimitStats"])
+  F32 --> F33
+  F33(["AdaptiveRateLimiter"])
+  F33 --> F34
+  F34(["RateLimiterFactory"])
+  F34 --> F35
+  F35(["RateLimitResult"])
+  F35 --> F36
+  F36(["ServiceStats"])
+  F36 --> F37
+  F37(["BackoffConfig"])
+  F37 --> F38
+  F38(["MultiServiceRateLimiter"])
+  F38 --> F39
+  F39(["ServiceRateLimiter"])
+  F39 --> F40
+  F40(["AdaptiveRateLimiter"])
+  F40 --> F41
+  F41(["RateLimiterFactory"])
+  F41 --> F42
+  F42(["service_limiter"])
+  F42 --> F43
+  F43(["limiters"])
+  F43 --> F44
+  F44(["limiters"])
+  F44 --> F45
+  F45(["limiters"])
+  F45 --> F46
+  F46(["limiters"])
+  F46 --> F47
+  F47(["limiters"])
+  F47 --> F48
+  F48(["requests_per_minute"])
+  F48 --> F49
+  F49(["quota"])
+  F49 --> F50
+  F50(["limiter"])
+  F50 --> F51
+  F51(["stats"])
+  F51 --> F52
+  F52(["retry_after"])
+  F52 --> F53
+  F53(["stats"])
+  F53 --> F54
+  F54(["elapsed"])
+  F54 --> F55
+  F55(["tokens_replenished"])
+  F55 --> F56
+  F56(["current_tokens"])
+  F56 --> F57
+  F57(["stats"])
+  F57 --> F58
+  F58(["stats"])
+  F58 --> F59
+  F59(["stats"])
+  F59 --> F60
+  F60(["stats"])
+  F60 --> F61
+  F61(["base_delay"])
+  F61 --> F62
+  F62(["multiplier"])
+  F62 --> F63
+  F63(["delay_ms"])
+  F63 --> F64
+  F64(["delay"])
+  F64 --> F65
+  F65(["jitter_factor"])
+  F65 --> F66
+  F66(["backoff_delay"])
+  F66 --> F67
+  F67(["config"])
+  F67 --> F68
+  F68(["base_limiter"])
+  F68 --> F69
+  F69(["current_rate"])
+  F69 --> F70
+  F70(["new_rate"])
+  F70 --> F71
+  F71(["new_rate"])
+  F71 --> F72
+  F72(["config"])
+  F72 --> F73
+  F73(["config"])
+  F73 --> F74
+  F74(["config"])
+  F74 --> F75
+  F75(["config"])
+  F75 --> F76
+  F76(["config"])
+  F76 --> F77
+  F77(["multi_limiter"])
+  F77 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant default
+  participant new
+  participant add_service
+  participant wait_for_permit
+  participant check_permit
+  participant get_stats
+  participant get_services
+  participant new
+  participant wait_for_permit
+  participant check_permit
+  participant get_stats
+  participant reset_stats
+  participant service_name
+  participant record_success
+  participant record_failure
+  participant calculate_backoff_delay
+  participant wait_with_backoff
+  participant new
+  participant adjust_rate
+  participant get_current_rate
+  participant nvd_limiter
+  participant nvd_limiter_with_key
+  participant osv_limiter
+  participant github_limiter
+  participant github_limiter_with_token
+  participant create_default_multi_limiter
+  default->>default: call
+  default->>new: call
+  new->>add_service: call
+  add_service->>wait_for_permit: call
+  wait_for_permit->>check_permit: call
+  check_permit->>get_stats: call
+  get_stats->>get_services: call
+  get_services->>new: call
+  new->>wait_for_permit: call
+  wait_for_permit->>check_permit: call
+  check_permit->>get_stats: call
+  get_stats->>reset_stats: call
+  reset_stats->>service_name: call
+  service_name->>record_success: call
+  record_success->>record_failure: call
+  record_failure->>calculate_backoff_delay: call
+  calculate_backoff_delay->>wait_with_backoff: call
+  wait_with_backoff->>new: call
+  new->>adjust_rate: call
+  adjust_rate->>get_current_rate: call
+  get_current_rate->>nvd_limiter: call
+  nvd_limiter->>nvd_limiter_with_key: call
+  nvd_limiter_with_key->>osv_limiter: call
+  osv_limiter->>github_limiter: call
+  github_limiter->>github_limiter_with_token: call
+  github_limiter_with_token->>create_default_multi_limiter: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-add_service"><code>add_service</code> <small>function</small></li>
+<li id="symbol-wait_for_permit"><code>wait_for_permit</code> <small>function</small></li>
+<li id="symbol-check_permit"><code>check_permit</code> <small>function</small></li>
+<li id="symbol-get_stats"><code>get_stats</code> <small>function</small></li>
+<li id="symbol-get_services"><code>get_services</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-wait_for_permit"><code>wait_for_permit</code> <small>function</small></li>
+<li id="symbol-check_permit"><code>check_permit</code> <small>function</small></li>
+<li id="symbol-get_stats"><code>get_stats</code> <small>function</small></li>
+<li id="symbol-reset_stats"><code>reset_stats</code> <small>function</small></li>
+<li id="symbol-service_name"><code>service_name</code> <small>function</small></li>
+<li id="symbol-record_success"><code>record_success</code> <small>function</small></li>
+<li id="symbol-record_failure"><code>record_failure</code> <small>function</small></li>
+<li id="symbol-calculate_backoff_delay"><code>calculate_backoff_delay</code> <small>function</small></li>
+<li id="symbol-wait_with_backoff"><code>wait_with_backoff</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-adjust_rate"><code>adjust_rate</code> <small>function</small></li>
+<li id="symbol-get_current_rate"><code>get_current_rate</code> <small>function</small></li>
+<li id="symbol-nvd_limiter"><code>nvd_limiter</code> <small>function</small></li>
+<li id="symbol-nvd_limiter_with_key"><code>nvd_limiter_with_key</code> <small>function</small></li>
+<li id="symbol-osv_limiter"><code>osv_limiter</code> <small>function</small></li>
+<li id="symbol-github_limiter"><code>github_limiter</code> <small>function</small></li>
+<li id="symbol-github_limiter_with_token"><code>github_limiter_with_token</code> <small>function</small></li>
+<li id="symbol-create_default_multi_limiter"><code>create_default_multi_limiter</code> <small>function</small></li>
+<li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>struct</small></li>
+<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>struct</small></li>
+<li id="symbol-servicestats"><code>ServiceStats</code> <small>struct</small></li>
+<li id="symbol-ratelimitconfig"><code>RateLimitConfig</code> <small>struct</small></li>
+<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>struct</small></li>
+<li id="symbol-ratelimitstats"><code>RateLimitStats</code> <small>struct</small></li>
+<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>struct</small></li>
+<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>struct</small></li>
+<li id="symbol-ratelimitresult"><code>RateLimitResult</code> <small>enum</small></li>
+<li id="symbol-servicestats"><code>ServiceStats</code> <small>impl</small></li>
+<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>impl</small></li>
+<li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>impl</small></li>
+<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>impl</small></li>
+<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>impl</small></li>
+<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>impl</small></li>
+<li id="symbol-service_limiter"><code>service_limiter</code> <small>variable</small></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
+<li id="symbol-requests_per_minute"><code>requests_per_minute</code> <small>variable</small></li>
+<li id="symbol-quota"><code>quota</code> <small>variable</small></li>
+<li id="symbol-limiter"><code>limiter</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-retry_after"><code>retry_after</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-elapsed"><code>elapsed</code> <small>variable</small></li>
+<li id="symbol-tokens_replenished"><code>tokens_replenished</code> <small>variable</small></li>
+<li id="symbol-current_tokens"><code>current_tokens</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-base_delay"><code>base_delay</code> <small>variable</small></li>
+<li id="symbol-multiplier"><code>multiplier</code> <small>variable</small></li>
+<li id="symbol-delay_ms"><code>delay_ms</code> <small>variable</small></li>
+<li id="symbol-delay"><code>delay</code> <small>variable</small></li>
+<li id="symbol-jitter_factor"><code>jitter_factor</code> <small>variable</small></li>
+<li id="symbol-backoff_delay"><code>backoff_delay</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-base_limiter"><code>base_limiter</code> <small>variable</small></li>
+<li id="symbol-current_rate"><code>current_rate</code> <small>variable</small></li>
+<li id="symbol-new_rate"><code>new_rate</code> <small>variable</small></li>
+<li id="symbol-new_rate"><code>new_rate</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-multi_limiter"><code>multi_limiter</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

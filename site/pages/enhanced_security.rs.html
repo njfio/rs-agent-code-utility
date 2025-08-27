@@ -1,0 +1,458 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>enhanced_security.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>enhanced_security.rs</h1></header>
+<main>
+<section class="article">
+<p>123 symbols, 981 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["with_config"])
+  F2 --> F3
+  F3(["analyze"])
+  F3 --> F4
+  F4(["scan_dependencies"])
+  F4 --> F5
+  F5(["scan_cargo_dependencies"])
+  F5 --> F6
+  F6(["scan_npm_dependencies"])
+  F6 --> F7
+  F7(["scan_python_dependencies"])
+  F7 --> F8
+  F8(["scan_go_dependencies"])
+  F8 --> F9
+  F9(["parse_and_analyze_owasp"])
+  F9 --> F10
+  F10(["detect_language"])
+  F10 --> F11
+  F11(["is_source_file"])
+  F11 --> F12
+  F12(["extract_package_name"])
+  F12 --> F13
+  F13(["extract_python_package_name"])
+  F13 --> F14
+  F14(["extract_go_package_name"])
+  F14 --> F15
+  F15(["calculate_metrics"])
+  F15 --> F16
+  F16(["assess_compliance"])
+  F16 --> F17
+  F17(["calculate_security_score"])
+  F17 --> F18
+  F18(["generate_remediation_roadmap"])
+  F18 --> F19
+  F19(["test_enhanced_security_config_default"])
+  F19 --> F20
+  F20(["test_security_metrics_creation"])
+  F20 --> F21
+  F21(["test_compliance_assessment_creation"])
+  F21 --> F22
+  F22(["test_remediation_action_creation"])
+  F22 --> F23
+  F23(["test_action_priority_ordering"])
+  F23 --> F24
+  F24(["test_remediation_roadmap_creation"])
+  F24 --> F25
+  F25(["test_enhanced_security_result_creation"])
+  F25 --> F26
+  F26(["test_package_name_extraction"])
+  F26 --> F27
+  F27(["test_language_detection"])
+  F27 --> F28
+  F28(["test_source_file_detection"])
+  F28 --> F29
+  F29(["EnhancedSecurityScanner"])
+  F29 --> F30
+  F30(["EnhancedSecurityConfig"])
+  F30 --> F31
+  F31(["EnhancedSecurityResult"])
+  F31 --> F32
+  F32(["SecurityMetrics"])
+  F32 --> F33
+  F33(["ComplianceAssessment"])
+  F33 --> F34
+  F34(["RemediationRoadmap"])
+  F34 --> F35
+  F35(["RemediationAction"])
+  F35 --> F36
+  F36(["EnhancedSecurityConfig"])
+  F36 --> F37
+  F37(["EnhancedSecurityScanner"])
+  F37 --> F38
+  F38(["vulnerability_db"])
+  F38 --> F39
+  F39(["secrets_detector"])
+  F39 --> F40
+  F40(["owasp_detector"])
+  F40 --> F41
+  F41(["scanner"])
+  F41 --> F42
+  F42(["vulnerability_findings"])
+  F42 --> F43
+  F43(["secret_findings"])
+  F43 --> F44
+  F44(["owasp_findings"])
+  F44 --> F45
+  F45(["full_path"])
+  F45 --> F46
+  F46(["content"])
+  F46 --> F47
+  F47(["filtered_findings"])
+  F47 --> F48
+  F48(["filtered_findings"])
+  F48 --> F49
+  F49(["metrics"])
+  F49 --> F50
+  F50(["compliance"])
+  F50 --> F51
+  F51(["remediation_roadmap"])
+  F51 --> F52
+  F52(["security_score"])
+  F52 --> F53
+  F53(["total_findings"])
+  F53 --> F54
+  F54(["vulnerabilities"])
+  F54 --> F55
+  F55(["file_name"])
+  F55 --> F56
+  F56(["path"])
+  F56 --> F57
+  F57(["path"])
+  F57 --> F58
+  F58(["path"])
+  F58 --> F59
+  F59(["path"])
+  F59 --> F60
+  F60(["content"])
+  F60 --> F61
+  F61(["vulnerabilities"])
+  F61 --> F62
+  F62(["content"])
+  F62 --> F63
+  F63(["vulnerabilities"])
+  F63 --> F64
+  F64(["content"])
+  F64 --> F65
+  F65(["vulnerabilities"])
+  F65 --> F66
+  F66(["content"])
+  F66 --> F67
+  F67(["vulnerabilities"])
+  F67 --> F68
+  F68(["parser"])
+  F68 --> F69
+  F69(["tree"])
+  F69 --> F70
+  F70(["package_name"])
+  F70 --> F71
+  F71(["line"])
+  F71 --> F72
+  F72(["package_name"])
+  F72 --> F73
+  F73(["parts"])
+  F73 --> F74
+  F74(["package_name"])
+  F74 --> F75
+  F75(["critical_count"])
+  F75 --> F76
+  F76(["high_count"])
+  F76 --> F77
+  F77(["medium_count"])
+  F77 --> F78
+  F78(["low_count"])
+  F78 --> F79
+  F79(["total_confidence"])
+  F79 --> F80
+  F80(["confidence_count"])
+  F80 --> F81
+  F81(["avg_confidence"])
+  F81 --> F82
+  F82(["total_findings"])
+  F82 --> F83
+  F83(["coverage_percentage"])
+  F83 --> F84
+  F84(["total_critical"])
+  F84 --> F85
+  F85(["total_high"])
+  F85 --> F86
+  F86(["owasp_compliance"])
+  F86 --> F87
+  F87(["cwe_compliance"])
+  F87 --> F88
+  F88(["secrets_compliance"])
+  F88 --> F89
+  F89(["overall_compliance"])
+  F89 --> F90
+  F90(["recommendations"])
+  F90 --> F91
+  F91(["score"])
+  F91 --> F92
+  F92(["compliance_factor"])
+  F92 --> F93
+  F93(["confidence_factor"])
+  F93 --> F94
+  F94(["immediate_actions"])
+  F94 --> F95
+  F95(["short_term_actions"])
+  F95 --> F96
+  F96(["long_term_actions"])
+  F96 --> F97
+  F97(["total_effort"])
+  F97 --> F98
+  F98(["effort"])
+  F98 --> F99
+  F99(["action"])
+  F99 --> F100
+  F100(["effort"])
+  F100 --> F101
+  F101(["action"])
+  F101 --> F102
+  F102(["effort"])
+  F102 --> F103
+  F103(["action"])
+  F103 --> F104
+  F104(["config"])
+  F104 --> F105
+  F105(["metrics"])
+  F105 --> F106
+  F106(["compliance"])
+  F106 --> F107
+  F107(["action"])
+  F107 --> F108
+  F108(["roadmap"])
+  F108 --> F109
+  F109(["result"])
+  F109 --> F110
+  F110(["cargo_line"])
+  F110 --> F111
+  F111(["python_line"])
+  F111 --> F112
+  F112(["package_name"])
+  F112 --> F113
+  F113(["go_line"])
+  F113 --> F114
+  F114(["parts"])
+  F114 --> F115
+  F115(["rust_path"])
+  F115 --> F116
+  F116(["js_path"])
+  F116 --> F117
+  F117(["py_path"])
+  F117 --> F118
+  F118(["go_path"])
+  F118 --> F119
+  F119(["source_extensions"])
+  F119 --> F120
+  F120(["non_source_extensions"])
+  F120 --> F121
+  F121(["path"])
+  F121 --> F122
+  F122(["path"])
+  F122 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant with_config
+  participant analyze
+  participant scan_dependencies
+  participant scan_cargo_dependencies
+  participant scan_npm_dependencies
+  participant scan_python_dependencies
+  participant scan_go_dependencies
+  participant parse_and_analyze_owasp
+  participant detect_language
+  participant is_source_file
+  participant extract_package_name
+  participant extract_python_package_name
+  participant extract_go_package_name
+  participant calculate_metrics
+  participant assess_compliance
+  participant calculate_security_score
+  participant generate_remediation_roadmap
+  participant test_enhanced_security_config_default
+  participant test_security_metrics_creation
+  participant test_compliance_assessment_creation
+  participant test_remediation_action_creation
+  participant test_action_priority_ordering
+  participant test_remediation_roadmap_creation
+  participant test_enhanced_security_result_creation
+  participant test_package_name_extraction
+  participant test_language_detection
+  participant test_source_file_detection
+  default->>new: call
+  new->>with_config: call
+  with_config->>analyze: call
+  analyze->>scan_dependencies: call
+  scan_dependencies->>scan_cargo_dependencies: call
+  scan_cargo_dependencies->>scan_npm_dependencies: call
+  scan_npm_dependencies->>scan_python_dependencies: call
+  scan_python_dependencies->>scan_go_dependencies: call
+  scan_go_dependencies->>parse_and_analyze_owasp: call
+  parse_and_analyze_owasp->>detect_language: call
+  detect_language->>is_source_file: call
+  is_source_file->>extract_package_name: call
+  extract_package_name->>extract_python_package_name: call
+  extract_python_package_name->>extract_go_package_name: call
+  extract_go_package_name->>calculate_metrics: call
+  calculate_metrics->>assess_compliance: call
+  assess_compliance->>calculate_security_score: call
+  calculate_security_score->>generate_remediation_roadmap: call
+  generate_remediation_roadmap->>test_enhanced_security_config_default: call
+  test_enhanced_security_config_default->>test_security_metrics_creation: call
+  test_security_metrics_creation->>test_compliance_assessment_creation: call
+  test_compliance_assessment_creation->>test_remediation_action_creation: call
+  test_remediation_action_creation->>test_action_priority_ordering: call
+  test_action_priority_ordering->>test_remediation_roadmap_creation: call
+  test_remediation_roadmap_creation->>test_enhanced_security_result_creation: call
+  test_enhanced_security_result_creation->>test_package_name_extraction: call
+  test_package_name_extraction->>test_language_detection: call
+  test_language_detection->>test_source_file_detection: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-scan_dependencies"><code>scan_dependencies</code> <small>function</small></li>
+<li id="symbol-scan_cargo_dependencies"><code>scan_cargo_dependencies</code> <small>function</small></li>
+<li id="symbol-scan_npm_dependencies"><code>scan_npm_dependencies</code> <small>function</small></li>
+<li id="symbol-scan_python_dependencies"><code>scan_python_dependencies</code> <small>function</small></li>
+<li id="symbol-scan_go_dependencies"><code>scan_go_dependencies</code> <small>function</small></li>
+<li id="symbol-parse_and_analyze_owasp"><code>parse_and_analyze_owasp</code> <small>function</small></li>
+<li id="symbol-detect_language"><code>detect_language</code> <small>function</small></li>
+<li id="symbol-is_source_file"><code>is_source_file</code> <small>function</small></li>
+<li id="symbol-extract_package_name"><code>extract_package_name</code> <small>function</small></li>
+<li id="symbol-extract_python_package_name"><code>extract_python_package_name</code> <small>function</small></li>
+<li id="symbol-extract_go_package_name"><code>extract_go_package_name</code> <small>function</small></li>
+<li id="symbol-calculate_metrics"><code>calculate_metrics</code> <small>function</small></li>
+<li id="symbol-assess_compliance"><code>assess_compliance</code> <small>function</small></li>
+<li id="symbol-calculate_security_score"><code>calculate_security_score</code> <small>function</small></li>
+<li id="symbol-generate_remediation_roadmap"><code>generate_remediation_roadmap</code> <small>function</small></li>
+<li id="symbol-test_enhanced_security_config_default"><code>test_enhanced_security_config_default</code> <small>function</small></li>
+<li id="symbol-test_security_metrics_creation"><code>test_security_metrics_creation</code> <small>function</small></li>
+<li id="symbol-test_compliance_assessment_creation"><code>test_compliance_assessment_creation</code> <small>function</small></li>
+<li id="symbol-test_remediation_action_creation"><code>test_remediation_action_creation</code> <small>function</small></li>
+<li id="symbol-test_action_priority_ordering"><code>test_action_priority_ordering</code> <small>function</small></li>
+<li id="symbol-test_remediation_roadmap_creation"><code>test_remediation_roadmap_creation</code> <small>function</small></li>
+<li id="symbol-test_enhanced_security_result_creation"><code>test_enhanced_security_result_creation</code> <small>function</small></li>
+<li id="symbol-test_package_name_extraction"><code>test_package_name_extraction</code> <small>function</small></li>
+<li id="symbol-test_language_detection"><code>test_language_detection</code> <small>function</small></li>
+<li id="symbol-test_source_file_detection"><code>test_source_file_detection</code> <small>function</small></li>
+<li id="symbol-enhancedsecurityscanner"><code>EnhancedSecurityScanner</code> <small>struct</small></li>
+<li id="symbol-enhancedsecurityconfig"><code>EnhancedSecurityConfig</code> <small>struct</small></li>
+<li id="symbol-enhancedsecurityresult"><code>EnhancedSecurityResult</code> <small>struct</small></li>
+<li id="symbol-securitymetrics"><code>SecurityMetrics</code> <small>struct</small></li>
+<li id="symbol-complianceassessment"><code>ComplianceAssessment</code> <small>struct</small></li>
+<li id="symbol-remediationroadmap"><code>RemediationRoadmap</code> <small>struct</small></li>
+<li id="symbol-remediationaction"><code>RemediationAction</code> <small>struct</small></li>
+<li id="symbol-enhancedsecurityconfig"><code>EnhancedSecurityConfig</code> <small>impl</small></li>
+<li id="symbol-enhancedsecurityscanner"><code>EnhancedSecurityScanner</code> <small>impl</small></li>
+<li id="symbol-vulnerability_db"><code>vulnerability_db</code> <small>variable</small></li>
+<li id="symbol-secrets_detector"><code>secrets_detector</code> <small>variable</small></li>
+<li id="symbol-owasp_detector"><code>owasp_detector</code> <small>variable</small></li>
+<li id="symbol-scanner"><code>scanner</code> <small>variable</small></li>
+<li id="symbol-vulnerability_findings"><code>vulnerability_findings</code> <small>variable</small></li>
+<li id="symbol-secret_findings"><code>secret_findings</code> <small>variable</small></li>
+<li id="symbol-owasp_findings"><code>owasp_findings</code> <small>variable</small></li>
+<li id="symbol-full_path"><code>full_path</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-filtered_findings"><code>filtered_findings</code> <small>variable</small></li>
+<li id="symbol-filtered_findings"><code>filtered_findings</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-compliance"><code>compliance</code> <small>variable</small></li>
+<li id="symbol-remediation_roadmap"><code>remediation_roadmap</code> <small>variable</small></li>
+<li id="symbol-security_score"><code>security_score</code> <small>variable</small></li>
+<li id="symbol-total_findings"><code>total_findings</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-package_name"><code>package_name</code> <small>variable</small></li>
+<li id="symbol-line"><code>line</code> <small>variable</small></li>
+<li id="symbol-package_name"><code>package_name</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-package_name"><code>package_name</code> <small>variable</small></li>
+<li id="symbol-critical_count"><code>critical_count</code> <small>variable</small></li>
+<li id="symbol-high_count"><code>high_count</code> <small>variable</small></li>
+<li id="symbol-medium_count"><code>medium_count</code> <small>variable</small></li>
+<li id="symbol-low_count"><code>low_count</code> <small>variable</small></li>
+<li id="symbol-total_confidence"><code>total_confidence</code> <small>variable</small></li>
+<li id="symbol-confidence_count"><code>confidence_count</code> <small>variable</small></li>
+<li id="symbol-avg_confidence"><code>avg_confidence</code> <small>variable</small></li>
+<li id="symbol-total_findings"><code>total_findings</code> <small>variable</small></li>
+<li id="symbol-coverage_percentage"><code>coverage_percentage</code> <small>variable</small></li>
+<li id="symbol-total_critical"><code>total_critical</code> <small>variable</small></li>
+<li id="symbol-total_high"><code>total_high</code> <small>variable</small></li>
+<li id="symbol-owasp_compliance"><code>owasp_compliance</code> <small>variable</small></li>
+<li id="symbol-cwe_compliance"><code>cwe_compliance</code> <small>variable</small></li>
+<li id="symbol-secrets_compliance"><code>secrets_compliance</code> <small>variable</small></li>
+<li id="symbol-overall_compliance"><code>overall_compliance</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-score"><code>score</code> <small>variable</small></li>
+<li id="symbol-compliance_factor"><code>compliance_factor</code> <small>variable</small></li>
+<li id="symbol-confidence_factor"><code>confidence_factor</code> <small>variable</small></li>
+<li id="symbol-immediate_actions"><code>immediate_actions</code> <small>variable</small></li>
+<li id="symbol-short_term_actions"><code>short_term_actions</code> <small>variable</small></li>
+<li id="symbol-long_term_actions"><code>long_term_actions</code> <small>variable</small></li>
+<li id="symbol-total_effort"><code>total_effort</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-action"><code>action</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-action"><code>action</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-action"><code>action</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-compliance"><code>compliance</code> <small>variable</small></li>
+<li id="symbol-action"><code>action</code> <small>variable</small></li>
+<li id="symbol-roadmap"><code>roadmap</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-cargo_line"><code>cargo_line</code> <small>variable</small></li>
+<li id="symbol-python_line"><code>python_line</code> <small>variable</small></li>
+<li id="symbol-package_name"><code>package_name</code> <small>variable</small></li>
+<li id="symbol-go_line"><code>go_line</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-rust_path"><code>rust_path</code> <small>variable</small></li>
+<li id="symbol-js_path"><code>js_path</code> <small>variable</small></li>
+<li id="symbol-py_path"><code>py_path</code> <small>variable</small></li>
+<li id="symbol-go_path"><code>go_path</code> <small>variable</small></li>
+<li id="symbol-source_extensions"><code>source_extensions</code> <small>variable</small></li>
+<li id="symbol-non_source_extensions"><code>non_source_extensions</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

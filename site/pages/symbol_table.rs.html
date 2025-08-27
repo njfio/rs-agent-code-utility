@@ -1,0 +1,480 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>symbol_table.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>symbol_table.rs</h1></header>
+<main>
+<section class="article">
+<p>119 symbols, 1147 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["analyze"])
+  F1 --> F2
+  F2(["reset"])
+  F2 --> F3
+  F3(["build_symbol_table"])
+  F3 --> F4
+  F4(["creates_scope"])
+  F4 --> F5
+  F5(["enter_scope"])
+  F5 --> F6
+  F6(["exit_scope"])
+  F6 --> F7
+  F7(["determine_scope_type"])
+  F7 --> F8
+  F8(["extract_scope_name"])
+  F8 --> F9
+  F9(["extract_symbol_definition"])
+  F9 --> F10
+  F10(["extract_rust_symbol_definition"])
+  F10 --> F11
+  F11(["add_symbol"])
+  F11 --> F12
+  F12(["resolve_references"])
+  F12 --> F13
+  F13(["is_symbol_reference"])
+  F13 --> F14
+  F14(["extract_symbol_reference"])
+  F14 --> F15
+  F15(["resolve_symbol"])
+  F15 --> F16
+  F16(["determine_reference_type"])
+  F16 --> F17
+  F17(["is_rust_item_public"])
+  F17 --> F18
+  F18(["is_rust_let_mutable"])
+  F18 --> F19
+  F19(["extract_rust_function_type"])
+  F19 --> F20
+  F20(["extract_rust_variable_type"])
+  F20 --> F21
+  F21(["extract_rust_parameter_type"])
+  F21 --> F22
+  F22(["extract_rust_initial_value"])
+  F22 --> F23
+  F23(["extract_js_symbol_definition"])
+  F23 --> F24
+  F24(["extract_python_symbol_definition"])
+  F24 --> F25
+  F25(["extract_c_symbol_definition"])
+  F25 --> F26
+  F26(["extract_go_symbol_definition"])
+  F26 --> F27
+  F27(["find_unresolved_references"])
+  F27 --> F28
+  F28(["find_shadowing_warnings"])
+  F28 --> F29
+  F29(["find_unused_symbols"])
+  F29 --> F30
+  F30(["calculate_statistics"])
+  F30 --> F31
+  F31(["get_symbol"])
+  F31 --> F32
+  F32(["get_scope"])
+  F32 --> F33
+  F33(["get_symbols_in_scope"])
+  F33 --> F34
+  F34(["get_symbol_references"])
+  F34 --> F35
+  F35(["is_symbol_accessible"])
+  F35 --> F36
+  F36(["get_scope_chain"])
+  F36 --> F37
+  F37(["test_symbol_table_analyzer_creation"])
+  F37 --> F38
+  F38(["test_scope_creation_and_hierarchy"])
+  F38 --> F39
+  F39(["test_symbol_definition_creation"])
+  F39 --> F40
+  F40(["test_symbol_reference_creation"])
+  F40 --> F41
+  F41(["test_scope_type_variants"])
+  F41 --> F42
+  F42(["test_symbol_type_variants"])
+  F42 --> F43
+  F43(["test_reference_type_variants"])
+  F43 --> F44
+  F44(["test_symbol_table_basic_operations"])
+  F44 --> F45
+  F45(["test_scope_chain_calculation"])
+  F45 --> F46
+  F46(["SymbolTableAnalyzer"])
+  F46 --> F47
+  F47(["SymbolTable"])
+  F47 --> F48
+  F48(["Scope"])
+  F48 --> F49
+  F49(["SymbolDefinition"])
+  F49 --> F50
+  F50(["SymbolReference"])
+  F50 --> F51
+  F51(["SymbolResolution"])
+  F51 --> F52
+  F52(["SymbolAnalysisResult"])
+  F52 --> F53
+  F53(["UnresolvedReference"])
+  F53 --> F54
+  F54(["ShadowingWarning"])
+  F54 --> F55
+  F55(["SymbolStatistics"])
+  F55 --> F56
+  F56(["ScopeType"])
+  F56 --> F57
+  F57(["SymbolType"])
+  F57 --> F58
+  F58(["ReferenceType"])
+  F58 --> F59
+  F59(["SymbolTableAnalyzer"])
+  F59 --> F60
+  F60(["SymbolTable"])
+  F60 --> F61
+  F61(["symbol_table"])
+  F61 --> F62
+  F62(["root_scope"])
+  F62 --> F63
+  F63(["unresolved_references"])
+  F63 --> F64
+  F64(["shadowing_warnings"])
+  F64 --> F65
+  F65(["unused_symbols"])
+  F65 --> F66
+  F66(["statistics"])
+  F66 --> F67
+  F67(["root_scope"])
+  F67 --> F68
+  F68(["cursor"])
+  F68 --> F69
+  F69(["node_kind"])
+  F69 --> F70
+  F70(["scope_type"])
+  F70 --> F71
+  F71(["scope_name"])
+  F71 --> F72
+  F72(["current_scope_id"])
+  F72 --> F73
+  F73(["new_scope_id"])
+  F73 --> F74
+  F74(["new_scope"])
+  F74 --> F75
+  F75(["node_kind"])
+  F75 --> F76
+  F76(["_node_kind"])
+  F76 --> F77
+  F77(["node_kind"])
+  F77 --> F78
+  F78(["current_scope"])
+  F78 --> F79
+  F79(["is_public"])
+  F79 --> F80
+  F80(["is_mutable"])
+  F80 --> F81
+  F81(["data_type"])
+  F81 --> F82
+  F82(["initial_value"])
+  F82 --> F83
+  F83(["data_type"])
+  F83 --> F84
+  F84(["is_public"])
+  F84 --> F85
+  F85(["symbol_id"])
+  F85 --> F86
+  F86(["scope_id"])
+  F86 --> F87
+  F87(["symbol_name"])
+  F87 --> F88
+  F88(["cursor"])
+  F88 --> F89
+  F89(["node_kind"])
+  F89 --> F90
+  F90(["current_scope"])
+  F90 --> F91
+  F91(["reference_type"])
+  F91 --> F92
+  F92(["current_scope_id"])
+  F92 --> F93
+  F93(["distance"])
+  F93 --> F94
+  F94(["parent_kind"])
+  F94 --> F95
+  F95(["cursor"])
+  F95 --> F96
+  F96(["cursor"])
+  F96 --> F97
+  F97(["warnings"])
+  F97 --> F98
+  F98(["used_symbols"])
+  F98 --> F99
+  F99(["unused"])
+  F99 --> F100
+  F100(["symbols_by_type"])
+  F100 --> F101
+  F101(["scopes_by_type"])
+  F101 --> F102
+  F102(["current_scope"])
+  F102 --> F103
+  F103(["chain"])
+  F103 --> F104
+  F104(["current_scope"])
+  F104 --> F105
+  F105(["analyzer"])
+  F105 --> F106
+  F106(["analyzer"])
+  F106 --> F107
+  F107(["symbol_def"])
+  F107 --> F108
+  F108(["reference"])
+  F108 --> F109
+  F109(["scope_types"])
+  F109 --> F110
+  F110(["symbol_types"])
+  F110 --> F111
+  F111(["reference_types"])
+  F111 --> F112
+  F112(["symbol_table"])
+  F112 --> F113
+  F113(["root_scope"])
+  F113 --> F114
+  F114(["symbol_table"])
+  F114 --> F115
+  F115(["root_scope"])
+  F115 --> F116
+  F116(["function_scope"])
+  F116 --> F117
+  F117(["block_scope"])
+  F117 --> F118
+  F118(["chain"])
+  F118 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant analyze
+  participant reset
+  participant build_symbol_table
+  participant creates_scope
+  participant enter_scope
+  participant exit_scope
+  participant determine_scope_type
+  participant extract_scope_name
+  participant extract_symbol_definition
+  participant extract_rust_symbol_definition
+  participant add_symbol
+  participant resolve_references
+  participant is_symbol_reference
+  participant extract_symbol_reference
+  participant resolve_symbol
+  participant determine_reference_type
+  participant is_rust_item_public
+  participant is_rust_let_mutable
+  participant extract_rust_function_type
+  participant extract_rust_variable_type
+  participant extract_rust_parameter_type
+  participant extract_rust_initial_value
+  participant extract_js_symbol_definition
+  participant extract_python_symbol_definition
+  participant extract_c_symbol_definition
+  participant extract_go_symbol_definition
+  participant find_unresolved_references
+  participant find_shadowing_warnings
+  participant find_unused_symbols
+  participant calculate_statistics
+  participant get_symbol
+  participant get_scope
+  participant get_symbols_in_scope
+  participant get_symbol_references
+  participant is_symbol_accessible
+  participant get_scope_chain
+  participant test_symbol_table_analyzer_creation
+  participant test_scope_creation_and_hierarchy
+  participant test_symbol_definition_creation
+  participant test_symbol_reference_creation
+  participant test_scope_type_variants
+  participant test_symbol_type_variants
+  participant test_reference_type_variants
+  participant test_symbol_table_basic_operations
+  participant test_scope_chain_calculation
+  new->>analyze: call
+  analyze->>reset: call
+  reset->>build_symbol_table: call
+  build_symbol_table->>creates_scope: call
+  creates_scope->>enter_scope: call
+  enter_scope->>exit_scope: call
+  exit_scope->>determine_scope_type: call
+  determine_scope_type->>extract_scope_name: call
+  extract_scope_name->>extract_symbol_definition: call
+  extract_symbol_definition->>extract_rust_symbol_definition: call
+  extract_rust_symbol_definition->>add_symbol: call
+  add_symbol->>resolve_references: call
+  resolve_references->>is_symbol_reference: call
+  is_symbol_reference->>extract_symbol_reference: call
+  extract_symbol_reference->>resolve_symbol: call
+  resolve_symbol->>determine_reference_type: call
+  determine_reference_type->>is_rust_item_public: call
+  is_rust_item_public->>is_rust_let_mutable: call
+  is_rust_let_mutable->>extract_rust_function_type: call
+  extract_rust_function_type->>extract_rust_variable_type: call
+  extract_rust_variable_type->>extract_rust_parameter_type: call
+  extract_rust_parameter_type->>extract_rust_initial_value: call
+  extract_rust_initial_value->>extract_js_symbol_definition: call
+  extract_js_symbol_definition->>extract_python_symbol_definition: call
+  extract_python_symbol_definition->>extract_c_symbol_definition: call
+  extract_c_symbol_definition->>extract_go_symbol_definition: call
+  extract_go_symbol_definition->>find_unresolved_references: call
+  find_unresolved_references->>find_shadowing_warnings: call
+  find_shadowing_warnings->>find_unused_symbols: call
+  find_unused_symbols->>calculate_statistics: call
+  calculate_statistics->>get_symbol: call
+  get_symbol->>get_scope: call
+  get_scope->>get_symbols_in_scope: call
+  get_symbols_in_scope->>get_symbol_references: call
+  get_symbol_references->>is_symbol_accessible: call
+  is_symbol_accessible->>get_scope_chain: call
+  get_scope_chain->>test_symbol_table_analyzer_creation: call
+  test_symbol_table_analyzer_creation->>test_scope_creation_and_hierarchy: call
+  test_scope_creation_and_hierarchy->>test_symbol_definition_creation: call
+  test_symbol_definition_creation->>test_symbol_reference_creation: call
+  test_symbol_reference_creation->>test_scope_type_variants: call
+  test_scope_type_variants->>test_symbol_type_variants: call
+  test_symbol_type_variants->>test_reference_type_variants: call
+  test_reference_type_variants->>test_symbol_table_basic_operations: call
+  test_symbol_table_basic_operations->>test_scope_chain_calculation: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-reset"><code>reset</code> <small>function</small></li>
+<li id="symbol-build_symbol_table"><code>build_symbol_table</code> <small>function</small></li>
+<li id="symbol-creates_scope"><code>creates_scope</code> <small>function</small></li>
+<li id="symbol-enter_scope"><code>enter_scope</code> <small>function</small></li>
+<li id="symbol-exit_scope"><code>exit_scope</code> <small>function</small></li>
+<li id="symbol-determine_scope_type"><code>determine_scope_type</code> <small>function</small></li>
+<li id="symbol-extract_scope_name"><code>extract_scope_name</code> <small>function</small></li>
+<li id="symbol-extract_symbol_definition"><code>extract_symbol_definition</code> <small>function</small></li>
+<li id="symbol-extract_rust_symbol_definition"><code>extract_rust_symbol_definition</code> <small>function</small></li>
+<li id="symbol-add_symbol"><code>add_symbol</code> <small>function</small></li>
+<li id="symbol-resolve_references"><code>resolve_references</code> <small>function</small></li>
+<li id="symbol-is_symbol_reference"><code>is_symbol_reference</code> <small>function</small></li>
+<li id="symbol-extract_symbol_reference"><code>extract_symbol_reference</code> <small>function</small></li>
+<li id="symbol-resolve_symbol"><code>resolve_symbol</code> <small>function</small></li>
+<li id="symbol-determine_reference_type"><code>determine_reference_type</code> <small>function</small></li>
+<li id="symbol-is_rust_item_public"><code>is_rust_item_public</code> <small>function</small></li>
+<li id="symbol-is_rust_let_mutable"><code>is_rust_let_mutable</code> <small>function</small></li>
+<li id="symbol-extract_rust_function_type"><code>extract_rust_function_type</code> <small>function</small></li>
+<li id="symbol-extract_rust_variable_type"><code>extract_rust_variable_type</code> <small>function</small></li>
+<li id="symbol-extract_rust_parameter_type"><code>extract_rust_parameter_type</code> <small>function</small></li>
+<li id="symbol-extract_rust_initial_value"><code>extract_rust_initial_value</code> <small>function</small></li>
+<li id="symbol-extract_js_symbol_definition"><code>extract_js_symbol_definition</code> <small>function</small></li>
+<li id="symbol-extract_python_symbol_definition"><code>extract_python_symbol_definition</code> <small>function</small></li>
+<li id="symbol-extract_c_symbol_definition"><code>extract_c_symbol_definition</code> <small>function</small></li>
+<li id="symbol-extract_go_symbol_definition"><code>extract_go_symbol_definition</code> <small>function</small></li>
+<li id="symbol-find_unresolved_references"><code>find_unresolved_references</code> <small>function</small></li>
+<li id="symbol-find_shadowing_warnings"><code>find_shadowing_warnings</code> <small>function</small></li>
+<li id="symbol-find_unused_symbols"><code>find_unused_symbols</code> <small>function</small></li>
+<li id="symbol-calculate_statistics"><code>calculate_statistics</code> <small>function</small></li>
+<li id="symbol-get_symbol"><code>get_symbol</code> <small>function</small></li>
+<li id="symbol-get_scope"><code>get_scope</code> <small>function</small></li>
+<li id="symbol-get_symbols_in_scope"><code>get_symbols_in_scope</code> <small>function</small></li>
+<li id="symbol-get_symbol_references"><code>get_symbol_references</code> <small>function</small></li>
+<li id="symbol-is_symbol_accessible"><code>is_symbol_accessible</code> <small>function</small></li>
+<li id="symbol-get_scope_chain"><code>get_scope_chain</code> <small>function</small></li>
+<li id="symbol-test_symbol_table_analyzer_creation"><code>test_symbol_table_analyzer_creation</code> <small>function</small></li>
+<li id="symbol-test_scope_creation_and_hierarchy"><code>test_scope_creation_and_hierarchy</code> <small>function</small></li>
+<li id="symbol-test_symbol_definition_creation"><code>test_symbol_definition_creation</code> <small>function</small></li>
+<li id="symbol-test_symbol_reference_creation"><code>test_symbol_reference_creation</code> <small>function</small></li>
+<li id="symbol-test_scope_type_variants"><code>test_scope_type_variants</code> <small>function</small></li>
+<li id="symbol-test_symbol_type_variants"><code>test_symbol_type_variants</code> <small>function</small></li>
+<li id="symbol-test_reference_type_variants"><code>test_reference_type_variants</code> <small>function</small></li>
+<li id="symbol-test_symbol_table_basic_operations"><code>test_symbol_table_basic_operations</code> <small>function</small></li>
+<li id="symbol-test_scope_chain_calculation"><code>test_scope_chain_calculation</code> <small>function</small></li>
+<li id="symbol-symboltableanalyzer"><code>SymbolTableAnalyzer</code> <small>struct</small></li>
+<li id="symbol-symboltable"><code>SymbolTable</code> <small>struct</small></li>
+<li id="symbol-scope"><code>Scope</code> <small>struct</small></li>
+<li id="symbol-symboldefinition"><code>SymbolDefinition</code> <small>struct</small></li>
+<li id="symbol-symbolreference"><code>SymbolReference</code> <small>struct</small></li>
+<li id="symbol-symbolresolution"><code>SymbolResolution</code> <small>struct</small></li>
+<li id="symbol-symbolanalysisresult"><code>SymbolAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-unresolvedreference"><code>UnresolvedReference</code> <small>struct</small></li>
+<li id="symbol-shadowingwarning"><code>ShadowingWarning</code> <small>struct</small></li>
+<li id="symbol-symbolstatistics"><code>SymbolStatistics</code> <small>struct</small></li>
+<li id="symbol-scopetype"><code>ScopeType</code> <small>enum</small></li>
+<li id="symbol-symboltype"><code>SymbolType</code> <small>enum</small></li>
+<li id="symbol-referencetype"><code>ReferenceType</code> <small>enum</small></li>
+<li id="symbol-symboltableanalyzer"><code>SymbolTableAnalyzer</code> <small>impl</small></li>
+<li id="symbol-symboltable"><code>SymbolTable</code> <small>impl</small></li>
+<li id="symbol-symbol_table"><code>symbol_table</code> <small>variable</small></li>
+<li id="symbol-root_scope"><code>root_scope</code> <small>variable</small></li>
+<li id="symbol-unresolved_references"><code>unresolved_references</code> <small>variable</small></li>
+<li id="symbol-shadowing_warnings"><code>shadowing_warnings</code> <small>variable</small></li>
+<li id="symbol-unused_symbols"><code>unused_symbols</code> <small>variable</small></li>
+<li id="symbol-statistics"><code>statistics</code> <small>variable</small></li>
+<li id="symbol-root_scope"><code>root_scope</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-scope_type"><code>scope_type</code> <small>variable</small></li>
+<li id="symbol-scope_name"><code>scope_name</code> <small>variable</small></li>
+<li id="symbol-current_scope_id"><code>current_scope_id</code> <small>variable</small></li>
+<li id="symbol-new_scope_id"><code>new_scope_id</code> <small>variable</small></li>
+<li id="symbol-new_scope"><code>new_scope</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-_node_kind"><code>_node_kind</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-current_scope"><code>current_scope</code> <small>variable</small></li>
+<li id="symbol-is_public"><code>is_public</code> <small>variable</small></li>
+<li id="symbol-is_mutable"><code>is_mutable</code> <small>variable</small></li>
+<li id="symbol-data_type"><code>data_type</code> <small>variable</small></li>
+<li id="symbol-initial_value"><code>initial_value</code> <small>variable</small></li>
+<li id="symbol-data_type"><code>data_type</code> <small>variable</small></li>
+<li id="symbol-is_public"><code>is_public</code> <small>variable</small></li>
+<li id="symbol-symbol_id"><code>symbol_id</code> <small>variable</small></li>
+<li id="symbol-scope_id"><code>scope_id</code> <small>variable</small></li>
+<li id="symbol-symbol_name"><code>symbol_name</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-current_scope"><code>current_scope</code> <small>variable</small></li>
+<li id="symbol-reference_type"><code>reference_type</code> <small>variable</small></li>
+<li id="symbol-current_scope_id"><code>current_scope_id</code> <small>variable</small></li>
+<li id="symbol-distance"><code>distance</code> <small>variable</small></li>
+<li id="symbol-parent_kind"><code>parent_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-warnings"><code>warnings</code> <small>variable</small></li>
+<li id="symbol-used_symbols"><code>used_symbols</code> <small>variable</small></li>
+<li id="symbol-unused"><code>unused</code> <small>variable</small></li>
+<li id="symbol-symbols_by_type"><code>symbols_by_type</code> <small>variable</small></li>
+<li id="symbol-scopes_by_type"><code>scopes_by_type</code> <small>variable</small></li>
+<li id="symbol-current_scope"><code>current_scope</code> <small>variable</small></li>
+<li id="symbol-chain"><code>chain</code> <small>variable</small></li>
+<li id="symbol-current_scope"><code>current_scope</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-symbol_def"><code>symbol_def</code> <small>variable</small></li>
+<li id="symbol-reference"><code>reference</code> <small>variable</small></li>
+<li id="symbol-scope_types"><code>scope_types</code> <small>variable</small></li>
+<li id="symbol-symbol_types"><code>symbol_types</code> <small>variable</small></li>
+<li id="symbol-reference_types"><code>reference_types</code> <small>variable</small></li>
+<li id="symbol-symbol_table"><code>symbol_table</code> <small>variable</small></li>
+<li id="symbol-root_scope"><code>root_scope</code> <small>variable</small></li>
+<li id="symbol-symbol_table"><code>symbol_table</code> <small>variable</small></li>
+<li id="symbol-root_scope"><code>root_scope</code> <small>variable</small></li>
+<li id="symbol-function_scope"><code>function_scope</code> <small>variable</small></li>
+<li id="symbol-block_scope"><code>block_scope</code> <small>variable</small></li>
+<li id="symbol-chain"><code>chain</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai/providers/openai.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>ai/providers/openai.rs</h1></header>
+<main>
+<section class="article">
+<p>33 symbols, 330 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["create_system_prompt"])
+  F1 --> F2
+  F2(["make_request"])
+  F2 --> F3
+  F3(["make_request"])
+  F3 --> F4
+  F4(["provider"])
+  F4 --> F5
+  F5(["capabilities"])
+  F5 --> F6
+  F6(["validate_connection"])
+  F6 --> F7
+  F7(["process_request"])
+  F7 --> F8
+  F8(["best_model_for_feature"])
+  F8 --> F9
+  F9(["rate_limit_info"])
+  F9 --> F10
+  F10(["OpenAIProvider"])
+  F10 --> F11
+  F11(["OpenAIRequest"])
+  F11 --> F12
+  F12(["OpenAIMessage"])
+  F12 --> F13
+  F13(["OpenAIResponse"])
+  F13 --> F14
+  F14(["OpenAIChoice"])
+  F14 --> F15
+  F15(["OpenAIUsage"])
+  F15 --> F16
+  F16(["OpenAIProvider"])
+  F16 --> F17
+  F17(["OpenAIProvider"])
+  F17 --> F18
+  F18(["api_key"])
+  F18 --> F19
+  F19(["base_url"])
+  F19 --> F20
+  F20(["client"])
+  F20 --> F21
+  F21(["client"])
+  F21 --> F22
+  F22(["client"])
+  F22 --> F23
+  F23(["response"])
+  F23 --> F24
+  F24(["status"])
+  F24 --> F25
+  F25(["error_text"])
+  F25 --> F26
+  F26(["test_request"])
+  F26 --> F27
+  F27(["system_prompt"])
+  F27 --> F28
+  F28(["openai_request"])
+  F28 --> F29
+  F29(["start_time"])
+  F29 --> F30
+  F30(["openai_response"])
+  F30 --> F31
+  F31(["processing_time"])
+  F31 --> F32
+  F32(["choice"])
+  F32 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant create_system_prompt
+  participant make_request
+  participant make_request
+  participant provider
+  participant capabilities
+  participant validate_connection
+  participant process_request
+  participant best_model_for_feature
+  participant rate_limit_info
+  new->>create_system_prompt: call
+  create_system_prompt->>make_request: call
+  make_request->>make_request: call
+  make_request->>provider: call
+  provider->>capabilities: call
+  capabilities->>validate_connection: call
+  validate_connection->>process_request: call
+  process_request->>best_model_for_feature: call
+  best_model_for_feature->>rate_limit_info: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-create_system_prompt"><code>create_system_prompt</code> <small>function</small></li>
+<li id="symbol-make_request"><code>make_request</code> <small>function</small></li>
+<li id="symbol-make_request"><code>make_request</code> <small>function</small></li>
+<li id="symbol-provider"><code>provider</code> <small>function</small></li>
+<li id="symbol-capabilities"><code>capabilities</code> <small>function</small></li>
+<li id="symbol-validate_connection"><code>validate_connection</code> <small>function</small></li>
+<li id="symbol-process_request"><code>process_request</code> <small>function</small></li>
+<li id="symbol-best_model_for_feature"><code>best_model_for_feature</code> <small>function</small></li>
+<li id="symbol-rate_limit_info"><code>rate_limit_info</code> <small>function</small></li>
+<li id="symbol-openaiprovider"><code>OpenAIProvider</code> <small>struct</small></li>
+<li id="symbol-openairequest"><code>OpenAIRequest</code> <small>struct</small></li>
+<li id="symbol-openaimessage"><code>OpenAIMessage</code> <small>struct</small></li>
+<li id="symbol-openairesponse"><code>OpenAIResponse</code> <small>struct</small></li>
+<li id="symbol-openaichoice"><code>OpenAIChoice</code> <small>struct</small></li>
+<li id="symbol-openaiusage"><code>OpenAIUsage</code> <small>struct</small></li>
+<li id="symbol-openaiprovider"><code>OpenAIProvider</code> <small>impl</small></li>
+<li id="symbol-openaiprovider"><code>OpenAIProvider</code> <small>impl</small></li>
+<li id="symbol-api_key"><code>api_key</code> <small>variable</small></li>
+<li id="symbol-base_url"><code>base_url</code> <small>variable</small></li>
+<li id="symbol-client"><code>client</code> <small>variable</small></li>
+<li id="symbol-client"><code>client</code> <small>variable</small></li>
+<li id="symbol-client"><code>client</code> <small>variable</small></li>
+<li id="symbol-response"><code>response</code> <small>variable</small></li>
+<li id="symbol-status"><code>status</code> <small>variable</small></li>
+<li id="symbol-error_text"><code>error_text</code> <small>variable</small></li>
+<li id="symbol-test_request"><code>test_request</code> <small>variable</small></li>
+<li id="symbol-system_prompt"><code>system_prompt</code> <small>variable</small></li>
+<li id="symbol-openai_request"><code>openai_request</code> <small>variable</small></li>
+<li id="symbol-start_time"><code>start_time</code> <small>variable</small></li>
+<li id="symbol-openai_response"><code>openai_response</code> <small>variable</small></li>
+<li id="symbol-processing_time"><code>processing_time</code> <small>variable</small></li>
+<li id="symbol-choice"><code>choice</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

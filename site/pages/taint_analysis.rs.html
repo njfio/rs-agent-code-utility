@@ -1,0 +1,671 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>taint_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>taint_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>172 symbols, 1419 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["initialize_language_rules"])
+  F1 --> F2
+  F2(["initialize_rust_rules"])
+  F2 --> F3
+  F3(["initialize_javascript_rules"])
+  F3 --> F4
+  F4(["initialize_python_rules"])
+  F4 --> F5
+  F5(["initialize_c_rules"])
+  F5 --> F6
+  F6(["initialize_go_rules"])
+  F6 --> F7
+  F7(["initialize_generic_rules"])
+  F7 --> F8
+  F8(["analyze"])
+  F8 --> F9
+  F9(["build_program_structure"])
+  F9 --> F10
+  F10(["traverse_for_structure"])
+  F10 --> F11
+  F11(["extract_function_definition"])
+  F11 --> F12
+  F12(["extract_function_parameters"])
+  F12 --> F13
+  F13(["extract_parameter_names"])
+  F13 --> F14
+  F14(["is_assignment"])
+  F14 --> F15
+  F15(["extract_assignment"])
+  F15 --> F16
+  F16(["extract_assignment_parts"])
+  F16 --> F17
+  F17(["extract_assignment_source"])
+  F17 --> F18
+  F18(["find_taint_sources"])
+  F18 --> F19
+  F19(["find_taint_sinks"])
+  F19 --> F20
+  F20(["traverse_for_sources"])
+  F20 --> F21
+  F21(["traverse_for_sinks"])
+  F21 --> F22
+  F22(["identify_taint_source"])
+  F22 --> F23
+  F23(["identify_taint_sink"])
+  F23 --> F24
+  F24(["is_function_call"])
+  F24 --> F25
+  F25(["is_identifier"])
+  F25 --> F26
+  F26(["is_function_definition"])
+  F26 --> F27
+  F27(["extract_function_call_name"])
+  F27 --> F28
+  F28(["extract_function_name"])
+  F28 --> F29
+  F29(["is_likely_user_input_variable"])
+  F29 --> F30
+  F30(["trace_enhanced_taint_flows"])
+  F30 --> F31
+  F31(["find_data_flow_path"])
+  F31 --> F32
+  F32(["build_taint_path"])
+  F32 --> F33
+  F33(["trace_inter_procedural_flow"])
+  F33 --> F34
+  F34(["can_reach_function"])
+  F34 --> F35
+  F35(["trace_taint_flows"])
+  F35 --> F36
+  F36(["has_potential_flow"])
+  F36 --> F37
+  F37(["assignment_propagates_to_tainted"])
+  F37 --> F38
+  F38(["assignment_propagates_taint"])
+  F38 --> F39
+  F39(["is_sanitizer_assignment"])
+  F39 --> F40
+  F40(["get_sanitizer_method"])
+  F40 --> F41
+  F41(["is_sanitizer_function"])
+  F41 --> F42
+  F42(["calculate_path_confidence"])
+  F42 --> F43
+  F43(["check_path_sanitization"])
+  F43 --> F44
+  F44(["is_parameter_list"])
+  F44 --> F45
+  F45(["is_assignment_operator"])
+  F45 --> F46
+  F46(["is_string_literal"])
+  F46 --> F47
+  F47(["is_number_literal"])
+  F47 --> F48
+  F48(["is_concatenation"])
+  F48 --> F49
+  F49(["extract_function_arguments"])
+  F49 --> F50
+  F50(["is_argument_list"])
+  F50 --> F51
+  F51(["extract_argument_names"])
+  F51 --> F52
+  F52(["extract_concatenation_parts"])
+  F52 --> F53
+  F53(["extract_function_call"])
+  F53 --> F54
+  F54(["test_taint_analyzer_creation"])
+  F54 --> F55
+  F55(["test_javascript_taint_sources"])
+  F55 --> F56
+  F56(["test_python_taint_analysis"])
+  F56 --> F57
+  F57(["test_assignment_source_types"])
+  F57 --> F58
+  F58(["test_function_definition_creation"])
+  F58 --> F59
+  F59(["test_taint_step_types"])
+  F59 --> F60
+  F60(["test_assignment_propagation_logic"])
+  F60 --> F61
+  F61(["test_sanitizer_detection"])
+  F61 --> F62
+  F62(["TaintSource"])
+  F62 --> F63
+  F63(["TaintSink"])
+  F63 --> F64
+  F64(["TaintLocation"])
+  F64 --> F65
+  F65(["TaintFlow"])
+  F65 --> F66
+  F66(["TaintStep"])
+  F66 --> F67
+  F67(["TaintAnalyzer"])
+  F67 --> F68
+  F68(["VariableAssignment"])
+  F68 --> F69
+  F69(["FunctionDefinition"])
+  F69 --> F70
+  F70(["FunctionCall"])
+  F70 --> F71
+  F71(["TaintSourceType"])
+  F71 --> F72
+  F72(["TaintSinkType"])
+  F72 --> F73
+  F73(["VulnerabilityType"])
+  F73 --> F74
+  F74(["TaintStepType"])
+  F74 --> F75
+  F75(["AssignmentSource"])
+  F75 --> F76
+  F76(["TaintAnalyzer"])
+  F76 --> F77
+  F77(["analyzer"])
+  F77 --> F78
+  F78(["flows"])
+  F78 --> F79
+  F79(["sources"])
+  F79 --> F80
+  F80(["sinks"])
+  F80 --> F81
+  F81(["source_flows"])
+  F81 --> F82
+  F82(["_node_kind"])
+  F82 --> F83
+  F83(["cursor"])
+  F83 --> F84
+  F84(["func_key"])
+  F84 --> F85
+  F85(["func_key"])
+  F85 --> F86
+  F86(["cursor"])
+  F86 --> F87
+  F87(["function_name"])
+  F87 --> F88
+  F88(["name"])
+  F88 --> F89
+  F89(["parameters"])
+  F89 --> F90
+  F90(["parameters"])
+  F90 --> F91
+  F91(["cursor"])
+  F91 --> F92
+  F92(["child"])
+  F92 --> F93
+  F93(["names"])
+  F93 --> F94
+  F94(["cursor"])
+  F94 --> F95
+  F95(["child"])
+  F95 --> F96
+  F96(["node_kind"])
+  F96 --> F97
+  F97(["target"])
+  F97 --> F98
+  F98(["source_value"])
+  F98 --> F99
+  F99(["propagates_taint"])
+  F99 --> F100
+  F100(["cursor"])
+  F100 --> F101
+  F101(["target"])
+  F101 --> F102
+  F102(["source"])
+  F102 --> F103
+  F103(["target_node"])
+  F103 --> F104
+  F104(["child"])
+  F104 --> F105
+  F105(["node_kind"])
+  F105 --> F106
+  F106(["args"])
+  F106 --> F107
+  F107(["parts"])
+  F107 --> F108
+  F108(["sources"])
+  F108 --> F109
+  F109(["sinks"])
+  F109 --> F110
+  F110(["function_name"])
+  F110 --> F111
+  F111(["cursor"])
+  F111 --> F112
+  F112(["function_name"])
+  F112 --> F113
+  F113(["cursor"])
+  F113 --> F114
+  F114(["node_kind"])
+  F114 --> F115
+  F115(["identifier"])
+  F115 --> F116
+  F116(["node_kind"])
+  F116 --> F117
+  F117(["node_kind"])
+  F117 --> F118
+  F118(["cursor"])
+  F118 --> F119
+  F119(["function_node"])
+  F119 --> F120
+  F120(["cursor"])
+  F120 --> F121
+  F121(["child"])
+  F121 --> F122
+  F122(["name_lower"])
+  F122 --> F123
+  F123(["user_input_patterns"])
+  F123 --> F124
+  F124(["flows"])
+  F124 --> F125
+  F125(["tainted_variables"])
+  F125 --> F126
+  F126(["path"])
+  F126 --> F127
+  F127(["confidence"])
+  F127 --> F128
+  F128(["is_sanitized"])
+  F128 --> F129
+  F129(["path"])
+  F129 --> F130
+  F130(["source_function"])
+  F130 --> F131
+  F131(["sink_function"])
+  F131 --> F132
+  F132(["step"])
+  F132 --> F133
+  F133(["step"])
+  F133 --> F134
+  F134(["path"])
+  F134 --> F135
+  F135(["flows"])
+  F135 --> F136
+  F136(["flow"])
+  F136 --> F137
+  F137(["confidence"])
+  F137 --> F138
+  F138(["function_changes"])
+  F138 --> F139
+  F139(["direct_assignments"])
+  F139 --> F140
+  F140(["sanitizers"])
+  F140 --> F141
+  F141(["is_sanitized"])
+  F141 --> F142
+  F142(["node_kind"])
+  F142 --> F143
+  F143(["args"])
+  F143 --> F144
+  F144(["cursor"])
+  F144 --> F145
+  F145(["child"])
+  F145 --> F146
+  F146(["names"])
+  F146 --> F147
+  F147(["cursor"])
+  F147 --> F148
+  F148(["child"])
+  F148 --> F149
+  F149(["parts"])
+  F149 --> F150
+  F150(["cursor"])
+  F150 --> F151
+  F151(["child"])
+  F151 --> F152
+  F152(["function_name"])
+  F152 --> F153
+  F153(["name"])
+  F153 --> F154
+  F154(["arguments"])
+  F154 --> F155
+  F155(["analyzer"])
+  F155 --> F156
+  F156(["analyzer"])
+  F156 --> F157
+  F157(["analyzer"])
+  F157 --> F158
+  F158(["var_source"])
+  F158 --> F159
+  F159(["func_source"])
+  F159 --> F160
+  F160(["literal_source"])
+  F160 --> F161
+  F161(["concat_source"])
+  F161 --> F162
+  F162(["func_def"])
+  F162 --> F163
+  F163(["assignment_step"])
+  F163 --> F164
+  F164(["function_call_step"])
+  F164 --> F165
+  F165(["analyzer"])
+  F165 --> F166
+  F166(["var_source"])
+  F166 --> F167
+  F167(["literal_source"])
+  F167 --> F168
+  F168(["source_func"])
+  F168 --> F169
+  F169(["safe_func"])
+  F169 --> F170
+  F170(["analyzer"])
+  F170 --> F171
+  F171(["sanitizer_assignment"])
+  F171 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant initialize_language_rules
+  participant initialize_rust_rules
+  participant initialize_javascript_rules
+  participant initialize_python_rules
+  participant initialize_c_rules
+  participant initialize_go_rules
+  participant initialize_generic_rules
+  participant analyze
+  participant build_program_structure
+  participant traverse_for_structure
+  participant extract_function_definition
+  participant extract_function_parameters
+  participant extract_parameter_names
+  participant is_assignment
+  participant extract_assignment
+  participant extract_assignment_parts
+  participant extract_assignment_source
+  participant find_taint_sources
+  participant find_taint_sinks
+  participant traverse_for_sources
+  participant traverse_for_sinks
+  participant identify_taint_source
+  participant identify_taint_sink
+  participant is_function_call
+  participant is_identifier
+  participant is_function_definition
+  participant extract_function_call_name
+  participant extract_function_name
+  participant is_likely_user_input_variable
+  participant trace_enhanced_taint_flows
+  participant find_data_flow_path
+  participant build_taint_path
+  participant trace_inter_procedural_flow
+  participant can_reach_function
+  participant trace_taint_flows
+  participant has_potential_flow
+  participant assignment_propagates_to_tainted
+  participant assignment_propagates_taint
+  participant is_sanitizer_assignment
+  participant get_sanitizer_method
+  participant is_sanitizer_function
+  participant calculate_path_confidence
+  participant check_path_sanitization
+  participant is_parameter_list
+  participant is_assignment_operator
+  participant is_string_literal
+  participant is_number_literal
+  participant is_concatenation
+  participant extract_function_arguments
+  participant is_argument_list
+  participant extract_argument_names
+  participant extract_concatenation_parts
+  participant extract_function_call
+  participant test_taint_analyzer_creation
+  participant test_javascript_taint_sources
+  participant test_python_taint_analysis
+  participant test_assignment_source_types
+  participant test_function_definition_creation
+  participant test_taint_step_types
+  participant test_assignment_propagation_logic
+  participant test_sanitizer_detection
+  new->>initialize_language_rules: call
+  initialize_language_rules->>initialize_rust_rules: call
+  initialize_rust_rules->>initialize_javascript_rules: call
+  initialize_javascript_rules->>initialize_python_rules: call
+  initialize_python_rules->>initialize_c_rules: call
+  initialize_c_rules->>initialize_go_rules: call
+  initialize_go_rules->>initialize_generic_rules: call
+  initialize_generic_rules->>analyze: call
+  analyze->>build_program_structure: call
+  build_program_structure->>traverse_for_structure: call
+  traverse_for_structure->>extract_function_definition: call
+  extract_function_definition->>extract_function_parameters: call
+  extract_function_parameters->>extract_parameter_names: call
+  extract_parameter_names->>is_assignment: call
+  is_assignment->>extract_assignment: call
+  extract_assignment->>extract_assignment_parts: call
+  extract_assignment_parts->>extract_assignment_source: call
+  extract_assignment_source->>find_taint_sources: call
+  find_taint_sources->>find_taint_sinks: call
+  find_taint_sinks->>traverse_for_sources: call
+  traverse_for_sources->>traverse_for_sinks: call
+  traverse_for_sinks->>identify_taint_source: call
+  identify_taint_source->>identify_taint_sink: call
+  identify_taint_sink->>is_function_call: call
+  is_function_call->>is_identifier: call
+  is_identifier->>is_function_definition: call
+  is_function_definition->>extract_function_call_name: call
+  extract_function_call_name->>extract_function_name: call
+  extract_function_name->>is_likely_user_input_variable: call
+  is_likely_user_input_variable->>trace_enhanced_taint_flows: call
+  trace_enhanced_taint_flows->>find_data_flow_path: call
+  find_data_flow_path->>build_taint_path: call
+  build_taint_path->>trace_inter_procedural_flow: call
+  trace_inter_procedural_flow->>can_reach_function: call
+  can_reach_function->>trace_taint_flows: call
+  trace_taint_flows->>has_potential_flow: call
+  has_potential_flow->>assignment_propagates_to_tainted: call
+  assignment_propagates_to_tainted->>assignment_propagates_taint: call
+  assignment_propagates_taint->>is_sanitizer_assignment: call
+  is_sanitizer_assignment->>get_sanitizer_method: call
+  get_sanitizer_method->>is_sanitizer_function: call
+  is_sanitizer_function->>calculate_path_confidence: call
+  calculate_path_confidence->>check_path_sanitization: call
+  check_path_sanitization->>is_parameter_list: call
+  is_parameter_list->>is_assignment_operator: call
+  is_assignment_operator->>is_string_literal: call
+  is_string_literal->>is_number_literal: call
+  is_number_literal->>is_concatenation: call
+  is_concatenation->>extract_function_arguments: call
+  extract_function_arguments->>is_argument_list: call
+  is_argument_list->>extract_argument_names: call
+  extract_argument_names->>extract_concatenation_parts: call
+  extract_concatenation_parts->>extract_function_call: call
+  extract_function_call->>test_taint_analyzer_creation: call
+  test_taint_analyzer_creation->>test_javascript_taint_sources: call
+  test_javascript_taint_sources->>test_python_taint_analysis: call
+  test_python_taint_analysis->>test_assignment_source_types: call
+  test_assignment_source_types->>test_function_definition_creation: call
+  test_function_definition_creation->>test_taint_step_types: call
+  test_taint_step_types->>test_assignment_propagation_logic: call
+  test_assignment_propagation_logic->>test_sanitizer_detection: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-initialize_language_rules"><code>initialize_language_rules</code> <small>function</small></li>
+<li id="symbol-initialize_rust_rules"><code>initialize_rust_rules</code> <small>function</small></li>
+<li id="symbol-initialize_javascript_rules"><code>initialize_javascript_rules</code> <small>function</small></li>
+<li id="symbol-initialize_python_rules"><code>initialize_python_rules</code> <small>function</small></li>
+<li id="symbol-initialize_c_rules"><code>initialize_c_rules</code> <small>function</small></li>
+<li id="symbol-initialize_go_rules"><code>initialize_go_rules</code> <small>function</small></li>
+<li id="symbol-initialize_generic_rules"><code>initialize_generic_rules</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-build_program_structure"><code>build_program_structure</code> <small>function</small></li>
+<li id="symbol-traverse_for_structure"><code>traverse_for_structure</code> <small>function</small></li>
+<li id="symbol-extract_function_definition"><code>extract_function_definition</code> <small>function</small></li>
+<li id="symbol-extract_function_parameters"><code>extract_function_parameters</code> <small>function</small></li>
+<li id="symbol-extract_parameter_names"><code>extract_parameter_names</code> <small>function</small></li>
+<li id="symbol-is_assignment"><code>is_assignment</code> <small>function</small></li>
+<li id="symbol-extract_assignment"><code>extract_assignment</code> <small>function</small></li>
+<li id="symbol-extract_assignment_parts"><code>extract_assignment_parts</code> <small>function</small></li>
+<li id="symbol-extract_assignment_source"><code>extract_assignment_source</code> <small>function</small></li>
+<li id="symbol-find_taint_sources"><code>find_taint_sources</code> <small>function</small></li>
+<li id="symbol-find_taint_sinks"><code>find_taint_sinks</code> <small>function</small></li>
+<li id="symbol-traverse_for_sources"><code>traverse_for_sources</code> <small>function</small></li>
+<li id="symbol-traverse_for_sinks"><code>traverse_for_sinks</code> <small>function</small></li>
+<li id="symbol-identify_taint_source"><code>identify_taint_source</code> <small>function</small></li>
+<li id="symbol-identify_taint_sink"><code>identify_taint_sink</code> <small>function</small></li>
+<li id="symbol-is_function_call"><code>is_function_call</code> <small>function</small></li>
+<li id="symbol-is_identifier"><code>is_identifier</code> <small>function</small></li>
+<li id="symbol-is_function_definition"><code>is_function_definition</code> <small>function</small></li>
+<li id="symbol-extract_function_call_name"><code>extract_function_call_name</code> <small>function</small></li>
+<li id="symbol-extract_function_name"><code>extract_function_name</code> <small>function</small></li>
+<li id="symbol-is_likely_user_input_variable"><code>is_likely_user_input_variable</code> <small>function</small></li>
+<li id="symbol-trace_enhanced_taint_flows"><code>trace_enhanced_taint_flows</code> <small>function</small></li>
+<li id="symbol-find_data_flow_path"><code>find_data_flow_path</code> <small>function</small></li>
+<li id="symbol-build_taint_path"><code>build_taint_path</code> <small>function</small></li>
+<li id="symbol-trace_inter_procedural_flow"><code>trace_inter_procedural_flow</code> <small>function</small></li>
+<li id="symbol-can_reach_function"><code>can_reach_function</code> <small>function</small></li>
+<li id="symbol-trace_taint_flows"><code>trace_taint_flows</code> <small>function</small></li>
+<li id="symbol-has_potential_flow"><code>has_potential_flow</code> <small>function</small></li>
+<li id="symbol-assignment_propagates_to_tainted"><code>assignment_propagates_to_tainted</code> <small>function</small></li>
+<li id="symbol-assignment_propagates_taint"><code>assignment_propagates_taint</code> <small>function</small></li>
+<li id="symbol-is_sanitizer_assignment"><code>is_sanitizer_assignment</code> <small>function</small></li>
+<li id="symbol-get_sanitizer_method"><code>get_sanitizer_method</code> <small>function</small></li>
+<li id="symbol-is_sanitizer_function"><code>is_sanitizer_function</code> <small>function</small></li>
+<li id="symbol-calculate_path_confidence"><code>calculate_path_confidence</code> <small>function</small></li>
+<li id="symbol-check_path_sanitization"><code>check_path_sanitization</code> <small>function</small></li>
+<li id="symbol-is_parameter_list"><code>is_parameter_list</code> <small>function</small></li>
+<li id="symbol-is_assignment_operator"><code>is_assignment_operator</code> <small>function</small></li>
+<li id="symbol-is_string_literal"><code>is_string_literal</code> <small>function</small></li>
+<li id="symbol-is_number_literal"><code>is_number_literal</code> <small>function</small></li>
+<li id="symbol-is_concatenation"><code>is_concatenation</code> <small>function</small></li>
+<li id="symbol-extract_function_arguments"><code>extract_function_arguments</code> <small>function</small></li>
+<li id="symbol-is_argument_list"><code>is_argument_list</code> <small>function</small></li>
+<li id="symbol-extract_argument_names"><code>extract_argument_names</code> <small>function</small></li>
+<li id="symbol-extract_concatenation_parts"><code>extract_concatenation_parts</code> <small>function</small></li>
+<li id="symbol-extract_function_call"><code>extract_function_call</code> <small>function</small></li>
+<li id="symbol-test_taint_analyzer_creation"><code>test_taint_analyzer_creation</code> <small>function</small></li>
+<li id="symbol-test_javascript_taint_sources"><code>test_javascript_taint_sources</code> <small>function</small></li>
+<li id="symbol-test_python_taint_analysis"><code>test_python_taint_analysis</code> <small>function</small></li>
+<li id="symbol-test_assignment_source_types"><code>test_assignment_source_types</code> <small>function</small></li>
+<li id="symbol-test_function_definition_creation"><code>test_function_definition_creation</code> <small>function</small></li>
+<li id="symbol-test_taint_step_types"><code>test_taint_step_types</code> <small>function</small></li>
+<li id="symbol-test_assignment_propagation_logic"><code>test_assignment_propagation_logic</code> <small>function</small></li>
+<li id="symbol-test_sanitizer_detection"><code>test_sanitizer_detection</code> <small>function</small></li>
+<li id="symbol-taintsource"><code>TaintSource</code> <small>struct</small></li>
+<li id="symbol-taintsink"><code>TaintSink</code> <small>struct</small></li>
+<li id="symbol-taintlocation"><code>TaintLocation</code> <small>struct</small></li>
+<li id="symbol-taintflow"><code>TaintFlow</code> <small>struct</small></li>
+<li id="symbol-taintstep"><code>TaintStep</code> <small>struct</small></li>
+<li id="symbol-taintanalyzer"><code>TaintAnalyzer</code> <small>struct</small></li>
+<li id="symbol-variableassignment"><code>VariableAssignment</code> <small>struct</small></li>
+<li id="symbol-functiondefinition"><code>FunctionDefinition</code> <small>struct</small></li>
+<li id="symbol-functioncall"><code>FunctionCall</code> <small>struct</small></li>
+<li id="symbol-taintsourcetype"><code>TaintSourceType</code> <small>enum</small></li>
+<li id="symbol-taintsinktype"><code>TaintSinkType</code> <small>enum</small></li>
+<li id="symbol-vulnerabilitytype"><code>VulnerabilityType</code> <small>enum</small></li>
+<li id="symbol-taintsteptype"><code>TaintStepType</code> <small>enum</small></li>
+<li id="symbol-assignmentsource"><code>AssignmentSource</code> <small>enum</small></li>
+<li id="symbol-taintanalyzer"><code>TaintAnalyzer</code> <small>impl</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-flows"><code>flows</code> <small>variable</small></li>
+<li id="symbol-sources"><code>sources</code> <small>variable</small></li>
+<li id="symbol-sinks"><code>sinks</code> <small>variable</small></li>
+<li id="symbol-source_flows"><code>source_flows</code> <small>variable</small></li>
+<li id="symbol-_node_kind"><code>_node_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-func_key"><code>func_key</code> <small>variable</small></li>
+<li id="symbol-func_key"><code>func_key</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-parameters"><code>parameters</code> <small>variable</small></li>
+<li id="symbol-parameters"><code>parameters</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-names"><code>names</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-target"><code>target</code> <small>variable</small></li>
+<li id="symbol-source_value"><code>source_value</code> <small>variable</small></li>
+<li id="symbol-propagates_taint"><code>propagates_taint</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-target"><code>target</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-target_node"><code>target_node</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-args"><code>args</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-sources"><code>sources</code> <small>variable</small></li>
+<li id="symbol-sinks"><code>sinks</code> <small>variable</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-identifier"><code>identifier</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-function_node"><code>function_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-name_lower"><code>name_lower</code> <small>variable</small></li>
+<li id="symbol-user_input_patterns"><code>user_input_patterns</code> <small>variable</small></li>
+<li id="symbol-flows"><code>flows</code> <small>variable</small></li>
+<li id="symbol-tainted_variables"><code>tainted_variables</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-is_sanitized"><code>is_sanitized</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-source_function"><code>source_function</code> <small>variable</small></li>
+<li id="symbol-sink_function"><code>sink_function</code> <small>variable</small></li>
+<li id="symbol-step"><code>step</code> <small>variable</small></li>
+<li id="symbol-step"><code>step</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-flows"><code>flows</code> <small>variable</small></li>
+<li id="symbol-flow"><code>flow</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-function_changes"><code>function_changes</code> <small>variable</small></li>
+<li id="symbol-direct_assignments"><code>direct_assignments</code> <small>variable</small></li>
+<li id="symbol-sanitizers"><code>sanitizers</code> <small>variable</small></li>
+<li id="symbol-is_sanitized"><code>is_sanitized</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-args"><code>args</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-names"><code>names</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-arguments"><code>arguments</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-var_source"><code>var_source</code> <small>variable</small></li>
+<li id="symbol-func_source"><code>func_source</code> <small>variable</small></li>
+<li id="symbol-literal_source"><code>literal_source</code> <small>variable</small></li>
+<li id="symbol-concat_source"><code>concat_source</code> <small>variable</small></li>
+<li id="symbol-func_def"><code>func_def</code> <small>variable</small></li>
+<li id="symbol-assignment_step"><code>assignment_step</code> <small>variable</small></li>
+<li id="symbol-function_call_step"><code>function_call_step</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-var_source"><code>var_source</code> <small>variable</small></li>
+<li id="symbol-literal_source"><code>literal_source</code> <small>variable</small></li>
+<li id="symbol-source_func"><code>source_func</code> <small>variable</small></li>
+<li id="symbol-safe_func"><code>safe_func</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-sanitizer_assignment"><code>sanitizer_assignment</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

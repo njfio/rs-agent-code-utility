@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>refactoring.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>refactoring.rs</h1></header>
+<main>
+<section class="article">
+<p>65 symbols, 766 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["with_config"])
+  F2 --> F3
+  F3(["analyze"])
+  F3 --> F4
+  F4(["analyze_file"])
+  F4 --> F5
+  F5(["analyze_cross_file_opportunities"])
+  F5 --> F6
+  F6(["analyze_file_complexity"])
+  F6 --> F7
+  F7(["check_large_file"])
+  F7 --> F8
+  F8(["check_symbol_density"])
+  F8 --> F9
+  F9(["create_file_location"])
+  F9 --> F10
+  F10(["create_large_file_impact"])
+  F10 --> F11
+  F11(["create_density_impact"])
+  F11 --> F12
+  F12(["get_large_file_instructions"])
+  F12 --> F13
+  F13(["get_large_file_benefits"])
+  F13 --> F14
+  F14(["get_large_file_risks"])
+  F14 --> F15
+  F15(["get_density_instructions"])
+  F15 --> F16
+  F16(["get_density_benefits"])
+  F16 --> F17
+  F17(["get_density_risks"])
+  F17 --> F18
+  F18(["calculate_quality_score"])
+  F18 --> F19
+  F19(["calculate_impact_summary"])
+  F19 --> F20
+  F20(["analyze_symbol"])
+  F20 --> F21
+  F21(["analyze_file_naming"])
+  F21 --> F22
+  F22(["analyze_symbol_naming"])
+  F22 --> F23
+  F23(["analyze_symbol_complexity"])
+  F23 --> F24
+  F24(["detect_code_duplication"])
+  F24 --> F25
+  F25(["analyze_architecture"])
+  F25 --> F26
+  F26(["fmt"])
+  F26 --> F27
+  F27(["RefactoringAnalyzer"])
+  F27 --> F28
+  F28(["RefactoringConfig"])
+  F28 --> F29
+  F29(["RefactoringResult"])
+  F29 --> F30
+  F30(["RefactoringSuggestion"])
+  F30 --> F31
+  F31(["RefactoringLocation"])
+  F31 --> F32
+  F32(["ImpactSummary"])
+  F32 --> F33
+  F33(["ExpectedImpact"])
+  F33 --> F34
+  F34(["RefactoringCategory"])
+  F34 --> F35
+  F35(["RefactoringConfig"])
+  F35 --> F36
+  F36(["RefactoringAnalyzer"])
+  F36 --> F37
+  F37(["RefactoringCategory"])
+  F37 --> F38
+  F38(["suggestions"])
+  F38 --> F39
+  F39(["suggestions_by_category"])
+  F39 --> F40
+  F40(["quick_wins"])
+  F40 --> F41
+  F41(["major_improvements"])
+  F41 --> F42
+  F42(["total_opportunities"])
+  F42 --> F43
+  F43(["quality_score"])
+  F43 --> F44
+  F44(["impact_summary"])
+  F44 --> F45
+  F45(["suggestions"])
+  F45 --> F46
+  F46(["function_symbols"])
+  F46 --> F47
+  F47(["suggestions"])
+  F47 --> F48
+  F48(["suggestions"])
+  F48 --> F49
+  F49(["thresholds"])
+  F49 --> F50
+  F50(["symbol_density"])
+  F50 --> F51
+  F51(["score"])
+  F51 --> F52
+  F52(["deduction"])
+  F52 --> F53
+  F53(["total_suggestions"])
+  F53 --> F54
+  F54(["maintainability"])
+  F54 --> F55
+  F55(["performance"])
+  F55 --> F56
+  F56(["readability"])
+  F56 --> F57
+  F57(["bug_risk"])
+  F57 --> F58
+  F58(["time_saved"])
+  F58 --> F59
+  F59(["suggestions"])
+  F59 --> F60
+  F60(["suggestions"])
+  F60 --> F61
+  F61(["file_name"])
+  F61 --> F62
+  F62(["suggestions"])
+  F62 --> F63
+  F63(["suggestions"])
+  F63 --> F64
+  F64(["suggestions"])
+  F64 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant with_config
+  participant analyze
+  participant analyze_file
+  participant analyze_cross_file_opportunities
+  participant analyze_file_complexity
+  participant check_large_file
+  participant check_symbol_density
+  participant create_file_location
+  participant create_large_file_impact
+  participant create_density_impact
+  participant get_large_file_instructions
+  participant get_large_file_benefits
+  participant get_large_file_risks
+  participant get_density_instructions
+  participant get_density_benefits
+  participant get_density_risks
+  participant calculate_quality_score
+  participant calculate_impact_summary
+  participant analyze_symbol
+  participant analyze_file_naming
+  participant analyze_symbol_naming
+  participant analyze_symbol_complexity
+  participant detect_code_duplication
+  participant analyze_architecture
+  participant fmt
+  default->>new: call
+  new->>with_config: call
+  with_config->>analyze: call
+  analyze->>analyze_file: call
+  analyze_file->>analyze_cross_file_opportunities: call
+  analyze_cross_file_opportunities->>analyze_file_complexity: call
+  analyze_file_complexity->>check_large_file: call
+  check_large_file->>check_symbol_density: call
+  check_symbol_density->>create_file_location: call
+  create_file_location->>create_large_file_impact: call
+  create_large_file_impact->>create_density_impact: call
+  create_density_impact->>get_large_file_instructions: call
+  get_large_file_instructions->>get_large_file_benefits: call
+  get_large_file_benefits->>get_large_file_risks: call
+  get_large_file_risks->>get_density_instructions: call
+  get_density_instructions->>get_density_benefits: call
+  get_density_benefits->>get_density_risks: call
+  get_density_risks->>calculate_quality_score: call
+  calculate_quality_score->>calculate_impact_summary: call
+  calculate_impact_summary->>analyze_symbol: call
+  analyze_symbol->>analyze_file_naming: call
+  analyze_file_naming->>analyze_symbol_naming: call
+  analyze_symbol_naming->>analyze_symbol_complexity: call
+  analyze_symbol_complexity->>detect_code_duplication: call
+  detect_code_duplication->>analyze_architecture: call
+  analyze_architecture->>fmt: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-analyze_file"><code>analyze_file</code> <small>function</small></li>
+<li id="symbol-analyze_cross_file_opportunities"><code>analyze_cross_file_opportunities</code> <small>function</small></li>
+<li id="symbol-analyze_file_complexity"><code>analyze_file_complexity</code> <small>function</small></li>
+<li id="symbol-check_large_file"><code>check_large_file</code> <small>function</small></li>
+<li id="symbol-check_symbol_density"><code>check_symbol_density</code> <small>function</small></li>
+<li id="symbol-create_file_location"><code>create_file_location</code> <small>function</small></li>
+<li id="symbol-create_large_file_impact"><code>create_large_file_impact</code> <small>function</small></li>
+<li id="symbol-create_density_impact"><code>create_density_impact</code> <small>function</small></li>
+<li id="symbol-get_large_file_instructions"><code>get_large_file_instructions</code> <small>function</small></li>
+<li id="symbol-get_large_file_benefits"><code>get_large_file_benefits</code> <small>function</small></li>
+<li id="symbol-get_large_file_risks"><code>get_large_file_risks</code> <small>function</small></li>
+<li id="symbol-get_density_instructions"><code>get_density_instructions</code> <small>function</small></li>
+<li id="symbol-get_density_benefits"><code>get_density_benefits</code> <small>function</small></li>
+<li id="symbol-get_density_risks"><code>get_density_risks</code> <small>function</small></li>
+<li id="symbol-calculate_quality_score"><code>calculate_quality_score</code> <small>function</small></li>
+<li id="symbol-calculate_impact_summary"><code>calculate_impact_summary</code> <small>function</small></li>
+<li id="symbol-analyze_symbol"><code>analyze_symbol</code> <small>function</small></li>
+<li id="symbol-analyze_file_naming"><code>analyze_file_naming</code> <small>function</small></li>
+<li id="symbol-analyze_symbol_naming"><code>analyze_symbol_naming</code> <small>function</small></li>
+<li id="symbol-analyze_symbol_complexity"><code>analyze_symbol_complexity</code> <small>function</small></li>
+<li id="symbol-detect_code_duplication"><code>detect_code_duplication</code> <small>function</small></li>
+<li id="symbol-analyze_architecture"><code>analyze_architecture</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-refactoringanalyzer"><code>RefactoringAnalyzer</code> <small>struct</small></li>
+<li id="symbol-refactoringconfig"><code>RefactoringConfig</code> <small>struct</small></li>
+<li id="symbol-refactoringresult"><code>RefactoringResult</code> <small>struct</small></li>
+<li id="symbol-refactoringsuggestion"><code>RefactoringSuggestion</code> <small>struct</small></li>
+<li id="symbol-refactoringlocation"><code>RefactoringLocation</code> <small>struct</small></li>
+<li id="symbol-impactsummary"><code>ImpactSummary</code> <small>struct</small></li>
+<li id="symbol-expectedimpact"><code>ExpectedImpact</code> <small>struct</small></li>
+<li id="symbol-refactoringcategory"><code>RefactoringCategory</code> <small>enum</small></li>
+<li id="symbol-refactoringconfig"><code>RefactoringConfig</code> <small>impl</small></li>
+<li id="symbol-refactoringanalyzer"><code>RefactoringAnalyzer</code> <small>impl</small></li>
+<li id="symbol-refactoringcategory"><code>RefactoringCategory</code> <small>impl</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-suggestions_by_category"><code>suggestions_by_category</code> <small>variable</small></li>
+<li id="symbol-quick_wins"><code>quick_wins</code> <small>variable</small></li>
+<li id="symbol-major_improvements"><code>major_improvements</code> <small>variable</small></li>
+<li id="symbol-total_opportunities"><code>total_opportunities</code> <small>variable</small></li>
+<li id="symbol-quality_score"><code>quality_score</code> <small>variable</small></li>
+<li id="symbol-impact_summary"><code>impact_summary</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-function_symbols"><code>function_symbols</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-thresholds"><code>thresholds</code> <small>variable</small></li>
+<li id="symbol-symbol_density"><code>symbol_density</code> <small>variable</small></li>
+<li id="symbol-score"><code>score</code> <small>variable</small></li>
+<li id="symbol-deduction"><code>deduction</code> <small>variable</small></li>
+<li id="symbol-total_suggestions"><code>total_suggestions</code> <small>variable</small></li>
+<li id="symbol-maintainability"><code>maintainability</code> <small>variable</small></li>
+<li id="symbol-performance"><code>performance</code> <small>variable</small></li>
+<li id="symbol-readability"><code>readability</code> <small>variable</small></li>
+<li id="symbol-bug_risk"><code>bug_risk</code> <small>variable</small></li>
+<li id="symbol-time_saved"><code>time_saved</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

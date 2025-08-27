@@ -1,0 +1,2237 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>intent_mapping.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>intent_mapping.rs</h1></header>
+<main>
+<section class="article">
+<p>616 symbols, 4348 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["add_node"])
+  F2 --> F3
+  F3(["add_edge"])
+  F3 --> F4
+  F4(["get_node"])
+  F4 --> F5
+  F5(["get_edge"])
+  F5 --> F6
+  F6(["get_node_edges"])
+  F6 --> F7
+  F7(["get_outgoing_edges"])
+  F7 --> F8
+  F8(["get_incoming_edges"])
+  F8 --> F9
+  F9(["find_shortest_path"])
+  F9 --> F10
+  F10(["calculate_metrics"])
+  F10 --> F11
+  F11(["count_connected_components"])
+  F11 --> F12
+  F12(["dfs_visit"])
+  F12 --> F13
+  F13(["calculate_diameter"])
+  F13 --> F14
+  F14(["calculate_clustering_coefficient"])
+  F14 --> F15
+  F15(["get_neighbors"])
+  F15 --> F16
+  F16(["count_edges_between_neighbors"])
+  F16 --> F17
+  F17(["has_edge"])
+  F17 --> F18
+  F18(["calculate_coverage_metrics"])
+  F18 --> F19
+  F19(["default"])
+  F19 --> F20
+  F20(["default"])
+  F20 --> F21
+  F21(["new"])
+  F21 --> F22
+  F22(["with_config"])
+  F22 --> F23
+  F23(["initialize_embeddings"])
+  F23 --> F24
+  F24(["has_embeddings"])
+  F24 --> F25
+  F25(["create_intent_mapping"])
+  F25 --> F26
+  F26(["add_requirement"])
+  F26 --> F27
+  F27(["add_requirements"])
+  F27 --> F28
+  F28(["extract_implementations"])
+  F28 --> F29
+  F29(["analyze_mappings"])
+  F29 --> F30
+  F30(["validate_mappings"])
+  F30 --> F31
+  F31(["get_traceability_report"])
+  F31 --> F32
+  F32(["create_implementation_from_file"])
+  F32 --> F33
+  F33(["infer_implementation_type"])
+  F33 --> F34
+  F34(["generate_automatic_mappings"])
+  F34 --> F35
+  F35(["generate_keyword_mappings"])
+  F35 --> F36
+  F36(["generate_semantic_mappings"])
+  F36 --> F37
+  F37(["generate_pattern_mappings"])
+  F37 --> F38
+  F38(["build_traceability_matrix"])
+  F38 --> F39
+  F39(["identify_gaps"])
+  F39 --> F40
+  F40(["generate_recommendations"])
+  F40 --> F41
+  F41(["validate_mapping"])
+  F41 --> F42
+  F42(["extract_keywords"])
+  F42 --> F43
+  F43(["extract_implementation_keywords"])
+  F43 --> F44
+  F44(["calculate_keyword_similarity"])
+  F44 --> F45
+  F45(["calculate_semantic_similarity"])
+  F45 --> F46
+  F46(["calculate_hybrid_similarity"])
+  F46 --> F47
+  F47(["calculate_structural_similarity"])
+  F47 --> F48
+  F48(["calculate_type_similarity"])
+  F48 --> F49
+  F49(["calculate_complexity_alignment"])
+  F49 --> F50
+  F50(["estimate_requirement_complexity"])
+  F50 --> F51
+  F51(["estimate_implementation_complexity"])
+  F51 --> F52
+  F52(["calculate_pattern_similarity"])
+  F52 --> F53
+  F53(["extract_requirement_patterns"])
+  F53 --> F54
+  F54(["extract_implementation_patterns"])
+  F54 --> F55
+  F55(["calculate_pattern_string_match"])
+  F55 --> F56
+  F56(["calculate_dependency_similarity"])
+  F56 --> F57
+  F57(["calculate_technology_alignment"])
+  F57 --> F58
+  F58(["calculate_integration_alignment"])
+  F58 --> F59
+  F59(["calculate_context_similarity"])
+  F59 --> F60
+  F60(["calculate_priority_alignment"])
+  F60 --> F61
+  F61(["calculate_category_alignment"])
+  F61 --> F62
+  F62(["extract_domain_from_requirement"])
+  F62 --> F63
+  F63(["extract_domain_from_implementation"])
+  F63 --> F64
+  F64(["generate_requirement_embeddings"])
+  F64 --> F65
+  F65(["generate_implementation_embeddings"])
+  F65 --> F66
+  F66(["calculate_embedding_similarity"])
+  F66 --> F67
+  F67(["find_similar_implementations"])
+  F67 --> F68
+  F68(["find_similar_requirements"])
+  F68 --> F69
+  F69(["analyze_requirement_clusters"])
+  F69 --> F70
+  F70(["get_embedding_stats"])
+  F70 --> F71
+  F71(["get_implementation_description"])
+  F71 --> F72
+  F72(["calculate_pattern_match_score"])
+  F72 --> F73
+  F73(["is_stop_word"])
+  F73 --> F74
+  F74(["requirements"])
+  F74 --> F75
+  F75(["implementations"])
+  F75 --> F76
+  F76(["mappings"])
+  F76 --> F77
+  F77(["config"])
+  F77 --> F78
+  F78(["traceability"])
+  F78 --> F79
+  F79(["add_implementation"])
+  F79 --> F80
+  F80(["add_mapping"])
+  F80 --> F81
+  F81(["build_traceability_matrix_public"])
+  F81 --> F82
+  F82(["identify_gaps_public"])
+  F82 --> F83
+  F83(["generate_recommendations_public"])
+  F83 --> F84
+  F84(["validate_mapping_public"])
+  F84 --> F85
+  F85(["extract_keywords_public"])
+  F85 --> F86
+  F86(["calculate_keyword_similarity_public"])
+  F86 --> F87
+  F87(["extract_implementation_keywords_public"])
+  F87 --> F88
+  F88(["calculate_pattern_match_public"])
+  F88 --> F89
+  F89(["calculate_confidence_score"])
+  F89 --> F90
+  F90(["calculate_quality_confidence"])
+  F90 --> F91
+  F91(["calculate_type_alignment_confidence"])
+  F91 --> F92
+  F92(["calculate_priority_confidence"])
+  F92 --> F93
+  F93(["calculate_documentation_confidence"])
+  F93 --> F94
+  F94(["calculate_status_confidence"])
+  F94 --> F95
+  F95(["calculate_test_confidence"])
+  F95 --> F96
+  F96(["apply_confidence_adjustments"])
+  F96 --> F97
+  F97(["determine_validation_status"])
+  F97 --> F98
+  F98(["get_confidence_level"])
+  F98 --> F99
+  F99(["build_relationship_graph"])
+  F99 --> F100
+  F100(["extract_requirement_metadata"])
+  F100 --> F101
+  F101(["extract_requirement_attributes"])
+  F101 --> F102
+  F102(["extract_implementation_metadata"])
+  F102 --> F103
+  F103(["extract_implementation_attributes"])
+  F103 --> F104
+  F104(["extract_mapping_metadata"])
+  F104 --> F105
+  F105(["extract_mapping_attributes"])
+  F105 --> F106
+  F106(["mapping_type_to_edge_type"])
+  F106 --> F107
+  F107(["add_derived_relationships"])
+  F107 --> F108
+  F108(["add_semantic_relationships"])
+  F108 --> F109
+  F109(["priority_to_weight"])
+  F109 --> F110
+  F110(["calculate_criteria_completeness"])
+  F110 --> F111
+  F111(["calculate_overall_quality_score"])
+  F111 --> F112
+  F112(["calculate_documentation_score"])
+  F112 --> F113
+  F113(["calculate_mapping_age_days"])
+  F113 --> F114
+  F114(["validation_status_to_score"])
+  F114 --> F115
+  F115(["calculate_dependency_score"])
+  F115 --> F116
+  F116(["calculate_requirement_similarity"])
+  F116 --> F117
+  F117(["calculate_implementation_similarity"])
+  F117 --> F118
+  F118(["calculate_text_similarity"])
+  F118 --> F119
+  F119(["calculate_path_similarity"])
+  F119 --> F120
+  F120(["calculate_code_element_similarity"])
+  F120 --> F121
+  F121(["extract_code_element_metadata"])
+  F121 --> F122
+  F122(["extract_code_element_attributes"])
+  F122 --> F123
+  F123(["new"])
+  F123 --> F124
+  F124(["default"])
+  F124 --> F125
+  F125(["default"])
+  F125 --> F126
+  F126(["fmt"])
+  F126 --> F127
+  F127(["fmt"])
+  F127 --> F128
+  F128(["fmt"])
+  F128 --> F129
+  F129(["test_intent_mapping_system_creation"])
+  F129 --> F130
+  F130(["test_intent_mapping_system_with_config"])
+  F130 --> F131
+  F131(["test_mapping_config_default"])
+  F131 --> F132
+  F132(["test_requirement_creation"])
+  F132 --> F133
+  F133(["test_requirement_type_variants"])
+  F133 --> F134
+  F134(["test_priority_ordering"])
+  F134 --> F135
+  F135(["test_requirement_status_variants"])
+  F135 --> F136
+  F136(["test_implementation_creation"])
+  F136 --> F137
+  F137(["test_implementation_type_variants"])
+  F137 --> F138
+  F138(["test_code_element_creation"])
+  F138 --> F139
+  F139(["test_implementation_status_variants"])
+  F139 --> F140
+  F140(["test_quality_metrics_creation"])
+  F140 --> F141
+  F141(["test_quality_metrics_default"])
+  F141 --> F142
+  F142(["test_intent_mapping_creation"])
+  F142 --> F143
+  F143(["test_mapping_type_variants"])
+  F143 --> F144
+  F144(["test_validation_status_variants"])
+  F144 --> F145
+  F145(["test_traceability_matrix_creation"])
+  F145 --> F146
+  F146(["test_coverage_metrics_creation"])
+  F146 --> F147
+  F147(["create_test_requirement"])
+  F147 --> F148
+  F148(["create_test_implementation"])
+  F148 --> F149
+  F149(["test_add_requirement"])
+  F149 --> F150
+  F150(["test_add_multiple_requirements"])
+  F150 --> F151
+  F151(["test_add_implementation"])
+  F151 --> F152
+  F152(["test_extract_keywords"])
+  F152 --> F153
+  F153(["test_calculate_keyword_similarity"])
+  F153 --> F154
+  F154(["test_extract_implementation_keywords"])
+  F154 --> F155
+  F155(["test_build_traceability_matrix"])
+  F155 --> F156
+  F156(["test_identify_gaps"])
+  F156 --> F157
+  F157(["test_generate_recommendations"])
+  F157 --> F158
+  F158(["test_display_implementations"])
+  F158 --> F159
+  F159(["test_embedding_stats_creation"])
+  F159 --> F160
+  F160(["test_semantic_similarity_without_embeddings"])
+  F160 --> F161
+  F161(["test_has_embeddings_initially_false"])
+  F161 --> F162
+  F162(["test_embedding_stats_structure"])
+  F162 --> F163
+  F163(["test_semantic_similarity_edge_cases"])
+  F163 --> F164
+  F164(["test_hybrid_similarity_scoring"])
+  F164 --> F165
+  F165(["test_structural_similarity"])
+  F165 --> F166
+  F166(["test_type_similarity"])
+  F166 --> F167
+  F167(["test_complexity_alignment"])
+  F167 --> F168
+  F168(["test_pattern_similarity"])
+  F168 --> F169
+  F169(["test_confidence_scoring_algorithm"])
+  F169 --> F170
+  F170(["test_confidence_scoring_low_quality"])
+  F170 --> F171
+  F171(["test_validation_status_determination"])
+  F171 --> F172
+  F172(["test_quality_confidence_calculation"])
+  F172 --> F173
+  F173(["test_relationship_graph_creation"])
+  F173 --> F174
+  F174(["test_graph_metrics_calculation"])
+  F174 --> F175
+  F175(["test_shortest_path_finding"])
+  F175 --> F176
+  F176(["test_find_similar_implementations_empty"])
+  F176 --> F177
+  F177(["test_find_similar_requirements_empty"])
+  F177 --> F178
+  F178(["test_analyze_requirement_clusters_empty"])
+  F178 --> F179
+  F179(["ConfidenceThresholds"])
+  F179 --> F180
+  F180(["RelationshipGraph"])
+  F180 --> F181
+  F181(["RelationshipNode"])
+  F181 --> F182
+  F182(["RelationshipEdge"])
+  F182 --> F183
+  F183(["GraphMetrics"])
+  F183 --> F184
+  F184(["GraphCoverageMetrics"])
+  F184 --> F185
+  F185(["IntentMappingSystem"])
+  F185 --> F186
+  F186(["Requirement"])
+  F186 --> F187
+  F187(["Implementation"])
+  F187 --> F188
+  F188(["CodeElement"])
+  F188 --> F189
+  F189(["QualityMetrics"])
+  F189 --> F190
+  F190(["IntentMapping"])
+  F190 --> F191
+  F191(["TraceabilityMatrix"])
+  F191 --> F192
+  F192(["CoverageMetrics"])
+  F192 --> F193
+  F193(["MappingConfig"])
+  F193 --> F194
+  F194(["MappingAnalysisResult"])
+  F194 --> F195
+  F195(["MappingGap"])
+  F195 --> F196
+  F196(["MappingRecommendation"])
+  F196 --> F197
+  F197(["EmbeddingStats"])
+  F197 --> F198
+  F198(["TraceabilityReport"])
+  F198 --> F199
+  F199(["RelationshipNodeType"])
+  F199 --> F200
+  F200(["RelationshipEdgeType"])
+  F200 --> F201
+  F201(["RequirementType"])
+  F201 --> F202
+  F202(["RequirementStatus"])
+  F202 --> F203
+  F203(["ImplementationType"])
+  F203 --> F204
+  F204(["ImplementationStatus"])
+  F204 --> F205
+  F205(["MappingType"])
+  F205 --> F206
+  F206(["ValidationStatus"])
+  F206 --> F207
+  F207(["GapType"])
+  F207 --> F208
+  F208(["RecommendationType"])
+  F208 --> F209
+  F209(["EffortLevel"])
+  F209 --> F210
+  F210(["ConfidenceThresholds"])
+  F210 --> F211
+  F211(["RelationshipGraph"])
+  F211 --> F212
+  F212(["GraphMetrics"])
+  F212 --> F213
+  F213(["MappingConfig"])
+  F213 --> F214
+  F214(["IntentMappingSystem"])
+  F214 --> F215
+  F215(["TraceabilityMatrix"])
+  F215 --> F216
+  F216(["IntentMappingSystem"])
+  F216 --> F217
+  F217(["QualityMetrics"])
+  F217 --> F218
+  F218(["RequirementType"])
+  F218 --> F219
+  F219(["ImplementationType"])
+  F219 --> F220
+  F220(["MappingType"])
+  F220 --> F221
+  F221(["visited"])
+  F221 --> F222
+  F222(["queue"])
+  F222 --> F223
+  F223(["parent"])
+  F223 --> F224
+  F224(["path"])
+  F224 --> F225
+  F225(["node"])
+  F225 --> F226
+  F226(["node_count"])
+  F226 --> F227
+  F227(["edge_count"])
+  F227 --> F228
+  F228(["density"])
+  F228 --> F229
+  F229(["average_degree"])
+  F229 --> F230
+  F230(["connected_components"])
+  F230 --> F231
+  F231(["diameter"])
+  F231 --> F232
+  F232(["clustering_coefficient"])
+  F232 --> F233
+  F233(["coverage_metrics"])
+  F233 --> F234
+  F234(["visited"])
+  F234 --> F235
+  F235(["components"])
+  F235 --> F236
+  F236(["neighbor"])
+  F236 --> F237
+  F237(["max_distance"])
+  F237 --> F238
+  F238(["total_coefficient"])
+  F238 --> F239
+  F239(["node_count"])
+  F239 --> F240
+  F240(["neighbors"])
+  F240 --> F241
+  F241(["possible_edges"])
+  F241 --> F242
+  F242(["actual_edges"])
+  F242 --> F243
+  F243(["neighbors"])
+  F243 --> F244
+  F244(["count"])
+  F244 --> F245
+  F245(["requirement_nodes"])
+  F245 --> F246
+  F246(["implementation_nodes"])
+  F246 --> F247
+  F247(["requirements_with_implementations"])
+  F247 --> F248
+  F248(["implementations_with_requirements"])
+  F248 --> F249
+  F249(["total_confidence"])
+  F249 --> F250
+  F250(["mapping_count"])
+  F250 --> F251
+  F251(["requirement_coverage"])
+  F251 --> F252
+  F252(["implementation_coverage"])
+  F252 --> F253
+  F253(["average_confidence"])
+  F253 --> F254
+  F254(["embedding_config"])
+  F254 --> F255
+  F255(["engine"])
+  F255 --> F256
+  F256(["implementation"])
+  F256 --> F257
+  F257(["gaps"])
+  F257 --> F258
+  F258(["recommendations"])
+  F258 --> F259
+  F259(["validated_mappings"])
+  F259 --> F260
+  F260(["validation_results"])
+  F260 --> F261
+  F261(["validation_result"])
+  F261 --> F262
+  F262(["report"])
+  F262 --> F263
+  F263(["requirements_with_impl"])
+  F263 --> F264
+  F264(["implementations_with_req"])
+  F264 --> F265
+  F265(["valid_mappings"])
+  F265 --> F266
+  F266(["code_elements"])
+  F266 --> F267
+  F267(["element"])
+  F267 --> F268
+  F268(["implementation"])
+  F268 --> F269
+  F269(["req_keywords"])
+  F269 --> F270
+  F270(["impl_keywords"])
+  F270 --> F271
+  F271(["similarity"])
+  F271 --> F272
+  F272(["validation_status"])
+  F272 --> F273
+  F273(["mapping"])
+  F273 --> F274
+  F274(["hybrid_score"])
+  F274 --> F275
+  F275(["exists"])
+  F275 --> F276
+  F276(["confidence_score"])
+  F276 --> F277
+  F277(["rationale"])
+  F277 --> F278
+  F278(["validation_status"])
+  F278 --> F279
+  F279(["mapping"])
+  F279 --> F280
+  F280(["pattern_score"])
+  F280 --> F281
+  F281(["mapping"])
+  F281 --> F282
+  F282(["req_coverage"])
+  F282 --> F283
+  F283(["impl_coverage"])
+  F283 --> F284
+  F284(["orphaned_reqs"])
+  F284 --> F285
+  F285(["orphaned_impls"])
+  F285 --> F286
+  F286(["gaps"])
+  F286 --> F287
+  F287(["recommendations"])
+  F287 --> F288
+  F288(["requirement"])
+  F288 --> F289
+  F289(["implementation"])
+  F289 --> F290
+  F290(["req"])
+  F290 --> F291
+  F291(["validation_score"])
+  F291 --> F292
+  F292(["keywords"])
+  F292 --> F293
+  F293(["set1"])
+  F293 --> F294
+  F294(["set2"])
+  F294 --> F295
+  F295(["intersection"])
+  F295 --> F296
+  F296(["union"])
+  F296 --> F297
+  F297(["words1"])
+  F297 --> F298
+  F298(["words2"])
+  F298 --> F299
+  F299(["total_score"])
+  F299 --> F300
+  F300(["semantic_score"])
+  F300 --> F301
+  F301(["structural_score"])
+  F301 --> F302
+  F302(["req_keywords"])
+  F302 --> F303
+  F303(["impl_keywords"])
+  F303 --> F304
+  F304(["keyword_score"])
+  F304 --> F305
+  F305(["context_score"])
+  F305 --> F306
+  F306(["structural_score"])
+  F306 --> F307
+  F307(["factors"])
+  F307 --> F308
+  F308(["req_type_str"])
+  F308 --> F309
+  F309(["impl_type_str"])
+  F309 --> F310
+  F310(["type_score"])
+  F310 --> F311
+  F311(["complexity_score"])
+  F311 --> F312
+  F312(["pattern_score"])
+  F312 --> F313
+  F313(["dependency_score"])
+  F313 --> F314
+  F314(["type_mappings"])
+  F314 --> F315
+  F315(["req_type_lower"])
+  F315 --> F316
+  F316(["impl_type_lower"])
+  F316 --> F317
+  F317(["req_keywords"])
+  F317 --> F318
+  F318(["impl_keywords"])
+  F318 --> F319
+  F319(["req_complexity"])
+  F319 --> F320
+  F320(["impl_complexity"])
+  F320 --> F321
+  F321(["complexity_diff"])
+  F321 --> F322
+  F322(["max_complexity"])
+  F322 --> F323
+  F323(["complexity"])
+  F323 --> F324
+  F324(["word_count"])
+  F324 --> F325
+  F325(["complexity_keywords"])
+  F325 --> F326
+  F326(["description_lower"])
+  F326 --> F327
+  F327(["complexity"])
+  F327 --> F328
+  F328(["path_segments"])
+  F328 --> F329
+  F329(["doc_lower"])
+  F329 --> F330
+  F330(["complexity_indicators"])
+  F330 --> F331
+  F331(["pattern_score"])
+  F331 --> F332
+  F332(["pattern_count"])
+  F332 --> F333
+  F333(["req_patterns"])
+  F333 --> F334
+  F334(["impl_patterns"])
+  F334 --> F335
+  F335(["similarity"])
+  F335 --> F336
+  F336(["patterns"])
+  F336 --> F337
+  F337(["description_lower"])
+  F337 --> F338
+  F338(["pattern_keywords"])
+  F338 --> F339
+  F339(["patterns"])
+  F339 --> F340
+  F340(["path_str"])
+  F340 --> F341
+  F341(["path_patterns"])
+  F341 --> F342
+  F342(["doc_lower"])
+  F342 --> F343
+  F343(["related_patterns"])
+  F343 --> F344
+  F344(["keywords1"])
+  F344 --> F345
+  F345(["keywords2"])
+  F345 --> F346
+  F346(["dependency_score"])
+  F346 --> F347
+  F347(["factors"])
+  F347 --> F348
+  F348(["tech_score"])
+  F348 --> F349
+  F349(["integration_score"])
+  F349 --> F350
+  F350(["req_description"])
+  F350 --> F351
+  F351(["impl_path"])
+  F351 --> F352
+  F352(["tech_mappings"])
+  F352 --> F353
+  F353(["alignment_score"])
+  F353 --> F354
+  F354(["matches"])
+  F354 --> F355
+  F355(["req_mentions_tech"])
+  F355 --> F356
+  F356(["impl_uses_tech"])
+  F356 --> F357
+  F357(["req_description"])
+  F357 --> F358
+  F358(["impl_details"])
+  F358 --> F359
+  F359(["integration_patterns"])
+  F359 --> F360
+  F360(["req_integration_count"])
+  F360 --> F361
+  F361(["impl_integration_count"])
+  F361 --> F362
+  F362(["common_integrations"])
+  F362 --> F363
+  F363(["req_has"])
+  F363 --> F364
+  F364(["impl_has"])
+  F364 --> F365
+  F365(["total_integrations"])
+  F365 --> F366
+  F366(["context_score"])
+  F366 --> F367
+  F367(["factors"])
+  F367 --> F368
+  F368(["priority_score"])
+  F368 --> F369
+  F369(["category_score"])
+  F369 --> F370
+  F370(["impl_path"])
+  F370 --> F371
+  F371(["impl_details"])
+  F371 --> F372
+  F372(["high_priority_indicators"])
+  F372 --> F373
+  F373(["low_priority_indicators"])
+  F373 --> F374
+  F374(["req_priority"])
+  F374 --> F375
+  F375(["impl_has_high_indicators"])
+  F375 --> F376
+  F376(["impl_has_low_indicators"])
+  F376 --> F377
+  F377(["req_domain"])
+  F377 --> F378
+  F378(["impl_domain"])
+  F378 --> F379
+  F379(["domain_relations"])
+  F379 --> F380
+  F380(["req_type"])
+  F380 --> F381
+  F381(["description"])
+  F381 --> F382
+  F382(["domains"])
+  F382 --> F383
+  F383(["path"])
+  F383 --> F384
+  F384(["details"])
+  F384 --> F385
+  F385(["domains"])
+  F385 --> F386
+  F386(["texts"])
+  F386 --> F387
+  F387(["embeddings"])
+  F387 --> F388
+  F388(["enhanced_embedding"])
+  F388 --> F389
+  F389(["texts"])
+  F389 --> F390
+  F390(["embeddings"])
+  F390 --> F391
+  F391(["enhanced_embedding"])
+  F391 --> F392
+  F392(["req_embedding"])
+  F392 --> F393
+  F393(["impl_embedding"])
+  F393 --> F394
+  F394(["req_embedding"])
+  F394 --> F395
+  F395(["similarities"])
+  F395 --> F396
+  F396(["impl_embedding"])
+  F396 --> F397
+  F397(["similarities"])
+  F397 --> F398
+  F398(["clusters"])
+  F398 --> F399
+  F399(["processed"])
+  F399 --> F400
+  F400(["cluster"])
+  F400 --> F401
+  F401(["description"])
+  F401 --> F402
+  F402(["score"])
+  F402 --> F403
+  F403(["req_keywords"])
+  F403 --> F404
+  F404(["impl_keywords"])
+  F404 --> F405
+  F405(["keyword_sim"])
+  F405 --> F406
+  F406(["confidence_factors"])
+  F406 --> F407
+  F407(["quality_factor"])
+  F407 --> F408
+  F408(["type_factor"])
+  F408 --> F409
+  F409(["priority_factor"])
+  F409 --> F410
+  F410(["doc_factor"])
+  F410 --> F411
+  F411(["status_factor"])
+  F411 --> F412
+  F412(["test_factor"])
+  F412 --> F413
+  F413(["total_weight"])
+  F413 --> F414
+  F414(["weighted_sum"])
+  F414 --> F415
+  F415(["base_confidence"])
+  F415 --> F416
+  F416(["factors"])
+  F416 --> F417
+  F417(["strong_alignments"])
+  F417 --> F418
+  F418(["moderate_alignments"])
+  F418 --> F419
+  F419(["priority_weight"])
+  F419 --> F420
+  F420(["status_weight"])
+  F420 --> F421
+  F421(["length_score"])
+  F421 --> F422
+  F422(["quality_indicators"])
+  F422 --> F423
+  F423(["quality_score"])
+  F423 --> F424
+  F424(["adjusted_confidence"])
+  F424 --> F425
+  F425(["graph"])
+  F425 --> F426
+  F426(["node"])
+  F426 --> F427
+  F427(["node"])
+  F427 --> F428
+  F428(["edge"])
+  F428 --> F429
+  F429(["metadata"])
+  F429 --> F430
+  F430(["attributes"])
+  F430 --> F431
+  F431(["metadata"])
+  F431 --> F432
+  F432(["attributes"])
+  F432 --> F433
+  F433(["metadata"])
+  F433 --> F434
+  F434(["attributes"])
+  F434 --> F435
+  F435(["dependency_score"])
+  F435 --> F436
+  F436(["edge"])
+  F436 --> F437
+  F437(["element_node"])
+  F437 --> F438
+  F438(["containment_edge"])
+  F438 --> F439
+  F439(["similarity_score"])
+  F439 --> F440
+  F440(["edge"])
+  F440 --> F441
+  F441(["similarity_score"])
+  F441 --> F442
+  F442(["edge"])
+  F442 --> F443
+  F443(["avg_length"])
+  F443 --> F444
+  F444(["length_score"])
+  F444 --> F445
+  F445(["quality_indicators"])
+  F445 --> F446
+  F446(["quality_score"])
+  F446 --> F447
+  F447(["current_time"])
+  F447 --> F448
+  F448(["path1"])
+  F448 --> F449
+  F449(["path2"])
+  F449 --> F450
+  F450(["name1"])
+  F450 --> F451
+  F451(["name2"])
+  F451 --> F452
+  F452(["similarity_factors"])
+  F452 --> F453
+  F453(["priority_diff"])
+  F453 --> F454
+  F454(["common_tags"])
+  F454 --> F455
+  F455(["total_tags"])
+  F455 --> F456
+  F456(["tag_similarity"])
+  F456 --> F457
+  F457(["common_stakeholders"])
+  F457 --> F458
+  F458(["total_stakeholders"])
+  F458 --> F459
+  F459(["stakeholder_similarity"])
+  F459 --> F460
+  F460(["desc_similarity"])
+  F460 --> F461
+  F461(["similarity_factors"])
+  F461 --> F462
+  F462(["quality_similarity"])
+  F462 --> F463
+  F463(["path_similarity"])
+  F463 --> F464
+  F464(["element_similarity"])
+  F464 --> F465
+  F465(["text1_lower"])
+  F465 --> F466
+  F466(["text2_lower"])
+  F466 --> F467
+  F467(["words1"])
+  F467 --> F468
+  F468(["words2"])
+  F468 --> F469
+  F469(["intersection"])
+  F469 --> F470
+  F470(["union"])
+  F470 --> F471
+  F471(["str1"])
+  F471 --> F472
+  F472(["str2"])
+  F472 --> F473
+  F473(["parts1"])
+  F473 --> F474
+  F474(["parts2"])
+  F474 --> F475
+  F475(["common_parts"])
+  F475 --> F476
+  F476(["max_parts"])
+  F476 --> F477
+  F477(["names1"])
+  F477 --> F478
+  F478(["names2"])
+  F478 --> F479
+  F479(["intersection"])
+  F479 --> F480
+  F480(["union"])
+  F480 --> F481
+  F481(["metadata"])
+  F481 --> F482
+  F482(["attributes"])
+  F482 --> F483
+  F483(["system"])
+  F483 --> F484
+  F484(["config"])
+  F484 --> F485
+  F485(["system"])
+  F485 --> F486
+  F486(["config"])
+  F486 --> F487
+  F487(["requirement"])
+  F487 --> F488
+  F488(["types"])
+  F488 --> F489
+  F489(["statuses"])
+  F489 --> F490
+  F490(["implementation"])
+  F490 --> F491
+  F491(["types"])
+  F491 --> F492
+  F492(["element"])
+  F492 --> F493
+  F493(["statuses"])
+  F493 --> F494
+  F494(["metrics"])
+  F494 --> F495
+  F495(["metrics"])
+  F495 --> F496
+  F496(["mapping"])
+  F496 --> F497
+  F497(["types"])
+  F497 --> F498
+  F498(["statuses"])
+  F498 --> F499
+  F499(["matrix"])
+  F499 --> F500
+  F500(["metrics"])
+  F500 --> F501
+  F501(["system"])
+  F501 --> F502
+  F502(["requirement"])
+  F502 --> F503
+  F503(["system"])
+  F503 --> F504
+  F504(["requirements"])
+  F504 --> F505
+  F505(["system"])
+  F505 --> F506
+  F506(["implementation"])
+  F506 --> F507
+  F507(["system"])
+  F507 --> F508
+  F508(["text"])
+  F508 --> F509
+  F509(["keywords"])
+  F509 --> F510
+  F510(["system"])
+  F510 --> F511
+  F511(["keywords1"])
+  F511 --> F512
+  F512(["keywords2"])
+  F512 --> F513
+  F513(["similarity"])
+  F513 --> F514
+  F514(["identical_similarity"])
+  F514 --> F515
+  F515(["keywords3"])
+  F515 --> F516
+  F516(["no_overlap_similarity"])
+  F516 --> F517
+  F517(["system"])
+  F517 --> F518
+  F518(["implementation"])
+  F518 --> F519
+  F519(["keywords"])
+  F519 --> F520
+  F520(["system"])
+  F520 --> F521
+  F521(["requirement"])
+  F521 --> F522
+  F522(["implementation"])
+  F522 --> F523
+  F523(["mapping"])
+  F523 --> F524
+  F524(["traceability"])
+  F524 --> F525
+  F525(["system"])
+  F525 --> F526
+  F526(["orphaned_requirement"])
+  F526 --> F527
+  F527(["orphaned_implementation"])
+  F527 --> F528
+  F528(["gaps"])
+  F528 --> F529
+  F529(["missing_impl_gaps"])
+  F529 --> F530
+  F530(["missing_req_gaps"])
+  F530 --> F531
+  F531(["system"])
+  F531 --> F532
+  F532(["gaps"])
+  F532 --> F533
+  F533(["recommendations"])
+  F533 --> F534
+  F534(["create_impl_recs"])
+  F534 --> F535
+  F535(["add_test_recs"])
+  F535 --> F536
+  F536(["system"])
+  F536 --> F537
+  F537(["stats"])
+  F537 --> F538
+  F538(["system"])
+  F538 --> F539
+  F539(["similarity"])
+  F539 --> F540
+  F540(["system"])
+  F540 --> F541
+  F541(["stats"])
+  F541 --> F542
+  F542(["system"])
+  F542 --> F543
+  F543(["empty_similarity"])
+  F543 --> F544
+  F544(["identical_similarity"])
+  F544 --> F545
+  F545(["different_similarity"])
+  F545 --> F546
+  F546(["system"])
+  F546 --> F547
+  F547(["requirement"])
+  F547 --> F548
+  F548(["implementation"])
+  F548 --> F549
+  F549(["similarity"])
+  F549 --> F550
+  F550(["system"])
+  F550 --> F551
+  F551(["requirement"])
+  F551 --> F552
+  F552(["implementation"])
+  F552 --> F553
+  F553(["structural_score"])
+  F553 --> F554
+  F554(["system"])
+  F554 --> F555
+  F555(["exact_similarity"])
+  F555 --> F556
+  F556(["related_similarity"])
+  F556 --> F557
+  F557(["unrelated_similarity"])
+  F557 --> F558
+  F558(["system"])
+  F558 --> F559
+  F559(["complex_req"])
+  F559 --> F560
+  F560(["complex_impl"])
+  F560 --> F561
+  F561(["alignment"])
+  F561 --> F562
+  F562(["system"])
+  F562 --> F563
+  F563(["mvc_req"])
+  F563 --> F564
+  F564(["controller_impl"])
+  F564 --> F565
+  F565(["pattern_score"])
+  F565 --> F566
+  F566(["system"])
+  F566 --> F567
+  F567(["requirement"])
+  F567 --> F568
+  F568(["high_quality_impl"])
+  F568 --> F569
+  F569(["similarity_score"])
+  F569 --> F570
+  F570(["confidence"])
+  F570 --> F571
+  F571(["level"])
+  F571 --> F572
+  F572(["system"])
+  F572 --> F573
+  F573(["requirement"])
+  F573 --> F574
+  F574(["low_quality_impl"])
+  F574 --> F575
+  F575(["similarity_score"])
+  F575 --> F576
+  F576(["confidence"])
+  F576 --> F577
+  F577(["level"])
+  F577 --> F578
+  F578(["system"])
+  F578 --> F579
+  F579(["high_confidence"])
+  F579 --> F580
+  F580(["medium_confidence"])
+  F580 --> F581
+  F581(["low_confidence"])
+  F581 --> F582
+  F582(["very_low_confidence"])
+  F582 --> F583
+  F583(["system"])
+  F583 --> F584
+  F584(["high_quality"])
+  F584 --> F585
+  F585(["quality_confidence"])
+  F585 --> F586
+  F586(["low_quality"])
+  F586 --> F587
+  F587(["low_quality_confidence"])
+  F587 --> F588
+  F588(["system"])
+  F588 --> F589
+  F589(["requirement"])
+  F589 --> F590
+  F590(["implementation"])
+  F590 --> F591
+  F591(["mapping"])
+  F591 --> F592
+  F592(["graph"])
+  F592 --> F593
+  F593(["req_node"])
+  F593 --> F594
+  F594(["impl_node"])
+  F594 --> F595
+  F595(["req_edges"])
+  F595 --> F596
+  F596(["impl_edges"])
+  F596 --> F597
+  F597(["graph"])
+  F597 --> F598
+  F598(["node1"])
+  F598 --> F599
+  F599(["node2"])
+  F599 --> F600
+  F600(["edge"])
+  F600 --> F601
+  F601(["graph"])
+  F601 --> F602
+  F602(["node"])
+  F602 --> F603
+  F603(["edge1"])
+  F603 --> F604
+  F604(["edge2"])
+  F604 --> F605
+  F605(["path"])
+  F605 --> F606
+  F606(["path"])
+  F606 --> F607
+  F607(["self_path"])
+  F607 --> F608
+  F608(["isolated_node"])
+  F608 --> F609
+  F609(["no_path"])
+  F609 --> F610
+  F610(["system"])
+  F610 --> F611
+  F611(["result"])
+  F611 --> F612
+  F612(["system"])
+  F612 --> F613
+  F613(["result"])
+  F613 --> F614
+  F614(["system"])
+  F614 --> F615
+  F615(["clusters"])
+  F615 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant add_node
+  participant add_edge
+  participant get_node
+  participant get_edge
+  participant get_node_edges
+  participant get_outgoing_edges
+  participant get_incoming_edges
+  participant find_shortest_path
+  participant calculate_metrics
+  participant count_connected_components
+  participant dfs_visit
+  participant calculate_diameter
+  participant calculate_clustering_coefficient
+  participant get_neighbors
+  participant count_edges_between_neighbors
+  participant has_edge
+  participant calculate_coverage_metrics
+  participant default
+  participant default
+  participant new
+  participant with_config
+  participant initialize_embeddings
+  participant has_embeddings
+  participant create_intent_mapping
+  participant add_requirement
+  participant add_requirements
+  participant extract_implementations
+  participant analyze_mappings
+  participant validate_mappings
+  participant get_traceability_report
+  participant create_implementation_from_file
+  participant infer_implementation_type
+  participant generate_automatic_mappings
+  participant generate_keyword_mappings
+  participant generate_semantic_mappings
+  participant generate_pattern_mappings
+  participant build_traceability_matrix
+  participant identify_gaps
+  participant generate_recommendations
+  participant validate_mapping
+  participant extract_keywords
+  participant extract_implementation_keywords
+  participant calculate_keyword_similarity
+  participant calculate_semantic_similarity
+  participant calculate_hybrid_similarity
+  participant calculate_structural_similarity
+  participant calculate_type_similarity
+  participant calculate_complexity_alignment
+  participant estimate_requirement_complexity
+  participant estimate_implementation_complexity
+  participant calculate_pattern_similarity
+  participant extract_requirement_patterns
+  participant extract_implementation_patterns
+  participant calculate_pattern_string_match
+  participant calculate_dependency_similarity
+  participant calculate_technology_alignment
+  participant calculate_integration_alignment
+  participant calculate_context_similarity
+  participant calculate_priority_alignment
+  participant calculate_category_alignment
+  participant extract_domain_from_requirement
+  participant extract_domain_from_implementation
+  participant generate_requirement_embeddings
+  participant generate_implementation_embeddings
+  participant calculate_embedding_similarity
+  participant find_similar_implementations
+  participant find_similar_requirements
+  participant analyze_requirement_clusters
+  participant get_embedding_stats
+  participant get_implementation_description
+  participant calculate_pattern_match_score
+  participant is_stop_word
+  participant requirements
+  participant implementations
+  participant mappings
+  participant config
+  participant traceability
+  participant add_implementation
+  participant add_mapping
+  participant build_traceability_matrix_public
+  participant identify_gaps_public
+  participant generate_recommendations_public
+  participant validate_mapping_public
+  participant extract_keywords_public
+  participant calculate_keyword_similarity_public
+  participant extract_implementation_keywords_public
+  participant calculate_pattern_match_public
+  participant calculate_confidence_score
+  participant calculate_quality_confidence
+  participant calculate_type_alignment_confidence
+  participant calculate_priority_confidence
+  participant calculate_documentation_confidence
+  participant calculate_status_confidence
+  participant calculate_test_confidence
+  participant apply_confidence_adjustments
+  participant determine_validation_status
+  participant get_confidence_level
+  participant build_relationship_graph
+  participant extract_requirement_metadata
+  participant extract_requirement_attributes
+  participant extract_implementation_metadata
+  participant extract_implementation_attributes
+  participant extract_mapping_metadata
+  participant extract_mapping_attributes
+  participant mapping_type_to_edge_type
+  participant add_derived_relationships
+  participant add_semantic_relationships
+  participant priority_to_weight
+  participant calculate_criteria_completeness
+  participant calculate_overall_quality_score
+  participant calculate_documentation_score
+  participant calculate_mapping_age_days
+  participant validation_status_to_score
+  participant calculate_dependency_score
+  participant calculate_requirement_similarity
+  participant calculate_implementation_similarity
+  participant calculate_text_similarity
+  participant calculate_path_similarity
+  participant calculate_code_element_similarity
+  participant extract_code_element_metadata
+  participant extract_code_element_attributes
+  participant new
+  participant default
+  participant default
+  participant fmt
+  participant fmt
+  participant fmt
+  participant test_intent_mapping_system_creation
+  participant test_intent_mapping_system_with_config
+  participant test_mapping_config_default
+  participant test_requirement_creation
+  participant test_requirement_type_variants
+  participant test_priority_ordering
+  participant test_requirement_status_variants
+  participant test_implementation_creation
+  participant test_implementation_type_variants
+  participant test_code_element_creation
+  participant test_implementation_status_variants
+  participant test_quality_metrics_creation
+  participant test_quality_metrics_default
+  participant test_intent_mapping_creation
+  participant test_mapping_type_variants
+  participant test_validation_status_variants
+  participant test_traceability_matrix_creation
+  participant test_coverage_metrics_creation
+  participant create_test_requirement
+  participant create_test_implementation
+  participant test_add_requirement
+  participant test_add_multiple_requirements
+  participant test_add_implementation
+  participant test_extract_keywords
+  participant test_calculate_keyword_similarity
+  participant test_extract_implementation_keywords
+  participant test_build_traceability_matrix
+  participant test_identify_gaps
+  participant test_generate_recommendations
+  participant test_display_implementations
+  participant test_embedding_stats_creation
+  participant test_semantic_similarity_without_embeddings
+  participant test_has_embeddings_initially_false
+  participant test_embedding_stats_structure
+  participant test_semantic_similarity_edge_cases
+  participant test_hybrid_similarity_scoring
+  participant test_structural_similarity
+  participant test_type_similarity
+  participant test_complexity_alignment
+  participant test_pattern_similarity
+  participant test_confidence_scoring_algorithm
+  participant test_confidence_scoring_low_quality
+  participant test_validation_status_determination
+  participant test_quality_confidence_calculation
+  participant test_relationship_graph_creation
+  participant test_graph_metrics_calculation
+  participant test_shortest_path_finding
+  participant test_find_similar_implementations_empty
+  participant test_find_similar_requirements_empty
+  participant test_analyze_requirement_clusters_empty
+  default->>new: call
+  new->>add_node: call
+  add_node->>add_edge: call
+  add_edge->>get_node: call
+  get_node->>get_edge: call
+  get_edge->>get_node_edges: call
+  get_node_edges->>get_outgoing_edges: call
+  get_outgoing_edges->>get_incoming_edges: call
+  get_incoming_edges->>find_shortest_path: call
+  find_shortest_path->>calculate_metrics: call
+  calculate_metrics->>count_connected_components: call
+  count_connected_components->>dfs_visit: call
+  dfs_visit->>calculate_diameter: call
+  calculate_diameter->>calculate_clustering_coefficient: call
+  calculate_clustering_coefficient->>get_neighbors: call
+  get_neighbors->>count_edges_between_neighbors: call
+  count_edges_between_neighbors->>has_edge: call
+  has_edge->>calculate_coverage_metrics: call
+  calculate_coverage_metrics->>default: call
+  default->>default: call
+  default->>new: call
+  new->>with_config: call
+  with_config->>initialize_embeddings: call
+  initialize_embeddings->>has_embeddings: call
+  has_embeddings->>create_intent_mapping: call
+  create_intent_mapping->>add_requirement: call
+  add_requirement->>add_requirements: call
+  add_requirements->>extract_implementations: call
+  extract_implementations->>analyze_mappings: call
+  analyze_mappings->>validate_mappings: call
+  validate_mappings->>get_traceability_report: call
+  get_traceability_report->>create_implementation_from_file: call
+  create_implementation_from_file->>infer_implementation_type: call
+  infer_implementation_type->>generate_automatic_mappings: call
+  generate_automatic_mappings->>generate_keyword_mappings: call
+  generate_keyword_mappings->>generate_semantic_mappings: call
+  generate_semantic_mappings->>generate_pattern_mappings: call
+  generate_pattern_mappings->>build_traceability_matrix: call
+  build_traceability_matrix->>identify_gaps: call
+  identify_gaps->>generate_recommendations: call
+  generate_recommendations->>validate_mapping: call
+  validate_mapping->>extract_keywords: call
+  extract_keywords->>extract_implementation_keywords: call
+  extract_implementation_keywords->>calculate_keyword_similarity: call
+  calculate_keyword_similarity->>calculate_semantic_similarity: call
+  calculate_semantic_similarity->>calculate_hybrid_similarity: call
+  calculate_hybrid_similarity->>calculate_structural_similarity: call
+  calculate_structural_similarity->>calculate_type_similarity: call
+  calculate_type_similarity->>calculate_complexity_alignment: call
+  calculate_complexity_alignment->>estimate_requirement_complexity: call
+  estimate_requirement_complexity->>estimate_implementation_complexity: call
+  estimate_implementation_complexity->>calculate_pattern_similarity: call
+  calculate_pattern_similarity->>extract_requirement_patterns: call
+  extract_requirement_patterns->>extract_implementation_patterns: call
+  extract_implementation_patterns->>calculate_pattern_string_match: call
+  calculate_pattern_string_match->>calculate_dependency_similarity: call
+  calculate_dependency_similarity->>calculate_technology_alignment: call
+  calculate_technology_alignment->>calculate_integration_alignment: call
+  calculate_integration_alignment->>calculate_context_similarity: call
+  calculate_context_similarity->>calculate_priority_alignment: call
+  calculate_priority_alignment->>calculate_category_alignment: call
+  calculate_category_alignment->>extract_domain_from_requirement: call
+  extract_domain_from_requirement->>extract_domain_from_implementation: call
+  extract_domain_from_implementation->>generate_requirement_embeddings: call
+  generate_requirement_embeddings->>generate_implementation_embeddings: call
+  generate_implementation_embeddings->>calculate_embedding_similarity: call
+  calculate_embedding_similarity->>find_similar_implementations: call
+  find_similar_implementations->>find_similar_requirements: call
+  find_similar_requirements->>analyze_requirement_clusters: call
+  analyze_requirement_clusters->>get_embedding_stats: call
+  get_embedding_stats->>get_implementation_description: call
+  get_implementation_description->>calculate_pattern_match_score: call
+  calculate_pattern_match_score->>is_stop_word: call
+  is_stop_word->>requirements: call
+  requirements->>implementations: call
+  implementations->>mappings: call
+  mappings->>config: call
+  config->>traceability: call
+  traceability->>add_implementation: call
+  add_implementation->>add_mapping: call
+  add_mapping->>build_traceability_matrix_public: call
+  build_traceability_matrix_public->>identify_gaps_public: call
+  identify_gaps_public->>generate_recommendations_public: call
+  generate_recommendations_public->>validate_mapping_public: call
+  validate_mapping_public->>extract_keywords_public: call
+  extract_keywords_public->>calculate_keyword_similarity_public: call
+  calculate_keyword_similarity_public->>extract_implementation_keywords_public: call
+  extract_implementation_keywords_public->>calculate_pattern_match_public: call
+  calculate_pattern_match_public->>calculate_confidence_score: call
+  calculate_confidence_score->>calculate_quality_confidence: call
+  calculate_quality_confidence->>calculate_type_alignment_confidence: call
+  calculate_type_alignment_confidence->>calculate_priority_confidence: call
+  calculate_priority_confidence->>calculate_documentation_confidence: call
+  calculate_documentation_confidence->>calculate_status_confidence: call
+  calculate_status_confidence->>calculate_test_confidence: call
+  calculate_test_confidence->>apply_confidence_adjustments: call
+  apply_confidence_adjustments->>determine_validation_status: call
+  determine_validation_status->>get_confidence_level: call
+  get_confidence_level->>build_relationship_graph: call
+  build_relationship_graph->>extract_requirement_metadata: call
+  extract_requirement_metadata->>extract_requirement_attributes: call
+  extract_requirement_attributes->>extract_implementation_metadata: call
+  extract_implementation_metadata->>extract_implementation_attributes: call
+  extract_implementation_attributes->>extract_mapping_metadata: call
+  extract_mapping_metadata->>extract_mapping_attributes: call
+  extract_mapping_attributes->>mapping_type_to_edge_type: call
+  mapping_type_to_edge_type->>add_derived_relationships: call
+  add_derived_relationships->>add_semantic_relationships: call
+  add_semantic_relationships->>priority_to_weight: call
+  priority_to_weight->>calculate_criteria_completeness: call
+  calculate_criteria_completeness->>calculate_overall_quality_score: call
+  calculate_overall_quality_score->>calculate_documentation_score: call
+  calculate_documentation_score->>calculate_mapping_age_days: call
+  calculate_mapping_age_days->>validation_status_to_score: call
+  validation_status_to_score->>calculate_dependency_score: call
+  calculate_dependency_score->>calculate_requirement_similarity: call
+  calculate_requirement_similarity->>calculate_implementation_similarity: call
+  calculate_implementation_similarity->>calculate_text_similarity: call
+  calculate_text_similarity->>calculate_path_similarity: call
+  calculate_path_similarity->>calculate_code_element_similarity: call
+  calculate_code_element_similarity->>extract_code_element_metadata: call
+  extract_code_element_metadata->>extract_code_element_attributes: call
+  extract_code_element_attributes->>new: call
+  new->>default: call
+  default->>default: call
+  default->>fmt: call
+  fmt->>fmt: call
+  fmt->>fmt: call
+  fmt->>test_intent_mapping_system_creation: call
+  test_intent_mapping_system_creation->>test_intent_mapping_system_with_config: call
+  test_intent_mapping_system_with_config->>test_mapping_config_default: call
+  test_mapping_config_default->>test_requirement_creation: call
+  test_requirement_creation->>test_requirement_type_variants: call
+  test_requirement_type_variants->>test_priority_ordering: call
+  test_priority_ordering->>test_requirement_status_variants: call
+  test_requirement_status_variants->>test_implementation_creation: call
+  test_implementation_creation->>test_implementation_type_variants: call
+  test_implementation_type_variants->>test_code_element_creation: call
+  test_code_element_creation->>test_implementation_status_variants: call
+  test_implementation_status_variants->>test_quality_metrics_creation: call
+  test_quality_metrics_creation->>test_quality_metrics_default: call
+  test_quality_metrics_default->>test_intent_mapping_creation: call
+  test_intent_mapping_creation->>test_mapping_type_variants: call
+  test_mapping_type_variants->>test_validation_status_variants: call
+  test_validation_status_variants->>test_traceability_matrix_creation: call
+  test_traceability_matrix_creation->>test_coverage_metrics_creation: call
+  test_coverage_metrics_creation->>create_test_requirement: call
+  create_test_requirement->>create_test_implementation: call
+  create_test_implementation->>test_add_requirement: call
+  test_add_requirement->>test_add_multiple_requirements: call
+  test_add_multiple_requirements->>test_add_implementation: call
+  test_add_implementation->>test_extract_keywords: call
+  test_extract_keywords->>test_calculate_keyword_similarity: call
+  test_calculate_keyword_similarity->>test_extract_implementation_keywords: call
+  test_extract_implementation_keywords->>test_build_traceability_matrix: call
+  test_build_traceability_matrix->>test_identify_gaps: call
+  test_identify_gaps->>test_generate_recommendations: call
+  test_generate_recommendations->>test_display_implementations: call
+  test_display_implementations->>test_embedding_stats_creation: call
+  test_embedding_stats_creation->>test_semantic_similarity_without_embeddings: call
+  test_semantic_similarity_without_embeddings->>test_has_embeddings_initially_false: call
+  test_has_embeddings_initially_false->>test_embedding_stats_structure: call
+  test_embedding_stats_structure->>test_semantic_similarity_edge_cases: call
+  test_semantic_similarity_edge_cases->>test_hybrid_similarity_scoring: call
+  test_hybrid_similarity_scoring->>test_structural_similarity: call
+  test_structural_similarity->>test_type_similarity: call
+  test_type_similarity->>test_complexity_alignment: call
+  test_complexity_alignment->>test_pattern_similarity: call
+  test_pattern_similarity->>test_confidence_scoring_algorithm: call
+  test_confidence_scoring_algorithm->>test_confidence_scoring_low_quality: call
+  test_confidence_scoring_low_quality->>test_validation_status_determination: call
+  test_validation_status_determination->>test_quality_confidence_calculation: call
+  test_quality_confidence_calculation->>test_relationship_graph_creation: call
+  test_relationship_graph_creation->>test_graph_metrics_calculation: call
+  test_graph_metrics_calculation->>test_shortest_path_finding: call
+  test_shortest_path_finding->>test_find_similar_implementations_empty: call
+  test_find_similar_implementations_empty->>test_find_similar_requirements_empty: call
+  test_find_similar_requirements_empty->>test_analyze_requirement_clusters_empty: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-add_node"><code>add_node</code> <small>function</small></li>
+<li id="symbol-add_edge"><code>add_edge</code> <small>function</small></li>
+<li id="symbol-get_node"><code>get_node</code> <small>function</small></li>
+<li id="symbol-get_edge"><code>get_edge</code> <small>function</small></li>
+<li id="symbol-get_node_edges"><code>get_node_edges</code> <small>function</small></li>
+<li id="symbol-get_outgoing_edges"><code>get_outgoing_edges</code> <small>function</small></li>
+<li id="symbol-get_incoming_edges"><code>get_incoming_edges</code> <small>function</small></li>
+<li id="symbol-find_shortest_path"><code>find_shortest_path</code> <small>function</small></li>
+<li id="symbol-calculate_metrics"><code>calculate_metrics</code> <small>function</small></li>
+<li id="symbol-count_connected_components"><code>count_connected_components</code> <small>function</small></li>
+<li id="symbol-dfs_visit"><code>dfs_visit</code> <small>function</small></li>
+<li id="symbol-calculate_diameter"><code>calculate_diameter</code> <small>function</small></li>
+<li id="symbol-calculate_clustering_coefficient"><code>calculate_clustering_coefficient</code> <small>function</small></li>
+<li id="symbol-get_neighbors"><code>get_neighbors</code> <small>function</small></li>
+<li id="symbol-count_edges_between_neighbors"><code>count_edges_between_neighbors</code> <small>function</small></li>
+<li id="symbol-has_edge"><code>has_edge</code> <small>function</small></li>
+<li id="symbol-calculate_coverage_metrics"><code>calculate_coverage_metrics</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-initialize_embeddings"><code>initialize_embeddings</code> <small>function</small></li>
+<li id="symbol-has_embeddings"><code>has_embeddings</code> <small>function</small></li>
+<li id="symbol-create_intent_mapping"><code>create_intent_mapping</code> <small>function</small></li>
+<li id="symbol-add_requirement"><code>add_requirement</code> <small>function</small></li>
+<li id="symbol-add_requirements"><code>add_requirements</code> <small>function</small></li>
+<li id="symbol-extract_implementations"><code>extract_implementations</code> <small>function</small></li>
+<li id="symbol-analyze_mappings"><code>analyze_mappings</code> <small>function</small></li>
+<li id="symbol-validate_mappings"><code>validate_mappings</code> <small>function</small></li>
+<li id="symbol-get_traceability_report"><code>get_traceability_report</code> <small>function</small></li>
+<li id="symbol-create_implementation_from_file"><code>create_implementation_from_file</code> <small>function</small></li>
+<li id="symbol-infer_implementation_type"><code>infer_implementation_type</code> <small>function</small></li>
+<li id="symbol-generate_automatic_mappings"><code>generate_automatic_mappings</code> <small>function</small></li>
+<li id="symbol-generate_keyword_mappings"><code>generate_keyword_mappings</code> <small>function</small></li>
+<li id="symbol-generate_semantic_mappings"><code>generate_semantic_mappings</code> <small>function</small></li>
+<li id="symbol-generate_pattern_mappings"><code>generate_pattern_mappings</code> <small>function</small></li>
+<li id="symbol-build_traceability_matrix"><code>build_traceability_matrix</code> <small>function</small></li>
+<li id="symbol-identify_gaps"><code>identify_gaps</code> <small>function</small></li>
+<li id="symbol-generate_recommendations"><code>generate_recommendations</code> <small>function</small></li>
+<li id="symbol-validate_mapping"><code>validate_mapping</code> <small>function</small></li>
+<li id="symbol-extract_keywords"><code>extract_keywords</code> <small>function</small></li>
+<li id="symbol-extract_implementation_keywords"><code>extract_implementation_keywords</code> <small>function</small></li>
+<li id="symbol-calculate_keyword_similarity"><code>calculate_keyword_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_semantic_similarity"><code>calculate_semantic_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_hybrid_similarity"><code>calculate_hybrid_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_structural_similarity"><code>calculate_structural_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_type_similarity"><code>calculate_type_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_complexity_alignment"><code>calculate_complexity_alignment</code> <small>function</small></li>
+<li id="symbol-estimate_requirement_complexity"><code>estimate_requirement_complexity</code> <small>function</small></li>
+<li id="symbol-estimate_implementation_complexity"><code>estimate_implementation_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_pattern_similarity"><code>calculate_pattern_similarity</code> <small>function</small></li>
+<li id="symbol-extract_requirement_patterns"><code>extract_requirement_patterns</code> <small>function</small></li>
+<li id="symbol-extract_implementation_patterns"><code>extract_implementation_patterns</code> <small>function</small></li>
+<li id="symbol-calculate_pattern_string_match"><code>calculate_pattern_string_match</code> <small>function</small></li>
+<li id="symbol-calculate_dependency_similarity"><code>calculate_dependency_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_technology_alignment"><code>calculate_technology_alignment</code> <small>function</small></li>
+<li id="symbol-calculate_integration_alignment"><code>calculate_integration_alignment</code> <small>function</small></li>
+<li id="symbol-calculate_context_similarity"><code>calculate_context_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_priority_alignment"><code>calculate_priority_alignment</code> <small>function</small></li>
+<li id="symbol-calculate_category_alignment"><code>calculate_category_alignment</code> <small>function</small></li>
+<li id="symbol-extract_domain_from_requirement"><code>extract_domain_from_requirement</code> <small>function</small></li>
+<li id="symbol-extract_domain_from_implementation"><code>extract_domain_from_implementation</code> <small>function</small></li>
+<li id="symbol-generate_requirement_embeddings"><code>generate_requirement_embeddings</code> <small>function</small></li>
+<li id="symbol-generate_implementation_embeddings"><code>generate_implementation_embeddings</code> <small>function</small></li>
+<li id="symbol-calculate_embedding_similarity"><code>calculate_embedding_similarity</code> <small>function</small></li>
+<li id="symbol-find_similar_implementations"><code>find_similar_implementations</code> <small>function</small></li>
+<li id="symbol-find_similar_requirements"><code>find_similar_requirements</code> <small>function</small></li>
+<li id="symbol-analyze_requirement_clusters"><code>analyze_requirement_clusters</code> <small>function</small></li>
+<li id="symbol-get_embedding_stats"><code>get_embedding_stats</code> <small>function</small></li>
+<li id="symbol-get_implementation_description"><code>get_implementation_description</code> <small>function</small></li>
+<li id="symbol-calculate_pattern_match_score"><code>calculate_pattern_match_score</code> <small>function</small></li>
+<li id="symbol-is_stop_word"><code>is_stop_word</code> <small>function</small></li>
+<li id="symbol-requirements"><code>requirements</code> <small>function</small></li>
+<li id="symbol-implementations"><code>implementations</code> <small>function</small></li>
+<li id="symbol-mappings"><code>mappings</code> <small>function</small></li>
+<li id="symbol-config"><code>config</code> <small>function</small></li>
+<li id="symbol-traceability"><code>traceability</code> <small>function</small></li>
+<li id="symbol-add_implementation"><code>add_implementation</code> <small>function</small></li>
+<li id="symbol-add_mapping"><code>add_mapping</code> <small>function</small></li>
+<li id="symbol-build_traceability_matrix_public"><code>build_traceability_matrix_public</code> <small>function</small></li>
+<li id="symbol-identify_gaps_public"><code>identify_gaps_public</code> <small>function</small></li>
+<li id="symbol-generate_recommendations_public"><code>generate_recommendations_public</code> <small>function</small></li>
+<li id="symbol-validate_mapping_public"><code>validate_mapping_public</code> <small>function</small></li>
+<li id="symbol-extract_keywords_public"><code>extract_keywords_public</code> <small>function</small></li>
+<li id="symbol-calculate_keyword_similarity_public"><code>calculate_keyword_similarity_public</code> <small>function</small></li>
+<li id="symbol-extract_implementation_keywords_public"><code>extract_implementation_keywords_public</code> <small>function</small></li>
+<li id="symbol-calculate_pattern_match_public"><code>calculate_pattern_match_public</code> <small>function</small></li>
+<li id="symbol-calculate_confidence_score"><code>calculate_confidence_score</code> <small>function</small></li>
+<li id="symbol-calculate_quality_confidence"><code>calculate_quality_confidence</code> <small>function</small></li>
+<li id="symbol-calculate_type_alignment_confidence"><code>calculate_type_alignment_confidence</code> <small>function</small></li>
+<li id="symbol-calculate_priority_confidence"><code>calculate_priority_confidence</code> <small>function</small></li>
+<li id="symbol-calculate_documentation_confidence"><code>calculate_documentation_confidence</code> <small>function</small></li>
+<li id="symbol-calculate_status_confidence"><code>calculate_status_confidence</code> <small>function</small></li>
+<li id="symbol-calculate_test_confidence"><code>calculate_test_confidence</code> <small>function</small></li>
+<li id="symbol-apply_confidence_adjustments"><code>apply_confidence_adjustments</code> <small>function</small></li>
+<li id="symbol-determine_validation_status"><code>determine_validation_status</code> <small>function</small></li>
+<li id="symbol-get_confidence_level"><code>get_confidence_level</code> <small>function</small></li>
+<li id="symbol-build_relationship_graph"><code>build_relationship_graph</code> <small>function</small></li>
+<li id="symbol-extract_requirement_metadata"><code>extract_requirement_metadata</code> <small>function</small></li>
+<li id="symbol-extract_requirement_attributes"><code>extract_requirement_attributes</code> <small>function</small></li>
+<li id="symbol-extract_implementation_metadata"><code>extract_implementation_metadata</code> <small>function</small></li>
+<li id="symbol-extract_implementation_attributes"><code>extract_implementation_attributes</code> <small>function</small></li>
+<li id="symbol-extract_mapping_metadata"><code>extract_mapping_metadata</code> <small>function</small></li>
+<li id="symbol-extract_mapping_attributes"><code>extract_mapping_attributes</code> <small>function</small></li>
+<li id="symbol-mapping_type_to_edge_type"><code>mapping_type_to_edge_type</code> <small>function</small></li>
+<li id="symbol-add_derived_relationships"><code>add_derived_relationships</code> <small>function</small></li>
+<li id="symbol-add_semantic_relationships"><code>add_semantic_relationships</code> <small>function</small></li>
+<li id="symbol-priority_to_weight"><code>priority_to_weight</code> <small>function</small></li>
+<li id="symbol-calculate_criteria_completeness"><code>calculate_criteria_completeness</code> <small>function</small></li>
+<li id="symbol-calculate_overall_quality_score"><code>calculate_overall_quality_score</code> <small>function</small></li>
+<li id="symbol-calculate_documentation_score"><code>calculate_documentation_score</code> <small>function</small></li>
+<li id="symbol-calculate_mapping_age_days"><code>calculate_mapping_age_days</code> <small>function</small></li>
+<li id="symbol-validation_status_to_score"><code>validation_status_to_score</code> <small>function</small></li>
+<li id="symbol-calculate_dependency_score"><code>calculate_dependency_score</code> <small>function</small></li>
+<li id="symbol-calculate_requirement_similarity"><code>calculate_requirement_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_implementation_similarity"><code>calculate_implementation_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_text_similarity"><code>calculate_text_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_path_similarity"><code>calculate_path_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_code_element_similarity"><code>calculate_code_element_similarity</code> <small>function</small></li>
+<li id="symbol-extract_code_element_metadata"><code>extract_code_element_metadata</code> <small>function</small></li>
+<li id="symbol-extract_code_element_attributes"><code>extract_code_element_attributes</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-test_intent_mapping_system_creation"><code>test_intent_mapping_system_creation</code> <small>function</small></li>
+<li id="symbol-test_intent_mapping_system_with_config"><code>test_intent_mapping_system_with_config</code> <small>function</small></li>
+<li id="symbol-test_mapping_config_default"><code>test_mapping_config_default</code> <small>function</small></li>
+<li id="symbol-test_requirement_creation"><code>test_requirement_creation</code> <small>function</small></li>
+<li id="symbol-test_requirement_type_variants"><code>test_requirement_type_variants</code> <small>function</small></li>
+<li id="symbol-test_priority_ordering"><code>test_priority_ordering</code> <small>function</small></li>
+<li id="symbol-test_requirement_status_variants"><code>test_requirement_status_variants</code> <small>function</small></li>
+<li id="symbol-test_implementation_creation"><code>test_implementation_creation</code> <small>function</small></li>
+<li id="symbol-test_implementation_type_variants"><code>test_implementation_type_variants</code> <small>function</small></li>
+<li id="symbol-test_code_element_creation"><code>test_code_element_creation</code> <small>function</small></li>
+<li id="symbol-test_implementation_status_variants"><code>test_implementation_status_variants</code> <small>function</small></li>
+<li id="symbol-test_quality_metrics_creation"><code>test_quality_metrics_creation</code> <small>function</small></li>
+<li id="symbol-test_quality_metrics_default"><code>test_quality_metrics_default</code> <small>function</small></li>
+<li id="symbol-test_intent_mapping_creation"><code>test_intent_mapping_creation</code> <small>function</small></li>
+<li id="symbol-test_mapping_type_variants"><code>test_mapping_type_variants</code> <small>function</small></li>
+<li id="symbol-test_validation_status_variants"><code>test_validation_status_variants</code> <small>function</small></li>
+<li id="symbol-test_traceability_matrix_creation"><code>test_traceability_matrix_creation</code> <small>function</small></li>
+<li id="symbol-test_coverage_metrics_creation"><code>test_coverage_metrics_creation</code> <small>function</small></li>
+<li id="symbol-create_test_requirement"><code>create_test_requirement</code> <small>function</small></li>
+<li id="symbol-create_test_implementation"><code>create_test_implementation</code> <small>function</small></li>
+<li id="symbol-test_add_requirement"><code>test_add_requirement</code> <small>function</small></li>
+<li id="symbol-test_add_multiple_requirements"><code>test_add_multiple_requirements</code> <small>function</small></li>
+<li id="symbol-test_add_implementation"><code>test_add_implementation</code> <small>function</small></li>
+<li id="symbol-test_extract_keywords"><code>test_extract_keywords</code> <small>function</small></li>
+<li id="symbol-test_calculate_keyword_similarity"><code>test_calculate_keyword_similarity</code> <small>function</small></li>
+<li id="symbol-test_extract_implementation_keywords"><code>test_extract_implementation_keywords</code> <small>function</small></li>
+<li id="symbol-test_build_traceability_matrix"><code>test_build_traceability_matrix</code> <small>function</small></li>
+<li id="symbol-test_identify_gaps"><code>test_identify_gaps</code> <small>function</small></li>
+<li id="symbol-test_generate_recommendations"><code>test_generate_recommendations</code> <small>function</small></li>
+<li id="symbol-test_display_implementations"><code>test_display_implementations</code> <small>function</small></li>
+<li id="symbol-test_embedding_stats_creation"><code>test_embedding_stats_creation</code> <small>function</small></li>
+<li id="symbol-test_semantic_similarity_without_embeddings"><code>test_semantic_similarity_without_embeddings</code> <small>function</small></li>
+<li id="symbol-test_has_embeddings_initially_false"><code>test_has_embeddings_initially_false</code> <small>function</small></li>
+<li id="symbol-test_embedding_stats_structure"><code>test_embedding_stats_structure</code> <small>function</small></li>
+<li id="symbol-test_semantic_similarity_edge_cases"><code>test_semantic_similarity_edge_cases</code> <small>function</small></li>
+<li id="symbol-test_hybrid_similarity_scoring"><code>test_hybrid_similarity_scoring</code> <small>function</small></li>
+<li id="symbol-test_structural_similarity"><code>test_structural_similarity</code> <small>function</small></li>
+<li id="symbol-test_type_similarity"><code>test_type_similarity</code> <small>function</small></li>
+<li id="symbol-test_complexity_alignment"><code>test_complexity_alignment</code> <small>function</small></li>
+<li id="symbol-test_pattern_similarity"><code>test_pattern_similarity</code> <small>function</small></li>
+<li id="symbol-test_confidence_scoring_algorithm"><code>test_confidence_scoring_algorithm</code> <small>function</small></li>
+<li id="symbol-test_confidence_scoring_low_quality"><code>test_confidence_scoring_low_quality</code> <small>function</small></li>
+<li id="symbol-test_validation_status_determination"><code>test_validation_status_determination</code> <small>function</small></li>
+<li id="symbol-test_quality_confidence_calculation"><code>test_quality_confidence_calculation</code> <small>function</small></li>
+<li id="symbol-test_relationship_graph_creation"><code>test_relationship_graph_creation</code> <small>function</small></li>
+<li id="symbol-test_graph_metrics_calculation"><code>test_graph_metrics_calculation</code> <small>function</small></li>
+<li id="symbol-test_shortest_path_finding"><code>test_shortest_path_finding</code> <small>function</small></li>
+<li id="symbol-test_find_similar_implementations_empty"><code>test_find_similar_implementations_empty</code> <small>function</small></li>
+<li id="symbol-test_find_similar_requirements_empty"><code>test_find_similar_requirements_empty</code> <small>function</small></li>
+<li id="symbol-test_analyze_requirement_clusters_empty"><code>test_analyze_requirement_clusters_empty</code> <small>function</small></li>
+<li id="symbol-confidencethresholds"><code>ConfidenceThresholds</code> <small>struct</small></li>
+<li id="symbol-relationshipgraph"><code>RelationshipGraph</code> <small>struct</small></li>
+<li id="symbol-relationshipnode"><code>RelationshipNode</code> <small>struct</small></li>
+<li id="symbol-relationshipedge"><code>RelationshipEdge</code> <small>struct</small></li>
+<li id="symbol-graphmetrics"><code>GraphMetrics</code> <small>struct</small></li>
+<li id="symbol-graphcoveragemetrics"><code>GraphCoverageMetrics</code> <small>struct</small></li>
+<li id="symbol-intentmappingsystem"><code>IntentMappingSystem</code> <small>struct</small></li>
+<li id="symbol-requirement"><code>Requirement</code> <small>struct</small></li>
+<li id="symbol-implementation"><code>Implementation</code> <small>struct</small></li>
+<li id="symbol-codeelement"><code>CodeElement</code> <small>struct</small></li>
+<li id="symbol-qualitymetrics"><code>QualityMetrics</code> <small>struct</small></li>
+<li id="symbol-intentmapping"><code>IntentMapping</code> <small>struct</small></li>
+<li id="symbol-traceabilitymatrix"><code>TraceabilityMatrix</code> <small>struct</small></li>
+<li id="symbol-coveragemetrics"><code>CoverageMetrics</code> <small>struct</small></li>
+<li id="symbol-mappingconfig"><code>MappingConfig</code> <small>struct</small></li>
+<li id="symbol-mappinganalysisresult"><code>MappingAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-mappinggap"><code>MappingGap</code> <small>struct</small></li>
+<li id="symbol-mappingrecommendation"><code>MappingRecommendation</code> <small>struct</small></li>
+<li id="symbol-embeddingstats"><code>EmbeddingStats</code> <small>struct</small></li>
+<li id="symbol-traceabilityreport"><code>TraceabilityReport</code> <small>struct</small></li>
+<li id="symbol-relationshipnodetype"><code>RelationshipNodeType</code> <small>enum</small></li>
+<li id="symbol-relationshipedgetype"><code>RelationshipEdgeType</code> <small>enum</small></li>
+<li id="symbol-requirementtype"><code>RequirementType</code> <small>enum</small></li>
+<li id="symbol-requirementstatus"><code>RequirementStatus</code> <small>enum</small></li>
+<li id="symbol-implementationtype"><code>ImplementationType</code> <small>enum</small></li>
+<li id="symbol-implementationstatus"><code>ImplementationStatus</code> <small>enum</small></li>
+<li id="symbol-mappingtype"><code>MappingType</code> <small>enum</small></li>
+<li id="symbol-validationstatus"><code>ValidationStatus</code> <small>enum</small></li>
+<li id="symbol-gaptype"><code>GapType</code> <small>enum</small></li>
+<li id="symbol-recommendationtype"><code>RecommendationType</code> <small>enum</small></li>
+<li id="symbol-effortlevel"><code>EffortLevel</code> <small>enum</small></li>
+<li id="symbol-confidencethresholds"><code>ConfidenceThresholds</code> <small>impl</small></li>
+<li id="symbol-relationshipgraph"><code>RelationshipGraph</code> <small>impl</small></li>
+<li id="symbol-graphmetrics"><code>GraphMetrics</code> <small>impl</small></li>
+<li id="symbol-mappingconfig"><code>MappingConfig</code> <small>impl</small></li>
+<li id="symbol-intentmappingsystem"><code>IntentMappingSystem</code> <small>impl</small></li>
+<li id="symbol-traceabilitymatrix"><code>TraceabilityMatrix</code> <small>impl</small></li>
+<li id="symbol-intentmappingsystem"><code>IntentMappingSystem</code> <small>impl</small></li>
+<li id="symbol-qualitymetrics"><code>QualityMetrics</code> <small>impl</small></li>
+<li id="symbol-requirementtype"><code>RequirementType</code> <small>impl</small></li>
+<li id="symbol-implementationtype"><code>ImplementationType</code> <small>impl</small></li>
+<li id="symbol-mappingtype"><code>MappingType</code> <small>impl</small></li>
+<li id="symbol-visited"><code>visited</code> <small>variable</small></li>
+<li id="symbol-queue"><code>queue</code> <small>variable</small></li>
+<li id="symbol-parent"><code>parent</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-node_count"><code>node_count</code> <small>variable</small></li>
+<li id="symbol-edge_count"><code>edge_count</code> <small>variable</small></li>
+<li id="symbol-density"><code>density</code> <small>variable</small></li>
+<li id="symbol-average_degree"><code>average_degree</code> <small>variable</small></li>
+<li id="symbol-connected_components"><code>connected_components</code> <small>variable</small></li>
+<li id="symbol-diameter"><code>diameter</code> <small>variable</small></li>
+<li id="symbol-clustering_coefficient"><code>clustering_coefficient</code> <small>variable</small></li>
+<li id="symbol-coverage_metrics"><code>coverage_metrics</code> <small>variable</small></li>
+<li id="symbol-visited"><code>visited</code> <small>variable</small></li>
+<li id="symbol-components"><code>components</code> <small>variable</small></li>
+<li id="symbol-neighbor"><code>neighbor</code> <small>variable</small></li>
+<li id="symbol-max_distance"><code>max_distance</code> <small>variable</small></li>
+<li id="symbol-total_coefficient"><code>total_coefficient</code> <small>variable</small></li>
+<li id="symbol-node_count"><code>node_count</code> <small>variable</small></li>
+<li id="symbol-neighbors"><code>neighbors</code> <small>variable</small></li>
+<li id="symbol-possible_edges"><code>possible_edges</code> <small>variable</small></li>
+<li id="symbol-actual_edges"><code>actual_edges</code> <small>variable</small></li>
+<li id="symbol-neighbors"><code>neighbors</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+<li id="symbol-requirement_nodes"><code>requirement_nodes</code> <small>variable</small></li>
+<li id="symbol-implementation_nodes"><code>implementation_nodes</code> <small>variable</small></li>
+<li id="symbol-requirements_with_implementations"><code>requirements_with_implementations</code> <small>variable</small></li>
+<li id="symbol-implementations_with_requirements"><code>implementations_with_requirements</code> <small>variable</small></li>
+<li id="symbol-total_confidence"><code>total_confidence</code> <small>variable</small></li>
+<li id="symbol-mapping_count"><code>mapping_count</code> <small>variable</small></li>
+<li id="symbol-requirement_coverage"><code>requirement_coverage</code> <small>variable</small></li>
+<li id="symbol-implementation_coverage"><code>implementation_coverage</code> <small>variable</small></li>
+<li id="symbol-average_confidence"><code>average_confidence</code> <small>variable</small></li>
+<li id="symbol-embedding_config"><code>embedding_config</code> <small>variable</small></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-gaps"><code>gaps</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-validated_mappings"><code>validated_mappings</code> <small>variable</small></li>
+<li id="symbol-validation_results"><code>validation_results</code> <small>variable</small></li>
+<li id="symbol-validation_result"><code>validation_result</code> <small>variable</small></li>
+<li id="symbol-report"><code>report</code> <small>variable</small></li>
+<li id="symbol-requirements_with_impl"><code>requirements_with_impl</code> <small>variable</small></li>
+<li id="symbol-implementations_with_req"><code>implementations_with_req</code> <small>variable</small></li>
+<li id="symbol-valid_mappings"><code>valid_mappings</code> <small>variable</small></li>
+<li id="symbol-code_elements"><code>code_elements</code> <small>variable</small></li>
+<li id="symbol-element"><code>element</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-req_keywords"><code>req_keywords</code> <small>variable</small></li>
+<li id="symbol-impl_keywords"><code>impl_keywords</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-validation_status"><code>validation_status</code> <small>variable</small></li>
+<li id="symbol-mapping"><code>mapping</code> <small>variable</small></li>
+<li id="symbol-hybrid_score"><code>hybrid_score</code> <small>variable</small></li>
+<li id="symbol-exists"><code>exists</code> <small>variable</small></li>
+<li id="symbol-confidence_score"><code>confidence_score</code> <small>variable</small></li>
+<li id="symbol-rationale"><code>rationale</code> <small>variable</small></li>
+<li id="symbol-validation_status"><code>validation_status</code> <small>variable</small></li>
+<li id="symbol-mapping"><code>mapping</code> <small>variable</small></li>
+<li id="symbol-pattern_score"><code>pattern_score</code> <small>variable</small></li>
+<li id="symbol-mapping"><code>mapping</code> <small>variable</small></li>
+<li id="symbol-req_coverage"><code>req_coverage</code> <small>variable</small></li>
+<li id="symbol-impl_coverage"><code>impl_coverage</code> <small>variable</small></li>
+<li id="symbol-orphaned_reqs"><code>orphaned_reqs</code> <small>variable</small></li>
+<li id="symbol-orphaned_impls"><code>orphaned_impls</code> <small>variable</small></li>
+<li id="symbol-gaps"><code>gaps</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-req"><code>req</code> <small>variable</small></li>
+<li id="symbol-validation_score"><code>validation_score</code> <small>variable</small></li>
+<li id="symbol-keywords"><code>keywords</code> <small>variable</small></li>
+<li id="symbol-set1"><code>set1</code> <small>variable</small></li>
+<li id="symbol-set2"><code>set2</code> <small>variable</small></li>
+<li id="symbol-intersection"><code>intersection</code> <small>variable</small></li>
+<li id="symbol-union"><code>union</code> <small>variable</small></li>
+<li id="symbol-words1"><code>words1</code> <small>variable</small></li>
+<li id="symbol-words2"><code>words2</code> <small>variable</small></li>
+<li id="symbol-total_score"><code>total_score</code> <small>variable</small></li>
+<li id="symbol-semantic_score"><code>semantic_score</code> <small>variable</small></li>
+<li id="symbol-structural_score"><code>structural_score</code> <small>variable</small></li>
+<li id="symbol-req_keywords"><code>req_keywords</code> <small>variable</small></li>
+<li id="symbol-impl_keywords"><code>impl_keywords</code> <small>variable</small></li>
+<li id="symbol-keyword_score"><code>keyword_score</code> <small>variable</small></li>
+<li id="symbol-context_score"><code>context_score</code> <small>variable</small></li>
+<li id="symbol-structural_score"><code>structural_score</code> <small>variable</small></li>
+<li id="symbol-factors"><code>factors</code> <small>variable</small></li>
+<li id="symbol-req_type_str"><code>req_type_str</code> <small>variable</small></li>
+<li id="symbol-impl_type_str"><code>impl_type_str</code> <small>variable</small></li>
+<li id="symbol-type_score"><code>type_score</code> <small>variable</small></li>
+<li id="symbol-complexity_score"><code>complexity_score</code> <small>variable</small></li>
+<li id="symbol-pattern_score"><code>pattern_score</code> <small>variable</small></li>
+<li id="symbol-dependency_score"><code>dependency_score</code> <small>variable</small></li>
+<li id="symbol-type_mappings"><code>type_mappings</code> <small>variable</small></li>
+<li id="symbol-req_type_lower"><code>req_type_lower</code> <small>variable</small></li>
+<li id="symbol-impl_type_lower"><code>impl_type_lower</code> <small>variable</small></li>
+<li id="symbol-req_keywords"><code>req_keywords</code> <small>variable</small></li>
+<li id="symbol-impl_keywords"><code>impl_keywords</code> <small>variable</small></li>
+<li id="symbol-req_complexity"><code>req_complexity</code> <small>variable</small></li>
+<li id="symbol-impl_complexity"><code>impl_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity_diff"><code>complexity_diff</code> <small>variable</small></li>
+<li id="symbol-max_complexity"><code>max_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-word_count"><code>word_count</code> <small>variable</small></li>
+<li id="symbol-complexity_keywords"><code>complexity_keywords</code> <small>variable</small></li>
+<li id="symbol-description_lower"><code>description_lower</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-path_segments"><code>path_segments</code> <small>variable</small></li>
+<li id="symbol-doc_lower"><code>doc_lower</code> <small>variable</small></li>
+<li id="symbol-complexity_indicators"><code>complexity_indicators</code> <small>variable</small></li>
+<li id="symbol-pattern_score"><code>pattern_score</code> <small>variable</small></li>
+<li id="symbol-pattern_count"><code>pattern_count</code> <small>variable</small></li>
+<li id="symbol-req_patterns"><code>req_patterns</code> <small>variable</small></li>
+<li id="symbol-impl_patterns"><code>impl_patterns</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-patterns"><code>patterns</code> <small>variable</small></li>
+<li id="symbol-description_lower"><code>description_lower</code> <small>variable</small></li>
+<li id="symbol-pattern_keywords"><code>pattern_keywords</code> <small>variable</small></li>
+<li id="symbol-patterns"><code>patterns</code> <small>variable</small></li>
+<li id="symbol-path_str"><code>path_str</code> <small>variable</small></li>
+<li id="symbol-path_patterns"><code>path_patterns</code> <small>variable</small></li>
+<li id="symbol-doc_lower"><code>doc_lower</code> <small>variable</small></li>
+<li id="symbol-related_patterns"><code>related_patterns</code> <small>variable</small></li>
+<li id="symbol-keywords1"><code>keywords1</code> <small>variable</small></li>
+<li id="symbol-keywords2"><code>keywords2</code> <small>variable</small></li>
+<li id="symbol-dependency_score"><code>dependency_score</code> <small>variable</small></li>
+<li id="symbol-factors"><code>factors</code> <small>variable</small></li>
+<li id="symbol-tech_score"><code>tech_score</code> <small>variable</small></li>
+<li id="symbol-integration_score"><code>integration_score</code> <small>variable</small></li>
+<li id="symbol-req_description"><code>req_description</code> <small>variable</small></li>
+<li id="symbol-impl_path"><code>impl_path</code> <small>variable</small></li>
+<li id="symbol-tech_mappings"><code>tech_mappings</code> <small>variable</small></li>
+<li id="symbol-alignment_score"><code>alignment_score</code> <small>variable</small></li>
+<li id="symbol-matches"><code>matches</code> <small>variable</small></li>
+<li id="symbol-req_mentions_tech"><code>req_mentions_tech</code> <small>variable</small></li>
+<li id="symbol-impl_uses_tech"><code>impl_uses_tech</code> <small>variable</small></li>
+<li id="symbol-req_description"><code>req_description</code> <small>variable</small></li>
+<li id="symbol-impl_details"><code>impl_details</code> <small>variable</small></li>
+<li id="symbol-integration_patterns"><code>integration_patterns</code> <small>variable</small></li>
+<li id="symbol-req_integration_count"><code>req_integration_count</code> <small>variable</small></li>
+<li id="symbol-impl_integration_count"><code>impl_integration_count</code> <small>variable</small></li>
+<li id="symbol-common_integrations"><code>common_integrations</code> <small>variable</small></li>
+<li id="symbol-req_has"><code>req_has</code> <small>variable</small></li>
+<li id="symbol-impl_has"><code>impl_has</code> <small>variable</small></li>
+<li id="symbol-total_integrations"><code>total_integrations</code> <small>variable</small></li>
+<li id="symbol-context_score"><code>context_score</code> <small>variable</small></li>
+<li id="symbol-factors"><code>factors</code> <small>variable</small></li>
+<li id="symbol-priority_score"><code>priority_score</code> <small>variable</small></li>
+<li id="symbol-category_score"><code>category_score</code> <small>variable</small></li>
+<li id="symbol-impl_path"><code>impl_path</code> <small>variable</small></li>
+<li id="symbol-impl_details"><code>impl_details</code> <small>variable</small></li>
+<li id="symbol-high_priority_indicators"><code>high_priority_indicators</code> <small>variable</small></li>
+<li id="symbol-low_priority_indicators"><code>low_priority_indicators</code> <small>variable</small></li>
+<li id="symbol-req_priority"><code>req_priority</code> <small>variable</small></li>
+<li id="symbol-impl_has_high_indicators"><code>impl_has_high_indicators</code> <small>variable</small></li>
+<li id="symbol-impl_has_low_indicators"><code>impl_has_low_indicators</code> <small>variable</small></li>
+<li id="symbol-req_domain"><code>req_domain</code> <small>variable</small></li>
+<li id="symbol-impl_domain"><code>impl_domain</code> <small>variable</small></li>
+<li id="symbol-domain_relations"><code>domain_relations</code> <small>variable</small></li>
+<li id="symbol-req_type"><code>req_type</code> <small>variable</small></li>
+<li id="symbol-description"><code>description</code> <small>variable</small></li>
+<li id="symbol-domains"><code>domains</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-details"><code>details</code> <small>variable</small></li>
+<li id="symbol-domains"><code>domains</code> <small>variable</small></li>
+<li id="symbol-texts"><code>texts</code> <small>variable</small></li>
+<li id="symbol-embeddings"><code>embeddings</code> <small>variable</small></li>
+<li id="symbol-enhanced_embedding"><code>enhanced_embedding</code> <small>variable</small></li>
+<li id="symbol-texts"><code>texts</code> <small>variable</small></li>
+<li id="symbol-embeddings"><code>embeddings</code> <small>variable</small></li>
+<li id="symbol-enhanced_embedding"><code>enhanced_embedding</code> <small>variable</small></li>
+<li id="symbol-req_embedding"><code>req_embedding</code> <small>variable</small></li>
+<li id="symbol-impl_embedding"><code>impl_embedding</code> <small>variable</small></li>
+<li id="symbol-req_embedding"><code>req_embedding</code> <small>variable</small></li>
+<li id="symbol-similarities"><code>similarities</code> <small>variable</small></li>
+<li id="symbol-impl_embedding"><code>impl_embedding</code> <small>variable</small></li>
+<li id="symbol-similarities"><code>similarities</code> <small>variable</small></li>
+<li id="symbol-clusters"><code>clusters</code> <small>variable</small></li>
+<li id="symbol-processed"><code>processed</code> <small>variable</small></li>
+<li id="symbol-cluster"><code>cluster</code> <small>variable</small></li>
+<li id="symbol-description"><code>description</code> <small>variable</small></li>
+<li id="symbol-score"><code>score</code> <small>variable</small></li>
+<li id="symbol-req_keywords"><code>req_keywords</code> <small>variable</small></li>
+<li id="symbol-impl_keywords"><code>impl_keywords</code> <small>variable</small></li>
+<li id="symbol-keyword_sim"><code>keyword_sim</code> <small>variable</small></li>
+<li id="symbol-confidence_factors"><code>confidence_factors</code> <small>variable</small></li>
+<li id="symbol-quality_factor"><code>quality_factor</code> <small>variable</small></li>
+<li id="symbol-type_factor"><code>type_factor</code> <small>variable</small></li>
+<li id="symbol-priority_factor"><code>priority_factor</code> <small>variable</small></li>
+<li id="symbol-doc_factor"><code>doc_factor</code> <small>variable</small></li>
+<li id="symbol-status_factor"><code>status_factor</code> <small>variable</small></li>
+<li id="symbol-test_factor"><code>test_factor</code> <small>variable</small></li>
+<li id="symbol-total_weight"><code>total_weight</code> <small>variable</small></li>
+<li id="symbol-weighted_sum"><code>weighted_sum</code> <small>variable</small></li>
+<li id="symbol-base_confidence"><code>base_confidence</code> <small>variable</small></li>
+<li id="symbol-factors"><code>factors</code> <small>variable</small></li>
+<li id="symbol-strong_alignments"><code>strong_alignments</code> <small>variable</small></li>
+<li id="symbol-moderate_alignments"><code>moderate_alignments</code> <small>variable</small></li>
+<li id="symbol-priority_weight"><code>priority_weight</code> <small>variable</small></li>
+<li id="symbol-status_weight"><code>status_weight</code> <small>variable</small></li>
+<li id="symbol-length_score"><code>length_score</code> <small>variable</small></li>
+<li id="symbol-quality_indicators"><code>quality_indicators</code> <small>variable</small></li>
+<li id="symbol-quality_score"><code>quality_score</code> <small>variable</small></li>
+<li id="symbol-adjusted_confidence"><code>adjusted_confidence</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-edge"><code>edge</code> <small>variable</small></li>
+<li id="symbol-metadata"><code>metadata</code> <small>variable</small></li>
+<li id="symbol-attributes"><code>attributes</code> <small>variable</small></li>
+<li id="symbol-metadata"><code>metadata</code> <small>variable</small></li>
+<li id="symbol-attributes"><code>attributes</code> <small>variable</small></li>
+<li id="symbol-metadata"><code>metadata</code> <small>variable</small></li>
+<li id="symbol-attributes"><code>attributes</code> <small>variable</small></li>
+<li id="symbol-dependency_score"><code>dependency_score</code> <small>variable</small></li>
+<li id="symbol-edge"><code>edge</code> <small>variable</small></li>
+<li id="symbol-element_node"><code>element_node</code> <small>variable</small></li>
+<li id="symbol-containment_edge"><code>containment_edge</code> <small>variable</small></li>
+<li id="symbol-similarity_score"><code>similarity_score</code> <small>variable</small></li>
+<li id="symbol-edge"><code>edge</code> <small>variable</small></li>
+<li id="symbol-similarity_score"><code>similarity_score</code> <small>variable</small></li>
+<li id="symbol-edge"><code>edge</code> <small>variable</small></li>
+<li id="symbol-avg_length"><code>avg_length</code> <small>variable</small></li>
+<li id="symbol-length_score"><code>length_score</code> <small>variable</small></li>
+<li id="symbol-quality_indicators"><code>quality_indicators</code> <small>variable</small></li>
+<li id="symbol-quality_score"><code>quality_score</code> <small>variable</small></li>
+<li id="symbol-current_time"><code>current_time</code> <small>variable</small></li>
+<li id="symbol-path1"><code>path1</code> <small>variable</small></li>
+<li id="symbol-path2"><code>path2</code> <small>variable</small></li>
+<li id="symbol-name1"><code>name1</code> <small>variable</small></li>
+<li id="symbol-name2"><code>name2</code> <small>variable</small></li>
+<li id="symbol-similarity_factors"><code>similarity_factors</code> <small>variable</small></li>
+<li id="symbol-priority_diff"><code>priority_diff</code> <small>variable</small></li>
+<li id="symbol-common_tags"><code>common_tags</code> <small>variable</small></li>
+<li id="symbol-total_tags"><code>total_tags</code> <small>variable</small></li>
+<li id="symbol-tag_similarity"><code>tag_similarity</code> <small>variable</small></li>
+<li id="symbol-common_stakeholders"><code>common_stakeholders</code> <small>variable</small></li>
+<li id="symbol-total_stakeholders"><code>total_stakeholders</code> <small>variable</small></li>
+<li id="symbol-stakeholder_similarity"><code>stakeholder_similarity</code> <small>variable</small></li>
+<li id="symbol-desc_similarity"><code>desc_similarity</code> <small>variable</small></li>
+<li id="symbol-similarity_factors"><code>similarity_factors</code> <small>variable</small></li>
+<li id="symbol-quality_similarity"><code>quality_similarity</code> <small>variable</small></li>
+<li id="symbol-path_similarity"><code>path_similarity</code> <small>variable</small></li>
+<li id="symbol-element_similarity"><code>element_similarity</code> <small>variable</small></li>
+<li id="symbol-text1_lower"><code>text1_lower</code> <small>variable</small></li>
+<li id="symbol-text2_lower"><code>text2_lower</code> <small>variable</small></li>
+<li id="symbol-words1"><code>words1</code> <small>variable</small></li>
+<li id="symbol-words2"><code>words2</code> <small>variable</small></li>
+<li id="symbol-intersection"><code>intersection</code> <small>variable</small></li>
+<li id="symbol-union"><code>union</code> <small>variable</small></li>
+<li id="symbol-str1"><code>str1</code> <small>variable</small></li>
+<li id="symbol-str2"><code>str2</code> <small>variable</small></li>
+<li id="symbol-parts1"><code>parts1</code> <small>variable</small></li>
+<li id="symbol-parts2"><code>parts2</code> <small>variable</small></li>
+<li id="symbol-common_parts"><code>common_parts</code> <small>variable</small></li>
+<li id="symbol-max_parts"><code>max_parts</code> <small>variable</small></li>
+<li id="symbol-names1"><code>names1</code> <small>variable</small></li>
+<li id="symbol-names2"><code>names2</code> <small>variable</small></li>
+<li id="symbol-intersection"><code>intersection</code> <small>variable</small></li>
+<li id="symbol-union"><code>union</code> <small>variable</small></li>
+<li id="symbol-metadata"><code>metadata</code> <small>variable</small></li>
+<li id="symbol-attributes"><code>attributes</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-types"><code>types</code> <small>variable</small></li>
+<li id="symbol-statuses"><code>statuses</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-types"><code>types</code> <small>variable</small></li>
+<li id="symbol-element"><code>element</code> <small>variable</small></li>
+<li id="symbol-statuses"><code>statuses</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-mapping"><code>mapping</code> <small>variable</small></li>
+<li id="symbol-types"><code>types</code> <small>variable</small></li>
+<li id="symbol-statuses"><code>statuses</code> <small>variable</small></li>
+<li id="symbol-matrix"><code>matrix</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirements"><code>requirements</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-text"><code>text</code> <small>variable</small></li>
+<li id="symbol-keywords"><code>keywords</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-keywords1"><code>keywords1</code> <small>variable</small></li>
+<li id="symbol-keywords2"><code>keywords2</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-identical_similarity"><code>identical_similarity</code> <small>variable</small></li>
+<li id="symbol-keywords3"><code>keywords3</code> <small>variable</small></li>
+<li id="symbol-no_overlap_similarity"><code>no_overlap_similarity</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-keywords"><code>keywords</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-mapping"><code>mapping</code> <small>variable</small></li>
+<li id="symbol-traceability"><code>traceability</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-orphaned_requirement"><code>orphaned_requirement</code> <small>variable</small></li>
+<li id="symbol-orphaned_implementation"><code>orphaned_implementation</code> <small>variable</small></li>
+<li id="symbol-gaps"><code>gaps</code> <small>variable</small></li>
+<li id="symbol-missing_impl_gaps"><code>missing_impl_gaps</code> <small>variable</small></li>
+<li id="symbol-missing_req_gaps"><code>missing_req_gaps</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-gaps"><code>gaps</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-create_impl_recs"><code>create_impl_recs</code> <small>variable</small></li>
+<li id="symbol-add_test_recs"><code>add_test_recs</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-empty_similarity"><code>empty_similarity</code> <small>variable</small></li>
+<li id="symbol-identical_similarity"><code>identical_similarity</code> <small>variable</small></li>
+<li id="symbol-different_similarity"><code>different_similarity</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-structural_score"><code>structural_score</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-exact_similarity"><code>exact_similarity</code> <small>variable</small></li>
+<li id="symbol-related_similarity"><code>related_similarity</code> <small>variable</small></li>
+<li id="symbol-unrelated_similarity"><code>unrelated_similarity</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-complex_req"><code>complex_req</code> <small>variable</small></li>
+<li id="symbol-complex_impl"><code>complex_impl</code> <small>variable</small></li>
+<li id="symbol-alignment"><code>alignment</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-mvc_req"><code>mvc_req</code> <small>variable</small></li>
+<li id="symbol-controller_impl"><code>controller_impl</code> <small>variable</small></li>
+<li id="symbol-pattern_score"><code>pattern_score</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-high_quality_impl"><code>high_quality_impl</code> <small>variable</small></li>
+<li id="symbol-similarity_score"><code>similarity_score</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-level"><code>level</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-low_quality_impl"><code>low_quality_impl</code> <small>variable</small></li>
+<li id="symbol-similarity_score"><code>similarity_score</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-level"><code>level</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-high_confidence"><code>high_confidence</code> <small>variable</small></li>
+<li id="symbol-medium_confidence"><code>medium_confidence</code> <small>variable</small></li>
+<li id="symbol-low_confidence"><code>low_confidence</code> <small>variable</small></li>
+<li id="symbol-very_low_confidence"><code>very_low_confidence</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-high_quality"><code>high_quality</code> <small>variable</small></li>
+<li id="symbol-quality_confidence"><code>quality_confidence</code> <small>variable</small></li>
+<li id="symbol-low_quality"><code>low_quality</code> <small>variable</small></li>
+<li id="symbol-low_quality_confidence"><code>low_quality_confidence</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-requirement"><code>requirement</code> <small>variable</small></li>
+<li id="symbol-implementation"><code>implementation</code> <small>variable</small></li>
+<li id="symbol-mapping"><code>mapping</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-req_node"><code>req_node</code> <small>variable</small></li>
+<li id="symbol-impl_node"><code>impl_node</code> <small>variable</small></li>
+<li id="symbol-req_edges"><code>req_edges</code> <small>variable</small></li>
+<li id="symbol-impl_edges"><code>impl_edges</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-node1"><code>node1</code> <small>variable</small></li>
+<li id="symbol-node2"><code>node2</code> <small>variable</small></li>
+<li id="symbol-edge"><code>edge</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-edge1"><code>edge1</code> <small>variable</small></li>
+<li id="symbol-edge2"><code>edge2</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-self_path"><code>self_path</code> <small>variable</small></li>
+<li id="symbol-isolated_node"><code>isolated_node</code> <small>variable</small></li>
+<li id="symbol-no_path"><code>no_path</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-system"><code>system</code> <small>variable</small></li>
+<li id="symbol-clusters"><code>clusters</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,839 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>examples/basic_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>examples/basic_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>24 symbols, 184 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["scoped_identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["scoped_identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["type_identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["type_identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["scoped_type_identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["scoped_identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["type_identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["mutable_specifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["call:new"])
+  N17 --> N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["call:from"])
+  N19 --> N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["call:analyze_directory"])
+  N21 --> N22
+  N23(["identifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["identifier"])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26(["identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["identifier"])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28(["identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["identifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["identifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["identifier"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["identifier"])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34(["identifier"])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35(["identifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["identifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["identifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["identifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["for_expression"])
+  N41 -->|repeat| N41
+  N40 --> N41
+  N42(["for"])
+  N42 -->|repeat| N42
+  N41 --> N42
+  N43(["identifier"])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44(["identifier"])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45(["identifier"])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46(["field_identifier"])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47(["identifier"])
+  N46 -->|true| N47
+  N46 -->|false| N47
+  N48(["identifier"])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49(["identifier"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["for_expression"])
+  N51 -->|repeat| N51
+  N50 --> N51
+  N52(["for"])
+  N52 -->|repeat| N52
+  N51 --> N52
+  N53(["identifier"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["identifier"])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55(["field_identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["if_expression"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["if"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["field_identifier"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["identifier"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["identifier"])
+  N61 -->|true| N62
+  N61 -->|false| N62
+  N63(["identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["identifier"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["identifier"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["identifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["identifier"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["identifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["identifier"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["identifier"])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73(["for_expression"])
+  N73 -->|repeat| N73
+  N72 --> N73
+  N74(["for"])
+  N74 -->|repeat| N74
+  N73 --> N74
+  N75(["identifier"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["identifier"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["field_identifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["identifier"])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79(["identifier"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["identifier"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["call:sum"])
+  N80 --> N81
+  N82(["identifier"])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83(["identifier"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["identifier"])
+  N83 -->|true| N84
+  N83 -->|false| N84
+  N85(["mutable_specifier"])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86(["identifier"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["call:new"])
+  N86 --> N87
+  N88(["for_expression"])
+  N88 -->|repeat| N88
+  N87 --> N88
+  N89(["for"])
+  N89 -->|repeat| N89
+  N88 --> N89
+  N90(["identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["identifier"])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92(["field_identifier"])
+  N91 -->|true| N92
+  N91 -->|false| N92
+  N93(["for_expression"])
+  N93 -->|repeat| N93
+  N92 --> N93
+  N94(["for"])
+  N94 -->|repeat| N94
+  N93 --> N94
+  N95(["identifier"])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96(["identifier"])
+  N95 -->|true| N96
+  N95 -->|false| N96
+  N97(["field_identifier"])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98(["call:or_insert"])
+  N97 --> N98
+  N99(["for_expression"])
+  N99 -->|repeat| N99
+  N98 --> N99
+  N100(["for"])
+  N100 -->|repeat| N100
+  N99 --> N100
+  N101(["identifier"])
+  N100 -->|true| N101
+  N100 -->|false| N101
+  N102(["identifier"])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103(["identifier"])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104(["identifier"])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105(["identifier"])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106(["identifier"])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107(["call:Ok"])
+  N106 --> N107
+  N108(["identifier"])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109(["identifier"])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110(["identifier"])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111(["scoped_identifier"])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112(["identifier"])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113(["identifier"])
+  N112 -->|true| N113
+  N112 -->|false| N113
+  N114(["scoped_identifier"])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115(["identifier"])
+  N114 -->|true| N115
+  N114 -->|false| N115
+  N116(["identifier"])
+  N115 -->|true| N116
+  N115 -->|false| N116
+  N117(["identifier"])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118(["identifier"])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119(["type_identifier"])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120(["type_identifier"])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121(["scoped_type_identifier"])
+  N120 -->|true| N121
+  N120 -->|false| N121
+  N122(["scoped_identifier"])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123(["identifier"])
+  N122 -->|true| N123
+  N122 -->|false| N123
+  N124(["identifier"])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125(["type_identifier"])
+  N124 -->|true| N125
+  N124 -->|false| N125
+  N126(["identifier"])
+  N125 -->|true| N126
+  N125 -->|false| N126
+  N127(["call:new"])
+  N126 --> N127
+  N128(["identifier"])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129(["call:join"])
+  N128 --> N129
+  N130(["call:write"])
+  N129 --> N130
+  N131(["mutable_specifier"])
+  N130 -->|true| N131
+  N130 -->|false| N131
+  N132(["identifier"])
+  N131 -->|true| N132
+  N131 -->|false| N132
+  N133(["call:new"])
+  N132 --> N133
+  N134(["identifier"])
+  N133 -->|true| N134
+  N133 -->|false| N134
+  N135(["call:analyze_directory"])
+  N134 --> N135
+  N136(["identifier"])
+  N135 -->|true| N136
+  N135 -->|false| N136
+  N137(["identifier"])
+  N136 -->|true| N137
+  N136 -->|false| N137
+  N138(["identifier"])
+  N137 -->|true| N138
+  N137 -->|false| N138
+  N139(["identifier"])
+  N138 -->|true| N139
+  N138 -->|false| N139
+  N140(["identifier"])
+  N139 -->|true| N140
+  N139 -->|false| N140
+  N141(["identifier"])
+  N140 -->|true| N141
+  N140 -->|false| N141
+  N142(["identifier"])
+  N141 -->|true| N142
+  N141 -->|false| N142
+  N143(["identifier"])
+  N142 -->|true| N143
+  N142 -->|false| N143
+  N144(["identifier"])
+  N143 -->|true| N144
+  N143 -->|false| N144
+  N145(["identifier"])
+  N144 -->|true| N145
+  N144 -->|false| N145
+  N146(["identifier"])
+  N145 -->|true| N146
+  N145 -->|false| N146
+  N147(["identifier"])
+  N146 -->|true| N147
+  N146 -->|false| N147
+  N148(["identifier"])
+  N147 -->|true| N148
+  N147 -->|false| N148
+  N149(["identifier"])
+  N148 -->|true| N149
+  N148 -->|false| N149
+  N150(["identifier"])
+  N149 -->|true| N150
+  N149 -->|false| N150
+  N151(["field_identifier"])
+  N150 -->|true| N151
+  N150 -->|false| N151
+  N152(["identifier"])
+  N151 -->|true| N152
+  N151 -->|false| N152
+  N153(["identifier"])
+  N152 -->|true| N153
+  N152 -->|false| N153
+  N154(["identifier"])
+  N153 -->|true| N154
+  N153 -->|false| N154
+  N155(["identifier"])
+  N154 -->|true| N155
+  N154 -->|false| N155
+  N156(["identifier"])
+  N155 -->|true| N156
+  N155 -->|false| N156
+  N157(["identifier"])
+  N156 -->|true| N157
+  N156 -->|false| N157
+  N158(["identifier"])
+  N157 -->|true| N158
+  N157 -->|false| N158
+  N159(["identifier"])
+  N158 -->|true| N159
+  N158 -->|false| N159
+  N160(["type_identifier"])
+  N159 -->|true| N160
+  N159 -->|false| N160
+  N161(["type_identifier"])
+  N160 -->|true| N161
+  N160 -->|false| N161
+  N162(["call:collect"])
+  N161 --> N162
+  N163(["identifier"])
+  N162 -->|true| N163
+  N162 -->|false| N163
+  N164(["identifier"])
+  N163 -->|true| N164
+  N163 -->|false| N164
+  N165(["identifier"])
+  N164 -->|true| N165
+  N164 -->|false| N165
+  N166(["identifier"])
+  N165 -->|true| N166
+  N165 -->|false| N166
+  N167(["identifier"])
+  N166 -->|true| N167
+  N166 -->|false| N167
+  N168(["identifier"])
+  N167 -->|true| N168
+  N167 -->|false| N168
+  N169(["identifier"])
+  N168 -->|true| N169
+  N168 -->|false| N169
+  N170(["identifier"])
+  N169 -->|true| N170
+  N169 -->|false| N170
+  N171(["call:Ok"])
+  N170 --> N171
+  N172(["identifier"])
+  N171 -->|true| N172
+  N171 -->|false| N172
+  N173(["identifier"])
+  N172 -->|true| N173
+  N172 -->|false| N173
+  N174(["type_identifier"])
+  N173 -->|true| N174
+  N173 -->|false| N174
+  N175(["type_identifier"])
+  N174 -->|true| N175
+  N174 -->|false| N175
+  N176(["scoped_type_identifier"])
+  N175 -->|true| N176
+  N175 -->|false| N176
+  N177(["scoped_identifier"])
+  N176 -->|true| N177
+  N176 -->|false| N177
+  N178(["identifier"])
+  N177 -->|true| N178
+  N177 -->|false| N178
+  N179(["identifier"])
+  N178 -->|true| N179
+  N178 -->|false| N179
+  N180(["type_identifier"])
+  N179 -->|true| N180
+  N179 -->|false| N180
+  N181(["identifier"])
+  N180 -->|true| N181
+  N180 -->|false| N181
+  N182(["type_identifier"])
+  N181 -->|true| N182
+  N181 -->|false| N182
+  N183(["field_identifier"])
+  N182 -->|true| N183
+  N182 -->|false| N183
+  N184(["call:Some"])
+  N183 --> N184
+  N185(["field_identifier"])
+  N184 -->|true| N185
+  N184 -->|false| N185
+  N186(["identifier"])
+  N185 -->|true| N186
+  N185 -->|false| N186
+  N187(["identifier"])
+  N186 -->|true| N187
+  N186 -->|false| N187
+  N188(["field_identifier"])
+  N187 -->|true| N188
+  N187 -->|false| N188
+  N189(["identifier"])
+  N188 -->|true| N189
+  N188 -->|false| N189
+  N190(["identifier"])
+  N189 -->|true| N190
+  N189 -->|false| N190
+  N191(["field_identifier"])
+  N190 -->|true| N191
+  N190 -->|false| N191
+  N192(["call:Some"])
+  N191 --> N192
+  N193(["field_identifier"])
+  N192 -->|true| N193
+  N192 -->|false| N193
+  N194(["field_identifier"])
+  N193 -->|true| N194
+  N193 -->|false| N194
+  N195(["field_identifier"])
+  N194 -->|true| N195
+  N194 -->|false| N195
+  N196(["mutable_specifier"])
+  N195 -->|true| N196
+  N195 -->|false| N196
+  N197(["identifier"])
+  N196 -->|true| N197
+  N196 -->|false| N197
+  N198(["call:with_config"])
+  N197 --> N198
+  N199(["identifier"])
+  N198 -->|true| N199
+  N198 -->|false| N199
+  N200(["call:new"])
+  N199 --> N200
+  N201(["identifier"])
+  N200 -->|true| N201
+  N200 -->|false| N201
+  N202(["call:join"])
+  N201 --> N202
+  N203(["call:create_dir"])
+  N202 --> N203
+  N204(["identifier"])
+  N203 -->|true| N204
+  N203 -->|false| N204
+  N205(["call:join"])
+  N204 --> N205
+  N206(["call:write"])
+  N205 --> N206
+  N207(["identifier"])
+  N206 -->|true| N207
+  N206 -->|false| N207
+  N208(["call:analyze_directory"])
+  N207 --> N208
+  N209(["identifier"])
+  N208 -->|true| N209
+  N208 -->|false| N209
+  N210(["identifier"])
+  N209 -->|true| N210
+  N209 -->|false| N210
+  N211(["identifier"])
+  N210 -->|true| N211
+  N210 -->|false| N211
+  N212(["identifier"])
+  N211 -->|true| N212
+  N211 -->|false| N212
+  N213(["identifier"])
+  N212 -->|true| N213
+  N212 -->|false| N213
+  N214(["identifier"])
+  N213 -->|true| N214
+  N213 -->|false| N214
+  N215(["identifier"])
+  N214 -->|true| N215
+  N214 -->|false| N215
+  N216(["identifier"])
+  N215 -->|true| N216
+  N215 -->|false| N216
+  N217(["identifier"])
+  N216 -->|true| N217
+  N216 -->|false| N217
+  N218(["identifier"])
+  N217 -->|true| N218
+  N217 -->|false| N218
+  N219(["identifier"])
+  N218 -->|true| N219
+  N218 -->|false| N219
+  N220(["call:Ok"])
+  N219 --> N220
+  N221(["identifier"])
+  N220 -->|true| N221
+  N220 -->|false| N221
+  N222(["identifier"])
+  N221 -->|true| N222
+  N221 -->|false| N222
+  N223(["type_identifier"])
+  N222 -->|true| N223
+  N222 -->|false| N223
+  N224(["type_identifier"])
+  N223 -->|true| N224
+  N223 -->|false| N224
+  N225(["scoped_type_identifier"])
+  N224 -->|true| N225
+  N224 -->|false| N225
+  N226(["scoped_identifier"])
+  N225 -->|true| N226
+  N225 -->|false| N226
+  N227(["identifier"])
+  N226 -->|true| N227
+  N226 -->|false| N227
+  N228(["identifier"])
+  N227 -->|true| N228
+  N227 -->|false| N228
+  N229(["type_identifier"])
+  N228 -->|true| N229
+  N228 -->|false| N229
+  N230(["identifier"])
+  N229 -->|true| N230
+  N229 -->|false| N230
+  N231(["call:new"])
+  N230 --> N231
+  N232(["call:write"])
+  N231 --> N232
+  N233(["call:write"])
+  N232 --> N233
+  N234(["call:write"])
+  N233 --> N234
+  N235(["mutable_specifier"])
+  N234 -->|true| N235
+  N234 -->|false| N235
+  N236(["identifier"])
+  N235 -->|true| N236
+  N235 -->|false| N236
+  N237(["call:new"])
+  N236 --> N237
+  N238(["identifier"])
+  N237 -->|true| N238
+  N237 -->|false| N238
+  N239(["call:analyze_directory"])
+  N238 --> N239
+  N240(["identifier"])
+  N239 -->|true| N240
+  N239 -->|false| N240
+  N241(["identifier"])
+  N240 -->|true| N241
+  N240 -->|false| N241
+  N242(["identifier"])
+  N241 -->|true| N242
+  N241 -->|false| N242
+  N243(["identifier"])
+  N242 -->|true| N243
+  N242 -->|false| N243
+  N244(["identifier"])
+  N243 -->|true| N244
+  N243 -->|false| N244
+  N245(["identifier"])
+  N244 -->|true| N245
+  N244 -->|false| N245
+  N246(["identifier"])
+  N245 -->|true| N246
+  N245 -->|false| N246
+  N247(["identifier"])
+  N246 -->|true| N247
+  N246 -->|false| N247
+  N248(["identifier"])
+  N247 -->|true| N248
+  N247 -->|false| N248
+  N249(["identifier"])
+  N248 -->|true| N249
+  N248 -->|false| N249
+  N250(["identifier"])
+  N249 -->|true| N250
+  N249 -->|false| N250
+  N251(["identifier"])
+  N250 -->|true| N251
+  N250 -->|false| N251
+  N252(["identifier"])
+  N251 -->|true| N252
+  N251 -->|false| N252
+  N253(["identifier"])
+  N252 -->|true| N253
+  N252 -->|false| N253
+  N254(["identifier"])
+  N253 -->|true| N254
+  N253 -->|false| N254
+  N255(["identifier"])
+  N254 -->|true| N255
+  N254 -->|false| N255
+  N256(["identifier"])
+  N255 -->|true| N256
+  N255 -->|false| N256
+  N257(["identifier"])
+  N256 -->|true| N257
+  N256 -->|false| N257
+  N258(["identifier"])
+  N257 -->|true| N258
+  N257 -->|false| N258
+  N259(["call:Ok"])
+  N258 --> N259
+  N259 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant main
+  participant test_basic_analysis
+  participant test_analysis_with_config
+  participant test_multi_language_analysis
+  main->>new: call
+  main->>from: call
+  main->>analyze_directory: call
+  main->>sum: call
+  main->>new: call
+  main->>ok: call
+  main->>new: call
+  main->>join: call
+  main->>write: call
+  main->>new: call
+  main->>analyze_directory: call
+  main->>collect: call
+  main->>ok: call
+  main->>some: call
+  main->>some: call
+  main->>with_config: call
+  main->>new: call
+  main->>join: call
+  main->>create_dir: call
+  main->>join: call
+  main->>write: call
+  main->>analyze_directory: call
+  main->>ok: call
+  main->>new: call
+  main->>write: call
+  main->>write: call
+  main->>write: call
+  main->>new: call
+  main->>analyze_directory: call
+  main->>ok: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-main"><code>main</code> <small>function</small></li>
+<li id="symbol-test_basic_analysis"><code>test_basic_analysis</code> <small>function</small></li>
+<li id="symbol-test_analysis_with_config"><code>test_analysis_with_config</code> <small>function</small></li>
+<li id="symbol-test_multi_language_analysis"><code>test_multi_language_analysis</code> <small>function</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-path"><code>path</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-total_symbols"><code>total_symbols</code> <small>variable</small></li>
+<li id="symbol-symbol_counts"><code>symbol_counts</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-file_info"><code>file_info</code> <small>variable</small></li>
+<li id="symbol-symbol_names"><code>symbol_names</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-src_dir"><code>src_dir</code> <small>variable</small></li>
+<li id="symbol-test_file"><code>test_file</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-temp_dir"><code>temp_dir</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

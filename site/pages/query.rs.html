@@ -1,0 +1,305 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>query.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>query.rs</h1></header>
+<main>
+<section class="article">
+<p>72 symbols, 341 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["language"])
+  F1 --> F2
+  F2(["pattern_count"])
+  F2 --> F3
+  F3(["capture_names"])
+  F3 --> F4
+  F4(["matches"])
+  F4 --> F5
+  F5(["captures"])
+  F5 --> F6
+  F6(["matches_in_node"])
+  F6 --> F7
+  F7(["highlights"])
+  F7 --> F8
+  F8(["functions"])
+  F8 --> F9
+  F9(["classes"])
+  F9 --> F10
+  F10(["pattern_index"])
+  F10 --> F11
+  F11(["captures"])
+  F11 --> F12
+  F12(["capture_by_name"])
+  F12 --> F13
+  F13(["node"])
+  F13 --> F14
+  F14(["index"])
+  F14 --> F15
+  F15(["name"])
+  F15 --> F16
+  F16(["text"])
+  F16 --> F17
+  F17(["byte_range"])
+  F17 --> F18
+  F18(["start_position"])
+  F18 --> F19
+  F19(["end_position"])
+  F19 --> F20
+  F20(["new"])
+  F20 --> F21
+  F21(["find_kind"])
+  F21 --> F22
+  F22(["find_with_field"])
+  F22 --> F23
+  F23(["add_pattern"])
+  F23 --> F24
+  F24(["build"])
+  F24 --> F25
+  F25(["test_query_creation"])
+  F25 --> F26
+  F26(["test_query_execution"])
+  F26 --> F27
+  F27(["test_query_builder"])
+  F27 --> F28
+  F28(["test_predefined_queries"])
+  F28 --> F29
+  F29(["Query"])
+  F29 --> F30
+  F30(["QueryMatch"])
+  F30 --> F31
+  F31(["QueryCapture"])
+  F31 --> F32
+  F32(["QueryBuilder"])
+  F32 --> F33
+  F33(["Query"])
+  F33 --> F34
+  F34(["QueryMatch"])
+  F34 --> F35
+  F35(["QueryCapture"])
+  F35 --> F36
+  F36(["QueryBuilder"])
+  F36 --> F37
+  F37(["ts_language"])
+  F37 --> F38
+  F38(["query"])
+  F38 --> F39
+  F39(["cursor"])
+  F39 --> F40
+  F40(["root"])
+  F40 --> F41
+  F41(["matches"])
+  F41 --> F42
+  F42(["ts_matches"])
+  F42 --> F43
+  F43(["captures"])
+  F43 --> F44
+  F44(["node"])
+  F44 --> F45
+  F45(["query_capture"])
+  F45 --> F46
+  F46(["query_match"])
+  F46 --> F47
+  F47(["cursor"])
+  F47 --> F48
+  F48(["root"])
+  F48 --> F49
+  F49(["ts_captures"])
+  F49 --> F50
+  F50(["captures"])
+  F50 --> F51
+  F51(["capture"])
+  F51 --> F52
+  F52(["cursor"])
+  F52 --> F53
+  F53(["ts_matches"])
+  F53 --> F54
+  F54(["matches_vec"])
+  F54 --> F55
+  F55(["captures"])
+  F55 --> F56
+  F56(["highlights_query"])
+  F56 --> F57
+  F57(["pattern"])
+  F57 --> F58
+  F58(["pattern"])
+  F58 --> F59
+  F59(["capture_names"])
+  F59 --> F60
+  F60(["capture_index"])
+  F60 --> F61
+  F61(["combined_pattern"])
+  F61 --> F62
+  F62(["query"])
+  F62 --> F63
+  F63(["query"])
+  F63 --> F64
+  F64(["parser"])
+  F64 --> F65
+  F65(["source"])
+  F65 --> F66
+  F66(["tree"])
+  F66 --> F67
+  F67(["query"])
+  F67 --> F68
+  F68(["matches"])
+  F68 --> F69
+  F69(["query"])
+  F69 --> F70
+  F70(["functions_query"])
+  F70 --> F71
+  F71(["classes_query"])
+  F71 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant language
+  participant pattern_count
+  participant capture_names
+  participant matches
+  participant captures
+  participant matches_in_node
+  participant highlights
+  participant functions
+  participant classes
+  participant pattern_index
+  participant captures
+  participant capture_by_name
+  participant node
+  participant index
+  participant name
+  participant text
+  participant byte_range
+  participant start_position
+  participant end_position
+  participant new
+  participant find_kind
+  participant find_with_field
+  participant add_pattern
+  participant build
+  participant test_query_creation
+  participant test_query_execution
+  participant test_query_builder
+  participant test_predefined_queries
+  new->>language: call
+  language->>pattern_count: call
+  pattern_count->>capture_names: call
+  capture_names->>matches: call
+  matches->>captures: call
+  captures->>matches_in_node: call
+  matches_in_node->>highlights: call
+  highlights->>functions: call
+  functions->>classes: call
+  classes->>pattern_index: call
+  pattern_index->>captures: call
+  captures->>capture_by_name: call
+  capture_by_name->>node: call
+  node->>index: call
+  index->>name: call
+  name->>text: call
+  text->>byte_range: call
+  byte_range->>start_position: call
+  start_position->>end_position: call
+  end_position->>new: call
+  new->>find_kind: call
+  find_kind->>find_with_field: call
+  find_with_field->>add_pattern: call
+  add_pattern->>build: call
+  build->>test_query_creation: call
+  test_query_creation->>test_query_execution: call
+  test_query_execution->>test_query_builder: call
+  test_query_builder->>test_predefined_queries: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-language"><code>language</code> <small>function</small></li>
+<li id="symbol-pattern_count"><code>pattern_count</code> <small>function</small></li>
+<li id="symbol-capture_names"><code>capture_names</code> <small>function</small></li>
+<li id="symbol-matches"><code>matches</code> <small>function</small></li>
+<li id="symbol-captures"><code>captures</code> <small>function</small></li>
+<li id="symbol-matches_in_node"><code>matches_in_node</code> <small>function</small></li>
+<li id="symbol-highlights"><code>highlights</code> <small>function</small></li>
+<li id="symbol-functions"><code>functions</code> <small>function</small></li>
+<li id="symbol-classes"><code>classes</code> <small>function</small></li>
+<li id="symbol-pattern_index"><code>pattern_index</code> <small>function</small></li>
+<li id="symbol-captures"><code>captures</code> <small>function</small></li>
+<li id="symbol-capture_by_name"><code>capture_by_name</code> <small>function</small></li>
+<li id="symbol-node"><code>node</code> <small>function</small></li>
+<li id="symbol-index"><code>index</code> <small>function</small></li>
+<li id="symbol-name"><code>name</code> <small>function</small></li>
+<li id="symbol-text"><code>text</code> <small>function</small></li>
+<li id="symbol-byte_range"><code>byte_range</code> <small>function</small></li>
+<li id="symbol-start_position"><code>start_position</code> <small>function</small></li>
+<li id="symbol-end_position"><code>end_position</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-find_kind"><code>find_kind</code> <small>function</small></li>
+<li id="symbol-find_with_field"><code>find_with_field</code> <small>function</small></li>
+<li id="symbol-add_pattern"><code>add_pattern</code> <small>function</small></li>
+<li id="symbol-build"><code>build</code> <small>function</small></li>
+<li id="symbol-test_query_creation"><code>test_query_creation</code> <small>function</small></li>
+<li id="symbol-test_query_execution"><code>test_query_execution</code> <small>function</small></li>
+<li id="symbol-test_query_builder"><code>test_query_builder</code> <small>function</small></li>
+<li id="symbol-test_predefined_queries"><code>test_predefined_queries</code> <small>function</small></li>
+<li id="symbol-query"><code>Query</code> <small>struct</small></li>
+<li id="symbol-querymatch"><code>QueryMatch</code> <small>struct</small></li>
+<li id="symbol-querycapture"><code>QueryCapture</code> <small>struct</small></li>
+<li id="symbol-querybuilder"><code>QueryBuilder</code> <small>struct</small></li>
+<li id="symbol-query"><code>Query</code> <small>impl</small></li>
+<li id="symbol-querymatch"><code>QueryMatch</code> <small>impl</small></li>
+<li id="symbol-querycapture"><code>QueryCapture</code> <small>impl</small></li>
+<li id="symbol-querybuilder"><code>QueryBuilder</code> <small>impl</small></li>
+<li id="symbol-ts_language"><code>ts_language</code> <small>variable</small></li>
+<li id="symbol-query"><code>query</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-matches"><code>matches</code> <small>variable</small></li>
+<li id="symbol-ts_matches"><code>ts_matches</code> <small>variable</small></li>
+<li id="symbol-captures"><code>captures</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-query_capture"><code>query_capture</code> <small>variable</small></li>
+<li id="symbol-query_match"><code>query_match</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-ts_captures"><code>ts_captures</code> <small>variable</small></li>
+<li id="symbol-captures"><code>captures</code> <small>variable</small></li>
+<li id="symbol-capture"><code>capture</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-ts_matches"><code>ts_matches</code> <small>variable</small></li>
+<li id="symbol-matches_vec"><code>matches_vec</code> <small>variable</small></li>
+<li id="symbol-captures"><code>captures</code> <small>variable</small></li>
+<li id="symbol-highlights_query"><code>highlights_query</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-capture_names"><code>capture_names</code> <small>variable</small></li>
+<li id="symbol-capture_index"><code>capture_index</code> <small>variable</small></li>
+<li id="symbol-combined_pattern"><code>combined_pattern</code> <small>variable</small></li>
+<li id="symbol-query"><code>query</code> <small>variable</small></li>
+<li id="symbol-query"><code>query</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-query"><code>query</code> <small>variable</small></li>
+<li id="symbol-matches"><code>matches</code> <small>variable</small></li>
+<li id="symbol-query"><code>query</code> <small>variable</small></li>
+<li id="symbol-functions_query"><code>functions_query</code> <small>variable</small></li>
+<li id="symbol-classes_query"><code>classes_query</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,92 @@
+# Enhanced Wiki Feature Expansion Plan
+
+## Current Capabilities
+- Static website generation from codebase analysis
+- AI insights with mock/real providers (OpenAI, Anthropic)
+- Mermaid diagrams for flowcharts, sequences, classes
+- Symbol extraction and cross-references
+- Search functionality (client-side)
+- CLI interface for generation
+- Multi-language support (Rust, JS, Python, C/C++, Go)
+
+## Identified Gaps
+- Limited complexity analysis integration
+- Basic dependency graphs (no real import analysis)
+- Security analysis limited to OWASP/taint with tree-sitter
+- No performance analysis integration
+- No advanced refactoring suggestions built-in
+- Missing function-level enhancement features
+- Limited AI context and knowledge graph integration
+- No intelligence-driven documentation improvement
+
+## Implementation Strategy
+
+### Phase 1: Enhanced Analysis Integration
+1. Extend WikiConfig with new flags for enhanced features
+2. Add complexity analysis integration (use existing ComplexityAnalyzer)
+3. Add performance analysis metrics to file pages
+4. Enhanced dependency graph with actual import analysis
+5. Add security vulnerability explanations with AI
+
+### Phase 2: Rich Function Documentation
+1. Implement function-level AI enhancement
+2. Add docstring improvement suggestions
+3. Context-aware documentation generation
+4. Multi-provider AI support with fallbacks
+
+### Phase 3: Advanced Visualizations
+1. Interactive diagrams with Mermaid enhancements
+2. CFG-based control flow visualization
+3. Call sequence improvements with more accurate analysis
+4. Hybrid flowchart + sequence diagrams
+
+### Phase 4: Knowledge Integration
+1. Integrate with semantic graph builder
+2. Add reasoning engine context
+3. Implement knowledge persistence
+4. Smart documentation diff and update capabilities
+
+### Phase 5: CLI and Plugin Enhancement
+1. Extended CLI flags for new features
+2. Plugin integration for extensibility
+3. Configuration file support
+4. Incremental update capability
+
+## Technical Implementation Details
+
+### Analysis Extensions
+- Leverage `ComplexityAnalyzer` for code metrics
+- Use `SecurityAnalyzer` with AI explanations
+- Integrate `PerformanceAnalyzer` for optimization insights
+- Apply `ReasoningEngine` for intelligent insights
+
+### AI Feature Additions
+- Function-specific documentation enhancement
+- Security vulnerability explanations
+- Refactoring suggestion integration
+- Quality assessment visualization
+
+### Visualization Improvements
+- Enhanced Mermaid diagrams with interactivity
+- Better CFG representation
+- Improved sequence diagram accuracy
+- Class hierarchy visualization
+
+## Integration Points
+- `analyzer.rs`: New analysis capabilities
+- `ai/features/`: Enhanced AI documentation
+- `complexity_analysis.rs`: Wiki integration
+- `security/*`: Vulnerability explanations
+- `performance_analysis.rs`: Optimization suggestions
+- `semantic_graph.rs`: Knowledge representation
+- `reasoning_engine.rs`: Contextual insights
+
+## CLI Extensions
+- `--enhanced-ai`: Enable advanced AI processing
+- `--security-insights`: Include vulnerability explanations
+- `--refactoring-hints`: Add improvement suggestions
+- `--function-enhancement`: Enable rich function docs
+- `--knowledge-integration`: Use semantic graph
+- `--incremental`: Only update changed files
+
+This plan maintains backward compatibility while providing significant feature enhancements through optional configuration flags.

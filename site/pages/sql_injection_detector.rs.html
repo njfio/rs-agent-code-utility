@@ -1,0 +1,278 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>sql_injection_detector.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>sql_injection_detector.rs</h1></header>
+<main>
+<section class="article">
+<p>63 symbols, 635 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["initialize_sql_patterns"])
+  F1 --> F2
+  F2(["initialize_rust_sql_patterns"])
+  F2 --> F3
+  F3(["initialize_javascript_sql_patterns"])
+  F3 --> F4
+  F4(["initialize_python_sql_patterns"])
+  F4 --> F5
+  F5(["initialize_c_sql_patterns"])
+  F5 --> F6
+  F6(["initialize_go_sql_patterns"])
+  F6 --> F7
+  F7(["initialize_generic_sql_patterns"])
+  F7 --> F8
+  F8(["detect"])
+  F8 --> F9
+  F9(["analyze_sql_injection_flow"])
+  F9 --> F10
+  F10(["detect_direct_sql_patterns"])
+  F10 --> F11
+  F11(["traverse_for_sql_patterns"])
+  F11 --> F12
+  F12(["check_node_for_sql_injection"])
+  F12 --> F13
+  F13(["analyze_sql_query_pattern"])
+  F13 --> F14
+  F14(["determine_injection_type"])
+  F14 --> F15
+  F15(["calculate_confidence"])
+  F15 --> F16
+  F16(["determine_severity"])
+  F16 --> F17
+  F17(["generate_remediation"])
+  F17 --> F18
+  F18(["is_string_concatenation"])
+  F18 --> F19
+  F19(["is_format_operation"])
+  F19 --> F20
+  F20(["is_template_literal"])
+  F20 --> F21
+  F21(["extract_sql_from_concatenation"])
+  F21 --> F22
+  F22(["extract_format_string"])
+  F22 --> F23
+  F23(["extract_template_content"])
+  F23 --> F24
+  F24(["contains_sql_keywords"])
+  F24 --> F25
+  F25(["create_direct_vulnerability"])
+  F25 --> F26
+  F26(["test_sql_injection_detector_creation"])
+  F26 --> F27
+  F27(["test_sql_keywords_detection"])
+  F27 --> F28
+  F28(["test_injection_type_determination"])
+  F28 --> F29
+  F29(["SqlInjectionVulnerability"])
+  F29 --> F30
+  F30(["SqlQueryPattern"])
+  F30 --> F31
+  F31(["SqlInjectionRemediation"])
+  F31 --> F32
+  F32(["SecureCodeExample"])
+  F32 --> F33
+  F33(["SqlInjectionDetector"])
+  F33 --> F34
+  F34(["SqlInjectionType"])
+  F34 --> F35
+  F35(["SqlInjectionSeverity"])
+  F35 --> F36
+  F36(["SqlOperation"])
+  F36 --> F37
+  F37(["RemediationEffort"])
+  F37 --> F38
+  F38(["SqlInjectionDetector"])
+  F38 --> F39
+  F39(["detector"])
+  F39 --> F40
+  F40(["keywords"])
+  F40 --> F41
+  F41(["vulnerabilities"])
+  F41 --> F42
+  F42(["taint_flows"])
+  F42 --> F43
+  F43(["direct_vulnerabilities"])
+  F43 --> F44
+  F44(["query_pattern"])
+  F44 --> F45
+  F45(["injection_type"])
+  F45 --> F46
+  F46(["confidence"])
+  F46 --> F47
+  F47(["severity"])
+  F47 --> F48
+  F48(["remediation"])
+  F48 --> F49
+  F49(["vulnerabilities"])
+  F49 --> F50
+  F50(["cursor"])
+  F50 --> F51
+  F51(["confidence"])
+  F51 --> F52
+  F52(["node_kind"])
+  F52 --> F53
+  F53(["text_upper"])
+  F53 --> F54
+  F54(["query_pattern"])
+  F54 --> F55
+  F55(["remediation"])
+  F55 --> F56
+  F56(["severity"])
+  F56 --> F57
+  F57(["detector"])
+  F57 --> F58
+  F58(["detector"])
+  F58 --> F59
+  F59(["detector"])
+  F59 --> F60
+  F60(["pattern"])
+  F60 --> F61
+  F61(["flow"])
+  F61 --> F62
+  F62(["injection_type"])
+  F62 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant initialize_sql_patterns
+  participant initialize_rust_sql_patterns
+  participant initialize_javascript_sql_patterns
+  participant initialize_python_sql_patterns
+  participant initialize_c_sql_patterns
+  participant initialize_go_sql_patterns
+  participant initialize_generic_sql_patterns
+  participant detect
+  participant analyze_sql_injection_flow
+  participant detect_direct_sql_patterns
+  participant traverse_for_sql_patterns
+  participant check_node_for_sql_injection
+  participant analyze_sql_query_pattern
+  participant determine_injection_type
+  participant calculate_confidence
+  participant determine_severity
+  participant generate_remediation
+  participant is_string_concatenation
+  participant is_format_operation
+  participant is_template_literal
+  participant extract_sql_from_concatenation
+  participant extract_format_string
+  participant extract_template_content
+  participant contains_sql_keywords
+  participant create_direct_vulnerability
+  participant test_sql_injection_detector_creation
+  participant test_sql_keywords_detection
+  participant test_injection_type_determination
+  new->>initialize_sql_patterns: call
+  initialize_sql_patterns->>initialize_rust_sql_patterns: call
+  initialize_rust_sql_patterns->>initialize_javascript_sql_patterns: call
+  initialize_javascript_sql_patterns->>initialize_python_sql_patterns: call
+  initialize_python_sql_patterns->>initialize_c_sql_patterns: call
+  initialize_c_sql_patterns->>initialize_go_sql_patterns: call
+  initialize_go_sql_patterns->>initialize_generic_sql_patterns: call
+  initialize_generic_sql_patterns->>detect: call
+  detect->>analyze_sql_injection_flow: call
+  analyze_sql_injection_flow->>detect_direct_sql_patterns: call
+  detect_direct_sql_patterns->>traverse_for_sql_patterns: call
+  traverse_for_sql_patterns->>check_node_for_sql_injection: call
+  check_node_for_sql_injection->>analyze_sql_query_pattern: call
+  analyze_sql_query_pattern->>determine_injection_type: call
+  determine_injection_type->>calculate_confidence: call
+  calculate_confidence->>determine_severity: call
+  determine_severity->>generate_remediation: call
+  generate_remediation->>is_string_concatenation: call
+  is_string_concatenation->>is_format_operation: call
+  is_format_operation->>is_template_literal: call
+  is_template_literal->>extract_sql_from_concatenation: call
+  extract_sql_from_concatenation->>extract_format_string: call
+  extract_format_string->>extract_template_content: call
+  extract_template_content->>contains_sql_keywords: call
+  contains_sql_keywords->>create_direct_vulnerability: call
+  create_direct_vulnerability->>test_sql_injection_detector_creation: call
+  test_sql_injection_detector_creation->>test_sql_keywords_detection: call
+  test_sql_keywords_detection->>test_injection_type_determination: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-initialize_sql_patterns"><code>initialize_sql_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_rust_sql_patterns"><code>initialize_rust_sql_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_javascript_sql_patterns"><code>initialize_javascript_sql_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_python_sql_patterns"><code>initialize_python_sql_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_c_sql_patterns"><code>initialize_c_sql_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_go_sql_patterns"><code>initialize_go_sql_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_generic_sql_patterns"><code>initialize_generic_sql_patterns</code> <small>function</small></li>
+<li id="symbol-detect"><code>detect</code> <small>function</small></li>
+<li id="symbol-analyze_sql_injection_flow"><code>analyze_sql_injection_flow</code> <small>function</small></li>
+<li id="symbol-detect_direct_sql_patterns"><code>detect_direct_sql_patterns</code> <small>function</small></li>
+<li id="symbol-traverse_for_sql_patterns"><code>traverse_for_sql_patterns</code> <small>function</small></li>
+<li id="symbol-check_node_for_sql_injection"><code>check_node_for_sql_injection</code> <small>function</small></li>
+<li id="symbol-analyze_sql_query_pattern"><code>analyze_sql_query_pattern</code> <small>function</small></li>
+<li id="symbol-determine_injection_type"><code>determine_injection_type</code> <small>function</small></li>
+<li id="symbol-calculate_confidence"><code>calculate_confidence</code> <small>function</small></li>
+<li id="symbol-determine_severity"><code>determine_severity</code> <small>function</small></li>
+<li id="symbol-generate_remediation"><code>generate_remediation</code> <small>function</small></li>
+<li id="symbol-is_string_concatenation"><code>is_string_concatenation</code> <small>function</small></li>
+<li id="symbol-is_format_operation"><code>is_format_operation</code> <small>function</small></li>
+<li id="symbol-is_template_literal"><code>is_template_literal</code> <small>function</small></li>
+<li id="symbol-extract_sql_from_concatenation"><code>extract_sql_from_concatenation</code> <small>function</small></li>
+<li id="symbol-extract_format_string"><code>extract_format_string</code> <small>function</small></li>
+<li id="symbol-extract_template_content"><code>extract_template_content</code> <small>function</small></li>
+<li id="symbol-contains_sql_keywords"><code>contains_sql_keywords</code> <small>function</small></li>
+<li id="symbol-create_direct_vulnerability"><code>create_direct_vulnerability</code> <small>function</small></li>
+<li id="symbol-test_sql_injection_detector_creation"><code>test_sql_injection_detector_creation</code> <small>function</small></li>
+<li id="symbol-test_sql_keywords_detection"><code>test_sql_keywords_detection</code> <small>function</small></li>
+<li id="symbol-test_injection_type_determination"><code>test_injection_type_determination</code> <small>function</small></li>
+<li id="symbol-sqlinjectionvulnerability"><code>SqlInjectionVulnerability</code> <small>struct</small></li>
+<li id="symbol-sqlquerypattern"><code>SqlQueryPattern</code> <small>struct</small></li>
+<li id="symbol-sqlinjectionremediation"><code>SqlInjectionRemediation</code> <small>struct</small></li>
+<li id="symbol-securecodeexample"><code>SecureCodeExample</code> <small>struct</small></li>
+<li id="symbol-sqlinjectiondetector"><code>SqlInjectionDetector</code> <small>struct</small></li>
+<li id="symbol-sqlinjectiontype"><code>SqlInjectionType</code> <small>enum</small></li>
+<li id="symbol-sqlinjectionseverity"><code>SqlInjectionSeverity</code> <small>enum</small></li>
+<li id="symbol-sqloperation"><code>SqlOperation</code> <small>enum</small></li>
+<li id="symbol-remediationeffort"><code>RemediationEffort</code> <small>enum</small></li>
+<li id="symbol-sqlinjectiondetector"><code>SqlInjectionDetector</code> <small>impl</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-keywords"><code>keywords</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-taint_flows"><code>taint_flows</code> <small>variable</small></li>
+<li id="symbol-direct_vulnerabilities"><code>direct_vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-query_pattern"><code>query_pattern</code> <small>variable</small></li>
+<li id="symbol-injection_type"><code>injection_type</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-severity"><code>severity</code> <small>variable</small></li>
+<li id="symbol-remediation"><code>remediation</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-text_upper"><code>text_upper</code> <small>variable</small></li>
+<li id="symbol-query_pattern"><code>query_pattern</code> <small>variable</small></li>
+<li id="symbol-remediation"><code>remediation</code> <small>variable</small></li>
+<li id="symbol-severity"><code>severity</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-flow"><code>flow</code> <small>variable</small></li>
+<li id="symbol-injection_type"><code>injection_type</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

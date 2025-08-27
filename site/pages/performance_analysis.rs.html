@@ -1,0 +1,1169 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>performance_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>performance_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>332 symbols, 3192 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["with_config"])
+  F2 --> F3
+  F3(["analyze"])
+  F3 --> F4
+  F4(["analyze_file_performance"])
+  F4 --> F5
+  F5(["detect_file_hotspots"])
+  F5 --> F6
+  F6(["detect_ast_hotspots"])
+  F6 --> F7
+  F7(["detect_nested_loop_hotspots"])
+  F7 --> F8
+  F8(["detect_semantic_complexity_patterns"])
+  F8 --> F9
+  F9(["analyze_nested_iteration_patterns"])
+  F9 --> F10
+  F10(["find_loop_nodes"])
+  F10 --> F11
+  F11(["traverse_for_loops"])
+  F11 --> F12
+  F12(["analyze_loop_nesting"])
+  F12 --> F13
+  F13(["count_nested_loops"])
+  F13 --> F14
+  F14(["extract_iteration_variables"])
+  F14 --> F15
+  F15(["analyze_data_dependencies"])
+  F15 --> F16
+  F16(["classify_loop_types"])
+  F16 --> F17
+  F17(["analyze_access_patterns"])
+  F17 --> F18
+  F18(["perform_semantic_loop_analysis"])
+  F18 --> F19
+  F19(["calculate_complexity_confidence"])
+  F19 --> F20
+  F20(["generate_complexity_optimization"])
+  F20 --> F21
+  F21(["extract_function_name_from_content"])
+  F21 --> F22
+  F22(["extract_code_snippet"])
+  F22 --> F23
+  F23(["analyze_recursive_complexity_patterns"])
+  F23 --> F24
+  F24(["analyze_data_structure_access_patterns"])
+  F24 --> F25
+  F25(["analyze_algorithmic_antipatterns"])
+  F25 --> F26
+  F26(["find_function_nodes"])
+  F26 --> F27
+  F27(["traverse_for_functions"])
+  F27 --> F28
+  F28(["extract_function_name"])
+  F28 --> F29
+  F29(["is_recursive_function"])
+  F29 --> F30
+  F30(["analyze_recursion_complexity"])
+  F30 --> F31
+  F31(["contains_linear_operations_in_loops"])
+  F31 --> F32
+  F32(["contains_inefficient_sorting"])
+  F32 --> F33
+  F33(["detect_memory_hotspots"])
+  F33 --> F34
+  F34(["detect_complexity_hotspots"])
+  F34 --> F35
+  F35(["calculate_function_complexity"])
+  F35 --> F36
+  F36(["extract_function_name_from_node"])
+  F36 --> F37
+  F37(["find_nodes_in_subtree"])
+  F37 --> F38
+  F38(["collect_nodes_recursive"])
+  F38 --> F39
+  F39(["is_inside_loop"])
+  F39 --> F40
+  F40(["find_nested_loops_in_node"])
+  F40 --> F41
+  F41(["detect_cross_file_hotspots"])
+  F41 --> F42
+  F42(["generate_optimizations"])
+  F42 --> F43
+  F43(["calculate_file_complexity"])
+  F43 --> F44
+  F44(["calculate_ast_complexity"])
+  F44 --> F45
+  F45(["parse_language"])
+  F45 --> F46
+  F46(["create_syntax_tree"])
+  F46 --> F47
+  F47(["calculate_cyclomatic_complexity"])
+  F47 --> F48
+  F48(["detect_nested_loops"])
+  F48 --> F49
+  F49(["count_nested_loops_in_file"])
+  F49 --> F50
+  F50(["count_recursive_functions"])
+  F50 --> F51
+  F51(["count_memory_allocations"])
+  F51 --> F52
+  F52(["detect_memory_allocations"])
+  F52 --> F53
+  F53(["count_allocation_patterns"])
+  F53 --> F54
+  F54(["count_io_operations"])
+  F54 --> F55
+  F55(["count_database_queries"])
+  F55 --> F56
+  F56(["calculate_file_performance_score"])
+  F56 --> F57
+  F57(["analyze_complexity"])
+  F57 --> F58
+  F58(["analyze_function_complexities"])
+  F58 --> F59
+  F59(["analyze_memory_usage"])
+  F59 --> F60
+  F60(["detect_memory_allocation_patterns"])
+  F60 --> F61
+  F61(["detect_potential_memory_leaks"])
+  F61 --> F62
+  F62(["analyze_concurrency"])
+  F62 --> F63
+  F63(["generate_recommendations"])
+  F63 --> F64
+  F64(["calculate_performance_score"])
+  F64 --> F65
+  F65(["default"])
+  F65 --> F66
+  F66(["default"])
+  F66 --> F67
+  F67(["default"])
+  F67 --> F68
+  F68(["fmt"])
+  F68 --> F69
+  F69(["fmt"])
+  F69 --> F70
+  F70(["fmt"])
+  F70 --> F71
+  F71(["LoopNestingInfo"])
+  F71 --> F72
+  F72(["DataDependency"])
+  F72 --> F73
+  F73(["AccessPattern"])
+  F73 --> F74
+  F74(["SemanticLoopAnalysis"])
+  F74 --> F75
+  F75(["RecursionAnalysis"])
+  F75 --> F76
+  F76(["PerformanceAnalyzer"])
+  F76 --> F77
+  F77(["PerformanceConfig"])
+  F77 --> F78
+  F78(["PerformanceAnalysisResult"])
+  F78 --> F79
+  F79(["PerformanceHotspot"])
+  F79 --> F80
+  F80(["HotspotLocation"])
+  F80 --> F81
+  F81(["PerformanceImpact"])
+  F81 --> F82
+  F82(["ExpectedImprovement"])
+  F82 --> F83
+  F83(["OptimizationOpportunity"])
+  F83 --> F84
+  F84(["EffortEstimate"])
+  F84 --> F85
+  F85(["FilePerformanceMetrics"])
+  F85 --> F86
+  F86(["ComplexityAnalysis"])
+  F86 --> F87
+  F87(["ComplexFunction"])
+  F87 --> F88
+  F88(["NestedLoopAnalysis"])
+  F88 --> F89
+  F89(["RecursiveFunction"])
+  F89 --> F90
+  F90(["MemoryAnalysis"])
+  F90 --> F91
+  F91(["MemoryHotspot"])
+  F91 --> F92
+  F92(["MemoryLeakRisk"])
+  F92 --> F93
+  F93(["InefficiientDataStructure"])
+  F93 --> F94
+  F94(["MemoryOptimization"])
+  F94 --> F95
+  F95(["ConcurrencyAnalysis"])
+  F95 --> F96
+  F96(["ParallelizationOpportunity"])
+  F96 --> F97
+  F97(["SynchronizationIssue"])
+  F97 --> F98
+  F98(["ThreadSafetyConcern"])
+  F98 --> F99
+  F99(["AsyncOptimization"])
+  F99 --> F100
+  F100(["PerformanceRecommendation"])
+  F100 --> F101
+  F101(["DependencyType"])
+  F101 --> F102
+  F102(["LoopType"])
+  F102 --> F103
+  F103(["AccessPatternType"])
+  F103 --> F104
+  F104(["AccessComplexity"])
+  F104 --> F105
+  F105(["HotspotCategory"])
+  F105 --> F106
+  F106(["PerformanceSeverity"])
+  F106 --> F107
+  F107(["ConfidenceLevel"])
+  F107 --> F108
+  F108(["OptimizationDifficulty"])
+  F108 --> F109
+  F109(["OptimizationType"])
+  F109 --> F110
+  F110(["OptimizationPriority"])
+  F110 --> F111
+  F111(["ExpertiseLevel"])
+  F111 --> F112
+  F112(["RecursionType"])
+  F112 --> F113
+  F113(["OptimizationPotential"])
+  F113 --> F114
+  F114(["AllocationType"])
+  F114 --> F115
+  F115(["AllocationFrequency"])
+  F115 --> F116
+  F116(["SizeEstimate"])
+  F116 --> F117
+  F117(["ParallelizationType"])
+  F117 --> F118
+  F118(["SynchronizationIssueType"])
+  F118 --> F119
+  F119(["ThreadSafetyIssue"])
+  F119 --> F120
+  F120(["AsyncOptimizationType"])
+  F120 --> F121
+  F121(["PerformanceConfig"])
+  F121 --> F122
+  F122(["PerformanceAnalyzer"])
+  F122 --> F123
+  F123(["ComplexityAnalysis"])
+  F123 --> F124
+  F124(["MemoryAnalysis"])
+  F124 --> F125
+  F125(["ConcurrencyAnalysis"])
+  F125 --> F126
+  F126(["PerformanceSeverity"])
+  F126 --> F127
+  F127(["OptimizationPriority"])
+  F127 --> F128
+  F128(["OptimizationDifficulty"])
+  F128 --> F129
+  F129(["hotspots"])
+  F129 --> F130
+  F130(["file_metrics"])
+  F130 --> F131
+  F131(["metrics"])
+  F131 --> F132
+  F132(["optimizations"])
+  F132 --> F133
+  F133(["hotspots_by_severity"])
+  F133 --> F134
+  F134(["complexity_analysis"])
+  F134 --> F135
+  F135(["memory_analysis"])
+  F135 --> F136
+  F136(["memory_tracking"])
+  F136 --> F137
+  F137(["memory_tracker"])
+  F137 --> F138
+  F138(["concurrency_analysis"])
+  F138 --> F139
+  F139(["recommendations"])
+  F139 --> F140
+  F140(["performance_score"])
+  F140 --> F141
+  F141(["function_lengths"])
+  F141 --> F142
+  F142(["function_count"])
+  F142 --> F143
+  F143(["average_function_length"])
+  F143 --> F144
+  F144(["cyclomatic_complexity"])
+  F144 --> F145
+  F145(["nested_loops"])
+  F145 --> F146
+  F146(["recursive_functions"])
+  F146 --> F147
+  F147(["memory_allocations"])
+  F147 --> F148
+  F148(["io_operations"])
+  F148 --> F149
+  F149(["database_queries"])
+  F149 --> F150
+  F150(["performance_score"])
+  F150 --> F151
+  F151(["hotspots"])
+  F151 --> F152
+  F152(["function_length"])
+  F152 --> F153
+  F153(["lang"])
+  F153 --> F154
+  F154(["parser"])
+  F154 --> F155
+  F155(["tree"])
+  F155 --> F156
+  F156(["hotspots"])
+  F156 --> F157
+  F157(["hotspots"])
+  F157 --> F158
+  F158(["loop_patterns"])
+  F158 --> F159
+  F159(["loops"])
+  F159 --> F160
+  F160(["nested_loops"])
+  F160 --> F161
+  F161(["start_point"])
+  F161 --> F162
+  F162(["end_point"])
+  F162 --> F163
+  F163(["hotspots"])
+  F163 --> F164
+  F164(["root_node"])
+  F164 --> F165
+  F165(["nested_patterns"])
+  F165 --> F166
+  F166(["recursive_patterns"])
+  F166 --> F167
+  F167(["access_patterns"])
+  F167 --> F168
+  F168(["antipatterns"])
+  F168 --> F169
+  F169(["hotspots"])
+  F169 --> F170
+  F170(["_cursor"])
+  F170 --> F171
+  F171(["loop_nodes"])
+  F171 --> F172
+  F172(["nesting_info"])
+  F172 --> F173
+  F173(["complexity_order"])
+  F173 --> F174
+  F174(["semantic_analysis"])
+  F174 --> F175
+  F175(["severity"])
+  F175 --> F176
+  F176(["confidence"])
+  F176 --> F177
+  F177(["loop_nodes"])
+  F177 --> F178
+  F178(["_cursor"])
+  F178 --> F179
+  F179(["loop_patterns"])
+  F179 --> F180
+  F180(["depth"])
+  F180 --> F181
+  F181(["current_node"])
+  F181 --> F182
+  F182(["iteration_variables"])
+  F182 --> F183
+  F183(["data_dependencies"])
+  F183 --> F184
+  F184(["count"])
+  F184 --> F185
+  F185(["loop_patterns"])
+  F185 --> F186
+  F186(["variables"])
+  F186 --> F187
+  F187(["var_part"])
+  F187 --> F188
+  F188(["var_part"])
+  F188 --> F189
+  F189(["common_vars"])
+  F189 --> F190
+  F190(["dependencies"])
+  F190 --> F191
+  F191(["types"])
+  F191 --> F192
+  F192(["patterns"])
+  F192 --> F193
+  F193(["confidence"])
+  F193 --> F194
+  F194(["description"])
+  F194 --> F195
+  F195(["pattern_type"])
+  F195 --> F196
+  F196(["optimization_suggestions"])
+  F196 --> F197
+  F197(["has_index_dependencies"])
+  F197 --> F198
+  F198(["function_name"])
+  F198 --> F199
+  F199(["base_suggestions"])
+  F199 --> F200
+  F200(["optimization"])
+  F200 --> F201
+  F201(["lines"])
+  F201 --> F202
+  F202(["func_name"])
+  F202 --> F203
+  F203(["func_name"])
+  F203 --> F204
+  F204(["func_name"])
+  F204 --> F205
+  F205(["hotspots"])
+  F205 --> F206
+  F206(["function_nodes"])
+  F206 --> F207
+  F207(["recursion_analysis"])
+  F207 --> F208
+  F208(["hotspots"])
+  F208 --> F209
+  F209(["hotspots"])
+  F209 --> F210
+  F210(["function_nodes"])
+  F210 --> F211
+  F211(["function_patterns"])
+  F211 --> F212
+  F212(["complexity_risk"])
+  F212 --> F213
+  F213(["pattern_type"])
+  F213 --> F214
+  F214(["optimization_suggestion"])
+  F214 --> F215
+  F215(["recursive_calls"])
+  F215 --> F216
+  F216(["has_base_case"])
+  F216 --> F217
+  F217(["lines"])
+  F217 --> F218
+  F218(["last_meaningful_line"])
+  F218 --> F219
+  F219(["loop_keywords"])
+  F219 --> F220
+  F220(["linear_operations"])
+  F220 --> F221
+  F221(["has_loop"])
+  F221 --> F222
+  F222(["remaining_text"])
+  F222 --> F223
+  F223(["text_bytes"])
+  F223 --> F224
+  F224(["for_count"])
+  F224 --> F225
+  F225(["while_count"])
+  F225 --> F226
+  F226(["has_nested_loops"])
+  F226 --> F227
+  F227(["has_swap"])
+  F227 --> F228
+  F228(["has_temp"])
+  F228 --> F229
+  F229(["has_array_swap"])
+  F229 --> F230
+  F230(["hotspots"])
+  F230 --> F231
+  F231(["call_expressions"])
+  F231 --> F232
+  F232(["function_text"])
+  F232 --> F233
+  F233(["is_allocation"])
+  F233 --> F234
+  F234(["start_point"])
+  F234 --> F235
+  F235(["end_point"])
+  F235 --> F236
+  F236(["in_loop"])
+  F236 --> F237
+  F237(["macro_expressions"])
+  F237 --> F238
+  F238(["macro_text"])
+  F238 --> F239
+  F239(["start_point"])
+  F239 --> F240
+  F240(["end_point"])
+  F240 --> F241
+  F241(["in_loop"])
+  F241 --> F242
+  F242(["hotspots"])
+  F242 --> F243
+  F243(["function_patterns"])
+  F243 --> F244
+  F244(["functions"])
+  F244 --> F245
+  F245(["complexity"])
+  F245 --> F246
+  F246(["start_point"])
+  F246 --> F247
+  F247(["end_point"])
+  F247 --> F248
+  F248(["function_name"])
+  F248 --> F249
+  F249(["complexity"])
+  F249 --> F250
+  F250(["control_patterns"])
+  F250 --> F251
+  F251(["nodes"])
+  F251 --> F252
+  F252(["nodes"])
+  F252 --> F253
+  F253(["current"])
+  F253 --> F254
+  F254(["kind"])
+  F254 --> F255
+  F255(["nested_count"])
+  F255 --> F256
+  F256(["nested_loops"])
+  F256 --> F257
+  F257(["hotspots"])
+  F257 --> F258
+  F258(["optimizations"])
+  F258 --> F259
+  F259(["complexity_hotspots"])
+  F259 --> F260
+  F260(["memory_hotspots"])
+  F260 --> F261
+  F261(["ast_complexity"])
+  F261 --> F262
+  F262(["symbol_complexity"])
+  F262 --> F263
+  F263(["size_complexity"])
+  F263 --> F264
+  F264(["symbol_complexity"])
+  F264 --> F265
+  F265(["size_complexity"])
+  F265 --> F266
+  F266(["lang"])
+  F266 --> F267
+  F267(["tree"])
+  F267 --> F268
+  F268(["name"])
+  F268 --> F269
+  F269(["lang"])
+  F269 --> F270
+  F270(["parser"])
+  F270 --> F271
+  F271(["tree"])
+  F271 --> F272
+  F272(["allocation_count"])
+  F272 --> F273
+  F273(["call_expressions"])
+  F273 --> F274
+  F274(["function_text"])
+  F274 --> F275
+  F275(["macro_invocations"])
+  F275 --> F276
+  F276(["macro_text"])
+  F276 --> F277
+  F277(["call_expressions"])
+  F277 --> F278
+  F278(["function_text"])
+  F278 --> F279
+  F279(["list_comprehensions"])
+  F279 --> F280
+  F280(["dict_comprehensions"])
+  F280 --> F281
+  F281(["new_expressions"])
+  F281 --> F282
+  F282(["array_expressions"])
+  F282 --> F283
+  F283(["call_expressions"])
+  F283 --> F284
+  F284(["function_text"])
+  F284 --> F285
+  F285(["call_expressions"])
+  F285 --> F286
+  F286(["function_text"])
+  F286 --> F287
+  F287(["name"])
+  F287 --> F288
+  F288(["name"])
+  F288 --> F289
+  F289(["score"])
+  F289 --> F290
+  F290(["total_complexity"])
+  F290 --> F291
+  F291(["max_complexity"])
+  F291 --> F292
+  F292(["high_complexity_functions"])
+  F292 --> F293
+  F293(["function_count"])
+  F293 --> F294
+  F294(["file_complexity"])
+  F294 --> F295
+  F295(["function_complexities"])
+  F295 --> F296
+  F296(["func_complexity"])
+  F296 --> F297
+  F297(["average_complexity"])
+  F297 --> F298
+  F298(["complexities"])
+  F298 --> F299
+  F299(["lines"])
+  F299 --> F300
+  F300(["current_function"])
+  F300 --> F301
+  F301(["current_complexity"])
+  F301 --> F302
+  F302(["brace_depth"])
+  F302 --> F303
+  F303(["function_start_depth"])
+  F303 --> F304
+  F304(["in_function"])
+  F304 --> F305
+  F305(["trimmed"])
+  F305 --> F306
+  F306(["open_braces"])
+  F306 --> F307
+  F307(["close_braces"])
+  F307 --> F308
+  F308(["func_name"])
+  F308 --> F309
+  F309(["line_lower"])
+  F309 --> F310
+  F310(["is_comment"])
+  F310 --> F311
+  F311(["allocation_hotspots"])
+  F311 --> F312
+  F312(["leak_potential"])
+  F312 --> F313
+  F313(["hotspots"])
+  F313 --> F314
+  F314(["leaks"])
+  F314 --> F315
+  F315(["hotspots"])
+  F315 --> F316
+  F316(["lines"])
+  F316 --> F317
+  F317(["in_loop"])
+  F317 --> F318
+  F318(["trimmed"])
+  F318 --> F319
+  F319(["has_allocation"])
+  F319 --> F320
+  F320(["_severity"])
+  F320 --> F321
+  F321(["leaks"])
+  F321 --> F322
+  F322(["lines"])
+  F322 --> F323
+  F323(["trimmed"])
+  F323 --> F324
+  F324(["recommendations"])
+  F324 --> F325
+  F325(["memory_hotspots"])
+  F325 --> F326
+  F326(["complexity_hotspots"])
+  F326 --> F327
+  F327(["io_hotspots"])
+  F327 --> F328
+  F328(["critical_hotspots"])
+  F328 --> F329
+  F329(["avg_file_score"])
+  F329 --> F330
+  F330(["score"])
+  F330 --> F331
+  F331(["deduction"])
+  F331 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant with_config
+  participant analyze
+  participant analyze_file_performance
+  participant detect_file_hotspots
+  participant detect_ast_hotspots
+  participant detect_nested_loop_hotspots
+  participant detect_semantic_complexity_patterns
+  participant analyze_nested_iteration_patterns
+  participant find_loop_nodes
+  participant traverse_for_loops
+  participant analyze_loop_nesting
+  participant count_nested_loops
+  participant extract_iteration_variables
+  participant analyze_data_dependencies
+  participant classify_loop_types
+  participant analyze_access_patterns
+  participant perform_semantic_loop_analysis
+  participant calculate_complexity_confidence
+  participant generate_complexity_optimization
+  participant extract_function_name_from_content
+  participant extract_code_snippet
+  participant analyze_recursive_complexity_patterns
+  participant analyze_data_structure_access_patterns
+  participant analyze_algorithmic_antipatterns
+  participant find_function_nodes
+  participant traverse_for_functions
+  participant extract_function_name
+  participant is_recursive_function
+  participant analyze_recursion_complexity
+  participant contains_linear_operations_in_loops
+  participant contains_inefficient_sorting
+  participant detect_memory_hotspots
+  participant detect_complexity_hotspots
+  participant calculate_function_complexity
+  participant extract_function_name_from_node
+  participant find_nodes_in_subtree
+  participant collect_nodes_recursive
+  participant is_inside_loop
+  participant find_nested_loops_in_node
+  participant detect_cross_file_hotspots
+  participant generate_optimizations
+  participant calculate_file_complexity
+  participant calculate_ast_complexity
+  participant parse_language
+  participant create_syntax_tree
+  participant calculate_cyclomatic_complexity
+  participant detect_nested_loops
+  participant count_nested_loops_in_file
+  participant count_recursive_functions
+  participant count_memory_allocations
+  participant detect_memory_allocations
+  participant count_allocation_patterns
+  participant count_io_operations
+  participant count_database_queries
+  participant calculate_file_performance_score
+  participant analyze_complexity
+  participant analyze_function_complexities
+  participant analyze_memory_usage
+  participant detect_memory_allocation_patterns
+  participant detect_potential_memory_leaks
+  participant analyze_concurrency
+  participant generate_recommendations
+  participant calculate_performance_score
+  participant default
+  participant default
+  participant default
+  participant fmt
+  participant fmt
+  participant fmt
+  default->>new: call
+  new->>with_config: call
+  with_config->>analyze: call
+  analyze->>analyze_file_performance: call
+  analyze_file_performance->>detect_file_hotspots: call
+  detect_file_hotspots->>detect_ast_hotspots: call
+  detect_ast_hotspots->>detect_nested_loop_hotspots: call
+  detect_nested_loop_hotspots->>detect_semantic_complexity_patterns: call
+  detect_semantic_complexity_patterns->>analyze_nested_iteration_patterns: call
+  analyze_nested_iteration_patterns->>find_loop_nodes: call
+  find_loop_nodes->>traverse_for_loops: call
+  traverse_for_loops->>analyze_loop_nesting: call
+  analyze_loop_nesting->>count_nested_loops: call
+  count_nested_loops->>extract_iteration_variables: call
+  extract_iteration_variables->>analyze_data_dependencies: call
+  analyze_data_dependencies->>classify_loop_types: call
+  classify_loop_types->>analyze_access_patterns: call
+  analyze_access_patterns->>perform_semantic_loop_analysis: call
+  perform_semantic_loop_analysis->>calculate_complexity_confidence: call
+  calculate_complexity_confidence->>generate_complexity_optimization: call
+  generate_complexity_optimization->>extract_function_name_from_content: call
+  extract_function_name_from_content->>extract_code_snippet: call
+  extract_code_snippet->>analyze_recursive_complexity_patterns: call
+  analyze_recursive_complexity_patterns->>analyze_data_structure_access_patterns: call
+  analyze_data_structure_access_patterns->>analyze_algorithmic_antipatterns: call
+  analyze_algorithmic_antipatterns->>find_function_nodes: call
+  find_function_nodes->>traverse_for_functions: call
+  traverse_for_functions->>extract_function_name: call
+  extract_function_name->>is_recursive_function: call
+  is_recursive_function->>analyze_recursion_complexity: call
+  analyze_recursion_complexity->>contains_linear_operations_in_loops: call
+  contains_linear_operations_in_loops->>contains_inefficient_sorting: call
+  contains_inefficient_sorting->>detect_memory_hotspots: call
+  detect_memory_hotspots->>detect_complexity_hotspots: call
+  detect_complexity_hotspots->>calculate_function_complexity: call
+  calculate_function_complexity->>extract_function_name_from_node: call
+  extract_function_name_from_node->>find_nodes_in_subtree: call
+  find_nodes_in_subtree->>collect_nodes_recursive: call
+  collect_nodes_recursive->>is_inside_loop: call
+  is_inside_loop->>find_nested_loops_in_node: call
+  find_nested_loops_in_node->>detect_cross_file_hotspots: call
+  detect_cross_file_hotspots->>generate_optimizations: call
+  generate_optimizations->>calculate_file_complexity: call
+  calculate_file_complexity->>calculate_ast_complexity: call
+  calculate_ast_complexity->>parse_language: call
+  parse_language->>create_syntax_tree: call
+  create_syntax_tree->>calculate_cyclomatic_complexity: call
+  calculate_cyclomatic_complexity->>detect_nested_loops: call
+  detect_nested_loops->>count_nested_loops_in_file: call
+  count_nested_loops_in_file->>count_recursive_functions: call
+  count_recursive_functions->>count_memory_allocations: call
+  count_memory_allocations->>detect_memory_allocations: call
+  detect_memory_allocations->>count_allocation_patterns: call
+  count_allocation_patterns->>count_io_operations: call
+  count_io_operations->>count_database_queries: call
+  count_database_queries->>calculate_file_performance_score: call
+  calculate_file_performance_score->>analyze_complexity: call
+  analyze_complexity->>analyze_function_complexities: call
+  analyze_function_complexities->>analyze_memory_usage: call
+  analyze_memory_usage->>detect_memory_allocation_patterns: call
+  detect_memory_allocation_patterns->>detect_potential_memory_leaks: call
+  detect_potential_memory_leaks->>analyze_concurrency: call
+  analyze_concurrency->>generate_recommendations: call
+  generate_recommendations->>calculate_performance_score: call
+  calculate_performance_score->>default: call
+  default->>default: call
+  default->>default: call
+  default->>fmt: call
+  fmt->>fmt: call
+  fmt->>fmt: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-analyze_file_performance"><code>analyze_file_performance</code> <small>function</small></li>
+<li id="symbol-detect_file_hotspots"><code>detect_file_hotspots</code> <small>function</small></li>
+<li id="symbol-detect_ast_hotspots"><code>detect_ast_hotspots</code> <small>function</small></li>
+<li id="symbol-detect_nested_loop_hotspots"><code>detect_nested_loop_hotspots</code> <small>function</small></li>
+<li id="symbol-detect_semantic_complexity_patterns"><code>detect_semantic_complexity_patterns</code> <small>function</small></li>
+<li id="symbol-analyze_nested_iteration_patterns"><code>analyze_nested_iteration_patterns</code> <small>function</small></li>
+<li id="symbol-find_loop_nodes"><code>find_loop_nodes</code> <small>function</small></li>
+<li id="symbol-traverse_for_loops"><code>traverse_for_loops</code> <small>function</small></li>
+<li id="symbol-analyze_loop_nesting"><code>analyze_loop_nesting</code> <small>function</small></li>
+<li id="symbol-count_nested_loops"><code>count_nested_loops</code> <small>function</small></li>
+<li id="symbol-extract_iteration_variables"><code>extract_iteration_variables</code> <small>function</small></li>
+<li id="symbol-analyze_data_dependencies"><code>analyze_data_dependencies</code> <small>function</small></li>
+<li id="symbol-classify_loop_types"><code>classify_loop_types</code> <small>function</small></li>
+<li id="symbol-analyze_access_patterns"><code>analyze_access_patterns</code> <small>function</small></li>
+<li id="symbol-perform_semantic_loop_analysis"><code>perform_semantic_loop_analysis</code> <small>function</small></li>
+<li id="symbol-calculate_complexity_confidence"><code>calculate_complexity_confidence</code> <small>function</small></li>
+<li id="symbol-generate_complexity_optimization"><code>generate_complexity_optimization</code> <small>function</small></li>
+<li id="symbol-extract_function_name_from_content"><code>extract_function_name_from_content</code> <small>function</small></li>
+<li id="symbol-extract_code_snippet"><code>extract_code_snippet</code> <small>function</small></li>
+<li id="symbol-analyze_recursive_complexity_patterns"><code>analyze_recursive_complexity_patterns</code> <small>function</small></li>
+<li id="symbol-analyze_data_structure_access_patterns"><code>analyze_data_structure_access_patterns</code> <small>function</small></li>
+<li id="symbol-analyze_algorithmic_antipatterns"><code>analyze_algorithmic_antipatterns</code> <small>function</small></li>
+<li id="symbol-find_function_nodes"><code>find_function_nodes</code> <small>function</small></li>
+<li id="symbol-traverse_for_functions"><code>traverse_for_functions</code> <small>function</small></li>
+<li id="symbol-extract_function_name"><code>extract_function_name</code> <small>function</small></li>
+<li id="symbol-is_recursive_function"><code>is_recursive_function</code> <small>function</small></li>
+<li id="symbol-analyze_recursion_complexity"><code>analyze_recursion_complexity</code> <small>function</small></li>
+<li id="symbol-contains_linear_operations_in_loops"><code>contains_linear_operations_in_loops</code> <small>function</small></li>
+<li id="symbol-contains_inefficient_sorting"><code>contains_inefficient_sorting</code> <small>function</small></li>
+<li id="symbol-detect_memory_hotspots"><code>detect_memory_hotspots</code> <small>function</small></li>
+<li id="symbol-detect_complexity_hotspots"><code>detect_complexity_hotspots</code> <small>function</small></li>
+<li id="symbol-calculate_function_complexity"><code>calculate_function_complexity</code> <small>function</small></li>
+<li id="symbol-extract_function_name_from_node"><code>extract_function_name_from_node</code> <small>function</small></li>
+<li id="symbol-find_nodes_in_subtree"><code>find_nodes_in_subtree</code> <small>function</small></li>
+<li id="symbol-collect_nodes_recursive"><code>collect_nodes_recursive</code> <small>function</small></li>
+<li id="symbol-is_inside_loop"><code>is_inside_loop</code> <small>function</small></li>
+<li id="symbol-find_nested_loops_in_node"><code>find_nested_loops_in_node</code> <small>function</small></li>
+<li id="symbol-detect_cross_file_hotspots"><code>detect_cross_file_hotspots</code> <small>function</small></li>
+<li id="symbol-generate_optimizations"><code>generate_optimizations</code> <small>function</small></li>
+<li id="symbol-calculate_file_complexity"><code>calculate_file_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_ast_complexity"><code>calculate_ast_complexity</code> <small>function</small></li>
+<li id="symbol-parse_language"><code>parse_language</code> <small>function</small></li>
+<li id="symbol-create_syntax_tree"><code>create_syntax_tree</code> <small>function</small></li>
+<li id="symbol-calculate_cyclomatic_complexity"><code>calculate_cyclomatic_complexity</code> <small>function</small></li>
+<li id="symbol-detect_nested_loops"><code>detect_nested_loops</code> <small>function</small></li>
+<li id="symbol-count_nested_loops_in_file"><code>count_nested_loops_in_file</code> <small>function</small></li>
+<li id="symbol-count_recursive_functions"><code>count_recursive_functions</code> <small>function</small></li>
+<li id="symbol-count_memory_allocations"><code>count_memory_allocations</code> <small>function</small></li>
+<li id="symbol-detect_memory_allocations"><code>detect_memory_allocations</code> <small>function</small></li>
+<li id="symbol-count_allocation_patterns"><code>count_allocation_patterns</code> <small>function</small></li>
+<li id="symbol-count_io_operations"><code>count_io_operations</code> <small>function</small></li>
+<li id="symbol-count_database_queries"><code>count_database_queries</code> <small>function</small></li>
+<li id="symbol-calculate_file_performance_score"><code>calculate_file_performance_score</code> <small>function</small></li>
+<li id="symbol-analyze_complexity"><code>analyze_complexity</code> <small>function</small></li>
+<li id="symbol-analyze_function_complexities"><code>analyze_function_complexities</code> <small>function</small></li>
+<li id="symbol-analyze_memory_usage"><code>analyze_memory_usage</code> <small>function</small></li>
+<li id="symbol-detect_memory_allocation_patterns"><code>detect_memory_allocation_patterns</code> <small>function</small></li>
+<li id="symbol-detect_potential_memory_leaks"><code>detect_potential_memory_leaks</code> <small>function</small></li>
+<li id="symbol-analyze_concurrency"><code>analyze_concurrency</code> <small>function</small></li>
+<li id="symbol-generate_recommendations"><code>generate_recommendations</code> <small>function</small></li>
+<li id="symbol-calculate_performance_score"><code>calculate_performance_score</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-loopnestinginfo"><code>LoopNestingInfo</code> <small>struct</small></li>
+<li id="symbol-datadependency"><code>DataDependency</code> <small>struct</small></li>
+<li id="symbol-accesspattern"><code>AccessPattern</code> <small>struct</small></li>
+<li id="symbol-semanticloopanalysis"><code>SemanticLoopAnalysis</code> <small>struct</small></li>
+<li id="symbol-recursionanalysis"><code>RecursionAnalysis</code> <small>struct</small></li>
+<li id="symbol-performanceanalyzer"><code>PerformanceAnalyzer</code> <small>struct</small></li>
+<li id="symbol-performanceconfig"><code>PerformanceConfig</code> <small>struct</small></li>
+<li id="symbol-performanceanalysisresult"><code>PerformanceAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-performancehotspot"><code>PerformanceHotspot</code> <small>struct</small></li>
+<li id="symbol-hotspotlocation"><code>HotspotLocation</code> <small>struct</small></li>
+<li id="symbol-performanceimpact"><code>PerformanceImpact</code> <small>struct</small></li>
+<li id="symbol-expectedimprovement"><code>ExpectedImprovement</code> <small>struct</small></li>
+<li id="symbol-optimizationopportunity"><code>OptimizationOpportunity</code> <small>struct</small></li>
+<li id="symbol-effortestimate"><code>EffortEstimate</code> <small>struct</small></li>
+<li id="symbol-fileperformancemetrics"><code>FilePerformanceMetrics</code> <small>struct</small></li>
+<li id="symbol-complexityanalysis"><code>ComplexityAnalysis</code> <small>struct</small></li>
+<li id="symbol-complexfunction"><code>ComplexFunction</code> <small>struct</small></li>
+<li id="symbol-nestedloopanalysis"><code>NestedLoopAnalysis</code> <small>struct</small></li>
+<li id="symbol-recursivefunction"><code>RecursiveFunction</code> <small>struct</small></li>
+<li id="symbol-memoryanalysis"><code>MemoryAnalysis</code> <small>struct</small></li>
+<li id="symbol-memoryhotspot"><code>MemoryHotspot</code> <small>struct</small></li>
+<li id="symbol-memoryleakrisk"><code>MemoryLeakRisk</code> <small>struct</small></li>
+<li id="symbol-inefficiientdatastructure"><code>InefficiientDataStructure</code> <small>struct</small></li>
+<li id="symbol-memoryoptimization"><code>MemoryOptimization</code> <small>struct</small></li>
+<li id="symbol-concurrencyanalysis"><code>ConcurrencyAnalysis</code> <small>struct</small></li>
+<li id="symbol-parallelizationopportunity"><code>ParallelizationOpportunity</code> <small>struct</small></li>
+<li id="symbol-synchronizationissue"><code>SynchronizationIssue</code> <small>struct</small></li>
+<li id="symbol-threadsafetyconcern"><code>ThreadSafetyConcern</code> <small>struct</small></li>
+<li id="symbol-asyncoptimization"><code>AsyncOptimization</code> <small>struct</small></li>
+<li id="symbol-performancerecommendation"><code>PerformanceRecommendation</code> <small>struct</small></li>
+<li id="symbol-dependencytype"><code>DependencyType</code> <small>enum</small></li>
+<li id="symbol-looptype"><code>LoopType</code> <small>enum</small></li>
+<li id="symbol-accesspatterntype"><code>AccessPatternType</code> <small>enum</small></li>
+<li id="symbol-accesscomplexity"><code>AccessComplexity</code> <small>enum</small></li>
+<li id="symbol-hotspotcategory"><code>HotspotCategory</code> <small>enum</small></li>
+<li id="symbol-performanceseverity"><code>PerformanceSeverity</code> <small>enum</small></li>
+<li id="symbol-confidencelevel"><code>ConfidenceLevel</code> <small>enum</small></li>
+<li id="symbol-optimizationdifficulty"><code>OptimizationDifficulty</code> <small>enum</small></li>
+<li id="symbol-optimizationtype"><code>OptimizationType</code> <small>enum</small></li>
+<li id="symbol-optimizationpriority"><code>OptimizationPriority</code> <small>enum</small></li>
+<li id="symbol-expertiselevel"><code>ExpertiseLevel</code> <small>enum</small></li>
+<li id="symbol-recursiontype"><code>RecursionType</code> <small>enum</small></li>
+<li id="symbol-optimizationpotential"><code>OptimizationPotential</code> <small>enum</small></li>
+<li id="symbol-allocationtype"><code>AllocationType</code> <small>enum</small></li>
+<li id="symbol-allocationfrequency"><code>AllocationFrequency</code> <small>enum</small></li>
+<li id="symbol-sizeestimate"><code>SizeEstimate</code> <small>enum</small></li>
+<li id="symbol-parallelizationtype"><code>ParallelizationType</code> <small>enum</small></li>
+<li id="symbol-synchronizationissuetype"><code>SynchronizationIssueType</code> <small>enum</small></li>
+<li id="symbol-threadsafetyissue"><code>ThreadSafetyIssue</code> <small>enum</small></li>
+<li id="symbol-asyncoptimizationtype"><code>AsyncOptimizationType</code> <small>enum</small></li>
+<li id="symbol-performanceconfig"><code>PerformanceConfig</code> <small>impl</small></li>
+<li id="symbol-performanceanalyzer"><code>PerformanceAnalyzer</code> <small>impl</small></li>
+<li id="symbol-complexityanalysis"><code>ComplexityAnalysis</code> <small>impl</small></li>
+<li id="symbol-memoryanalysis"><code>MemoryAnalysis</code> <small>impl</small></li>
+<li id="symbol-concurrencyanalysis"><code>ConcurrencyAnalysis</code> <small>impl</small></li>
+<li id="symbol-performanceseverity"><code>PerformanceSeverity</code> <small>impl</small></li>
+<li id="symbol-optimizationpriority"><code>OptimizationPriority</code> <small>impl</small></li>
+<li id="symbol-optimizationdifficulty"><code>OptimizationDifficulty</code> <small>impl</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-file_metrics"><code>file_metrics</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-optimizations"><code>optimizations</code> <small>variable</small></li>
+<li id="symbol-hotspots_by_severity"><code>hotspots_by_severity</code> <small>variable</small></li>
+<li id="symbol-complexity_analysis"><code>complexity_analysis</code> <small>variable</small></li>
+<li id="symbol-memory_analysis"><code>memory_analysis</code> <small>variable</small></li>
+<li id="symbol-memory_tracking"><code>memory_tracking</code> <small>variable</small></li>
+<li id="symbol-memory_tracker"><code>memory_tracker</code> <small>variable</small></li>
+<li id="symbol-concurrency_analysis"><code>concurrency_analysis</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-performance_score"><code>performance_score</code> <small>variable</small></li>
+<li id="symbol-function_lengths"><code>function_lengths</code> <small>variable</small></li>
+<li id="symbol-function_count"><code>function_count</code> <small>variable</small></li>
+<li id="symbol-average_function_length"><code>average_function_length</code> <small>variable</small></li>
+<li id="symbol-cyclomatic_complexity"><code>cyclomatic_complexity</code> <small>variable</small></li>
+<li id="symbol-nested_loops"><code>nested_loops</code> <small>variable</small></li>
+<li id="symbol-recursive_functions"><code>recursive_functions</code> <small>variable</small></li>
+<li id="symbol-memory_allocations"><code>memory_allocations</code> <small>variable</small></li>
+<li id="symbol-io_operations"><code>io_operations</code> <small>variable</small></li>
+<li id="symbol-database_queries"><code>database_queries</code> <small>variable</small></li>
+<li id="symbol-performance_score"><code>performance_score</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-function_length"><code>function_length</code> <small>variable</small></li>
+<li id="symbol-lang"><code>lang</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-loop_patterns"><code>loop_patterns</code> <small>variable</small></li>
+<li id="symbol-loops"><code>loops</code> <small>variable</small></li>
+<li id="symbol-nested_loops"><code>nested_loops</code> <small>variable</small></li>
+<li id="symbol-start_point"><code>start_point</code> <small>variable</small></li>
+<li id="symbol-end_point"><code>end_point</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-root_node"><code>root_node</code> <small>variable</small></li>
+<li id="symbol-nested_patterns"><code>nested_patterns</code> <small>variable</small></li>
+<li id="symbol-recursive_patterns"><code>recursive_patterns</code> <small>variable</small></li>
+<li id="symbol-access_patterns"><code>access_patterns</code> <small>variable</small></li>
+<li id="symbol-antipatterns"><code>antipatterns</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-_cursor"><code>_cursor</code> <small>variable</small></li>
+<li id="symbol-loop_nodes"><code>loop_nodes</code> <small>variable</small></li>
+<li id="symbol-nesting_info"><code>nesting_info</code> <small>variable</small></li>
+<li id="symbol-complexity_order"><code>complexity_order</code> <small>variable</small></li>
+<li id="symbol-semantic_analysis"><code>semantic_analysis</code> <small>variable</small></li>
+<li id="symbol-severity"><code>severity</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-loop_nodes"><code>loop_nodes</code> <small>variable</small></li>
+<li id="symbol-_cursor"><code>_cursor</code> <small>variable</small></li>
+<li id="symbol-loop_patterns"><code>loop_patterns</code> <small>variable</small></li>
+<li id="symbol-depth"><code>depth</code> <small>variable</small></li>
+<li id="symbol-current_node"><code>current_node</code> <small>variable</small></li>
+<li id="symbol-iteration_variables"><code>iteration_variables</code> <small>variable</small></li>
+<li id="symbol-data_dependencies"><code>data_dependencies</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+<li id="symbol-loop_patterns"><code>loop_patterns</code> <small>variable</small></li>
+<li id="symbol-variables"><code>variables</code> <small>variable</small></li>
+<li id="symbol-var_part"><code>var_part</code> <small>variable</small></li>
+<li id="symbol-var_part"><code>var_part</code> <small>variable</small></li>
+<li id="symbol-common_vars"><code>common_vars</code> <small>variable</small></li>
+<li id="symbol-dependencies"><code>dependencies</code> <small>variable</small></li>
+<li id="symbol-types"><code>types</code> <small>variable</small></li>
+<li id="symbol-patterns"><code>patterns</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-description"><code>description</code> <small>variable</small></li>
+<li id="symbol-pattern_type"><code>pattern_type</code> <small>variable</small></li>
+<li id="symbol-optimization_suggestions"><code>optimization_suggestions</code> <small>variable</small></li>
+<li id="symbol-has_index_dependencies"><code>has_index_dependencies</code> <small>variable</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>variable</small></li>
+<li id="symbol-base_suggestions"><code>base_suggestions</code> <small>variable</small></li>
+<li id="symbol-optimization"><code>optimization</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-func_name"><code>func_name</code> <small>variable</small></li>
+<li id="symbol-func_name"><code>func_name</code> <small>variable</small></li>
+<li id="symbol-func_name"><code>func_name</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-recursion_analysis"><code>recursion_analysis</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-function_patterns"><code>function_patterns</code> <small>variable</small></li>
+<li id="symbol-complexity_risk"><code>complexity_risk</code> <small>variable</small></li>
+<li id="symbol-pattern_type"><code>pattern_type</code> <small>variable</small></li>
+<li id="symbol-optimization_suggestion"><code>optimization_suggestion</code> <small>variable</small></li>
+<li id="symbol-recursive_calls"><code>recursive_calls</code> <small>variable</small></li>
+<li id="symbol-has_base_case"><code>has_base_case</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-last_meaningful_line"><code>last_meaningful_line</code> <small>variable</small></li>
+<li id="symbol-loop_keywords"><code>loop_keywords</code> <small>variable</small></li>
+<li id="symbol-linear_operations"><code>linear_operations</code> <small>variable</small></li>
+<li id="symbol-has_loop"><code>has_loop</code> <small>variable</small></li>
+<li id="symbol-remaining_text"><code>remaining_text</code> <small>variable</small></li>
+<li id="symbol-text_bytes"><code>text_bytes</code> <small>variable</small></li>
+<li id="symbol-for_count"><code>for_count</code> <small>variable</small></li>
+<li id="symbol-while_count"><code>while_count</code> <small>variable</small></li>
+<li id="symbol-has_nested_loops"><code>has_nested_loops</code> <small>variable</small></li>
+<li id="symbol-has_swap"><code>has_swap</code> <small>variable</small></li>
+<li id="symbol-has_temp"><code>has_temp</code> <small>variable</small></li>
+<li id="symbol-has_array_swap"><code>has_array_swap</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-call_expressions"><code>call_expressions</code> <small>variable</small></li>
+<li id="symbol-function_text"><code>function_text</code> <small>variable</small></li>
+<li id="symbol-is_allocation"><code>is_allocation</code> <small>variable</small></li>
+<li id="symbol-start_point"><code>start_point</code> <small>variable</small></li>
+<li id="symbol-end_point"><code>end_point</code> <small>variable</small></li>
+<li id="symbol-in_loop"><code>in_loop</code> <small>variable</small></li>
+<li id="symbol-macro_expressions"><code>macro_expressions</code> <small>variable</small></li>
+<li id="symbol-macro_text"><code>macro_text</code> <small>variable</small></li>
+<li id="symbol-start_point"><code>start_point</code> <small>variable</small></li>
+<li id="symbol-end_point"><code>end_point</code> <small>variable</small></li>
+<li id="symbol-in_loop"><code>in_loop</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-function_patterns"><code>function_patterns</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-start_point"><code>start_point</code> <small>variable</small></li>
+<li id="symbol-end_point"><code>end_point</code> <small>variable</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-control_patterns"><code>control_patterns</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-current"><code>current</code> <small>variable</small></li>
+<li id="symbol-kind"><code>kind</code> <small>variable</small></li>
+<li id="symbol-nested_count"><code>nested_count</code> <small>variable</small></li>
+<li id="symbol-nested_loops"><code>nested_loops</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-optimizations"><code>optimizations</code> <small>variable</small></li>
+<li id="symbol-complexity_hotspots"><code>complexity_hotspots</code> <small>variable</small></li>
+<li id="symbol-memory_hotspots"><code>memory_hotspots</code> <small>variable</small></li>
+<li id="symbol-ast_complexity"><code>ast_complexity</code> <small>variable</small></li>
+<li id="symbol-symbol_complexity"><code>symbol_complexity</code> <small>variable</small></li>
+<li id="symbol-size_complexity"><code>size_complexity</code> <small>variable</small></li>
+<li id="symbol-symbol_complexity"><code>symbol_complexity</code> <small>variable</small></li>
+<li id="symbol-size_complexity"><code>size_complexity</code> <small>variable</small></li>
+<li id="symbol-lang"><code>lang</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-lang"><code>lang</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-allocation_count"><code>allocation_count</code> <small>variable</small></li>
+<li id="symbol-call_expressions"><code>call_expressions</code> <small>variable</small></li>
+<li id="symbol-function_text"><code>function_text</code> <small>variable</small></li>
+<li id="symbol-macro_invocations"><code>macro_invocations</code> <small>variable</small></li>
+<li id="symbol-macro_text"><code>macro_text</code> <small>variable</small></li>
+<li id="symbol-call_expressions"><code>call_expressions</code> <small>variable</small></li>
+<li id="symbol-function_text"><code>function_text</code> <small>variable</small></li>
+<li id="symbol-list_comprehensions"><code>list_comprehensions</code> <small>variable</small></li>
+<li id="symbol-dict_comprehensions"><code>dict_comprehensions</code> <small>variable</small></li>
+<li id="symbol-new_expressions"><code>new_expressions</code> <small>variable</small></li>
+<li id="symbol-array_expressions"><code>array_expressions</code> <small>variable</small></li>
+<li id="symbol-call_expressions"><code>call_expressions</code> <small>variable</small></li>
+<li id="symbol-function_text"><code>function_text</code> <small>variable</small></li>
+<li id="symbol-call_expressions"><code>call_expressions</code> <small>variable</small></li>
+<li id="symbol-function_text"><code>function_text</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-score"><code>score</code> <small>variable</small></li>
+<li id="symbol-total_complexity"><code>total_complexity</code> <small>variable</small></li>
+<li id="symbol-max_complexity"><code>max_complexity</code> <small>variable</small></li>
+<li id="symbol-high_complexity_functions"><code>high_complexity_functions</code> <small>variable</small></li>
+<li id="symbol-function_count"><code>function_count</code> <small>variable</small></li>
+<li id="symbol-file_complexity"><code>file_complexity</code> <small>variable</small></li>
+<li id="symbol-function_complexities"><code>function_complexities</code> <small>variable</small></li>
+<li id="symbol-func_complexity"><code>func_complexity</code> <small>variable</small></li>
+<li id="symbol-average_complexity"><code>average_complexity</code> <small>variable</small></li>
+<li id="symbol-complexities"><code>complexities</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-current_function"><code>current_function</code> <small>variable</small></li>
+<li id="symbol-current_complexity"><code>current_complexity</code> <small>variable</small></li>
+<li id="symbol-brace_depth"><code>brace_depth</code> <small>variable</small></li>
+<li id="symbol-function_start_depth"><code>function_start_depth</code> <small>variable</small></li>
+<li id="symbol-in_function"><code>in_function</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-open_braces"><code>open_braces</code> <small>variable</small></li>
+<li id="symbol-close_braces"><code>close_braces</code> <small>variable</small></li>
+<li id="symbol-func_name"><code>func_name</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-is_comment"><code>is_comment</code> <small>variable</small></li>
+<li id="symbol-allocation_hotspots"><code>allocation_hotspots</code> <small>variable</small></li>
+<li id="symbol-leak_potential"><code>leak_potential</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-leaks"><code>leaks</code> <small>variable</small></li>
+<li id="symbol-hotspots"><code>hotspots</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-in_loop"><code>in_loop</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-has_allocation"><code>has_allocation</code> <small>variable</small></li>
+<li id="symbol-_severity"><code>_severity</code> <small>variable</small></li>
+<li id="symbol-leaks"><code>leaks</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-memory_hotspots"><code>memory_hotspots</code> <small>variable</small></li>
+<li id="symbol-complexity_hotspots"><code>complexity_hotspots</code> <small>variable</small></li>
+<li id="symbol-io_hotspots"><code>io_hotspots</code> <small>variable</small></li>
+<li id="symbol-critical_hotspots"><code>critical_hotspots</code> <small>variable</small></li>
+<li id="symbol-avg_file_score"><code>avg_file_score</code> <small>variable</small></li>
+<li id="symbol-score"><code>score</code> <small>variable</small></li>
+<li id="symbol-deduction"><code>deduction</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

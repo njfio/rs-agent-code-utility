@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai/error.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>ai/error.rs</h1></header>
+<main>
+<section class="article">
+<p>17 symbols, 179 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["configuration"])
+  F0 --> F1
+  F1(["provider"])
+  F1 --> F2
+  F2(["authentication"])
+  F2 --> F3
+  F3(["rate_limit"])
+  F3 --> F4
+  F4(["network"])
+  F4 --> F5
+  F5(["invalid_request"])
+  F5 --> F6
+  F6(["response_parsing"])
+  F6 --> F7
+  F7(["model_unavailable"])
+  F7 --> F8
+  F8(["feature_not_supported"])
+  F8 --> F9
+  F9(["token_limit_exceeded"])
+  F9 --> F10
+  F10(["cache"])
+  F10 --> F11
+  F11(["timeout"])
+  F11 --> F12
+  F12(["internal"])
+  F12 --> F13
+  F13(["is_retryable"])
+  F13 --> F14
+  F14(["retry_delay"])
+  F14 --> F15
+  F15(["AIError"])
+  F15 --> F16
+  F16(["AIError"])
+  F16 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant configuration
+  participant provider
+  participant authentication
+  participant rate_limit
+  participant network
+  participant invalid_request
+  participant response_parsing
+  participant model_unavailable
+  participant feature_not_supported
+  participant token_limit_exceeded
+  participant cache
+  participant timeout
+  participant internal
+  participant is_retryable
+  participant retry_delay
+  configuration->>provider: call
+  provider->>authentication: call
+  authentication->>rate_limit: call
+  rate_limit->>network: call
+  network->>invalid_request: call
+  invalid_request->>response_parsing: call
+  response_parsing->>model_unavailable: call
+  model_unavailable->>feature_not_supported: call
+  feature_not_supported->>token_limit_exceeded: call
+  token_limit_exceeded->>cache: call
+  cache->>timeout: call
+  timeout->>internal: call
+  internal->>is_retryable: call
+  is_retryable->>retry_delay: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-configuration"><code>configuration</code> <small>function</small></li>
+<li id="symbol-provider"><code>provider</code> <small>function</small></li>
+<li id="symbol-authentication"><code>authentication</code> <small>function</small></li>
+<li id="symbol-rate_limit"><code>rate_limit</code> <small>function</small></li>
+<li id="symbol-network"><code>network</code> <small>function</small></li>
+<li id="symbol-invalid_request"><code>invalid_request</code> <small>function</small></li>
+<li id="symbol-response_parsing"><code>response_parsing</code> <small>function</small></li>
+<li id="symbol-model_unavailable"><code>model_unavailable</code> <small>function</small></li>
+<li id="symbol-feature_not_supported"><code>feature_not_supported</code> <small>function</small></li>
+<li id="symbol-token_limit_exceeded"><code>token_limit_exceeded</code> <small>function</small></li>
+<li id="symbol-cache"><code>cache</code> <small>function</small></li>
+<li id="symbol-timeout"><code>timeout</code> <small>function</small></li>
+<li id="symbol-internal"><code>internal</code> <small>function</small></li>
+<li id="symbol-is_retryable"><code>is_retryable</code> <small>function</small></li>
+<li id="symbol-retry_delay"><code>retry_delay</code> <small>function</small></li>
+<li id="symbol-aierror"><code>AIError</code> <small>enum</small></li>
+<li id="symbol-aierror"><code>AIError</code> <small>impl</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

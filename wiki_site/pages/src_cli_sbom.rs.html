@@ -1,0 +1,403 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>src/cli/sbom.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>src/cli/sbom.rs</h1></header>
+<main>
+<section class="article">
+<p>6 symbols, 42 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["type_identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["lifetime"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["field_identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["lifetime"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["field_identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["lifetime"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["field_identifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["field_identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["type_identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["type_identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["lifetime"])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23(["identifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["identifier"])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26(["type_identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["lifetime"])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28(["identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["identifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["field_identifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["lifetime"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["identifier"])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34(["field_identifier"])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35(["lifetime"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["field_identifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["lifetime"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["identifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["identifier"])
+  N40 -->|true| N41
+  N40 -->|false| N41
+  N42(["field_identifier"])
+  N41 -->|true| N42
+  N41 -->|false| N42
+  N43(["type_identifier"])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44(["type_identifier"])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45(["identifier"])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46(["identifier"])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47(["scoped_type_identifier"])
+  N46 -->|true| N47
+  N46 -->|false| N47
+  N48(["scoped_identifier"])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49(["identifier"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["type_identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["identifier"])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52(["identifier"])
+  N51 -->|true| N52
+  N51 -->|false| N52
+  N53(["type_identifier"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["type_identifier"])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55(["identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["scoped_identifier"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["scoped_identifier"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["scoped_identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["identifier"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["identifier"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["call:Some"])
+  N61 --> N62
+  N63(["scoped_identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["scoped_identifier"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["scoped_identifier"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["identifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["identifier"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["identifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["scoped_identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["scoped_identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["scoped_identifier"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["identifier"])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73(["identifier"])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74(["identifier"])
+  N73 -->|true| N74
+  N73 -->|false| N74
+  N75(["call:Some"])
+  N74 --> N75
+  N76(["scoped_identifier"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["scoped_identifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["scoped_identifier"])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79(["identifier"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["identifier"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["identifier"])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82(["scoped_identifier"])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83(["scoped_identifier"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["scoped_identifier"])
+  N83 -->|true| N84
+  N83 -->|false| N84
+  N85(["identifier"])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86(["identifier"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["identifier"])
+  N86 -->|true| N87
+  N86 -->|false| N87
+  N88(["scoped_identifier"])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89(["scoped_identifier"])
+  N88 -->|true| N89
+  N88 -->|false| N89
+  N90(["scoped_identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["identifier"])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92(["identifier"])
+  N91 -->|true| N92
+  N91 -->|false| N92
+  N93(["identifier"])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94(["call:Some"])
+  N93 --> N94
+  N95(["scoped_identifier"])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96(["scoped_identifier"])
+  N95 -->|true| N96
+  N95 -->|false| N96
+  N97(["scoped_identifier"])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98(["identifier"])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99(["identifier"])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100(["identifier"])
+  N99 -->|true| N100
+  N99 -->|false| N100
+  N101(["call:Some"])
+  N100 --> N101
+  N102(["visibility_modifier"])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103(["identifier"])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104(["identifier"])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105(["lifetime"])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106(["identifier"])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107(["scoped_type_identifier"])
+  N106 -->|true| N107
+  N106 -->|false| N107
+  N108(["type_identifier"])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109(["type_identifier"])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110(["identifier"])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111(["type_identifier"])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112(["type_identifier"])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113(["call:collect"])
+  N112 --> N113
+  N114(["identifier"])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115(["type_identifier"])
+  N114 -->|true| N115
+  N114 -->|false| N115
+  N116(["field_identifier"])
+  N115 -->|true| N116
+  N115 -->|false| N116
+  N117(["field_identifier"])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118(["field_identifier"])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119(["identifier"])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120(["call:unwrap_or_else"])
+  N119 --> N120
+  N120 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant purl_for
+  participant to_cyclonedx
+  purl_for->>some: call
+  purl_for->>some: call
+  purl_for->>some: call
+  purl_for->>some: call
+  purl_for->>collect: call
+  purl_for->>unwrap_or_else: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-purl_for"><code>purl_for</code> <small>function</small></li>
+<li id="symbol-to_cyclonedx"><code>to_cyclonedx</code> <small>function</small></li>
+<li id="symbol-bom"><code>Bom</code> <small>struct</small></li>
+<li id="symbol-component"><code>Component</code> <small>struct</small></li>
+<li id="symbol-components"><code>components</code> <small>variable</small></li>
+<li id="symbol-bom"><code>bom</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

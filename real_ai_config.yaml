@@ -1,0 +1,110 @@
+default_provider: OpenAI
+
+providers:
+  OpenAI:
+    enabled: true
+    api_key: "${OPENAI_API_KEY}"
+    base_url: "https://api.openai.com/v1"
+    organization: null
+    models:
+      - name: "gpt-3.5-turbo"
+        context_length: 4096
+        max_tokens: 1000
+        supports_streaming: false
+        cost_per_token: 0.000002
+        supported_features:
+          - CodeExplanation
+          - SecurityAnalysis
+          - RefactoringSuggestions
+          - ArchitecturalInsights
+          - PatternDetection
+          - QualityAssessment
+          - DocumentationGeneration
+          - TestGeneration
+    default_model: "gpt-3.5-turbo"
+    timeout:
+      secs: 30
+      nanos: 0
+    rate_limit:
+      requests_per_minute: 60
+      tokens_per_minute: 90000
+      burst_size: 10
+    retry:
+      max_retries: 3
+      initial_delay:
+        secs: 1
+        nanos: 0
+      max_delay:
+        secs: 10
+        nanos: 0
+      backoff_multiplier: 2.0
+
+features:
+  code_explanation:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+  security_analysis:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+  refactoring_suggestions:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+  architectural_insights:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+  pattern_detection:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+  quality_assessment:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+  documentation_generation:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+  test_generation:
+    enabled: true
+    preferred_provider: null
+    preferred_model: null
+    max_tokens: 1000
+    temperature: 0.3
+    cache_ttl: 3600
+
+global:
+  enable_cache: true
+  cache:
+    cache_type: "memory"
+    max_size_mb: 100
+    default_ttl: 3600
+    compression_enabled: false
+    file_cache_dir: null
+  enable_metrics: true
+  log_level: "info"
+  max_concurrent_requests: 10

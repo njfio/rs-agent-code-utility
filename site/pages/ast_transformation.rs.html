@@ -1,0 +1,1166 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ast_transformation.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>ast_transformation.rs</h1></header>
+<main>
+<section class="article">
+<p>317 symbols, 3392 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["default"])
+  F1 --> F2
+  F2(["new"])
+  F2 --> F3
+  F3(["with_config"])
+  F3 --> F4
+  F4(["apply_transformation"])
+  F4 --> F5
+  F5(["apply_transformations"])
+  F5 --> F6
+  F6(["create_default_transformation_rules"])
+  F6 --> F7
+  F7(["apply_single_transformation"])
+  F7 --> F8
+  F8(["apply_replace_transformation"])
+  F8 --> F9
+  F9(["apply_insert_transformation"])
+  F9 --> F10
+  F10(["apply_delete_transformation"])
+  F10 --> F11
+  F11(["calculate_tree_hash"])
+  F11 --> F12
+  F12(["extract_method_name_from_metadata"])
+  F12 --> F13
+  F13(["sanitize_method_name"])
+  F13 --> F14
+  F14(["is_valid_method_name"])
+  F14 --> F15
+  F15(["generate_default_method_name"])
+  F15 --> F16
+  F16(["analyze_extracted_code_variables"])
+  F16 --> F17
+  F17(["generate_method_signature"])
+  F17 --> F18
+  F18(["generate_method_call"])
+  F18 --> F19
+  F19(["apply_rename_transformation"])
+  F19 --> F20
+  F20(["apply_extract_method_transformation"])
+  F20 --> F21
+  F21(["apply_inline_transformation"])
+  F21 --> F22
+  F22(["apply_move_transformation"])
+  F22 --> F23
+  F23(["apply_reorder_transformation"])
+  F23 --> F24
+  F24(["apply_wrap_transformation"])
+  F24 --> F25
+  F25(["apply_unwrap_transformation"])
+  F25 --> F26
+  F26(["is_valid_identifier"])
+  F26 --> F27
+  F27(["is_rust_keyword"])
+  F27 --> F28
+  F28(["is_python_keyword"])
+  F28 --> F29
+  F29(["is_javascript_keyword"])
+  F29 --> F30
+  F30(["find_variable_occurrences"])
+  F30 --> F31
+  F31(["find_containing_scope"])
+  F31 --> F32
+  F32(["is_scope_defining_node"])
+  F32 --> F33
+  F33(["find_identifiers_in_scope"])
+  F33 --> F34
+  F34(["has_naming_conflict"])
+  F34 --> F35
+  F35(["identifier_exists_in_scope"])
+  F35 --> F36
+  F36(["apply_rename_to_occurrences"])
+  F36 --> F37
+  F37(["node_to_location"])
+  F37 --> F38
+  F38(["determine_inline_type"])
+  F38 --> F39
+  F39(["apply_inline_variable_transformation"])
+  F39 --> F40
+  F40(["apply_inline_method_transformation"])
+  F40 --> F41
+  F41(["find_variable_declaration"])
+  F41 --> F42
+  F42(["find_variable_declaration_node"])
+  F42 --> F43
+  F43(["extract_variable_value"])
+  F43 --> F44
+  F44(["find_variable_usages"])
+  F44 --> F45
+  F45(["find_variable_usages_in_node"])
+  F45 --> F46
+  F46(["is_safe_to_inline_variable"])
+  F46 --> F47
+  F47(["find_method_definition"])
+  F47 --> F48
+  F48(["find_method_definition_node"])
+  F48 --> F49
+  F49(["extract_method_body"])
+  F49 --> F50
+  F50(["find_method_calls"])
+  F50 --> F51
+  F51(["find_method_calls_in_node"])
+  F51 --> F52
+  F52(["is_safe_to_inline_method"])
+  F52 --> F53
+  F53(["adapt_method_body_for_call"])
+  F53 --> F54
+  F54(["collect_variables_in_node"])
+  F54 --> F55
+  F55(["collect_local_declarations"])
+  F55 --> F56
+  F56(["analyze_variable_usage"])
+  F56 --> F57
+  F57(["is_variable_declaration_node"])
+  F57 --> F58
+  F58(["extract_declared_variable_name"])
+  F58 --> F59
+  F59(["is_language_keyword"])
+  F59 --> F60
+  F60(["is_builtin_function"])
+  F60 --> F61
+  F61(["infer_variable_type"])
+  F61 --> F62
+  F62(["infer_type_from_expression"])
+  F62 --> F63
+  F63(["infer_return_type_from_function_name"])
+  F63 --> F64
+  F64(["is_variable_mutable"])
+  F64 --> F65
+  F65(["determine_variable_usage_context"])
+  F65 --> F66
+  F66(["node_contains_identifier"])
+  F66 --> F67
+  F67(["find_method_insertion_point"])
+  F67 --> F68
+  F68(["find_containing_class_or_impl"])
+  F68 --> F69
+  F69(["find_insertion_point_before_closing_brace"])
+  F69 --> F70
+  F70(["find_good_insertion_point_after_function"])
+  F70 --> F71
+  F71(["find_default_insertion_point"])
+  F71 --> F72
+  F72(["is_function_like_node"])
+  F72 --> F73
+  F73(["build_method_definition"])
+  F73 --> F74
+  F74(["generate_method_documentation"])
+  F74 --> F75
+  F75(["process_extracted_body"])
+  F75 --> F76
+  F76(["new"])
+  F76 --> F77
+  F77(["with_config"])
+  F77 --> F78
+  F78(["validate_transformation"])
+  F78 --> F79
+  F79(["perform_scope_analysis"])
+  F79 --> F80
+  F80(["perform_type_analysis"])
+  F80 --> F81
+  F81(["perform_control_flow_analysis"])
+  F81 --> F82
+  F82(["perform_data_flow_analysis"])
+  F82 --> F83
+  F83(["find_node_at_position"])
+  F83 --> F84
+  F84(["extract_variables_in_scope"])
+  F84 --> F85
+  F85(["extract_functions_in_scope"])
+  F85 --> F86
+  F86(["detect_scope_conflicts"])
+  F86 --> F87
+  F87(["is_variable_declaration"])
+  F87 --> F88
+  F88(["is_function_declaration"])
+  F88 --> F89
+  F89(["extract_variable_info"])
+  F89 --> F90
+  F90(["extract_function_info"])
+  F90 --> F91
+  F91(["node_to_location"])
+  F91 --> F92
+  F92(["AstTransformationEngine"])
+  F92 --> F93
+  F93(["TransformationConfig"])
+  F93 --> F94
+  F94(["LanguageTransformationRules"])
+  F94 --> F95
+  F95(["ValidationRule"])
+  F95 --> F96
+  F96(["SemanticValidator"])
+  F96 --> F97
+  F97(["ValidationConfig"])
+  F97 --> F98
+  F98(["ValidationResult"])
+  F98 --> F99
+  F99(["ValidationError"])
+  F99 --> F100
+  F100(["ValidationWarning"])
+  F100 --> F101
+  F101(["ValidationAnalysis"])
+  F101 --> F102
+  F102(["TransformationLocation"])
+  F102 --> F103
+  F103(["Position"])
+  F103 --> F104
+  F104(["ScopeAnalysisResult"])
+  F104 --> F105
+  F105(["TypeAnalysisResult"])
+  F105 --> F106
+  F106(["ControlFlowAnalysisResult"])
+  F106 --> F107
+  F107(["DataFlowAnalysisResult"])
+  F107 --> F108
+  F108(["VariableInfo"])
+  F108 --> F109
+  F109(["FunctionInfo"])
+  F109 --> F110
+  F110(["ScopeConflict"])
+  F110 --> F111
+  F111(["TypeConflict"])
+  F111 --> F112
+  F112(["ControlPath"])
+  F112 --> F113
+  F113(["DataDependency"])
+  F113 --> F114
+  F114(["DataFlowIssue"])
+  F114 --> F115
+  F115(["ExtractedVariableAnalysis"])
+  F115 --> F116
+  F116(["VariableOccurrence"])
+  F116 --> F117
+  F117(["Transformation"])
+  F117 --> F118
+  F118(["TransformationMetadata"])
+  F118 --> F119
+  F119(["TransformationImpact"])
+  F119 --> F120
+  F120(["RollbackInfo"])
+  F120 --> F121
+  F121(["TransformationResult"])
+  F121 --> F122
+  F122(["FailedTransformation"])
+  F122 --> F123
+  F123(["ValidationSummary"])
+  F123 --> F124
+  F124(["TransformationType"])
+  F124 --> F125
+  F125(["ValidationSeverity"])
+  F125 --> F126
+  F126(["ScopeConflictType"])
+  F126 --> F127
+  F127(["ControlPathType"])
+  F127 --> F128
+  F128(["DataDependencyType"])
+  F128 --> F129
+  F129(["DataFlowIssueType"])
+  F129 --> F130
+  F130(["VariableOccurrenceType"])
+  F130 --> F131
+  F131(["InlineType"])
+  F131 --> F132
+  F132(["VariableUsageContext"])
+  F132 --> F133
+  F133(["ImpactScope"])
+  F133 --> F134
+  F134(["TransformationConfig"])
+  F134 --> F135
+  F135(["ValidationConfig"])
+  F135 --> F136
+  F136(["AstTransformationEngine"])
+  F136 --> F137
+  F137(["SemanticValidator"])
+  F137 --> F138
+  F138(["parser"])
+  F138 --> F139
+  F139(["tree"])
+  F139 --> F140
+  F140(["validation_result"])
+  F140 --> F141
+  F141(["updated_tree"])
+  F141 --> F142
+  F142(["current_source"])
+  F142 --> F143
+  F143(["applied_transformations"])
+  F143 --> F144
+  F144(["failed_transformations"])
+  F144 --> F145
+  F145(["total_validations"])
+  F145 --> F146
+  F146(["successful_validations"])
+  F146 --> F147
+  F147(["failed_validations"])
+  F147 --> F148
+  F148(["total_errors"])
+  F148 --> F149
+  F149(["total_warnings"])
+  F149 --> F150
+  F150(["confidence_scores"])
+  F150 --> F151
+  F151(["result"])
+  F151 --> F152
+  F152(["overall_confidence"])
+  F152 --> F153
+  F153(["parser"])
+  F153 --> F154
+  F154(["final_tree"])
+  F154 --> F155
+  F155(["rules"])
+  F155 --> F156
+  F156(["start_byte"])
+  F156 --> F157
+  F157(["end_byte"])
+  F157 --> F158
+  F158(["result"])
+  F158 --> F159
+  F159(["insert_byte"])
+  F159 --> F160
+  F160(["result"])
+  F160 --> F161
+  F161(["start_byte"])
+  F161 --> F162
+  F162(["end_byte"])
+  F162 --> F163
+  F163(["result"])
+  F163 --> F164
+  F164(["hasher"])
+  F164 --> F165
+  F165(["method_name"])
+  F165 --> F166
+  F166(["cleaned_name"])
+  F166 --> F167
+  F167(["patterns"])
+  F167 --> F168
+  F168(["start"])
+  F168 --> F169
+  F169(["remaining"])
+  F169 --> F170
+  F170(["method_name"])
+  F170 --> F171
+  F171(["cleaned_name"])
+  F171 --> F172
+  F172(["method_name"])
+  F172 --> F173
+  F173(["cleaned_name"])
+  F173 --> F174
+  F174(["result"])
+  F174 --> F175
+  F175(["chars"])
+  F175 --> F176
+  F176(["chars"])
+  F176 --> F177
+  F177(["timestamp"])
+  F177 --> F178
+  F178(["analysis"])
+  F178 --> F179
+  F179(["root"])
+  F179 --> F180
+  F180(["params"])
+  F180 --> F181
+  F181(["return_type"])
+  F181 --> F182
+  F182(["params"])
+  F182 --> F183
+  F183(["params"])
+  F183 --> F184
+  F184(["params"])
+  F184 --> F185
+  F185(["args"])
+  F185 --> F186
+  F186(["output_names"])
+  F186 --> F187
+  F187(["output_names"])
+  F187 --> F188
+  F188(["output_names"])
+  F188 --> F189
+  F189(["old_name"])
+  F189 --> F190
+  F190(["new_name"])
+  F190 --> F191
+  F191(["target_location"])
+  F191 --> F192
+  F192(["occurrences"])
+  F192 --> F193
+  F193(["method_name"])
+  F193 --> F194
+  F194(["extract_range"])
+  F194 --> F195
+  F195(["start_byte"])
+  F195 --> F196
+  F196(["end_byte"])
+  F196 --> F197
+  F197(["extracted_code"])
+  F197 --> F198
+  F198(["variable_analysis"])
+  F198 --> F199
+  F199(["method_signature"])
+  F199 --> F200
+  F200(["method_call"])
+  F200 --> F201
+  F201(["insertion_point"])
+  F201 --> F202
+  F202(["method_definition"])
+  F202 --> F203
+  F203(["result"])
+  F203 --> F204
+  F204(["inline_type"])
+  F204 --> F205
+  F205(["chars"])
+  F205 --> F206
+  F206(["chars"])
+  F206 --> F207
+  F207(["chars"])
+  F207 --> F208
+  F208(["chars"])
+  F208 --> F209
+  F209(["occurrences"])
+  F209 --> F210
+  F210(["root"])
+  F210 --> F211
+  F211(["target_start"])
+  F211 --> F212
+  F212(["target_end"])
+  F212 --> F213
+  F213(["root"])
+  F213 --> F214
+  F214(["result"])
+  F214 --> F215
+  F215(["offset"])
+  F215 --> F216
+  F216(["sorted_occurrences"])
+  F216 --> F217
+  F217(["start"])
+  F217 --> F218
+  F218(["end"])
+  F218 --> F219
+  F219(["adjusted_start"])
+  F219 --> F220
+  F220(["adjusted_end"])
+  F220 --> F221
+  F221(["root"])
+  F221 --> F222
+  F222(["variable_name"])
+  F222 --> F223
+  F223(["variable_declaration"])
+  F223 --> F224
+  F224(["variable_value"])
+  F224 --> F225
+  F225(["usages"])
+  F225 --> F226
+  F226(["result"])
+  F226 --> F227
+  F227(["offset"])
+  F227 --> F228
+  F228(["all_locations"])
+  F228 --> F229
+  F229(["start"])
+  F229 --> F230
+  F230(["end"])
+  F230 --> F231
+  F231(["adjusted_start"])
+  F231 --> F232
+  F232(["adjusted_end"])
+  F232 --> F233
+  F233(["method_name"])
+  F233 --> F234
+  F234(["method_definition"])
+  F234 --> F235
+  F235(["method_body"])
+  F235 --> F236
+  F236(["method_calls"])
+  F236 --> F237
+  F237(["result"])
+  F237 --> F238
+  F238(["offset"])
+  F238 --> F239
+  F239(["all_locations"])
+  F239 --> F240
+  F240(["start"])
+  F240 --> F241
+  F241(["end"])
+  F241 --> F242
+  F242(["adjusted_start"])
+  F242 --> F243
+  F243(["adjusted_end"])
+  F243 --> F244
+  F244(["inlined_body"])
+  F244 --> F245
+  F245(["root"])
+  F245 --> F246
+  F246(["start"])
+  F246 --> F247
+  F247(["end"])
+  F247 --> F248
+  F248(["declaration_text"])
+  F248 --> F249
+  F249(["value_part"])
+  F249 --> F250
+  F250(["usages"])
+  F250 --> F251
+  F251(["root"])
+  F251 --> F252
+  F252(["root"])
+  F252 --> F253
+  F253(["start"])
+  F253 --> F254
+  F254(["end"])
+  F254 --> F255
+  F255(["method_text"])
+  F255 --> F256
+  F256(["calls"])
+  F256 --> F257
+  F257(["root"])
+  F257 --> F258
+  F258(["local_declarations"])
+  F258 --> F259
+  F259(["var_name"])
+  F259 --> F260
+  F260(["var_type"])
+  F260 --> F261
+  F261(["is_mutable"])
+  F261 --> F262
+  F262(["var_info"])
+  F262 --> F263
+  F263(["usage_context"])
+  F263 --> F264
+  F264(["field_names"])
+  F264 --> F265
+  F265(["current"])
+  F265 --> F266
+  F266(["root"])
+  F266 --> F267
+  F267(["insertion_point"])
+  F267 --> F268
+  F268(["last_function_end"])
+  F268 --> F269
+  F269(["best_insertion_point"])
+  F269 --> F270
+  F270(["pos"])
+  F270 --> F271
+  F271(["chars"])
+  F271 --> F272
+  F272(["insertion_point"])
+  F272 --> F273
+  F273(["insertion_point"])
+  F273 --> F274
+  F274(["chars"])
+  F274 --> F275
+  F275(["line_start"])
+  F275 --> F276
+  F276(["last_import_end"])
+  F276 --> F277
+  F277(["method"])
+  F277 --> F278
+  F278(["processed_body"])
+  F278 --> F279
+  F279(["var"])
+  F279 --> F280
+  F280(["output_names"])
+  F280 --> F281
+  F281(["method"])
+  F281 --> F282
+  F282(["var_type"])
+  F282 --> F283
+  F283(["var"])
+  F283 --> F284
+  F284(["var_type"])
+  F284 --> F285
+  F285(["processed_body"])
+  F285 --> F286
+  F286(["output_names"])
+  F286 --> F287
+  F287(["method"])
+  F287 --> F288
+  F288(["processed_body"])
+  F288 --> F289
+  F289(["output_names"])
+  F289 --> F290
+  F290(["method"])
+  F290 --> F291
+  F291(["processed_body"])
+  F291 --> F292
+  F292(["doc"])
+  F292 --> F293
+  F293(["var_type"])
+  F293 --> F294
+  F294(["var_type"])
+  F294 --> F295
+  F295(["processed"])
+  F295 --> F296
+  F296(["lines"])
+  F296 --> F297
+  F297(["trimmed"])
+  F297 --> F298
+  F298(["errors"])
+  F298 --> F299
+  F299(["warnings"])
+  F299 --> F300
+  F300(["confidence_factors"])
+  F300 --> F301
+  F301(["scope_analysis"])
+  F301 --> F302
+  F302(["type_analysis"])
+  F302 --> F303
+  F303(["control_flow_analysis"])
+  F303 --> F304
+  F304(["data_flow_analysis"])
+  F304 --> F305
+  F305(["confidence"])
+  F305 --> F306
+  F306(["is_valid"])
+  F306 --> F307
+  F307(["variables_in_scope"])
+  F307 --> F308
+  F308(["functions_in_scope"])
+  F308 --> F309
+  F309(["scope_conflicts"])
+  F309 --> F310
+  F310(["root"])
+  F310 --> F311
+  F311(["start_byte"])
+  F311 --> F312
+  F312(["end_byte"])
+  F312 --> F313
+  F313(["variables"])
+  F313 --> F314
+  F314(["current"])
+  F314 --> F315
+  F315(["functions"])
+  F315 --> F316
+  F316(["current"])
+  F316 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant default
+  participant new
+  participant with_config
+  participant apply_transformation
+  participant apply_transformations
+  participant create_default_transformation_rules
+  participant apply_single_transformation
+  participant apply_replace_transformation
+  participant apply_insert_transformation
+  participant apply_delete_transformation
+  participant calculate_tree_hash
+  participant extract_method_name_from_metadata
+  participant sanitize_method_name
+  participant is_valid_method_name
+  participant generate_default_method_name
+  participant analyze_extracted_code_variables
+  participant generate_method_signature
+  participant generate_method_call
+  participant apply_rename_transformation
+  participant apply_extract_method_transformation
+  participant apply_inline_transformation
+  participant apply_move_transformation
+  participant apply_reorder_transformation
+  participant apply_wrap_transformation
+  participant apply_unwrap_transformation
+  participant is_valid_identifier
+  participant is_rust_keyword
+  participant is_python_keyword
+  participant is_javascript_keyword
+  participant find_variable_occurrences
+  participant find_containing_scope
+  participant is_scope_defining_node
+  participant find_identifiers_in_scope
+  participant has_naming_conflict
+  participant identifier_exists_in_scope
+  participant apply_rename_to_occurrences
+  participant node_to_location
+  participant determine_inline_type
+  participant apply_inline_variable_transformation
+  participant apply_inline_method_transformation
+  participant find_variable_declaration
+  participant find_variable_declaration_node
+  participant extract_variable_value
+  participant find_variable_usages
+  participant find_variable_usages_in_node
+  participant is_safe_to_inline_variable
+  participant find_method_definition
+  participant find_method_definition_node
+  participant extract_method_body
+  participant find_method_calls
+  participant find_method_calls_in_node
+  participant is_safe_to_inline_method
+  participant adapt_method_body_for_call
+  participant collect_variables_in_node
+  participant collect_local_declarations
+  participant analyze_variable_usage
+  participant is_variable_declaration_node
+  participant extract_declared_variable_name
+  participant is_language_keyword
+  participant is_builtin_function
+  participant infer_variable_type
+  participant infer_type_from_expression
+  participant infer_return_type_from_function_name
+  participant is_variable_mutable
+  participant determine_variable_usage_context
+  participant node_contains_identifier
+  participant find_method_insertion_point
+  participant find_containing_class_or_impl
+  participant find_insertion_point_before_closing_brace
+  participant find_good_insertion_point_after_function
+  participant find_default_insertion_point
+  participant is_function_like_node
+  participant build_method_definition
+  participant generate_method_documentation
+  participant process_extracted_body
+  participant new
+  participant with_config
+  participant validate_transformation
+  participant perform_scope_analysis
+  participant perform_type_analysis
+  participant perform_control_flow_analysis
+  participant perform_data_flow_analysis
+  participant find_node_at_position
+  participant extract_variables_in_scope
+  participant extract_functions_in_scope
+  participant detect_scope_conflicts
+  participant is_variable_declaration
+  participant is_function_declaration
+  participant extract_variable_info
+  participant extract_function_info
+  participant node_to_location
+  default->>default: call
+  default->>new: call
+  new->>with_config: call
+  with_config->>apply_transformation: call
+  apply_transformation->>apply_transformations: call
+  apply_transformations->>create_default_transformation_rules: call
+  create_default_transformation_rules->>apply_single_transformation: call
+  apply_single_transformation->>apply_replace_transformation: call
+  apply_replace_transformation->>apply_insert_transformation: call
+  apply_insert_transformation->>apply_delete_transformation: call
+  apply_delete_transformation->>calculate_tree_hash: call
+  calculate_tree_hash->>extract_method_name_from_metadata: call
+  extract_method_name_from_metadata->>sanitize_method_name: call
+  sanitize_method_name->>is_valid_method_name: call
+  is_valid_method_name->>generate_default_method_name: call
+  generate_default_method_name->>analyze_extracted_code_variables: call
+  analyze_extracted_code_variables->>generate_method_signature: call
+  generate_method_signature->>generate_method_call: call
+  generate_method_call->>apply_rename_transformation: call
+  apply_rename_transformation->>apply_extract_method_transformation: call
+  apply_extract_method_transformation->>apply_inline_transformation: call
+  apply_inline_transformation->>apply_move_transformation: call
+  apply_move_transformation->>apply_reorder_transformation: call
+  apply_reorder_transformation->>apply_wrap_transformation: call
+  apply_wrap_transformation->>apply_unwrap_transformation: call
+  apply_unwrap_transformation->>is_valid_identifier: call
+  is_valid_identifier->>is_rust_keyword: call
+  is_rust_keyword->>is_python_keyword: call
+  is_python_keyword->>is_javascript_keyword: call
+  is_javascript_keyword->>find_variable_occurrences: call
+  find_variable_occurrences->>find_containing_scope: call
+  find_containing_scope->>is_scope_defining_node: call
+  is_scope_defining_node->>find_identifiers_in_scope: call
+  find_identifiers_in_scope->>has_naming_conflict: call
+  has_naming_conflict->>identifier_exists_in_scope: call
+  identifier_exists_in_scope->>apply_rename_to_occurrences: call
+  apply_rename_to_occurrences->>node_to_location: call
+  node_to_location->>determine_inline_type: call
+  determine_inline_type->>apply_inline_variable_transformation: call
+  apply_inline_variable_transformation->>apply_inline_method_transformation: call
+  apply_inline_method_transformation->>find_variable_declaration: call
+  find_variable_declaration->>find_variable_declaration_node: call
+  find_variable_declaration_node->>extract_variable_value: call
+  extract_variable_value->>find_variable_usages: call
+  find_variable_usages->>find_variable_usages_in_node: call
+  find_variable_usages_in_node->>is_safe_to_inline_variable: call
+  is_safe_to_inline_variable->>find_method_definition: call
+  find_method_definition->>find_method_definition_node: call
+  find_method_definition_node->>extract_method_body: call
+  extract_method_body->>find_method_calls: call
+  find_method_calls->>find_method_calls_in_node: call
+  find_method_calls_in_node->>is_safe_to_inline_method: call
+  is_safe_to_inline_method->>adapt_method_body_for_call: call
+  adapt_method_body_for_call->>collect_variables_in_node: call
+  collect_variables_in_node->>collect_local_declarations: call
+  collect_local_declarations->>analyze_variable_usage: call
+  analyze_variable_usage->>is_variable_declaration_node: call
+  is_variable_declaration_node->>extract_declared_variable_name: call
+  extract_declared_variable_name->>is_language_keyword: call
+  is_language_keyword->>is_builtin_function: call
+  is_builtin_function->>infer_variable_type: call
+  infer_variable_type->>infer_type_from_expression: call
+  infer_type_from_expression->>infer_return_type_from_function_name: call
+  infer_return_type_from_function_name->>is_variable_mutable: call
+  is_variable_mutable->>determine_variable_usage_context: call
+  determine_variable_usage_context->>node_contains_identifier: call
+  node_contains_identifier->>find_method_insertion_point: call
+  find_method_insertion_point->>find_containing_class_or_impl: call
+  find_containing_class_or_impl->>find_insertion_point_before_closing_brace: call
+  find_insertion_point_before_closing_brace->>find_good_insertion_point_after_function: call
+  find_good_insertion_point_after_function->>find_default_insertion_point: call
+  find_default_insertion_point->>is_function_like_node: call
+  is_function_like_node->>build_method_definition: call
+  build_method_definition->>generate_method_documentation: call
+  generate_method_documentation->>process_extracted_body: call
+  process_extracted_body->>new: call
+  new->>with_config: call
+  with_config->>validate_transformation: call
+  validate_transformation->>perform_scope_analysis: call
+  perform_scope_analysis->>perform_type_analysis: call
+  perform_type_analysis->>perform_control_flow_analysis: call
+  perform_control_flow_analysis->>perform_data_flow_analysis: call
+  perform_data_flow_analysis->>find_node_at_position: call
+  find_node_at_position->>extract_variables_in_scope: call
+  extract_variables_in_scope->>extract_functions_in_scope: call
+  extract_functions_in_scope->>detect_scope_conflicts: call
+  detect_scope_conflicts->>is_variable_declaration: call
+  is_variable_declaration->>is_function_declaration: call
+  is_function_declaration->>extract_variable_info: call
+  extract_variable_info->>extract_function_info: call
+  extract_function_info->>node_to_location: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-apply_transformation"><code>apply_transformation</code> <small>function</small></li>
+<li id="symbol-apply_transformations"><code>apply_transformations</code> <small>function</small></li>
+<li id="symbol-create_default_transformation_rules"><code>create_default_transformation_rules</code> <small>function</small></li>
+<li id="symbol-apply_single_transformation"><code>apply_single_transformation</code> <small>function</small></li>
+<li id="symbol-apply_replace_transformation"><code>apply_replace_transformation</code> <small>function</small></li>
+<li id="symbol-apply_insert_transformation"><code>apply_insert_transformation</code> <small>function</small></li>
+<li id="symbol-apply_delete_transformation"><code>apply_delete_transformation</code> <small>function</small></li>
+<li id="symbol-calculate_tree_hash"><code>calculate_tree_hash</code> <small>function</small></li>
+<li id="symbol-extract_method_name_from_metadata"><code>extract_method_name_from_metadata</code> <small>function</small></li>
+<li id="symbol-sanitize_method_name"><code>sanitize_method_name</code> <small>function</small></li>
+<li id="symbol-is_valid_method_name"><code>is_valid_method_name</code> <small>function</small></li>
+<li id="symbol-generate_default_method_name"><code>generate_default_method_name</code> <small>function</small></li>
+<li id="symbol-analyze_extracted_code_variables"><code>analyze_extracted_code_variables</code> <small>function</small></li>
+<li id="symbol-generate_method_signature"><code>generate_method_signature</code> <small>function</small></li>
+<li id="symbol-generate_method_call"><code>generate_method_call</code> <small>function</small></li>
+<li id="symbol-apply_rename_transformation"><code>apply_rename_transformation</code> <small>function</small></li>
+<li id="symbol-apply_extract_method_transformation"><code>apply_extract_method_transformation</code> <small>function</small></li>
+<li id="symbol-apply_inline_transformation"><code>apply_inline_transformation</code> <small>function</small></li>
+<li id="symbol-apply_move_transformation"><code>apply_move_transformation</code> <small>function</small></li>
+<li id="symbol-apply_reorder_transformation"><code>apply_reorder_transformation</code> <small>function</small></li>
+<li id="symbol-apply_wrap_transformation"><code>apply_wrap_transformation</code> <small>function</small></li>
+<li id="symbol-apply_unwrap_transformation"><code>apply_unwrap_transformation</code> <small>function</small></li>
+<li id="symbol-is_valid_identifier"><code>is_valid_identifier</code> <small>function</small></li>
+<li id="symbol-is_rust_keyword"><code>is_rust_keyword</code> <small>function</small></li>
+<li id="symbol-is_python_keyword"><code>is_python_keyword</code> <small>function</small></li>
+<li id="symbol-is_javascript_keyword"><code>is_javascript_keyword</code> <small>function</small></li>
+<li id="symbol-find_variable_occurrences"><code>find_variable_occurrences</code> <small>function</small></li>
+<li id="symbol-find_containing_scope"><code>find_containing_scope</code> <small>function</small></li>
+<li id="symbol-is_scope_defining_node"><code>is_scope_defining_node</code> <small>function</small></li>
+<li id="symbol-find_identifiers_in_scope"><code>find_identifiers_in_scope</code> <small>function</small></li>
+<li id="symbol-has_naming_conflict"><code>has_naming_conflict</code> <small>function</small></li>
+<li id="symbol-identifier_exists_in_scope"><code>identifier_exists_in_scope</code> <small>function</small></li>
+<li id="symbol-apply_rename_to_occurrences"><code>apply_rename_to_occurrences</code> <small>function</small></li>
+<li id="symbol-node_to_location"><code>node_to_location</code> <small>function</small></li>
+<li id="symbol-determine_inline_type"><code>determine_inline_type</code> <small>function</small></li>
+<li id="symbol-apply_inline_variable_transformation"><code>apply_inline_variable_transformation</code> <small>function</small></li>
+<li id="symbol-apply_inline_method_transformation"><code>apply_inline_method_transformation</code> <small>function</small></li>
+<li id="symbol-find_variable_declaration"><code>find_variable_declaration</code> <small>function</small></li>
+<li id="symbol-find_variable_declaration_node"><code>find_variable_declaration_node</code> <small>function</small></li>
+<li id="symbol-extract_variable_value"><code>extract_variable_value</code> <small>function</small></li>
+<li id="symbol-find_variable_usages"><code>find_variable_usages</code> <small>function</small></li>
+<li id="symbol-find_variable_usages_in_node"><code>find_variable_usages_in_node</code> <small>function</small></li>
+<li id="symbol-is_safe_to_inline_variable"><code>is_safe_to_inline_variable</code> <small>function</small></li>
+<li id="symbol-find_method_definition"><code>find_method_definition</code> <small>function</small></li>
+<li id="symbol-find_method_definition_node"><code>find_method_definition_node</code> <small>function</small></li>
+<li id="symbol-extract_method_body"><code>extract_method_body</code> <small>function</small></li>
+<li id="symbol-find_method_calls"><code>find_method_calls</code> <small>function</small></li>
+<li id="symbol-find_method_calls_in_node"><code>find_method_calls_in_node</code> <small>function</small></li>
+<li id="symbol-is_safe_to_inline_method"><code>is_safe_to_inline_method</code> <small>function</small></li>
+<li id="symbol-adapt_method_body_for_call"><code>adapt_method_body_for_call</code> <small>function</small></li>
+<li id="symbol-collect_variables_in_node"><code>collect_variables_in_node</code> <small>function</small></li>
+<li id="symbol-collect_local_declarations"><code>collect_local_declarations</code> <small>function</small></li>
+<li id="symbol-analyze_variable_usage"><code>analyze_variable_usage</code> <small>function</small></li>
+<li id="symbol-is_variable_declaration_node"><code>is_variable_declaration_node</code> <small>function</small></li>
+<li id="symbol-extract_declared_variable_name"><code>extract_declared_variable_name</code> <small>function</small></li>
+<li id="symbol-is_language_keyword"><code>is_language_keyword</code> <small>function</small></li>
+<li id="symbol-is_builtin_function"><code>is_builtin_function</code> <small>function</small></li>
+<li id="symbol-infer_variable_type"><code>infer_variable_type</code> <small>function</small></li>
+<li id="symbol-infer_type_from_expression"><code>infer_type_from_expression</code> <small>function</small></li>
+<li id="symbol-infer_return_type_from_function_name"><code>infer_return_type_from_function_name</code> <small>function</small></li>
+<li id="symbol-is_variable_mutable"><code>is_variable_mutable</code> <small>function</small></li>
+<li id="symbol-determine_variable_usage_context"><code>determine_variable_usage_context</code> <small>function</small></li>
+<li id="symbol-node_contains_identifier"><code>node_contains_identifier</code> <small>function</small></li>
+<li id="symbol-find_method_insertion_point"><code>find_method_insertion_point</code> <small>function</small></li>
+<li id="symbol-find_containing_class_or_impl"><code>find_containing_class_or_impl</code> <small>function</small></li>
+<li id="symbol-find_insertion_point_before_closing_brace"><code>find_insertion_point_before_closing_brace</code> <small>function</small></li>
+<li id="symbol-find_good_insertion_point_after_function"><code>find_good_insertion_point_after_function</code> <small>function</small></li>
+<li id="symbol-find_default_insertion_point"><code>find_default_insertion_point</code> <small>function</small></li>
+<li id="symbol-is_function_like_node"><code>is_function_like_node</code> <small>function</small></li>
+<li id="symbol-build_method_definition"><code>build_method_definition</code> <small>function</small></li>
+<li id="symbol-generate_method_documentation"><code>generate_method_documentation</code> <small>function</small></li>
+<li id="symbol-process_extracted_body"><code>process_extracted_body</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-validate_transformation"><code>validate_transformation</code> <small>function</small></li>
+<li id="symbol-perform_scope_analysis"><code>perform_scope_analysis</code> <small>function</small></li>
+<li id="symbol-perform_type_analysis"><code>perform_type_analysis</code> <small>function</small></li>
+<li id="symbol-perform_control_flow_analysis"><code>perform_control_flow_analysis</code> <small>function</small></li>
+<li id="symbol-perform_data_flow_analysis"><code>perform_data_flow_analysis</code> <small>function</small></li>
+<li id="symbol-find_node_at_position"><code>find_node_at_position</code> <small>function</small></li>
+<li id="symbol-extract_variables_in_scope"><code>extract_variables_in_scope</code> <small>function</small></li>
+<li id="symbol-extract_functions_in_scope"><code>extract_functions_in_scope</code> <small>function</small></li>
+<li id="symbol-detect_scope_conflicts"><code>detect_scope_conflicts</code> <small>function</small></li>
+<li id="symbol-is_variable_declaration"><code>is_variable_declaration</code> <small>function</small></li>
+<li id="symbol-is_function_declaration"><code>is_function_declaration</code> <small>function</small></li>
+<li id="symbol-extract_variable_info"><code>extract_variable_info</code> <small>function</small></li>
+<li id="symbol-extract_function_info"><code>extract_function_info</code> <small>function</small></li>
+<li id="symbol-node_to_location"><code>node_to_location</code> <small>function</small></li>
+<li id="symbol-asttransformationengine"><code>AstTransformationEngine</code> <small>struct</small></li>
+<li id="symbol-transformationconfig"><code>TransformationConfig</code> <small>struct</small></li>
+<li id="symbol-languagetransformationrules"><code>LanguageTransformationRules</code> <small>struct</small></li>
+<li id="symbol-validationrule"><code>ValidationRule</code> <small>struct</small></li>
+<li id="symbol-semanticvalidator"><code>SemanticValidator</code> <small>struct</small></li>
+<li id="symbol-validationconfig"><code>ValidationConfig</code> <small>struct</small></li>
+<li id="symbol-validationresult"><code>ValidationResult</code> <small>struct</small></li>
+<li id="symbol-validationerror"><code>ValidationError</code> <small>struct</small></li>
+<li id="symbol-validationwarning"><code>ValidationWarning</code> <small>struct</small></li>
+<li id="symbol-validationanalysis"><code>ValidationAnalysis</code> <small>struct</small></li>
+<li id="symbol-transformationlocation"><code>TransformationLocation</code> <small>struct</small></li>
+<li id="symbol-position"><code>Position</code> <small>struct</small></li>
+<li id="symbol-scopeanalysisresult"><code>ScopeAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-typeanalysisresult"><code>TypeAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-controlflowanalysisresult"><code>ControlFlowAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-dataflowanalysisresult"><code>DataFlowAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-variableinfo"><code>VariableInfo</code> <small>struct</small></li>
+<li id="symbol-functioninfo"><code>FunctionInfo</code> <small>struct</small></li>
+<li id="symbol-scopeconflict"><code>ScopeConflict</code> <small>struct</small></li>
+<li id="symbol-typeconflict"><code>TypeConflict</code> <small>struct</small></li>
+<li id="symbol-controlpath"><code>ControlPath</code> <small>struct</small></li>
+<li id="symbol-datadependency"><code>DataDependency</code> <small>struct</small></li>
+<li id="symbol-dataflowissue"><code>DataFlowIssue</code> <small>struct</small></li>
+<li id="symbol-extractedvariableanalysis"><code>ExtractedVariableAnalysis</code> <small>struct</small></li>
+<li id="symbol-variableoccurrence"><code>VariableOccurrence</code> <small>struct</small></li>
+<li id="symbol-transformation"><code>Transformation</code> <small>struct</small></li>
+<li id="symbol-transformationmetadata"><code>TransformationMetadata</code> <small>struct</small></li>
+<li id="symbol-transformationimpact"><code>TransformationImpact</code> <small>struct</small></li>
+<li id="symbol-rollbackinfo"><code>RollbackInfo</code> <small>struct</small></li>
+<li id="symbol-transformationresult"><code>TransformationResult</code> <small>struct</small></li>
+<li id="symbol-failedtransformation"><code>FailedTransformation</code> <small>struct</small></li>
+<li id="symbol-validationsummary"><code>ValidationSummary</code> <small>struct</small></li>
+<li id="symbol-transformationtype"><code>TransformationType</code> <small>enum</small></li>
+<li id="symbol-validationseverity"><code>ValidationSeverity</code> <small>enum</small></li>
+<li id="symbol-scopeconflicttype"><code>ScopeConflictType</code> <small>enum</small></li>
+<li id="symbol-controlpathtype"><code>ControlPathType</code> <small>enum</small></li>
+<li id="symbol-datadependencytype"><code>DataDependencyType</code> <small>enum</small></li>
+<li id="symbol-dataflowissuetype"><code>DataFlowIssueType</code> <small>enum</small></li>
+<li id="symbol-variableoccurrencetype"><code>VariableOccurrenceType</code> <small>enum</small></li>
+<li id="symbol-inlinetype"><code>InlineType</code> <small>enum</small></li>
+<li id="symbol-variableusagecontext"><code>VariableUsageContext</code> <small>enum</small></li>
+<li id="symbol-impactscope"><code>ImpactScope</code> <small>enum</small></li>
+<li id="symbol-transformationconfig"><code>TransformationConfig</code> <small>impl</small></li>
+<li id="symbol-validationconfig"><code>ValidationConfig</code> <small>impl</small></li>
+<li id="symbol-asttransformationengine"><code>AstTransformationEngine</code> <small>impl</small></li>
+<li id="symbol-semanticvalidator"><code>SemanticValidator</code> <small>impl</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-validation_result"><code>validation_result</code> <small>variable</small></li>
+<li id="symbol-updated_tree"><code>updated_tree</code> <small>variable</small></li>
+<li id="symbol-current_source"><code>current_source</code> <small>variable</small></li>
+<li id="symbol-applied_transformations"><code>applied_transformations</code> <small>variable</small></li>
+<li id="symbol-failed_transformations"><code>failed_transformations</code> <small>variable</small></li>
+<li id="symbol-total_validations"><code>total_validations</code> <small>variable</small></li>
+<li id="symbol-successful_validations"><code>successful_validations</code> <small>variable</small></li>
+<li id="symbol-failed_validations"><code>failed_validations</code> <small>variable</small></li>
+<li id="symbol-total_errors"><code>total_errors</code> <small>variable</small></li>
+<li id="symbol-total_warnings"><code>total_warnings</code> <small>variable</small></li>
+<li id="symbol-confidence_scores"><code>confidence_scores</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-overall_confidence"><code>overall_confidence</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-final_tree"><code>final_tree</code> <small>variable</small></li>
+<li id="symbol-rules"><code>rules</code> <small>variable</small></li>
+<li id="symbol-start_byte"><code>start_byte</code> <small>variable</small></li>
+<li id="symbol-end_byte"><code>end_byte</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-insert_byte"><code>insert_byte</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-start_byte"><code>start_byte</code> <small>variable</small></li>
+<li id="symbol-end_byte"><code>end_byte</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-hasher"><code>hasher</code> <small>variable</small></li>
+<li id="symbol-method_name"><code>method_name</code> <small>variable</small></li>
+<li id="symbol-cleaned_name"><code>cleaned_name</code> <small>variable</small></li>
+<li id="symbol-patterns"><code>patterns</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-remaining"><code>remaining</code> <small>variable</small></li>
+<li id="symbol-method_name"><code>method_name</code> <small>variable</small></li>
+<li id="symbol-cleaned_name"><code>cleaned_name</code> <small>variable</small></li>
+<li id="symbol-method_name"><code>method_name</code> <small>variable</small></li>
+<li id="symbol-cleaned_name"><code>cleaned_name</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-timestamp"><code>timestamp</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-params"><code>params</code> <small>variable</small></li>
+<li id="symbol-return_type"><code>return_type</code> <small>variable</small></li>
+<li id="symbol-params"><code>params</code> <small>variable</small></li>
+<li id="symbol-params"><code>params</code> <small>variable</small></li>
+<li id="symbol-params"><code>params</code> <small>variable</small></li>
+<li id="symbol-args"><code>args</code> <small>variable</small></li>
+<li id="symbol-output_names"><code>output_names</code> <small>variable</small></li>
+<li id="symbol-output_names"><code>output_names</code> <small>variable</small></li>
+<li id="symbol-output_names"><code>output_names</code> <small>variable</small></li>
+<li id="symbol-old_name"><code>old_name</code> <small>variable</small></li>
+<li id="symbol-new_name"><code>new_name</code> <small>variable</small></li>
+<li id="symbol-target_location"><code>target_location</code> <small>variable</small></li>
+<li id="symbol-occurrences"><code>occurrences</code> <small>variable</small></li>
+<li id="symbol-method_name"><code>method_name</code> <small>variable</small></li>
+<li id="symbol-extract_range"><code>extract_range</code> <small>variable</small></li>
+<li id="symbol-start_byte"><code>start_byte</code> <small>variable</small></li>
+<li id="symbol-end_byte"><code>end_byte</code> <small>variable</small></li>
+<li id="symbol-extracted_code"><code>extracted_code</code> <small>variable</small></li>
+<li id="symbol-variable_analysis"><code>variable_analysis</code> <small>variable</small></li>
+<li id="symbol-method_signature"><code>method_signature</code> <small>variable</small></li>
+<li id="symbol-method_call"><code>method_call</code> <small>variable</small></li>
+<li id="symbol-insertion_point"><code>insertion_point</code> <small>variable</small></li>
+<li id="symbol-method_definition"><code>method_definition</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-inline_type"><code>inline_type</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-occurrences"><code>occurrences</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-target_start"><code>target_start</code> <small>variable</small></li>
+<li id="symbol-target_end"><code>target_end</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-offset"><code>offset</code> <small>variable</small></li>
+<li id="symbol-sorted_occurrences"><code>sorted_occurrences</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-end"><code>end</code> <small>variable</small></li>
+<li id="symbol-adjusted_start"><code>adjusted_start</code> <small>variable</small></li>
+<li id="symbol-adjusted_end"><code>adjusted_end</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-variable_name"><code>variable_name</code> <small>variable</small></li>
+<li id="symbol-variable_declaration"><code>variable_declaration</code> <small>variable</small></li>
+<li id="symbol-variable_value"><code>variable_value</code> <small>variable</small></li>
+<li id="symbol-usages"><code>usages</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-offset"><code>offset</code> <small>variable</small></li>
+<li id="symbol-all_locations"><code>all_locations</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-end"><code>end</code> <small>variable</small></li>
+<li id="symbol-adjusted_start"><code>adjusted_start</code> <small>variable</small></li>
+<li id="symbol-adjusted_end"><code>adjusted_end</code> <small>variable</small></li>
+<li id="symbol-method_name"><code>method_name</code> <small>variable</small></li>
+<li id="symbol-method_definition"><code>method_definition</code> <small>variable</small></li>
+<li id="symbol-method_body"><code>method_body</code> <small>variable</small></li>
+<li id="symbol-method_calls"><code>method_calls</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-offset"><code>offset</code> <small>variable</small></li>
+<li id="symbol-all_locations"><code>all_locations</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-end"><code>end</code> <small>variable</small></li>
+<li id="symbol-adjusted_start"><code>adjusted_start</code> <small>variable</small></li>
+<li id="symbol-adjusted_end"><code>adjusted_end</code> <small>variable</small></li>
+<li id="symbol-inlined_body"><code>inlined_body</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-end"><code>end</code> <small>variable</small></li>
+<li id="symbol-declaration_text"><code>declaration_text</code> <small>variable</small></li>
+<li id="symbol-value_part"><code>value_part</code> <small>variable</small></li>
+<li id="symbol-usages"><code>usages</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-end"><code>end</code> <small>variable</small></li>
+<li id="symbol-method_text"><code>method_text</code> <small>variable</small></li>
+<li id="symbol-calls"><code>calls</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-local_declarations"><code>local_declarations</code> <small>variable</small></li>
+<li id="symbol-var_name"><code>var_name</code> <small>variable</small></li>
+<li id="symbol-var_type"><code>var_type</code> <small>variable</small></li>
+<li id="symbol-is_mutable"><code>is_mutable</code> <small>variable</small></li>
+<li id="symbol-var_info"><code>var_info</code> <small>variable</small></li>
+<li id="symbol-usage_context"><code>usage_context</code> <small>variable</small></li>
+<li id="symbol-field_names"><code>field_names</code> <small>variable</small></li>
+<li id="symbol-current"><code>current</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-insertion_point"><code>insertion_point</code> <small>variable</small></li>
+<li id="symbol-last_function_end"><code>last_function_end</code> <small>variable</small></li>
+<li id="symbol-best_insertion_point"><code>best_insertion_point</code> <small>variable</small></li>
+<li id="symbol-pos"><code>pos</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-insertion_point"><code>insertion_point</code> <small>variable</small></li>
+<li id="symbol-insertion_point"><code>insertion_point</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-line_start"><code>line_start</code> <small>variable</small></li>
+<li id="symbol-last_import_end"><code>last_import_end</code> <small>variable</small></li>
+<li id="symbol-method"><code>method</code> <small>variable</small></li>
+<li id="symbol-processed_body"><code>processed_body</code> <small>variable</small></li>
+<li id="symbol-var"><code>var</code> <small>variable</small></li>
+<li id="symbol-output_names"><code>output_names</code> <small>variable</small></li>
+<li id="symbol-method"><code>method</code> <small>variable</small></li>
+<li id="symbol-var_type"><code>var_type</code> <small>variable</small></li>
+<li id="symbol-var"><code>var</code> <small>variable</small></li>
+<li id="symbol-var_type"><code>var_type</code> <small>variable</small></li>
+<li id="symbol-processed_body"><code>processed_body</code> <small>variable</small></li>
+<li id="symbol-output_names"><code>output_names</code> <small>variable</small></li>
+<li id="symbol-method"><code>method</code> <small>variable</small></li>
+<li id="symbol-processed_body"><code>processed_body</code> <small>variable</small></li>
+<li id="symbol-output_names"><code>output_names</code> <small>variable</small></li>
+<li id="symbol-method"><code>method</code> <small>variable</small></li>
+<li id="symbol-processed_body"><code>processed_body</code> <small>variable</small></li>
+<li id="symbol-doc"><code>doc</code> <small>variable</small></li>
+<li id="symbol-var_type"><code>var_type</code> <small>variable</small></li>
+<li id="symbol-var_type"><code>var_type</code> <small>variable</small></li>
+<li id="symbol-processed"><code>processed</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-errors"><code>errors</code> <small>variable</small></li>
+<li id="symbol-warnings"><code>warnings</code> <small>variable</small></li>
+<li id="symbol-confidence_factors"><code>confidence_factors</code> <small>variable</small></li>
+<li id="symbol-scope_analysis"><code>scope_analysis</code> <small>variable</small></li>
+<li id="symbol-type_analysis"><code>type_analysis</code> <small>variable</small></li>
+<li id="symbol-control_flow_analysis"><code>control_flow_analysis</code> <small>variable</small></li>
+<li id="symbol-data_flow_analysis"><code>data_flow_analysis</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-is_valid"><code>is_valid</code> <small>variable</small></li>
+<li id="symbol-variables_in_scope"><code>variables_in_scope</code> <small>variable</small></li>
+<li id="symbol-functions_in_scope"><code>functions_in_scope</code> <small>variable</small></li>
+<li id="symbol-scope_conflicts"><code>scope_conflicts</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-start_byte"><code>start_byte</code> <small>variable</small></li>
+<li id="symbol-end_byte"><code>end_byte</code> <small>variable</small></li>
+<li id="symbol-variables"><code>variables</code> <small>variable</small></li>
+<li id="symbol-current"><code>current</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-current"><code>current</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

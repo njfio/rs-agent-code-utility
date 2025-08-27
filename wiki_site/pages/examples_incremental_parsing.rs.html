@@ -1,0 +1,808 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>examples/incremental_parsing.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>examples/incremental_parsing.rs</h1></header>
+<main>
+<section class="article">
+<p>36 symbols, 216 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["type_identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["type_identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["scoped_type_identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["scoped_identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["type_identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["identifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["call:new"])
+  N16 --> N17
+  N18(["identifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["mutable_specifier"])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23(["identifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["call:to_string"])
+  N23 --> N24
+  N25(["identifier"])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26(["identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["identifier"])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28(["identifier"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["mutable_specifier"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["call:parse"])
+  N30 --> N31
+  N32(["identifier"])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33(["identifier"])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34(["identifier"])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35(["identifier"])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36(["identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["identifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["identifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["identifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["identifier"])
+  N40 -->|true| N41
+  N40 -->|false| N41
+  N42(["call:find_nodes_by_kind"])
+  N41 --> N42
+  N43(["if_expression"])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44(["if"])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45(["identifier"])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46(["identifier"])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47(["call:first"])
+  N46 --> N47
+  N48(["if_expression"])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49(["if"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["identifier"])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52(["call:child_by_field_name"])
+  N51 --> N52
+  N53(["if_expression"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["if"])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55(["identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["identifier"])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57(["call:text"])
+  N56 --> N57
+  N58(["identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["identifier"])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60(["identifier"])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61(["identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["call:unwrap"])
+  N61 --> N62
+  N63(["identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["identifier"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["call:len"])
+  N64 --> N65
+  N66(["identifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["type_identifier"])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68(["field_identifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["field_identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["identifier"])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72(["field_identifier"])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73(["identifier"])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74(["call:len"])
+  N73 --> N74
+  N75(["field_identifier"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["call:new"])
+  N75 --> N76
+  N77(["field_identifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["call:new"])
+  N77 --> N78
+  N79(["field_identifier"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["call:new"])
+  N79 --> N80
+  N81(["call:replace_range"])
+  N80 --> N81
+  N82(["call:edit"])
+  N81 --> N82
+  N83(["identifier"])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84(["call:parse"])
+  N83 --> N84
+  N85(["identifier"])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86(["identifier"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["identifier"])
+  N86 -->|true| N87
+  N86 -->|false| N87
+  N88(["identifier"])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89(["identifier"])
+  N88 -->|true| N89
+  N88 -->|false| N89
+  N90(["identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["identifier"])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92(["call:find_nodes_by_kind"])
+  N91 --> N92
+  N93(["if_expression"])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94(["if"])
+  N93 -->|true| N94
+  N93 -->|false| N94
+  N95(["identifier"])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96(["identifier"])
+  N95 -->|true| N96
+  N95 -->|false| N96
+  N97(["call:first"])
+  N96 --> N97
+  N98(["if_expression"])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99(["if"])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100(["identifier"])
+  N99 -->|true| N100
+  N99 -->|false| N100
+  N101(["identifier"])
+  N100 -->|true| N101
+  N100 -->|false| N101
+  N102(["call:child_by_field_name"])
+  N101 --> N102
+  N103(["if_expression"])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104(["if"])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105(["identifier"])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106(["identifier"])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107(["call:text"])
+  N106 --> N107
+  N108(["identifier"])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109(["identifier"])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110(["identifier"])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111(["identifier"])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112(["call:unwrap"])
+  N111 --> N112
+  N113(["identifier"])
+  N112 -->|true| N113
+  N112 -->|false| N113
+  N114(["identifier"])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115(["call:len"])
+  N114 --> N115
+  N116(["identifier"])
+  N115 -->|true| N116
+  N115 -->|false| N116
+  N117(["identifier"])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118(["type_identifier"])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119(["field_identifier"])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120(["identifier"])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121(["field_identifier"])
+  N120 -->|true| N121
+  N120 -->|false| N121
+  N122(["identifier"])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123(["field_identifier"])
+  N122 -->|true| N123
+  N122 -->|false| N123
+  N124(["identifier"])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125(["call:len"])
+  N124 --> N125
+  N126(["field_identifier"])
+  N125 -->|true| N126
+  N125 -->|false| N126
+  N127(["call:new"])
+  N126 --> N127
+  N128(["field_identifier"])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129(["call:new"])
+  N128 --> N129
+  N130(["field_identifier"])
+  N129 -->|true| N130
+  N129 -->|false| N130
+  N131(["call:new"])
+  N130 --> N131
+  N132(["call:replace_range"])
+  N131 --> N132
+  N133(["call:edit"])
+  N132 --> N133
+  N134(["identifier"])
+  N133 -->|true| N134
+  N133 -->|false| N134
+  N135(["call:parse"])
+  N134 --> N135
+  N136(["identifier"])
+  N135 -->|true| N136
+  N135 -->|false| N136
+  N137(["identifier"])
+  N136 -->|true| N137
+  N136 -->|false| N137
+  N138(["identifier"])
+  N137 -->|true| N138
+  N137 -->|false| N138
+  N139(["identifier"])
+  N138 -->|true| N139
+  N138 -->|false| N139
+  N140(["identifier"])
+  N139 -->|true| N140
+  N139 -->|false| N140
+  N141(["identifier"])
+  N140 -->|true| N141
+  N140 -->|false| N141
+  N142(["identifier"])
+  N141 -->|true| N142
+  N141 -->|false| N142
+  N143(["identifier"])
+  N142 -->|true| N143
+  N142 -->|false| N143
+  N144(["identifier"])
+  N143 -->|true| N144
+  N143 -->|false| N144
+  N145(["identifier"])
+  N144 -->|true| N145
+  N144 -->|false| N145
+  N146(["call:unwrap"])
+  N145 --> N146
+  N147(["identifier"])
+  N146 -->|true| N147
+  N146 -->|false| N147
+  N148(["identifier"])
+  N147 -->|true| N148
+  N147 -->|false| N148
+  N149(["call:len"])
+  N148 --> N149
+  N150(["identifier"])
+  N149 -->|true| N150
+  N149 -->|false| N150
+  N151(["call:create_edit"])
+  N150 --> N151
+  N152(["call:replace_range"])
+  N151 --> N152
+  N153(["call:edit"])
+  N152 --> N153
+  N154(["identifier"])
+  N153 -->|true| N154
+  N153 -->|false| N154
+  N155(["call:parse"])
+  N154 --> N155
+  N156(["identifier"])
+  N155 -->|true| N156
+  N155 -->|false| N156
+  N157(["identifier"])
+  N156 -->|true| N157
+  N156 -->|false| N157
+  N158(["identifier"])
+  N157 -->|true| N158
+  N157 -->|false| N158
+  N159(["identifier"])
+  N158 -->|true| N159
+  N158 -->|false| N159
+  N160(["identifier"])
+  N159 -->|true| N160
+  N159 -->|false| N160
+  N161(["identifier"])
+  N160 -->|true| N161
+  N160 -->|false| N161
+  N162(["identifier"])
+  N161 -->|true| N162
+  N161 -->|false| N162
+  N163(["identifier"])
+  N162 -->|true| N163
+  N162 -->|false| N163
+  N164(["identifier"])
+  N163 -->|true| N164
+  N163 -->|false| N164
+  N165(["identifier"])
+  N164 -->|true| N165
+  N164 -->|false| N165
+  N166(["identifier"])
+  N165 -->|true| N166
+  N165 -->|false| N166
+  N167(["identifier"])
+  N166 -->|true| N167
+  N166 -->|false| N167
+  N168(["identifier"])
+  N167 -->|true| N168
+  N167 -->|false| N168
+  N169(["type_identifier"])
+  N168 -->|true| N169
+  N168 -->|false| N169
+  N170(["field_identifier"])
+  N169 -->|true| N170
+  N169 -->|false| N170
+  N171(["identifier"])
+  N170 -->|true| N171
+  N170 -->|false| N171
+  N172(["field_identifier"])
+  N171 -->|true| N172
+  N171 -->|false| N172
+  N173(["identifier"])
+  N172 -->|true| N173
+  N172 -->|false| N173
+  N174(["field_identifier"])
+  N173 -->|true| N174
+  N173 -->|false| N174
+  N175(["identifier"])
+  N174 -->|true| N175
+  N174 -->|false| N175
+  N176(["call:len"])
+  N175 --> N176
+  N177(["field_identifier"])
+  N176 -->|true| N177
+  N176 -->|false| N177
+  N178(["call:new"])
+  N177 --> N178
+  N179(["field_identifier"])
+  N178 -->|true| N179
+  N178 -->|false| N179
+  N180(["call:new"])
+  N179 --> N180
+  N181(["field_identifier"])
+  N180 -->|true| N181
+  N180 -->|false| N181
+  N182(["call:new"])
+  N181 --> N182
+  N183(["call:insert_str"])
+  N182 --> N183
+  N184(["call:edit"])
+  N183 --> N184
+  N185(["identifier"])
+  N184 -->|true| N185
+  N184 -->|false| N185
+  N186(["call:parse"])
+  N185 --> N186
+  N187(["identifier"])
+  N186 -->|true| N187
+  N186 -->|false| N187
+  N188(["identifier"])
+  N187 -->|true| N188
+  N187 -->|false| N188
+  N189(["identifier"])
+  N188 -->|true| N189
+  N188 -->|false| N189
+  N190(["identifier"])
+  N189 -->|true| N190
+  N189 -->|false| N190
+  N191(["identifier"])
+  N190 -->|true| N191
+  N190 -->|false| N191
+  N192(["identifier"])
+  N191 -->|true| N192
+  N191 -->|false| N192
+  N193(["identifier"])
+  N192 -->|true| N193
+  N192 -->|false| N193
+  N194(["identifier"])
+  N193 -->|true| N194
+  N193 -->|false| N194
+  N195(["call:now"])
+  N194 --> N195
+  N196(["identifier"])
+  N195 -->|true| N196
+  N195 -->|false| N196
+  N197(["call:parse"])
+  N196 --> N197
+  N198(["identifier"])
+  N197 -->|true| N198
+  N197 -->|false| N198
+  N199(["call:elapsed"])
+  N198 --> N199
+  N200(["identifier"])
+  N199 -->|true| N200
+  N199 -->|false| N200
+  N201(["type_identifier"])
+  N200 -->|true| N201
+  N200 -->|false| N201
+  N202(["field_identifier"])
+  N201 -->|true| N202
+  N201 -->|false| N202
+  N203(["field_identifier"])
+  N202 -->|true| N203
+  N202 -->|false| N203
+  N204(["field_identifier"])
+  N203 -->|true| N204
+  N203 -->|false| N204
+  N205(["field_identifier"])
+  N204 -->|true| N205
+  N204 -->|false| N205
+  N206(["call:new"])
+  N205 --> N206
+  N207(["field_identifier"])
+  N206 -->|true| N207
+  N206 -->|false| N207
+  N208(["call:new"])
+  N207 --> N208
+  N209(["field_identifier"])
+  N208 -->|true| N209
+  N208 -->|false| N209
+  N210(["call:new"])
+  N209 --> N210
+  N211(["identifier"])
+  N210 -->|true| N211
+  N210 -->|false| N211
+  N212(["call:to_string"])
+  N211 --> N212
+  N213(["identifier"])
+  N212 -->|true| N213
+  N212 -->|false| N213
+  N214(["call:edit"])
+  N213 --> N214
+  N215(["identifier"])
+  N214 -->|true| N215
+  N214 -->|false| N215
+  N216(["call:now"])
+  N215 --> N216
+  N217(["identifier"])
+  N216 -->|true| N217
+  N216 -->|false| N217
+  N218(["call:parse"])
+  N217 --> N218
+  N219(["identifier"])
+  N218 -->|true| N219
+  N218 -->|false| N219
+  N220(["call:elapsed"])
+  N219 --> N220
+  N221(["identifier"])
+  N220 -->|true| N221
+  N220 -->|false| N221
+  N222(["identifier"])
+  N221 -->|true| N222
+  N221 -->|false| N222
+  N223(["identifier"])
+  N222 -->|true| N223
+  N222 -->|false| N223
+  N224(["identifier"])
+  N223 -->|true| N224
+  N223 -->|false| N224
+  N225(["if_expression"])
+  N224 -->|true| N225
+  N224 -->|false| N225
+  N226(["if"])
+  N225 -->|true| N226
+  N225 -->|false| N226
+  N227(["identifier"])
+  N226 -->|true| N227
+  N226 -->|false| N227
+  N228(["identifier"])
+  N227 -->|true| N228
+  N227 -->|false| N228
+  N229(["identifier"])
+  N228 -->|true| N229
+  N228 -->|false| N229
+  N230(["identifier"])
+  N229 -->|true| N230
+  N229 -->|false| N230
+  N231(["identifier"])
+  N230 -->|true| N231
+  N230 -->|false| N231
+  N232(["identifier"])
+  N231 -->|true| N232
+  N231 -->|false| N232
+  N233(["call:parse"])
+  N232 --> N233
+  N234(["identifier"])
+  N233 -->|true| N234
+  N233 -->|false| N234
+  N235(["call:parse"])
+  N234 --> N235
+  N236(["identifier"])
+  N235 -->|true| N236
+  N235 -->|false| N236
+  N237(["call:changed_ranges"])
+  N236 --> N237
+  N238(["identifier"])
+  N237 -->|true| N238
+  N237 -->|false| N238
+  N239(["identifier"])
+  N238 -->|true| N239
+  N238 -->|false| N239
+  N240(["identifier"])
+  N239 -->|true| N240
+  N239 -->|false| N240
+  N241(["for_expression"])
+  N241 -->|repeat| N241
+  N240 --> N241
+  N242(["for"])
+  N242 -->|repeat| N242
+  N241 --> N242
+  N243(["identifier"])
+  N242 -->|true| N243
+  N242 -->|false| N243
+  N244(["identifier"])
+  N243 -->|true| N244
+  N243 -->|false| N244
+  N245(["call:iter"])
+  N244 --> N245
+  N246(["field_identifier"])
+  N245 -->|true| N246
+  N245 -->|false| N246
+  N247(["identifier"])
+  N246 -->|true| N247
+  N246 -->|false| N247
+  N248(["identifier"])
+  N247 -->|true| N248
+  N247 -->|false| N248
+  N249(["identifier"])
+  N248 -->|true| N249
+  N248 -->|false| N249
+  N250(["identifier"])
+  N249 -->|true| N250
+  N249 -->|false| N250
+  N251(["identifier"])
+  N250 -->|true| N251
+  N250 -->|false| N251
+  N252(["identifier"])
+  N251 -->|true| N252
+  N251 -->|false| N252
+  N253(["identifier"])
+  N252 -->|true| N253
+  N252 -->|false| N253
+  N254(["identifier"])
+  N253 -->|true| N254
+  N253 -->|false| N254
+  N255(["identifier"])
+  N254 -->|true| N255
+  N254 -->|false| N255
+  N256(["identifier"])
+  N255 -->|true| N256
+  N255 -->|false| N256
+  N257(["identifier"])
+  N256 -->|true| N257
+  N256 -->|false| N257
+  N258(["identifier"])
+  N257 -->|true| N258
+  N257 -->|false| N258
+  N259(["identifier"])
+  N258 -->|true| N259
+  N258 -->|false| N259
+  N260(["identifier"])
+  N259 -->|true| N260
+  N259 -->|false| N260
+  N261(["identifier"])
+  N260 -->|true| N261
+  N260 -->|false| N261
+  N262(["identifier"])
+  N261 -->|true| N262
+  N261 -->|false| N262
+  N263(["identifier"])
+  N262 -->|true| N263
+  N262 -->|false| N263
+  N264(["identifier"])
+  N263 -->|true| N264
+  N263 -->|false| N264
+  N265(["identifier"])
+  N264 -->|true| N265
+  N264 -->|false| N265
+  N266(["call:Ok"])
+  N265 --> N266
+  N266 --> end
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-main"><code>main</code> <small>function</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-source_code"><code>source_code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-hello_start"><code>hello_start</code> <small>variable</small></li>
+<li id="symbol-hello_end"><code>hello_end</code> <small>variable</small></li>
+<li id="symbol-edit1"><code>edit1</code> <small>variable</small></li>
+<li id="symbol-new_tree"><code>new_tree</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-params_start"><code>params_start</code> <small>variable</small></li>
+<li id="symbol-params_end"><code>params_end</code> <small>variable</small></li>
+<li id="symbol-new_params"><code>new_params</code> <small>variable</small></li>
+<li id="symbol-edit2"><code>edit2</code> <small>variable</small></li>
+<li id="symbol-new_tree"><code>new_tree</code> <small>variable</small></li>
+<li id="symbol-old_content"><code>old_content</code> <small>variable</small></li>
+<li id="symbol-new_content"><code>new_content</code> <small>variable</small></li>
+<li id="symbol-content_start"><code>content_start</code> <small>variable</small></li>
+<li id="symbol-content_end"><code>content_end</code> <small>variable</small></li>
+<li id="symbol-edit3"><code>edit3</code> <small>variable</small></li>
+<li id="symbol-new_tree"><code>new_tree</code> <small>variable</small></li>
+<li id="symbol-doc_comment"><code>doc_comment</code> <small>variable</small></li>
+<li id="symbol-insert_pos"><code>insert_pos</code> <small>variable</small></li>
+<li id="symbol-edit4"><code>edit4</code> <small>variable</small></li>
+<li id="symbol-new_tree"><code>new_tree</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-_full_parse"><code>_full_parse</code> <small>variable</small></li>
+<li id="symbol-full_parse_time"><code>full_parse_time</code> <small>variable</small></li>
+<li id="symbol-small_edit"><code>small_edit</code> <small>variable</small></li>
+<li id="symbol-temp_source"><code>temp_source</code> <small>variable</small></li>
+<li id="symbol-start"><code>start</code> <small>variable</small></li>
+<li id="symbol-_incremental_parse"><code>_incremental_parse</code> <small>variable</small></li>
+<li id="symbol-incremental_parse_time"><code>incremental_parse_time</code> <small>variable</small></li>
+<li id="symbol-original_tree"><code>original_tree</code> <small>variable</small></li>
+<li id="symbol-final_tree"><code>final_tree</code> <small>variable</small></li>
+<li id="symbol-changed_ranges"><code>changed_ranges</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

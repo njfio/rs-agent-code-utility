@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tests/wiki_ai_mock.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>tests/wiki_ai_mock.rs</h1></header>
+<main>
+<section class="article">
+<p>15 symbols, 54 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["scoped_identifier"])
+  N1(["identifier"])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2(["identifier"])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3(["identifier"])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4(["identifier"])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5(["identifier"])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6(["scoped_identifier"])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7(["identifier"])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8(["identifier"])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9(["scoped_identifier"])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10(["identifier"])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11(["identifier"])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12(["scoped_identifier"])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13(["identifier"])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14(["identifier"])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15(["scoped_identifier"])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16(["scoped_identifier"])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17(["identifier"])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18(["identifier"])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19(["identifier"])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20(["identifier"])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21(["identifier"])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22(["type_identifier"])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23(["identifier"])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24(["identifier"])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25(["type_identifier"])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26(["identifier"])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27(["call:join"])
+  N26 --> N27
+  N28(["if_expression"])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29(["if"])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30(["identifier"])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31(["identifier"])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32(["call:parent"])
+  N31 --> N32
+  N33(["call:create_dir_all"])
+  N32 --> N33
+  N34(["call:write"])
+  N33 --> N34
+  N35(["call:Ok"])
+  N34 --> N35
+  N36(["identifier"])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37(["type_identifier"])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38(["type_identifier"])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39(["type_identifier"])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40(["identifier"])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41(["call:new"])
+  N40 --> N41
+  N42(["identifier"])
+  N41 -->|true| N42
+  N41 -->|false| N42
+  N43(["call:to_path_buf"])
+  N42 --> N43
+  N44(["identifier"])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45(["call:join"])
+  N44 --> N45
+  N46(["call:create_dir_all"])
+  N45 --> N46
+  N47(["call:write_rs"])
+  N46 --> N47
+  N48(["call:Ok"])
+  N47 --> N48
+  N49(["identifier"])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50(["identifier"])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51(["type_identifier"])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52(["identifier"])
+  N51 -->|true| N52
+  N51 -->|false| N52
+  N53(["identifier"])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54(["call:project_simple"])
+  N53 --> N54
+  N55(["identifier"])
+  N54 -->|true| N55
+  N54 -->|false| N55
+  N56(["call:new"])
+  N55 --> N56
+  N57(["identifier"])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58(["type_identifier"])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59(["call:build"])
+  N58 --> N59
+  N60(["call:generate_from_path"])
+  N59 --> N60
+  N61(["identifier"])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62(["call:read_to_string"])
+  N61 --> N62
+  N63(["identifier"])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64(["identifier"])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65(["identifier"])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66(["identifier"])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67(["call:join"])
+  N66 --> N67
+  N68(["mutable_specifier"])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69(["identifier"])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70(["identifier"])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71(["for_expression"])
+  N71 -->|repeat| N71
+  N70 --> N71
+  N72(["for"])
+  N72 -->|repeat| N72
+  N71 --> N72
+  N73(["identifier"])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74(["call:read_dir"])
+  N73 --> N74
+  N75(["identifier"])
+  N74 -->|true| N75
+  N74 -->|false| N75
+  N76(["identifier"])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77(["identifier"])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78(["call:read_to_string"])
+  N77 --> N78
+  N79(["if_expression"])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80(["if"])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81(["call:contains"])
+  N80 --> N81
+  N82(["call:contains"])
+  N81 --> N82
+  N83(["call:contains"])
+  N82 --> N83
+  N84(["call:contains"])
+  N83 --> N84
+  N85(["call:contains"])
+  N84 --> N85
+  N86(["identifier"])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87(["call:Some"])
+  N86 --> N87
+  N88(["identifier"])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89(["identifier"])
+  N88 -->|true| N89
+  N88 -->|false| N89
+  N90(["identifier"])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91(["call:Ok"])
+  N90 --> N91
+  N91 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant write_rs
+  participant project_simple
+  participant index_and_file_pages_include_ai_mock_sections
+  write_rs->>join: call
+  write_rs->>parent: call
+  write_rs->>create_dir_all: call
+  write_rs->>write: call
+  write_rs->>ok: call
+  write_rs->>new: call
+  write_rs->>to_path_buf: call
+  write_rs->>join: call
+  write_rs->>create_dir_all: call
+  write_rs->>write_rs: call
+  write_rs->>ok: call
+  write_rs->>project_simple: call
+  write_rs->>new: call
+  write_rs->>build: call
+  write_rs->>generate_from_path: call
+  write_rs->>read_to_string: call
+  write_rs->>join: call
+  write_rs->>ok: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-write_rs"><code>write_rs</code> <small>function</small></li>
+<li id="symbol-project_simple"><code>project_simple</code> <small>function</small></li>
+<li id="symbol-index_and_file_pages_include_ai_mock_sections"><code>index_and_file_pages_include_ai_mock_sections</code> <small>function</small></li>
+<li id="symbol-p"><code>p</code> <small>variable</small></li>
+<li id="symbol-tmp"><code>tmp</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-src"><code>src</code> <small>variable</small></li>
+<li id="symbol-_t"><code>_t</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-cfg"><code>cfg</code> <small>variable</small></li>
+<li id="symbol-index"><code>index</code> <small>variable</small></li>
+<li id="symbol-pages"><code>pages</code> <small>variable</small></li>
+<li id="symbol-found"><code>found</code> <small>variable</small></li>
+<li id="symbol-e"><code>e</code> <small>variable</small></li>
+<li id="symbol-c"><code>c</code> <small>variable</small></li>
+
+</ul>
+</div>
+
+</section>
+</main>
+</body>
+</html>

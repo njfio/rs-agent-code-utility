@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, feature/** ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  rust:
+    name: Rust CI (fmt, clippy, tests)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Unit + integration tests (no examples)
+        run: cargo test --workspace
+
+      - name: Build binaries (no examples)
+        run: |
+          cargo build --bins --all-features
+
+      # Examples are gated behind the optional "demo" feature and are not built in CI by default.
+      # To build examples locally, use: cargo build --examples --features demo

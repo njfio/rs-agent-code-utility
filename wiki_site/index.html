@@ -1,0 +1,571 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Project Wiki</title>
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/search.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Project Wiki</h1></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<a href="pages/examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="pages/examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="pages/examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="pages/examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="pages/examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="pages/examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="pages/examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="pages/examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="pages/examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="pages/examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="pages/examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="pages/examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="pages/examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="pages/examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="pages/examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="pages/examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="pages/examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="pages/examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="pages/examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="pages/examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="pages/examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="pages/examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="pages/examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="pages/examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="pages/examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="pages/examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="pages/examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="pages/examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="pages/examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="pages/examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="pages/examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="pages/examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+<a href="pages/site_assets_search.js.html">site/assets/search.js</a>
+<a href="pages/src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="pages/src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="pages/src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="pages/src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="pages/src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="pages/src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="pages/src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="pages/src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="pages/src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="pages/src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="pages/src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="pages/src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="pages/src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+<a href="pages/src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="pages/src_ai_types.rs.html">src/ai/types.rs</a>
+<a href="pages/src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="pages/src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="pages/src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="pages/src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="pages/src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="pages/src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="pages/src_bin_rts.rs.html">src/bin/rts.rs</a>
+<a href="pages/src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="pages/src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="pages/src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="pages/src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="pages/src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="pages/src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="pages/src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="pages/src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="pages/src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="pages/src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="pages/src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="pages/src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="pages/src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="pages/src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="pages/src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="pages/src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+<a href="pages/src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="pages/src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="pages/src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="pages/src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="pages/src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="pages/src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="pages/src_cli_utils.rs.html">src/cli/utils.rs</a>
+<a href="pages/src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="pages/src_code_map.rs.html">src/code_map.rs</a>
+<a href="pages/src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="pages/src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="pages/src_constants.rs.html">src/constants.rs</a>
+<a href="pages/src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="pages/src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="pages/src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="pages/src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="pages/src_error.rs.html">src/error.rs</a>
+<a href="pages/src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="pages/src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="pages/src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="pages/src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="pages/src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="pages/src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="pages/src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+<a href="pages/src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="pages/src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="pages/src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="pages/src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="pages/src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="pages/src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="pages/src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="pages/src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="pages/src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="pages/src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+<a href="pages/src_lib.rs.html">src/lib.rs</a>
+<a href="pages/src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="pages/src_parser.rs.html">src/parser.rs</a>
+<a href="pages/src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="pages/src_query.rs.html">src/query.rs</a>
+<a href="pages/src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="pages/src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="pages/src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="pages/src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="pages/src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="pages/src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+<a href="pages/src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="pages/src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="pages/src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="pages/src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="pages/src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="pages/src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="pages/src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="pages/src_tree.rs.html">src/tree.rs</a>
+<a href="pages/src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="pages/test_cli.rs.html">test_cli.rs</a>
+<a href="pages/test_code_map.rs.html">test_code_map.rs</a>
+<a href="pages/test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="pages/test_files_sample.go.html">test_files/sample.go</a>
+<a href="pages/test_files_sample.ts.html">test_files/sample.ts</a>
+<a href="pages/test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+<a href="pages/tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="pages/tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="pages/tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="pages/tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="pages/tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="pages/tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="pages/tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="pages/tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="pages/tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="pages/tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="pages/tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="pages/tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="pages/tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="pages/tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="pages/tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="pages/tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="pages/tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="pages/tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="pages/tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="pages/tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="pages/tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="pages/tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="pages/tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="pages/tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="pages/tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="pages/tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="pages/tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="pages/tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="pages/tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="pages/tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="pages/tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="pages/tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="pages/tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="pages/tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="pages/tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="pages/tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="pages/tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="pages/tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="pages/tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="pages/tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="pages/tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="pages/tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="pages/tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="pages/tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="pages/tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="pages/tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="pages/tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="pages/tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+
+</nav>
+<section class="article">
+<div class="card"><h2>Overview</h2>
+<p>Total files: 179, Lines: 81145</p>
+</div>
+<div class="card"><h2>Dependency Overview</h2>
+<div class="mermaid">graph LR
+  N2454276105["examples/ai_code_reviewer.rs"]
+  N926138044["examples/ai_powered_cli.rs"]
+  N2454276105 --> N926138044
+  N2743207983["examples/ai_service_demo.rs"]
+  N926138044 --> N2743207983
+  N2356769088["examples/ai_showcase.rs"]
+  N2743207983 --> N2356769088
+  N3513741921["examples/analyze_codebase.rs"]
+  N2356769088 --> N3513741921
+  N1949522291["examples/ast_transformation_demo.rs"]
+  N3513741921 --> N1949522291
+  N3444855863["examples/basic_analysis.rs"]
+  N1949522291 --> N3444855863
+  N2637372436["examples/basic_usage.rs"]
+  N3444855863 --> N2637372436
+  N2527894808["examples/code_map.rs"]
+  N2637372436 --> N2527894808
+  N1579852735["examples/code_migration_assistant.rs"]
+  N2527894808 --> N1579852735
+  N2592159062["examples/comprehensive_demo.rs"]
+  N1579852735 --> N2592159062
+  N1300497591["examples/debug_response.rs"]
+  N2592159062 --> N1300497591
+  N1586190535["examples/direct_anthropic_test.rs"]
+  N1300497591 --> N1586190535
+  N675793986["examples/direct_openai_test.rs"]
+  N1586190535 --> N675793986
+  N4248535968["examples/gpt4o_advanced_demo.rs"]
+  N675793986 --> N4248535968
+  N2111078788["examples/gpt4o_simple_test.rs"]
+  N4248535968 --> N2111078788
+  N3700204347["examples/gpt5_real_analysis.rs"]
+  N2111078788 --> N3700204347
+  N180372340["examples/gpt5_ultimate_demo.rs"]
+  N3700204347 --> N180372340
+  N1071142646["examples/improvements_demo.rs"]
+  N180372340 --> N1071142646
+  N2724728614["examples/incremental_parsing.rs"]
+  N1071142646 --> N2724728614
+  N452395705["examples/intelligent_architect.rs"]
+  N2724728614 --> N452395705
+  N1536078311["examples/provider_comparison.rs"]
+  N452395705 --> N1536078311
+  N3498962227["examples/real_ai_demo.rs"]
+  N1536078311 --> N3498962227
+  N3915838867["examples/real_api_validation.rs"]
+  N3498962227 --> N3915838867
+  N3163847025["examples/real_code_analysis.rs"]
+  N3915838867 --> N3163847025
+  N3614338723["examples/real_file_analysis.rs"]
+  N3163847025 --> N3614338723
+  N4219970704["examples/real_openai_demo.rs"]
+  N3614338723 --> N4219970704
+  N3581830125["examples/reasoning_engine_demo.rs"]
+  N4219970704 --> N3581830125
+  N4249803678["examples/security_analysis.rs"]
+  N3581830125 --> N4249803678
+  N2439989630["examples/simple_ai_demo.rs"]
+  N4249803678 --> N2439989630
+  N1024662280["examples/simple_validation.rs"]
+  N2439989630 --> N1024662280
+  N2183413942["examples/tdd_minimal.rs"]
+  N1024662280 --> N2183413942
+  N974782808["site/assets/search.js"]
+  N2183413942 --> N974782808
+  N3515372338["src/advanced_ai_analysis.rs"]
+  N974782808 --> N3515372338
+  N1466268101["src/advanced_security.rs"]
+  N3515372338 --> N1466268101
+  N1294396331["src/ai/cache.rs"]
+  N1466268101 --> N1294396331
+  N1262591265["src/ai/config.rs"]
+  N1294396331 --> N1262591265
+  N1780156023["src/ai/error.rs"]
+  N1262591265 --> N1780156023
+  N4152904337["src/ai/mod.rs"]
+  N1780156023 --> N4152904337
+  N1046228839["src/ai/providers/anthropic.rs"]
+  N4152904337 --> N1046228839
+  N2900129585["src/ai/providers/azure.rs"]
+  N1046228839 --> N2900129585
+  N2687524595["src/ai/providers/google.rs"]
+  N2900129585 --> N2687524595
+  N2381877975["src/ai/providers/local.rs"]
+  N2687524595 --> N2381877975
+  N428112378["src/ai/providers/mod.rs"]
+  N2381877975 --> N428112378
+  N3235167343["src/ai/providers/ollama.rs"]
+  N428112378 --> N3235167343
+  N2404035299["src/ai/providers/openai.rs"]
+  N3235167343 --> N2404035299
+  N1817096829["src/ai/service.rs"]
+  N2404035299 --> N1817096829
+  N1741274615["src/ai/types.rs"]
+  N1817096829 --> N1741274615
+  N2213714648["src/ai_analysis.rs"]
+  N1741274615 --> N2213714648
+  N875695594["src/analysis_common.rs"]
+  N2213714648 --> N875695594
+  N555661867["src/analysis_utils.rs"]
+  N875695594 --> N555661867
+  N624693382["src/analyzer.rs"]
+  N555661867 --> N624693382
+  N419957672["src/ast_transformation.rs"]
+  N624693382 --> N419957672
+  N51783810["src/bin/main.rs"]
+  N419957672 --> N51783810
+  N3675737758["src/bin/rts.rs"]
+  N51783810 --> N3675737758
+  N1686390066["src/cli/commands/analyze.rs"]
+  N3675737758 --> N1686390066
+  N3833518733["src/cli/commands/dependencies.rs"]
+  N1686390066 --> N3833518733
+  N492832163["src/cli/commands/explain.rs"]
+  N3833518733 --> N492832163
+  N2901121686["src/cli/commands/find.rs"]
+  N492832163 --> N2901121686
+  N3255653571["src/cli/commands/insights.rs"]
+  N2901121686 --> N3255653571
+  N415780968["src/cli/commands/interactive.rs"]
+  N3255653571 --> N415780968
+  N2354467633["src/cli/commands/languages.rs"]
+  N415780968 --> N2354467633
+  N2927367944["src/cli/commands/map.rs"]
+  N2354467633 --> N2927367944
+  N3459738017["src/cli/commands/mod.rs"]
+  N2927367944 --> N3459738017
+  N2077138695["src/cli/commands/query.rs"]
+  N3459738017 --> N2077138695
+  N2908739381["src/cli/commands/refactor.rs"]
+  N2077138695 --> N2908739381
+  N1617417670["src/cli/commands/security.rs"]
+  N2908739381 --> N1617417670
+  N3840984092["src/cli/commands/stats.rs"]
+  N1617417670 --> N3840984092
+  N3350453930["src/cli/commands/symbols.rs"]
+  N3840984092 --> N3350453930
+  N1402958251["src/cli/commands/watch.rs"]
+  N3350453930 --> N1402958251
+  N1472748097["src/cli/commands/wiki.rs"]
+  N1402958251 --> N1472748097
+  N1011994874["src/cli/error.rs"]
+  N1472748097 --> N1011994874
+  N1559826445["src/cli/mod.rs"]
+  N1011994874 --> N1559826445
+  N583816809["src/cli/output.rs"]
+  N1559826445 --> N583816809
+  N2156419949["src/cli/sarif.rs"]
+  N583816809 --> N2156419949
+  N1817222844["src/cli/sbom.rs"]
+  N2156419949 --> N1817222844
+  N3517431519["src/cli/schemas.rs"]
+  N1817222844 --> N3517431519
+  N3040295686["src/cli/utils.rs"]
+  N3517431519 --> N3040295686
+  N3302391404["src/code_evolution.rs"]
+  N3040295686 --> N3302391404
+  N712887507["src/code_map.rs"]
+  N3302391404 --> N712887507
+  N3606035980["src/command_injection_detector.rs"]
+  N712887507 --> N3606035980
+  N930536352["src/complexity_analysis.rs"]
+  N3606035980 --> N930536352
+  N4004948752["src/constants.rs"]
+  N930536352 --> N4004948752
+  N36356252["src/control_flow.rs"]
+  N4004948752 --> N36356252
+  N497529698["src/dependency_analysis.rs"]
+  N36356252 --> N497529698
+  N961746976["src/embeddings.rs"]
+  N497529698 --> N961746976
+  N1393805177["src/enhanced_security.rs"]
+  N961746976 --> N1393805177
+  N1883477980["src/error.rs"]
+  N1393805177 --> N1883477980
+  N186380714["src/file_cache.rs"]
+  N1883477980 --> N186380714
+  N439145688["src/infrastructure/cache.rs"]
+  N186380714 --> N439145688
+  N2182789016["src/infrastructure/config.rs"]
+  N439145688 --> N2182789016
+  N3236890548["src/infrastructure/database.rs"]
+  N2182789016 --> N3236890548
+  N3288988079["src/infrastructure/http_client.rs"]
+  N3236890548 --> N3288988079
+  N2697191885["src/infrastructure/mod.rs"]
+  N3288988079 --> N2697191885
+  N4072268083["src/infrastructure/rate_limiter.rs"]
+  N2697191885 --> N4072268083
+  N2769219751["src/intent_mapping.rs"]
+  N4072268083 --> N2769219751
+  N3337514423["src/intent_mapping_stub.rs"]
+  N2769219751 --> N3337514423
+  N2898453315["src/languages/c.rs"]
+  N3337514423 --> N2898453315
+  N1053109769["src/languages/cpp.rs"]
+  N2898453315 --> N1053109769
+  N1591894735["src/languages/go.rs"]
+  N1053109769 --> N1591894735
+  N1474958883["src/languages/javascript.rs"]
+  N1591894735 --> N1474958883
+  N956600290["src/languages/mod.rs"]
+  N1474958883 --> N956600290
+  N1795225892["src/languages/python.rs"]
+  N956600290 --> N1795225892
+  N1814415307["src/languages/rust.rs"]
+  N1795225892 --> N1814415307
+  N4064365938["src/languages/typescript.rs"]
+  N1814415307 --> N4064365938
+  N3688752670["src/lib.rs"]
+  N4064365938 --> N3688752670
+  N702997606["src/memory_tracker.rs"]
+  N3688752670 --> N702997606
+  N3687513192["src/parser.rs"]
+  N702997606 --> N3687513192
+  N734922244["src/performance_analysis.rs"]
+  N3687513192 --> N734922244
+  N481783954["src/query.rs"]
+  N734922244 --> N481783954
+  N3804908281["src/reasoning_engine.rs"]
+  N481783954 --> N3804908281
+  N3660371123["src/refactoring.rs"]
+  N3804908281 --> N3660371123
+  N898255320["src/security/mod.rs"]
+  N3660371123 --> N898255320
+  N3910370157["src/security/owasp_detector.rs"]
+  N898255320 --> N3910370157
+  N2534250861["src/security/secrets_detector.rs"]
+  N3910370157 --> N2534250861
+  N4121910052["src/security/vulnerability_db.rs"]
+  N2534250861 --> N4121910052
+  N31445885["src/semantic_context.rs"]
+  N4121910052 --> N31445885
+  N1139843690["src/semantic_graph.rs"]
+  N31445885 --> N1139843690
+  N2685387414["src/smart_refactoring.rs"]
+  N1139843690 --> N2685387414
+  N3991800764["src/sql_injection_detector.rs"]
+  N2685387414 --> N3991800764
+  N4181657145["src/symbol_table.rs"]
+  N3991800764 --> N4181657145
+  N3725935581["src/taint_analysis.rs"]
+  N4181657145 --> N3725935581
+  N3588302191["src/test_coverage.rs"]
+  N3725935581 --> N3588302191
+  N1584589510["src/tree.rs"]
+  N3588302191 --> N1584589510
+  N1031372737["src/wiki/mod.rs"]
+  N1584589510 --> N1031372737
+  N1413589412["test_cli.rs"]
+  N1031372737 --> N1413589412
+  N216789058["test_code_map.rs"]
+  N1413589412 --> N216789058
+  N524573561["test_files/phase2_demo.rs"]
+  N216789058 --> N524573561
+  N3070807591["test_files/sample.go"]
+  N524573561 --> N3070807591
+  N3269907450["test_files/sample.ts"]
+  N3070807591 --> N3269907450
+  N3216372368["test_rate_limiter.rs"]
+  N3269907450 --> N3216372368
+  N858784702["tests/ai_service_tests.rs"]
+  N3216372368 --> N858784702
+  N3948019086["tests/analyzer_cache_tests.rs"]
+  N858784702 --> N3948019086
+  N1880798113["tests/analyzer_depth.rs"]
+  N3948019086 --> N1880798113
+  N4228602364["tests/ast_transformation.rs"]
+  N1880798113 --> N4228602364
+  N3058682145["tests/ast_transformation_tests.rs"]
+  N4228602364 --> N3058682145
+  N3646023309["tests/basic_integration_tests.rs"]
+  N3058682145 --> N3646023309
+  N3169569809["tests/cli_determinism.rs"]
+  N3646023309 --> N3169569809
+  N4177579024["tests/cli_enable_security_flag.rs"]
+  N3169569809 --> N4177579024
+  N1120814899["tests/cli_sbom_tests.rs"]
+  N4177579024 --> N1120814899
+  N2101130385["tests/code_evolution_tests.rs"]
+  N1120814899 --> N2101130385
+  N740321992["tests/code_map.rs"]
+  N2101130385 --> N740321992
+  N3151742131["tests/complexity_analysis_unit_tests.rs"]
+  N740321992 --> N3151742131
+  N1253030714["tests/comprehensive_integration_tests.rs"]
+  N3151742131 --> N1253030714
+  N1900291549["tests/dependency_analysis.rs"]
+  N1253030714 --> N1900291549
+  N3957603938["tests/dependency_analysis_unit_tests.rs"]
+  N1900291549 --> N3957603938
+  N2223286657["tests/documentation_validation.rs"]
+  N3957603938 --> N2223286657
+  N2081360252["tests/enhanced_security_analysis.rs"]
+  N2223286657 --> N2081360252
+  N2898096682["tests/error_tests.rs"]
+  N2081360252 --> N2898096682
+  N4138197494["tests/file_cache_tests.rs"]
+  N2898096682 --> N4138197494
+  N1458351268["tests/integration_tests.rs"]
+  N4138197494 --> N1458351268
+  N2721080436["tests/intent_mapping_tests.rs"]
+  N1458351268 --> N2721080436
+  N369103636["tests/memory_tracker_tests.rs"]
+  N2721080436 --> N369103636
+  N3220507429["tests/missing_language_features_tests.rs"]
+  N369103636 --> N3220507429
+  N2808935953["tests/parser_comprehensive_tests.rs"]
+  N3220507429 --> N2808935953
+  N1887193999["tests/performance_analysis.rs"]
+  N2808935953 --> N1887193999
+  N2672005481["tests/performance_optimization_tests.rs"]
+  N1887193999 --> N2672005481
+  N618327877["tests/performance_optimizations_tests.rs"]
+  N2672005481 --> N618327877
+  N234594780["tests/public_api_validation.rs"]
+  N618327877 --> N234594780
+  N3381761478["tests/reasoning_engine_tests.rs"]
+  N234594780 --> N3381761478
+  N3182231825["tests/sarif_output_tests.rs"]
+  N3381761478 --> N3182231825
+  N479429237["tests/secrets_detector.rs"]
+  N3182231825 --> N479429237
+  N782204450["tests/security_analysis_unit_tests.rs"]
+  N479429237 --> N782204450
+  N3938004462["tests/security_cli.rs"]
+  N782204450 --> N3938004462
+  N3291371971["tests/security_scanning.rs"]
+  N3938004462 --> N3291371971
+  N2175653186["tests/security_vuln_db.rs"]
+  N3291371971 --> N2175653186
+  N2252552243["tests/semantic_graph_tests.rs"]
+  N2175653186 --> N2252552243
+  N3699897782["tests/simple_memory_test.rs"]
+  N2252552243 --> N3699897782
+  N1994627931["tests/smart_refactoring.rs"]
+  N3699897782 --> N1994627931
+  N2662648186["tests/symbol_listing.rs"]
+  N1994627931 --> N2662648186
+  N3485788592["tests/symbols_cli.rs"]
+  N2662648186 --> N3485788592
+  N2327106578["tests/test_coverage_analysis.rs"]
+  N3485788592 --> N2327106578
+  N1158663481["tests/wiki_ai_mock.rs"]
+  N2327106578 --> N1158663481
+  N3839781683["tests/wiki_cfg_flow.rs"]
+  N1158663481 --> N3839781683
+  N802988916["tests/wiki_cfg_true_false.rs"]
+  N3839781683 --> N802988916
+  N605383179["tests/wiki_generator.rs"]
+  N802988916 --> N605383179
+  N3936996431["tests/wiki_generator_phase2.rs"]
+  N605383179 --> N3936996431
+  N2439819483["tests/wiki_sequence_calls.rs"]
+  N3936996431 --> N2439819483
+  N2664046725["tests/wiki_sequence_methods.rs"]
+  N2439819483 --> N2664046725
+
+</div>
+</div>
+<div class="card"><h2>Documentation Insights</h2>
+<p>Automatic summaries are generated from symbols and structure. Public functions and modules include heuristic descriptions and cross-references.</p>
+</div>
+<div class="card"><h3>AI Insights</h3><p>Enable AI to generate rich documentation.</p></div>
+</section>
+</main>
+</body>
+</html>

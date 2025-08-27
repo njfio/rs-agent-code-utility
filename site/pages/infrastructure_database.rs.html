@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure/database.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>infrastructure/database.rs</h1></header>
+<main>
+<section class="article">
+<p>32 symbols, 348 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["run_migrations"])
+  F1 --> F2
+  F2(["insert_default_secret_patterns"])
+  F2 --> F3
+  F3(["store_vulnerability"])
+  F3 --> F4
+  F4(["get_vulnerabilities_for_package"])
+  F4 --> F5
+  F5(["store_analysis_cache"])
+  F5 --> F6
+  F6(["get_analysis_cache"])
+  F6 --> F7
+  F7(["get_secret_patterns"])
+  F7 --> F8
+  F8(["clean_expired_cache"])
+  F8 --> F9
+  F9(["get_stats"])
+  F9 --> F10
+  F10(["close"])
+  F10 --> F11
+  F11(["DatabaseManager"])
+  F11 --> F12
+  F12(["VulnerabilityRecord"])
+  F12 --> F13
+  F13(["AnalysisCacheEntry"])
+  F13 --> F14
+  F14(["SecretPattern"])
+  F14 --> F15
+  F15(["DatabaseStats"])
+  F15 --> F16
+  F16(["DatabaseManager"])
+  F16 --> F17
+  F17(["pool"])
+  F17 --> F18
+  F18(["manager"])
+  F18 --> F19
+  F19(["patterns"])
+  F19 --> F20
+  F20(["id"])
+  F20 --> F21
+  F21(["now"])
+  F21 --> F22
+  F22(["rows"])
+  F22 --> F23
+  F23(["now"])
+  F23 --> F24
+  F24(["row"])
+  F24 --> F25
+  F25(["rows"])
+  F25 --> F26
+  F26(["now"])
+  F26 --> F27
+  F27(["result"])
+  F27 --> F28
+  F28(["deleted_count"])
+  F28 --> F29
+  F29(["vuln_count"])
+  F29 --> F30
+  F30(["cache_count"])
+  F30 --> F31
+  F31(["pattern_count"])
+  F31 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant run_migrations
+  participant insert_default_secret_patterns
+  participant store_vulnerability
+  participant get_vulnerabilities_for_package
+  participant store_analysis_cache
+  participant get_analysis_cache
+  participant get_secret_patterns
+  participant clean_expired_cache
+  participant get_stats
+  participant close
+  new->>run_migrations: call
+  run_migrations->>insert_default_secret_patterns: call
+  insert_default_secret_patterns->>store_vulnerability: call
+  store_vulnerability->>get_vulnerabilities_for_package: call
+  get_vulnerabilities_for_package->>store_analysis_cache: call
+  store_analysis_cache->>get_analysis_cache: call
+  get_analysis_cache->>get_secret_patterns: call
+  get_secret_patterns->>clean_expired_cache: call
+  clean_expired_cache->>get_stats: call
+  get_stats->>close: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-run_migrations"><code>run_migrations</code> <small>function</small></li>
+<li id="symbol-insert_default_secret_patterns"><code>insert_default_secret_patterns</code> <small>function</small></li>
+<li id="symbol-store_vulnerability"><code>store_vulnerability</code> <small>function</small></li>
+<li id="symbol-get_vulnerabilities_for_package"><code>get_vulnerabilities_for_package</code> <small>function</small></li>
+<li id="symbol-store_analysis_cache"><code>store_analysis_cache</code> <small>function</small></li>
+<li id="symbol-get_analysis_cache"><code>get_analysis_cache</code> <small>function</small></li>
+<li id="symbol-get_secret_patterns"><code>get_secret_patterns</code> <small>function</small></li>
+<li id="symbol-clean_expired_cache"><code>clean_expired_cache</code> <small>function</small></li>
+<li id="symbol-get_stats"><code>get_stats</code> <small>function</small></li>
+<li id="symbol-close"><code>close</code> <small>function</small></li>
+<li id="symbol-databasemanager"><code>DatabaseManager</code> <small>struct</small></li>
+<li id="symbol-vulnerabilityrecord"><code>VulnerabilityRecord</code> <small>struct</small></li>
+<li id="symbol-analysiscacheentry"><code>AnalysisCacheEntry</code> <small>struct</small></li>
+<li id="symbol-secretpattern"><code>SecretPattern</code> <small>struct</small></li>
+<li id="symbol-databasestats"><code>DatabaseStats</code> <small>struct</small></li>
+<li id="symbol-databasemanager"><code>DatabaseManager</code> <small>impl</small></li>
+<li id="symbol-pool"><code>pool</code> <small>variable</small></li>
+<li id="symbol-manager"><code>manager</code> <small>variable</small></li>
+<li id="symbol-patterns"><code>patterns</code> <small>variable</small></li>
+<li id="symbol-id"><code>id</code> <small>variable</small></li>
+<li id="symbol-now"><code>now</code> <small>variable</small></li>
+<li id="symbol-rows"><code>rows</code> <small>variable</small></li>
+<li id="symbol-now"><code>now</code> <small>variable</small></li>
+<li id="symbol-row"><code>row</code> <small>variable</small></li>
+<li id="symbol-rows"><code>rows</code> <small>variable</small></li>
+<li id="symbol-now"><code>now</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-deleted_count"><code>deleted_count</code> <small>variable</small></li>
+<li id="symbol-vuln_count"><code>vuln_count</code> <small>variable</small></li>
+<li id="symbol-cache_count"><code>cache_count</code> <small>variable</small></li>
+<li id="symbol-pattern_count"><code>pattern_count</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

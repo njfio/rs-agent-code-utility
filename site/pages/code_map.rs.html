@@ -1,0 +1,327 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>code_map.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>code_map.rs</h1></header>
+<main>
+<section class="article">
+<p>86 symbols, 499 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["to_dot"])
+  F0 --> F1
+  F1(["to_mermaid"])
+  F1 --> F2
+  F2(["to_dot"])
+  F2 --> F3
+  F3(["to_mermaid"])
+  F3 --> F4
+  F4(["build_call_graph"])
+  F4 --> F5
+  F5(["build_module_graph"])
+  F5 --> F6
+  F6(["resolve_dependency_to_file"])
+  F6 --> F7
+  F7(["extract_function_calls_simple"])
+  F7 --> F8
+  F8(["extract_dependencies"])
+  F8 --> F9
+  F9(["extract_dependencies_ast"])
+  F9 --> F10
+  F10(["extract_imports_from_node"])
+  F10 --> F11
+  F11(["detect_language_from_content"])
+  F11 --> F12
+  F12(["extract_dependencies_string_based"])
+  F12 --> F13
+  F13(["sanitize_mermaid"])
+  F13 --> F14
+  F14(["test_extract_dependencies_rust"])
+  F14 --> F15
+  F15(["test_extract_dependencies_python"])
+  F15 --> F16
+  F16(["test_extract_dependencies_javascript"])
+  F16 --> F17
+  F17(["test_detect_language_from_content"])
+  F17 --> F18
+  F18(["test_resolve_dependency_to_file"])
+  F18 --> F19
+  F19(["CallGraph"])
+  F19 --> F20
+  F20(["ModuleGraph"])
+  F20 --> F21
+  F21(["CallGraph"])
+  F21 --> F22
+  F22(["ModuleGraph"])
+  F22 --> F23
+  F23(["dot"])
+  F23 --> F24
+  F24(["m"])
+  F24 --> F25
+  F25(["dot"])
+  F25 --> F26
+  F26(["m"])
+  F26 --> F27
+  F27(["nodes"])
+  F27 --> F28
+  F28(["edges"])
+  F28 --> F29
+  F29(["functions"])
+  F29 --> F30
+  F30(["calls"])
+  F30 --> F31
+  F31(["from"])
+  F31 --> F32
+  F32(["target_name"])
+  F32 --> F33
+  F33(["root"])
+  F33 --> F34
+  F34(["nodes"])
+  F34 --> F35
+  F35(["edges"])
+  F35 --> F36
+  F36(["module_name"])
+  F36 --> F37
+  F37(["resolved_dep"])
+  F37 --> F38
+  F38(["file_stem"])
+  F38 --> F39
+  F39(["calls"])
+  F39 --> F40
+  F40(["line"])
+  F40 --> F41
+  F41(["chars"])
+  F41 --> F42
+  F42(["current_word"])
+  F42 --> F43
+  F43(["language_str"])
+  F43 --> F44
+  F44(["language"])
+  F44 --> F45
+  F45(["parser"])
+  F45 --> F46
+  F46(["syntax_tree"])
+  F46 --> F47
+  F47(["root_node"])
+  F47 --> F48
+  F48(["dependencies"])
+  F48 --> F49
+  F49(["path_text"])
+  F49 --> F50
+  F50(["dep"])
+  F50 --> F51
+  F51(["name_text"])
+  F51 --> F52
+  F52(["import_text"])
+  F52 --> F53
+  F53(["dep"])
+  F53 --> F54
+  F54(["import_text"])
+  F54 --> F55
+  F55(["dep"])
+  F55 --> F56
+  F56(["source_text"])
+  F56 --> F57
+  F57(["dep"])
+  F57 --> F58
+  F58(["function_text"])
+  F58 --> F59
+  F59(["dep_text"])
+  F59 --> F60
+  F60(["dep"])
+  F60 --> F61
+  F61(["path_text"])
+  F61 --> F62
+  F62(["dep"])
+  F62 --> F63
+  F63(["deps"])
+  F63 --> F64
+  F64(["trimmed"])
+  F64 --> F65
+  F65(["use_part"])
+  F65 --> F66
+  F66(["use_part"])
+  F66 --> F67
+  F67(["dep"])
+  F67 --> F68
+  F68(["parts"])
+  F68 --> F69
+  F69(["dep"])
+  F69 --> F70
+  F70(["parts"])
+  F70 --> F71
+  F71(["rest"])
+  F71 --> F72
+  F72(["dep"])
+  F72 --> F73
+  F73(["dep"])
+  F73 --> F74
+  F74(["dep"])
+  F74 --> F75
+  F75(["rust_code"])
+  F75 --> F76
+  F76(["deps"])
+  F76 --> F77
+  F77(["python_code"])
+  F77 --> F78
+  F78(["deps"])
+  F78 --> F79
+  F79(["js_code"])
+  F79 --> F80
+  F80(["deps"])
+  F80 --> F81
+  F81(["files"])
+  F81 --> F82
+  F82(["result"])
+  F82 --> F83
+  F83(["resolved"])
+  F83 --> F84
+  F84(["resolved"])
+  F84 --> F85
+  F85(["resolved"])
+  F85 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant to_dot
+  participant to_mermaid
+  participant to_dot
+  participant to_mermaid
+  participant build_call_graph
+  participant build_module_graph
+  participant resolve_dependency_to_file
+  participant extract_function_calls_simple
+  participant extract_dependencies
+  participant extract_dependencies_ast
+  participant extract_imports_from_node
+  participant detect_language_from_content
+  participant extract_dependencies_string_based
+  participant sanitize_mermaid
+  participant test_extract_dependencies_rust
+  participant test_extract_dependencies_python
+  participant test_extract_dependencies_javascript
+  participant test_detect_language_from_content
+  participant test_resolve_dependency_to_file
+  to_dot->>to_mermaid: call
+  to_mermaid->>to_dot: call
+  to_dot->>to_mermaid: call
+  to_mermaid->>build_call_graph: call
+  build_call_graph->>build_module_graph: call
+  build_module_graph->>resolve_dependency_to_file: call
+  resolve_dependency_to_file->>extract_function_calls_simple: call
+  extract_function_calls_simple->>extract_dependencies: call
+  extract_dependencies->>extract_dependencies_ast: call
+  extract_dependencies_ast->>extract_imports_from_node: call
+  extract_imports_from_node->>detect_language_from_content: call
+  detect_language_from_content->>extract_dependencies_string_based: call
+  extract_dependencies_string_based->>sanitize_mermaid: call
+  sanitize_mermaid->>test_extract_dependencies_rust: call
+  test_extract_dependencies_rust->>test_extract_dependencies_python: call
+  test_extract_dependencies_python->>test_extract_dependencies_javascript: call
+  test_extract_dependencies_javascript->>test_detect_language_from_content: call
+  test_detect_language_from_content->>test_resolve_dependency_to_file: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-to_dot"><code>to_dot</code> <small>function</small></li>
+<li id="symbol-to_mermaid"><code>to_mermaid</code> <small>function</small></li>
+<li id="symbol-to_dot"><code>to_dot</code> <small>function</small></li>
+<li id="symbol-to_mermaid"><code>to_mermaid</code> <small>function</small></li>
+<li id="symbol-build_call_graph"><code>build_call_graph</code> <small>function</small></li>
+<li id="symbol-build_module_graph"><code>build_module_graph</code> <small>function</small></li>
+<li id="symbol-resolve_dependency_to_file"><code>resolve_dependency_to_file</code> <small>function</small></li>
+<li id="symbol-extract_function_calls_simple"><code>extract_function_calls_simple</code> <small>function</small></li>
+<li id="symbol-extract_dependencies"><code>extract_dependencies</code> <small>function</small></li>
+<li id="symbol-extract_dependencies_ast"><code>extract_dependencies_ast</code> <small>function</small></li>
+<li id="symbol-extract_imports_from_node"><code>extract_imports_from_node</code> <small>function</small></li>
+<li id="symbol-detect_language_from_content"><code>detect_language_from_content</code> <small>function</small></li>
+<li id="symbol-extract_dependencies_string_based"><code>extract_dependencies_string_based</code> <small>function</small></li>
+<li id="symbol-sanitize_mermaid"><code>sanitize_mermaid</code> <small>function</small></li>
+<li id="symbol-test_extract_dependencies_rust"><code>test_extract_dependencies_rust</code> <small>function</small></li>
+<li id="symbol-test_extract_dependencies_python"><code>test_extract_dependencies_python</code> <small>function</small></li>
+<li id="symbol-test_extract_dependencies_javascript"><code>test_extract_dependencies_javascript</code> <small>function</small></li>
+<li id="symbol-test_detect_language_from_content"><code>test_detect_language_from_content</code> <small>function</small></li>
+<li id="symbol-test_resolve_dependency_to_file"><code>test_resolve_dependency_to_file</code> <small>function</small></li>
+<li id="symbol-callgraph"><code>CallGraph</code> <small>struct</small></li>
+<li id="symbol-modulegraph"><code>ModuleGraph</code> <small>struct</small></li>
+<li id="symbol-callgraph"><code>CallGraph</code> <small>impl</small></li>
+<li id="symbol-modulegraph"><code>ModuleGraph</code> <small>impl</small></li>
+<li id="symbol-dot"><code>dot</code> <small>variable</small></li>
+<li id="symbol-m"><code>m</code> <small>variable</small></li>
+<li id="symbol-dot"><code>dot</code> <small>variable</small></li>
+<li id="symbol-m"><code>m</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-edges"><code>edges</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-calls"><code>calls</code> <small>variable</small></li>
+<li id="symbol-from"><code>from</code> <small>variable</small></li>
+<li id="symbol-target_name"><code>target_name</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-edges"><code>edges</code> <small>variable</small></li>
+<li id="symbol-module_name"><code>module_name</code> <small>variable</small></li>
+<li id="symbol-resolved_dep"><code>resolved_dep</code> <small>variable</small></li>
+<li id="symbol-file_stem"><code>file_stem</code> <small>variable</small></li>
+<li id="symbol-calls"><code>calls</code> <small>variable</small></li>
+<li id="symbol-line"><code>line</code> <small>variable</small></li>
+<li id="symbol-chars"><code>chars</code> <small>variable</small></li>
+<li id="symbol-current_word"><code>current_word</code> <small>variable</small></li>
+<li id="symbol-language_str"><code>language_str</code> <small>variable</small></li>
+<li id="symbol-language"><code>language</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-syntax_tree"><code>syntax_tree</code> <small>variable</small></li>
+<li id="symbol-root_node"><code>root_node</code> <small>variable</small></li>
+<li id="symbol-dependencies"><code>dependencies</code> <small>variable</small></li>
+<li id="symbol-path_text"><code>path_text</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-name_text"><code>name_text</code> <small>variable</small></li>
+<li id="symbol-import_text"><code>import_text</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-import_text"><code>import_text</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-source_text"><code>source_text</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-function_text"><code>function_text</code> <small>variable</small></li>
+<li id="symbol-dep_text"><code>dep_text</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-path_text"><code>path_text</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-deps"><code>deps</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-use_part"><code>use_part</code> <small>variable</small></li>
+<li id="symbol-use_part"><code>use_part</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-rest"><code>rest</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-dep"><code>dep</code> <small>variable</small></li>
+<li id="symbol-rust_code"><code>rust_code</code> <small>variable</small></li>
+<li id="symbol-deps"><code>deps</code> <small>variable</small></li>
+<li id="symbol-python_code"><code>python_code</code> <small>variable</small></li>
+<li id="symbol-deps"><code>deps</code> <small>variable</small></li>
+<li id="symbol-js_code"><code>js_code</code> <small>variable</small></li>
+<li id="symbol-deps"><code>deps</code> <small>variable</small></li>
+<li id="symbol-files"><code>files</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-resolved"><code>resolved</code> <small>variable</small></li>
+<li id="symbol-resolved"><code>resolved</code> <small>variable</small></li>
+<li id="symbol-resolved"><code>resolved</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

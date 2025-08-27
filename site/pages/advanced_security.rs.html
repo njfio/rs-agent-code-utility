@@ -1,0 +1,1073 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>advanced_security.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>advanced_security.rs</h1></header>
+<main>
+<section class="article">
+<p>286 symbols, 3214 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["default"])
+  F1 --> F2
+  F2(["new"])
+  F2 --> F3
+  F3(["with_config"])
+  F3 --> F4
+  F4(["create_vulnerability_location"])
+  F4 --> F5
+  F5(["analyze"])
+  F5 --> F6
+  F6(["meets_severity_threshold"])
+  F6 --> F7
+  F7(["detect_owasp_vulnerabilities"])
+  F7 --> F8
+  F8(["analyze_with_ast"])
+  F8 --> F9
+  F9(["analyze_with_string_matching"])
+  F9 --> F10
+  F10(["detect_command_injection_strings"])
+  F10 --> F11
+  F11(["detect_path_traversal_strings"])
+  F11 --> F12
+  F12(["detect_insecure_random_strings"])
+  F12 --> F13
+  F13(["detect_xss_strings"])
+  F13 --> F14
+  F14(["detect_access_control_issues"])
+  F14 --> F15
+  F15(["detect_cryptographic_failures"])
+  F15 --> F16
+  F16(["detect_injection_issues"])
+  F16 --> F17
+  F17(["detect_insecure_design"])
+  F17 --> F18
+  F18(["detect_security_misconfiguration"])
+  F18 --> F19
+  F19(["detect_secrets"])
+  F19 --> F20
+  F20(["detect_api_key"])
+  F20 --> F21
+  F21(["detect_password"])
+  F21 --> F22
+  F22(["detect_token"])
+  F22 --> F23
+  F23(["calculate_entropy"])
+  F23 --> F24
+  F24(["detect_input_validation_issues"])
+  F24 --> F25
+  F25(["detect_injection_vulnerabilities"])
+  F25 --> F26
+  F26(["detect_best_practice_violations"])
+  F26 --> F27
+  F27(["categorize_by_severity"])
+  F27 --> F28
+  F28(["categorize_by_owasp"])
+  F28 --> F29
+  F29(["generate_security_recommendations"])
+  F29 --> F30
+  F30(["assess_compliance"])
+  F30 --> F31
+  F31(["calculate_security_score"])
+  F31 --> F32
+  F32(["build_security_context"])
+  F32 --> F33
+  F33(["walk_node_for_context"])
+  F33 --> F34
+  F34(["is_user_input_function"])
+  F34 --> F35
+  F35(["detect_sql_injection_ast"])
+  F35 --> F36
+  F36(["filter_sql_injection_false_positives"])
+  F36 --> F37
+  F37(["is_parameterized_query"])
+  F37 --> F38
+  F38(["is_static_query"])
+  F38 --> F39
+  F39(["is_using_orm_or_query_builder"])
+  F39 --> F40
+  F40(["analyze_node_for_sql_injection"])
+  F40 --> F41
+  F41(["is_database_function"])
+  F41 --> F42
+  F42(["has_string_concatenation_in_args"])
+  F42 --> F43
+  F43(["calculate_sql_injection_confidence"])
+  F43 --> F44
+  F44(["detect_command_injection_ast"])
+  F44 --> F45
+  F45(["filter_command_injection_false_positives"])
+  F45 --> F46
+  F46(["is_hardcoded_command"])
+  F46 --> F47
+  F47(["is_using_safe_command_execution"])
+  F47 --> F48
+  F48(["is_build_or_dev_script"])
+  F48 --> F49
+  F49(["analyze_node_for_command_injection"])
+  F49 --> F50
+  F50(["is_command_execution_function"])
+  F50 --> F51
+  F51(["calculate_command_injection_confidence"])
+  F51 --> F52
+  F52(["detect_hardcoded_secrets_ast"])
+  F52 --> F53
+  F53(["filter_secrets_false_positives"])
+  F53 --> F54
+  F54(["is_placeholder_secret"])
+  F54 --> F55
+  F55(["is_config_template"])
+  F55 --> F56
+  F56(["is_public_key_or_cert"])
+  F56 --> F57
+  F57(["analyze_node_for_hardcoded_secrets"])
+  F57 --> F58
+  F58(["looks_like_secret"])
+  F58 --> F59
+  F59(["calculate_secret_confidence"])
+  F59 --> F60
+  F60(["detect_weak_crypto_ast"])
+  F60 --> F61
+  F61(["analyze_node_for_weak_crypto"])
+  F61 --> F62
+  F62(["detect_access_control_ast"])
+  F62 --> F63
+  F63(["analyze_node_for_access_control"])
+  F63 --> F64
+  F64(["is_admin_function"])
+  F64 --> F65
+  F65(["has_authorization_checks_in_body"])
+  F65 --> F66
+  F66(["find_authorization_patterns"])
+  F66 --> F67
+  F67(["is_authorization_function"])
+  F67 --> F68
+  F68(["contains_authorization_keywords"])
+  F68 --> F69
+  F69(["detect_enhanced_injection_ast"])
+  F69 --> F70
+  F70(["analyze_node_for_enhanced_sql_injection"])
+  F70 --> F71
+  F71(["is_database_function_enhanced"])
+  F71 --> F72
+  F72(["has_dynamic_sql_construction"])
+  F72 --> F73
+  F73(["contains_sql_keywords"])
+  F73 --> F74
+  F74(["calculate_enhanced_sql_injection_confidence"])
+  F74 --> F75
+  F75(["has_nearby_parameterized_patterns"])
+  F75 --> F76
+  F76(["analyze_node_for_enhanced_command_injection"])
+  F76 --> F77
+  F77(["is_command_execution_function_enhanced"])
+  F77 --> F78
+  F78(["has_dynamic_command_construction"])
+  F78 --> F79
+  F79(["analyze_node_for_xss"])
+  F79 --> F80
+  F80(["is_output_function"])
+  F80 --> F81
+  F81(["has_unescaped_user_input"])
+  F81 --> F82
+  F82(["looks_like_user_input"])
+  F82 --> F83
+  F83(["has_escaping_function"])
+  F83 --> F84
+  F84(["fmt"])
+  F84 --> F85
+  F85(["fmt"])
+  F85 --> F86
+  F86(["create_test_analysis_result"])
+  F86 --> F87
+  F87(["test_advanced_security_scanner_creation"])
+  F87 --> F88
+  F88(["test_scan_analysis_result"])
+  F88 --> F89
+  F89(["test_user_input_function_detection"])
+  F89 --> F90
+  F90(["test_security_config_default"])
+  F90 --> F91
+  F91(["test_entropy_calculation"])
+  F91 --> F92
+  F92(["AdvancedSecurityAnalyzer"])
+  F92 --> F93
+  F93(["AdvancedSecurityConfig"])
+  F93 --> F94
+  F94(["SecurityContext"])
+  F94 --> F95
+  F95(["AdvancedSecurityResult"])
+  F95 --> F96
+  F96(["SecurityVulnerability"])
+  F96 --> F97
+  F97(["VulnerabilityLocation"])
+  F97 --> F98
+  F98(["SecurityImpact"])
+  F98 --> F99
+  F99(["RemediationGuidance"])
+  F99 --> F100
+  F100(["CodeExample"])
+  F100 --> F101
+  F101(["DetectedSecret"])
+  F101 --> F102
+  F102(["InputValidationIssue"])
+  F102 --> F103
+  F103(["InjectionVulnerability"])
+  F103 --> F104
+  F104(["BestPracticeViolation"])
+  F104 --> F105
+  F105(["SecurityRecommendation"])
+  F105 --> F106
+  F106(["ComplianceAssessment"])
+  F106 --> F107
+  F107(["CustomSecurityRule"])
+  F107 --> F108
+  F108(["SecuritySeverity"])
+  F108 --> F109
+  F109(["OwaspCategory"])
+  F109 --> F110
+  F110(["ImpactLevel"])
+  F110 --> F111
+  F111(["RemediationEffort"])
+  F111 --> F112
+  F112(["ConfidenceLevel"])
+  F112 --> F113
+  F113(["SecretType"])
+  F113 --> F114
+  F114(["InputValidationType"])
+  F114 --> F115
+  F115(["InjectionType"])
+  F115 --> F116
+  F116(["BestPracticeCategory"])
+  F116 --> F117
+  F117(["RecommendationPriority"])
+  F117 --> F118
+  F118(["ComplianceStatus"])
+  F118 --> F119
+  F119(["AdvancedSecurityConfig"])
+  F119 --> F120
+  F120(["AdvancedSecurityAnalyzer"])
+  F120 --> F121
+  F121(["AdvancedSecurityAnalyzer"])
+  F121 --> F122
+  F122(["SecuritySeverity"])
+  F122 --> F123
+  F123(["OwaspCategory"])
+  F123 --> F124
+  F124(["config"])
+  F124 --> F125
+  F125(["vulnerabilities"])
+  F125 --> F126
+  F126(["secrets"])
+  F126 --> F127
+  F127(["input_validation_issues"])
+  F127 --> F128
+  F128(["injection_vulnerabilities"])
+  F128 --> F129
+  F129(["best_practice_violations"])
+  F129 --> F130
+  F130(["absolute_path"])
+  F130 --> F131
+  F131(["file_with_absolute_path"])
+  F131 --> F132
+  F132(["file_vulnerabilities"])
+  F132 --> F133
+  F133(["file_secrets"])
+  F133 --> F134
+  F134(["file_input_issues"])
+  F134 --> F135
+  F135(["file_injection_vulns"])
+  F135 --> F136
+  F136(["file_best_practices"])
+  F136 --> F137
+  F137(["total_vulnerabilities"])
+  F137 --> F138
+  F138(["vulnerabilities_by_severity"])
+  F138 --> F139
+  F139(["owasp_categories"])
+  F139 --> F140
+  F140(["recommendations"])
+  F140 --> F141
+  F141(["compliance"])
+  F141 --> F142
+  F142(["security_score"])
+  F142 --> F143
+  F143(["vulnerabilities"])
+  F143 --> F144
+  F144(["is_duplicate"])
+  F144 --> F145
+  F145(["vulnerabilities"])
+  F145 --> F146
+  F146(["language"])
+  F146 --> F147
+  F147(["parser"])
+  F147 --> F148
+  F148(["content"])
+  F148 --> F149
+  F149(["tree"])
+  F149 --> F150
+  F150(["context"])
+  F150 --> F151
+  F151(["vulnerabilities"])
+  F151 --> F152
+  F152(["content"])
+  F152 --> F153
+  F153(["lines"])
+  F153 --> F154
+  F154(["vulns"])
+  F154 --> F155
+  F155(["vulns"])
+  F155 --> F156
+  F156(["after"])
+  F156 --> F157
+  F157(["arg"])
+  F157 --> F158
+  F158(["vulns"])
+  F158 --> F159
+  F159(["vulns"])
+  F159 --> F160
+  F160(["vulnerabilities"])
+  F160 --> F161
+  F161(["vulnerabilities"])
+  F161 --> F162
+  F162(["line_lower"])
+  F162 --> F163
+  F163(["vulnerabilities"])
+  F163 --> F164
+  F164(["line_lower"])
+  F164 --> F165
+  F165(["vulnerabilities"])
+  F165 --> F166
+  F166(["line_lower"])
+  F166 --> F167
+  F167(["vulnerabilities"])
+  F167 --> F168
+  F168(["line_lower"])
+  F168 --> F169
+  F169(["secrets"])
+  F169 --> F170
+  F170(["content"])
+  F170 --> F171
+  F171(["lines"])
+  F171 --> F172
+  F172(["line_lower"])
+  F172 --> F173
+  F173(["parts"])
+  F173 --> F174
+  F174(["value"])
+  F174 --> F175
+  F175(["line_lower"])
+  F175 --> F176
+  F176(["parts"])
+  F176 --> F177
+  F177(["value"])
+  F177 --> F178
+  F178(["line_lower"])
+  F178 --> F179
+  F179(["parts"])
+  F179 --> F180
+  F180(["value"])
+  F180 --> F181
+  F181(["char_counts"])
+  F181 --> F182
+  F182(["len"])
+  F182 --> F183
+  F183(["entropy"])
+  F183 --> F184
+  F184(["p"])
+  F184 --> F185
+  F185(["issues"])
+  F185 --> F186
+  F186(["content"])
+  F186 --> F187
+  F187(["lines"])
+  F187 --> F188
+  F188(["vulnerabilities"])
+  F188 --> F189
+  F189(["content"])
+  F189 --> F190
+  F190(["lines"])
+  F190 --> F191
+  F191(["violations"])
+  F191 --> F192
+  F192(["content"])
+  F192 --> F193
+  F193(["lines"])
+  F193 --> F194
+  F194(["counts"])
+  F194 --> F195
+  F195(["counts"])
+  F195 --> F196
+  F196(["recommendations"])
+  F196 --> F197
+  F197(["critical_count"])
+  F197 --> F198
+  F198(["total_owasp_issues"])
+  F198 --> F199
+  F199(["owasp_score"])
+  F199 --> F200
+  F200(["cwe_coverage"])
+  F200 --> F201
+  F201(["standards_compliance"])
+  F201 --> F202
+  F202(["overall_status"])
+  F202 --> F203
+  F203(["score"])
+  F203 --> F204
+  F204(["root"])
+  F204 --> F205
+  F205(["context"])
+  F205 --> F206
+  F206(["user_input_functions"])
+  F206 --> F207
+  F207(["vulnerabilities"])
+  F207 --> F208
+  F208(["root"])
+  F208 --> F209
+  F209(["filtered"])
+  F209 --> F210
+  F210(["is_false_positive"])
+  F210 --> F211
+  F211(["orm_patterns"])
+  F211 --> F212
+  F212(["function_name_lower"])
+  F212 --> F213
+  F213(["confidence"])
+  F213 --> F214
+  F214(["db_functions"])
+  F214 --> F215
+  F215(["confidence_score"])
+  F215 --> F216
+  F216(["function_name_lower"])
+  F216 --> F217
+  F217(["vulnerabilities"])
+  F217 --> F218
+  F218(["root"])
+  F218 --> F219
+  F219(["filtered"])
+  F219 --> F220
+  F220(["is_false_positive"])
+  F220 --> F221
+  F221(["has_quotes"])
+  F221 --> F222
+  F222(["has_concatenation"])
+  F222 --> F223
+  F223(["build_patterns"])
+  F223 --> F224
+  F224(["function_name_lower"])
+  F224 --> F225
+  F225(["confidence"])
+  F225 --> F226
+  F226(["cmd_functions"])
+  F226 --> F227
+  F227(["confidence_score"])
+  F227 --> F228
+  F228(["function_name_lower"])
+  F228 --> F229
+  F229(["vulnerabilities"])
+  F229 --> F230
+  F230(["root"])
+  F230 --> F231
+  F231(["filtered"])
+  F231 --> F232
+  F232(["is_false_positive"])
+  F232 --> F233
+  F233(["placeholder_patterns"])
+  F233 --> F234
+  F234(["secret_lower"])
+  F234 --> F235
+  F235(["confidence"])
+  F235 --> F236
+  F236(["clean_value"])
+  F236 --> F237
+  F237(["entropy"])
+  F237 --> F238
+  F238(["secret_patterns"])
+  F238 --> F239
+  F239(["confidence_score"])
+  F239 --> F240
+  F240(["entropy"])
+  F240 --> F241
+  F241(["test_values"])
+  F241 --> F242
+  F242(["vulnerabilities"])
+  F242 --> F243
+  F243(["root"])
+  F243 --> F244
+  F244(["function_name_lower"])
+  F244 --> F245
+  F245(["vulnerabilities"])
+  F245 --> F246
+  F246(["root"])
+  F246 --> F247
+  F247(["function_name_lower"])
+  F247 --> F248
+  F248(["admin_patterns"])
+  F248 --> F249
+  F249(["function_name_lower"])
+  F249 --> F250
+  F250(["node_text_lower"])
+  F250 --> F251
+  F251(["auth_patterns"])
+  F251 --> F252
+  F252(["auth_keywords"])
+  F252 --> F253
+  F253(["vulnerabilities"])
+  F253 --> F254
+  F254(["root"])
+  F254 --> F255
+  F255(["function_name_lower"])
+  F255 --> F256
+  F256(["confidence"])
+  F256 --> F257
+  F257(["db_functions"])
+  F257 --> F258
+  F258(["sql_keywords"])
+  F258 --> F259
+  F259(["confidence_score"])
+  F259 --> F260
+  F260(["function_name_lower"])
+  F260 --> F261
+  F261(["confidence"])
+  F261 --> F262
+  F262(["cmd_functions"])
+  F262 --> F263
+  F263(["function_name_lower"])
+  F263 --> F264
+  F264(["output_functions"])
+  F264 --> F265
+  F265(["arg_text_lower"])
+  F265 --> F266
+  F266(["user_input_patterns"])
+  F266 --> F267
+  F267(["escape_functions"])
+  F267 --> F268
+  F268(["temp_file"])
+  F268 --> F269
+  F269(["file"])
+  F269 --> F270
+  F270(["symbols"])
+  F270 --> F271
+  F271(["file_info"])
+  F271 --> F272
+  F272(["_config"])
+  F272 --> F273
+  F273(["scanner"])
+  F273 --> F274
+  F274(["_config"])
+  F274 --> F275
+  F275(["scanner"])
+  F275 --> F276
+  F276(["analysis"])
+  F276 --> F277
+  F277(["result"])
+  F277 --> F278
+  F278(["security_result"])
+  F278 --> F279
+  F279(["_config"])
+  F279 --> F280
+  F280(["scanner"])
+  F280 --> F281
+  F281(["config"])
+  F281 --> F282
+  F282(["_config"])
+  F282 --> F283
+  F283(["scanner"])
+  F283 --> F284
+  F284(["high_entropy"])
+  F284 --> F285
+  F285(["low_entropy"])
+  F285 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant default
+  participant new
+  participant with_config
+  participant create_vulnerability_location
+  participant analyze
+  participant meets_severity_threshold
+  participant detect_owasp_vulnerabilities
+  participant analyze_with_ast
+  participant analyze_with_string_matching
+  participant detect_command_injection_strings
+  participant detect_path_traversal_strings
+  participant detect_insecure_random_strings
+  participant detect_xss_strings
+  participant detect_access_control_issues
+  participant detect_cryptographic_failures
+  participant detect_injection_issues
+  participant detect_insecure_design
+  participant detect_security_misconfiguration
+  participant detect_secrets
+  participant detect_api_key
+  participant detect_password
+  participant detect_token
+  participant calculate_entropy
+  participant detect_input_validation_issues
+  participant detect_injection_vulnerabilities
+  participant detect_best_practice_violations
+  participant categorize_by_severity
+  participant categorize_by_owasp
+  participant generate_security_recommendations
+  participant assess_compliance
+  participant calculate_security_score
+  participant build_security_context
+  participant walk_node_for_context
+  participant is_user_input_function
+  participant detect_sql_injection_ast
+  participant filter_sql_injection_false_positives
+  participant is_parameterized_query
+  participant is_static_query
+  participant is_using_orm_or_query_builder
+  participant analyze_node_for_sql_injection
+  participant is_database_function
+  participant has_string_concatenation_in_args
+  participant calculate_sql_injection_confidence
+  participant detect_command_injection_ast
+  participant filter_command_injection_false_positives
+  participant is_hardcoded_command
+  participant is_using_safe_command_execution
+  participant is_build_or_dev_script
+  participant analyze_node_for_command_injection
+  participant is_command_execution_function
+  participant calculate_command_injection_confidence
+  participant detect_hardcoded_secrets_ast
+  participant filter_secrets_false_positives
+  participant is_placeholder_secret
+  participant is_config_template
+  participant is_public_key_or_cert
+  participant analyze_node_for_hardcoded_secrets
+  participant looks_like_secret
+  participant calculate_secret_confidence
+  participant detect_weak_crypto_ast
+  participant analyze_node_for_weak_crypto
+  participant detect_access_control_ast
+  participant analyze_node_for_access_control
+  participant is_admin_function
+  participant has_authorization_checks_in_body
+  participant find_authorization_patterns
+  participant is_authorization_function
+  participant contains_authorization_keywords
+  participant detect_enhanced_injection_ast
+  participant analyze_node_for_enhanced_sql_injection
+  participant is_database_function_enhanced
+  participant has_dynamic_sql_construction
+  participant contains_sql_keywords
+  participant calculate_enhanced_sql_injection_confidence
+  participant has_nearby_parameterized_patterns
+  participant analyze_node_for_enhanced_command_injection
+  participant is_command_execution_function_enhanced
+  participant has_dynamic_command_construction
+  participant analyze_node_for_xss
+  participant is_output_function
+  participant has_unescaped_user_input
+  participant looks_like_user_input
+  participant has_escaping_function
+  participant fmt
+  participant fmt
+  participant create_test_analysis_result
+  participant test_advanced_security_scanner_creation
+  participant test_scan_analysis_result
+  participant test_user_input_function_detection
+  participant test_security_config_default
+  participant test_entropy_calculation
+  default->>default: call
+  default->>new: call
+  new->>with_config: call
+  with_config->>create_vulnerability_location: call
+  create_vulnerability_location->>analyze: call
+  analyze->>meets_severity_threshold: call
+  meets_severity_threshold->>detect_owasp_vulnerabilities: call
+  detect_owasp_vulnerabilities->>analyze_with_ast: call
+  analyze_with_ast->>analyze_with_string_matching: call
+  analyze_with_string_matching->>detect_command_injection_strings: call
+  detect_command_injection_strings->>detect_path_traversal_strings: call
+  detect_path_traversal_strings->>detect_insecure_random_strings: call
+  detect_insecure_random_strings->>detect_xss_strings: call
+  detect_xss_strings->>detect_access_control_issues: call
+  detect_access_control_issues->>detect_cryptographic_failures: call
+  detect_cryptographic_failures->>detect_injection_issues: call
+  detect_injection_issues->>detect_insecure_design: call
+  detect_insecure_design->>detect_security_misconfiguration: call
+  detect_security_misconfiguration->>detect_secrets: call
+  detect_secrets->>detect_api_key: call
+  detect_api_key->>detect_password: call
+  detect_password->>detect_token: call
+  detect_token->>calculate_entropy: call
+  calculate_entropy->>detect_input_validation_issues: call
+  detect_input_validation_issues->>detect_injection_vulnerabilities: call
+  detect_injection_vulnerabilities->>detect_best_practice_violations: call
+  detect_best_practice_violations->>categorize_by_severity: call
+  categorize_by_severity->>categorize_by_owasp: call
+  categorize_by_owasp->>generate_security_recommendations: call
+  generate_security_recommendations->>assess_compliance: call
+  assess_compliance->>calculate_security_score: call
+  calculate_security_score->>build_security_context: call
+  build_security_context->>walk_node_for_context: call
+  walk_node_for_context->>is_user_input_function: call
+  is_user_input_function->>detect_sql_injection_ast: call
+  detect_sql_injection_ast->>filter_sql_injection_false_positives: call
+  filter_sql_injection_false_positives->>is_parameterized_query: call
+  is_parameterized_query->>is_static_query: call
+  is_static_query->>is_using_orm_or_query_builder: call
+  is_using_orm_or_query_builder->>analyze_node_for_sql_injection: call
+  analyze_node_for_sql_injection->>is_database_function: call
+  is_database_function->>has_string_concatenation_in_args: call
+  has_string_concatenation_in_args->>calculate_sql_injection_confidence: call
+  calculate_sql_injection_confidence->>detect_command_injection_ast: call
+  detect_command_injection_ast->>filter_command_injection_false_positives: call
+  filter_command_injection_false_positives->>is_hardcoded_command: call
+  is_hardcoded_command->>is_using_safe_command_execution: call
+  is_using_safe_command_execution->>is_build_or_dev_script: call
+  is_build_or_dev_script->>analyze_node_for_command_injection: call
+  analyze_node_for_command_injection->>is_command_execution_function: call
+  is_command_execution_function->>calculate_command_injection_confidence: call
+  calculate_command_injection_confidence->>detect_hardcoded_secrets_ast: call
+  detect_hardcoded_secrets_ast->>filter_secrets_false_positives: call
+  filter_secrets_false_positives->>is_placeholder_secret: call
+  is_placeholder_secret->>is_config_template: call
+  is_config_template->>is_public_key_or_cert: call
+  is_public_key_or_cert->>analyze_node_for_hardcoded_secrets: call
+  analyze_node_for_hardcoded_secrets->>looks_like_secret: call
+  looks_like_secret->>calculate_secret_confidence: call
+  calculate_secret_confidence->>detect_weak_crypto_ast: call
+  detect_weak_crypto_ast->>analyze_node_for_weak_crypto: call
+  analyze_node_for_weak_crypto->>detect_access_control_ast: call
+  detect_access_control_ast->>analyze_node_for_access_control: call
+  analyze_node_for_access_control->>is_admin_function: call
+  is_admin_function->>has_authorization_checks_in_body: call
+  has_authorization_checks_in_body->>find_authorization_patterns: call
+  find_authorization_patterns->>is_authorization_function: call
+  is_authorization_function->>contains_authorization_keywords: call
+  contains_authorization_keywords->>detect_enhanced_injection_ast: call
+  detect_enhanced_injection_ast->>analyze_node_for_enhanced_sql_injection: call
+  analyze_node_for_enhanced_sql_injection->>is_database_function_enhanced: call
+  is_database_function_enhanced->>has_dynamic_sql_construction: call
+  has_dynamic_sql_construction->>contains_sql_keywords: call
+  contains_sql_keywords->>calculate_enhanced_sql_injection_confidence: call
+  calculate_enhanced_sql_injection_confidence->>has_nearby_parameterized_patterns: call
+  has_nearby_parameterized_patterns->>analyze_node_for_enhanced_command_injection: call
+  analyze_node_for_enhanced_command_injection->>is_command_execution_function_enhanced: call
+  is_command_execution_function_enhanced->>has_dynamic_command_construction: call
+  has_dynamic_command_construction->>analyze_node_for_xss: call
+  analyze_node_for_xss->>is_output_function: call
+  is_output_function->>has_unescaped_user_input: call
+  has_unescaped_user_input->>looks_like_user_input: call
+  looks_like_user_input->>has_escaping_function: call
+  has_escaping_function->>fmt: call
+  fmt->>fmt: call
+  fmt->>create_test_analysis_result: call
+  create_test_analysis_result->>test_advanced_security_scanner_creation: call
+  test_advanced_security_scanner_creation->>test_scan_analysis_result: call
+  test_scan_analysis_result->>test_user_input_function_detection: call
+  test_user_input_function_detection->>test_security_config_default: call
+  test_security_config_default->>test_entropy_calculation: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-create_vulnerability_location"><code>create_vulnerability_location</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-meets_severity_threshold"><code>meets_severity_threshold</code> <small>function</small></li>
+<li id="symbol-detect_owasp_vulnerabilities"><code>detect_owasp_vulnerabilities</code> <small>function</small></li>
+<li id="symbol-analyze_with_ast"><code>analyze_with_ast</code> <small>function</small></li>
+<li id="symbol-analyze_with_string_matching"><code>analyze_with_string_matching</code> <small>function</small></li>
+<li id="symbol-detect_command_injection_strings"><code>detect_command_injection_strings</code> <small>function</small></li>
+<li id="symbol-detect_path_traversal_strings"><code>detect_path_traversal_strings</code> <small>function</small></li>
+<li id="symbol-detect_insecure_random_strings"><code>detect_insecure_random_strings</code> <small>function</small></li>
+<li id="symbol-detect_xss_strings"><code>detect_xss_strings</code> <small>function</small></li>
+<li id="symbol-detect_access_control_issues"><code>detect_access_control_issues</code> <small>function</small></li>
+<li id="symbol-detect_cryptographic_failures"><code>detect_cryptographic_failures</code> <small>function</small></li>
+<li id="symbol-detect_injection_issues"><code>detect_injection_issues</code> <small>function</small></li>
+<li id="symbol-detect_insecure_design"><code>detect_insecure_design</code> <small>function</small></li>
+<li id="symbol-detect_security_misconfiguration"><code>detect_security_misconfiguration</code> <small>function</small></li>
+<li id="symbol-detect_secrets"><code>detect_secrets</code> <small>function</small></li>
+<li id="symbol-detect_api_key"><code>detect_api_key</code> <small>function</small></li>
+<li id="symbol-detect_password"><code>detect_password</code> <small>function</small></li>
+<li id="symbol-detect_token"><code>detect_token</code> <small>function</small></li>
+<li id="symbol-calculate_entropy"><code>calculate_entropy</code> <small>function</small></li>
+<li id="symbol-detect_input_validation_issues"><code>detect_input_validation_issues</code> <small>function</small></li>
+<li id="symbol-detect_injection_vulnerabilities"><code>detect_injection_vulnerabilities</code> <small>function</small></li>
+<li id="symbol-detect_best_practice_violations"><code>detect_best_practice_violations</code> <small>function</small></li>
+<li id="symbol-categorize_by_severity"><code>categorize_by_severity</code> <small>function</small></li>
+<li id="symbol-categorize_by_owasp"><code>categorize_by_owasp</code> <small>function</small></li>
+<li id="symbol-generate_security_recommendations"><code>generate_security_recommendations</code> <small>function</small></li>
+<li id="symbol-assess_compliance"><code>assess_compliance</code> <small>function</small></li>
+<li id="symbol-calculate_security_score"><code>calculate_security_score</code> <small>function</small></li>
+<li id="symbol-build_security_context"><code>build_security_context</code> <small>function</small></li>
+<li id="symbol-walk_node_for_context"><code>walk_node_for_context</code> <small>function</small></li>
+<li id="symbol-is_user_input_function"><code>is_user_input_function</code> <small>function</small></li>
+<li id="symbol-detect_sql_injection_ast"><code>detect_sql_injection_ast</code> <small>function</small></li>
+<li id="symbol-filter_sql_injection_false_positives"><code>filter_sql_injection_false_positives</code> <small>function</small></li>
+<li id="symbol-is_parameterized_query"><code>is_parameterized_query</code> <small>function</small></li>
+<li id="symbol-is_static_query"><code>is_static_query</code> <small>function</small></li>
+<li id="symbol-is_using_orm_or_query_builder"><code>is_using_orm_or_query_builder</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_sql_injection"><code>analyze_node_for_sql_injection</code> <small>function</small></li>
+<li id="symbol-is_database_function"><code>is_database_function</code> <small>function</small></li>
+<li id="symbol-has_string_concatenation_in_args"><code>has_string_concatenation_in_args</code> <small>function</small></li>
+<li id="symbol-calculate_sql_injection_confidence"><code>calculate_sql_injection_confidence</code> <small>function</small></li>
+<li id="symbol-detect_command_injection_ast"><code>detect_command_injection_ast</code> <small>function</small></li>
+<li id="symbol-filter_command_injection_false_positives"><code>filter_command_injection_false_positives</code> <small>function</small></li>
+<li id="symbol-is_hardcoded_command"><code>is_hardcoded_command</code> <small>function</small></li>
+<li id="symbol-is_using_safe_command_execution"><code>is_using_safe_command_execution</code> <small>function</small></li>
+<li id="symbol-is_build_or_dev_script"><code>is_build_or_dev_script</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_command_injection"><code>analyze_node_for_command_injection</code> <small>function</small></li>
+<li id="symbol-is_command_execution_function"><code>is_command_execution_function</code> <small>function</small></li>
+<li id="symbol-calculate_command_injection_confidence"><code>calculate_command_injection_confidence</code> <small>function</small></li>
+<li id="symbol-detect_hardcoded_secrets_ast"><code>detect_hardcoded_secrets_ast</code> <small>function</small></li>
+<li id="symbol-filter_secrets_false_positives"><code>filter_secrets_false_positives</code> <small>function</small></li>
+<li id="symbol-is_placeholder_secret"><code>is_placeholder_secret</code> <small>function</small></li>
+<li id="symbol-is_config_template"><code>is_config_template</code> <small>function</small></li>
+<li id="symbol-is_public_key_or_cert"><code>is_public_key_or_cert</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_hardcoded_secrets"><code>analyze_node_for_hardcoded_secrets</code> <small>function</small></li>
+<li id="symbol-looks_like_secret"><code>looks_like_secret</code> <small>function</small></li>
+<li id="symbol-calculate_secret_confidence"><code>calculate_secret_confidence</code> <small>function</small></li>
+<li id="symbol-detect_weak_crypto_ast"><code>detect_weak_crypto_ast</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_weak_crypto"><code>analyze_node_for_weak_crypto</code> <small>function</small></li>
+<li id="symbol-detect_access_control_ast"><code>detect_access_control_ast</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_access_control"><code>analyze_node_for_access_control</code> <small>function</small></li>
+<li id="symbol-is_admin_function"><code>is_admin_function</code> <small>function</small></li>
+<li id="symbol-has_authorization_checks_in_body"><code>has_authorization_checks_in_body</code> <small>function</small></li>
+<li id="symbol-find_authorization_patterns"><code>find_authorization_patterns</code> <small>function</small></li>
+<li id="symbol-is_authorization_function"><code>is_authorization_function</code> <small>function</small></li>
+<li id="symbol-contains_authorization_keywords"><code>contains_authorization_keywords</code> <small>function</small></li>
+<li id="symbol-detect_enhanced_injection_ast"><code>detect_enhanced_injection_ast</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_enhanced_sql_injection"><code>analyze_node_for_enhanced_sql_injection</code> <small>function</small></li>
+<li id="symbol-is_database_function_enhanced"><code>is_database_function_enhanced</code> <small>function</small></li>
+<li id="symbol-has_dynamic_sql_construction"><code>has_dynamic_sql_construction</code> <small>function</small></li>
+<li id="symbol-contains_sql_keywords"><code>contains_sql_keywords</code> <small>function</small></li>
+<li id="symbol-calculate_enhanced_sql_injection_confidence"><code>calculate_enhanced_sql_injection_confidence</code> <small>function</small></li>
+<li id="symbol-has_nearby_parameterized_patterns"><code>has_nearby_parameterized_patterns</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_enhanced_command_injection"><code>analyze_node_for_enhanced_command_injection</code> <small>function</small></li>
+<li id="symbol-is_command_execution_function_enhanced"><code>is_command_execution_function_enhanced</code> <small>function</small></li>
+<li id="symbol-has_dynamic_command_construction"><code>has_dynamic_command_construction</code> <small>function</small></li>
+<li id="symbol-analyze_node_for_xss"><code>analyze_node_for_xss</code> <small>function</small></li>
+<li id="symbol-is_output_function"><code>is_output_function</code> <small>function</small></li>
+<li id="symbol-has_unescaped_user_input"><code>has_unescaped_user_input</code> <small>function</small></li>
+<li id="symbol-looks_like_user_input"><code>looks_like_user_input</code> <small>function</small></li>
+<li id="symbol-has_escaping_function"><code>has_escaping_function</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-create_test_analysis_result"><code>create_test_analysis_result</code> <small>function</small></li>
+<li id="symbol-test_advanced_security_scanner_creation"><code>test_advanced_security_scanner_creation</code> <small>function</small></li>
+<li id="symbol-test_scan_analysis_result"><code>test_scan_analysis_result</code> <small>function</small></li>
+<li id="symbol-test_user_input_function_detection"><code>test_user_input_function_detection</code> <small>function</small></li>
+<li id="symbol-test_security_config_default"><code>test_security_config_default</code> <small>function</small></li>
+<li id="symbol-test_entropy_calculation"><code>test_entropy_calculation</code> <small>function</small></li>
+<li id="symbol-advancedsecurityanalyzer"><code>AdvancedSecurityAnalyzer</code> <small>struct</small></li>
+<li id="symbol-advancedsecurityconfig"><code>AdvancedSecurityConfig</code> <small>struct</small></li>
+<li id="symbol-securitycontext"><code>SecurityContext</code> <small>struct</small></li>
+<li id="symbol-advancedsecurityresult"><code>AdvancedSecurityResult</code> <small>struct</small></li>
+<li id="symbol-securityvulnerability"><code>SecurityVulnerability</code> <small>struct</small></li>
+<li id="symbol-vulnerabilitylocation"><code>VulnerabilityLocation</code> <small>struct</small></li>
+<li id="symbol-securityimpact"><code>SecurityImpact</code> <small>struct</small></li>
+<li id="symbol-remediationguidance"><code>RemediationGuidance</code> <small>struct</small></li>
+<li id="symbol-codeexample"><code>CodeExample</code> <small>struct</small></li>
+<li id="symbol-detectedsecret"><code>DetectedSecret</code> <small>struct</small></li>
+<li id="symbol-inputvalidationissue"><code>InputValidationIssue</code> <small>struct</small></li>
+<li id="symbol-injectionvulnerability"><code>InjectionVulnerability</code> <small>struct</small></li>
+<li id="symbol-bestpracticeviolation"><code>BestPracticeViolation</code> <small>struct</small></li>
+<li id="symbol-securityrecommendation"><code>SecurityRecommendation</code> <small>struct</small></li>
+<li id="symbol-complianceassessment"><code>ComplianceAssessment</code> <small>struct</small></li>
+<li id="symbol-customsecurityrule"><code>CustomSecurityRule</code> <small>struct</small></li>
+<li id="symbol-securityseverity"><code>SecuritySeverity</code> <small>enum</small></li>
+<li id="symbol-owaspcategory"><code>OwaspCategory</code> <small>enum</small></li>
+<li id="symbol-impactlevel"><code>ImpactLevel</code> <small>enum</small></li>
+<li id="symbol-remediationeffort"><code>RemediationEffort</code> <small>enum</small></li>
+<li id="symbol-confidencelevel"><code>ConfidenceLevel</code> <small>enum</small></li>
+<li id="symbol-secrettype"><code>SecretType</code> <small>enum</small></li>
+<li id="symbol-inputvalidationtype"><code>InputValidationType</code> <small>enum</small></li>
+<li id="symbol-injectiontype"><code>InjectionType</code> <small>enum</small></li>
+<li id="symbol-bestpracticecategory"><code>BestPracticeCategory</code> <small>enum</small></li>
+<li id="symbol-recommendationpriority"><code>RecommendationPriority</code> <small>enum</small></li>
+<li id="symbol-compliancestatus"><code>ComplianceStatus</code> <small>enum</small></li>
+<li id="symbol-advancedsecurityconfig"><code>AdvancedSecurityConfig</code> <small>impl</small></li>
+<li id="symbol-advancedsecurityanalyzer"><code>AdvancedSecurityAnalyzer</code> <small>impl</small></li>
+<li id="symbol-advancedsecurityanalyzer"><code>AdvancedSecurityAnalyzer</code> <small>impl</small></li>
+<li id="symbol-securityseverity"><code>SecuritySeverity</code> <small>impl</small></li>
+<li id="symbol-owaspcategory"><code>OwaspCategory</code> <small>impl</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-secrets"><code>secrets</code> <small>variable</small></li>
+<li id="symbol-input_validation_issues"><code>input_validation_issues</code> <small>variable</small></li>
+<li id="symbol-injection_vulnerabilities"><code>injection_vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-best_practice_violations"><code>best_practice_violations</code> <small>variable</small></li>
+<li id="symbol-absolute_path"><code>absolute_path</code> <small>variable</small></li>
+<li id="symbol-file_with_absolute_path"><code>file_with_absolute_path</code> <small>variable</small></li>
+<li id="symbol-file_vulnerabilities"><code>file_vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-file_secrets"><code>file_secrets</code> <small>variable</small></li>
+<li id="symbol-file_input_issues"><code>file_input_issues</code> <small>variable</small></li>
+<li id="symbol-file_injection_vulns"><code>file_injection_vulns</code> <small>variable</small></li>
+<li id="symbol-file_best_practices"><code>file_best_practices</code> <small>variable</small></li>
+<li id="symbol-total_vulnerabilities"><code>total_vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities_by_severity"><code>vulnerabilities_by_severity</code> <small>variable</small></li>
+<li id="symbol-owasp_categories"><code>owasp_categories</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-compliance"><code>compliance</code> <small>variable</small></li>
+<li id="symbol-security_score"><code>security_score</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-is_duplicate"><code>is_duplicate</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-language"><code>language</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-context"><code>context</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-vulns"><code>vulns</code> <small>variable</small></li>
+<li id="symbol-vulns"><code>vulns</code> <small>variable</small></li>
+<li id="symbol-after"><code>after</code> <small>variable</small></li>
+<li id="symbol-arg"><code>arg</code> <small>variable</small></li>
+<li id="symbol-vulns"><code>vulns</code> <small>variable</small></li>
+<li id="symbol-vulns"><code>vulns</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-secrets"><code>secrets</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-value"><code>value</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-value"><code>value</code> <small>variable</small></li>
+<li id="symbol-line_lower"><code>line_lower</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-value"><code>value</code> <small>variable</small></li>
+<li id="symbol-char_counts"><code>char_counts</code> <small>variable</small></li>
+<li id="symbol-len"><code>len</code> <small>variable</small></li>
+<li id="symbol-entropy"><code>entropy</code> <small>variable</small></li>
+<li id="symbol-p"><code>p</code> <small>variable</small></li>
+<li id="symbol-issues"><code>issues</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-violations"><code>violations</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-counts"><code>counts</code> <small>variable</small></li>
+<li id="symbol-counts"><code>counts</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-critical_count"><code>critical_count</code> <small>variable</small></li>
+<li id="symbol-total_owasp_issues"><code>total_owasp_issues</code> <small>variable</small></li>
+<li id="symbol-owasp_score"><code>owasp_score</code> <small>variable</small></li>
+<li id="symbol-cwe_coverage"><code>cwe_coverage</code> <small>variable</small></li>
+<li id="symbol-standards_compliance"><code>standards_compliance</code> <small>variable</small></li>
+<li id="symbol-overall_status"><code>overall_status</code> <small>variable</small></li>
+<li id="symbol-score"><code>score</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-context"><code>context</code> <small>variable</small></li>
+<li id="symbol-user_input_functions"><code>user_input_functions</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-filtered"><code>filtered</code> <small>variable</small></li>
+<li id="symbol-is_false_positive"><code>is_false_positive</code> <small>variable</small></li>
+<li id="symbol-orm_patterns"><code>orm_patterns</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-db_functions"><code>db_functions</code> <small>variable</small></li>
+<li id="symbol-confidence_score"><code>confidence_score</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-filtered"><code>filtered</code> <small>variable</small></li>
+<li id="symbol-is_false_positive"><code>is_false_positive</code> <small>variable</small></li>
+<li id="symbol-has_quotes"><code>has_quotes</code> <small>variable</small></li>
+<li id="symbol-has_concatenation"><code>has_concatenation</code> <small>variable</small></li>
+<li id="symbol-build_patterns"><code>build_patterns</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-cmd_functions"><code>cmd_functions</code> <small>variable</small></li>
+<li id="symbol-confidence_score"><code>confidence_score</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-filtered"><code>filtered</code> <small>variable</small></li>
+<li id="symbol-is_false_positive"><code>is_false_positive</code> <small>variable</small></li>
+<li id="symbol-placeholder_patterns"><code>placeholder_patterns</code> <small>variable</small></li>
+<li id="symbol-secret_lower"><code>secret_lower</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-clean_value"><code>clean_value</code> <small>variable</small></li>
+<li id="symbol-entropy"><code>entropy</code> <small>variable</small></li>
+<li id="symbol-secret_patterns"><code>secret_patterns</code> <small>variable</small></li>
+<li id="symbol-confidence_score"><code>confidence_score</code> <small>variable</small></li>
+<li id="symbol-entropy"><code>entropy</code> <small>variable</small></li>
+<li id="symbol-test_values"><code>test_values</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-admin_patterns"><code>admin_patterns</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-node_text_lower"><code>node_text_lower</code> <small>variable</small></li>
+<li id="symbol-auth_patterns"><code>auth_patterns</code> <small>variable</small></li>
+<li id="symbol-auth_keywords"><code>auth_keywords</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-db_functions"><code>db_functions</code> <small>variable</small></li>
+<li id="symbol-sql_keywords"><code>sql_keywords</code> <small>variable</small></li>
+<li id="symbol-confidence_score"><code>confidence_score</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-cmd_functions"><code>cmd_functions</code> <small>variable</small></li>
+<li id="symbol-function_name_lower"><code>function_name_lower</code> <small>variable</small></li>
+<li id="symbol-output_functions"><code>output_functions</code> <small>variable</small></li>
+<li id="symbol-arg_text_lower"><code>arg_text_lower</code> <small>variable</small></li>
+<li id="symbol-user_input_patterns"><code>user_input_patterns</code> <small>variable</small></li>
+<li id="symbol-escape_functions"><code>escape_functions</code> <small>variable</small></li>
+<li id="symbol-temp_file"><code>temp_file</code> <small>variable</small></li>
+<li id="symbol-file"><code>file</code> <small>variable</small></li>
+<li id="symbol-symbols"><code>symbols</code> <small>variable</small></li>
+<li id="symbol-file_info"><code>file_info</code> <small>variable</small></li>
+<li id="symbol-_config"><code>_config</code> <small>variable</small></li>
+<li id="symbol-scanner"><code>scanner</code> <small>variable</small></li>
+<li id="symbol-_config"><code>_config</code> <small>variable</small></li>
+<li id="symbol-scanner"><code>scanner</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-security_result"><code>security_result</code> <small>variable</small></li>
+<li id="symbol-_config"><code>_config</code> <small>variable</small></li>
+<li id="symbol-scanner"><code>scanner</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-_config"><code>_config</code> <small>variable</small></li>
+<li id="symbol-scanner"><code>scanner</code> <small>variable</small></li>
+<li id="symbol-high_entropy"><code>high_entropy</code> <small>variable</small></li>
+<li id="symbol-low_entropy"><code>low_entropy</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>error.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>error.rs</h1></header>
+<main>
+<section class="article">
+<p>76 symbols, 847 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["language_error"])
+  F0 --> F1
+  F1(["language_error_with_cause"])
+  F1 --> F2
+  F2(["parse_error"])
+  F2 --> F3
+  F3(["parse_error_with_location"])
+  F3 --> F4
+  F4(["query_error"])
+  F4 --> F5
+  F5(["query_error_with_position"])
+  F5 --> F6
+  F6(["tree_error"])
+  F6 --> F7
+  F7(["tree_error_with_context"])
+  F7 --> F8
+  F8(["invalid_input_error"])
+  F8 --> F9
+  F9(["invalid_input_with_suggestion"])
+  F9 --> F10
+  F10(["not_supported_error"])
+  F10 --> F11
+  F11(["not_supported_with_alternative"])
+  F11 --> F12
+  F12(["internal_error"])
+  F12 --> F13
+  F13(["internal_error_with_context"])
+  F13 --> F14
+  F14(["cli_error"])
+  F14 --> F15
+  F15(["cli_error_with_suggestion"])
+  F15 --> F16
+  F16(["language"])
+  F16 --> F17
+  F17(["parse"])
+  F17 --> F18
+  F18(["query"])
+  F18 --> F19
+  F19(["tree"])
+  F19 --> F20
+  F20(["invalid_input"])
+  F20 --> F21
+  F21(["not_supported"])
+  F21 --> F22
+  F22(["internal"])
+  F22 --> F23
+  F23(["config_error"])
+  F23 --> F24
+  F24(["config_error_with_context"])
+  F24 --> F25
+  F25(["network_error"])
+  F25 --> F26
+  F26(["network_error_with_details"])
+  F26 --> F27
+  F27(["auth_error"])
+  F27 --> F28
+  F28(["auth_error_with_provider"])
+  F28 --> F29
+  F29(["rate_limit_error"])
+  F29 --> F30
+  F30(["rate_limit_error_with_retry"])
+  F30 --> F31
+  F31(["timeout_error"])
+  F31 --> F32
+  F32(["resource_exhausted"])
+  F32 --> F33
+  F33(["resource_exhausted_with_details"])
+  F33 --> F34
+  F34(["validation_error"])
+  F34 --> F35
+  F35(["validation_error_with_context"])
+  F35 --> F36
+  F36(["dependency_error"])
+  F36 --> F37
+  F37(["dependency_error_with_versions"])
+  F37 --> F38
+  F38(["security_error"])
+  F38 --> F39
+  F39(["security_error_with_details"])
+  F39 --> F40
+  F40(["analysis_error"])
+  F40 --> F41
+  F41(["analysis_error_with_context"])
+  F41 --> F42
+  F42(["from"])
+  F42 --> F43
+  F43(["from"])
+  F43 --> F44
+  F44(["test_structured_error_creation"])
+  F44 --> F45
+  F45(["test_error_with_context"])
+  F45 --> F46
+  F46(["test_invalid_input_with_suggestion"])
+  F46 --> F47
+  F47(["test_not_supported_with_alternative"])
+  F47 --> F48
+  F48(["test_internal_error_with_context"])
+  F48 --> F49
+  F49(["test_error_conversion"])
+  F49 --> F50
+  F50(["test_backward_compatibility"])
+  F50 --> F51
+  F51(["LanguageErrorDetails"])
+  F51 --> F52
+  F52(["ParseErrorDetails"])
+  F52 --> F53
+  F53(["QueryErrorDetails"])
+  F53 --> F54
+  F54(["TreeErrorDetails"])
+  F54 --> F55
+  F55(["InvalidInputDetails"])
+  F55 --> F56
+  F56(["QueryErrorType"])
+  F56 --> F57
+  F57(["Error"])
+  F57 --> F58
+  F58(["Error"])
+  F58 --> F59
+  F59(["Error"])
+  F59 --> F60
+  F60(["Error"])
+  F60 --> F61
+  F61(["error_str"])
+  F61 --> F62
+  F62(["error_type"])
+  F62 --> F63
+  F63(["err"])
+  F63 --> F64
+  F64(["err"])
+  F64 --> F65
+  F65(["err"])
+  F65 --> F66
+  F66(["err"])
+  F66 --> F67
+  F67(["err"])
+  F67 --> F68
+  F68(["err"])
+  F68 --> F69
+  F69(["err"])
+  F69 --> F70
+  F70(["err"])
+  F70 --> F71
+  F71(["io_err"])
+  F71 --> F72
+  F72(["err"])
+  F72 --> F73
+  F73(["err"])
+  F73 --> F74
+  F74(["err"])
+  F74 --> F75
+  F75(["err"])
+  F75 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant language_error
+  participant language_error_with_cause
+  participant parse_error
+  participant parse_error_with_location
+  participant query_error
+  participant query_error_with_position
+  participant tree_error
+  participant tree_error_with_context
+  participant invalid_input_error
+  participant invalid_input_with_suggestion
+  participant not_supported_error
+  participant not_supported_with_alternative
+  participant internal_error
+  participant internal_error_with_context
+  participant cli_error
+  participant cli_error_with_suggestion
+  participant language
+  participant parse
+  participant query
+  participant tree
+  participant invalid_input
+  participant not_supported
+  participant internal
+  participant config_error
+  participant config_error_with_context
+  participant network_error
+  participant network_error_with_details
+  participant auth_error
+  participant auth_error_with_provider
+  participant rate_limit_error
+  participant rate_limit_error_with_retry
+  participant timeout_error
+  participant resource_exhausted
+  participant resource_exhausted_with_details
+  participant validation_error
+  participant validation_error_with_context
+  participant dependency_error
+  participant dependency_error_with_versions
+  participant security_error
+  participant security_error_with_details
+  participant analysis_error
+  participant analysis_error_with_context
+  participant from
+  participant from
+  participant test_structured_error_creation
+  participant test_error_with_context
+  participant test_invalid_input_with_suggestion
+  participant test_not_supported_with_alternative
+  participant test_internal_error_with_context
+  participant test_error_conversion
+  participant test_backward_compatibility
+  language_error->>language_error_with_cause: call
+  language_error_with_cause->>parse_error: call
+  parse_error->>parse_error_with_location: call
+  parse_error_with_location->>query_error: call
+  query_error->>query_error_with_position: call
+  query_error_with_position->>tree_error: call
+  tree_error->>tree_error_with_context: call
+  tree_error_with_context->>invalid_input_error: call
+  invalid_input_error->>invalid_input_with_suggestion: call
+  invalid_input_with_suggestion->>not_supported_error: call
+  not_supported_error->>not_supported_with_alternative: call
+  not_supported_with_alternative->>internal_error: call
+  internal_error->>internal_error_with_context: call
+  internal_error_with_context->>cli_error: call
+  cli_error->>cli_error_with_suggestion: call
+  cli_error_with_suggestion->>language: call
+  language->>parse: call
+  parse->>query: call
+  query->>tree: call
+  tree->>invalid_input: call
+  invalid_input->>not_supported: call
+  not_supported->>internal: call
+  internal->>config_error: call
+  config_error->>config_error_with_context: call
+  config_error_with_context->>network_error: call
+  network_error->>network_error_with_details: call
+  network_error_with_details->>auth_error: call
+  auth_error->>auth_error_with_provider: call
+  auth_error_with_provider->>rate_limit_error: call
+  rate_limit_error->>rate_limit_error_with_retry: call
+  rate_limit_error_with_retry->>timeout_error: call
+  timeout_error->>resource_exhausted: call
+  resource_exhausted->>resource_exhausted_with_details: call
+  resource_exhausted_with_details->>validation_error: call
+  validation_error->>validation_error_with_context: call
+  validation_error_with_context->>dependency_error: call
+  dependency_error->>dependency_error_with_versions: call
+  dependency_error_with_versions->>security_error: call
+  security_error->>security_error_with_details: call
+  security_error_with_details->>analysis_error: call
+  analysis_error->>analysis_error_with_context: call
+  analysis_error_with_context->>from: call
+  from->>from: call
+  from->>test_structured_error_creation: call
+  test_structured_error_creation->>test_error_with_context: call
+  test_error_with_context->>test_invalid_input_with_suggestion: call
+  test_invalid_input_with_suggestion->>test_not_supported_with_alternative: call
+  test_not_supported_with_alternative->>test_internal_error_with_context: call
+  test_internal_error_with_context->>test_error_conversion: call
+  test_error_conversion->>test_backward_compatibility: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-language_error"><code>language_error</code> <small>function</small></li>
+<li id="symbol-language_error_with_cause"><code>language_error_with_cause</code> <small>function</small></li>
+<li id="symbol-parse_error"><code>parse_error</code> <small>function</small></li>
+<li id="symbol-parse_error_with_location"><code>parse_error_with_location</code> <small>function</small></li>
+<li id="symbol-query_error"><code>query_error</code> <small>function</small></li>
+<li id="symbol-query_error_with_position"><code>query_error_with_position</code> <small>function</small></li>
+<li id="symbol-tree_error"><code>tree_error</code> <small>function</small></li>
+<li id="symbol-tree_error_with_context"><code>tree_error_with_context</code> <small>function</small></li>
+<li id="symbol-invalid_input_error"><code>invalid_input_error</code> <small>function</small></li>
+<li id="symbol-invalid_input_with_suggestion"><code>invalid_input_with_suggestion</code> <small>function</small></li>
+<li id="symbol-not_supported_error"><code>not_supported_error</code> <small>function</small></li>
+<li id="symbol-not_supported_with_alternative"><code>not_supported_with_alternative</code> <small>function</small></li>
+<li id="symbol-internal_error"><code>internal_error</code> <small>function</small></li>
+<li id="symbol-internal_error_with_context"><code>internal_error_with_context</code> <small>function</small></li>
+<li id="symbol-cli_error"><code>cli_error</code> <small>function</small></li>
+<li id="symbol-cli_error_with_suggestion"><code>cli_error_with_suggestion</code> <small>function</small></li>
+<li id="symbol-language"><code>language</code> <small>function</small></li>
+<li id="symbol-parse"><code>parse</code> <small>function</small></li>
+<li id="symbol-query"><code>query</code> <small>function</small></li>
+<li id="symbol-tree"><code>tree</code> <small>function</small></li>
+<li id="symbol-invalid_input"><code>invalid_input</code> <small>function</small></li>
+<li id="symbol-not_supported"><code>not_supported</code> <small>function</small></li>
+<li id="symbol-internal"><code>internal</code> <small>function</small></li>
+<li id="symbol-config_error"><code>config_error</code> <small>function</small></li>
+<li id="symbol-config_error_with_context"><code>config_error_with_context</code> <small>function</small></li>
+<li id="symbol-network_error"><code>network_error</code> <small>function</small></li>
+<li id="symbol-network_error_with_details"><code>network_error_with_details</code> <small>function</small></li>
+<li id="symbol-auth_error"><code>auth_error</code> <small>function</small></li>
+<li id="symbol-auth_error_with_provider"><code>auth_error_with_provider</code> <small>function</small></li>
+<li id="symbol-rate_limit_error"><code>rate_limit_error</code> <small>function</small></li>
+<li id="symbol-rate_limit_error_with_retry"><code>rate_limit_error_with_retry</code> <small>function</small></li>
+<li id="symbol-timeout_error"><code>timeout_error</code> <small>function</small></li>
+<li id="symbol-resource_exhausted"><code>resource_exhausted</code> <small>function</small></li>
+<li id="symbol-resource_exhausted_with_details"><code>resource_exhausted_with_details</code> <small>function</small></li>
+<li id="symbol-validation_error"><code>validation_error</code> <small>function</small></li>
+<li id="symbol-validation_error_with_context"><code>validation_error_with_context</code> <small>function</small></li>
+<li id="symbol-dependency_error"><code>dependency_error</code> <small>function</small></li>
+<li id="symbol-dependency_error_with_versions"><code>dependency_error_with_versions</code> <small>function</small></li>
+<li id="symbol-security_error"><code>security_error</code> <small>function</small></li>
+<li id="symbol-security_error_with_details"><code>security_error_with_details</code> <small>function</small></li>
+<li id="symbol-analysis_error"><code>analysis_error</code> <small>function</small></li>
+<li id="symbol-analysis_error_with_context"><code>analysis_error_with_context</code> <small>function</small></li>
+<li id="symbol-from"><code>from</code> <small>function</small></li>
+<li id="symbol-from"><code>from</code> <small>function</small></li>
+<li id="symbol-test_structured_error_creation"><code>test_structured_error_creation</code> <small>function</small></li>
+<li id="symbol-test_error_with_context"><code>test_error_with_context</code> <small>function</small></li>
+<li id="symbol-test_invalid_input_with_suggestion"><code>test_invalid_input_with_suggestion</code> <small>function</small></li>
+<li id="symbol-test_not_supported_with_alternative"><code>test_not_supported_with_alternative</code> <small>function</small></li>
+<li id="symbol-test_internal_error_with_context"><code>test_internal_error_with_context</code> <small>function</small></li>
+<li id="symbol-test_error_conversion"><code>test_error_conversion</code> <small>function</small></li>
+<li id="symbol-test_backward_compatibility"><code>test_backward_compatibility</code> <small>function</small></li>
+<li id="symbol-languageerrordetails"><code>LanguageErrorDetails</code> <small>struct</small></li>
+<li id="symbol-parseerrordetails"><code>ParseErrorDetails</code> <small>struct</small></li>
+<li id="symbol-queryerrordetails"><code>QueryErrorDetails</code> <small>struct</small></li>
+<li id="symbol-treeerrordetails"><code>TreeErrorDetails</code> <small>struct</small></li>
+<li id="symbol-invalidinputdetails"><code>InvalidInputDetails</code> <small>struct</small></li>
+<li id="symbol-queryerrortype"><code>QueryErrorType</code> <small>enum</small></li>
+<li id="symbol-error"><code>Error</code> <small>enum</small></li>
+<li id="symbol-error"><code>Error</code> <small>impl</small></li>
+<li id="symbol-error"><code>Error</code> <small>impl</small></li>
+<li id="symbol-error"><code>Error</code> <small>impl</small></li>
+<li id="symbol-error_str"><code>error_str</code> <small>variable</small></li>
+<li id="symbol-error_type"><code>error_type</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-io_err"><code>io_err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+<li id="symbol-err"><code>err</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

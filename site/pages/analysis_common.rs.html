@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>analysis_common.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>analysis_common.rs</h1></header>
+<main>
+<section class="article">
+<p>58 symbols, 329 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["analyze_file_content"])
+  F0 --> F1
+  F1(["parse_file_content"])
+  F1 --> F2
+  F2(["string_to_language"])
+  F2 --> F3
+  F3(["filter_symbols_by_type"])
+  F3 --> F4
+  F4(["get_function_symbols"])
+  F4 --> F5
+  F5(["is_large_file"])
+  F5 --> F6
+  F6(["calculate_function_complexity"])
+  F6 --> F7
+  F7(["count_control_flow_statements"])
+  F7 --> F8
+  F8(["count_nesting_depth"])
+  F8 --> F9
+  F9(["get_language_specific_complexity"])
+  F9 --> F10
+  F10(["calculate_function_similarity"])
+  F10 --> F11
+  F11(["calculate_name_similarity"])
+  F11 --> F12
+  F12(["calculate_length_similarity"])
+  F12 --> F13
+  F13(["longest_common_prefix"])
+  F13 --> F14
+  F14(["longest_common_suffix"])
+  F14 --> F15
+  F15(["detect_string_concatenation_in_loops"])
+  F15 --> F16
+  F16(["count_nested_loops"])
+  F16 --> F17
+  F17(["limit_results_by_category"])
+  F17 --> F18
+  F18(["sort_by_confidence"])
+  F18 --> F19
+  F19(["FileAnalyzer"])
+  F19 --> F20
+  F20(["ComplexityAnalyzer"])
+  F20 --> F21
+  F21(["PatternAnalyzer"])
+  F21 --> F22
+  F22(["ResultAggregator"])
+  F22 --> F23
+  F23(["FileAnalyzer"])
+  F23 --> F24
+  F24(["ComplexityAnalyzer"])
+  F24 --> F25
+  F25(["PatternAnalyzer"])
+  F25 --> F26
+  F26(["ResultAggregator"])
+  F26 --> F27
+  F27(["lang"])
+  F27 --> F28
+  F28(["parser"])
+  F28 --> F29
+  F29(["complexity"])
+  F29 --> F30
+  F30(["control_keywords"])
+  F30 --> F31
+  F31(["count"])
+  F31 --> F32
+  F32(["max_depth"])
+  F32 --> F33
+  F33(["current_depth"])
+  F33 --> F34
+  F34(["complexity"])
+  F34 --> F35
+  F35(["complexity"])
+  F35 --> F36
+  F36(["complexity"])
+  F36 --> F37
+  F37(["name_similarity"])
+  F37 --> F38
+  F38(["length_similarity"])
+  F38 --> F39
+  F39(["common_prefix"])
+  F39 --> F40
+  F40(["common_suffix"])
+  F40 --> F41
+  F41(["total_common"])
+  F41 --> F42
+  F42(["max_length"])
+  F42 --> F43
+  F43(["len1"])
+  F43 --> F44
+  F44(["len2"])
+  F44 --> F45
+  F45(["min_len"])
+  F45 --> F46
+  F46(["max_len"])
+  F46 --> F47
+  F47(["lines"])
+  F47 --> F48
+  F48(["in_loop"])
+  F48 --> F49
+  F49(["trimmed"])
+  F49 --> F50
+  F50(["loop_keywords"])
+  F50 --> F51
+  F51(["max_depth"])
+  F51 --> F52
+  F52(["current_depth"])
+  F52 --> F53
+  F53(["lines"])
+  F53 --> F54
+  F54(["trimmed"])
+  F54 --> F55
+  F55(["category_counts"])
+  F55 --> F56
+  F56(["category"])
+  F56 --> F57
+  F57(["count"])
+  F57 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant analyze_file_content
+  participant parse_file_content
+  participant string_to_language
+  participant filter_symbols_by_type
+  participant get_function_symbols
+  participant is_large_file
+  participant calculate_function_complexity
+  participant count_control_flow_statements
+  participant count_nesting_depth
+  participant get_language_specific_complexity
+  participant calculate_function_similarity
+  participant calculate_name_similarity
+  participant calculate_length_similarity
+  participant longest_common_prefix
+  participant longest_common_suffix
+  participant detect_string_concatenation_in_loops
+  participant count_nested_loops
+  participant limit_results_by_category
+  participant sort_by_confidence
+  analyze_file_content->>parse_file_content: call
+  parse_file_content->>string_to_language: call
+  string_to_language->>filter_symbols_by_type: call
+  filter_symbols_by_type->>get_function_symbols: call
+  get_function_symbols->>is_large_file: call
+  is_large_file->>calculate_function_complexity: call
+  calculate_function_complexity->>count_control_flow_statements: call
+  count_control_flow_statements->>count_nesting_depth: call
+  count_nesting_depth->>get_language_specific_complexity: call
+  get_language_specific_complexity->>calculate_function_similarity: call
+  calculate_function_similarity->>calculate_name_similarity: call
+  calculate_name_similarity->>calculate_length_similarity: call
+  calculate_length_similarity->>longest_common_prefix: call
+  longest_common_prefix->>longest_common_suffix: call
+  longest_common_suffix->>detect_string_concatenation_in_loops: call
+  detect_string_concatenation_in_loops->>count_nested_loops: call
+  count_nested_loops->>limit_results_by_category: call
+  limit_results_by_category->>sort_by_confidence: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-analyze_file_content"><code>analyze_file_content</code> <small>function</small></li>
+<li id="symbol-parse_file_content"><code>parse_file_content</code> <small>function</small></li>
+<li id="symbol-string_to_language"><code>string_to_language</code> <small>function</small></li>
+<li id="symbol-filter_symbols_by_type"><code>filter_symbols_by_type</code> <small>function</small></li>
+<li id="symbol-get_function_symbols"><code>get_function_symbols</code> <small>function</small></li>
+<li id="symbol-is_large_file"><code>is_large_file</code> <small>function</small></li>
+<li id="symbol-calculate_function_complexity"><code>calculate_function_complexity</code> <small>function</small></li>
+<li id="symbol-count_control_flow_statements"><code>count_control_flow_statements</code> <small>function</small></li>
+<li id="symbol-count_nesting_depth"><code>count_nesting_depth</code> <small>function</small></li>
+<li id="symbol-get_language_specific_complexity"><code>get_language_specific_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_function_similarity"><code>calculate_function_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_name_similarity"><code>calculate_name_similarity</code> <small>function</small></li>
+<li id="symbol-calculate_length_similarity"><code>calculate_length_similarity</code> <small>function</small></li>
+<li id="symbol-longest_common_prefix"><code>longest_common_prefix</code> <small>function</small></li>
+<li id="symbol-longest_common_suffix"><code>longest_common_suffix</code> <small>function</small></li>
+<li id="symbol-detect_string_concatenation_in_loops"><code>detect_string_concatenation_in_loops</code> <small>function</small></li>
+<li id="symbol-count_nested_loops"><code>count_nested_loops</code> <small>function</small></li>
+<li id="symbol-limit_results_by_category"><code>limit_results_by_category</code> <small>function</small></li>
+<li id="symbol-sort_by_confidence"><code>sort_by_confidence</code> <small>function</small></li>
+<li id="symbol-fileanalyzer"><code>FileAnalyzer</code> <small>struct</small></li>
+<li id="symbol-complexityanalyzer"><code>ComplexityAnalyzer</code> <small>struct</small></li>
+<li id="symbol-patternanalyzer"><code>PatternAnalyzer</code> <small>struct</small></li>
+<li id="symbol-resultaggregator"><code>ResultAggregator</code> <small>struct</small></li>
+<li id="symbol-fileanalyzer"><code>FileAnalyzer</code> <small>impl</small></li>
+<li id="symbol-complexityanalyzer"><code>ComplexityAnalyzer</code> <small>impl</small></li>
+<li id="symbol-patternanalyzer"><code>PatternAnalyzer</code> <small>impl</small></li>
+<li id="symbol-resultaggregator"><code>ResultAggregator</code> <small>impl</small></li>
+<li id="symbol-lang"><code>lang</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-control_keywords"><code>control_keywords</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+<li id="symbol-max_depth"><code>max_depth</code> <small>variable</small></li>
+<li id="symbol-current_depth"><code>current_depth</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-name_similarity"><code>name_similarity</code> <small>variable</small></li>
+<li id="symbol-length_similarity"><code>length_similarity</code> <small>variable</small></li>
+<li id="symbol-common_prefix"><code>common_prefix</code> <small>variable</small></li>
+<li id="symbol-common_suffix"><code>common_suffix</code> <small>variable</small></li>
+<li id="symbol-total_common"><code>total_common</code> <small>variable</small></li>
+<li id="symbol-max_length"><code>max_length</code> <small>variable</small></li>
+<li id="symbol-len1"><code>len1</code> <small>variable</small></li>
+<li id="symbol-len2"><code>len2</code> <small>variable</small></li>
+<li id="symbol-min_len"><code>min_len</code> <small>variable</small></li>
+<li id="symbol-max_len"><code>max_len</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-in_loop"><code>in_loop</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-loop_keywords"><code>loop_keywords</code> <small>variable</small></li>
+<li id="symbol-max_depth"><code>max_depth</code> <small>variable</small></li>
+<li id="symbol-current_depth"><code>current_depth</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-category_counts"><code>category_counts</code> <small>variable</small></li>
+<li id="symbol-category"><code>category</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

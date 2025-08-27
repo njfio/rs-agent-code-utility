@@ -1,0 +1,688 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dependency_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>dependency_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>193 symbols, 1667 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["fmt"])
+  F0 --> F1
+  F1(["clone"])
+  F1 --> F2
+  F2(["default"])
+  F2 --> F3
+  F3(["enrich"])
+  F3 --> F4
+  F4(["new"])
+  F4 --> F5
+  F5(["with_config"])
+  F5 --> F6
+  F6(["with_provider"])
+  F6 --> F7
+  F7(["create_dependency"])
+  F7 --> F8
+  F8(["analyze"])
+  F8 --> F9
+  F9(["detect_package_managers"])
+  F9 --> F10
+  F10(["extract_dependencies"])
+  F10 --> F11
+  F11(["extract_cargo_dependencies"])
+  F11 --> F12
+  F12(["parse_cargo_dependency_spec"])
+  F12 --> F13
+  F13(["extract_npm_dependencies"])
+  F13 --> F14
+  F14(["extract_source_imports"])
+  F14 --> F15
+  F15(["scan_rust_imports"])
+  F15 --> F16
+  F16(["scan_js_imports"])
+  F16 --> F17
+  F17(["normalize_js_pkg"])
+  F17 --> F18
+  F18(["scan_python_imports"])
+  F18 --> F19
+  F19(["extract_python_dependencies"])
+  F19 --> F20
+  F20(["parse_pip_requirement"])
+  F20 --> F21
+  F21(["extract_go_dependencies"])
+  F21 --> F22
+  F22(["parse_go_require_line"])
+  F22 --> F23
+  F23(["analyze_vulnerabilities"])
+  F23 --> F24
+  F24(["analyze_licenses"])
+  F24 --> F25
+  F25(["is_copyleft_license"])
+  F25 --> F26
+  F26(["detect_outdated_dependencies"])
+  F26 --> F27
+  F27(["is_major_version_difference"])
+  F27 --> F28
+  F28(["analyze_dependency_graph"])
+  F28 --> F29
+  F29(["generate_security_recommendations"])
+  F29 --> F30
+  F30(["parse_poetry_dependencies"])
+  F30 --> F31
+  F31(["parse_pipfile_dependencies"])
+  F31 --> F32
+  F32(["default"])
+  F32 --> F33
+  F33(["default"])
+  F33 --> F34
+  F34(["fmt"])
+  F34 --> F35
+  F35(["fmt"])
+  F35 --> F36
+  F36(["fmt"])
+  F36 --> F37
+  F37(["fmt"])
+  F37 --> F38
+  F38(["fmt"])
+  F38 --> F39
+  F39(["DependencyAnalyzer"])
+  F39 --> F40
+  F40(["DependencyConfig"])
+  F40 --> F41
+  F41(["DependencyAnalysisResult"])
+  F41 --> F42
+  F42(["Dependency"])
+  F42 --> F43
+  F43(["PackageManagerInfo"])
+  F43 --> F44
+  F44(["DependencyVulnerability"])
+  F44 --> F45
+  F45(["LicenseAnalysis"])
+  F45 --> F46
+  F46(["LicenseIssue"])
+  F46 --> F47
+  F47(["OutdatedDependency"])
+  F47 --> F48
+  F48(["DependencyGraphAnalysis"])
+  F48 --> F49
+  F49(["CircularDependency"])
+  F49 --> F50
+  F50(["PopularDependency"])
+  F50 --> F51
+  F51(["DependencyCluster"])
+  F51 --> F52
+  F52(["GraphMetrics"])
+  F52 --> F53
+  F53(["SecurityRecommendation"])
+  F53 --> F54
+  F54(["NoopVulnProvider"])
+  F54 --> F55
+  F55(["PackageManager"])
+  F55 --> F56
+  F56(["DependencyType"])
+  F56 --> F57
+  F57(["VulnerabilitySeverity"])
+  F57 --> F58
+  F58(["LicenseIssueType"])
+  F58 --> F59
+  F59(["ComplianceStatus"])
+  F59 --> F60
+  F60(["UpdateUrgency"])
+  F60 --> F61
+  F61(["CircularDependencyImpact"])
+  F61 --> F62
+  F62(["RecommendationPriority"])
+  F62 --> F63
+  F63(["ImplementationDifficulty"])
+  F63 --> F64
+  F64(["DependencyAnalyzer"])
+  F64 --> F65
+  F65(["DependencyAnalyzer"])
+  F65 --> F66
+  F66(["DependencyConfig"])
+  F66 --> F67
+  F67(["NoopVulnProvider"])
+  F67 --> F68
+  F68(["DependencyAnalyzer"])
+  F68 --> F69
+  F69(["LicenseAnalysis"])
+  F69 --> F70
+  F70(["DependencyGraphAnalysis"])
+  F70 --> F71
+  F71(["PackageManager"])
+  F71 --> F72
+  F72(["VulnerabilitySeverity"])
+  F72 --> F73
+  F73(["LicenseIssueType"])
+  F73 --> F74
+  F74(["UpdateUrgency"])
+  F74 --> F75
+  F75(["RecommendationPriority"])
+  F75 --> F76
+  F76(["root_path"])
+  F76 --> F77
+  F77(["package_managers"])
+  F77 --> F78
+  F78(["all_dependencies"])
+  F78 --> F79
+  F79(["dependencies_by_manager"])
+  F79 --> F80
+  F80(["deps"])
+  F80 --> F81
+  F81(["count"])
+  F81 --> F82
+  F82(["inferred"])
+  F82 --> F83
+  F83(["vulnerabilities"])
+  F83 --> F84
+  F84(["license_analysis"])
+  F84 --> F85
+  F85(["outdated_dependencies"])
+  F85 --> F86
+  F86(["graph_analysis"])
+  F86 --> F87
+  F87(["security_recommendations"])
+  F87 --> F88
+  F88(["direct_deps"])
+  F88 --> F89
+  F89(["transitive_deps"])
+  F89 --> F90
+  F90(["package_managers"])
+  F90 --> F91
+  F91(["cargo_toml"])
+  F91 --> F92
+  F92(["lock_file"])
+  F92 --> F93
+  F93(["package_json"])
+  F93 --> F94
+  F94(["lock_file"])
+  F94 --> F95
+  F95(["yarn_lock"])
+  F95 --> F96
+  F96(["manager"])
+  F96 --> F97
+  F97(["requirements_txt"])
+  F97 --> F98
+  F98(["pyproject_toml"])
+  F98 --> F99
+  F99(["pipfile"])
+  F99 --> F100
+  F100(["go_mod"])
+  F100 --> F101
+  F101(["content"])
+  F101 --> F102
+  F102(["dependencies"])
+  F102 --> F103
+  F103(["toml_value"])
+  F103 --> F104
+  F104(["version"])
+  F104 --> F105
+  F105(["version"])
+  F105 --> F106
+  F106(["version"])
+  F106 --> F107
+  F107(["version"])
+  F107 --> F108
+  F108(["dependency_type"])
+  F108 --> F109
+  F109(["content"])
+  F109 --> F110
+  F110(["dependencies"])
+  F110 --> F111
+  F111(["package_json"])
+  F111 --> F112
+  F112(["version_str"])
+  F112 --> F113
+  F113(["version_str"])
+  F113 --> F114
+  F114(["version_str"])
+  F114 --> F115
+  F115(["version_str"])
+  F115 --> F116
+  F116(["deps"])
+  F116 --> F117
+  F117(["seen"])
+  F117 --> F118
+  F118(["full"])
+  F118 --> F119
+  F119(["Ok"])
+  F119 --> F120
+  F120(["key"])
+  F120 --> F121
+  F121(["key"])
+  F121 --> F122
+  F122(["key"])
+  F122 --> F123
+  F123(["names"])
+  F123 --> F124
+  F124(["l"])
+  F124 --> F125
+  F125(["after"])
+  F125 --> F126
+  F126(["first"])
+  F126 --> F127
+  F127(["after"])
+  F127 --> F128
+  F128(["name"])
+  F128 --> F129
+  F129(["names"])
+  F129 --> F130
+  F130(["l"])
+  F130 --> F131
+  F131(["spec"])
+  F131 --> F132
+  F132(["spec"])
+  F132 --> F133
+  F133(["spec"])
+  F133 --> F134
+  F134(["s"])
+  F134 --> F135
+  F135(["spec"])
+  F135 --> F136
+  F136(["s"])
+  F136 --> F137
+  F137(["rest"])
+  F137 --> F138
+  F138(["inside"])
+  F138 --> F139
+  F139(["inside"])
+  F139 --> F140
+  F140(["rest"])
+  F140 --> F141
+  F141(["inside"])
+  F141 --> F142
+  F142(["inside"])
+  F142 --> F143
+  F143(["spec"])
+  F143 --> F144
+  F144(["spec"])
+  F144 --> F145
+  F145(["iter"])
+  F145 --> F146
+  F146(["scope"])
+  F146 --> F147
+  F147(["pkg"])
+  F147 --> F148
+  F148(["names"])
+  F148 --> F149
+  F149(["l"])
+  F149 --> F150
+  F150(["after"])
+  F150 --> F151
+  F151(["first"])
+  F151 --> F152
+  F152(["after"])
+  F152 --> F153
+  F153(["module"])
+  F153 --> F154
+  F154(["content"])
+  F154 --> F155
+  F155(["dependencies"])
+  F155 --> F156
+  F156(["line"])
+  F156 --> F157
+  F157(["name"])
+  F157 --> F158
+  F158(["version"])
+  F158 --> F159
+  F159(["name"])
+  F159 --> F160
+  F160(["version"])
+  F160 --> F161
+  F161(["content"])
+  F161 --> F162
+  F162(["dependencies"])
+  F162 --> F163
+  F163(["in_require"])
+  F163 --> F164
+  F164(["line"])
+  F164 --> F165
+  F165(["parts"])
+  F165 --> F166
+  F166(["vulnerabilities"])
+  F166 --> F167
+  F167(["license_distribution"])
+  F167 --> F168
+  F168(["compliance_issues"])
+  F168 --> F169
+  F169(["unknown_licenses"])
+  F169 --> F170
+  F170(["compatible_licenses"])
+  F170 --> F171
+  F171(["incompatible_licenses"])
+  F171 --> F172
+  F172(["compliance_status"])
+  F172 --> F173
+  F173(["outdated"])
+  F173 --> F174
+  F174(["urgency"])
+  F174 --> F175
+  F175(["current_major"])
+  F175 --> F176
+  F176(["latest_major"])
+  F176 --> F177
+  F177(["total_nodes"])
+  F177 --> F178
+  F178(["total_edges"])
+  F178 --> F179
+  F179(["circular_dependencies"])
+  F179 --> F180
+  F180(["dependency_counts"])
+  F180 --> F181
+  F181(["popular_dependencies"])
+  F181 --> F182
+  F182(["clusters"])
+  F182 --> F183
+  F183(["metrics"])
+  F183 --> F184
+  F184(["recommendations"])
+  F184 --> F185
+  F185(["critical_updates"])
+  F185 --> F186
+  F186(["toml_value"])
+  F186 --> F187
+  F187(["version"])
+  F187 --> F188
+  F188(["dependency_type"])
+  F188 --> F189
+  F189(["version"])
+  F189 --> F190
+  F190(["toml_value"])
+  F190 --> F191
+  F191(["version"])
+  F191 --> F192
+  F192(["version"])
+  F192 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant fmt
+  participant clone
+  participant default
+  participant enrich
+  participant new
+  participant with_config
+  participant with_provider
+  participant create_dependency
+  participant analyze
+  participant detect_package_managers
+  participant extract_dependencies
+  participant extract_cargo_dependencies
+  participant parse_cargo_dependency_spec
+  participant extract_npm_dependencies
+  participant extract_source_imports
+  participant scan_rust_imports
+  participant scan_js_imports
+  participant normalize_js_pkg
+  participant scan_python_imports
+  participant extract_python_dependencies
+  participant parse_pip_requirement
+  participant extract_go_dependencies
+  participant parse_go_require_line
+  participant analyze_vulnerabilities
+  participant analyze_licenses
+  participant is_copyleft_license
+  participant detect_outdated_dependencies
+  participant is_major_version_difference
+  participant analyze_dependency_graph
+  participant generate_security_recommendations
+  participant parse_poetry_dependencies
+  participant parse_pipfile_dependencies
+  participant default
+  participant default
+  participant fmt
+  participant fmt
+  participant fmt
+  participant fmt
+  participant fmt
+  fmt->>clone: call
+  clone->>default: call
+  default->>enrich: call
+  enrich->>new: call
+  new->>with_config: call
+  with_config->>with_provider: call
+  with_provider->>create_dependency: call
+  create_dependency->>analyze: call
+  analyze->>detect_package_managers: call
+  detect_package_managers->>extract_dependencies: call
+  extract_dependencies->>extract_cargo_dependencies: call
+  extract_cargo_dependencies->>parse_cargo_dependency_spec: call
+  parse_cargo_dependency_spec->>extract_npm_dependencies: call
+  extract_npm_dependencies->>extract_source_imports: call
+  extract_source_imports->>scan_rust_imports: call
+  scan_rust_imports->>scan_js_imports: call
+  scan_js_imports->>normalize_js_pkg: call
+  normalize_js_pkg->>scan_python_imports: call
+  scan_python_imports->>extract_python_dependencies: call
+  extract_python_dependencies->>parse_pip_requirement: call
+  parse_pip_requirement->>extract_go_dependencies: call
+  extract_go_dependencies->>parse_go_require_line: call
+  parse_go_require_line->>analyze_vulnerabilities: call
+  analyze_vulnerabilities->>analyze_licenses: call
+  analyze_licenses->>is_copyleft_license: call
+  is_copyleft_license->>detect_outdated_dependencies: call
+  detect_outdated_dependencies->>is_major_version_difference: call
+  is_major_version_difference->>analyze_dependency_graph: call
+  analyze_dependency_graph->>generate_security_recommendations: call
+  generate_security_recommendations->>parse_poetry_dependencies: call
+  parse_poetry_dependencies->>parse_pipfile_dependencies: call
+  parse_pipfile_dependencies->>default: call
+  default->>default: call
+  default->>fmt: call
+  fmt->>fmt: call
+  fmt->>fmt: call
+  fmt->>fmt: call
+  fmt->>fmt: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-clone"><code>clone</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-enrich"><code>enrich</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-with_provider"><code>with_provider</code> <small>function</small></li>
+<li id="symbol-create_dependency"><code>create_dependency</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-detect_package_managers"><code>detect_package_managers</code> <small>function</small></li>
+<li id="symbol-extract_dependencies"><code>extract_dependencies</code> <small>function</small></li>
+<li id="symbol-extract_cargo_dependencies"><code>extract_cargo_dependencies</code> <small>function</small></li>
+<li id="symbol-parse_cargo_dependency_spec"><code>parse_cargo_dependency_spec</code> <small>function</small></li>
+<li id="symbol-extract_npm_dependencies"><code>extract_npm_dependencies</code> <small>function</small></li>
+<li id="symbol-extract_source_imports"><code>extract_source_imports</code> <small>function</small></li>
+<li id="symbol-scan_rust_imports"><code>scan_rust_imports</code> <small>function</small></li>
+<li id="symbol-scan_js_imports"><code>scan_js_imports</code> <small>function</small></li>
+<li id="symbol-normalize_js_pkg"><code>normalize_js_pkg</code> <small>function</small></li>
+<li id="symbol-scan_python_imports"><code>scan_python_imports</code> <small>function</small></li>
+<li id="symbol-extract_python_dependencies"><code>extract_python_dependencies</code> <small>function</small></li>
+<li id="symbol-parse_pip_requirement"><code>parse_pip_requirement</code> <small>function</small></li>
+<li id="symbol-extract_go_dependencies"><code>extract_go_dependencies</code> <small>function</small></li>
+<li id="symbol-parse_go_require_line"><code>parse_go_require_line</code> <small>function</small></li>
+<li id="symbol-analyze_vulnerabilities"><code>analyze_vulnerabilities</code> <small>function</small></li>
+<li id="symbol-analyze_licenses"><code>analyze_licenses</code> <small>function</small></li>
+<li id="symbol-is_copyleft_license"><code>is_copyleft_license</code> <small>function</small></li>
+<li id="symbol-detect_outdated_dependencies"><code>detect_outdated_dependencies</code> <small>function</small></li>
+<li id="symbol-is_major_version_difference"><code>is_major_version_difference</code> <small>function</small></li>
+<li id="symbol-analyze_dependency_graph"><code>analyze_dependency_graph</code> <small>function</small></li>
+<li id="symbol-generate_security_recommendations"><code>generate_security_recommendations</code> <small>function</small></li>
+<li id="symbol-parse_poetry_dependencies"><code>parse_poetry_dependencies</code> <small>function</small></li>
+<li id="symbol-parse_pipfile_dependencies"><code>parse_pipfile_dependencies</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-dependencyanalyzer"><code>DependencyAnalyzer</code> <small>struct</small></li>
+<li id="symbol-dependencyconfig"><code>DependencyConfig</code> <small>struct</small></li>
+<li id="symbol-dependencyanalysisresult"><code>DependencyAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-dependency"><code>Dependency</code> <small>struct</small></li>
+<li id="symbol-packagemanagerinfo"><code>PackageManagerInfo</code> <small>struct</small></li>
+<li id="symbol-dependencyvulnerability"><code>DependencyVulnerability</code> <small>struct</small></li>
+<li id="symbol-licenseanalysis"><code>LicenseAnalysis</code> <small>struct</small></li>
+<li id="symbol-licenseissue"><code>LicenseIssue</code> <small>struct</small></li>
+<li id="symbol-outdateddependency"><code>OutdatedDependency</code> <small>struct</small></li>
+<li id="symbol-dependencygraphanalysis"><code>DependencyGraphAnalysis</code> <small>struct</small></li>
+<li id="symbol-circulardependency"><code>CircularDependency</code> <small>struct</small></li>
+<li id="symbol-populardependency"><code>PopularDependency</code> <small>struct</small></li>
+<li id="symbol-dependencycluster"><code>DependencyCluster</code> <small>struct</small></li>
+<li id="symbol-graphmetrics"><code>GraphMetrics</code> <small>struct</small></li>
+<li id="symbol-securityrecommendation"><code>SecurityRecommendation</code> <small>struct</small></li>
+<li id="symbol-noopvulnprovider"><code>NoopVulnProvider</code> <small>struct</small></li>
+<li id="symbol-packagemanager"><code>PackageManager</code> <small>enum</small></li>
+<li id="symbol-dependencytype"><code>DependencyType</code> <small>enum</small></li>
+<li id="symbol-vulnerabilityseverity"><code>VulnerabilitySeverity</code> <small>enum</small></li>
+<li id="symbol-licenseissuetype"><code>LicenseIssueType</code> <small>enum</small></li>
+<li id="symbol-compliancestatus"><code>ComplianceStatus</code> <small>enum</small></li>
+<li id="symbol-updateurgency"><code>UpdateUrgency</code> <small>enum</small></li>
+<li id="symbol-circulardependencyimpact"><code>CircularDependencyImpact</code> <small>enum</small></li>
+<li id="symbol-recommendationpriority"><code>RecommendationPriority</code> <small>enum</small></li>
+<li id="symbol-implementationdifficulty"><code>ImplementationDifficulty</code> <small>enum</small></li>
+<li id="symbol-dependencyanalyzer"><code>DependencyAnalyzer</code> <small>impl</small></li>
+<li id="symbol-dependencyanalyzer"><code>DependencyAnalyzer</code> <small>impl</small></li>
+<li id="symbol-dependencyconfig"><code>DependencyConfig</code> <small>impl</small></li>
+<li id="symbol-noopvulnprovider"><code>NoopVulnProvider</code> <small>impl</small></li>
+<li id="symbol-dependencyanalyzer"><code>DependencyAnalyzer</code> <small>impl</small></li>
+<li id="symbol-licenseanalysis"><code>LicenseAnalysis</code> <small>impl</small></li>
+<li id="symbol-dependencygraphanalysis"><code>DependencyGraphAnalysis</code> <small>impl</small></li>
+<li id="symbol-packagemanager"><code>PackageManager</code> <small>impl</small></li>
+<li id="symbol-vulnerabilityseverity"><code>VulnerabilitySeverity</code> <small>impl</small></li>
+<li id="symbol-licenseissuetype"><code>LicenseIssueType</code> <small>impl</small></li>
+<li id="symbol-updateurgency"><code>UpdateUrgency</code> <small>impl</small></li>
+<li id="symbol-recommendationpriority"><code>RecommendationPriority</code> <small>impl</small></li>
+<li id="symbol-root_path"><code>root_path</code> <small>variable</small></li>
+<li id="symbol-package_managers"><code>package_managers</code> <small>variable</small></li>
+<li id="symbol-all_dependencies"><code>all_dependencies</code> <small>variable</small></li>
+<li id="symbol-dependencies_by_manager"><code>dependencies_by_manager</code> <small>variable</small></li>
+<li id="symbol-deps"><code>deps</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+<li id="symbol-inferred"><code>inferred</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-license_analysis"><code>license_analysis</code> <small>variable</small></li>
+<li id="symbol-outdated_dependencies"><code>outdated_dependencies</code> <small>variable</small></li>
+<li id="symbol-graph_analysis"><code>graph_analysis</code> <small>variable</small></li>
+<li id="symbol-security_recommendations"><code>security_recommendations</code> <small>variable</small></li>
+<li id="symbol-direct_deps"><code>direct_deps</code> <small>variable</small></li>
+<li id="symbol-transitive_deps"><code>transitive_deps</code> <small>variable</small></li>
+<li id="symbol-package_managers"><code>package_managers</code> <small>variable</small></li>
+<li id="symbol-cargo_toml"><code>cargo_toml</code> <small>variable</small></li>
+<li id="symbol-lock_file"><code>lock_file</code> <small>variable</small></li>
+<li id="symbol-package_json"><code>package_json</code> <small>variable</small></li>
+<li id="symbol-lock_file"><code>lock_file</code> <small>variable</small></li>
+<li id="symbol-yarn_lock"><code>yarn_lock</code> <small>variable</small></li>
+<li id="symbol-manager"><code>manager</code> <small>variable</small></li>
+<li id="symbol-requirements_txt"><code>requirements_txt</code> <small>variable</small></li>
+<li id="symbol-pyproject_toml"><code>pyproject_toml</code> <small>variable</small></li>
+<li id="symbol-pipfile"><code>pipfile</code> <small>variable</small></li>
+<li id="symbol-go_mod"><code>go_mod</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-dependencies"><code>dependencies</code> <small>variable</small></li>
+<li id="symbol-toml_value"><code>toml_value</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-dependency_type"><code>dependency_type</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-dependencies"><code>dependencies</code> <small>variable</small></li>
+<li id="symbol-package_json"><code>package_json</code> <small>variable</small></li>
+<li id="symbol-version_str"><code>version_str</code> <small>variable</small></li>
+<li id="symbol-version_str"><code>version_str</code> <small>variable</small></li>
+<li id="symbol-version_str"><code>version_str</code> <small>variable</small></li>
+<li id="symbol-version_str"><code>version_str</code> <small>variable</small></li>
+<li id="symbol-deps"><code>deps</code> <small>variable</small></li>
+<li id="symbol-seen"><code>seen</code> <small>variable</small></li>
+<li id="symbol-full"><code>full</code> <small>variable</small></li>
+<li id="symbol-ok"><code>Ok</code> <small>variable</small></li>
+<li id="symbol-key"><code>key</code> <small>variable</small></li>
+<li id="symbol-key"><code>key</code> <small>variable</small></li>
+<li id="symbol-key"><code>key</code> <small>variable</small></li>
+<li id="symbol-names"><code>names</code> <small>variable</small></li>
+<li id="symbol-l"><code>l</code> <small>variable</small></li>
+<li id="symbol-after"><code>after</code> <small>variable</small></li>
+<li id="symbol-first"><code>first</code> <small>variable</small></li>
+<li id="symbol-after"><code>after</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-names"><code>names</code> <small>variable</small></li>
+<li id="symbol-l"><code>l</code> <small>variable</small></li>
+<li id="symbol-spec"><code>spec</code> <small>variable</small></li>
+<li id="symbol-spec"><code>spec</code> <small>variable</small></li>
+<li id="symbol-spec"><code>spec</code> <small>variable</small></li>
+<li id="symbol-s"><code>s</code> <small>variable</small></li>
+<li id="symbol-spec"><code>spec</code> <small>variable</small></li>
+<li id="symbol-s"><code>s</code> <small>variable</small></li>
+<li id="symbol-rest"><code>rest</code> <small>variable</small></li>
+<li id="symbol-inside"><code>inside</code> <small>variable</small></li>
+<li id="symbol-inside"><code>inside</code> <small>variable</small></li>
+<li id="symbol-rest"><code>rest</code> <small>variable</small></li>
+<li id="symbol-inside"><code>inside</code> <small>variable</small></li>
+<li id="symbol-inside"><code>inside</code> <small>variable</small></li>
+<li id="symbol-spec"><code>spec</code> <small>variable</small></li>
+<li id="symbol-spec"><code>spec</code> <small>variable</small></li>
+<li id="symbol-iter"><code>iter</code> <small>variable</small></li>
+<li id="symbol-scope"><code>scope</code> <small>variable</small></li>
+<li id="symbol-pkg"><code>pkg</code> <small>variable</small></li>
+<li id="symbol-names"><code>names</code> <small>variable</small></li>
+<li id="symbol-l"><code>l</code> <small>variable</small></li>
+<li id="symbol-after"><code>after</code> <small>variable</small></li>
+<li id="symbol-first"><code>first</code> <small>variable</small></li>
+<li id="symbol-after"><code>after</code> <small>variable</small></li>
+<li id="symbol-module"><code>module</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-dependencies"><code>dependencies</code> <small>variable</small></li>
+<li id="symbol-line"><code>line</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-dependencies"><code>dependencies</code> <small>variable</small></li>
+<li id="symbol-in_require"><code>in_require</code> <small>variable</small></li>
+<li id="symbol-line"><code>line</code> <small>variable</small></li>
+<li id="symbol-parts"><code>parts</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-license_distribution"><code>license_distribution</code> <small>variable</small></li>
+<li id="symbol-compliance_issues"><code>compliance_issues</code> <small>variable</small></li>
+<li id="symbol-unknown_licenses"><code>unknown_licenses</code> <small>variable</small></li>
+<li id="symbol-compatible_licenses"><code>compatible_licenses</code> <small>variable</small></li>
+<li id="symbol-incompatible_licenses"><code>incompatible_licenses</code> <small>variable</small></li>
+<li id="symbol-compliance_status"><code>compliance_status</code> <small>variable</small></li>
+<li id="symbol-outdated"><code>outdated</code> <small>variable</small></li>
+<li id="symbol-urgency"><code>urgency</code> <small>variable</small></li>
+<li id="symbol-current_major"><code>current_major</code> <small>variable</small></li>
+<li id="symbol-latest_major"><code>latest_major</code> <small>variable</small></li>
+<li id="symbol-total_nodes"><code>total_nodes</code> <small>variable</small></li>
+<li id="symbol-total_edges"><code>total_edges</code> <small>variable</small></li>
+<li id="symbol-circular_dependencies"><code>circular_dependencies</code> <small>variable</small></li>
+<li id="symbol-dependency_counts"><code>dependency_counts</code> <small>variable</small></li>
+<li id="symbol-popular_dependencies"><code>popular_dependencies</code> <small>variable</small></li>
+<li id="symbol-clusters"><code>clusters</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-critical_updates"><code>critical_updates</code> <small>variable</small></li>
+<li id="symbol-toml_value"><code>toml_value</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-dependency_type"><code>dependency_type</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-toml_value"><code>toml_value</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+<li id="symbol-version"><code>version</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>control_flow.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>control_flow.rs</h1></header>
+<main>
+<section class="article">
+<p>77 symbols, 534 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["build_cfg"])
+  F1 --> F2
+  F2(["find_functions"])
+  F2 --> F3
+  F3(["traverse_for_functions"])
+  F3 --> F4
+  F4(["build_cfg_for_function"])
+  F4 --> F5
+  F5(["find_function_body"])
+  F5 --> F6
+  F6(["build_cfg_for_node"])
+  F6 --> F7
+  F7(["traverse_and_build_cfg"])
+  F7 --> F8
+  F8(["is_conditional"])
+  F8 --> F9
+  F9(["is_loop"])
+  F9 --> F10
+  F10(["is_return"])
+  F10 --> F11
+  F11(["build_conditional_cfg"])
+  F11 --> F12
+  F12(["build_loop_cfg"])
+  F12 --> F13
+  F13(["build_return_cfg"])
+  F13 --> F14
+  F14(["build_sequential_cfg"])
+  F14 --> F15
+  F15(["is_control_flow_node"])
+  F15 --> F16
+  F16(["cyclomatic_complexity"])
+  F16 --> F17
+  F17(["decision_points"])
+  F17 --> F18
+  F18(["npath_complexity"])
+  F18 --> F19
+  F19(["test_cfg_construction_rust"])
+  F19 --> F20
+  F20(["test_cfg_cyclomatic_complexity"])
+  F20 --> F21
+  F21(["test_cfg_decision_points"])
+  F21 --> F22
+  F22(["ControlFlowGraph"])
+  F22 --> F23
+  F23(["CfgBuilder"])
+  F23 --> F24
+  F24(["CfgNodeType"])
+  F24 --> F25
+  F25(["CfgBuilder"])
+  F25 --> F26
+  F26(["ControlFlowGraph"])
+  F26 --> F27
+  F27(["graph"])
+  F27 --> F28
+  F28(["byte_to_node"])
+  F28 --> F29
+  F29(["entry"])
+  F29 --> F30
+  F30(["exit"])
+  F30 --> F31
+  F31(["functions"])
+  F31 --> F32
+  F32(["function_kinds"])
+  F32 --> F33
+  F33(["functions"])
+  F33 --> F34
+  F34(["cursor"])
+  F34 --> F35
+  F35(["node"])
+  F35 --> F36
+  F36(["body"])
+  F36 --> F37
+  F37(["body_kinds"])
+  F37 --> F38
+  F38(["cursor"])
+  F38 --> F39
+  F39(["node"])
+  F39 --> F40
+  F40(["cursor"])
+  F40 --> F41
+  F41(["current_entry"])
+  F41 --> F42
+  F42(["child"])
+  F42 --> F43
+  F43(["intermediate_exit"])
+  F43 --> F44
+  F44(["condition_text"])
+  F44 --> F45
+  F45(["branch_node"])
+  F45 --> F46
+  F46(["cursor"])
+  F46 --> F47
+  F47(["child"])
+  F47 --> F48
+  F48(["condition_text"])
+  F48 --> F49
+  F49(["loop_node"])
+  F49 --> F50
+  F50(["cursor"])
+  F50 --> F51
+  F51(["child"])
+  F51 --> F52
+  F52(["return_value"])
+  F52 --> F53
+  F53(["return_node"])
+  F53 --> F54
+  F54(["statement"])
+  F54 --> F55
+  F55(["basic_block"])
+  F55 --> F56
+  F56(["_edges"])
+  F56 --> F57
+  F57(["nodes"])
+  F57 --> F58
+  F58(["_components"])
+  F58 --> F59
+  F59(["decision_points"])
+  F59 --> F60
+  F60(["decision_points"])
+  F60 --> F61
+  F61(["parser"])
+  F61 --> F62
+  F62(["code"])
+  F62 --> F63
+  F63(["tree"])
+  F63 --> F64
+  F64(["builder"])
+  F64 --> F65
+  F65(["cfg"])
+  F65 --> F66
+  F66(["parser"])
+  F66 --> F67
+  F67(["code"])
+  F67 --> F68
+  F68(["tree"])
+  F68 --> F69
+  F69(["builder"])
+  F69 --> F70
+  F70(["cfg"])
+  F70 --> F71
+  F71(["parser"])
+  F71 --> F72
+  F72(["code"])
+  F72 --> F73
+  F73(["tree"])
+  F73 --> F74
+  F74(["builder"])
+  F74 --> F75
+  F75(["cfg"])
+  F75 --> F76
+  F76(["decision_points"])
+  F76 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant build_cfg
+  participant find_functions
+  participant traverse_for_functions
+  participant build_cfg_for_function
+  participant find_function_body
+  participant build_cfg_for_node
+  participant traverse_and_build_cfg
+  participant is_conditional
+  participant is_loop
+  participant is_return
+  participant build_conditional_cfg
+  participant build_loop_cfg
+  participant build_return_cfg
+  participant build_sequential_cfg
+  participant is_control_flow_node
+  participant cyclomatic_complexity
+  participant decision_points
+  participant npath_complexity
+  participant test_cfg_construction_rust
+  participant test_cfg_cyclomatic_complexity
+  participant test_cfg_decision_points
+  new->>build_cfg: call
+  build_cfg->>find_functions: call
+  find_functions->>traverse_for_functions: call
+  traverse_for_functions->>build_cfg_for_function: call
+  build_cfg_for_function->>find_function_body: call
+  find_function_body->>build_cfg_for_node: call
+  build_cfg_for_node->>traverse_and_build_cfg: call
+  traverse_and_build_cfg->>is_conditional: call
+  is_conditional->>is_loop: call
+  is_loop->>is_return: call
+  is_return->>build_conditional_cfg: call
+  build_conditional_cfg->>build_loop_cfg: call
+  build_loop_cfg->>build_return_cfg: call
+  build_return_cfg->>build_sequential_cfg: call
+  build_sequential_cfg->>is_control_flow_node: call
+  is_control_flow_node->>cyclomatic_complexity: call
+  cyclomatic_complexity->>decision_points: call
+  decision_points->>npath_complexity: call
+  npath_complexity->>test_cfg_construction_rust: call
+  test_cfg_construction_rust->>test_cfg_cyclomatic_complexity: call
+  test_cfg_cyclomatic_complexity->>test_cfg_decision_points: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-build_cfg"><code>build_cfg</code> <small>function</small></li>
+<li id="symbol-find_functions"><code>find_functions</code> <small>function</small></li>
+<li id="symbol-traverse_for_functions"><code>traverse_for_functions</code> <small>function</small></li>
+<li id="symbol-build_cfg_for_function"><code>build_cfg_for_function</code> <small>function</small></li>
+<li id="symbol-find_function_body"><code>find_function_body</code> <small>function</small></li>
+<li id="symbol-build_cfg_for_node"><code>build_cfg_for_node</code> <small>function</small></li>
+<li id="symbol-traverse_and_build_cfg"><code>traverse_and_build_cfg</code> <small>function</small></li>
+<li id="symbol-is_conditional"><code>is_conditional</code> <small>function</small></li>
+<li id="symbol-is_loop"><code>is_loop</code> <small>function</small></li>
+<li id="symbol-is_return"><code>is_return</code> <small>function</small></li>
+<li id="symbol-build_conditional_cfg"><code>build_conditional_cfg</code> <small>function</small></li>
+<li id="symbol-build_loop_cfg"><code>build_loop_cfg</code> <small>function</small></li>
+<li id="symbol-build_return_cfg"><code>build_return_cfg</code> <small>function</small></li>
+<li id="symbol-build_sequential_cfg"><code>build_sequential_cfg</code> <small>function</small></li>
+<li id="symbol-is_control_flow_node"><code>is_control_flow_node</code> <small>function</small></li>
+<li id="symbol-cyclomatic_complexity"><code>cyclomatic_complexity</code> <small>function</small></li>
+<li id="symbol-decision_points"><code>decision_points</code> <small>function</small></li>
+<li id="symbol-npath_complexity"><code>npath_complexity</code> <small>function</small></li>
+<li id="symbol-test_cfg_construction_rust"><code>test_cfg_construction_rust</code> <small>function</small></li>
+<li id="symbol-test_cfg_cyclomatic_complexity"><code>test_cfg_cyclomatic_complexity</code> <small>function</small></li>
+<li id="symbol-test_cfg_decision_points"><code>test_cfg_decision_points</code> <small>function</small></li>
+<li id="symbol-controlflowgraph"><code>ControlFlowGraph</code> <small>struct</small></li>
+<li id="symbol-cfgbuilder"><code>CfgBuilder</code> <small>struct</small></li>
+<li id="symbol-cfgnodetype"><code>CfgNodeType</code> <small>enum</small></li>
+<li id="symbol-cfgbuilder"><code>CfgBuilder</code> <small>impl</small></li>
+<li id="symbol-controlflowgraph"><code>ControlFlowGraph</code> <small>impl</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-byte_to_node"><code>byte_to_node</code> <small>variable</small></li>
+<li id="symbol-entry"><code>entry</code> <small>variable</small></li>
+<li id="symbol-exit"><code>exit</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_kinds"><code>function_kinds</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-body"><code>body</code> <small>variable</small></li>
+<li id="symbol-body_kinds"><code>body_kinds</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-current_entry"><code>current_entry</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-intermediate_exit"><code>intermediate_exit</code> <small>variable</small></li>
+<li id="symbol-condition_text"><code>condition_text</code> <small>variable</small></li>
+<li id="symbol-branch_node"><code>branch_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-condition_text"><code>condition_text</code> <small>variable</small></li>
+<li id="symbol-loop_node"><code>loop_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child"><code>child</code> <small>variable</small></li>
+<li id="symbol-return_value"><code>return_value</code> <small>variable</small></li>
+<li id="symbol-return_node"><code>return_node</code> <small>variable</small></li>
+<li id="symbol-statement"><code>statement</code> <small>variable</small></li>
+<li id="symbol-basic_block"><code>basic_block</code> <small>variable</small></li>
+<li id="symbol-_edges"><code>_edges</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-_components"><code>_components</code> <small>variable</small></li>
+<li id="symbol-decision_points"><code>decision_points</code> <small>variable</small></li>
+<li id="symbol-decision_points"><code>decision_points</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-builder"><code>builder</code> <small>variable</small></li>
+<li id="symbol-cfg"><code>cfg</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-builder"><code>builder</code> <small>variable</small></li>
+<li id="symbol-cfg"><code>cfg</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-builder"><code>builder</code> <small>variable</small></li>
+<li id="symbol-cfg"><code>cfg</code> <small>variable</small></li>
+<li id="symbol-decision_points"><code>decision_points</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

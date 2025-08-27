@@ -1,0 +1,628 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>languages/typescript.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>languages/typescript.rs</h1></header>
+<main>
+<section class="article">
+<p>161 symbols, 965 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["is_function_declaration"])
+  F0 --> F1
+  F1(["is_function_expression"])
+  F1 --> F2
+  F2(["is_arrow_function"])
+  F2 --> F3
+  F3(["is_function"])
+  F3 --> F4
+  F4(["is_class_declaration"])
+  F4 --> F5
+  F5(["is_interface_declaration"])
+  F5 --> F6
+  F6(["is_type_alias_declaration"])
+  F6 --> F7
+  F7(["is_enum_declaration"])
+  F7 --> F8
+  F8(["is_namespace_declaration"])
+  F8 --> F9
+  F9(["is_method_signature"])
+  F9 --> F10
+  F10(["is_property_signature"])
+  F10 --> F11
+  F11(["is_method_definition"])
+  F11 --> F12
+  F12(["is_decorator"])
+  F12 --> F13
+  F13(["is_generic_type"])
+  F13 --> F14
+  F14(["function_name"])
+  F14 --> F15
+  F15(["class_name"])
+  F15 --> F16
+  F16(["interface_name"])
+  F16 --> F17
+  F17(["type_alias_name"])
+  F17 --> F18
+  F18(["enum_name"])
+  F18 --> F19
+  F19(["namespace_name"])
+  F19 --> F20
+  F20(["method_name"])
+  F20 --> F21
+  F21(["has_type_annotations"])
+  F21 --> F22
+  F22(["function_return_type"])
+  F22 --> F23
+  F23(["function_parameters_with_types"])
+  F23 --> F24
+  F24(["generic_type_parameters"])
+  F24 --> F25
+  F25(["is_public_member"])
+  F25 --> F26
+  F26(["is_private_member"])
+  F26 --> F27
+  F27(["is_protected_member"])
+  F27 --> F28
+  F28(["is_static_member"])
+  F28 --> F29
+  F29(["is_readonly_member"])
+  F29 --> F30
+  F30(["get_decorators"])
+  F30 --> F31
+  F31(["find_functions"])
+  F31 --> F32
+  F32(["find_classes"])
+  F32 --> F33
+  F33(["find_interfaces"])
+  F33 --> F34
+  F34(["find_type_aliases"])
+  F34 --> F35
+  F35(["find_enums"])
+  F35 --> F36
+  F36(["find_namespaces"])
+  F36 --> F37
+  F37(["find_generic_types"])
+  F37 --> F38
+  F38(["find_mapped_types"])
+  F38 --> F39
+  F39(["find_decorators"])
+  F39 --> F40
+  F40(["find_conditional_types"])
+  F40 --> F41
+  F41(["functions_query"])
+  F41 --> F42
+  F42(["classes_query"])
+  F42 --> F43
+  F43(["interfaces_query"])
+  F43 --> F44
+  F44(["type_aliases_query"])
+  F44 --> F45
+  F45(["enums_query"])
+  F45 --> F46
+  F46(["namespaces_query"])
+  F46 --> F47
+  F47(["methods_query"])
+  F47 --> F48
+  F48(["detect_typescript_features"])
+  F48 --> F49
+  F49(["analyze_complexity"])
+  F49 --> F50
+  F50(["test_typescript_function_detection"])
+  F50 --> F51
+  F51(["test_typescript_class_detection"])
+  F51 --> F52
+  F52(["test_typescript_interface_detection"])
+  F52 --> F53
+  F53(["test_typescript_type_alias_detection"])
+  F53 --> F54
+  F54(["test_typescript_enum_detection"])
+  F54 --> F55
+  F55(["test_typescript_features_detection"])
+  F55 --> F56
+  F56(["test_function_parameters_with_types"])
+  F56 --> F57
+  F57(["TypeScriptSyntax"])
+  F57 --> F58
+  F58(["TypeScriptSyntax"])
+  F58 --> F59
+  F59(["parameters"])
+  F59 --> F60
+  F60(["name"])
+  F60 --> F61
+  F61(["type_annotation"])
+  F61 --> F62
+  F62(["type_params"])
+  F62 --> F63
+  F63(["decorators"])
+  F63 --> F64
+  F64(["functions"])
+  F64 --> F65
+  F65(["function_nodes"])
+  F65 --> F66
+  F66(["ts_node"])
+  F66 --> F67
+  F67(["expr_nodes"])
+  F67 --> F68
+  F68(["ts_node"])
+  F68 --> F69
+  F69(["arrow_nodes"])
+  F69 --> F70
+  F70(["ts_node"])
+  F70 --> F71
+  F71(["classes"])
+  F71 --> F72
+  F72(["class_nodes"])
+  F72 --> F73
+  F73(["ts_node"])
+  F73 --> F74
+  F74(["interfaces"])
+  F74 --> F75
+  F75(["interface_nodes"])
+  F75 --> F76
+  F76(["ts_node"])
+  F76 --> F77
+  F77(["type_aliases"])
+  F77 --> F78
+  F78(["type_nodes"])
+  F78 --> F79
+  F79(["ts_node"])
+  F79 --> F80
+  F80(["enums"])
+  F80 --> F81
+  F81(["enum_nodes"])
+  F81 --> F82
+  F82(["ts_node"])
+  F82 --> F83
+  F83(["namespaces"])
+  F83 --> F84
+  F84(["namespace_nodes"])
+  F84 --> F85
+  F85(["ts_node"])
+  F85 --> F86
+  F86(["module_nodes"])
+  F86 --> F87
+  F87(["ts_node"])
+  F87 --> F88
+  F88(["internal_module_nodes"])
+  F88 --> F89
+  F89(["ts_node"])
+  F89 --> F90
+  F90(["generic_types"])
+  F90 --> F91
+  F91(["type_alias_nodes"])
+  F91 --> F92
+  F92(["type_params"])
+  F92 --> F93
+  F93(["ts_node"])
+  F93 --> F94
+  F94(["interface_nodes"])
+  F94 --> F95
+  F95(["type_params"])
+  F95 --> F96
+  F96(["ts_node"])
+  F96 --> F97
+  F97(["class_nodes"])
+  F97 --> F98
+  F98(["type_params"])
+  F98 --> F99
+  F99(["ts_node"])
+  F99 --> F100
+  F100(["mapped_types"])
+  F100 --> F101
+  F101(["mapped_type_nodes"])
+  F101 --> F102
+  F102(["ts_node"])
+  F102 --> F103
+  F103(["decorators"])
+  F103 --> F104
+  F104(["class_nodes"])
+  F104 --> F105
+  F105(["class_decorators"])
+  F105 --> F106
+  F106(["ts_node"])
+  F106 --> F107
+  F107(["method_nodes"])
+  F107 --> F108
+  F108(["method_decorators"])
+  F108 --> F109
+  F109(["ts_node"])
+  F109 --> F110
+  F110(["property_nodes"])
+  F110 --> F111
+  F111(["property_decorators"])
+  F111 --> F112
+  F112(["ts_node"])
+  F112 --> F113
+  F113(["public_field_nodes"])
+  F113 --> F114
+  F114(["field_decorators"])
+  F114 --> F115
+  F115(["ts_node"])
+  F115 --> F116
+  F116(["conditional_types"])
+  F116 --> F117
+  F117(["conditional_nodes"])
+  F117 --> F118
+  F118(["ts_node"])
+  F118 --> F119
+  F119(["query_str"])
+  F119 --> F120
+  F120(["query_str"])
+  F120 --> F121
+  F121(["query_str"])
+  F121 --> F122
+  F122(["query_str"])
+  F122 --> F123
+  F123(["query_str"])
+  F123 --> F124
+  F124(["query_str"])
+  F124 --> F125
+  F125(["query_str"])
+  F125 --> F126
+  F126(["features"])
+  F126 --> F127
+  F127(["complexity"])
+  F127 --> F128
+  F128(["source"])
+  F128 --> F129
+  F129(["parser"])
+  F129 --> F130
+  F130(["tree"])
+  F130 --> F131
+  F131(["functions"])
+  F131 --> F132
+  F132(["function_names"])
+  F132 --> F133
+  F133(["source"])
+  F133 --> F134
+  F134(["parser"])
+  F134 --> F135
+  F135(["tree"])
+  F135 --> F136
+  F136(["classes"])
+  F136 --> F137
+  F137(["source"])
+  F137 --> F138
+  F138(["parser"])
+  F138 --> F139
+  F139(["tree"])
+  F139 --> F140
+  F140(["interfaces"])
+  F140 --> F141
+  F141(["interface_names"])
+  F141 --> F142
+  F142(["source"])
+  F142 --> F143
+  F143(["parser"])
+  F143 --> F144
+  F144(["tree"])
+  F144 --> F145
+  F145(["type_aliases"])
+  F145 --> F146
+  F146(["type_names"])
+  F146 --> F147
+  F147(["source"])
+  F147 --> F148
+  F148(["parser"])
+  F148 --> F149
+  F149(["tree"])
+  F149 --> F150
+  F150(["enums"])
+  F150 --> F151
+  F151(["enum_names"])
+  F151 --> F152
+  F152(["source"])
+  F152 --> F153
+  F153(["parser"])
+  F153 --> F154
+  F154(["tree"])
+  F154 --> F155
+  F155(["features"])
+  F155 --> F156
+  F156(["source"])
+  F156 --> F157
+  F157(["parser"])
+  F157 --> F158
+  F158(["tree"])
+  F158 --> F159
+  F159(["function_nodes"])
+  F159 --> F160
+  F160(["params"])
+  F160 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant is_function_declaration
+  participant is_function_expression
+  participant is_arrow_function
+  participant is_function
+  participant is_class_declaration
+  participant is_interface_declaration
+  participant is_type_alias_declaration
+  participant is_enum_declaration
+  participant is_namespace_declaration
+  participant is_method_signature
+  participant is_property_signature
+  participant is_method_definition
+  participant is_decorator
+  participant is_generic_type
+  participant function_name
+  participant class_name
+  participant interface_name
+  participant type_alias_name
+  participant enum_name
+  participant namespace_name
+  participant method_name
+  participant has_type_annotations
+  participant function_return_type
+  participant function_parameters_with_types
+  participant generic_type_parameters
+  participant is_public_member
+  participant is_private_member
+  participant is_protected_member
+  participant is_static_member
+  participant is_readonly_member
+  participant get_decorators
+  participant find_functions
+  participant find_classes
+  participant find_interfaces
+  participant find_type_aliases
+  participant find_enums
+  participant find_namespaces
+  participant find_generic_types
+  participant find_mapped_types
+  participant find_decorators
+  participant find_conditional_types
+  participant functions_query
+  participant classes_query
+  participant interfaces_query
+  participant type_aliases_query
+  participant enums_query
+  participant namespaces_query
+  participant methods_query
+  participant detect_typescript_features
+  participant analyze_complexity
+  participant test_typescript_function_detection
+  participant test_typescript_class_detection
+  participant test_typescript_interface_detection
+  participant test_typescript_type_alias_detection
+  participant test_typescript_enum_detection
+  participant test_typescript_features_detection
+  participant test_function_parameters_with_types
+  is_function_declaration->>is_function_expression: call
+  is_function_expression->>is_arrow_function: call
+  is_arrow_function->>is_function: call
+  is_function->>is_class_declaration: call
+  is_class_declaration->>is_interface_declaration: call
+  is_interface_declaration->>is_type_alias_declaration: call
+  is_type_alias_declaration->>is_enum_declaration: call
+  is_enum_declaration->>is_namespace_declaration: call
+  is_namespace_declaration->>is_method_signature: call
+  is_method_signature->>is_property_signature: call
+  is_property_signature->>is_method_definition: call
+  is_method_definition->>is_decorator: call
+  is_decorator->>is_generic_type: call
+  is_generic_type->>function_name: call
+  function_name->>class_name: call
+  class_name->>interface_name: call
+  interface_name->>type_alias_name: call
+  type_alias_name->>enum_name: call
+  enum_name->>namespace_name: call
+  namespace_name->>method_name: call
+  method_name->>has_type_annotations: call
+  has_type_annotations->>function_return_type: call
+  function_return_type->>function_parameters_with_types: call
+  function_parameters_with_types->>generic_type_parameters: call
+  generic_type_parameters->>is_public_member: call
+  is_public_member->>is_private_member: call
+  is_private_member->>is_protected_member: call
+  is_protected_member->>is_static_member: call
+  is_static_member->>is_readonly_member: call
+  is_readonly_member->>get_decorators: call
+  get_decorators->>find_functions: call
+  find_functions->>find_classes: call
+  find_classes->>find_interfaces: call
+  find_interfaces->>find_type_aliases: call
+  find_type_aliases->>find_enums: call
+  find_enums->>find_namespaces: call
+  find_namespaces->>find_generic_types: call
+  find_generic_types->>find_mapped_types: call
+  find_mapped_types->>find_decorators: call
+  find_decorators->>find_conditional_types: call
+  find_conditional_types->>functions_query: call
+  functions_query->>classes_query: call
+  classes_query->>interfaces_query: call
+  interfaces_query->>type_aliases_query: call
+  type_aliases_query->>enums_query: call
+  enums_query->>namespaces_query: call
+  namespaces_query->>methods_query: call
+  methods_query->>detect_typescript_features: call
+  detect_typescript_features->>analyze_complexity: call
+  analyze_complexity->>test_typescript_function_detection: call
+  test_typescript_function_detection->>test_typescript_class_detection: call
+  test_typescript_class_detection->>test_typescript_interface_detection: call
+  test_typescript_interface_detection->>test_typescript_type_alias_detection: call
+  test_typescript_type_alias_detection->>test_typescript_enum_detection: call
+  test_typescript_enum_detection->>test_typescript_features_detection: call
+  test_typescript_features_detection->>test_function_parameters_with_types: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-is_function_declaration"><code>is_function_declaration</code> <small>function</small></li>
+<li id="symbol-is_function_expression"><code>is_function_expression</code> <small>function</small></li>
+<li id="symbol-is_arrow_function"><code>is_arrow_function</code> <small>function</small></li>
+<li id="symbol-is_function"><code>is_function</code> <small>function</small></li>
+<li id="symbol-is_class_declaration"><code>is_class_declaration</code> <small>function</small></li>
+<li id="symbol-is_interface_declaration"><code>is_interface_declaration</code> <small>function</small></li>
+<li id="symbol-is_type_alias_declaration"><code>is_type_alias_declaration</code> <small>function</small></li>
+<li id="symbol-is_enum_declaration"><code>is_enum_declaration</code> <small>function</small></li>
+<li id="symbol-is_namespace_declaration"><code>is_namespace_declaration</code> <small>function</small></li>
+<li id="symbol-is_method_signature"><code>is_method_signature</code> <small>function</small></li>
+<li id="symbol-is_property_signature"><code>is_property_signature</code> <small>function</small></li>
+<li id="symbol-is_method_definition"><code>is_method_definition</code> <small>function</small></li>
+<li id="symbol-is_decorator"><code>is_decorator</code> <small>function</small></li>
+<li id="symbol-is_generic_type"><code>is_generic_type</code> <small>function</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>function</small></li>
+<li id="symbol-class_name"><code>class_name</code> <small>function</small></li>
+<li id="symbol-interface_name"><code>interface_name</code> <small>function</small></li>
+<li id="symbol-type_alias_name"><code>type_alias_name</code> <small>function</small></li>
+<li id="symbol-enum_name"><code>enum_name</code> <small>function</small></li>
+<li id="symbol-namespace_name"><code>namespace_name</code> <small>function</small></li>
+<li id="symbol-method_name"><code>method_name</code> <small>function</small></li>
+<li id="symbol-has_type_annotations"><code>has_type_annotations</code> <small>function</small></li>
+<li id="symbol-function_return_type"><code>function_return_type</code> <small>function</small></li>
+<li id="symbol-function_parameters_with_types"><code>function_parameters_with_types</code> <small>function</small></li>
+<li id="symbol-generic_type_parameters"><code>generic_type_parameters</code> <small>function</small></li>
+<li id="symbol-is_public_member"><code>is_public_member</code> <small>function</small></li>
+<li id="symbol-is_private_member"><code>is_private_member</code> <small>function</small></li>
+<li id="symbol-is_protected_member"><code>is_protected_member</code> <small>function</small></li>
+<li id="symbol-is_static_member"><code>is_static_member</code> <small>function</small></li>
+<li id="symbol-is_readonly_member"><code>is_readonly_member</code> <small>function</small></li>
+<li id="symbol-get_decorators"><code>get_decorators</code> <small>function</small></li>
+<li id="symbol-find_functions"><code>find_functions</code> <small>function</small></li>
+<li id="symbol-find_classes"><code>find_classes</code> <small>function</small></li>
+<li id="symbol-find_interfaces"><code>find_interfaces</code> <small>function</small></li>
+<li id="symbol-find_type_aliases"><code>find_type_aliases</code> <small>function</small></li>
+<li id="symbol-find_enums"><code>find_enums</code> <small>function</small></li>
+<li id="symbol-find_namespaces"><code>find_namespaces</code> <small>function</small></li>
+<li id="symbol-find_generic_types"><code>find_generic_types</code> <small>function</small></li>
+<li id="symbol-find_mapped_types"><code>find_mapped_types</code> <small>function</small></li>
+<li id="symbol-find_decorators"><code>find_decorators</code> <small>function</small></li>
+<li id="symbol-find_conditional_types"><code>find_conditional_types</code> <small>function</small></li>
+<li id="symbol-functions_query"><code>functions_query</code> <small>function</small></li>
+<li id="symbol-classes_query"><code>classes_query</code> <small>function</small></li>
+<li id="symbol-interfaces_query"><code>interfaces_query</code> <small>function</small></li>
+<li id="symbol-type_aliases_query"><code>type_aliases_query</code> <small>function</small></li>
+<li id="symbol-enums_query"><code>enums_query</code> <small>function</small></li>
+<li id="symbol-namespaces_query"><code>namespaces_query</code> <small>function</small></li>
+<li id="symbol-methods_query"><code>methods_query</code> <small>function</small></li>
+<li id="symbol-detect_typescript_features"><code>detect_typescript_features</code> <small>function</small></li>
+<li id="symbol-analyze_complexity"><code>analyze_complexity</code> <small>function</small></li>
+<li id="symbol-test_typescript_function_detection"><code>test_typescript_function_detection</code> <small>function</small></li>
+<li id="symbol-test_typescript_class_detection"><code>test_typescript_class_detection</code> <small>function</small></li>
+<li id="symbol-test_typescript_interface_detection"><code>test_typescript_interface_detection</code> <small>function</small></li>
+<li id="symbol-test_typescript_type_alias_detection"><code>test_typescript_type_alias_detection</code> <small>function</small></li>
+<li id="symbol-test_typescript_enum_detection"><code>test_typescript_enum_detection</code> <small>function</small></li>
+<li id="symbol-test_typescript_features_detection"><code>test_typescript_features_detection</code> <small>function</small></li>
+<li id="symbol-test_function_parameters_with_types"><code>test_function_parameters_with_types</code> <small>function</small></li>
+<li id="symbol-typescriptsyntax"><code>TypeScriptSyntax</code> <small>struct</small></li>
+<li id="symbol-typescriptsyntax"><code>TypeScriptSyntax</code> <small>impl</small></li>
+<li id="symbol-parameters"><code>parameters</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-type_annotation"><code>type_annotation</code> <small>variable</small></li>
+<li id="symbol-type_params"><code>type_params</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-expr_nodes"><code>expr_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-arrow_nodes"><code>arrow_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-classes"><code>classes</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-interfaces"><code>interfaces</code> <small>variable</small></li>
+<li id="symbol-interface_nodes"><code>interface_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-type_aliases"><code>type_aliases</code> <small>variable</small></li>
+<li id="symbol-type_nodes"><code>type_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-enums"><code>enums</code> <small>variable</small></li>
+<li id="symbol-enum_nodes"><code>enum_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-namespaces"><code>namespaces</code> <small>variable</small></li>
+<li id="symbol-namespace_nodes"><code>namespace_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-module_nodes"><code>module_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-internal_module_nodes"><code>internal_module_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-generic_types"><code>generic_types</code> <small>variable</small></li>
+<li id="symbol-type_alias_nodes"><code>type_alias_nodes</code> <small>variable</small></li>
+<li id="symbol-type_params"><code>type_params</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-interface_nodes"><code>interface_nodes</code> <small>variable</small></li>
+<li id="symbol-type_params"><code>type_params</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-type_params"><code>type_params</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-mapped_types"><code>mapped_types</code> <small>variable</small></li>
+<li id="symbol-mapped_type_nodes"><code>mapped_type_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-decorators"><code>decorators</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-class_decorators"><code>class_decorators</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-method_nodes"><code>method_nodes</code> <small>variable</small></li>
+<li id="symbol-method_decorators"><code>method_decorators</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-property_nodes"><code>property_nodes</code> <small>variable</small></li>
+<li id="symbol-property_decorators"><code>property_decorators</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-public_field_nodes"><code>public_field_nodes</code> <small>variable</small></li>
+<li id="symbol-field_decorators"><code>field_decorators</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-conditional_types"><code>conditional_types</code> <small>variable</small></li>
+<li id="symbol-conditional_nodes"><code>conditional_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-features"><code>features</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_names"><code>function_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-classes"><code>classes</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-interfaces"><code>interfaces</code> <small>variable</small></li>
+<li id="symbol-interface_names"><code>interface_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-type_aliases"><code>type_aliases</code> <small>variable</small></li>
+<li id="symbol-type_names"><code>type_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-enums"><code>enums</code> <small>variable</small></li>
+<li id="symbol-enum_names"><code>enum_names</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-features"><code>features</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-params"><code>params</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

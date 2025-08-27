@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cli/output.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>cli/output.rs</h1></header>
+<main>
+<section class="article">
+<p>22 symbols, 191 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["format_size"])
+  F0 --> F1
+  F1(["from_str"])
+  F1 --> F2
+  F2(["print_header"])
+  F2 --> F3
+  F3(["print_summary"])
+  F3 --> F4
+  F4(["save_to_file"])
+  F4 --> F5
+  F5(["print_analysis_table"])
+  F5 --> F6
+  F6(["FileRow"])
+  F6 --> F7
+  F7(["SymbolRow"])
+  F7 --> F8
+  F8(["LanguageRow"])
+  F8 --> F9
+  F9(["OutputFormat"])
+  F9 --> F10
+  F10(["OutputFormat"])
+  F10 --> F11
+  F11(["colored_title"])
+  F11 --> F12
+  F12(["total_size"])
+  F12 --> F13
+  F13(["langs"])
+  F13 --> F14
+  F14(["percentage"])
+  F14 --> F15
+  F15(["total_symbols"])
+  F15 --> F16
+  F16(["symbol_counts"])
+  F16 --> F17
+  F17(["symbol_vec"])
+  F17 --> F18
+  F18(["json"])
+  F18 --> F19
+  F19(["file_rows"])
+  F19 --> F20
+  F20(["symbol_count"])
+  F20 --> F21
+  F21(["table"])
+  F21 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant format_size
+  participant from_str
+  participant print_header
+  participant print_summary
+  participant save_to_file
+  participant print_analysis_table
+  format_size->>from_str: call
+  from_str->>print_header: call
+  print_header->>print_summary: call
+  print_summary->>save_to_file: call
+  save_to_file->>print_analysis_table: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-format_size"><code>format_size</code> <small>function</small></li>
+<li id="symbol-from_str"><code>from_str</code> <small>function</small></li>
+<li id="symbol-print_header"><code>print_header</code> <small>function</small></li>
+<li id="symbol-print_summary"><code>print_summary</code> <small>function</small></li>
+<li id="symbol-save_to_file"><code>save_to_file</code> <small>function</small></li>
+<li id="symbol-print_analysis_table"><code>print_analysis_table</code> <small>function</small></li>
+<li id="symbol-filerow"><code>FileRow</code> <small>struct</small></li>
+<li id="symbol-symbolrow"><code>SymbolRow</code> <small>struct</small></li>
+<li id="symbol-languagerow"><code>LanguageRow</code> <small>struct</small></li>
+<li id="symbol-outputformat"><code>OutputFormat</code> <small>enum</small></li>
+<li id="symbol-outputformat"><code>OutputFormat</code> <small>impl</small></li>
+<li id="symbol-colored_title"><code>colored_title</code> <small>variable</small></li>
+<li id="symbol-total_size"><code>total_size</code> <small>variable</small></li>
+<li id="symbol-langs"><code>langs</code> <small>variable</small></li>
+<li id="symbol-percentage"><code>percentage</code> <small>variable</small></li>
+<li id="symbol-total_symbols"><code>total_symbols</code> <small>variable</small></li>
+<li id="symbol-symbol_counts"><code>symbol_counts</code> <small>variable</small></li>
+<li id="symbol-symbol_vec"><code>symbol_vec</code> <small>variable</small></li>
+<li id="symbol-json"><code>json</code> <small>variable</small></li>
+<li id="symbol-file_rows"><code>file_rows</code> <small>variable</small></li>
+<li id="symbol-symbol_count"><code>symbol_count</code> <small>variable</small></li>
+<li id="symbol-table"><code>table</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

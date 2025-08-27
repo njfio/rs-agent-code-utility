@@ -1,0 +1,721 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>semantic_context.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>semantic_context.rs</h1></header>
+<main>
+<section class="article">
+<p>192 symbols, 1884 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["build_cfg"])
+  F1 --> F2
+  F2(["new"])
+  F2 --> F3
+  F3(["analyze_taint_flows"])
+  F3 --> F4
+  F4(["new"])
+  F4 --> F5
+  F5(["analyze"])
+  F5 --> F6
+  F6(["analyze_data_flow"])
+  F6 --> F7
+  F7(["compute_reaching_definitions"])
+  F7 --> F8
+  F8(["collect_definitions"])
+  F8 --> F9
+  F9(["find_symbol_at_location"])
+  F9 --> F10
+  F10(["propagate_definitions"])
+  F10 --> F11
+  F11(["compute_use_def_chains"])
+  F11 --> F12
+  F12(["collect_uses"])
+  F12 --> F13
+  F13(["is_definition_site"])
+  F13 --> F14
+  F14(["compute_def_use_chains"])
+  F14 --> F15
+  F15(["compute_aliases"])
+  F15 --> F16
+  F16(["analyze_aliases"])
+  F16 --> F17
+  F17(["find_symbol_by_name"])
+  F17 --> F18
+  F18(["compute_constants"])
+  F18 --> F19
+  F19(["propagate_constants"])
+  F19 --> F20
+  F20(["compute_taint_flows"])
+  F20 --> F21
+  F21(["build_call_graph"])
+  F21 --> F22
+  F22(["collect_function_definitions"])
+  F22 --> F23
+  F23(["extract_parameters"])
+  F23 --> F24
+  F24(["is_parameter_mutable"])
+  F24 --> F25
+  F25(["analyze_function_attributes"])
+  F25 --> F26
+  F26(["analyze_function_body"])
+  F26 --> F27
+  F27(["is_io_function"])
+  F27 --> F28
+  F28(["is_security_sensitive_function"])
+  F28 --> F29
+  F29(["is_sanitization_function"])
+  F29 --> F30
+  F30(["is_validation_function"])
+  F30 --> F31
+  F31(["collect_function_calls"])
+  F31 --> F32
+  F32(["extract_arguments"])
+  F32 --> F33
+  F33(["build_call_chains"])
+  F33 --> F34
+  F34(["analyze_security_context"])
+  F34 --> F35
+  F35(["analyze_security_patterns"])
+  F35 --> F36
+  F36(["analyze_types"])
+  F36 --> F37
+  F37(["infer_types"])
+  F37 --> F38
+  F38(["analyze_patterns"])
+  F38 --> F39
+  F39(["detect_patterns"])
+  F39 --> F40
+  F40(["test_semantic_context_analyzer_creation"])
+  F40 --> F41
+  F41(["test_definition_site_creation"])
+  F41 --> F42
+  F42(["test_constant_value_variants"])
+  F42 --> F43
+  F43(["test_function_call_creation"])
+  F43 --> F44
+  F44(["test_validation_point_creation"])
+  F44 --> F45
+  F45(["test_sanitization_point_creation"])
+  F45 --> F46
+  F46(["test_trust_level_ordering"])
+  F46 --> F47
+  F47(["test_validation_strength_ordering"])
+  F47 --> F48
+  F48(["test_sanitization_effectiveness_ordering"])
+  F48 --> F49
+  F49(["test_authentication_strength_ordering"])
+  F49 --> F50
+  F50(["test_error_handling_quality_ordering"])
+  F50 --> F51
+  F51(["test_anti_pattern_severity_ordering"])
+  F51 --> F52
+  F52(["test_type_info_creation"])
+  F52 --> F53
+  F53(["test_code_pattern_creation"])
+  F53 --> F54
+  F54(["test_anti_pattern_creation"])
+  F54 --> F55
+  F55(["test_security_boundary_creation"])
+  F55 --> F56
+  F56(["test_data_flow_analysis_creation"])
+  F56 --> F57
+  F57(["ControlFlowGraph"])
+  F57 --> F58
+  F58(["CfgBuilder"])
+  F58 --> F59
+  F59(["TaintAnalyzer"])
+  F59 --> F60
+  F60(["TaintAnalysisResult"])
+  F60 --> F61
+  F61(["TaintFlow"])
+  F61 --> F62
+  F62(["SemanticContext"])
+  F62 --> F63
+  F63(["DataFlowAnalysis"])
+  F63 --> F64
+  F64(["DefinitionSite"])
+  F64 --> F65
+  F65(["CallGraph"])
+  F65 --> F66
+  F66(["FunctionCall"])
+  F66 --> F67
+  F67(["ArgumentInfo"])
+  F67 --> F68
+  F68(["FunctionDefinition"])
+  F68 --> F69
+  F69(["ParameterInfo"])
+  F69 --> F70
+  F70(["FunctionAttributes"])
+  F70 --> F71
+  F71(["CallChain"])
+  F71 --> F72
+  F72(["SecuritySemanticContext"])
+  F72 --> F73
+  F73(["ValidationPoint"])
+  F73 --> F74
+  F74(["SanitizationPoint"])
+  F74 --> F75
+  F75(["AuthenticationCheck"])
+  F75 --> F76
+  F76(["AuthorizationCheck"])
+  F76 --> F77
+  F77(["ErrorHandlingPattern"])
+  F77 --> F78
+  F78(["SecurityBoundary"])
+  F78 --> F79
+  F79(["TrustLevelChange"])
+  F79 --> F80
+  F80(["TypeContext"])
+  F80 --> F81
+  F81(["TypeInfo"])
+  F81 --> F82
+  F82(["TypeConstraint"])
+  F82 --> F83
+  F83(["PatternContext"])
+  F83 --> F84
+  F84(["CodePattern"])
+  F84 --> F85
+  F85(["AntiPattern"])
+  F85 --> F86
+  F86(["CodeIdiom"])
+  F86 --> F87
+  F87(["SemanticContextAnalyzer"])
+  F87 --> F88
+  F88(["DefinitionType"])
+  F88 --> F89
+  F89(["ConstantValue"])
+  F89 --> F90
+  F90(["ReturnUsage"])
+  F90 --> F91
+  F91(["ValidationType"])
+  F91 --> F92
+  F92(["ValidationStrength"])
+  F92 --> F93
+  F93(["SanitizationType"])
+  F93 --> F94
+  F94(["SanitizationEffectiveness"])
+  F94 --> F95
+  F95(["AuthenticationType"])
+  F95 --> F96
+  F96(["AuthenticationStrength"])
+  F96 --> F97
+  F97(["AuthorizationType"])
+  F97 --> F98
+  F98(["ErrorHandlingType"])
+  F98 --> F99
+  F99(["ErrorHandlingQuality"])
+  F99 --> F100
+  F100(["SecurityBoundaryType"])
+  F100 --> F101
+  F101(["TrustLevel"])
+  F101 --> F102
+  F102(["ConstraintType"])
+  F102 --> F103
+  F103(["PatternType"])
+  F103 --> F104
+  F104(["AntiPatternSeverity"])
+  F104 --> F105
+  F105(["CfgBuilder"])
+  F105 --> F106
+  F106(["TaintAnalyzer"])
+  F106 --> F107
+  F107(["SemanticContextAnalyzer"])
+  F107 --> F108
+  F108(["symbol_analysis"])
+  F108 --> F109
+  F109(["symbol_table"])
+  F109 --> F110
+  F110(["control_flow"])
+  F110 --> F111
+  F111(["data_flow"])
+  F111 --> F112
+  F112(["call_graph"])
+  F112 --> F113
+  F113(["security_context"])
+  F113 --> F114
+  F114(["type_context"])
+  F114 --> F115
+  F115(["pattern_context"])
+  F115 --> F116
+  F116(["reaching_definitions"])
+  F116 --> F117
+  F117(["use_def_chains"])
+  F117 --> F118
+  F118(["def_use_chains"])
+  F118 --> F119
+  F119(["aliases"])
+  F119 --> F120
+  F120(["constants"])
+  F120 --> F121
+  F121(["taint_flows"])
+  F121 --> F122
+  F122(["root"])
+  F122 --> F123
+  F123(["definitions"])
+  F123 --> F124
+  F124(["def_site"])
+  F124 --> F125
+  F125(["def_site"])
+  F125 --> F126
+  F126(["def_site"])
+  F126 --> F127
+  F127(["current_definitions"])
+  F127 --> F128
+  F128(["root"])
+  F128 --> F129
+  F129(["relevant_defs"])
+  F129 --> F130
+  F130(["root"])
+  F130 --> F131
+  F131(["right_name"])
+  F131 --> F132
+  F132(["root"])
+  F132 --> F133
+  F133(["value"])
+  F133 --> F134
+  F134(["taint_result"])
+  F134 --> F135
+  F135(["calls"])
+  F135 --> F136
+  F136(["functions"])
+  F136 --> F137
+  F137(["call_chains"])
+  F137 --> F138
+  F138(["root"])
+  F138 --> F139
+  F139(["parameters"])
+  F139 --> F140
+  F140(["return_type"])
+  F140 --> F141
+  F141(["attributes"])
+  F141 --> F142
+  F142(["function_def"])
+  F142 --> F143
+  F143(["param_type"])
+  F143 --> F144
+  F144(["default_value"])
+  F144 --> F145
+  F145(["is_mutable"])
+  F145 --> F146
+  F146(["is_pure"])
+  F146 --> F147
+  F147(["performs_io"])
+  F147 --> F148
+  F148(["is_security_sensitive"])
+  F148 --> F149
+  F149(["sanitizes_input"])
+  F149 --> F150
+  F150(["validates_input"])
+  F150 --> F151
+  F151(["func_name_lower"])
+  F151 --> F152
+  F152(["io_functions"])
+  F152 --> F153
+  F153(["security_functions"])
+  F153 --> F154
+  F154(["sanitization_functions"])
+  F154 --> F155
+  F155(["validation_functions"])
+  F155 --> F156
+  F156(["arguments"])
+  F156 --> F157
+  F157(["function_call"])
+  F157 --> F158
+  F158(["position"])
+  F158 --> F159
+  F159(["validation_points"])
+  F159 --> F160
+  F160(["sanitization_points"])
+  F160 --> F161
+  F161(["auth_checks"])
+  F161 --> F162
+  F162(["authz_checks"])
+  F162 --> F163
+  F163(["error_handling"])
+  F163 --> F164
+  F164(["security_boundaries"])
+  F164 --> F165
+  F165(["trust_levels"])
+  F165 --> F166
+  F166(["root"])
+  F166 --> F167
+  F167(["func_name_lower"])
+  F167 --> F168
+  F168(["expression_types"])
+  F168 --> F169
+  F169(["type_constraints"])
+  F169 --> F170
+  F170(["generic_instantiations"])
+  F170 --> F171
+  F171(["root"])
+  F171 --> F172
+  F172(["patterns"])
+  F172 --> F173
+  F173(["anti_patterns"])
+  F173 --> F174
+  F174(["idioms"])
+  F174 --> F175
+  F175(["root"])
+  F175 --> F176
+  F176(["analyzer"])
+  F176 --> F177
+  F177(["def_site"])
+  F177 --> F178
+  F178(["string_val"])
+  F178 --> F179
+  F179(["int_val"])
+  F179 --> F180
+  F180(["float_val"])
+  F180 --> F181
+  F181(["bool_val"])
+  F181 --> F182
+  F182(["null_val"])
+  F182 --> F183
+  F183(["unknown_val"])
+  F183 --> F184
+  F184(["function_call"])
+  F184 --> F185
+  F185(["validation_point"])
+  F185 --> F186
+  F186(["sanitization_point"])
+  F186 --> F187
+  F187(["type_info"])
+  F187 --> F188
+  F188(["pattern"])
+  F188 --> F189
+  F189(["anti_pattern"])
+  F189 --> F190
+  F190(["boundary"])
+  F190 --> F191
+  F191(["data_flow"])
+  F191 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant build_cfg
+  participant new
+  participant analyze_taint_flows
+  participant new
+  participant analyze
+  participant analyze_data_flow
+  participant compute_reaching_definitions
+  participant collect_definitions
+  participant find_symbol_at_location
+  participant propagate_definitions
+  participant compute_use_def_chains
+  participant collect_uses
+  participant is_definition_site
+  participant compute_def_use_chains
+  participant compute_aliases
+  participant analyze_aliases
+  participant find_symbol_by_name
+  participant compute_constants
+  participant propagate_constants
+  participant compute_taint_flows
+  participant build_call_graph
+  participant collect_function_definitions
+  participant extract_parameters
+  participant is_parameter_mutable
+  participant analyze_function_attributes
+  participant analyze_function_body
+  participant is_io_function
+  participant is_security_sensitive_function
+  participant is_sanitization_function
+  participant is_validation_function
+  participant collect_function_calls
+  participant extract_arguments
+  participant build_call_chains
+  participant analyze_security_context
+  participant analyze_security_patterns
+  participant analyze_types
+  participant infer_types
+  participant analyze_patterns
+  participant detect_patterns
+  participant test_semantic_context_analyzer_creation
+  participant test_definition_site_creation
+  participant test_constant_value_variants
+  participant test_function_call_creation
+  participant test_validation_point_creation
+  participant test_sanitization_point_creation
+  participant test_trust_level_ordering
+  participant test_validation_strength_ordering
+  participant test_sanitization_effectiveness_ordering
+  participant test_authentication_strength_ordering
+  participant test_error_handling_quality_ordering
+  participant test_anti_pattern_severity_ordering
+  participant test_type_info_creation
+  participant test_code_pattern_creation
+  participant test_anti_pattern_creation
+  participant test_security_boundary_creation
+  participant test_data_flow_analysis_creation
+  new->>build_cfg: call
+  build_cfg->>new: call
+  new->>analyze_taint_flows: call
+  analyze_taint_flows->>new: call
+  new->>analyze: call
+  analyze->>analyze_data_flow: call
+  analyze_data_flow->>compute_reaching_definitions: call
+  compute_reaching_definitions->>collect_definitions: call
+  collect_definitions->>find_symbol_at_location: call
+  find_symbol_at_location->>propagate_definitions: call
+  propagate_definitions->>compute_use_def_chains: call
+  compute_use_def_chains->>collect_uses: call
+  collect_uses->>is_definition_site: call
+  is_definition_site->>compute_def_use_chains: call
+  compute_def_use_chains->>compute_aliases: call
+  compute_aliases->>analyze_aliases: call
+  analyze_aliases->>find_symbol_by_name: call
+  find_symbol_by_name->>compute_constants: call
+  compute_constants->>propagate_constants: call
+  propagate_constants->>compute_taint_flows: call
+  compute_taint_flows->>build_call_graph: call
+  build_call_graph->>collect_function_definitions: call
+  collect_function_definitions->>extract_parameters: call
+  extract_parameters->>is_parameter_mutable: call
+  is_parameter_mutable->>analyze_function_attributes: call
+  analyze_function_attributes->>analyze_function_body: call
+  analyze_function_body->>is_io_function: call
+  is_io_function->>is_security_sensitive_function: call
+  is_security_sensitive_function->>is_sanitization_function: call
+  is_sanitization_function->>is_validation_function: call
+  is_validation_function->>collect_function_calls: call
+  collect_function_calls->>extract_arguments: call
+  extract_arguments->>build_call_chains: call
+  build_call_chains->>analyze_security_context: call
+  analyze_security_context->>analyze_security_patterns: call
+  analyze_security_patterns->>analyze_types: call
+  analyze_types->>infer_types: call
+  infer_types->>analyze_patterns: call
+  analyze_patterns->>detect_patterns: call
+  detect_patterns->>test_semantic_context_analyzer_creation: call
+  test_semantic_context_analyzer_creation->>test_definition_site_creation: call
+  test_definition_site_creation->>test_constant_value_variants: call
+  test_constant_value_variants->>test_function_call_creation: call
+  test_function_call_creation->>test_validation_point_creation: call
+  test_validation_point_creation->>test_sanitization_point_creation: call
+  test_sanitization_point_creation->>test_trust_level_ordering: call
+  test_trust_level_ordering->>test_validation_strength_ordering: call
+  test_validation_strength_ordering->>test_sanitization_effectiveness_ordering: call
+  test_sanitization_effectiveness_ordering->>test_authentication_strength_ordering: call
+  test_authentication_strength_ordering->>test_error_handling_quality_ordering: call
+  test_error_handling_quality_ordering->>test_anti_pattern_severity_ordering: call
+  test_anti_pattern_severity_ordering->>test_type_info_creation: call
+  test_type_info_creation->>test_code_pattern_creation: call
+  test_code_pattern_creation->>test_anti_pattern_creation: call
+  test_anti_pattern_creation->>test_security_boundary_creation: call
+  test_security_boundary_creation->>test_data_flow_analysis_creation: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-build_cfg"><code>build_cfg</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-analyze_taint_flows"><code>analyze_taint_flows</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-analyze_data_flow"><code>analyze_data_flow</code> <small>function</small></li>
+<li id="symbol-compute_reaching_definitions"><code>compute_reaching_definitions</code> <small>function</small></li>
+<li id="symbol-collect_definitions"><code>collect_definitions</code> <small>function</small></li>
+<li id="symbol-find_symbol_at_location"><code>find_symbol_at_location</code> <small>function</small></li>
+<li id="symbol-propagate_definitions"><code>propagate_definitions</code> <small>function</small></li>
+<li id="symbol-compute_use_def_chains"><code>compute_use_def_chains</code> <small>function</small></li>
+<li id="symbol-collect_uses"><code>collect_uses</code> <small>function</small></li>
+<li id="symbol-is_definition_site"><code>is_definition_site</code> <small>function</small></li>
+<li id="symbol-compute_def_use_chains"><code>compute_def_use_chains</code> <small>function</small></li>
+<li id="symbol-compute_aliases"><code>compute_aliases</code> <small>function</small></li>
+<li id="symbol-analyze_aliases"><code>analyze_aliases</code> <small>function</small></li>
+<li id="symbol-find_symbol_by_name"><code>find_symbol_by_name</code> <small>function</small></li>
+<li id="symbol-compute_constants"><code>compute_constants</code> <small>function</small></li>
+<li id="symbol-propagate_constants"><code>propagate_constants</code> <small>function</small></li>
+<li id="symbol-compute_taint_flows"><code>compute_taint_flows</code> <small>function</small></li>
+<li id="symbol-build_call_graph"><code>build_call_graph</code> <small>function</small></li>
+<li id="symbol-collect_function_definitions"><code>collect_function_definitions</code> <small>function</small></li>
+<li id="symbol-extract_parameters"><code>extract_parameters</code> <small>function</small></li>
+<li id="symbol-is_parameter_mutable"><code>is_parameter_mutable</code> <small>function</small></li>
+<li id="symbol-analyze_function_attributes"><code>analyze_function_attributes</code> <small>function</small></li>
+<li id="symbol-analyze_function_body"><code>analyze_function_body</code> <small>function</small></li>
+<li id="symbol-is_io_function"><code>is_io_function</code> <small>function</small></li>
+<li id="symbol-is_security_sensitive_function"><code>is_security_sensitive_function</code> <small>function</small></li>
+<li id="symbol-is_sanitization_function"><code>is_sanitization_function</code> <small>function</small></li>
+<li id="symbol-is_validation_function"><code>is_validation_function</code> <small>function</small></li>
+<li id="symbol-collect_function_calls"><code>collect_function_calls</code> <small>function</small></li>
+<li id="symbol-extract_arguments"><code>extract_arguments</code> <small>function</small></li>
+<li id="symbol-build_call_chains"><code>build_call_chains</code> <small>function</small></li>
+<li id="symbol-analyze_security_context"><code>analyze_security_context</code> <small>function</small></li>
+<li id="symbol-analyze_security_patterns"><code>analyze_security_patterns</code> <small>function</small></li>
+<li id="symbol-analyze_types"><code>analyze_types</code> <small>function</small></li>
+<li id="symbol-infer_types"><code>infer_types</code> <small>function</small></li>
+<li id="symbol-analyze_patterns"><code>analyze_patterns</code> <small>function</small></li>
+<li id="symbol-detect_patterns"><code>detect_patterns</code> <small>function</small></li>
+<li id="symbol-test_semantic_context_analyzer_creation"><code>test_semantic_context_analyzer_creation</code> <small>function</small></li>
+<li id="symbol-test_definition_site_creation"><code>test_definition_site_creation</code> <small>function</small></li>
+<li id="symbol-test_constant_value_variants"><code>test_constant_value_variants</code> <small>function</small></li>
+<li id="symbol-test_function_call_creation"><code>test_function_call_creation</code> <small>function</small></li>
+<li id="symbol-test_validation_point_creation"><code>test_validation_point_creation</code> <small>function</small></li>
+<li id="symbol-test_sanitization_point_creation"><code>test_sanitization_point_creation</code> <small>function</small></li>
+<li id="symbol-test_trust_level_ordering"><code>test_trust_level_ordering</code> <small>function</small></li>
+<li id="symbol-test_validation_strength_ordering"><code>test_validation_strength_ordering</code> <small>function</small></li>
+<li id="symbol-test_sanitization_effectiveness_ordering"><code>test_sanitization_effectiveness_ordering</code> <small>function</small></li>
+<li id="symbol-test_authentication_strength_ordering"><code>test_authentication_strength_ordering</code> <small>function</small></li>
+<li id="symbol-test_error_handling_quality_ordering"><code>test_error_handling_quality_ordering</code> <small>function</small></li>
+<li id="symbol-test_anti_pattern_severity_ordering"><code>test_anti_pattern_severity_ordering</code> <small>function</small></li>
+<li id="symbol-test_type_info_creation"><code>test_type_info_creation</code> <small>function</small></li>
+<li id="symbol-test_code_pattern_creation"><code>test_code_pattern_creation</code> <small>function</small></li>
+<li id="symbol-test_anti_pattern_creation"><code>test_anti_pattern_creation</code> <small>function</small></li>
+<li id="symbol-test_security_boundary_creation"><code>test_security_boundary_creation</code> <small>function</small></li>
+<li id="symbol-test_data_flow_analysis_creation"><code>test_data_flow_analysis_creation</code> <small>function</small></li>
+<li id="symbol-controlflowgraph"><code>ControlFlowGraph</code> <small>struct</small></li>
+<li id="symbol-cfgbuilder"><code>CfgBuilder</code> <small>struct</small></li>
+<li id="symbol-taintanalyzer"><code>TaintAnalyzer</code> <small>struct</small></li>
+<li id="symbol-taintanalysisresult"><code>TaintAnalysisResult</code> <small>struct</small></li>
+<li id="symbol-taintflow"><code>TaintFlow</code> <small>struct</small></li>
+<li id="symbol-semanticcontext"><code>SemanticContext</code> <small>struct</small></li>
+<li id="symbol-dataflowanalysis"><code>DataFlowAnalysis</code> <small>struct</small></li>
+<li id="symbol-definitionsite"><code>DefinitionSite</code> <small>struct</small></li>
+<li id="symbol-callgraph"><code>CallGraph</code> <small>struct</small></li>
+<li id="symbol-functioncall"><code>FunctionCall</code> <small>struct</small></li>
+<li id="symbol-argumentinfo"><code>ArgumentInfo</code> <small>struct</small></li>
+<li id="symbol-functiondefinition"><code>FunctionDefinition</code> <small>struct</small></li>
+<li id="symbol-parameterinfo"><code>ParameterInfo</code> <small>struct</small></li>
+<li id="symbol-functionattributes"><code>FunctionAttributes</code> <small>struct</small></li>
+<li id="symbol-callchain"><code>CallChain</code> <small>struct</small></li>
+<li id="symbol-securitysemanticcontext"><code>SecuritySemanticContext</code> <small>struct</small></li>
+<li id="symbol-validationpoint"><code>ValidationPoint</code> <small>struct</small></li>
+<li id="symbol-sanitizationpoint"><code>SanitizationPoint</code> <small>struct</small></li>
+<li id="symbol-authenticationcheck"><code>AuthenticationCheck</code> <small>struct</small></li>
+<li id="symbol-authorizationcheck"><code>AuthorizationCheck</code> <small>struct</small></li>
+<li id="symbol-errorhandlingpattern"><code>ErrorHandlingPattern</code> <small>struct</small></li>
+<li id="symbol-securityboundary"><code>SecurityBoundary</code> <small>struct</small></li>
+<li id="symbol-trustlevelchange"><code>TrustLevelChange</code> <small>struct</small></li>
+<li id="symbol-typecontext"><code>TypeContext</code> <small>struct</small></li>
+<li id="symbol-typeinfo"><code>TypeInfo</code> <small>struct</small></li>
+<li id="symbol-typeconstraint"><code>TypeConstraint</code> <small>struct</small></li>
+<li id="symbol-patterncontext"><code>PatternContext</code> <small>struct</small></li>
+<li id="symbol-codepattern"><code>CodePattern</code> <small>struct</small></li>
+<li id="symbol-antipattern"><code>AntiPattern</code> <small>struct</small></li>
+<li id="symbol-codeidiom"><code>CodeIdiom</code> <small>struct</small></li>
+<li id="symbol-semanticcontextanalyzer"><code>SemanticContextAnalyzer</code> <small>struct</small></li>
+<li id="symbol-definitiontype"><code>DefinitionType</code> <small>enum</small></li>
+<li id="symbol-constantvalue"><code>ConstantValue</code> <small>enum</small></li>
+<li id="symbol-returnusage"><code>ReturnUsage</code> <small>enum</small></li>
+<li id="symbol-validationtype"><code>ValidationType</code> <small>enum</small></li>
+<li id="symbol-validationstrength"><code>ValidationStrength</code> <small>enum</small></li>
+<li id="symbol-sanitizationtype"><code>SanitizationType</code> <small>enum</small></li>
+<li id="symbol-sanitizationeffectiveness"><code>SanitizationEffectiveness</code> <small>enum</small></li>
+<li id="symbol-authenticationtype"><code>AuthenticationType</code> <small>enum</small></li>
+<li id="symbol-authenticationstrength"><code>AuthenticationStrength</code> <small>enum</small></li>
+<li id="symbol-authorizationtype"><code>AuthorizationType</code> <small>enum</small></li>
+<li id="symbol-errorhandlingtype"><code>ErrorHandlingType</code> <small>enum</small></li>
+<li id="symbol-errorhandlingquality"><code>ErrorHandlingQuality</code> <small>enum</small></li>
+<li id="symbol-securityboundarytype"><code>SecurityBoundaryType</code> <small>enum</small></li>
+<li id="symbol-trustlevel"><code>TrustLevel</code> <small>enum</small></li>
+<li id="symbol-constrainttype"><code>ConstraintType</code> <small>enum</small></li>
+<li id="symbol-patterntype"><code>PatternType</code> <small>enum</small></li>
+<li id="symbol-antipatternseverity"><code>AntiPatternSeverity</code> <small>enum</small></li>
+<li id="symbol-cfgbuilder"><code>CfgBuilder</code> <small>impl</small></li>
+<li id="symbol-taintanalyzer"><code>TaintAnalyzer</code> <small>impl</small></li>
+<li id="symbol-semanticcontextanalyzer"><code>SemanticContextAnalyzer</code> <small>impl</small></li>
+<li id="symbol-symbol_analysis"><code>symbol_analysis</code> <small>variable</small></li>
+<li id="symbol-symbol_table"><code>symbol_table</code> <small>variable</small></li>
+<li id="symbol-control_flow"><code>control_flow</code> <small>variable</small></li>
+<li id="symbol-data_flow"><code>data_flow</code> <small>variable</small></li>
+<li id="symbol-call_graph"><code>call_graph</code> <small>variable</small></li>
+<li id="symbol-security_context"><code>security_context</code> <small>variable</small></li>
+<li id="symbol-type_context"><code>type_context</code> <small>variable</small></li>
+<li id="symbol-pattern_context"><code>pattern_context</code> <small>variable</small></li>
+<li id="symbol-reaching_definitions"><code>reaching_definitions</code> <small>variable</small></li>
+<li id="symbol-use_def_chains"><code>use_def_chains</code> <small>variable</small></li>
+<li id="symbol-def_use_chains"><code>def_use_chains</code> <small>variable</small></li>
+<li id="symbol-aliases"><code>aliases</code> <small>variable</small></li>
+<li id="symbol-constants"><code>constants</code> <small>variable</small></li>
+<li id="symbol-taint_flows"><code>taint_flows</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-definitions"><code>definitions</code> <small>variable</small></li>
+<li id="symbol-def_site"><code>def_site</code> <small>variable</small></li>
+<li id="symbol-def_site"><code>def_site</code> <small>variable</small></li>
+<li id="symbol-def_site"><code>def_site</code> <small>variable</small></li>
+<li id="symbol-current_definitions"><code>current_definitions</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-relevant_defs"><code>relevant_defs</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-right_name"><code>right_name</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-value"><code>value</code> <small>variable</small></li>
+<li id="symbol-taint_result"><code>taint_result</code> <small>variable</small></li>
+<li id="symbol-calls"><code>calls</code> <small>variable</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-call_chains"><code>call_chains</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-parameters"><code>parameters</code> <small>variable</small></li>
+<li id="symbol-return_type"><code>return_type</code> <small>variable</small></li>
+<li id="symbol-attributes"><code>attributes</code> <small>variable</small></li>
+<li id="symbol-function_def"><code>function_def</code> <small>variable</small></li>
+<li id="symbol-param_type"><code>param_type</code> <small>variable</small></li>
+<li id="symbol-default_value"><code>default_value</code> <small>variable</small></li>
+<li id="symbol-is_mutable"><code>is_mutable</code> <small>variable</small></li>
+<li id="symbol-is_pure"><code>is_pure</code> <small>variable</small></li>
+<li id="symbol-performs_io"><code>performs_io</code> <small>variable</small></li>
+<li id="symbol-is_security_sensitive"><code>is_security_sensitive</code> <small>variable</small></li>
+<li id="symbol-sanitizes_input"><code>sanitizes_input</code> <small>variable</small></li>
+<li id="symbol-validates_input"><code>validates_input</code> <small>variable</small></li>
+<li id="symbol-func_name_lower"><code>func_name_lower</code> <small>variable</small></li>
+<li id="symbol-io_functions"><code>io_functions</code> <small>variable</small></li>
+<li id="symbol-security_functions"><code>security_functions</code> <small>variable</small></li>
+<li id="symbol-sanitization_functions"><code>sanitization_functions</code> <small>variable</small></li>
+<li id="symbol-validation_functions"><code>validation_functions</code> <small>variable</small></li>
+<li id="symbol-arguments"><code>arguments</code> <small>variable</small></li>
+<li id="symbol-function_call"><code>function_call</code> <small>variable</small></li>
+<li id="symbol-position"><code>position</code> <small>variable</small></li>
+<li id="symbol-validation_points"><code>validation_points</code> <small>variable</small></li>
+<li id="symbol-sanitization_points"><code>sanitization_points</code> <small>variable</small></li>
+<li id="symbol-auth_checks"><code>auth_checks</code> <small>variable</small></li>
+<li id="symbol-authz_checks"><code>authz_checks</code> <small>variable</small></li>
+<li id="symbol-error_handling"><code>error_handling</code> <small>variable</small></li>
+<li id="symbol-security_boundaries"><code>security_boundaries</code> <small>variable</small></li>
+<li id="symbol-trust_levels"><code>trust_levels</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-func_name_lower"><code>func_name_lower</code> <small>variable</small></li>
+<li id="symbol-expression_types"><code>expression_types</code> <small>variable</small></li>
+<li id="symbol-type_constraints"><code>type_constraints</code> <small>variable</small></li>
+<li id="symbol-generic_instantiations"><code>generic_instantiations</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-patterns"><code>patterns</code> <small>variable</small></li>
+<li id="symbol-anti_patterns"><code>anti_patterns</code> <small>variable</small></li>
+<li id="symbol-idioms"><code>idioms</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-def_site"><code>def_site</code> <small>variable</small></li>
+<li id="symbol-string_val"><code>string_val</code> <small>variable</small></li>
+<li id="symbol-int_val"><code>int_val</code> <small>variable</small></li>
+<li id="symbol-float_val"><code>float_val</code> <small>variable</small></li>
+<li id="symbol-bool_val"><code>bool_val</code> <small>variable</small></li>
+<li id="symbol-null_val"><code>null_val</code> <small>variable</small></li>
+<li id="symbol-unknown_val"><code>unknown_val</code> <small>variable</small></li>
+<li id="symbol-function_call"><code>function_call</code> <small>variable</small></li>
+<li id="symbol-validation_point"><code>validation_point</code> <small>variable</small></li>
+<li id="symbol-sanitization_point"><code>sanitization_point</code> <small>variable</small></li>
+<li id="symbol-type_info"><code>type_info</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-anti_pattern"><code>anti_pattern</code> <small>variable</small></li>
+<li id="symbol-boundary"><code>boundary</code> <small>variable</small></li>
+<li id="symbol-data_flow"><code>data_flow</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,490 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>semantic_graph.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>semantic_graph.rs</h1></header>
+<main>
+<section class="article">
+<p>131 symbols, 912 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["create_graph_node"])
+  F2 --> F3
+  F3(["create_graph_edge"])
+  F3 --> F4
+  F4(["build_from_analysis"])
+  F4 --> F5
+  F5(["find_by_type"])
+  F5 --> F6
+  F6(["find_by_name"])
+  F6 --> F7
+  F7(["traverse_relationships"])
+  F7 --> F8
+  F8(["find_similar"])
+  F8 --> F9
+  F9(["get_statistics"])
+  F9 --> F10
+  F10(["add_file_nodes"])
+  F10 --> F11
+  F11(["symbol_to_node_type"])
+  F11 --> F12
+  F12(["build_relationships"])
+  F12 --> F13
+  F13(["build_file_relationships"])
+  F13 --> F14
+  F14(["calculate_node_degrees"])
+  F14 --> F15
+  F15(["calculate_similarity"])
+  F15 --> F16
+  F16(["string_similarity"])
+  F16 --> F17
+  F17(["rebuild_index"])
+  F17 --> F18
+  F18(["new"])
+  F18 --> F19
+  F19(["default"])
+  F19 --> F20
+  F20(["default"])
+  F20 --> F21
+  F21(["fmt"])
+  F21 --> F22
+  F22(["fmt"])
+  F22 --> F23
+  F23(["create_test_analysis_result"])
+  F23 --> F24
+  F24(["test_semantic_graph_creation"])
+  F24 --> F25
+  F25(["test_build_graph_from_analysis"])
+  F25 --> F26
+  F26(["test_find_by_type"])
+  F26 --> F27
+  F27(["test_find_by_name"])
+  F27 --> F28
+  F28(["test_symbol_to_node_type_conversion"])
+  F28 --> F29
+  F29(["test_string_similarity"])
+  F29 --> F30
+  F30(["test_get_statistics"])
+  F30 --> F31
+  F31(["test_query_config_default"])
+  F31 --> F32
+  F32(["test_node_properties_default"])
+  F32 --> F33
+  F33(["SemanticGraphQuery"])
+  F33 --> F34
+  F34(["GraphNode"])
+  F34 --> F35
+  F35(["GraphEdge"])
+  F35 --> F36
+  F36(["NodeProperties"])
+  F36 --> F37
+  F37(["GraphIndex"])
+  F37 --> F38
+  F38(["QueryResult"])
+  F38 --> F39
+  F39(["QueryMetadata"])
+  F39 --> F40
+  F40(["QueryConfig"])
+  F40 --> F41
+  F41(["GraphStatistics"])
+  F41 --> F42
+  F42(["NodeType"])
+  F42 --> F43
+  F43(["RelationshipType"])
+  F43 --> F44
+  F44(["QueryConfig"])
+  F44 --> F45
+  F45(["SemanticGraphQuery"])
+  F45 --> F46
+  F46(["GraphIndex"])
+  F46 --> F47
+  F47(["SemanticGraphQuery"])
+  F47 --> F48
+  F48(["NodeProperties"])
+  F48 --> F49
+  F49(["NodeType"])
+  F49 --> F50
+  F50(["RelationshipType"])
+  F50 --> F51
+  F51(["start_time"])
+  F51 --> F52
+  F52(["nodes"])
+  F52 --> F53
+  F53(["edges"])
+  F53 --> F54
+  F54(["execution_time"])
+  F54 --> F55
+  F55(["edges_count"])
+  F55 --> F56
+  F56(["start_time"])
+  F56 --> F57
+  F57(["nodes"])
+  F57 --> F58
+  F58(["edges"])
+  F58 --> F59
+  F59(["examined"])
+  F59 --> F60
+  F60(["execution_time"])
+  F60 --> F61
+  F61(["edges_count"])
+  F61 --> F62
+  F62(["nodes_count"])
+  F62 --> F63
+  F63(["is_truncated"])
+  F63 --> F64
+  F64(["start_time"])
+  F64 --> F65
+  F65(["visited"])
+  F65 --> F66
+  F66(["queue"])
+  F66 --> F67
+  F67(["result_nodes"])
+  F67 --> F68
+  F68(["result_edges"])
+  F68 --> F69
+  F69(["edges_traversed"])
+  F69 --> F70
+  F70(["execution_time"])
+  F70 --> F71
+  F71(["start_time"])
+  F71 --> F72
+  F72(["similar_nodes"])
+  F72 --> F73
+  F73(["edges"])
+  F73 --> F74
+  F74(["similarities"])
+  F74 --> F75
+  F75(["similarity"])
+  F75 --> F76
+  F76(["execution_time"])
+  F76 --> F77
+  F77(["edges_count"])
+  F77 --> F78
+  F78(["type_counts"])
+  F78 --> F79
+  F79(["relationship_counts"])
+  F79 --> F80
+  F80(["node_id"])
+  F80 --> F81
+  F81(["node_type"])
+  F81 --> F82
+  F82(["node"])
+  F82 --> F83
+  F83(["file_symbols"])
+  F83 --> F84
+  F84(["node1_id"])
+  F84 --> F85
+  F85(["edges_for_node1"])
+  F85 --> F86
+  F86(["node2_id"])
+  F86 --> F87
+  F87(["edge"])
+  F87 --> F88
+  F88(["in_degrees"])
+  F88 --> F89
+  F89(["out_degrees"])
+  F89 --> F90
+  F90(["similarity"])
+  F90 --> F91
+  F91(["name_similarity"])
+  F91 --> F92
+  F92(["complexity_diff"])
+  F92 --> F93
+  F93(["complexity_similarity"])
+  F93 --> F94
+  F94(["degree_diff"])
+  F94 --> F95
+  F95(["degree_similarity"])
+  F95 --> F96
+  F96(["common_tags"])
+  F96 --> F97
+  F97(["total_tags"])
+  F97 --> F98
+  F98(["tag_similarity"])
+  F98 --> F99
+  F99(["s1_chars"])
+  F99 --> F100
+  F100(["s2_chars"])
+  F100 --> F101
+  F101(["intersection"])
+  F101 --> F102
+  F102(["union"])
+  F102 --> F103
+  F103(["symbols"])
+  F103 --> F104
+  F104(["file"])
+  F104 --> F105
+  F105(["graph"])
+  F105 --> F106
+  F106(["analysis"])
+  F106 --> F107
+  F107(["graph"])
+  F107 --> F108
+  F108(["result"])
+  F108 --> F109
+  F109(["function_nodes"])
+  F109 --> F110
+  F110(["class_nodes"])
+  F110 --> F111
+  F111(["analysis"])
+  F111 --> F112
+  F112(["graph"])
+  F112 --> F113
+  F113(["config"])
+  F113 --> F114
+  F114(["function_result"])
+  F114 --> F115
+  F115(["class_result"])
+  F115 --> F116
+  F116(["module_result"])
+  F116 --> F117
+  F117(["analysis"])
+  F117 --> F118
+  F118(["graph"])
+  F118 --> F119
+  F119(["config"])
+  F119 --> F120
+  F120(["result"])
+  F120 --> F121
+  F121(["result"])
+  F121 --> F122
+  F122(["result"])
+  F122 --> F123
+  F123(["graph"])
+  F123 --> F124
+  F124(["graph"])
+  F124 --> F125
+  F125(["similarity"])
+  F125 --> F126
+  F126(["analysis"])
+  F126 --> F127
+  F127(["graph"])
+  F127 --> F128
+  F128(["stats"])
+  F128 --> F129
+  F129(["config"])
+  F129 --> F130
+  F130(["props"])
+  F130 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant create_graph_node
+  participant create_graph_edge
+  participant build_from_analysis
+  participant find_by_type
+  participant find_by_name
+  participant traverse_relationships
+  participant find_similar
+  participant get_statistics
+  participant add_file_nodes
+  participant symbol_to_node_type
+  participant build_relationships
+  participant build_file_relationships
+  participant calculate_node_degrees
+  participant calculate_similarity
+  participant string_similarity
+  participant rebuild_index
+  participant new
+  participant default
+  participant default
+  participant fmt
+  participant fmt
+  participant create_test_analysis_result
+  participant test_semantic_graph_creation
+  participant test_build_graph_from_analysis
+  participant test_find_by_type
+  participant test_find_by_name
+  participant test_symbol_to_node_type_conversion
+  participant test_string_similarity
+  participant test_get_statistics
+  participant test_query_config_default
+  participant test_node_properties_default
+  default->>new: call
+  new->>create_graph_node: call
+  create_graph_node->>create_graph_edge: call
+  create_graph_edge->>build_from_analysis: call
+  build_from_analysis->>find_by_type: call
+  find_by_type->>find_by_name: call
+  find_by_name->>traverse_relationships: call
+  traverse_relationships->>find_similar: call
+  find_similar->>get_statistics: call
+  get_statistics->>add_file_nodes: call
+  add_file_nodes->>symbol_to_node_type: call
+  symbol_to_node_type->>build_relationships: call
+  build_relationships->>build_file_relationships: call
+  build_file_relationships->>calculate_node_degrees: call
+  calculate_node_degrees->>calculate_similarity: call
+  calculate_similarity->>string_similarity: call
+  string_similarity->>rebuild_index: call
+  rebuild_index->>new: call
+  new->>default: call
+  default->>default: call
+  default->>fmt: call
+  fmt->>fmt: call
+  fmt->>create_test_analysis_result: call
+  create_test_analysis_result->>test_semantic_graph_creation: call
+  test_semantic_graph_creation->>test_build_graph_from_analysis: call
+  test_build_graph_from_analysis->>test_find_by_type: call
+  test_find_by_type->>test_find_by_name: call
+  test_find_by_name->>test_symbol_to_node_type_conversion: call
+  test_symbol_to_node_type_conversion->>test_string_similarity: call
+  test_string_similarity->>test_get_statistics: call
+  test_get_statistics->>test_query_config_default: call
+  test_query_config_default->>test_node_properties_default: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-create_graph_node"><code>create_graph_node</code> <small>function</small></li>
+<li id="symbol-create_graph_edge"><code>create_graph_edge</code> <small>function</small></li>
+<li id="symbol-build_from_analysis"><code>build_from_analysis</code> <small>function</small></li>
+<li id="symbol-find_by_type"><code>find_by_type</code> <small>function</small></li>
+<li id="symbol-find_by_name"><code>find_by_name</code> <small>function</small></li>
+<li id="symbol-traverse_relationships"><code>traverse_relationships</code> <small>function</small></li>
+<li id="symbol-find_similar"><code>find_similar</code> <small>function</small></li>
+<li id="symbol-get_statistics"><code>get_statistics</code> <small>function</small></li>
+<li id="symbol-add_file_nodes"><code>add_file_nodes</code> <small>function</small></li>
+<li id="symbol-symbol_to_node_type"><code>symbol_to_node_type</code> <small>function</small></li>
+<li id="symbol-build_relationships"><code>build_relationships</code> <small>function</small></li>
+<li id="symbol-build_file_relationships"><code>build_file_relationships</code> <small>function</small></li>
+<li id="symbol-calculate_node_degrees"><code>calculate_node_degrees</code> <small>function</small></li>
+<li id="symbol-calculate_similarity"><code>calculate_similarity</code> <small>function</small></li>
+<li id="symbol-string_similarity"><code>string_similarity</code> <small>function</small></li>
+<li id="symbol-rebuild_index"><code>rebuild_index</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-create_test_analysis_result"><code>create_test_analysis_result</code> <small>function</small></li>
+<li id="symbol-test_semantic_graph_creation"><code>test_semantic_graph_creation</code> <small>function</small></li>
+<li id="symbol-test_build_graph_from_analysis"><code>test_build_graph_from_analysis</code> <small>function</small></li>
+<li id="symbol-test_find_by_type"><code>test_find_by_type</code> <small>function</small></li>
+<li id="symbol-test_find_by_name"><code>test_find_by_name</code> <small>function</small></li>
+<li id="symbol-test_symbol_to_node_type_conversion"><code>test_symbol_to_node_type_conversion</code> <small>function</small></li>
+<li id="symbol-test_string_similarity"><code>test_string_similarity</code> <small>function</small></li>
+<li id="symbol-test_get_statistics"><code>test_get_statistics</code> <small>function</small></li>
+<li id="symbol-test_query_config_default"><code>test_query_config_default</code> <small>function</small></li>
+<li id="symbol-test_node_properties_default"><code>test_node_properties_default</code> <small>function</small></li>
+<li id="symbol-semanticgraphquery"><code>SemanticGraphQuery</code> <small>struct</small></li>
+<li id="symbol-graphnode"><code>GraphNode</code> <small>struct</small></li>
+<li id="symbol-graphedge"><code>GraphEdge</code> <small>struct</small></li>
+<li id="symbol-nodeproperties"><code>NodeProperties</code> <small>struct</small></li>
+<li id="symbol-graphindex"><code>GraphIndex</code> <small>struct</small></li>
+<li id="symbol-queryresult"><code>QueryResult</code> <small>struct</small></li>
+<li id="symbol-querymetadata"><code>QueryMetadata</code> <small>struct</small></li>
+<li id="symbol-queryconfig"><code>QueryConfig</code> <small>struct</small></li>
+<li id="symbol-graphstatistics"><code>GraphStatistics</code> <small>struct</small></li>
+<li id="symbol-nodetype"><code>NodeType</code> <small>enum</small></li>
+<li id="symbol-relationshiptype"><code>RelationshipType</code> <small>enum</small></li>
+<li id="symbol-queryconfig"><code>QueryConfig</code> <small>impl</small></li>
+<li id="symbol-semanticgraphquery"><code>SemanticGraphQuery</code> <small>impl</small></li>
+<li id="symbol-graphindex"><code>GraphIndex</code> <small>impl</small></li>
+<li id="symbol-semanticgraphquery"><code>SemanticGraphQuery</code> <small>impl</small></li>
+<li id="symbol-nodeproperties"><code>NodeProperties</code> <small>impl</small></li>
+<li id="symbol-nodetype"><code>NodeType</code> <small>impl</small></li>
+<li id="symbol-relationshiptype"><code>RelationshipType</code> <small>impl</small></li>
+<li id="symbol-start_time"><code>start_time</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-edges"><code>edges</code> <small>variable</small></li>
+<li id="symbol-execution_time"><code>execution_time</code> <small>variable</small></li>
+<li id="symbol-edges_count"><code>edges_count</code> <small>variable</small></li>
+<li id="symbol-start_time"><code>start_time</code> <small>variable</small></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small></li>
+<li id="symbol-edges"><code>edges</code> <small>variable</small></li>
+<li id="symbol-examined"><code>examined</code> <small>variable</small></li>
+<li id="symbol-execution_time"><code>execution_time</code> <small>variable</small></li>
+<li id="symbol-edges_count"><code>edges_count</code> <small>variable</small></li>
+<li id="symbol-nodes_count"><code>nodes_count</code> <small>variable</small></li>
+<li id="symbol-is_truncated"><code>is_truncated</code> <small>variable</small></li>
+<li id="symbol-start_time"><code>start_time</code> <small>variable</small></li>
+<li id="symbol-visited"><code>visited</code> <small>variable</small></li>
+<li id="symbol-queue"><code>queue</code> <small>variable</small></li>
+<li id="symbol-result_nodes"><code>result_nodes</code> <small>variable</small></li>
+<li id="symbol-result_edges"><code>result_edges</code> <small>variable</small></li>
+<li id="symbol-edges_traversed"><code>edges_traversed</code> <small>variable</small></li>
+<li id="symbol-execution_time"><code>execution_time</code> <small>variable</small></li>
+<li id="symbol-start_time"><code>start_time</code> <small>variable</small></li>
+<li id="symbol-similar_nodes"><code>similar_nodes</code> <small>variable</small></li>
+<li id="symbol-edges"><code>edges</code> <small>variable</small></li>
+<li id="symbol-similarities"><code>similarities</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-execution_time"><code>execution_time</code> <small>variable</small></li>
+<li id="symbol-edges_count"><code>edges_count</code> <small>variable</small></li>
+<li id="symbol-type_counts"><code>type_counts</code> <small>variable</small></li>
+<li id="symbol-relationship_counts"><code>relationship_counts</code> <small>variable</small></li>
+<li id="symbol-node_id"><code>node_id</code> <small>variable</small></li>
+<li id="symbol-node_type"><code>node_type</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-file_symbols"><code>file_symbols</code> <small>variable</small></li>
+<li id="symbol-node1_id"><code>node1_id</code> <small>variable</small></li>
+<li id="symbol-edges_for_node1"><code>edges_for_node1</code> <small>variable</small></li>
+<li id="symbol-node2_id"><code>node2_id</code> <small>variable</small></li>
+<li id="symbol-edge"><code>edge</code> <small>variable</small></li>
+<li id="symbol-in_degrees"><code>in_degrees</code> <small>variable</small></li>
+<li id="symbol-out_degrees"><code>out_degrees</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-name_similarity"><code>name_similarity</code> <small>variable</small></li>
+<li id="symbol-complexity_diff"><code>complexity_diff</code> <small>variable</small></li>
+<li id="symbol-complexity_similarity"><code>complexity_similarity</code> <small>variable</small></li>
+<li id="symbol-degree_diff"><code>degree_diff</code> <small>variable</small></li>
+<li id="symbol-degree_similarity"><code>degree_similarity</code> <small>variable</small></li>
+<li id="symbol-common_tags"><code>common_tags</code> <small>variable</small></li>
+<li id="symbol-total_tags"><code>total_tags</code> <small>variable</small></li>
+<li id="symbol-tag_similarity"><code>tag_similarity</code> <small>variable</small></li>
+<li id="symbol-s1_chars"><code>s1_chars</code> <small>variable</small></li>
+<li id="symbol-s2_chars"><code>s2_chars</code> <small>variable</small></li>
+<li id="symbol-intersection"><code>intersection</code> <small>variable</small></li>
+<li id="symbol-union"><code>union</code> <small>variable</small></li>
+<li id="symbol-symbols"><code>symbols</code> <small>variable</small></li>
+<li id="symbol-file"><code>file</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-class_nodes"><code>class_nodes</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-function_result"><code>function_result</code> <small>variable</small></li>
+<li id="symbol-class_result"><code>class_result</code> <small>variable</small></li>
+<li id="symbol-module_result"><code>module_result</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-result"><code>result</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-graph"><code>graph</code> <small>variable</small></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-props"><code>props</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

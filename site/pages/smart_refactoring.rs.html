@@ -1,0 +1,622 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>smart_refactoring.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>smart_refactoring.rs</h1></header>
+<main>
+<section class="article">
+<p>173 symbols, 2174 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["with_config"])
+  F2 --> F3
+  F3(["analyze"])
+  F3 --> F4
+  F4(["detect_code_smell_fixes"])
+  F4 --> F5
+  F5(["detect_large_classes"])
+  F5 --> F6
+  F6(["detect_duplicate_code"])
+  F6 --> F7
+  F7(["detect_long_parameter_lists"])
+  F7 --> F8
+  F8(["is_function_or_method"])
+  F8 --> F9
+  F9(["create_parameter_list_fix"])
+  F9 --> F10
+  F10(["create_refactoring_location"])
+  F10 --> F11
+  F11(["get_parameter_list_benefits"])
+  F11 --> F12
+  F12(["get_parameter_list_risks"])
+  F12 --> F13
+  F13(["detect_complex_conditionals"])
+  F13 --> F14
+  F14(["calculate_method_complexity_score"])
+  F14 --> F15
+  F15(["generate_method_refactoring_suggestion"])
+  F15 --> F16
+  F16(["generate_class_refactoring_suggestion"])
+  F16 --> F17
+  F17(["calculate_function_similarity"])
+  F17 --> F18
+  F18(["generate_duplicate_code_refactoring"])
+  F18 --> F19
+  F19(["estimate_parameter_count"])
+  F19 --> F20
+  F20(["generate_parameter_object_refactoring"])
+  F20 --> F21
+  F21(["generate_conditional_refactoring"])
+  F21 --> F22
+  F22(["limit_fixes_per_category"])
+  F22 --> F23
+  F23(["detect_long_methods"])
+  F23 --> F24
+  F24(["generate_pattern_recommendations"])
+  F24 --> F25
+  F25(["generate_performance_optimizations"])
+  F25 --> F26
+  F26(["detect_string_concatenation_issues"])
+  F26 --> F27
+  F27(["detect_vector_reallocation_issues"])
+  F27 --> F28
+  F28(["detect_nested_loop_issues"])
+  F28 --> F29
+  F29(["generate_modernization_suggestions"])
+  F29 --> F30
+  F30(["generate_architectural_improvements"])
+  F30 --> F31
+  F31(["create_refactoring_roadmap"])
+  F31 --> F32
+  F32(["analyze_impact"])
+  F32 --> F33
+  F33(["calculate_refactoring_score"])
+  F33 --> F34
+  F34(["fmt"])
+  F34 --> F35
+  F35(["fmt"])
+  F35 --> F36
+  F36(["SmartRefactoringEngine"])
+  F36 --> F37
+  F37(["SmartRefactoringConfig"])
+  F37 --> F38
+  F38(["SmartRefactoringResult"])
+  F38 --> F39
+  F39(["CodeSmellFix"])
+  F39 --> F40
+  F40(["RefactoringLocation"])
+  F40 --> F41
+  F41(["PatternRecommendation"])
+  F41 --> F42
+  F42(["ImplementationStep"])
+  F42 --> F43
+  F43(["CodeChange"])
+  F43 --> F44
+  F44(["PerformanceOptimization"])
+  F44 --> F45
+  F45(["PerformanceGain"])
+  F45 --> F46
+  F46(["ModernizationSuggestion"])
+  F46 --> F47
+  F47(["ArchitecturalImprovement"])
+  F47 --> F48
+  F48(["ImplementationPhase"])
+  F48 --> F49
+  F49(["RefactoringRoadmap"])
+  F49 --> F50
+  F50(["RefactoringPhase"])
+  F50 --> F51
+  F51(["RefactoringItem"])
+  F51 --> F52
+  F52(["PriorityMatrix"])
+  F52 --> F53
+  F53(["SuccessMetric"])
+  F53 --> F54
+  F54(["ImpactAnalysis"])
+  F54 --> F55
+  F55(["QualityImpact"])
+  F55 --> F56
+  F56(["PerformanceImpact"])
+  F56 --> F57
+  F57(["MaintainabilityImpact"])
+  F57 --> F58
+  F58(["RiskAssessment"])
+  F58 --> F59
+  F59(["RefactoringRisk"])
+  F59 --> F60
+  F60(["RefactoringCategory"])
+  F60 --> F61
+  F61(["SmellCategory"])
+  F61 --> F62
+  F62(["PatternType"])
+  F62 --> F63
+  F63(["ChangeType"])
+  F63 --> F64
+  F64(["ImplementationComplexity"])
+  F64 --> F65
+  F65(["OptimizationType"])
+  F65 --> F66
+  F66(["ModernizationType"])
+  F66 --> F67
+  F67(["ArchitecturalImprovementType"])
+  F67 --> F68
+  F68(["Priority"])
+  F68 --> F69
+  F69(["SmartRefactoringConfig"])
+  F69 --> F70
+  F70(["SmartRefactoringEngine"])
+  F70 --> F71
+  F71(["RefactoringCategory"])
+  F71 --> F72
+  F72(["Priority"])
+  F72 --> F73
+  F73(["opportunities_by_category"])
+  F73 --> F74
+  F74(["code_smell_fixes"])
+  F74 --> F75
+  F75(["fixes"])
+  F75 --> F76
+  F76(["pattern_recommendations"])
+  F76 --> F77
+  F77(["recommendations"])
+  F77 --> F78
+  F78(["performance_optimizations"])
+  F78 --> F79
+  F79(["optimizations"])
+  F79 --> F80
+  F80(["modernization_suggestions"])
+  F80 --> F81
+  F81(["suggestions"])
+  F81 --> F82
+  F82(["architectural_improvements"])
+  F82 --> F83
+  F83(["improvements"])
+  F83 --> F84
+  F84(["refactoring_roadmap"])
+  F84 --> F85
+  F85(["impact_analysis"])
+  F85 --> F86
+  F86(["total_opportunities"])
+  F86 --> F87
+  F87(["refactoring_score"])
+  F87 --> F88
+  F88(["fixes"])
+  F88 --> F89
+  F89(["fixes"])
+  F89 --> F90
+  F90(["struct_symbols"])
+  F90 --> F91
+  F91(["impl_symbols"])
+  F91 --> F92
+  F92(["total_lines"])
+  F92 --> F93
+  F93(["start_line"])
+  F93 --> F94
+  F94(["end_line"])
+  F94 --> F95
+  F95(["method_count"])
+  F95 --> F96
+  F96(["line_threshold"])
+  F96 --> F97
+  F97(["method_threshold"])
+  F97 --> F98
+  F98(["fixes"])
+  F98 --> F99
+  F99(["function_symbols"])
+  F99 --> F100
+  F100(["similarity"])
+  F100 --> F101
+  F101(["fixes"])
+  F101 --> F102
+  F102(["estimated_params"])
+  F102 --> F103
+  F103(["fixes"])
+  F103 --> F104
+  F104(["complexity_score"])
+  F104 --> F105
+  F105(["score"])
+  F105 --> F106
+  F106(["name_lower"])
+  F106 --> F107
+  F107(["name_lower"])
+  F107 --> F108
+  F108(["count"])
+  F108 --> F109
+  F109(["category_counts"])
+  F109 --> F110
+  F110(["filtered_fixes"])
+  F110 --> F111
+  F111(["category_key"])
+  F111 --> F112
+  F112(["count"])
+  F112 --> F113
+  F113(["fixes"])
+  F113 --> F114
+  F114(["thresholds"])
+  F114 --> F115
+  F115(["function_symbols"])
+  F115 --> F116
+  F116(["line_count"])
+  F116 --> F117
+  F117(["threshold"])
+  F117 --> F118
+  F118(["complexity_score"])
+  F118 --> F119
+  F119(["recommendations"])
+  F119 --> F120
+  F120(["creation_methods"])
+  F120 --> F121
+  F121(["event_related_code"])
+  F121 --> F122
+  F122(["file_content"])
+  F122 --> F123
+  F123(["root_relative_path"])
+  F123 --> F124
+  F124(["optimizations"])
+  F124 --> F125
+  F125(["file_content"])
+  F125 --> F126
+  F126(["root_relative_path"])
+  F126 --> F127
+  F127(["optimizations"])
+  F127 --> F128
+  F128(["optimizations"])
+  F128 --> F129
+  F129(["lines"])
+  F129 --> F130
+  F130(["found_vec_new"])
+  F130 --> F131
+  F131(["found_push_in_loop"])
+  F131 --> F132
+  F132(["trimmed"])
+  F132 --> F133
+  F133(["optimizations"])
+  F133 --> F134
+  F134(["max_depth"])
+  F134 --> F135
+  F135(["thresholds"])
+  F135 --> F136
+  F136(["suggestions"])
+  F136 --> F137
+  F137(["file_content"])
+  F137 --> F138
+  F138(["root_relative_path"])
+  F138 --> F139
+  F139(["unwrap_count"])
+  F139 --> F140
+  F140(["expect_count"])
+  F140 --> F141
+  F141(["improvements"])
+  F141 --> F142
+  F142(["_has_clear_modules"])
+  F142 --> F143
+  F143(["module_dirs"])
+  F143 --> F144
+  F144(["business_logic_files"])
+  F144 --> F145
+  F145(["ui_files"])
+  F145 --> F146
+  F146(["data_files"])
+  F146 --> F147
+  F147(["file_name"])
+  F147 --> F148
+  F148(["refactoring_items"])
+  F148 --> F149
+  F149(["effort"])
+  F149 --> F150
+  F150(["phases"])
+  F150 --> F151
+  F151(["current_phase_items"])
+  F151 --> F152
+  F152(["current_phase_effort"])
+  F152 --> F153
+  F153(["max_phase_effort"])
+  F153 --> F154
+  F154(["total_effort"])
+  F154 --> F155
+  F155(["priority_matrix"])
+  F155 --> F156
+  F156(["success_metrics"])
+  F156 --> F157
+  F157(["readability_improvement"])
+  F157 --> F158
+  F158(["testability_improvement"])
+  F158 --> F159
+  F159(["reusability_improvement"])
+  F159 --> F160
+  F160(["quality_impact"])
+  F160 --> F161
+  F161(["avg_performance_gain"])
+  F161 --> F162
+  F162(["performance_impact"])
+  F162 --> F163
+  F163(["complexity_reduction"])
+  F163 --> F164
+  F164(["documentation_improvement"])
+  F164 --> F165
+  F165(["modularity_improvement"])
+  F165 --> F166
+  F166(["maintainability_impact"])
+  F166 --> F167
+  F167(["risks"])
+  F167 --> F168
+  F168(["overall_risk"])
+  F168 --> F169
+  F169(["risk_assessment"])
+  F169 --> F170
+  F170(["overall_impact"])
+  F170 --> F171
+  F171(["impact_score"])
+  F171 --> F172
+  F172(["opportunity_score"])
+  F172 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant with_config
+  participant analyze
+  participant detect_code_smell_fixes
+  participant detect_large_classes
+  participant detect_duplicate_code
+  participant detect_long_parameter_lists
+  participant is_function_or_method
+  participant create_parameter_list_fix
+  participant create_refactoring_location
+  participant get_parameter_list_benefits
+  participant get_parameter_list_risks
+  participant detect_complex_conditionals
+  participant calculate_method_complexity_score
+  participant generate_method_refactoring_suggestion
+  participant generate_class_refactoring_suggestion
+  participant calculate_function_similarity
+  participant generate_duplicate_code_refactoring
+  participant estimate_parameter_count
+  participant generate_parameter_object_refactoring
+  participant generate_conditional_refactoring
+  participant limit_fixes_per_category
+  participant detect_long_methods
+  participant generate_pattern_recommendations
+  participant generate_performance_optimizations
+  participant detect_string_concatenation_issues
+  participant detect_vector_reallocation_issues
+  participant detect_nested_loop_issues
+  participant generate_modernization_suggestions
+  participant generate_architectural_improvements
+  participant create_refactoring_roadmap
+  participant analyze_impact
+  participant calculate_refactoring_score
+  participant fmt
+  participant fmt
+  default->>new: call
+  new->>with_config: call
+  with_config->>analyze: call
+  analyze->>detect_code_smell_fixes: call
+  detect_code_smell_fixes->>detect_large_classes: call
+  detect_large_classes->>detect_duplicate_code: call
+  detect_duplicate_code->>detect_long_parameter_lists: call
+  detect_long_parameter_lists->>is_function_or_method: call
+  is_function_or_method->>create_parameter_list_fix: call
+  create_parameter_list_fix->>create_refactoring_location: call
+  create_refactoring_location->>get_parameter_list_benefits: call
+  get_parameter_list_benefits->>get_parameter_list_risks: call
+  get_parameter_list_risks->>detect_complex_conditionals: call
+  detect_complex_conditionals->>calculate_method_complexity_score: call
+  calculate_method_complexity_score->>generate_method_refactoring_suggestion: call
+  generate_method_refactoring_suggestion->>generate_class_refactoring_suggestion: call
+  generate_class_refactoring_suggestion->>calculate_function_similarity: call
+  calculate_function_similarity->>generate_duplicate_code_refactoring: call
+  generate_duplicate_code_refactoring->>estimate_parameter_count: call
+  estimate_parameter_count->>generate_parameter_object_refactoring: call
+  generate_parameter_object_refactoring->>generate_conditional_refactoring: call
+  generate_conditional_refactoring->>limit_fixes_per_category: call
+  limit_fixes_per_category->>detect_long_methods: call
+  detect_long_methods->>generate_pattern_recommendations: call
+  generate_pattern_recommendations->>generate_performance_optimizations: call
+  generate_performance_optimizations->>detect_string_concatenation_issues: call
+  detect_string_concatenation_issues->>detect_vector_reallocation_issues: call
+  detect_vector_reallocation_issues->>detect_nested_loop_issues: call
+  detect_nested_loop_issues->>generate_modernization_suggestions: call
+  generate_modernization_suggestions->>generate_architectural_improvements: call
+  generate_architectural_improvements->>create_refactoring_roadmap: call
+  create_refactoring_roadmap->>analyze_impact: call
+  analyze_impact->>calculate_refactoring_score: call
+  calculate_refactoring_score->>fmt: call
+  fmt->>fmt: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-detect_code_smell_fixes"><code>detect_code_smell_fixes</code> <small>function</small></li>
+<li id="symbol-detect_large_classes"><code>detect_large_classes</code> <small>function</small></li>
+<li id="symbol-detect_duplicate_code"><code>detect_duplicate_code</code> <small>function</small></li>
+<li id="symbol-detect_long_parameter_lists"><code>detect_long_parameter_lists</code> <small>function</small></li>
+<li id="symbol-is_function_or_method"><code>is_function_or_method</code> <small>function</small></li>
+<li id="symbol-create_parameter_list_fix"><code>create_parameter_list_fix</code> <small>function</small></li>
+<li id="symbol-create_refactoring_location"><code>create_refactoring_location</code> <small>function</small></li>
+<li id="symbol-get_parameter_list_benefits"><code>get_parameter_list_benefits</code> <small>function</small></li>
+<li id="symbol-get_parameter_list_risks"><code>get_parameter_list_risks</code> <small>function</small></li>
+<li id="symbol-detect_complex_conditionals"><code>detect_complex_conditionals</code> <small>function</small></li>
+<li id="symbol-calculate_method_complexity_score"><code>calculate_method_complexity_score</code> <small>function</small></li>
+<li id="symbol-generate_method_refactoring_suggestion"><code>generate_method_refactoring_suggestion</code> <small>function</small></li>
+<li id="symbol-generate_class_refactoring_suggestion"><code>generate_class_refactoring_suggestion</code> <small>function</small></li>
+<li id="symbol-calculate_function_similarity"><code>calculate_function_similarity</code> <small>function</small></li>
+<li id="symbol-generate_duplicate_code_refactoring"><code>generate_duplicate_code_refactoring</code> <small>function</small></li>
+<li id="symbol-estimate_parameter_count"><code>estimate_parameter_count</code> <small>function</small></li>
+<li id="symbol-generate_parameter_object_refactoring"><code>generate_parameter_object_refactoring</code> <small>function</small></li>
+<li id="symbol-generate_conditional_refactoring"><code>generate_conditional_refactoring</code> <small>function</small></li>
+<li id="symbol-limit_fixes_per_category"><code>limit_fixes_per_category</code> <small>function</small></li>
+<li id="symbol-detect_long_methods"><code>detect_long_methods</code> <small>function</small></li>
+<li id="symbol-generate_pattern_recommendations"><code>generate_pattern_recommendations</code> <small>function</small></li>
+<li id="symbol-generate_performance_optimizations"><code>generate_performance_optimizations</code> <small>function</small></li>
+<li id="symbol-detect_string_concatenation_issues"><code>detect_string_concatenation_issues</code> <small>function</small></li>
+<li id="symbol-detect_vector_reallocation_issues"><code>detect_vector_reallocation_issues</code> <small>function</small></li>
+<li id="symbol-detect_nested_loop_issues"><code>detect_nested_loop_issues</code> <small>function</small></li>
+<li id="symbol-generate_modernization_suggestions"><code>generate_modernization_suggestions</code> <small>function</small></li>
+<li id="symbol-generate_architectural_improvements"><code>generate_architectural_improvements</code> <small>function</small></li>
+<li id="symbol-create_refactoring_roadmap"><code>create_refactoring_roadmap</code> <small>function</small></li>
+<li id="symbol-analyze_impact"><code>analyze_impact</code> <small>function</small></li>
+<li id="symbol-calculate_refactoring_score"><code>calculate_refactoring_score</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small></li>
+<li id="symbol-smartrefactoringengine"><code>SmartRefactoringEngine</code> <small>struct</small></li>
+<li id="symbol-smartrefactoringconfig"><code>SmartRefactoringConfig</code> <small>struct</small></li>
+<li id="symbol-smartrefactoringresult"><code>SmartRefactoringResult</code> <small>struct</small></li>
+<li id="symbol-codesmellfix"><code>CodeSmellFix</code> <small>struct</small></li>
+<li id="symbol-refactoringlocation"><code>RefactoringLocation</code> <small>struct</small></li>
+<li id="symbol-patternrecommendation"><code>PatternRecommendation</code> <small>struct</small></li>
+<li id="symbol-implementationstep"><code>ImplementationStep</code> <small>struct</small></li>
+<li id="symbol-codechange"><code>CodeChange</code> <small>struct</small></li>
+<li id="symbol-performanceoptimization"><code>PerformanceOptimization</code> <small>struct</small></li>
+<li id="symbol-performancegain"><code>PerformanceGain</code> <small>struct</small></li>
+<li id="symbol-modernizationsuggestion"><code>ModernizationSuggestion</code> <small>struct</small></li>
+<li id="symbol-architecturalimprovement"><code>ArchitecturalImprovement</code> <small>struct</small></li>
+<li id="symbol-implementationphase"><code>ImplementationPhase</code> <small>struct</small></li>
+<li id="symbol-refactoringroadmap"><code>RefactoringRoadmap</code> <small>struct</small></li>
+<li id="symbol-refactoringphase"><code>RefactoringPhase</code> <small>struct</small></li>
+<li id="symbol-refactoringitem"><code>RefactoringItem</code> <small>struct</small></li>
+<li id="symbol-prioritymatrix"><code>PriorityMatrix</code> <small>struct</small></li>
+<li id="symbol-successmetric"><code>SuccessMetric</code> <small>struct</small></li>
+<li id="symbol-impactanalysis"><code>ImpactAnalysis</code> <small>struct</small></li>
+<li id="symbol-qualityimpact"><code>QualityImpact</code> <small>struct</small></li>
+<li id="symbol-performanceimpact"><code>PerformanceImpact</code> <small>struct</small></li>
+<li id="symbol-maintainabilityimpact"><code>MaintainabilityImpact</code> <small>struct</small></li>
+<li id="symbol-riskassessment"><code>RiskAssessment</code> <small>struct</small></li>
+<li id="symbol-refactoringrisk"><code>RefactoringRisk</code> <small>struct</small></li>
+<li id="symbol-refactoringcategory"><code>RefactoringCategory</code> <small>enum</small></li>
+<li id="symbol-smellcategory"><code>SmellCategory</code> <small>enum</small></li>
+<li id="symbol-patterntype"><code>PatternType</code> <small>enum</small></li>
+<li id="symbol-changetype"><code>ChangeType</code> <small>enum</small></li>
+<li id="symbol-implementationcomplexity"><code>ImplementationComplexity</code> <small>enum</small></li>
+<li id="symbol-optimizationtype"><code>OptimizationType</code> <small>enum</small></li>
+<li id="symbol-modernizationtype"><code>ModernizationType</code> <small>enum</small></li>
+<li id="symbol-architecturalimprovementtype"><code>ArchitecturalImprovementType</code> <small>enum</small></li>
+<li id="symbol-priority"><code>Priority</code> <small>enum</small></li>
+<li id="symbol-smartrefactoringconfig"><code>SmartRefactoringConfig</code> <small>impl</small></li>
+<li id="symbol-smartrefactoringengine"><code>SmartRefactoringEngine</code> <small>impl</small></li>
+<li id="symbol-refactoringcategory"><code>RefactoringCategory</code> <small>impl</small></li>
+<li id="symbol-priority"><code>Priority</code> <small>impl</small></li>
+<li id="symbol-opportunities_by_category"><code>opportunities_by_category</code> <small>variable</small></li>
+<li id="symbol-code_smell_fixes"><code>code_smell_fixes</code> <small>variable</small></li>
+<li id="symbol-fixes"><code>fixes</code> <small>variable</small></li>
+<li id="symbol-pattern_recommendations"><code>pattern_recommendations</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-performance_optimizations"><code>performance_optimizations</code> <small>variable</small></li>
+<li id="symbol-optimizations"><code>optimizations</code> <small>variable</small></li>
+<li id="symbol-modernization_suggestions"><code>modernization_suggestions</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-architectural_improvements"><code>architectural_improvements</code> <small>variable</small></li>
+<li id="symbol-improvements"><code>improvements</code> <small>variable</small></li>
+<li id="symbol-refactoring_roadmap"><code>refactoring_roadmap</code> <small>variable</small></li>
+<li id="symbol-impact_analysis"><code>impact_analysis</code> <small>variable</small></li>
+<li id="symbol-total_opportunities"><code>total_opportunities</code> <small>variable</small></li>
+<li id="symbol-refactoring_score"><code>refactoring_score</code> <small>variable</small></li>
+<li id="symbol-fixes"><code>fixes</code> <small>variable</small></li>
+<li id="symbol-fixes"><code>fixes</code> <small>variable</small></li>
+<li id="symbol-struct_symbols"><code>struct_symbols</code> <small>variable</small></li>
+<li id="symbol-impl_symbols"><code>impl_symbols</code> <small>variable</small></li>
+<li id="symbol-total_lines"><code>total_lines</code> <small>variable</small></li>
+<li id="symbol-start_line"><code>start_line</code> <small>variable</small></li>
+<li id="symbol-end_line"><code>end_line</code> <small>variable</small></li>
+<li id="symbol-method_count"><code>method_count</code> <small>variable</small></li>
+<li id="symbol-line_threshold"><code>line_threshold</code> <small>variable</small></li>
+<li id="symbol-method_threshold"><code>method_threshold</code> <small>variable</small></li>
+<li id="symbol-fixes"><code>fixes</code> <small>variable</small></li>
+<li id="symbol-function_symbols"><code>function_symbols</code> <small>variable</small></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small></li>
+<li id="symbol-fixes"><code>fixes</code> <small>variable</small></li>
+<li id="symbol-estimated_params"><code>estimated_params</code> <small>variable</small></li>
+<li id="symbol-fixes"><code>fixes</code> <small>variable</small></li>
+<li id="symbol-complexity_score"><code>complexity_score</code> <small>variable</small></li>
+<li id="symbol-score"><code>score</code> <small>variable</small></li>
+<li id="symbol-name_lower"><code>name_lower</code> <small>variable</small></li>
+<li id="symbol-name_lower"><code>name_lower</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+<li id="symbol-category_counts"><code>category_counts</code> <small>variable</small></li>
+<li id="symbol-filtered_fixes"><code>filtered_fixes</code> <small>variable</small></li>
+<li id="symbol-category_key"><code>category_key</code> <small>variable</small></li>
+<li id="symbol-count"><code>count</code> <small>variable</small></li>
+<li id="symbol-fixes"><code>fixes</code> <small>variable</small></li>
+<li id="symbol-thresholds"><code>thresholds</code> <small>variable</small></li>
+<li id="symbol-function_symbols"><code>function_symbols</code> <small>variable</small></li>
+<li id="symbol-line_count"><code>line_count</code> <small>variable</small></li>
+<li id="symbol-threshold"><code>threshold</code> <small>variable</small></li>
+<li id="symbol-complexity_score"><code>complexity_score</code> <small>variable</small></li>
+<li id="symbol-recommendations"><code>recommendations</code> <small>variable</small></li>
+<li id="symbol-creation_methods"><code>creation_methods</code> <small>variable</small></li>
+<li id="symbol-event_related_code"><code>event_related_code</code> <small>variable</small></li>
+<li id="symbol-file_content"><code>file_content</code> <small>variable</small></li>
+<li id="symbol-root_relative_path"><code>root_relative_path</code> <small>variable</small></li>
+<li id="symbol-optimizations"><code>optimizations</code> <small>variable</small></li>
+<li id="symbol-file_content"><code>file_content</code> <small>variable</small></li>
+<li id="symbol-root_relative_path"><code>root_relative_path</code> <small>variable</small></li>
+<li id="symbol-optimizations"><code>optimizations</code> <small>variable</small></li>
+<li id="symbol-optimizations"><code>optimizations</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-found_vec_new"><code>found_vec_new</code> <small>variable</small></li>
+<li id="symbol-found_push_in_loop"><code>found_push_in_loop</code> <small>variable</small></li>
+<li id="symbol-trimmed"><code>trimmed</code> <small>variable</small></li>
+<li id="symbol-optimizations"><code>optimizations</code> <small>variable</small></li>
+<li id="symbol-max_depth"><code>max_depth</code> <small>variable</small></li>
+<li id="symbol-thresholds"><code>thresholds</code> <small>variable</small></li>
+<li id="symbol-suggestions"><code>suggestions</code> <small>variable</small></li>
+<li id="symbol-file_content"><code>file_content</code> <small>variable</small></li>
+<li id="symbol-root_relative_path"><code>root_relative_path</code> <small>variable</small></li>
+<li id="symbol-unwrap_count"><code>unwrap_count</code> <small>variable</small></li>
+<li id="symbol-expect_count"><code>expect_count</code> <small>variable</small></li>
+<li id="symbol-improvements"><code>improvements</code> <small>variable</small></li>
+<li id="symbol-_has_clear_modules"><code>_has_clear_modules</code> <small>variable</small></li>
+<li id="symbol-module_dirs"><code>module_dirs</code> <small>variable</small></li>
+<li id="symbol-business_logic_files"><code>business_logic_files</code> <small>variable</small></li>
+<li id="symbol-ui_files"><code>ui_files</code> <small>variable</small></li>
+<li id="symbol-data_files"><code>data_files</code> <small>variable</small></li>
+<li id="symbol-file_name"><code>file_name</code> <small>variable</small></li>
+<li id="symbol-refactoring_items"><code>refactoring_items</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-phases"><code>phases</code> <small>variable</small></li>
+<li id="symbol-current_phase_items"><code>current_phase_items</code> <small>variable</small></li>
+<li id="symbol-current_phase_effort"><code>current_phase_effort</code> <small>variable</small></li>
+<li id="symbol-max_phase_effort"><code>max_phase_effort</code> <small>variable</small></li>
+<li id="symbol-total_effort"><code>total_effort</code> <small>variable</small></li>
+<li id="symbol-priority_matrix"><code>priority_matrix</code> <small>variable</small></li>
+<li id="symbol-success_metrics"><code>success_metrics</code> <small>variable</small></li>
+<li id="symbol-readability_improvement"><code>readability_improvement</code> <small>variable</small></li>
+<li id="symbol-testability_improvement"><code>testability_improvement</code> <small>variable</small></li>
+<li id="symbol-reusability_improvement"><code>reusability_improvement</code> <small>variable</small></li>
+<li id="symbol-quality_impact"><code>quality_impact</code> <small>variable</small></li>
+<li id="symbol-avg_performance_gain"><code>avg_performance_gain</code> <small>variable</small></li>
+<li id="symbol-performance_impact"><code>performance_impact</code> <small>variable</small></li>
+<li id="symbol-complexity_reduction"><code>complexity_reduction</code> <small>variable</small></li>
+<li id="symbol-documentation_improvement"><code>documentation_improvement</code> <small>variable</small></li>
+<li id="symbol-modularity_improvement"><code>modularity_improvement</code> <small>variable</small></li>
+<li id="symbol-maintainability_impact"><code>maintainability_impact</code> <small>variable</small></li>
+<li id="symbol-risks"><code>risks</code> <small>variable</small></li>
+<li id="symbol-overall_risk"><code>overall_risk</code> <small>variable</small></li>
+<li id="symbol-risk_assessment"><code>risk_assessment</code> <small>variable</small></li>
+<li id="symbol-overall_impact"><code>overall_impact</code> <small>variable</small></li>
+<li id="symbol-impact_score"><code>impact_score</code> <small>variable</small></li>
+<li id="symbol-opportunity_score"><code>opportunity_score</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

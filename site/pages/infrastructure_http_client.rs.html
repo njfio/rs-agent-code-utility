@@ -1,0 +1,263 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure/http_client.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>infrastructure/http_client.rs</h1></header>
+<main>
+<section class="article">
+<p>64 symbols, 390 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["with_config"])
+  F1 --> F2
+  F2(["get"])
+  F2 --> F3
+  F3(["post"])
+  F3 --> F4
+  F4(["request"])
+  F4 --> F5
+  F5(["execute_request"])
+  F5 --> F6
+  F6(["should_retry"])
+  F6 --> F7
+  F7(["default"])
+  F7 --> F8
+  F8(["new"])
+  F8 --> F9
+  F9(["wait_for_permit"])
+  F9 --> F10
+  F10(["check_permit"])
+  F10 --> F11
+  F11(["new"])
+  F11 --> F12
+  F12(["timeout"])
+  F12 --> F13
+  F13(["max_retries"])
+  F13 --> F14
+  F14(["user_agent"])
+  F14 --> F15
+  F15(["build"])
+  F15 --> F16
+  F16(["default"])
+  F16 --> F17
+  F17(["parse_json"])
+  F17 --> F18
+  F18(["is_rate_limited"])
+  F18 --> F19
+  F19(["extract_rate_limit_info"])
+  F19 --> F20
+  F20(["HttpClient"])
+  F20 --> F21
+  F21(["RequestConfig"])
+  F21 --> F22
+  F22(["HttpResponse"])
+  F22 --> F23
+  F23(["RateLimiter"])
+  F23 --> F24
+  F24(["HttpClientBuilder"])
+  F24 --> F25
+  F25(["RateLimitInfo"])
+  F25 --> F26
+  F26(["AuthConfig"])
+  F26 --> F27
+  F27(["HttpClient"])
+  F27 --> F28
+  F28(["RequestConfig"])
+  F28 --> F29
+  F29(["RateLimiter"])
+  F29 --> F30
+  F30(["HttpClientBuilder"])
+  F30 --> F31
+  F31(["HttpClientBuilder"])
+  F31 --> F32
+  F32(["client"])
+  F32 --> F33
+  F33(["client"])
+  F33 --> F34
+  F34(["config"])
+  F34 --> F35
+  F35(["timeout"])
+  F35 --> F36
+  F36(["max_retries"])
+  F36 --> F37
+  F37(["backoff_min"])
+  F37 --> F38
+  F38(["backoff_max"])
+  F38 --> F39
+  F39(["start_time"])
+  F39 --> F40
+  F40(["duration"])
+  F40 --> F41
+  F41(["shift"])
+  F41 --> F42
+  F42(["factor"])
+  F42 --> F43
+  F43(["min_nanos"])
+  F43 --> F44
+  F44(["delay_nanos"])
+  F44 --> F45
+  F45(["max_nanos"])
+  F45 --> F46
+  F46(["rng"])
+  F46 --> F47
+  F47(["jitter_factor"])
+  F47 --> F48
+  F48(["jittered"])
+  F48 --> F49
+  F49(["jittered"])
+  F49 --> F50
+  F50(["delay"])
+  F50 --> F51
+  F51(["request_builder"])
+  F51 --> F52
+  F52(["response"])
+  F52 --> F53
+  F53(["status"])
+  F53 --> F54
+  F54(["headers"])
+  F54 --> F55
+  F55(["url"])
+  F55 --> F56
+  F56(["error_body"])
+  F56 --> F57
+  F57(["body"])
+  F57 --> F58
+  F58(["error_str"])
+  F58 --> F59
+  F59(["quota"])
+  F59 --> F60
+  F60(["limiter"])
+  F60 --> F61
+  F61(["client"])
+  F61 --> F62
+  F62(["remaining"])
+  F62 --> F63
+  F63(["reset"])
+  F63 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant with_config
+  participant get
+  participant post
+  participant request
+  participant execute_request
+  participant should_retry
+  participant default
+  participant new
+  participant wait_for_permit
+  participant check_permit
+  participant new
+  participant timeout
+  participant max_retries
+  participant user_agent
+  participant build
+  participant default
+  participant parse_json
+  participant is_rate_limited
+  participant extract_rate_limit_info
+  new->>with_config: call
+  with_config->>get: call
+  get->>post: call
+  post->>request: call
+  request->>execute_request: call
+  execute_request->>should_retry: call
+  should_retry->>default: call
+  default->>new: call
+  new->>wait_for_permit: call
+  wait_for_permit->>check_permit: call
+  check_permit->>new: call
+  new->>timeout: call
+  timeout->>max_retries: call
+  max_retries->>user_agent: call
+  user_agent->>build: call
+  build->>default: call
+  default->>parse_json: call
+  parse_json->>is_rate_limited: call
+  is_rate_limited->>extract_rate_limit_info: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_config"><code>with_config</code> <small>function</small></li>
+<li id="symbol-get"><code>get</code> <small>function</small></li>
+<li id="symbol-post"><code>post</code> <small>function</small></li>
+<li id="symbol-request"><code>request</code> <small>function</small></li>
+<li id="symbol-execute_request"><code>execute_request</code> <small>function</small></li>
+<li id="symbol-should_retry"><code>should_retry</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-wait_for_permit"><code>wait_for_permit</code> <small>function</small></li>
+<li id="symbol-check_permit"><code>check_permit</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-timeout"><code>timeout</code> <small>function</small></li>
+<li id="symbol-max_retries"><code>max_retries</code> <small>function</small></li>
+<li id="symbol-user_agent"><code>user_agent</code> <small>function</small></li>
+<li id="symbol-build"><code>build</code> <small>function</small></li>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-parse_json"><code>parse_json</code> <small>function</small></li>
+<li id="symbol-is_rate_limited"><code>is_rate_limited</code> <small>function</small></li>
+<li id="symbol-extract_rate_limit_info"><code>extract_rate_limit_info</code> <small>function</small></li>
+<li id="symbol-httpclient"><code>HttpClient</code> <small>struct</small></li>
+<li id="symbol-requestconfig"><code>RequestConfig</code> <small>struct</small></li>
+<li id="symbol-httpresponse"><code>HttpResponse</code> <small>struct</small></li>
+<li id="symbol-ratelimiter"><code>RateLimiter</code> <small>struct</small></li>
+<li id="symbol-httpclientbuilder"><code>HttpClientBuilder</code> <small>struct</small></li>
+<li id="symbol-ratelimitinfo"><code>RateLimitInfo</code> <small>struct</small></li>
+<li id="symbol-authconfig"><code>AuthConfig</code> <small>enum</small></li>
+<li id="symbol-httpclient"><code>HttpClient</code> <small>impl</small></li>
+<li id="symbol-requestconfig"><code>RequestConfig</code> <small>impl</small></li>
+<li id="symbol-ratelimiter"><code>RateLimiter</code> <small>impl</small></li>
+<li id="symbol-httpclientbuilder"><code>HttpClientBuilder</code> <small>impl</small></li>
+<li id="symbol-httpclientbuilder"><code>HttpClientBuilder</code> <small>impl</small></li>
+<li id="symbol-client"><code>client</code> <small>variable</small></li>
+<li id="symbol-client"><code>client</code> <small>variable</small></li>
+<li id="symbol-config"><code>config</code> <small>variable</small></li>
+<li id="symbol-timeout"><code>timeout</code> <small>variable</small></li>
+<li id="symbol-max_retries"><code>max_retries</code> <small>variable</small></li>
+<li id="symbol-backoff_min"><code>backoff_min</code> <small>variable</small></li>
+<li id="symbol-backoff_max"><code>backoff_max</code> <small>variable</small></li>
+<li id="symbol-start_time"><code>start_time</code> <small>variable</small></li>
+<li id="symbol-duration"><code>duration</code> <small>variable</small></li>
+<li id="symbol-shift"><code>shift</code> <small>variable</small></li>
+<li id="symbol-factor"><code>factor</code> <small>variable</small></li>
+<li id="symbol-min_nanos"><code>min_nanos</code> <small>variable</small></li>
+<li id="symbol-delay_nanos"><code>delay_nanos</code> <small>variable</small></li>
+<li id="symbol-max_nanos"><code>max_nanos</code> <small>variable</small></li>
+<li id="symbol-rng"><code>rng</code> <small>variable</small></li>
+<li id="symbol-jitter_factor"><code>jitter_factor</code> <small>variable</small></li>
+<li id="symbol-jittered"><code>jittered</code> <small>variable</small></li>
+<li id="symbol-jittered"><code>jittered</code> <small>variable</small></li>
+<li id="symbol-delay"><code>delay</code> <small>variable</small></li>
+<li id="symbol-request_builder"><code>request_builder</code> <small>variable</small></li>
+<li id="symbol-response"><code>response</code> <small>variable</small></li>
+<li id="symbol-status"><code>status</code> <small>variable</small></li>
+<li id="symbol-headers"><code>headers</code> <small>variable</small></li>
+<li id="symbol-url"><code>url</code> <small>variable</small></li>
+<li id="symbol-error_body"><code>error_body</code> <small>variable</small></li>
+<li id="symbol-body"><code>body</code> <small>variable</small></li>
+<li id="symbol-error_str"><code>error_str</code> <small>variable</small></li>
+<li id="symbol-quota"><code>quota</code> <small>variable</small></li>
+<li id="symbol-limiter"><code>limiter</code> <small>variable</small></li>
+<li id="symbol-client"><code>client</code> <small>variable</small></li>
+<li id="symbol-remaining"><code>remaining</code> <small>variable</small></li>
+<li id="symbol-reset"><code>reset</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>wiki/mod.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>wiki/mod.rs</h1></header>
+<main>
+<section class="article">
+<p>114 symbols, 528 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["builder"])
+  F0 --> F1
+  F1(["new"])
+  F1 --> F2
+  F2(["with_site_title"])
+  F2 --> F3
+  F3(["with_output_dir"])
+  F3 --> F4
+  F4(["include_api_docs"])
+  F4 --> F5
+  F5(["include_examples"])
+  F5 --> F6
+  F6(["with_ai_enabled"])
+  F6 --> F7
+  F7(["with_ai_mock"])
+  F7 --> F8
+  F8(["with_ai_config_path"])
+  F8 --> F9
+  F9(["build"])
+  F9 --> F10
+  F10(["new"])
+  F10 --> F11
+  F11(["generate_from_path"])
+  F11 --> F12
+  F12(["analyze"])
+  F12 --> F13
+  F13(["generate_site"])
+  F13 --> F14
+  F14(["write_style_css"])
+  F14 --> F15
+  F15(["write_search_js"])
+  F15 --> F16
+  F16(["write_index_html"])
+  F16 --> F17
+  F17(["write_file_page"])
+  F17 --> F18
+  F18(["write_global_symbols"])
+  F18 --> F19
+  F19(["file_has_branching"])
+  F19 --> F20
+  F20(["build_sequence_diagram"])
+  F20 --> F21
+  F21(["build_control_flow"])
+  F21 --> F22
+  F22(["build_sequence_or_flow_blocks"])
+  F22 --> F23
+  F23(["anchorize"])
+  F23 --> F24
+  F24(["safe_ident"])
+  F24 --> F25
+  F25(["build_nav"])
+  F25 --> F26
+  F26(["write_search_index"])
+  F26 --> F27
+  F27(["generate_ai_insights_sync"])
+  F27 --> F28
+  F28(["sanitize_filename"])
+  F28 --> F29
+  F29(["html_escape"])
+  F29 --> F30
+  F30(["build_simple_dependency_graph"])
+  F30 --> F31
+  F31(["build_simple_flow"])
+  F31 --> F32
+  F32(["WikiConfig"])
+  F32 --> F33
+  F33(["WikiConfigBuilder"])
+  F33 --> F34
+  F34(["WikiGenerationResult"])
+  F34 --> F35
+  F35(["WikiGenerator"])
+  F35 --> F36
+  F36(["SearchEntry"])
+  F36 --> F37
+  F37(["WikiConfig"])
+  F37 --> F38
+  F38(["WikiConfigBuilder"])
+  F38 --> F39
+  F39(["WikiGenerator"])
+  F39 --> F40
+  F40(["WikiGenerator"])
+  F40 --> F41
+  F41(["site_title"])
+  F41 --> F42
+  F42(["output_dir"])
+  F42 --> F43
+  F43(["root"])
+  F43 --> F44
+  F44(["analysis"])
+  F44 --> F45
+  F45(["cfg"])
+  F45 --> F46
+  F46(["analyzer"])
+  F46 --> F47
+  F47(["out"])
+  F47 --> F48
+  F48(["assets"])
+  F48 --> F49
+  F49(["pages"])
+  F49 --> F50
+  F50(["page_count"])
+  F50 --> F51
+  F51(["index_entries"])
+  F51 --> F52
+  F52(["safe_name"])
+  F52 --> F53
+  F53(["page_path"])
+  F53 --> F54
+  F54(["ai_insights"])
+  F54 --> F55
+  F55(["title"])
+  F55 --> F56
+  F56(["desc"])
+  F56 --> F57
+  F57(["anchor"])
+  F57 --> F58
+  F58(["css"])
+  F58 --> F59
+  F59(["js"])
+  F59 --> F60
+  F60(["nav"])
+  F60 --> F61
+  F61(["ai_block"])
+  F61 --> F62
+  F62(["content"])
+  F62 --> F63
+  F63(["rels"])
+  F63 --> F64
+  F64(["writeln"])
+  F64 --> F65
+  F65(["sym_list"])
+  F65 --> F66
+  F66(["writeln"])
+  F66 --> F67
+  F67(["diag_blocks"])
+  F67 --> F68
+  F68(["content"])
+  F68 --> F69
+  F69(["items"])
+  F69 --> F70
+  F70(["page"])
+  F70 --> F71
+  F71(["writeln"])
+  F71 --> F72
+  F72(["content"])
+  F72 --> F73
+  F73(["out"])
+  F73 --> F74
+  F74(["funcs"])
+  F74 --> F75
+  F75(["writeln"])
+  F75 --> F76
+  F76(["a"])
+  F76 --> F77
+  F77(["b"])
+  F77 --> F78
+  F78(["writeln"])
+  F78 --> F79
+  F79(["out"])
+  F79 --> F80
+  F80(["writeln"])
+  F80 --> F81
+  F81(["id"])
+  F81 --> F82
+  F82(["writeln"])
+  F82 --> F83
+  F83(["next"])
+  F83 --> F84
+  F84(["writeln"])
+  F84 --> F85
+  F85(["writeln"])
+  F85 --> F86
+  F86(["has_branch"])
+  F86 --> F87
+  F87(["multi_funcs"])
+  F87 --> F88
+  F88(["out"])
+  F88 --> F89
+  F89(["name"])
+  F89 --> F90
+  F90(["writeln"])
+  F90 --> F91
+  F91(["json"])
+  F91 --> F92
+  F92(["summary"])
+  F92 --> F93
+  F93(["writeln"])
+  F93 --> F94
+  F94(["writeln"])
+  F94 --> F95
+  F95(["content"])
+  F95 --> F96
+  F96(["req"])
+  F96 --> F97
+  F97(["builder"])
+  F97 --> F98
+  F98(["builder"])
+  F98 --> F99
+  F99(["rt"])
+  F99 --> F100
+  F100(["service"])
+  F100 --> F101
+  F101(["resp"])
+  F101 --> F102
+  F102(["html"])
+  F102 --> F103
+  F103(["out"])
+  F103 --> F104
+  F104(["prev"])
+  F104 --> F105
+  F105(["id"])
+  F105 --> F106
+  F106(["writeln"])
+  F106 --> F107
+  F107(["writeln"])
+  F107 --> F108
+  F108(["out"])
+  F108 --> F109
+  F109(["file_id"])
+  F109 --> F110
+  F110(["writeln"])
+  F110 --> F111
+  F111(["node"])
+  F111 --> F112
+  F112(["writeln"])
+  F112 --> F113
+  F113(["writeln"])
+  F113 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant builder
+  participant new
+  participant with_site_title
+  participant with_output_dir
+  participant include_api_docs
+  participant include_examples
+  participant with_ai_enabled
+  participant with_ai_mock
+  participant with_ai_config_path
+  participant build
+  participant new
+  participant generate_from_path
+  participant analyze
+  participant generate_site
+  participant write_style_css
+  participant write_search_js
+  participant write_index_html
+  participant write_file_page
+  participant write_global_symbols
+  participant file_has_branching
+  participant build_sequence_diagram
+  participant build_control_flow
+  participant build_sequence_or_flow_blocks
+  participant anchorize
+  participant safe_ident
+  participant build_nav
+  participant write_search_index
+  participant generate_ai_insights_sync
+  participant sanitize_filename
+  participant html_escape
+  participant build_simple_dependency_graph
+  participant build_simple_flow
+  builder->>new: call
+  new->>with_site_title: call
+  with_site_title->>with_output_dir: call
+  with_output_dir->>include_api_docs: call
+  include_api_docs->>include_examples: call
+  include_examples->>with_ai_enabled: call
+  with_ai_enabled->>with_ai_mock: call
+  with_ai_mock->>with_ai_config_path: call
+  with_ai_config_path->>build: call
+  build->>new: call
+  new->>generate_from_path: call
+  generate_from_path->>analyze: call
+  analyze->>generate_site: call
+  generate_site->>write_style_css: call
+  write_style_css->>write_search_js: call
+  write_search_js->>write_index_html: call
+  write_index_html->>write_file_page: call
+  write_file_page->>write_global_symbols: call
+  write_global_symbols->>file_has_branching: call
+  file_has_branching->>build_sequence_diagram: call
+  build_sequence_diagram->>build_control_flow: call
+  build_control_flow->>build_sequence_or_flow_blocks: call
+  build_sequence_or_flow_blocks->>anchorize: call
+  anchorize->>safe_ident: call
+  safe_ident->>build_nav: call
+  build_nav->>write_search_index: call
+  write_search_index->>generate_ai_insights_sync: call
+  generate_ai_insights_sync->>sanitize_filename: call
+  sanitize_filename->>html_escape: call
+  html_escape->>build_simple_dependency_graph: call
+  build_simple_dependency_graph->>build_simple_flow: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-builder"><code>builder</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-with_site_title"><code>with_site_title</code> <small>function</small></li>
+<li id="symbol-with_output_dir"><code>with_output_dir</code> <small>function</small></li>
+<li id="symbol-include_api_docs"><code>include_api_docs</code> <small>function</small></li>
+<li id="symbol-include_examples"><code>include_examples</code> <small>function</small></li>
+<li id="symbol-with_ai_enabled"><code>with_ai_enabled</code> <small>function</small></li>
+<li id="symbol-with_ai_mock"><code>with_ai_mock</code> <small>function</small></li>
+<li id="symbol-with_ai_config_path"><code>with_ai_config_path</code> <small>function</small></li>
+<li id="symbol-build"><code>build</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-generate_from_path"><code>generate_from_path</code> <small>function</small></li>
+<li id="symbol-analyze"><code>analyze</code> <small>function</small></li>
+<li id="symbol-generate_site"><code>generate_site</code> <small>function</small></li>
+<li id="symbol-write_style_css"><code>write_style_css</code> <small>function</small></li>
+<li id="symbol-write_search_js"><code>write_search_js</code> <small>function</small></li>
+<li id="symbol-write_index_html"><code>write_index_html</code> <small>function</small></li>
+<li id="symbol-write_file_page"><code>write_file_page</code> <small>function</small></li>
+<li id="symbol-write_global_symbols"><code>write_global_symbols</code> <small>function</small></li>
+<li id="symbol-file_has_branching"><code>file_has_branching</code> <small>function</small></li>
+<li id="symbol-build_sequence_diagram"><code>build_sequence_diagram</code> <small>function</small></li>
+<li id="symbol-build_control_flow"><code>build_control_flow</code> <small>function</small></li>
+<li id="symbol-build_sequence_or_flow_blocks"><code>build_sequence_or_flow_blocks</code> <small>function</small></li>
+<li id="symbol-anchorize"><code>anchorize</code> <small>function</small></li>
+<li id="symbol-safe_ident"><code>safe_ident</code> <small>function</small></li>
+<li id="symbol-build_nav"><code>build_nav</code> <small>function</small></li>
+<li id="symbol-write_search_index"><code>write_search_index</code> <small>function</small></li>
+<li id="symbol-generate_ai_insights_sync"><code>generate_ai_insights_sync</code> <small>function</small></li>
+<li id="symbol-sanitize_filename"><code>sanitize_filename</code> <small>function</small></li>
+<li id="symbol-html_escape"><code>html_escape</code> <small>function</small></li>
+<li id="symbol-build_simple_dependency_graph"><code>build_simple_dependency_graph</code> <small>function</small></li>
+<li id="symbol-build_simple_flow"><code>build_simple_flow</code> <small>function</small></li>
+<li id="symbol-wikiconfig"><code>WikiConfig</code> <small>struct</small></li>
+<li id="symbol-wikiconfigbuilder"><code>WikiConfigBuilder</code> <small>struct</small></li>
+<li id="symbol-wikigenerationresult"><code>WikiGenerationResult</code> <small>struct</small></li>
+<li id="symbol-wikigenerator"><code>WikiGenerator</code> <small>struct</small></li>
+<li id="symbol-searchentry"><code>SearchEntry</code> <small>struct</small></li>
+<li id="symbol-wikiconfig"><code>WikiConfig</code> <small>impl</small></li>
+<li id="symbol-wikiconfigbuilder"><code>WikiConfigBuilder</code> <small>impl</small></li>
+<li id="symbol-wikigenerator"><code>WikiGenerator</code> <small>impl</small></li>
+<li id="symbol-wikigenerator"><code>WikiGenerator</code> <small>impl</small></li>
+<li id="symbol-site_title"><code>site_title</code> <small>variable</small></li>
+<li id="symbol-output_dir"><code>output_dir</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-analysis"><code>analysis</code> <small>variable</small></li>
+<li id="symbol-cfg"><code>cfg</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-assets"><code>assets</code> <small>variable</small></li>
+<li id="symbol-pages"><code>pages</code> <small>variable</small></li>
+<li id="symbol-page_count"><code>page_count</code> <small>variable</small></li>
+<li id="symbol-index_entries"><code>index_entries</code> <small>variable</small></li>
+<li id="symbol-safe_name"><code>safe_name</code> <small>variable</small></li>
+<li id="symbol-page_path"><code>page_path</code> <small>variable</small></li>
+<li id="symbol-ai_insights"><code>ai_insights</code> <small>variable</small></li>
+<li id="symbol-title"><code>title</code> <small>variable</small></li>
+<li id="symbol-desc"><code>desc</code> <small>variable</small></li>
+<li id="symbol-anchor"><code>anchor</code> <small>variable</small></li>
+<li id="symbol-css"><code>css</code> <small>variable</small></li>
+<li id="symbol-js"><code>js</code> <small>variable</small></li>
+<li id="symbol-nav"><code>nav</code> <small>variable</small></li>
+<li id="symbol-ai_block"><code>ai_block</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-rels"><code>rels</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-sym_list"><code>sym_list</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-diag_blocks"><code>diag_blocks</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-items"><code>items</code> <small>variable</small></li>
+<li id="symbol-page"><code>page</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-funcs"><code>funcs</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-a"><code>a</code> <small>variable</small></li>
+<li id="symbol-b"><code>b</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-id"><code>id</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-next"><code>next</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-has_branch"><code>has_branch</code> <small>variable</small></li>
+<li id="symbol-multi_funcs"><code>multi_funcs</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-name"><code>name</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-json"><code>json</code> <small>variable</small></li>
+<li id="symbol-summary"><code>summary</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-content"><code>content</code> <small>variable</small></li>
+<li id="symbol-req"><code>req</code> <small>variable</small></li>
+<li id="symbol-builder"><code>builder</code> <small>variable</small></li>
+<li id="symbol-builder"><code>builder</code> <small>variable</small></li>
+<li id="symbol-rt"><code>rt</code> <small>variable</small></li>
+<li id="symbol-service"><code>service</code> <small>variable</small></li>
+<li id="symbol-resp"><code>resp</code> <small>variable</small></li>
+<li id="symbol-html"><code>html</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-prev"><code>prev</code> <small>variable</small></li>
+<li id="symbol-id"><code>id</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-out"><code>out</code> <small>variable</small></li>
+<li id="symbol-file_id"><code>file_id</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+<li id="symbol-writeln"><code>writeln</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

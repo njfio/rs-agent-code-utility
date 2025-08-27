@@ -1,0 +1,1019 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>complexity_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>complexity_analysis.rs</h1></header>
+<main>
+<section class="article">
+<p>290 symbols, 2047 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["default"])
+  F0 --> F1
+  F1(["volume"])
+  F1 --> F2
+  F2(["difficulty"])
+  F2 --> F3
+  F3(["effort"])
+  F3 --> F4
+  F4(["new"])
+  F4 --> F5
+  F5(["analyze_complexity"])
+  F5 --> F6
+  F6(["calculate_mccabe_complexity"])
+  F6 --> F7
+  F7(["calculate_cognitive_complexity"])
+  F7 --> F8
+  F8(["traverse_for_cognitive_complexity"])
+  F8 --> F9
+  F9(["get_cognitive_complexity_impact"])
+  F9 --> F10
+  F10(["get_rust_cognitive_impact"])
+  F10 --> F11
+  F11(["get_javascript_cognitive_impact"])
+  F11 --> F12
+  F12(["get_python_cognitive_impact"])
+  F12 --> F13
+  F13(["get_c_cognitive_impact"])
+  F13 --> F14
+  F14(["get_go_cognitive_impact"])
+  F14 --> F15
+  F15(["is_logical_operator"])
+  F15 --> F16
+  F16(["calculate_halstead_metrics"])
+  F16 --> F17
+  F17(["traverse_for_halstead"])
+  F17 --> F18
+  F18(["is_operator"])
+  F18 --> F19
+  F19(["is_operand"])
+  F19 --> F20
+  F20(["calculate_npath_complexity"])
+  F20 --> F21
+  F21(["traverse_for_npath"])
+  F21 --> F22
+  F22(["calculate_rust_npath"])
+  F22 --> F23
+  F23(["calculate_js_npath"])
+  F23 --> F24
+  F24(["calculate_python_npath"])
+  F24 --> F25
+  F25(["calculate_c_npath"])
+  F25 --> F26
+  F26(["calculate_go_npath"])
+  F26 --> F27
+  F27(["calculate_default_npath"])
+  F27 --> F28
+  F28(["is_control_flow_node"])
+  F28 --> F29
+  F29(["calculate_expression_npath"])
+  F29 --> F30
+  F30(["calculate_rust_expression_npath"])
+  F30 --> F31
+  F31(["calculate_js_expression_npath"])
+  F31 --> F32
+  F32(["calculate_python_expression_npath"])
+  F32 --> F33
+  F33(["calculate_c_expression_npath"])
+  F33 --> F34
+  F34(["calculate_go_expression_npath"])
+  F34 --> F35
+  F35(["count_lines_of_code"])
+  F35 --> F36
+  F36(["calculate_max_nesting_depth"])
+  F36 --> F37
+  F37(["traverse_for_max_depth"])
+  F37 --> F38
+  F38(["increases_nesting_depth"])
+  F38 --> F39
+  F39(["test_mccabe_complexity_simple"])
+  F39 --> F40
+  F40(["test_mccabe_complexity_with_conditions"])
+  F40 --> F41
+  F41(["test_halstead_metrics_basic"])
+  F41 --> F42
+  F42(["test_halstead_metrics_detailed"])
+  F42 --> F43
+  F43(["test_halstead_metrics_empty_function"])
+  F43 --> F44
+  F44(["test_halstead_metrics_complex_function"])
+  F44 --> F45
+  F45(["test_cognitive_complexity_simple"])
+  F45 --> F46
+  F46(["test_cognitive_complexity_basic_increment"])
+  F46 --> F47
+  F47(["test_cognitive_complexity_nesting_penalty"])
+  F47 --> F48
+  F48(["test_cognitive_complexity_logical_operators"])
+  F48 --> F49
+  F49(["test_cognitive_complexity_loops"])
+  F49 --> F50
+  F50(["test_cognitive_complexity_match_expression"])
+  F50 --> F51
+  F51(["test_cognitive_complexity_break_continue"])
+  F51 --> F52
+  F52(["test_npath_complexity_simple"])
+  F52 --> F53
+  F53(["test_npath_complexity_if_statement"])
+  F53 --> F54
+  F54(["test_npath_complexity_if_else"])
+  F54 --> F55
+  F55(["test_npath_complexity_nested_conditions"])
+  F55 --> F56
+  F56(["test_npath_complexity_loops"])
+  F56 --> F57
+  F57(["test_npath_complexity_match_expression"])
+  F57 --> F58
+  F58(["test_npath_complexity_complex_function"])
+  F58 --> F59
+  F59(["ComplexityMetrics"])
+  F59 --> F60
+  F60(["HalsteadMetrics"])
+  F60 --> F61
+  F61(["ComplexityAnalyzer"])
+  F61 --> F62
+  F62(["CognitiveComplexityImpact"])
+  F62 --> F63
+  F63(["ComplexityMetrics"])
+  F63 --> F64
+  F64(["HalsteadMetrics"])
+  F64 --> F65
+  F65(["ComplexityAnalyzer"])
+  F65 --> F66
+  F66(["n"])
+  F66 --> F67
+  F67(["big_n"])
+  F67 --> F68
+  F68(["cfg_builder"])
+  F68 --> F69
+  F69(["cfg"])
+  F69 --> F70
+  F70(["cyclomatic_complexity"])
+  F70 --> F71
+  F71(["cognitive_complexity"])
+  F71 --> F72
+  F72(["halstead_metrics"])
+  F72 --> F73
+  F73(["npath_complexity"])
+  F73 --> F74
+  F74(["lines_of_code"])
+  F74 --> F75
+  F75(["decision_points"])
+  F75 --> F76
+  F76(["max_nesting_depth"])
+  F76 --> F77
+  F77(["complexity"])
+  F77 --> F78
+  F78(["nesting_level"])
+  F78 --> F79
+  F79(["node_kind"])
+  F79 --> F80
+  F80(["impact"])
+  F80 --> F81
+  F81(["cursor"])
+  F81 --> F82
+  F82(["operators"])
+  F82 --> F83
+  F83(["operands"])
+  F83 --> F84
+  F84(["unique_operators"])
+  F84 --> F85
+  F85(["unique_operands"])
+  F85 --> F86
+  F86(["total_operators"])
+  F86 --> F87
+  F87(["total_operands"])
+  F87 --> F88
+  F88(["node_kind"])
+  F88 --> F89
+  F89(["cursor"])
+  F89 --> F90
+  F90(["node_kind"])
+  F90 --> F91
+  F91(["complexity"])
+  F91 --> F92
+  F92(["cursor"])
+  F92 --> F93
+  F93(["complexity"])
+  F93 --> F94
+  F94(["cursor"])
+  F94 --> F95
+  F95(["complexity"])
+  F95 --> F96
+  F96(["cursor"])
+  F96 --> F97
+  F97(["child_kind"])
+  F97 --> F98
+  F98(["complexity"])
+  F98 --> F99
+  F99(["cursor"])
+  F99 --> F100
+  F100(["complexity"])
+  F100 --> F101
+  F101(["cursor"])
+  F101 --> F102
+  F102(["complexity"])
+  F102 --> F103
+  F103(["arm_count"])
+  F103 --> F104
+  F104(["cursor"])
+  F104 --> F105
+  F105(["arm_cursor"])
+  F105 --> F106
+  F106(["complexity"])
+  F106 --> F107
+  F107(["cursor"])
+  F107 --> F108
+  F108(["child_complexity"])
+  F108 --> F109
+  F109(["child_kind"])
+  F109 --> F110
+  F110(["total_complexity"])
+  F110 --> F111
+  F111(["cursor"])
+  F111 --> F112
+  F112(["child_complexity"])
+  F112 --> F113
+  F113(["complexity"])
+  F113 --> F114
+  F114(["cursor"])
+  F114 --> F115
+  F115(["complexity"])
+  F115 --> F116
+  F116(["cursor"])
+  F116 --> F117
+  F117(["case_cursor"])
+  F117 --> F118
+  F118(["complexity"])
+  F118 --> F119
+  F119(["cursor"])
+  F119 --> F120
+  F120(["complexity"])
+  F120 --> F121
+  F121(["cursor"])
+  F121 --> F122
+  F122(["complexity"])
+  F122 --> F123
+  F123(["cursor"])
+  F123 --> F124
+  F124(["child_complexity"])
+  F124 --> F125
+  F125(["max_complexity"])
+  F125 --> F126
+  F126(["cursor"])
+  F126 --> F127
+  F127(["child_complexity"])
+  F127 --> F128
+  F128(["complexity"])
+  F128 --> F129
+  F129(["cursor"])
+  F129 --> F130
+  F130(["complexity"])
+  F130 --> F131
+  F131(["cursor"])
+  F131 --> F132
+  F132(["complexity"])
+  F132 --> F133
+  F133(["cursor"])
+  F133 --> F134
+  F134(["complexity"])
+  F134 --> F135
+  F135(["cursor"])
+  F135 --> F136
+  F136(["complexity"])
+  F136 --> F137
+  F137(["cursor"])
+  F137 --> F138
+  F138(["complexity"])
+  F138 --> F139
+  F139(["cursor"])
+  F139 --> F140
+  F140(["complexity"])
+  F140 --> F141
+  F141(["cursor"])
+  F141 --> F142
+  F142(["complexity"])
+  F142 --> F143
+  F143(["cursor"])
+  F143 --> F144
+  F144(["max_complexity"])
+  F144 --> F145
+  F145(["cursor"])
+  F145 --> F146
+  F146(["child_complexity"])
+  F146 --> F147
+  F147(["complexity"])
+  F147 --> F148
+  F148(["node_kind"])
+  F148 --> F149
+  F149(["cursor"])
+  F149 --> F150
+  F150(["child_kind"])
+  F150 --> F151
+  F151(["complexity"])
+  F151 --> F152
+  F152(["cursor"])
+  F152 --> F153
+  F153(["op"])
+  F153 --> F154
+  F154(["cursor"])
+  F154 --> F155
+  F155(["cursor"])
+  F155 --> F156
+  F156(["complexity"])
+  F156 --> F157
+  F157(["cursor"])
+  F157 --> F158
+  F158(["op"])
+  F158 --> F159
+  F159(["cursor"])
+  F159 --> F160
+  F160(["cursor"])
+  F160 --> F161
+  F161(["complexity"])
+  F161 --> F162
+  F162(["cursor"])
+  F162 --> F163
+  F163(["cursor"])
+  F163 --> F164
+  F164(["cursor"])
+  F164 --> F165
+  F165(["complexity"])
+  F165 --> F166
+  F166(["cursor"])
+  F166 --> F167
+  F167(["op"])
+  F167 --> F168
+  F168(["cursor"])
+  F168 --> F169
+  F169(["cursor"])
+  F169 --> F170
+  F170(["complexity"])
+  F170 --> F171
+  F171(["cursor"])
+  F171 --> F172
+  F172(["op"])
+  F172 --> F173
+  F173(["cursor"])
+  F173 --> F174
+  F174(["cursor"])
+  F174 --> F175
+  F175(["root"])
+  F175 --> F176
+  F176(["node_kind"])
+  F176 --> F177
+  F177(["new_depth"])
+  F177 --> F178
+  F178(["max_depth"])
+  F178 --> F179
+  F179(["cursor"])
+  F179 --> F180
+  F180(["child_depth"])
+  F180 --> F181
+  F181(["parser"])
+  F181 --> F182
+  F182(["code"])
+  F182 --> F183
+  F183(["tree"])
+  F183 --> F184
+  F184(["analyzer"])
+  F184 --> F185
+  F185(["metrics"])
+  F185 --> F186
+  F186(["parser"])
+  F186 --> F187
+  F187(["code"])
+  F187 --> F188
+  F188(["tree"])
+  F188 --> F189
+  F189(["analyzer"])
+  F189 --> F190
+  F190(["metrics"])
+  F190 --> F191
+  F191(["parser"])
+  F191 --> F192
+  F192(["code"])
+  F192 --> F193
+  F193(["tree"])
+  F193 --> F194
+  F194(["analyzer"])
+  F194 --> F195
+  F195(["halstead_metrics"])
+  F195 --> F196
+  F196(["volume"])
+  F196 --> F197
+  F197(["difficulty"])
+  F197 --> F198
+  F198(["effort"])
+  F198 --> F199
+  F199(["expected_effort"])
+  F199 --> F200
+  F200(["parser"])
+  F200 --> F201
+  F201(["code"])
+  F201 --> F202
+  F202(["tree"])
+  F202 --> F203
+  F203(["analyzer"])
+  F203 --> F204
+  F204(["halstead_metrics"])
+  F204 --> F205
+  F205(["n"])
+  F205 --> F206
+  F206(["big_n"])
+  F206 --> F207
+  F207(["expected_volume"])
+  F207 --> F208
+  F208(["expected_difficulty"])
+  F208 --> F209
+  F209(["parser"])
+  F209 --> F210
+  F210(["code"])
+  F210 --> F211
+  F211(["tree"])
+  F211 --> F212
+  F212(["analyzer"])
+  F212 --> F213
+  F213(["halstead_metrics"])
+  F213 --> F214
+  F214(["_volume"])
+  F214 --> F215
+  F215(["parser"])
+  F215 --> F216
+  F216(["code"])
+  F216 --> F217
+  F217(["tree"])
+  F217 --> F218
+  F218(["analyzer"])
+  F218 --> F219
+  F219(["halstead_metrics"])
+  F219 --> F220
+  F220(["parser"])
+  F220 --> F221
+  F221(["code"])
+  F221 --> F222
+  F222(["tree"])
+  F222 --> F223
+  F223(["analyzer"])
+  F223 --> F224
+  F224(["metrics"])
+  F224 --> F225
+  F225(["parser"])
+  F225 --> F226
+  F226(["code"])
+  F226 --> F227
+  F227(["tree"])
+  F227 --> F228
+  F228(["analyzer"])
+  F228 --> F229
+  F229(["metrics"])
+  F229 --> F230
+  F230(["parser"])
+  F230 --> F231
+  F231(["code"])
+  F231 --> F232
+  F232(["tree"])
+  F232 --> F233
+  F233(["analyzer"])
+  F233 --> F234
+  F234(["metrics"])
+  F234 --> F235
+  F235(["parser"])
+  F235 --> F236
+  F236(["code"])
+  F236 --> F237
+  F237(["tree"])
+  F237 --> F238
+  F238(["analyzer"])
+  F238 --> F239
+  F239(["metrics"])
+  F239 --> F240
+  F240(["parser"])
+  F240 --> F241
+  F241(["code"])
+  F241 --> F242
+  F242(["tree"])
+  F242 --> F243
+  F243(["analyzer"])
+  F243 --> F244
+  F244(["metrics"])
+  F244 --> F245
+  F245(["parser"])
+  F245 --> F246
+  F246(["code"])
+  F246 --> F247
+  F247(["tree"])
+  F247 --> F248
+  F248(["analyzer"])
+  F248 --> F249
+  F249(["metrics"])
+  F249 --> F250
+  F250(["parser"])
+  F250 --> F251
+  F251(["code"])
+  F251 --> F252
+  F252(["tree"])
+  F252 --> F253
+  F253(["analyzer"])
+  F253 --> F254
+  F254(["metrics"])
+  F254 --> F255
+  F255(["parser"])
+  F255 --> F256
+  F256(["code"])
+  F256 --> F257
+  F257(["tree"])
+  F257 --> F258
+  F258(["analyzer"])
+  F258 --> F259
+  F259(["metrics"])
+  F259 --> F260
+  F260(["parser"])
+  F260 --> F261
+  F261(["code"])
+  F261 --> F262
+  F262(["tree"])
+  F262 --> F263
+  F263(["analyzer"])
+  F263 --> F264
+  F264(["metrics"])
+  F264 --> F265
+  F265(["parser"])
+  F265 --> F266
+  F266(["code"])
+  F266 --> F267
+  F267(["tree"])
+  F267 --> F268
+  F268(["analyzer"])
+  F268 --> F269
+  F269(["metrics"])
+  F269 --> F270
+  F270(["parser"])
+  F270 --> F271
+  F271(["code"])
+  F271 --> F272
+  F272(["tree"])
+  F272 --> F273
+  F273(["analyzer"])
+  F273 --> F274
+  F274(["metrics"])
+  F274 --> F275
+  F275(["parser"])
+  F275 --> F276
+  F276(["code"])
+  F276 --> F277
+  F277(["tree"])
+  F277 --> F278
+  F278(["analyzer"])
+  F278 --> F279
+  F279(["metrics"])
+  F279 --> F280
+  F280(["parser"])
+  F280 --> F281
+  F281(["code"])
+  F281 --> F282
+  F282(["tree"])
+  F282 --> F283
+  F283(["analyzer"])
+  F283 --> F284
+  F284(["metrics"])
+  F284 --> F285
+  F285(["parser"])
+  F285 --> F286
+  F286(["code"])
+  F286 --> F287
+  F287(["tree"])
+  F287 --> F288
+  F288(["analyzer"])
+  F288 --> F289
+  F289(["metrics"])
+  F289 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant default
+  participant volume
+  participant difficulty
+  participant effort
+  participant new
+  participant analyze_complexity
+  participant calculate_mccabe_complexity
+  participant calculate_cognitive_complexity
+  participant traverse_for_cognitive_complexity
+  participant get_cognitive_complexity_impact
+  participant get_rust_cognitive_impact
+  participant get_javascript_cognitive_impact
+  participant get_python_cognitive_impact
+  participant get_c_cognitive_impact
+  participant get_go_cognitive_impact
+  participant is_logical_operator
+  participant calculate_halstead_metrics
+  participant traverse_for_halstead
+  participant is_operator
+  participant is_operand
+  participant calculate_npath_complexity
+  participant traverse_for_npath
+  participant calculate_rust_npath
+  participant calculate_js_npath
+  participant calculate_python_npath
+  participant calculate_c_npath
+  participant calculate_go_npath
+  participant calculate_default_npath
+  participant is_control_flow_node
+  participant calculate_expression_npath
+  participant calculate_rust_expression_npath
+  participant calculate_js_expression_npath
+  participant calculate_python_expression_npath
+  participant calculate_c_expression_npath
+  participant calculate_go_expression_npath
+  participant count_lines_of_code
+  participant calculate_max_nesting_depth
+  participant traverse_for_max_depth
+  participant increases_nesting_depth
+  participant test_mccabe_complexity_simple
+  participant test_mccabe_complexity_with_conditions
+  participant test_halstead_metrics_basic
+  participant test_halstead_metrics_detailed
+  participant test_halstead_metrics_empty_function
+  participant test_halstead_metrics_complex_function
+  participant test_cognitive_complexity_simple
+  participant test_cognitive_complexity_basic_increment
+  participant test_cognitive_complexity_nesting_penalty
+  participant test_cognitive_complexity_logical_operators
+  participant test_cognitive_complexity_loops
+  participant test_cognitive_complexity_match_expression
+  participant test_cognitive_complexity_break_continue
+  participant test_npath_complexity_simple
+  participant test_npath_complexity_if_statement
+  participant test_npath_complexity_if_else
+  participant test_npath_complexity_nested_conditions
+  participant test_npath_complexity_loops
+  participant test_npath_complexity_match_expression
+  participant test_npath_complexity_complex_function
+  default->>volume: call
+  volume->>difficulty: call
+  difficulty->>effort: call
+  effort->>new: call
+  new->>analyze_complexity: call
+  analyze_complexity->>calculate_mccabe_complexity: call
+  calculate_mccabe_complexity->>calculate_cognitive_complexity: call
+  calculate_cognitive_complexity->>traverse_for_cognitive_complexity: call
+  traverse_for_cognitive_complexity->>get_cognitive_complexity_impact: call
+  get_cognitive_complexity_impact->>get_rust_cognitive_impact: call
+  get_rust_cognitive_impact->>get_javascript_cognitive_impact: call
+  get_javascript_cognitive_impact->>get_python_cognitive_impact: call
+  get_python_cognitive_impact->>get_c_cognitive_impact: call
+  get_c_cognitive_impact->>get_go_cognitive_impact: call
+  get_go_cognitive_impact->>is_logical_operator: call
+  is_logical_operator->>calculate_halstead_metrics: call
+  calculate_halstead_metrics->>traverse_for_halstead: call
+  traverse_for_halstead->>is_operator: call
+  is_operator->>is_operand: call
+  is_operand->>calculate_npath_complexity: call
+  calculate_npath_complexity->>traverse_for_npath: call
+  traverse_for_npath->>calculate_rust_npath: call
+  calculate_rust_npath->>calculate_js_npath: call
+  calculate_js_npath->>calculate_python_npath: call
+  calculate_python_npath->>calculate_c_npath: call
+  calculate_c_npath->>calculate_go_npath: call
+  calculate_go_npath->>calculate_default_npath: call
+  calculate_default_npath->>is_control_flow_node: call
+  is_control_flow_node->>calculate_expression_npath: call
+  calculate_expression_npath->>calculate_rust_expression_npath: call
+  calculate_rust_expression_npath->>calculate_js_expression_npath: call
+  calculate_js_expression_npath->>calculate_python_expression_npath: call
+  calculate_python_expression_npath->>calculate_c_expression_npath: call
+  calculate_c_expression_npath->>calculate_go_expression_npath: call
+  calculate_go_expression_npath->>count_lines_of_code: call
+  count_lines_of_code->>calculate_max_nesting_depth: call
+  calculate_max_nesting_depth->>traverse_for_max_depth: call
+  traverse_for_max_depth->>increases_nesting_depth: call
+  increases_nesting_depth->>test_mccabe_complexity_simple: call
+  test_mccabe_complexity_simple->>test_mccabe_complexity_with_conditions: call
+  test_mccabe_complexity_with_conditions->>test_halstead_metrics_basic: call
+  test_halstead_metrics_basic->>test_halstead_metrics_detailed: call
+  test_halstead_metrics_detailed->>test_halstead_metrics_empty_function: call
+  test_halstead_metrics_empty_function->>test_halstead_metrics_complex_function: call
+  test_halstead_metrics_complex_function->>test_cognitive_complexity_simple: call
+  test_cognitive_complexity_simple->>test_cognitive_complexity_basic_increment: call
+  test_cognitive_complexity_basic_increment->>test_cognitive_complexity_nesting_penalty: call
+  test_cognitive_complexity_nesting_penalty->>test_cognitive_complexity_logical_operators: call
+  test_cognitive_complexity_logical_operators->>test_cognitive_complexity_loops: call
+  test_cognitive_complexity_loops->>test_cognitive_complexity_match_expression: call
+  test_cognitive_complexity_match_expression->>test_cognitive_complexity_break_continue: call
+  test_cognitive_complexity_break_continue->>test_npath_complexity_simple: call
+  test_npath_complexity_simple->>test_npath_complexity_if_statement: call
+  test_npath_complexity_if_statement->>test_npath_complexity_if_else: call
+  test_npath_complexity_if_else->>test_npath_complexity_nested_conditions: call
+  test_npath_complexity_nested_conditions->>test_npath_complexity_loops: call
+  test_npath_complexity_loops->>test_npath_complexity_match_expression: call
+  test_npath_complexity_match_expression->>test_npath_complexity_complex_function: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-default"><code>default</code> <small>function</small></li>
+<li id="symbol-volume"><code>volume</code> <small>function</small></li>
+<li id="symbol-difficulty"><code>difficulty</code> <small>function</small></li>
+<li id="symbol-effort"><code>effort</code> <small>function</small></li>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-analyze_complexity"><code>analyze_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_mccabe_complexity"><code>calculate_mccabe_complexity</code> <small>function</small></li>
+<li id="symbol-calculate_cognitive_complexity"><code>calculate_cognitive_complexity</code> <small>function</small></li>
+<li id="symbol-traverse_for_cognitive_complexity"><code>traverse_for_cognitive_complexity</code> <small>function</small></li>
+<li id="symbol-get_cognitive_complexity_impact"><code>get_cognitive_complexity_impact</code> <small>function</small></li>
+<li id="symbol-get_rust_cognitive_impact"><code>get_rust_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_javascript_cognitive_impact"><code>get_javascript_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_python_cognitive_impact"><code>get_python_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_c_cognitive_impact"><code>get_c_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-get_go_cognitive_impact"><code>get_go_cognitive_impact</code> <small>function</small></li>
+<li id="symbol-is_logical_operator"><code>is_logical_operator</code> <small>function</small></li>
+<li id="symbol-calculate_halstead_metrics"><code>calculate_halstead_metrics</code> <small>function</small></li>
+<li id="symbol-traverse_for_halstead"><code>traverse_for_halstead</code> <small>function</small></li>
+<li id="symbol-is_operator"><code>is_operator</code> <small>function</small></li>
+<li id="symbol-is_operand"><code>is_operand</code> <small>function</small></li>
+<li id="symbol-calculate_npath_complexity"><code>calculate_npath_complexity</code> <small>function</small></li>
+<li id="symbol-traverse_for_npath"><code>traverse_for_npath</code> <small>function</small></li>
+<li id="symbol-calculate_rust_npath"><code>calculate_rust_npath</code> <small>function</small></li>
+<li id="symbol-calculate_js_npath"><code>calculate_js_npath</code> <small>function</small></li>
+<li id="symbol-calculate_python_npath"><code>calculate_python_npath</code> <small>function</small></li>
+<li id="symbol-calculate_c_npath"><code>calculate_c_npath</code> <small>function</small></li>
+<li id="symbol-calculate_go_npath"><code>calculate_go_npath</code> <small>function</small></li>
+<li id="symbol-calculate_default_npath"><code>calculate_default_npath</code> <small>function</small></li>
+<li id="symbol-is_control_flow_node"><code>is_control_flow_node</code> <small>function</small></li>
+<li id="symbol-calculate_expression_npath"><code>calculate_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_rust_expression_npath"><code>calculate_rust_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_js_expression_npath"><code>calculate_js_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_python_expression_npath"><code>calculate_python_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_c_expression_npath"><code>calculate_c_expression_npath</code> <small>function</small></li>
+<li id="symbol-calculate_go_expression_npath"><code>calculate_go_expression_npath</code> <small>function</small></li>
+<li id="symbol-count_lines_of_code"><code>count_lines_of_code</code> <small>function</small></li>
+<li id="symbol-calculate_max_nesting_depth"><code>calculate_max_nesting_depth</code> <small>function</small></li>
+<li id="symbol-traverse_for_max_depth"><code>traverse_for_max_depth</code> <small>function</small></li>
+<li id="symbol-increases_nesting_depth"><code>increases_nesting_depth</code> <small>function</small></li>
+<li id="symbol-test_mccabe_complexity_simple"><code>test_mccabe_complexity_simple</code> <small>function</small></li>
+<li id="symbol-test_mccabe_complexity_with_conditions"><code>test_mccabe_complexity_with_conditions</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_basic"><code>test_halstead_metrics_basic</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_detailed"><code>test_halstead_metrics_detailed</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_empty_function"><code>test_halstead_metrics_empty_function</code> <small>function</small></li>
+<li id="symbol-test_halstead_metrics_complex_function"><code>test_halstead_metrics_complex_function</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_simple"><code>test_cognitive_complexity_simple</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_basic_increment"><code>test_cognitive_complexity_basic_increment</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_nesting_penalty"><code>test_cognitive_complexity_nesting_penalty</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_logical_operators"><code>test_cognitive_complexity_logical_operators</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_loops"><code>test_cognitive_complexity_loops</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_match_expression"><code>test_cognitive_complexity_match_expression</code> <small>function</small></li>
+<li id="symbol-test_cognitive_complexity_break_continue"><code>test_cognitive_complexity_break_continue</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_simple"><code>test_npath_complexity_simple</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_if_statement"><code>test_npath_complexity_if_statement</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_if_else"><code>test_npath_complexity_if_else</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_nested_conditions"><code>test_npath_complexity_nested_conditions</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_loops"><code>test_npath_complexity_loops</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_match_expression"><code>test_npath_complexity_match_expression</code> <small>function</small></li>
+<li id="symbol-test_npath_complexity_complex_function"><code>test_npath_complexity_complex_function</code> <small>function</small></li>
+<li id="symbol-complexitymetrics"><code>ComplexityMetrics</code> <small>struct</small></li>
+<li id="symbol-halsteadmetrics"><code>HalsteadMetrics</code> <small>struct</small></li>
+<li id="symbol-complexityanalyzer"><code>ComplexityAnalyzer</code> <small>struct</small></li>
+<li id="symbol-cognitivecomplexityimpact"><code>CognitiveComplexityImpact</code> <small>enum</small></li>
+<li id="symbol-complexitymetrics"><code>ComplexityMetrics</code> <small>impl</small></li>
+<li id="symbol-halsteadmetrics"><code>HalsteadMetrics</code> <small>impl</small></li>
+<li id="symbol-complexityanalyzer"><code>ComplexityAnalyzer</code> <small>impl</small></li>
+<li id="symbol-n"><code>n</code> <small>variable</small></li>
+<li id="symbol-big_n"><code>big_n</code> <small>variable</small></li>
+<li id="symbol-cfg_builder"><code>cfg_builder</code> <small>variable</small></li>
+<li id="symbol-cfg"><code>cfg</code> <small>variable</small></li>
+<li id="symbol-cyclomatic_complexity"><code>cyclomatic_complexity</code> <small>variable</small></li>
+<li id="symbol-cognitive_complexity"><code>cognitive_complexity</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-npath_complexity"><code>npath_complexity</code> <small>variable</small></li>
+<li id="symbol-lines_of_code"><code>lines_of_code</code> <small>variable</small></li>
+<li id="symbol-decision_points"><code>decision_points</code> <small>variable</small></li>
+<li id="symbol-max_nesting_depth"><code>max_nesting_depth</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-nesting_level"><code>nesting_level</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-impact"><code>impact</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-operators"><code>operators</code> <small>variable</small></li>
+<li id="symbol-operands"><code>operands</code> <small>variable</small></li>
+<li id="symbol-unique_operators"><code>unique_operators</code> <small>variable</small></li>
+<li id="symbol-unique_operands"><code>unique_operands</code> <small>variable</small></li>
+<li id="symbol-total_operators"><code>total_operators</code> <small>variable</small></li>
+<li id="symbol-total_operands"><code>total_operands</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_kind"><code>child_kind</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-arm_count"><code>arm_count</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-arm_cursor"><code>arm_cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-child_kind"><code>child_kind</code> <small>variable</small></li>
+<li id="symbol-total_complexity"><code>total_complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-case_cursor"><code>case_cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-max_complexity"><code>max_complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-max_complexity"><code>max_complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_complexity"><code>child_complexity</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_kind"><code>child_kind</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-complexity"><code>complexity</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-op"><code>op</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-new_depth"><code>new_depth</code> <small>variable</small></li>
+<li id="symbol-max_depth"><code>max_depth</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-child_depth"><code>child_depth</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-volume"><code>volume</code> <small>variable</small></li>
+<li id="symbol-difficulty"><code>difficulty</code> <small>variable</small></li>
+<li id="symbol-effort"><code>effort</code> <small>variable</small></li>
+<li id="symbol-expected_effort"><code>expected_effort</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-n"><code>n</code> <small>variable</small></li>
+<li id="symbol-big_n"><code>big_n</code> <small>variable</small></li>
+<li id="symbol-expected_volume"><code>expected_volume</code> <small>variable</small></li>
+<li id="symbol-expected_difficulty"><code>expected_difficulty</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-_volume"><code>_volume</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-halstead_metrics"><code>halstead_metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-code"><code>code</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-analyzer"><code>analyzer</code> <small>variable</small></li>
+<li id="symbol-metrics"><code>metrics</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

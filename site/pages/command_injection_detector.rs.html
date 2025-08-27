@@ -1,0 +1,360 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>command_injection_detector.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>command_injection_detector.rs</h1></header>
+<main>
+<section class="article">
+<p>85 symbols, 991 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["new"])
+  F0 --> F1
+  F1(["initialize_command_patterns"])
+  F1 --> F2
+  F2(["initialize_rust_command_patterns"])
+  F2 --> F3
+  F3(["initialize_javascript_command_patterns"])
+  F3 --> F4
+  F4(["initialize_python_command_patterns"])
+  F4 --> F5
+  F5(["initialize_c_command_patterns"])
+  F5 --> F6
+  F6(["initialize_go_command_patterns"])
+  F6 --> F7
+  F7(["initialize_php_command_patterns"])
+  F7 --> F8
+  F8(["initialize_generic_command_patterns"])
+  F8 --> F9
+  F9(["detect"])
+  F9 --> F10
+  F10(["analyze_command_injection_flow"])
+  F10 --> F11
+  F11(["detect_direct_command_patterns"])
+  F11 --> F12
+  F12(["traverse_for_command_patterns"])
+  F12 --> F13
+  F13(["check_node_for_command_injection"])
+  F13 --> F14
+  F14(["analyze_command_execution_pattern"])
+  F14 --> F15
+  F15(["determine_injection_type"])
+  F15 --> F16
+  F16(["calculate_confidence"])
+  F16 --> F17
+  F17(["determine_severity"])
+  F17 --> F18
+  F18(["generate_remediation"])
+  F18 --> F19
+  F19(["is_function_call"])
+  F19 --> F20
+  F20(["extract_function_call_name"])
+  F20 --> F21
+  F21(["extract_command_argument"])
+  F21 --> F22
+  F22(["contains_dangerous_patterns"])
+  F22 --> F23
+  F23(["is_string_concatenation"])
+  F23 --> F24
+  F24(["has_string_concatenation"])
+  F24 --> F25
+  F25(["extract_concatenation_content"])
+  F25 --> F26
+  F26(["is_template_literal"])
+  F26 --> F27
+  F27(["extract_template_content"])
+  F27 --> F28
+  F28(["contains_shell_metacharacters"])
+  F28 --> F29
+  F29(["contains_command_patterns"])
+  F29 --> F30
+  F30(["create_direct_vulnerability"])
+  F30 --> F31
+  F31(["test_command_injection_detector_creation"])
+  F31 --> F32
+  F32(["test_shell_metacharacters_detection"])
+  F32 --> F33
+  F33(["test_dangerous_patterns_detection"])
+  F33 --> F34
+  F34(["test_command_functions_initialization"])
+  F34 --> F35
+  F35(["test_injection_type_determination"])
+  F35 --> F36
+  F36(["test_confidence_calculation"])
+  F36 --> F37
+  F37(["CommandInjectionVulnerability"])
+  F37 --> F38
+  F38(["CommandExecutionPattern"])
+  F38 --> F39
+  F39(["CommandInjectionRemediation"])
+  F39 --> F40
+  F40(["SecureCommandExample"])
+  F40 --> F41
+  F41(["CommandInjectionDetector"])
+  F41 --> F42
+  F42(["CommandExecutionInfo"])
+  F42 --> F43
+  F43(["CommandInjectionType"])
+  F43 --> F44
+  F44(["CommandInjectionSeverity"])
+  F44 --> F45
+  F45(["RemediationEffort"])
+  F45 --> F46
+  F46(["CommandRiskLevel"])
+  F46 --> F47
+  F47(["CommandInjectionDetector"])
+  F47 --> F48
+  F48(["detector"])
+  F48 --> F49
+  F49(["metacharacters"])
+  F49 --> F50
+  F50(["separators"])
+  F50 --> F51
+  F51(["vulnerabilities"])
+  F51 --> F52
+  F52(["taint_flows"])
+  F52 --> F53
+  F53(["direct_vulnerabilities"])
+  F53 --> F54
+  F54(["command_pattern"])
+  F54 --> F55
+  F55(["injection_type"])
+  F55 --> F56
+  F56(["confidence"])
+  F56 --> F57
+  F57(["severity"])
+  F57 --> F58
+  F58(["remediation"])
+  F58 --> F59
+  F59(["vulnerabilities"])
+  F59 --> F60
+  F60(["cursor"])
+  F60 --> F61
+  F61(["confidence"])
+  F61 --> F62
+  F62(["cursor"])
+  F62 --> F63
+  F63(["function_node"])
+  F63 --> F64
+  F64(["cursor"])
+  F64 --> F65
+  F65(["current_index"])
+  F65 --> F66
+  F66(["node_kind"])
+  F66 --> F67
+  F67(["cursor"])
+  F67 --> F68
+  F68(["command_keywords"])
+  F68 --> F69
+  F69(["command_pattern"])
+  F69 --> F70
+  F70(["remediation"])
+  F70 --> F71
+  F71(["severity"])
+  F71 --> F72
+  F72(["detector"])
+  F72 --> F73
+  F73(["detector"])
+  F73 --> F74
+  F74(["detector"])
+  F74 --> F75
+  F75(["detector"])
+  F75 --> F76
+  F76(["system_info"])
+  F76 --> F77
+  F77(["detector"])
+  F77 --> F78
+  F78(["pattern"])
+  F78 --> F79
+  F79(["flow"])
+  F79 --> F80
+  F80(["injection_type"])
+  F80 --> F81
+  F81(["detector"])
+  F81 --> F82
+  F82(["pattern"])
+  F82 --> F83
+  F83(["flow"])
+  F83 --> F84
+  F84(["confidence"])
+  F84 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant new
+  participant initialize_command_patterns
+  participant initialize_rust_command_patterns
+  participant initialize_javascript_command_patterns
+  participant initialize_python_command_patterns
+  participant initialize_c_command_patterns
+  participant initialize_go_command_patterns
+  participant initialize_php_command_patterns
+  participant initialize_generic_command_patterns
+  participant detect
+  participant analyze_command_injection_flow
+  participant detect_direct_command_patterns
+  participant traverse_for_command_patterns
+  participant check_node_for_command_injection
+  participant analyze_command_execution_pattern
+  participant determine_injection_type
+  participant calculate_confidence
+  participant determine_severity
+  participant generate_remediation
+  participant is_function_call
+  participant extract_function_call_name
+  participant extract_command_argument
+  participant contains_dangerous_patterns
+  participant is_string_concatenation
+  participant has_string_concatenation
+  participant extract_concatenation_content
+  participant is_template_literal
+  participant extract_template_content
+  participant contains_shell_metacharacters
+  participant contains_command_patterns
+  participant create_direct_vulnerability
+  participant test_command_injection_detector_creation
+  participant test_shell_metacharacters_detection
+  participant test_dangerous_patterns_detection
+  participant test_command_functions_initialization
+  participant test_injection_type_determination
+  participant test_confidence_calculation
+  new->>initialize_command_patterns: call
+  initialize_command_patterns->>initialize_rust_command_patterns: call
+  initialize_rust_command_patterns->>initialize_javascript_command_patterns: call
+  initialize_javascript_command_patterns->>initialize_python_command_patterns: call
+  initialize_python_command_patterns->>initialize_c_command_patterns: call
+  initialize_c_command_patterns->>initialize_go_command_patterns: call
+  initialize_go_command_patterns->>initialize_php_command_patterns: call
+  initialize_php_command_patterns->>initialize_generic_command_patterns: call
+  initialize_generic_command_patterns->>detect: call
+  detect->>analyze_command_injection_flow: call
+  analyze_command_injection_flow->>detect_direct_command_patterns: call
+  detect_direct_command_patterns->>traverse_for_command_patterns: call
+  traverse_for_command_patterns->>check_node_for_command_injection: call
+  check_node_for_command_injection->>analyze_command_execution_pattern: call
+  analyze_command_execution_pattern->>determine_injection_type: call
+  determine_injection_type->>calculate_confidence: call
+  calculate_confidence->>determine_severity: call
+  determine_severity->>generate_remediation: call
+  generate_remediation->>is_function_call: call
+  is_function_call->>extract_function_call_name: call
+  extract_function_call_name->>extract_command_argument: call
+  extract_command_argument->>contains_dangerous_patterns: call
+  contains_dangerous_patterns->>is_string_concatenation: call
+  is_string_concatenation->>has_string_concatenation: call
+  has_string_concatenation->>extract_concatenation_content: call
+  extract_concatenation_content->>is_template_literal: call
+  is_template_literal->>extract_template_content: call
+  extract_template_content->>contains_shell_metacharacters: call
+  contains_shell_metacharacters->>contains_command_patterns: call
+  contains_command_patterns->>create_direct_vulnerability: call
+  create_direct_vulnerability->>test_command_injection_detector_creation: call
+  test_command_injection_detector_creation->>test_shell_metacharacters_detection: call
+  test_shell_metacharacters_detection->>test_dangerous_patterns_detection: call
+  test_dangerous_patterns_detection->>test_command_functions_initialization: call
+  test_command_functions_initialization->>test_injection_type_determination: call
+  test_injection_type_determination->>test_confidence_calculation: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-new"><code>new</code> <small>function</small></li>
+<li id="symbol-initialize_command_patterns"><code>initialize_command_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_rust_command_patterns"><code>initialize_rust_command_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_javascript_command_patterns"><code>initialize_javascript_command_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_python_command_patterns"><code>initialize_python_command_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_c_command_patterns"><code>initialize_c_command_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_go_command_patterns"><code>initialize_go_command_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_php_command_patterns"><code>initialize_php_command_patterns</code> <small>function</small></li>
+<li id="symbol-initialize_generic_command_patterns"><code>initialize_generic_command_patterns</code> <small>function</small></li>
+<li id="symbol-detect"><code>detect</code> <small>function</small></li>
+<li id="symbol-analyze_command_injection_flow"><code>analyze_command_injection_flow</code> <small>function</small></li>
+<li id="symbol-detect_direct_command_patterns"><code>detect_direct_command_patterns</code> <small>function</small></li>
+<li id="symbol-traverse_for_command_patterns"><code>traverse_for_command_patterns</code> <small>function</small></li>
+<li id="symbol-check_node_for_command_injection"><code>check_node_for_command_injection</code> <small>function</small></li>
+<li id="symbol-analyze_command_execution_pattern"><code>analyze_command_execution_pattern</code> <small>function</small></li>
+<li id="symbol-determine_injection_type"><code>determine_injection_type</code> <small>function</small></li>
+<li id="symbol-calculate_confidence"><code>calculate_confidence</code> <small>function</small></li>
+<li id="symbol-determine_severity"><code>determine_severity</code> <small>function</small></li>
+<li id="symbol-generate_remediation"><code>generate_remediation</code> <small>function</small></li>
+<li id="symbol-is_function_call"><code>is_function_call</code> <small>function</small></li>
+<li id="symbol-extract_function_call_name"><code>extract_function_call_name</code> <small>function</small></li>
+<li id="symbol-extract_command_argument"><code>extract_command_argument</code> <small>function</small></li>
+<li id="symbol-contains_dangerous_patterns"><code>contains_dangerous_patterns</code> <small>function</small></li>
+<li id="symbol-is_string_concatenation"><code>is_string_concatenation</code> <small>function</small></li>
+<li id="symbol-has_string_concatenation"><code>has_string_concatenation</code> <small>function</small></li>
+<li id="symbol-extract_concatenation_content"><code>extract_concatenation_content</code> <small>function</small></li>
+<li id="symbol-is_template_literal"><code>is_template_literal</code> <small>function</small></li>
+<li id="symbol-extract_template_content"><code>extract_template_content</code> <small>function</small></li>
+<li id="symbol-contains_shell_metacharacters"><code>contains_shell_metacharacters</code> <small>function</small></li>
+<li id="symbol-contains_command_patterns"><code>contains_command_patterns</code> <small>function</small></li>
+<li id="symbol-create_direct_vulnerability"><code>create_direct_vulnerability</code> <small>function</small></li>
+<li id="symbol-test_command_injection_detector_creation"><code>test_command_injection_detector_creation</code> <small>function</small></li>
+<li id="symbol-test_shell_metacharacters_detection"><code>test_shell_metacharacters_detection</code> <small>function</small></li>
+<li id="symbol-test_dangerous_patterns_detection"><code>test_dangerous_patterns_detection</code> <small>function</small></li>
+<li id="symbol-test_command_functions_initialization"><code>test_command_functions_initialization</code> <small>function</small></li>
+<li id="symbol-test_injection_type_determination"><code>test_injection_type_determination</code> <small>function</small></li>
+<li id="symbol-test_confidence_calculation"><code>test_confidence_calculation</code> <small>function</small></li>
+<li id="symbol-commandinjectionvulnerability"><code>CommandInjectionVulnerability</code> <small>struct</small></li>
+<li id="symbol-commandexecutionpattern"><code>CommandExecutionPattern</code> <small>struct</small></li>
+<li id="symbol-commandinjectionremediation"><code>CommandInjectionRemediation</code> <small>struct</small></li>
+<li id="symbol-securecommandexample"><code>SecureCommandExample</code> <small>struct</small></li>
+<li id="symbol-commandinjectiondetector"><code>CommandInjectionDetector</code> <small>struct</small></li>
+<li id="symbol-commandexecutioninfo"><code>CommandExecutionInfo</code> <small>struct</small></li>
+<li id="symbol-commandinjectiontype"><code>CommandInjectionType</code> <small>enum</small></li>
+<li id="symbol-commandinjectionseverity"><code>CommandInjectionSeverity</code> <small>enum</small></li>
+<li id="symbol-remediationeffort"><code>RemediationEffort</code> <small>enum</small></li>
+<li id="symbol-commandrisklevel"><code>CommandRiskLevel</code> <small>enum</small></li>
+<li id="symbol-commandinjectiondetector"><code>CommandInjectionDetector</code> <small>impl</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-metacharacters"><code>metacharacters</code> <small>variable</small></li>
+<li id="symbol-separators"><code>separators</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-taint_flows"><code>taint_flows</code> <small>variable</small></li>
+<li id="symbol-direct_vulnerabilities"><code>direct_vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-command_pattern"><code>command_pattern</code> <small>variable</small></li>
+<li id="symbol-injection_type"><code>injection_type</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-severity"><code>severity</code> <small>variable</small></li>
+<li id="symbol-remediation"><code>remediation</code> <small>variable</small></li>
+<li id="symbol-vulnerabilities"><code>vulnerabilities</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-function_node"><code>function_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-current_index"><code>current_index</code> <small>variable</small></li>
+<li id="symbol-node_kind"><code>node_kind</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-command_keywords"><code>command_keywords</code> <small>variable</small></li>
+<li id="symbol-command_pattern"><code>command_pattern</code> <small>variable</small></li>
+<li id="symbol-remediation"><code>remediation</code> <small>variable</small></li>
+<li id="symbol-severity"><code>severity</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-system_info"><code>system_info</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-flow"><code>flow</code> <small>variable</small></li>
+<li id="symbol-injection_type"><code>injection_type</code> <small>variable</small></li>
+<li id="symbol-detector"><code>detector</code> <small>variable</small></li>
+<li id="symbol-pattern"><code>pattern</code> <small>variable</small></li>
+<li id="symbol-flow"><code>flow</code> <small>variable</small></li>
+<li id="symbol-confidence"><code>confidence</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>

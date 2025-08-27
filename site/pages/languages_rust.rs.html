@@ -1,0 +1,355 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>languages/rust.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>languages/rust.rs</h1></header>
+<main>
+<section class="article">
+<p>90 symbols, 556 lines</p>
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> F0
+  F0(["is_function"])
+  F0 --> F1
+  F1(["is_struct"])
+  F1 --> F2
+  F2(["is_enum"])
+  F2 --> F3
+  F3(["is_impl"])
+  F3 --> F4
+  F4(["is_trait"])
+  F4 --> F5
+  F5(["is_module"])
+  F5 --> F6
+  F6(["is_use_statement"])
+  F6 --> F7
+  F7(["function_name"])
+  F7 --> F8
+  F8(["struct_name"])
+  F8 --> F9
+  F9(["enum_name"])
+  F9 --> F10
+  F10(["trait_name"])
+  F10 --> F11
+  F11(["module_name"])
+  F11 --> F12
+  F12(["find_functions"])
+  F12 --> F13
+  F13(["find_structs"])
+  F13 --> F14
+  F14(["public_functions_query"])
+  F14 --> F15
+  F15(["structs_query"])
+  F15 --> F16
+  F16(["impl_blocks_query"])
+  F16 --> F17
+  F17(["is_public_function"])
+  F17 --> F18
+  F18(["is_public_struct"])
+  F18 --> F19
+  F19(["extract_doc_comment"])
+  F19 --> F20
+  F20(["find_traits"])
+  F20 --> F21
+  F21(["find_impl_blocks"])
+  F21 --> F22
+  F22(["find_macros"])
+  F22 --> F23
+  F23(["find_lifetimes"])
+  F23 --> F24
+  F24(["find_associated_types"])
+  F24 --> F25
+  F25(["find_const_generics"])
+  F25 --> F26
+  F26(["test_rust_syntax_detection"])
+  F26 --> F27
+  F27(["RustSyntax"])
+  F27 --> F28
+  F28(["RustSyntax"])
+  F28 --> F29
+  F29(["functions"])
+  F29 --> F30
+  F30(["function_nodes"])
+  F30 --> F31
+  F31(["ts_node"])
+  F31 --> F32
+  F32(["structs"])
+  F32 --> F33
+  F33(["struct_nodes"])
+  F33 --> F34
+  F34(["ts_node"])
+  F34 --> F35
+  F35(["query_str"])
+  F35 --> F36
+  F36(["query_str"])
+  F36 --> F37
+  F37(["query_str"])
+  F37 --> F38
+  F38(["lines"])
+  F38 --> F39
+  F39(["doc_lines"])
+  F39 --> F40
+  F40(["j"])
+  F40 --> F41
+  F41(["prev_line"])
+  F41 --> F42
+  F42(["traits"])
+  F42 --> F43
+  F43(["trait_nodes"])
+  F43 --> F44
+  F44(["ts_node"])
+  F44 --> F45
+  F45(["methods"])
+  F45 --> F46
+  F46(["cursor"])
+  F46 --> F47
+  F47(["node"])
+  F47 --> F48
+  F48(["impl_blocks"])
+  F48 --> F49
+  F49(["impl_nodes"])
+  F49 --> F50
+  F50(["ts_node"])
+  F50 --> F51
+  F51(["type_name"])
+  F51 --> F52
+  F52(["trait_name"])
+  F52 --> F53
+  F53(["methods"])
+  F53 --> F54
+  F54(["base_type"])
+  F54 --> F55
+  F55(["base_trait"])
+  F55 --> F56
+  F56(["cursor"])
+  F56 --> F57
+  F57(["node"])
+  F57 --> F58
+  F58(["macros"])
+  F58 --> F59
+  F59(["macro_nodes"])
+  F59 --> F60
+  F60(["ts_node"])
+  F60 --> F61
+  F61(["declarative_macro_nodes"])
+  F61 --> F62
+  F62(["ts_node"])
+  F62 --> F63
+  F63(["after_macro_rules"])
+  F63 --> F64
+  F64(["macro_name"])
+  F64 --> F65
+  F65(["lifetimes"])
+  F65 --> F66
+  F66(["function_nodes"])
+  F66 --> F67
+  F67(["ts_node"])
+  F67 --> F68
+  F68(["cursor"])
+  F68 --> F69
+  F69(["node"])
+  F69 --> F70
+  F70(["associated_types"])
+  F70 --> F71
+  F71(["trait_nodes"])
+  F71 --> F72
+  F72(["ts_node"])
+  F72 --> F73
+  F73(["cursor"])
+  F73 --> F74
+  F74(["node"])
+  F74 --> F75
+  F75(["const_generics"])
+  F75 --> F76
+  F76(["struct_nodes"])
+  F76 --> F77
+  F77(["ts_node"])
+  F77 --> F78
+  F78(["cursor"])
+  F78 --> F79
+  F79(["node"])
+  F79 --> F80
+  F80(["source"])
+  F80 --> F81
+  F81(["parser"])
+  F81 --> F82
+  F82(["tree"])
+  F82 --> F83
+  F83(["root"])
+  F83 --> F84
+  F84(["found_function"])
+  F84 --> F85
+  F85(["found_struct"])
+  F85 --> F86
+  F86(["found_enum"])
+  F86 --> F87
+  F87(["cursor"])
+  F87 --> F88
+  F88(["node"])
+  F88 --> F89
+  F89(["ts_node"])
+  F89 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant is_function
+  participant is_struct
+  participant is_enum
+  participant is_impl
+  participant is_trait
+  participant is_module
+  participant is_use_statement
+  participant function_name
+  participant struct_name
+  participant enum_name
+  participant trait_name
+  participant module_name
+  participant find_functions
+  participant find_structs
+  participant public_functions_query
+  participant structs_query
+  participant impl_blocks_query
+  participant is_public_function
+  participant is_public_struct
+  participant extract_doc_comment
+  participant find_traits
+  participant find_impl_blocks
+  participant find_macros
+  participant find_lifetimes
+  participant find_associated_types
+  participant find_const_generics
+  participant test_rust_syntax_detection
+  is_function->>is_struct: call
+  is_struct->>is_enum: call
+  is_enum->>is_impl: call
+  is_impl->>is_trait: call
+  is_trait->>is_module: call
+  is_module->>is_use_statement: call
+  is_use_statement->>function_name: call
+  function_name->>struct_name: call
+  struct_name->>enum_name: call
+  enum_name->>trait_name: call
+  trait_name->>module_name: call
+  module_name->>find_functions: call
+  find_functions->>find_structs: call
+  find_structs->>public_functions_query: call
+  public_functions_query->>structs_query: call
+  structs_query->>impl_blocks_query: call
+  impl_blocks_query->>is_public_function: call
+  is_public_function->>is_public_struct: call
+  is_public_struct->>extract_doc_comment: call
+  extract_doc_comment->>find_traits: call
+  find_traits->>find_impl_blocks: call
+  find_impl_blocks->>find_macros: call
+  find_macros->>find_lifetimes: call
+  find_lifetimes->>find_associated_types: call
+  find_associated_types->>find_const_generics: call
+  find_const_generics->>test_rust_syntax_detection: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<ul>
+<li id="symbol-is_function"><code>is_function</code> <small>function</small></li>
+<li id="symbol-is_struct"><code>is_struct</code> <small>function</small></li>
+<li id="symbol-is_enum"><code>is_enum</code> <small>function</small></li>
+<li id="symbol-is_impl"><code>is_impl</code> <small>function</small></li>
+<li id="symbol-is_trait"><code>is_trait</code> <small>function</small></li>
+<li id="symbol-is_module"><code>is_module</code> <small>function</small></li>
+<li id="symbol-is_use_statement"><code>is_use_statement</code> <small>function</small></li>
+<li id="symbol-function_name"><code>function_name</code> <small>function</small></li>
+<li id="symbol-struct_name"><code>struct_name</code> <small>function</small></li>
+<li id="symbol-enum_name"><code>enum_name</code> <small>function</small></li>
+<li id="symbol-trait_name"><code>trait_name</code> <small>function</small></li>
+<li id="symbol-module_name"><code>module_name</code> <small>function</small></li>
+<li id="symbol-find_functions"><code>find_functions</code> <small>function</small></li>
+<li id="symbol-find_structs"><code>find_structs</code> <small>function</small></li>
+<li id="symbol-public_functions_query"><code>public_functions_query</code> <small>function</small></li>
+<li id="symbol-structs_query"><code>structs_query</code> <small>function</small></li>
+<li id="symbol-impl_blocks_query"><code>impl_blocks_query</code> <small>function</small></li>
+<li id="symbol-is_public_function"><code>is_public_function</code> <small>function</small></li>
+<li id="symbol-is_public_struct"><code>is_public_struct</code> <small>function</small></li>
+<li id="symbol-extract_doc_comment"><code>extract_doc_comment</code> <small>function</small></li>
+<li id="symbol-find_traits"><code>find_traits</code> <small>function</small></li>
+<li id="symbol-find_impl_blocks"><code>find_impl_blocks</code> <small>function</small></li>
+<li id="symbol-find_macros"><code>find_macros</code> <small>function</small></li>
+<li id="symbol-find_lifetimes"><code>find_lifetimes</code> <small>function</small></li>
+<li id="symbol-find_associated_types"><code>find_associated_types</code> <small>function</small></li>
+<li id="symbol-find_const_generics"><code>find_const_generics</code> <small>function</small></li>
+<li id="symbol-test_rust_syntax_detection"><code>test_rust_syntax_detection</code> <small>function</small></li>
+<li id="symbol-rustsyntax"><code>RustSyntax</code> <small>struct</small></li>
+<li id="symbol-rustsyntax"><code>RustSyntax</code> <small>impl</small></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-structs"><code>structs</code> <small>variable</small></li>
+<li id="symbol-struct_nodes"><code>struct_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-query_str"><code>query_str</code> <small>variable</small></li>
+<li id="symbol-lines"><code>lines</code> <small>variable</small></li>
+<li id="symbol-doc_lines"><code>doc_lines</code> <small>variable</small></li>
+<li id="symbol-j"><code>j</code> <small>variable</small></li>
+<li id="symbol-prev_line"><code>prev_line</code> <small>variable</small></li>
+<li id="symbol-traits"><code>traits</code> <small>variable</small></li>
+<li id="symbol-trait_nodes"><code>trait_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-impl_blocks"><code>impl_blocks</code> <small>variable</small></li>
+<li id="symbol-impl_nodes"><code>impl_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-type_name"><code>type_name</code> <small>variable</small></li>
+<li id="symbol-trait_name"><code>trait_name</code> <small>variable</small></li>
+<li id="symbol-methods"><code>methods</code> <small>variable</small></li>
+<li id="symbol-base_type"><code>base_type</code> <small>variable</small></li>
+<li id="symbol-base_trait"><code>base_trait</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-macros"><code>macros</code> <small>variable</small></li>
+<li id="symbol-macro_nodes"><code>macro_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-declarative_macro_nodes"><code>declarative_macro_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-after_macro_rules"><code>after_macro_rules</code> <small>variable</small></li>
+<li id="symbol-macro_name"><code>macro_name</code> <small>variable</small></li>
+<li id="symbol-lifetimes"><code>lifetimes</code> <small>variable</small></li>
+<li id="symbol-function_nodes"><code>function_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-associated_types"><code>associated_types</code> <small>variable</small></li>
+<li id="symbol-trait_nodes"><code>trait_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-const_generics"><code>const_generics</code> <small>variable</small></li>
+<li id="symbol-struct_nodes"><code>struct_nodes</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-source"><code>source</code> <small>variable</small></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small></li>
+<li id="symbol-root"><code>root</code> <small>variable</small></li>
+<li id="symbol-found_function"><code>found_function</code> <small>variable</small></li>
+<li id="symbol-found_struct"><code>found_struct</code> <small>variable</small></li>
+<li id="symbol-found_enum"><code>found_enum</code> <small>variable</small></li>
+<li id="symbol-cursor"><code>cursor</code> <small>variable</small></li>
+<li id="symbol-node"><code>node</code> <small>variable</small></li>
+<li id="symbol-ts_node"><code>ts_node</code> <small>variable</small></li>
+
+</ul>
+</div>
+</section>
+</main>
+</body>
+</html>
