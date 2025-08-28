@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/mod.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/mod.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 15</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 22</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+tree_sitter_language"tree_sitter_language (fn)"]
+  name"name (fn)"]
+  file_extensions"file_extensions (fn)"]
+  version"version (fn)"]
+  supports_highlights"supports_highlights (fn)"]
+  highlights_query"highlights_query (fn)"]
+  injections_query"injections_query (fn)"]
+  locals_query"locals_query (fn)"]
+  all"all (fn)"]
+  detect_language_from_path"detect_language_from_path (fn)"]
+  fmt"fmt (fn)"]
+  from_str"from_str (fn)"]
+  test_language_properties"test_language_properties (fn)"]
+  test_language_parsing"test_language_parsing (fn)"]
+  test_tree_sitter_language"test_tree_sitter_language (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  tree_sitter_language["tree_sitter_language"Fn]
+  name["name"Fn]
+  file_extensions["file_extensions"Fn]
+  version["version"Fn]
+  supports_highlights["supports_highlights"Fn]
+  highlights_query["highlights_query"Fn]
+  injections_query["injections_query"Fn]
+  locals_query["locals_query"Fn]
+  all["all"Fn]
+  detect_language_from_path["detect_language_from_path"Fn]
+  fmt["fmt"Fn]
+  from_str["from_str"Fn]
+  test_language_properties["test_language_properties"Fn]
+  test_language_parsing["test_language_parsing"Fn]
+  test_tree_sitter_language["test_tree_sitter_language"Fn]
+  Start --> tree_sitter_language
+  tree_sitter_language --> name
+  name --> file_extensions
+  file_extensions --> version
+  version --> supports_highlights
+  supports_highlights --> highlights_query
+  highlights_query --> injections_query
+  injections_query --> locals_query
+  locals_query --> all
+  all --> detect_language_from_path
+  detect_language_from_path --> fmt
+  fmt --> from_str
+  from_str --> test_language_properties
+  test_language_properties --> test_language_parsing
+  test_language_parsing --> test_tree_sitter_language
+  test_tree_sitter_language --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

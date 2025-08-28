@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/analysis_common.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/analysis_common.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 19</li>
+<li><strong>Structures:</strong> 4</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 58</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+analyze_file_content"analyze_file_content (fn)"]
+  parse_file_content"parse_file_content (fn)"]
+  string_to_language"string_to_language (fn)"]
+  filter_symbols_by_type"filter_symbols_by_type (fn)"]
+  get_function_symbols"get_function_symbols (fn)"]
+  is_large_file"is_large_file (fn)"]
+  calculate_function_complexity"calculate_function_complexity (fn)"]
+  count_control_flow_statements"count_control_flow_statements (fn)"]
+  count_nesting_depth"count_nesting_depth (fn)"]
+  get_language_specific_complexity"get_language_specific_complexity (fn)"]
+  calculate_function_similarity"calculate_function_similarity (fn)"]
+  calculate_name_similarity"calculate_name_similarity (fn)"]
+  calculate_length_similarity"calculate_length_similarity (fn)"]
+  longest_common_prefix"longest_common_prefix (fn)"]
+  longest_common_suffix"longest_common_suffix (fn)"]
+  detect_string_concatenation_in_loops"detect_string_concatenation_in_loops (fn)"]
+  count_nested_loops"count_nested_loops (fn)"]
+  limit_results_by_category"limit_results_by_category (fn)"]
+  sort_by_confidence"sort_by_confidence (fn)"]
+  detect_string_concatenation_in_loops --> string_to_language
+  detect_string_concatenation_in_loops --> count_nesting_depth
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  fileanalyzer["FileAnalyzer"]
+  Start --> fileanalyzer
+  complexityanalyzer["ComplexityAnalyzer"]
+  Start --> complexityanalyzer
+  patternanalyzer["PatternAnalyzer"]
+  Start --> patternanalyzer
+  resultaggregator["ResultAggregator"]
+  Start --> resultaggregator
+  analyze_file_content["analyze_file_content"Fn]
+  parse_file_content["parse_file_content"Fn]
+  string_to_language["string_to_language"Fn]
+  filter_symbols_by_type["filter_symbols_by_type"Fn]
+  get_function_symbols["get_function_symbols"Fn]
+  is_large_file["is_large_file"Fn]
+  calculate_function_complexity["calculate_function_complexity"Fn]
+  count_control_flow_statements["count_control_flow_statements"Fn]
+  count_nesting_depth["count_nesting_depth"Fn]
+  get_language_specific_complexity["get_language_specific_complexity"Fn]
+  calculate_function_similarity["calculate_function_similarity"Fn]
+  calculate_name_similarity["calculate_name_similarity"Fn]
+  calculate_length_similarity["calculate_length_similarity"Fn]
+  longest_common_prefix["longest_common_prefix"Fn]
+  longest_common_suffix["longest_common_suffix"Fn]
+  detect_string_concatenation_in_loops["detect_string_concatenation_in_loops"Fn]
+  count_nested_loops["count_nested_loops"Fn]
+  limit_results_by_category["limit_results_by_category"Fn]
+  sort_by_confidence["sort_by_confidence"Fn]
+  fileanalyzer --> analyze_file_content
+  analyze_file_content --> parse_file_content
+  parse_file_content --> string_to_language
+  string_to_language --> filter_symbols_by_type
+  filter_symbols_by_type --> get_function_symbols
+  get_function_symbols --> is_large_file
+  is_large_file --> calculate_function_complexity
+  calculate_function_complexity --> count_control_flow_statements
+  count_control_flow_statements --> count_nesting_depth
+  count_nesting_depth --> get_language_specific_complexity
+  get_language_specific_complexity --> calculate_function_similarity
+  calculate_function_similarity --> calculate_name_similarity
+  calculate_name_similarity --> calculate_length_similarity
+  calculate_length_similarity --> longest_common_prefix
+  longest_common_prefix --> longest_common_suffix
+  longest_common_suffix --> detect_string_concatenation_in_loops
+  detect_string_concatenation_in_loops --> count_nested_loops
+  count_nested_loops --> limit_results_by_category
+  limit_results_by_category --> sort_by_confidence
+  sort_by_confidence --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class FileAnalyzer {
+    +FileAnalyzer()
+  }
+  class ComplexityAnalyzer {
+    +ComplexityAnalyzer()
+  }
+  class PatternAnalyzer {
+    +PatternAnalyzer()
+  }
+  class ResultAggregator {
+    +ResultAggregator()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

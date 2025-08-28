@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/ai_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/ai_analysis.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 41</li>
+<li><strong>Structures:</strong> 9</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 121</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze"analyze (fn)"]
+  generate_codebase_explanation"generate_codebase_explanation (fn)"]
+  generate_file_explanations"generate_file_explanations (fn)"]
+  generate_symbol_explanations"generate_symbol_explanations (fn)"]
+  generate_architectural_insights"generate_architectural_insights (fn)"]
+  detect_patterns"detect_patterns (fn)"]
+  generate_learning_recommendations"generate_learning_recommendations (fn)"]
+  assess_codebase_complexity"assess_codebase_complexity (fn)"]
+  infer_codebase_purpose"infer_codebase_purpose (fn)"]
+  analyze_architecture_style"analyze_architecture_style (fn)"]
+  identify_technologies"identify_technologies (fn)"]
+  determine_target_audience"determine_target_audience (fn)"]
+  find_entry_points"find_entry_points (fn)"]
+  explain_file"explain_file (fn)"]
+  explain_symbol"explain_symbol (fn)"]
+  determine_architectural_style"determine_architectural_style (fn)"]
+  identify_design_patterns"identify_design_patterns (fn)"]
+  assess_separation_of_concerns"assess_separation_of_concerns (fn)"]
+  assess_modularity"assess_modularity (fn)"]
+  assess_scalability"assess_scalability (fn)"]
+  assess_maintainability"assess_maintainability (fn)"]
+  suggest_architectural_improvements"suggest_architectural_improvements (fn)"]
+  detect_design_patterns"detect_design_patterns (fn)"]
+  detect_anti_patterns"detect_anti_patterns (fn)"]
+  detect_code_smells"detect_code_smells (fn)"]
+  detect_best_practices"detect_best_practices (fn)"]
+  infer_file_purpose"infer_file_purpose (fn)"]
+  determine_file_role"determine_file_role (fn)"]
+  identify_file_responsibilities"identify_file_responsibilities (fn)"]
+  analyze_file_relationships"analyze_file_relationships (fn)"]
+  assess_file_complexity"assess_file_complexity (fn)"]
+  suggest_file_improvements"suggest_file_improvements (fn)"]
+  infer_symbol_purpose"infer_symbol_purpose (fn)"]
+  generate_symbol_usage"generate_symbol_usage (fn)"]
+  explain_symbol_signature"explain_symbol_signature (fn)"]
+  assess_symbol_complexity"assess_symbol_complexity (fn)"]
+  suggest_symbol_best_practices"suggest_symbol_best_practices (fn)"]
+  fmt"fmt (fn)"]
+  generate_codebase_explanation --> generate_file_explanations
+  generate_codebase_explanation --> generate_symbol_explanations
+  detect_code_smells --> generate_codebase_explanation
+  detect_code_smells --> assess_codebase_complexity
+  detect_code_smells --> infer_codebase_purpose
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  aianalyzer["AIAnalyzer"]
+  Start --> aianalyzer
+  aiconfig["AIConfig"]
+  Start --> aiconfig
+  aianalysisresult["AIAnalysisResult"]
+  Start --> aianalysisresult
+  codebaseexplanation["CodebaseExplanation"]
+  Start --> codebaseexplanation
+  fileexplanation["FileExplanation"]
+  Start --> fileexplanation
+  symbolexplanation["SymbolExplanation"]
+  Start --> symbolexplanation
+  architecturalinsights["ArchitecturalInsights"]
+  Start --> architecturalinsights
+  detectedpattern["DetectedPattern"]
+  Start --> detectedpattern
+  patternlocation["PatternLocation"]
+  Start --> patternlocation
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze["analyze"Fn]
+  generate_codebase_explanation["generate_codebase_explanation"Fn]
+  generate_file_explanations["generate_file_explanations"Fn]
+  generate_symbol_explanations["generate_symbol_explanations"Fn]
+  generate_architectural_insights["generate_architectural_insights"Fn]
+  detect_patterns["detect_patterns"Fn]
+  generate_learning_recommendations["generate_learning_recommendations"Fn]
+  assess_codebase_complexity["assess_codebase_complexity"Fn]
+  infer_codebase_purpose["infer_codebase_purpose"Fn]
+  analyze_architecture_style["analyze_architecture_style"Fn]
+  identify_technologies["identify_technologies"Fn]
+  determine_target_audience["determine_target_audience"Fn]
+  find_entry_points["find_entry_points"Fn]
+  explain_file["explain_file"Fn]
+  explain_symbol["explain_symbol"Fn]
+  determine_architectural_style["determine_architectural_style"Fn]
+  identify_design_patterns["identify_design_patterns"Fn]
+  assess_separation_of_concerns["assess_separation_of_concerns"Fn]
+  assess_modularity["assess_modularity"Fn]
+  assess_scalability["assess_scalability"Fn]
+  assess_maintainability["assess_maintainability"Fn]
+  suggest_architectural_improvements["suggest_architectural_improvements"Fn]
+  detect_design_patterns["detect_design_patterns"Fn]
+  detect_anti_patterns["detect_anti_patterns"Fn]
+  detect_code_smells["detect_code_smells"Fn]
+  detect_best_practices["detect_best_practices"Fn]
+  infer_file_purpose["infer_file_purpose"Fn]
+  determine_file_role["determine_file_role"Fn]
+  identify_file_responsibilities["identify_file_responsibilities"Fn]
+  analyze_file_relationships["analyze_file_relationships"Fn]
+  assess_file_complexity["assess_file_complexity"Fn]
+  suggest_file_improvements["suggest_file_improvements"Fn]
+  infer_symbol_purpose["infer_symbol_purpose"Fn]
+  generate_symbol_usage["generate_symbol_usage"Fn]
+  explain_symbol_signature["explain_symbol_signature"Fn]
+  assess_symbol_complexity["assess_symbol_complexity"Fn]
+  suggest_symbol_best_practices["suggest_symbol_best_practices"Fn]
+  fmt["fmt"Fn]
+  aianalyzer --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze
+  analyze --> generate_codebase_explanation
+  generate_codebase_explanation --> generate_file_explanations
+  generate_file_explanations --> generate_symbol_explanations
+  generate_symbol_explanations --> generate_architectural_insights
+  generate_architectural_insights --> detect_patterns
+  detect_patterns --> generate_learning_recommendations
+  generate_learning_recommendations --> assess_codebase_complexity
+  assess_codebase_complexity --> infer_codebase_purpose
+  infer_codebase_purpose --> analyze_architecture_style
+  analyze_architecture_style --> identify_technologies
+  identify_technologies --> determine_target_audience
+  determine_target_audience --> find_entry_points
+  find_entry_points --> explain_file
+  explain_file --> explain_symbol
+  explain_symbol --> determine_architectural_style
+  determine_architectural_style --> identify_design_patterns
+  identify_design_patterns --> assess_separation_of_concerns
+  assess_separation_of_concerns --> assess_modularity
+  assess_modularity --> assess_scalability
+  assess_scalability --> assess_maintainability
+  assess_maintainability --> suggest_architectural_improvements
+  suggest_architectural_improvements --> detect_design_patterns
+  detect_design_patterns --> detect_anti_patterns
+  detect_anti_patterns --> detect_code_smells
+  detect_code_smells --> detect_best_practices
+  detect_best_practices --> infer_file_purpose
+  infer_file_purpose --> determine_file_role
+  determine_file_role --> identify_file_responsibilities
+  identify_file_responsibilities --> analyze_file_relationships
+  analyze_file_relationships --> assess_file_complexity
+  assess_file_complexity --> suggest_file_improvements
+  suggest_file_improvements --> infer_symbol_purpose
+  infer_symbol_purpose --> generate_symbol_usage
+  generate_symbol_usage --> explain_symbol_signature
+  explain_symbol_signature --> assess_symbol_complexity
+  assess_symbol_complexity --> suggest_symbol_best_practices
+  suggest_symbol_best_practices --> fmt
+  fmt --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AIAnalyzer {
+    +AIAnalyzer()
+  }
+  class AIConfig {
+    +AIConfig()
+  }
+  class AIAnalysisResult {
+    +AIAnalysisResult()
+  }
+  class CodebaseExplanation {
+    +CodebaseExplanation()
+  }
+  class FileExplanation {
+    +FileExplanation()
+  }
+  class SymbolExplanation {
+    +SymbolExplanation()
+  }
+  class ArchitecturalInsights {
+    +ArchitecturalInsights()
+  }
+  class DetectedPattern {
+    +DetectedPattern()
+  }
+  class PatternLocation {
+    +PatternLocation()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

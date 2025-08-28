@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/analyzer_cache_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/analyzer_cache_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 6</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 29</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+test_cache_stats"test_cache_stats (fn)"]
+  test_cache_hit_ratio"test_cache_hit_ratio (fn)"]
+  test_clear_cache"test_clear_cache (fn)"]
+  test_is_cached"test_is_cached (fn)"]
+  test_cache_multiple_files"test_cache_multiple_files (fn)"]
+  test_cache_directory_analysis"test_cache_directory_analysis (fn)"]
+  test_cache_stats --> test_is_cached
+  test_cache_hit_ratio --> test_is_cached
+  test_clear_cache --> test_is_cached
+  test_is_cached --> test_cache_directory_analysis
+  test_cache_multiple_files --> test_is_cached
+  test_cache_directory_analysis --> test_is_cached
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  test_cache_stats["test_cache_stats"Fn]
+  test_cache_hit_ratio["test_cache_hit_ratio"Fn]
+  test_clear_cache["test_clear_cache"Fn]
+  test_is_cached["test_is_cached"Fn]
+  test_cache_multiple_files["test_cache_multiple_files"Fn]
+  test_cache_directory_analysis["test_cache_directory_analysis"Fn]
+  Start --> test_cache_stats
+  test_cache_stats --> test_cache_hit_ratio
+  test_cache_hit_ratio --> test_clear_cache
+  test_clear_cache --> test_is_cached
+  test_is_cached --> test_cache_multiple_files
+  test_cache_multiple_files --> test_cache_directory_analysis
+  test_cache_directory_analysis --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

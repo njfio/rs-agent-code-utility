@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/ai/error.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/ai/error.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 15</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 17</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+configuration"configuration (fn)"]
+  provider"provider (fn)"]
+  authentication"authentication (fn)"]
+  rate_limit"rate_limit (fn)"]
+  network"network (fn)"]
+  invalid_request"invalid_request (fn)"]
+  response_parsing"response_parsing (fn)"]
+  model_unavailable"model_unavailable (fn)"]
+  feature_not_supported"feature_not_supported (fn)"]
+  token_limit_exceeded"token_limit_exceeded (fn)"]
+  cache"cache (fn)"]
+  timeout"timeout (fn)"]
+  internal"internal (fn)"]
+  is_retryable"is_retryable (fn)"]
+  retry_delay"retry_delay (fn)"]
+  retry_delay --> is_retryable
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  configuration["configuration"Fn]
+  provider["provider"Fn]
+  authentication["authentication"Fn]
+  rate_limit["rate_limit"Fn]
+  network["network"Fn]
+  invalid_request["invalid_request"Fn]
+  response_parsing["response_parsing"Fn]
+  model_unavailable["model_unavailable"Fn]
+  feature_not_supported["feature_not_supported"Fn]
+  token_limit_exceeded["token_limit_exceeded"Fn]
+  cache["cache"Fn]
+  timeout["timeout"Fn]
+  internal["internal"Fn]
+  is_retryable["is_retryable"Fn]
+  retry_delay["retry_delay"Fn]
+  Start --> configuration
+  configuration --> provider
+  provider --> authentication
+  authentication --> rate_limit
+  rate_limit --> network
+  network --> invalid_request
+  invalid_request --> response_parsing
+  response_parsing --> model_unavailable
+  model_unavailable --> feature_not_supported
+  feature_not_supported --> token_limit_exceeded
+  token_limit_exceeded --> cache
+  cache --> timeout
+  timeout --> internal
+  internal --> is_retryable
+  is_retryable --> retry_delay
+  retry_delay --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

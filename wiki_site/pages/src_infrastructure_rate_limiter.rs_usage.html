@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/infrastructure/rate_limiter.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/infrastructure/rate_limiter.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 27</li>
+<li><strong>Structures:</strong> 8</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 78</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  default"default (fn)"]
+  new"new (fn)"]
+  add_service"add_service (fn)"]
+  wait_for_permit"wait_for_permit (fn)"]
+  check_permit"check_permit (fn)"]
+  get_stats"get_stats (fn)"]
+  get_services"get_services (fn)"]
+  new"new (fn)"]
+  wait_for_permit"wait_for_permit (fn)"]
+  check_permit"check_permit (fn)"]
+  get_stats"get_stats (fn)"]
+  reset_stats"reset_stats (fn)"]
+  service_name"service_name (fn)"]
+  record_success"record_success (fn)"]
+  record_failure"record_failure (fn)"]
+  calculate_backoff_delay"calculate_backoff_delay (fn)"]
+  wait_with_backoff"wait_with_backoff (fn)"]
+  new"new (fn)"]
+  adjust_rate"adjust_rate (fn)"]
+  get_current_rate"get_current_rate (fn)"]
+  nvd_limiter"nvd_limiter (fn)"]
+  nvd_limiter_with_key"nvd_limiter_with_key (fn)"]
+  osv_limiter"osv_limiter (fn)"]
+  github_limiter"github_limiter (fn)"]
+  github_limiter_with_token"github_limiter_with_token (fn)"]
+  create_default_multi_limiter"create_default_multi_limiter (fn)"]
+  add_service --> get_services
+  service_name --> get_services
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  multiserviceratelimiter["MultiServiceRateLimiter"]
+  Start --> multiserviceratelimiter
+  serviceratelimiter["ServiceRateLimiter"]
+  Start --> serviceratelimiter
+  servicestats["ServiceStats"]
+  Start --> servicestats
+  ratelimitconfig["RateLimitConfig"]
+  Start --> ratelimitconfig
+  backoffconfig["BackoffConfig"]
+  Start --> backoffconfig
+  ratelimitstats["RateLimitStats"]
+  Start --> ratelimitstats
+  adaptiveratelimiter["AdaptiveRateLimiter"]
+  Start --> adaptiveratelimiter
+  ratelimiterfactory["RateLimiterFactory"]
+  Start --> ratelimiterfactory
+  default["default"Fn]
+  default["default"Fn]
+  new["new"Fn]
+  add_service["add_service"Fn]
+  wait_for_permit["wait_for_permit"Fn]
+  check_permit["check_permit"Fn]
+  get_stats["get_stats"Fn]
+  get_services["get_services"Fn]
+  new["new"Fn]
+  wait_for_permit["wait_for_permit"Fn]
+  check_permit["check_permit"Fn]
+  get_stats["get_stats"Fn]
+  reset_stats["reset_stats"Fn]
+  service_name["service_name"Fn]
+  record_success["record_success"Fn]
+  record_failure["record_failure"Fn]
+  calculate_backoff_delay["calculate_backoff_delay"Fn]
+  wait_with_backoff["wait_with_backoff"Fn]
+  new["new"Fn]
+  adjust_rate["adjust_rate"Fn]
+  get_current_rate["get_current_rate"Fn]
+  nvd_limiter["nvd_limiter"Fn]
+  nvd_limiter_with_key["nvd_limiter_with_key"Fn]
+  osv_limiter["osv_limiter"Fn]
+  github_limiter["github_limiter"Fn]
+  github_limiter_with_token["github_limiter_with_token"Fn]
+  create_default_multi_limiter["create_default_multi_limiter"Fn]
+  multiserviceratelimiter --> default
+  default --> default
+  default --> new
+  new --> add_service
+  add_service --> wait_for_permit
+  wait_for_permit --> check_permit
+  check_permit --> get_stats
+  get_stats --> get_services
+  get_services --> new
+  new --> wait_for_permit
+  wait_for_permit --> check_permit
+  check_permit --> get_stats
+  get_stats --> reset_stats
+  reset_stats --> service_name
+  service_name --> record_success
+  record_success --> record_failure
+  record_failure --> calculate_backoff_delay
+  calculate_backoff_delay --> wait_with_backoff
+  wait_with_backoff --> new
+  new --> adjust_rate
+  adjust_rate --> get_current_rate
+  get_current_rate --> nvd_limiter
+  nvd_limiter --> nvd_limiter_with_key
+  nvd_limiter_with_key --> osv_limiter
+  osv_limiter --> github_limiter
+  github_limiter --> github_limiter_with_token
+  github_limiter_with_token --> create_default_multi_limiter
+  create_default_multi_limiter --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class MultiServiceRateLimiter {
+    +MultiServiceRateLimiter()
+  }
+  class ServiceRateLimiter {
+    +ServiceRateLimiter()
+  }
+  class ServiceStats {
+    +ServiceStats()
+  }
+  class RateLimitConfig {
+    +RateLimitConfig()
+  }
+  class BackoffConfig {
+    +BackoffConfig()
+  }
+  class RateLimitStats {
+    +RateLimitStats()
+  }
+  class AdaptiveRateLimiter {
+    +AdaptiveRateLimiter()
+  }
+  class RateLimiterFactory {
+    +RateLimiterFactory()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

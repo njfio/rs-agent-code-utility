@@ -1,0 +1,314 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/go.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/go.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 51</li>
+<li><strong>Structures:</strong> 2</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 167</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+is_function_declaration"is_function_declaration (fn)"]
+  is_method_declaration"is_method_declaration (fn)"]
+  is_type_declaration"is_type_declaration (fn)"]
+  is_struct_type"is_struct_type (fn)"]
+  is_interface_type"is_interface_type (fn)"]
+  is_package_clause"is_package_clause (fn)"]
+  is_import_declaration"is_import_declaration (fn)"]
+  is_const_declaration"is_const_declaration (fn)"]
+  is_var_declaration"is_var_declaration (fn)"]
+  function_name"function_name (fn)"]
+  method_name"method_name (fn)"]
+  method_receiver_type"method_receiver_type (fn)"]
+  type_name"type_name (fn)"]
+  package_name"package_name (fn)"]
+  function_parameters"function_parameters (fn)"]
+  function_return_types"function_return_types (fn)"]
+  struct_fields"struct_fields (fn)"]
+  interface_methods"interface_methods (fn)"]
+  is_exported"is_exported (fn)"]
+  is_main_function"is_main_function (fn)"]
+  is_init_function"is_init_function (fn)"]
+  get_import_paths"get_import_paths (fn)"]
+  find_functions"find_functions (fn)"]
+  find_methods"find_methods (fn)"]
+  find_types"find_types (fn)"]
+  find_structs"find_structs (fn)"]
+  functions_query"functions_query (fn)"]
+  methods_query"methods_query (fn)"]
+  types_query"types_query (fn)"]
+  structs_query"structs_query (fn)"]
+  interfaces_query"interfaces_query (fn)"]
+  detect_go_features"detect_go_features (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  analyze_package"analyze_package (fn)"]
+  find_constants"find_constants (fn)"]
+  find_variables"find_variables (fn)"]
+  find_interfaces"find_interfaces (fn)"]
+  find_channels"find_channels (fn)"]
+  find_goroutines"find_goroutines (fn)"]
+  find_embedded_types"find_embedded_types (fn)"]
+  find_type_assertions"find_type_assertions (fn)"]
+  test_go_function_detection"test_go_function_detection (fn)"]
+  test_go_method_detection"test_go_method_detection (fn)"]
+  test_go_struct_detection"test_go_struct_detection (fn)"]
+  test_go_interface_detection"test_go_interface_detection (fn)"]
+  test_go_package_analysis"test_go_package_analysis (fn)"]
+  test_go_features_detection"test_go_features_detection (fn)"]
+  test_function_parameters_and_returns"test_function_parameters_and_returns (fn)"]
+  test_struct_fields"test_struct_fields (fn)"]
+  test_exported_vs_private"test_exported_vs_private (fn)"]
+  test_special_functions"test_special_functions (fn)"]
+  is_function_declaration --> find_functions
+  is_function_declaration --> functions_query
+  is_function_declaration --> test_go_package_analysis
+  is_function_declaration --> test_special_functions
+  is_method_declaration --> interface_methods
+  is_method_declaration --> find_methods
+  is_method_declaration --> methods_query
+  is_method_declaration --> test_go_package_analysis
+  is_type_declaration --> function_return_types
+  is_type_declaration --> find_types
+  is_type_declaration --> types_query
+  is_type_declaration --> find_embedded_types
+  is_type_declaration --> test_go_package_analysis
+  is_struct_type --> function_return_types
+  is_struct_type --> find_types
+  is_struct_type --> find_structs
+  is_struct_type --> types_query
+  is_struct_type --> structs_query
+  is_struct_type --> find_embedded_types
+  is_struct_type --> test_go_package_analysis
+  is_interface_type --> function_return_types
+  is_interface_type --> find_types
+  is_interface_type --> types_query
+  is_interface_type --> interfaces_query
+  is_interface_type --> find_interfaces
+  is_interface_type --> find_embedded_types
+  is_interface_type --> test_go_package_analysis
+  is_package_clause --> test_go_package_analysis
+  is_import_declaration --> test_go_package_analysis
+  is_const_declaration --> find_constants
+  is_const_declaration --> test_go_package_analysis
+  is_var_declaration --> find_variables
+  is_var_declaration --> test_go_package_analysis
+  function_name --> find_functions
+  function_name --> functions_query
+  function_name --> test_special_functions
+  method_name --> interface_methods
+  method_name --> find_methods
+  method_name --> methods_query
+  method_receiver_type --> function_return_types
+  method_receiver_type --> interface_methods
+  method_receiver_type --> find_methods
+  method_receiver_type --> find_types
+  method_receiver_type --> methods_query
+  method_receiver_type --> types_query
+  method_receiver_type --> find_embedded_types
+  type_name --> function_return_types
+  type_name --> find_types
+  type_name --> types_query
+  type_name --> find_embedded_types
+  function_parameters --> find_functions
+  function_parameters --> functions_query
+  function_parameters --> test_special_functions
+  function_return_types --> find_functions
+  function_return_types --> functions_query
+  function_return_types --> test_function_parameters_and_returns
+  function_return_types --> test_special_functions
+  struct_fields --> find_structs
+  struct_fields --> structs_query
+  interface_methods --> interfaces_query
+  interface_methods --> find_interfaces
+  is_exported --> test_go_package_analysis
+  is_main_function --> find_functions
+  is_main_function --> functions_query
+  is_main_function --> test_go_package_analysis
+  is_main_function --> test_special_functions
+  is_init_function --> find_functions
+  is_init_function --> functions_query
+  is_init_function --> test_go_package_analysis
+  is_init_function --> test_special_functions
+  detect_go_features --> find_goroutines
+  detect_go_features --> test_go_function_detection
+  detect_go_features --> test_go_method_detection
+  detect_go_features --> test_go_struct_detection
+  detect_go_features --> test_go_interface_detection
+  detect_go_features --> test_go_features_detection
+  find_type_assertions --> function_return_types
+  find_type_assertions --> find_types
+  find_type_assertions --> types_query
+  find_type_assertions --> find_embedded_types
+  test_go_function_detection --> find_functions
+  test_go_function_detection --> functions_query
+  test_go_function_detection --> find_goroutines
+  test_go_function_detection --> test_special_functions
+  test_go_method_detection --> interface_methods
+  test_go_method_detection --> find_methods
+  test_go_method_detection --> methods_query
+  test_go_method_detection --> find_goroutines
+  test_go_struct_detection --> find_structs
+  test_go_struct_detection --> structs_query
+  test_go_struct_detection --> find_goroutines
+  test_go_interface_detection --> interfaces_query
+  test_go_interface_detection --> find_interfaces
+  test_go_interface_detection --> find_goroutines
+  test_go_package_analysis --> find_goroutines
+  test_go_features_detection --> find_goroutines
+  test_function_parameters_and_returns --> find_functions
+  test_function_parameters_and_returns --> functions_query
+  test_function_parameters_and_returns --> test_special_functions
+  test_struct_fields --> find_structs
+  test_struct_fields --> structs_query
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  gosyntax["GoSyntax"]
+  Start --> gosyntax
+  packageanalysis["PackageAnalysis"]
+  Start --> packageanalysis
+  is_function_declaration["is_function_declaration"Fn]
+  is_method_declaration["is_method_declaration"Fn]
+  is_type_declaration["is_type_declaration"Fn]
+  is_struct_type["is_struct_type"Fn]
+  is_interface_type["is_interface_type"Fn]
+  is_package_clause["is_package_clause"Fn]
+  is_import_declaration["is_import_declaration"Fn]
+  is_const_declaration["is_const_declaration"Fn]
+  is_var_declaration["is_var_declaration"Fn]
+  function_name["function_name"Fn]
+  method_name["method_name"Fn]
+  method_receiver_type["method_receiver_type"Fn]
+  type_name["type_name"Fn]
+  package_name["package_name"Fn]
+  function_parameters["function_parameters"Fn]
+  function_return_types["function_return_types"Fn]
+  struct_fields["struct_fields"Fn]
+  interface_methods["interface_methods"Fn]
+  is_exported["is_exported"Fn]
+  is_main_function["is_main_function"Fn]
+  is_init_function["is_init_function"Fn]
+  get_import_paths["get_import_paths"Fn]
+  find_functions["find_functions"Fn]
+  find_methods["find_methods"Fn]
+  find_types["find_types"Fn]
+  find_structs["find_structs"Fn]
+  functions_query["functions_query"Fn]
+  methods_query["methods_query"Fn]
+  types_query["types_query"Fn]
+  structs_query["structs_query"Fn]
+  interfaces_query["interfaces_query"Fn]
+  detect_go_features["detect_go_features"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  analyze_package["analyze_package"Fn]
+  find_constants["find_constants"Fn]
+  find_variables["find_variables"Fn]
+  find_interfaces["find_interfaces"Fn]
+  find_channels["find_channels"Fn]
+  find_goroutines["find_goroutines"Fn]
+  find_embedded_types["find_embedded_types"Fn]
+  find_type_assertions["find_type_assertions"Fn]
+  test_go_function_detection["test_go_function_detection"Fn]
+  test_go_method_detection["test_go_method_detection"Fn]
+  test_go_struct_detection["test_go_struct_detection"Fn]
+  test_go_interface_detection["test_go_interface_detection"Fn]
+  test_go_package_analysis["test_go_package_analysis"Fn]
+  test_go_features_detection["test_go_features_detection"Fn]
+  test_function_parameters_and_returns["test_function_parameters_and_returns"Fn]
+  test_struct_fields["test_struct_fields"Fn]
+  test_exported_vs_private["test_exported_vs_private"Fn]
+  test_special_functions["test_special_functions"Fn]
+  gosyntax --> is_function_declaration
+  is_function_declaration --> is_method_declaration
+  is_method_declaration --> is_type_declaration
+  is_type_declaration --> is_struct_type
+  is_struct_type --> is_interface_type
+  is_interface_type --> is_package_clause
+  is_package_clause --> is_import_declaration
+  is_import_declaration --> is_const_declaration
+  is_const_declaration --> is_var_declaration
+  is_var_declaration --> function_name
+  function_name --> method_name
+  method_name --> method_receiver_type
+  method_receiver_type --> type_name
+  type_name --> package_name
+  package_name --> function_parameters
+  function_parameters --> function_return_types
+  function_return_types --> struct_fields
+  struct_fields --> interface_methods
+  interface_methods --> is_exported
+  is_exported --> is_main_function
+  is_main_function --> is_init_function
+  is_init_function --> get_import_paths
+  get_import_paths --> find_functions
+  find_functions --> find_methods
+  find_methods --> find_types
+  find_types --> find_structs
+  find_structs --> functions_query
+  functions_query --> methods_query
+  methods_query --> types_query
+  types_query --> structs_query
+  structs_query --> interfaces_query
+  interfaces_query --> detect_go_features
+  detect_go_features --> analyze_complexity
+  analyze_complexity --> analyze_package
+  analyze_package --> find_constants
+  find_constants --> find_variables
+  find_variables --> find_interfaces
+  find_interfaces --> find_channels
+  find_channels --> find_goroutines
+  find_goroutines --> find_embedded_types
+  find_embedded_types --> find_type_assertions
+  find_type_assertions --> test_go_function_detection
+  test_go_function_detection --> test_go_method_detection
+  test_go_method_detection --> test_go_struct_detection
+  test_go_struct_detection --> test_go_interface_detection
+  test_go_interface_detection --> test_go_package_analysis
+  test_go_package_analysis --> test_go_features_detection
+  test_go_features_detection --> test_function_parameters_and_returns
+  test_function_parameters_and_returns --> test_struct_fields
+  test_struct_fields --> test_exported_vs_private
+  test_exported_vs_private --> test_special_functions
+  test_special_functions --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class GoSyntax {
+    +GoSyntax()
+  }
+  class PackageAnalysis {
+    +PackageAnalysis()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

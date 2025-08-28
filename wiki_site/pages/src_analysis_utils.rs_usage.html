@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/analysis_utils.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/analysis_utils.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 28</li>
+<li><strong>Structures:</strong> 6</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 81</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  parse_language"parse_language (fn)"]
+  create_syntax_tree"create_syntax_tree (fn)"]
+  get_control_flow_patterns"get_control_flow_patterns (fn)"]
+  get_function_patterns"get_function_patterns (fn)"]
+  get_loop_patterns"get_loop_patterns (fn)"]
+  filter_functions"filter_functions (fn)"]
+  filter_types"filter_types (fn)"]
+  is_function_or_method"is_function_or_method (fn)"]
+  calculate_line_count"calculate_line_count (fn)"]
+  calculate_cyclomatic_complexity"calculate_cyclomatic_complexity (fn)"]
+  calculate_function_complexity"calculate_function_complexity (fn)"]
+  calculate_method_complexity_score"calculate_method_complexity_score (fn)"]
+  analyze_files_with"analyze_files_with (fn)"]
+  is_large_file"is_large_file (fn)"]
+  calculate_basic_file_complexity"calculate_basic_file_complexity (fn)"]
+  read_file_content"read_file_content (fn)"]
+  count_nested_loops"count_nested_loops (fn)"]
+  detect_string_concatenation_in_loops"detect_string_concatenation_in_loops (fn)"]
+  calculate_function_similarity"calculate_function_similarity (fn)"]
+  calculate_name_similarity"calculate_name_similarity (fn)"]
+  calculate_size_similarity"calculate_size_similarity (fn)"]
+  test_analysis_thresholds_default"test_analysis_thresholds_default (fn)"]
+  test_language_parser"test_language_parser (fn)"]
+  test_symbol_filter"test_symbol_filter (fn)"]
+  test_file_analyzer"test_file_analyzer (fn)"]
+  test_pattern_detector"test_pattern_detector (fn)"]
+  test_complexity_calculator"test_complexity_calculator (fn)"]
+  parse_language --> test_language_parser
+  get_function_patterns --> filter_functions
+  get_loop_patterns --> count_nested_loops
+  get_loop_patterns --> detect_string_concatenation_in_loops
+  is_function_or_method --> filter_functions
+  is_function_or_method --> calculate_method_complexity_score
+  is_function_or_method --> test_analysis_thresholds_default
+  is_function_or_method --> test_pattern_detector
+  is_function_or_method --> test_complexity_calculator
+  calculate_function_complexity --> filter_functions
+  analyze_files_with --> test_file_analyzer
+  is_large_file --> analyze_files_with
+  is_large_file --> test_analysis_thresholds_default
+  calculate_basic_file_complexity --> analyze_files_with
+  read_file_content --> analyze_files_with
+  detect_string_concatenation_in_loops --> calculate_line_count
+  detect_string_concatenation_in_loops --> test_pattern_detector
+  calculate_function_similarity --> filter_functions
+  test_file_analyzer --> analyze_files_with
+  test_pattern_detector --> get_control_flow_patterns
+  test_pattern_detector --> get_function_patterns
+  test_pattern_detector --> get_loop_patterns
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  analysisthresholds["AnalysisThresholds"]
+  Start --> analysisthresholds
+  languageparser["LanguageParser"]
+  Start --> languageparser
+  symbolfilter["SymbolFilter"]
+  Start --> symbolfilter
+  complexitycalculator["ComplexityCalculator"]
+  Start --> complexitycalculator
+  fileanalyzer["FileAnalyzer"]
+  Start --> fileanalyzer
+  patterndetector["PatternDetector"]
+  Start --> patterndetector
+  default["default"Fn]
+  parse_language["parse_language"Fn]
+  create_syntax_tree["create_syntax_tree"Fn]
+  get_control_flow_patterns["get_control_flow_patterns"Fn]
+  get_function_patterns["get_function_patterns"Fn]
+  get_loop_patterns["get_loop_patterns"Fn]
+  filter_functions["filter_functions"Fn]
+  filter_types["filter_types"Fn]
+  is_function_or_method["is_function_or_method"Fn]
+  calculate_line_count["calculate_line_count"Fn]
+  calculate_cyclomatic_complexity["calculate_cyclomatic_complexity"Fn]
+  calculate_function_complexity["calculate_function_complexity"Fn]
+  calculate_method_complexity_score["calculate_method_complexity_score"Fn]
+  analyze_files_with["analyze_files_with"Fn]
+  is_large_file["is_large_file"Fn]
+  calculate_basic_file_complexity["calculate_basic_file_complexity"Fn]
+  read_file_content["read_file_content"Fn]
+  count_nested_loops["count_nested_loops"Fn]
+  detect_string_concatenation_in_loops["detect_string_concatenation_in_loops"Fn]
+  calculate_function_similarity["calculate_function_similarity"Fn]
+  calculate_name_similarity["calculate_name_similarity"Fn]
+  calculate_size_similarity["calculate_size_similarity"Fn]
+  test_analysis_thresholds_default["test_analysis_thresholds_default"Fn]
+  test_language_parser["test_language_parser"Fn]
+  test_symbol_filter["test_symbol_filter"Fn]
+  test_file_analyzer["test_file_analyzer"Fn]
+  test_pattern_detector["test_pattern_detector"Fn]
+  test_complexity_calculator["test_complexity_calculator"Fn]
+  analysisthresholds --> default
+  default --> parse_language
+  parse_language --> create_syntax_tree
+  create_syntax_tree --> get_control_flow_patterns
+  get_control_flow_patterns --> get_function_patterns
+  get_function_patterns --> get_loop_patterns
+  get_loop_patterns --> filter_functions
+  filter_functions --> filter_types
+  filter_types --> is_function_or_method
+  is_function_or_method --> calculate_line_count
+  calculate_line_count --> calculate_cyclomatic_complexity
+  calculate_cyclomatic_complexity --> calculate_function_complexity
+  calculate_function_complexity --> calculate_method_complexity_score
+  calculate_method_complexity_score --> analyze_files_with
+  analyze_files_with --> is_large_file
+  is_large_file --> calculate_basic_file_complexity
+  calculate_basic_file_complexity --> read_file_content
+  read_file_content --> count_nested_loops
+  count_nested_loops --> detect_string_concatenation_in_loops
+  detect_string_concatenation_in_loops --> calculate_function_similarity
+  calculate_function_similarity --> calculate_name_similarity
+  calculate_name_similarity --> calculate_size_similarity
+  calculate_size_similarity --> test_analysis_thresholds_default
+  test_analysis_thresholds_default --> test_language_parser
+  test_language_parser --> test_symbol_filter
+  test_symbol_filter --> test_file_analyzer
+  test_file_analyzer --> test_pattern_detector
+  test_pattern_detector --> test_complexity_calculator
+  test_complexity_calculator --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AnalysisThresholds {
+    +AnalysisThresholds()
+  }
+  class LanguageParser {
+    +LanguageParser()
+  }
+  class SymbolFilter {
+    +SymbolFilter()
+  }
+  class ComplexityCalculator {
+    +ComplexityCalculator()
+  }
+  class FileAnalyzer {
+    +FileAnalyzer()
+  }
+  class PatternDetector {
+    +PatternDetector()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

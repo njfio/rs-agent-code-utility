@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/file_cache.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/file_cache.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 17</li>
+<li><strong>Structures:</strong> 2</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 56</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  with_capacity"with_capacity (fn)"]
+  read_to_string"read_to_string (fn)"]
+  insert"insert (fn)"]
+  clear"clear (fn)"]
+  stats"stats (fn)"]
+  hit_ratio"hit_ratio (fn)"]
+  contains"contains (fn)"]
+  len"len (fn)"]
+  is_empty"is_empty (fn)"]
+  default"default (fn)"]
+  efficiency"efficiency (fn)"]
+  average_file_size"average_file_size (fn)"]
+  test_file_cache_basic_operations"test_file_cache_basic_operations (fn)"]
+  test_cache_capacity_and_eviction"test_cache_capacity_and_eviction (fn)"]
+  test_cache_clear"test_cache_clear (fn)"]
+  test_cache_stats"test_cache_stats (fn)"]
+  hit_ratio --> test_file_cache_basic_operations
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  filecache["FileCache"]
+  Start --> filecache
+  cachestats["CacheStats"]
+  Start --> cachestats
+  new["new"Fn]
+  with_capacity["with_capacity"Fn]
+  read_to_string["read_to_string"Fn]
+  insert["insert"Fn]
+  clear["clear"Fn]
+  stats["stats"Fn]
+  hit_ratio["hit_ratio"Fn]
+  contains["contains"Fn]
+  len["len"Fn]
+  is_empty["is_empty"Fn]
+  default["default"Fn]
+  efficiency["efficiency"Fn]
+  average_file_size["average_file_size"Fn]
+  test_file_cache_basic_operations["test_file_cache_basic_operations"Fn]
+  test_cache_capacity_and_eviction["test_cache_capacity_and_eviction"Fn]
+  test_cache_clear["test_cache_clear"Fn]
+  test_cache_stats["test_cache_stats"Fn]
+  filecache --> new
+  new --> with_capacity
+  with_capacity --> read_to_string
+  read_to_string --> insert
+  insert --> clear
+  clear --> stats
+  stats --> hit_ratio
+  hit_ratio --> contains
+  contains --> len
+  len --> is_empty
+  is_empty --> default
+  default --> efficiency
+  efficiency --> average_file_size
+  average_file_size --> test_file_cache_basic_operations
+  test_file_cache_basic_operations --> test_cache_capacity_and_eviction
+  test_cache_capacity_and_eviction --> test_cache_clear
+  test_cache_clear --> test_cache_stats
+  test_cache_stats --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class FileCache {
+    +FileCache()
+  }
+  class CacheStats {
+    +CacheStats()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

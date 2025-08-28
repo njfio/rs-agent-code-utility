@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/query.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/query.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 29</li>
+<li><strong>Structures:</strong> 4</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 72</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  language"language (fn)"]
+  pattern_count"pattern_count (fn)"]
+  capture_names"capture_names (fn)"]
+  matches"matches (fn)"]
+  captures"captures (fn)"]
+  matches_in_node"matches_in_node (fn)"]
+  highlights"highlights (fn)"]
+  functions"functions (fn)"]
+  classes"classes (fn)"]
+  pattern_index"pattern_index (fn)"]
+  captures"captures (fn)"]
+  capture_by_name"capture_by_name (fn)"]
+  node"node (fn)"]
+  index"index (fn)"]
+  name"name (fn)"]
+  text"text (fn)"]
+  byte_range"byte_range (fn)"]
+  start_position"start_position (fn)"]
+  end_position"end_position (fn)"]
+  new"new (fn)"]
+  find_kind"find_kind (fn)"]
+  find_with_field"find_with_field (fn)"]
+  add_pattern"add_pattern (fn)"]
+  build"build (fn)"]
+  test_query_creation"test_query_creation (fn)"]
+  test_query_execution"test_query_execution (fn)"]
+  test_query_builder"test_query_builder (fn)"]
+  test_predefined_queries"test_predefined_queries (fn)"]
+  capture_names --> captures
+  capture_names --> captures
+  matches_in_node --> pattern_index
+  matches_in_node --> index
+  matches_in_node --> find_kind
+  matches_in_node --> find_with_field
+  matches_in_node --> test_predefined_queries
+  capture_by_name --> capture_names
+  capture_by_name --> captures
+  capture_by_name --> captures
+  capture_by_name --> byte_range
+  name --> capture_names
+  build --> test_query_builder
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  query["Query"]
+  Start --> query
+  querymatch["QueryMatch"]
+  Start --> querymatch
+  querycapture["QueryCapture"]
+  Start --> querycapture
+  querybuilder["QueryBuilder"]
+  Start --> querybuilder
+  new["new"Fn]
+  language["language"Fn]
+  pattern_count["pattern_count"Fn]
+  capture_names["capture_names"Fn]
+  matches["matches"Fn]
+  captures["captures"Fn]
+  matches_in_node["matches_in_node"Fn]
+  highlights["highlights"Fn]
+  functions["functions"Fn]
+  classes["classes"Fn]
+  pattern_index["pattern_index"Fn]
+  captures["captures"Fn]
+  capture_by_name["capture_by_name"Fn]
+  node["node"Fn]
+  index["index"Fn]
+  name["name"Fn]
+  text["text"Fn]
+  byte_range["byte_range"Fn]
+  start_position["start_position"Fn]
+  end_position["end_position"Fn]
+  new["new"Fn]
+  find_kind["find_kind"Fn]
+  find_with_field["find_with_field"Fn]
+  add_pattern["add_pattern"Fn]
+  build["build"Fn]
+  test_query_creation["test_query_creation"Fn]
+  test_query_execution["test_query_execution"Fn]
+  test_query_builder["test_query_builder"Fn]
+  test_predefined_queries["test_predefined_queries"Fn]
+  query --> new
+  new --> language
+  language --> pattern_count
+  pattern_count --> capture_names
+  capture_names --> matches
+  matches --> captures
+  captures --> matches_in_node
+  matches_in_node --> highlights
+  highlights --> functions
+  functions --> classes
+  classes --> pattern_index
+  pattern_index --> captures
+  captures --> capture_by_name
+  capture_by_name --> node
+  node --> index
+  index --> name
+  name --> text
+  text --> byte_range
+  byte_range --> start_position
+  start_position --> end_position
+  end_position --> new
+  new --> find_kind
+  find_kind --> find_with_field
+  find_with_field --> add_pattern
+  add_pattern --> build
+  build --> test_query_creation
+  test_query_creation --> test_query_execution
+  test_query_execution --> test_query_builder
+  test_query_builder --> test_predefined_queries
+  test_predefined_queries --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class Query {
+    +Query()
+  }
+  class QueryMatch {
+    +QueryMatch()
+  }
+  class QueryCapture {
+    +QueryCapture()
+  }
+  class QueryBuilder {
+    +QueryBuilder()
+  }
+  test_query_creation ..> Query : uses
+  test_query_execution ..> Query : uses
+  test_query_builder ..> Query : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

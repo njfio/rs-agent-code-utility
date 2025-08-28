@@ -1,0 +1,440 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/complexity_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/complexity_analysis.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 59</li>
+<li><strong>Structures:</strong> 3</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 290</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  volume"volume (fn)"]
+  difficulty"difficulty (fn)"]
+  effort"effort (fn)"]
+  new"new (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  calculate_mccabe_complexity"calculate_mccabe_complexity (fn)"]
+  calculate_cognitive_complexity"calculate_cognitive_complexity (fn)"]
+  traverse_for_cognitive_complexity"traverse_for_cognitive_complexity (fn)"]
+  get_cognitive_complexity_impact"get_cognitive_complexity_impact (fn)"]
+  get_rust_cognitive_impact"get_rust_cognitive_impact (fn)"]
+  get_javascript_cognitive_impact"get_javascript_cognitive_impact (fn)"]
+  get_python_cognitive_impact"get_python_cognitive_impact (fn)"]
+  get_c_cognitive_impact"get_c_cognitive_impact (fn)"]
+  get_go_cognitive_impact"get_go_cognitive_impact (fn)"]
+  is_logical_operator"is_logical_operator (fn)"]
+  calculate_halstead_metrics"calculate_halstead_metrics (fn)"]
+  traverse_for_halstead"traverse_for_halstead (fn)"]
+  is_operator"is_operator (fn)"]
+  is_operand"is_operand (fn)"]
+  calculate_npath_complexity"calculate_npath_complexity (fn)"]
+  traverse_for_npath"traverse_for_npath (fn)"]
+  calculate_rust_npath"calculate_rust_npath (fn)"]
+  calculate_js_npath"calculate_js_npath (fn)"]
+  calculate_python_npath"calculate_python_npath (fn)"]
+  calculate_c_npath"calculate_c_npath (fn)"]
+  calculate_go_npath"calculate_go_npath (fn)"]
+  calculate_default_npath"calculate_default_npath (fn)"]
+  is_control_flow_node"is_control_flow_node (fn)"]
+  calculate_expression_npath"calculate_expression_npath (fn)"]
+  calculate_rust_expression_npath"calculate_rust_expression_npath (fn)"]
+  calculate_js_expression_npath"calculate_js_expression_npath (fn)"]
+  calculate_python_expression_npath"calculate_python_expression_npath (fn)"]
+  calculate_c_expression_npath"calculate_c_expression_npath (fn)"]
+  calculate_go_expression_npath"calculate_go_expression_npath (fn)"]
+  count_lines_of_code"count_lines_of_code (fn)"]
+  calculate_max_nesting_depth"calculate_max_nesting_depth (fn)"]
+  traverse_for_max_depth"traverse_for_max_depth (fn)"]
+  increases_nesting_depth"increases_nesting_depth (fn)"]
+  test_mccabe_complexity_simple"test_mccabe_complexity_simple (fn)"]
+  test_mccabe_complexity_with_conditions"test_mccabe_complexity_with_conditions (fn)"]
+  test_halstead_metrics_basic"test_halstead_metrics_basic (fn)"]
+  test_halstead_metrics_detailed"test_halstead_metrics_detailed (fn)"]
+  test_halstead_metrics_empty_function"test_halstead_metrics_empty_function (fn)"]
+  test_halstead_metrics_complex_function"test_halstead_metrics_complex_function (fn)"]
+  test_cognitive_complexity_simple"test_cognitive_complexity_simple (fn)"]
+  test_cognitive_complexity_basic_increment"test_cognitive_complexity_basic_increment (fn)"]
+  test_cognitive_complexity_nesting_penalty"test_cognitive_complexity_nesting_penalty (fn)"]
+  test_cognitive_complexity_logical_operators"test_cognitive_complexity_logical_operators (fn)"]
+  test_cognitive_complexity_loops"test_cognitive_complexity_loops (fn)"]
+  test_cognitive_complexity_match_expression"test_cognitive_complexity_match_expression (fn)"]
+  test_cognitive_complexity_break_continue"test_cognitive_complexity_break_continue (fn)"]
+  test_npath_complexity_simple"test_npath_complexity_simple (fn)"]
+  test_npath_complexity_if_statement"test_npath_complexity_if_statement (fn)"]
+  test_npath_complexity_if_else"test_npath_complexity_if_else (fn)"]
+  test_npath_complexity_nested_conditions"test_npath_complexity_nested_conditions (fn)"]
+  test_npath_complexity_loops"test_npath_complexity_loops (fn)"]
+  test_npath_complexity_match_expression"test_npath_complexity_match_expression (fn)"]
+  test_npath_complexity_complex_function"test_npath_complexity_complex_function (fn)"]
+  traverse_for_cognitive_complexity --> effort
+  get_c_cognitive_impact --> difficulty
+  get_c_cognitive_impact --> analyze_complexity
+  get_c_cognitive_impact --> calculate_mccabe_complexity
+  get_c_cognitive_impact --> calculate_cognitive_complexity
+  get_c_cognitive_impact --> traverse_for_cognitive_complexity
+  get_c_cognitive_impact --> get_cognitive_complexity_impact
+  get_c_cognitive_impact --> get_rust_cognitive_impact
+  get_c_cognitive_impact --> get_javascript_cognitive_impact
+  get_c_cognitive_impact --> get_python_cognitive_impact
+  get_c_cognitive_impact --> get_go_cognitive_impact
+  get_c_cognitive_impact --> is_logical_operator
+  get_c_cognitive_impact --> calculate_halstead_metrics
+  get_c_cognitive_impact --> calculate_npath_complexity
+  get_c_cognitive_impact --> calculate_rust_npath
+  get_c_cognitive_impact --> calculate_js_npath
+  get_c_cognitive_impact --> calculate_python_npath
+  get_c_cognitive_impact --> calculate_c_npath
+  get_c_cognitive_impact --> calculate_go_npath
+  get_c_cognitive_impact --> calculate_default_npath
+  get_c_cognitive_impact --> is_control_flow_node
+  get_c_cognitive_impact --> calculate_expression_npath
+  get_c_cognitive_impact --> calculate_rust_expression_npath
+  get_c_cognitive_impact --> calculate_js_expression_npath
+  get_c_cognitive_impact --> calculate_python_expression_npath
+  get_c_cognitive_impact --> calculate_c_expression_npath
+  get_c_cognitive_impact --> calculate_go_expression_npath
+  get_c_cognitive_impact --> count_lines_of_code
+  get_c_cognitive_impact --> calculate_max_nesting_depth
+  get_c_cognitive_impact --> increases_nesting_depth
+  get_c_cognitive_impact --> test_mccabe_complexity_simple
+  get_c_cognitive_impact --> test_mccabe_complexity_with_conditions
+  get_c_cognitive_impact --> test_halstead_metrics_basic
+  get_c_cognitive_impact --> test_halstead_metrics_detailed
+  get_c_cognitive_impact --> test_halstead_metrics_empty_function
+  get_c_cognitive_impact --> test_halstead_metrics_complex_function
+  get_c_cognitive_impact --> test_cognitive_complexity_simple
+  get_c_cognitive_impact --> test_cognitive_complexity_basic_increment
+  get_c_cognitive_impact --> test_cognitive_complexity_nesting_penalty
+  get_c_cognitive_impact --> test_cognitive_complexity_logical_operators
+  get_c_cognitive_impact --> test_cognitive_complexity_loops
+  get_c_cognitive_impact --> test_cognitive_complexity_match_expression
+  get_c_cognitive_impact --> test_cognitive_complexity_break_continue
+  get_c_cognitive_impact --> test_npath_complexity_simple
+  get_c_cognitive_impact --> test_npath_complexity_if_statement
+  get_c_cognitive_impact --> test_npath_complexity_if_else
+  get_c_cognitive_impact --> test_npath_complexity_nested_conditions
+  get_c_cognitive_impact --> test_npath_complexity_loops
+  get_c_cognitive_impact --> test_npath_complexity_match_expression
+  get_c_cognitive_impact --> test_npath_complexity_complex_function
+  is_logical_operator --> test_cognitive_complexity_logical_operators
+  traverse_for_halstead --> effort
+  is_operator --> test_cognitive_complexity_logical_operators
+  traverse_for_npath --> effort
+  calculate_c_npath --> difficulty
+  calculate_c_npath --> analyze_complexity
+  calculate_c_npath --> calculate_mccabe_complexity
+  calculate_c_npath --> calculate_cognitive_complexity
+  calculate_c_npath --> traverse_for_cognitive_complexity
+  calculate_c_npath --> get_cognitive_complexity_impact
+  calculate_c_npath --> get_rust_cognitive_impact
+  calculate_c_npath --> get_javascript_cognitive_impact
+  calculate_c_npath --> get_python_cognitive_impact
+  calculate_c_npath --> get_c_cognitive_impact
+  calculate_c_npath --> get_go_cognitive_impact
+  calculate_c_npath --> is_logical_operator
+  calculate_c_npath --> calculate_halstead_metrics
+  calculate_c_npath --> calculate_npath_complexity
+  calculate_c_npath --> calculate_rust_npath
+  calculate_c_npath --> calculate_js_npath
+  calculate_c_npath --> calculate_python_npath
+  calculate_c_npath --> calculate_go_npath
+  calculate_c_npath --> calculate_default_npath
+  calculate_c_npath --> is_control_flow_node
+  calculate_c_npath --> calculate_expression_npath
+  calculate_c_npath --> calculate_rust_expression_npath
+  calculate_c_npath --> calculate_js_expression_npath
+  calculate_c_npath --> calculate_python_expression_npath
+  calculate_c_npath --> calculate_c_expression_npath
+  calculate_c_npath --> calculate_go_expression_npath
+  calculate_c_npath --> count_lines_of_code
+  calculate_c_npath --> calculate_max_nesting_depth
+  calculate_c_npath --> increases_nesting_depth
+  calculate_c_npath --> test_mccabe_complexity_simple
+  calculate_c_npath --> test_mccabe_complexity_with_conditions
+  calculate_c_npath --> test_halstead_metrics_basic
+  calculate_c_npath --> test_halstead_metrics_detailed
+  calculate_c_npath --> test_halstead_metrics_empty_function
+  calculate_c_npath --> test_halstead_metrics_complex_function
+  calculate_c_npath --> test_cognitive_complexity_simple
+  calculate_c_npath --> test_cognitive_complexity_basic_increment
+  calculate_c_npath --> test_cognitive_complexity_nesting_penalty
+  calculate_c_npath --> test_cognitive_complexity_logical_operators
+  calculate_c_npath --> test_cognitive_complexity_loops
+  calculate_c_npath --> test_cognitive_complexity_match_expression
+  calculate_c_npath --> test_cognitive_complexity_break_continue
+  calculate_c_npath --> test_npath_complexity_simple
+  calculate_c_npath --> test_npath_complexity_if_statement
+  calculate_c_npath --> test_npath_complexity_if_else
+  calculate_c_npath --> test_npath_complexity_nested_conditions
+  calculate_c_npath --> test_npath_complexity_loops
+  calculate_c_npath --> test_npath_complexity_match_expression
+  calculate_c_npath --> test_npath_complexity_complex_function
+  calculate_c_expression_npath --> difficulty
+  calculate_c_expression_npath --> analyze_complexity
+  calculate_c_expression_npath --> calculate_mccabe_complexity
+  calculate_c_expression_npath --> calculate_cognitive_complexity
+  calculate_c_expression_npath --> traverse_for_cognitive_complexity
+  calculate_c_expression_npath --> get_cognitive_complexity_impact
+  calculate_c_expression_npath --> get_rust_cognitive_impact
+  calculate_c_expression_npath --> get_javascript_cognitive_impact
+  calculate_c_expression_npath --> get_python_cognitive_impact
+  calculate_c_expression_npath --> get_c_cognitive_impact
+  calculate_c_expression_npath --> get_go_cognitive_impact
+  calculate_c_expression_npath --> is_logical_operator
+  calculate_c_expression_npath --> calculate_halstead_metrics
+  calculate_c_expression_npath --> calculate_npath_complexity
+  calculate_c_expression_npath --> calculate_rust_npath
+  calculate_c_expression_npath --> calculate_js_npath
+  calculate_c_expression_npath --> calculate_python_npath
+  calculate_c_expression_npath --> calculate_c_npath
+  calculate_c_expression_npath --> calculate_go_npath
+  calculate_c_expression_npath --> calculate_default_npath
+  calculate_c_expression_npath --> is_control_flow_node
+  calculate_c_expression_npath --> calculate_expression_npath
+  calculate_c_expression_npath --> calculate_rust_expression_npath
+  calculate_c_expression_npath --> calculate_js_expression_npath
+  calculate_c_expression_npath --> calculate_python_expression_npath
+  calculate_c_expression_npath --> calculate_go_expression_npath
+  calculate_c_expression_npath --> count_lines_of_code
+  calculate_c_expression_npath --> calculate_max_nesting_depth
+  calculate_c_expression_npath --> increases_nesting_depth
+  calculate_c_expression_npath --> test_mccabe_complexity_simple
+  calculate_c_expression_npath --> test_mccabe_complexity_with_conditions
+  calculate_c_expression_npath --> test_halstead_metrics_basic
+  calculate_c_expression_npath --> test_halstead_metrics_detailed
+  calculate_c_expression_npath --> test_halstead_metrics_empty_function
+  calculate_c_expression_npath --> test_halstead_metrics_complex_function
+  calculate_c_expression_npath --> test_cognitive_complexity_simple
+  calculate_c_expression_npath --> test_cognitive_complexity_basic_increment
+  calculate_c_expression_npath --> test_cognitive_complexity_nesting_penalty
+  calculate_c_expression_npath --> test_cognitive_complexity_logical_operators
+  calculate_c_expression_npath --> test_cognitive_complexity_loops
+  calculate_c_expression_npath --> test_cognitive_complexity_match_expression
+  calculate_c_expression_npath --> test_cognitive_complexity_break_continue
+  calculate_c_expression_npath --> test_npath_complexity_simple
+  calculate_c_expression_npath --> test_npath_complexity_if_statement
+  calculate_c_expression_npath --> test_npath_complexity_if_else
+  calculate_c_expression_npath --> test_npath_complexity_nested_conditions
+  calculate_c_expression_npath --> test_npath_complexity_loops
+  calculate_c_expression_npath --> test_npath_complexity_match_expression
+  calculate_c_expression_npath --> test_npath_complexity_complex_function
+  traverse_for_max_depth --> effort
+  test_halstead_metrics_complex_function --> analyze_complexity
+  test_halstead_metrics_complex_function --> calculate_mccabe_complexity
+  test_halstead_metrics_complex_function --> calculate_cognitive_complexity
+  test_halstead_metrics_complex_function --> traverse_for_cognitive_complexity
+  test_halstead_metrics_complex_function --> get_cognitive_complexity_impact
+  test_halstead_metrics_complex_function --> calculate_npath_complexity
+  test_halstead_metrics_complex_function --> test_mccabe_complexity_simple
+  test_halstead_metrics_complex_function --> test_mccabe_complexity_with_conditions
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_simple
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_basic_increment
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_nesting_penalty
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_logical_operators
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_loops
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_match_expression
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_break_continue
+  test_halstead_metrics_complex_function --> test_npath_complexity_simple
+  test_halstead_metrics_complex_function --> test_npath_complexity_if_statement
+  test_halstead_metrics_complex_function --> test_npath_complexity_if_else
+  test_halstead_metrics_complex_function --> test_npath_complexity_nested_conditions
+  test_halstead_metrics_complex_function --> test_npath_complexity_loops
+  test_halstead_metrics_complex_function --> test_npath_complexity_match_expression
+  test_halstead_metrics_complex_function --> test_npath_complexity_complex_function
+  test_npath_complexity_if_statement --> difficulty
+  test_npath_complexity_if_else --> difficulty
+  test_npath_complexity_complex_function --> analyze_complexity
+  test_npath_complexity_complex_function --> calculate_mccabe_complexity
+  test_npath_complexity_complex_function --> calculate_cognitive_complexity
+  test_npath_complexity_complex_function --> traverse_for_cognitive_complexity
+  test_npath_complexity_complex_function --> get_cognitive_complexity_impact
+  test_npath_complexity_complex_function --> calculate_npath_complexity
+  test_npath_complexity_complex_function --> test_mccabe_complexity_simple
+  test_npath_complexity_complex_function --> test_mccabe_complexity_with_conditions
+  test_npath_complexity_complex_function --> test_cognitive_complexity_simple
+  test_npath_complexity_complex_function --> test_cognitive_complexity_basic_increment
+  test_npath_complexity_complex_function --> test_cognitive_complexity_nesting_penalty
+  test_npath_complexity_complex_function --> test_cognitive_complexity_logical_operators
+  test_npath_complexity_complex_function --> test_cognitive_complexity_loops
+  test_npath_complexity_complex_function --> test_cognitive_complexity_match_expression
+  test_npath_complexity_complex_function --> test_cognitive_complexity_break_continue
+  test_npath_complexity_complex_function --> test_npath_complexity_simple
+  test_npath_complexity_complex_function --> test_npath_complexity_if_statement
+  test_npath_complexity_complex_function --> test_npath_complexity_if_else
+  test_npath_complexity_complex_function --> test_npath_complexity_nested_conditions
+  test_npath_complexity_complex_function --> test_npath_complexity_loops
+  test_npath_complexity_complex_function --> test_npath_complexity_match_expression
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  complexitymetrics["ComplexityMetrics"]
+  Start --> complexitymetrics
+  halsteadmetrics["HalsteadMetrics"]
+  Start --> halsteadmetrics
+  complexityanalyzer["ComplexityAnalyzer"]
+  Start --> complexityanalyzer
+  default["default"Fn]
+  volume["volume"Fn]
+  difficulty["difficulty"Fn]
+  effort["effort"Fn]
+  new["new"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  calculate_mccabe_complexity["calculate_mccabe_complexity"Fn]
+  calculate_cognitive_complexity["calculate_cognitive_complexity"Fn]
+  traverse_for_cognitive_complexity["traverse_for_cognitive_complexity"Fn]
+  get_cognitive_complexity_impact["get_cognitive_complexity_impact"Fn]
+  get_rust_cognitive_impact["get_rust_cognitive_impact"Fn]
+  get_javascript_cognitive_impact["get_javascript_cognitive_impact"Fn]
+  get_python_cognitive_impact["get_python_cognitive_impact"Fn]
+  get_c_cognitive_impact["get_c_cognitive_impact"Fn]
+  get_go_cognitive_impact["get_go_cognitive_impact"Fn]
+  is_logical_operator["is_logical_operator"Fn]
+  calculate_halstead_metrics["calculate_halstead_metrics"Fn]
+  traverse_for_halstead["traverse_for_halstead"Fn]
+  is_operator["is_operator"Fn]
+  is_operand["is_operand"Fn]
+  calculate_npath_complexity["calculate_npath_complexity"Fn]
+  traverse_for_npath["traverse_for_npath"Fn]
+  calculate_rust_npath["calculate_rust_npath"Fn]
+  calculate_js_npath["calculate_js_npath"Fn]
+  calculate_python_npath["calculate_python_npath"Fn]
+  calculate_c_npath["calculate_c_npath"Fn]
+  calculate_go_npath["calculate_go_npath"Fn]
+  calculate_default_npath["calculate_default_npath"Fn]
+  is_control_flow_node["is_control_flow_node"Fn]
+  calculate_expression_npath["calculate_expression_npath"Fn]
+  calculate_rust_expression_npath["calculate_rust_expression_npath"Fn]
+  calculate_js_expression_npath["calculate_js_expression_npath"Fn]
+  calculate_python_expression_npath["calculate_python_expression_npath"Fn]
+  calculate_c_expression_npath["calculate_c_expression_npath"Fn]
+  calculate_go_expression_npath["calculate_go_expression_npath"Fn]
+  count_lines_of_code["count_lines_of_code"Fn]
+  calculate_max_nesting_depth["calculate_max_nesting_depth"Fn]
+  traverse_for_max_depth["traverse_for_max_depth"Fn]
+  increases_nesting_depth["increases_nesting_depth"Fn]
+  test_mccabe_complexity_simple["test_mccabe_complexity_simple"Fn]
+  test_mccabe_complexity_with_conditions["test_mccabe_complexity_with_conditions"Fn]
+  test_halstead_metrics_basic["test_halstead_metrics_basic"Fn]
+  test_halstead_metrics_detailed["test_halstead_metrics_detailed"Fn]
+  test_halstead_metrics_empty_function["test_halstead_metrics_empty_function"Fn]
+  test_halstead_metrics_complex_function["test_halstead_metrics_complex_function"Fn]
+  test_cognitive_complexity_simple["test_cognitive_complexity_simple"Fn]
+  test_cognitive_complexity_basic_increment["test_cognitive_complexity_basic_increment"Fn]
+  test_cognitive_complexity_nesting_penalty["test_cognitive_complexity_nesting_penalty"Fn]
+  test_cognitive_complexity_logical_operators["test_cognitive_complexity_logical_operators"Fn]
+  test_cognitive_complexity_loops["test_cognitive_complexity_loops"Fn]
+  test_cognitive_complexity_match_expression["test_cognitive_complexity_match_expression"Fn]
+  test_cognitive_complexity_break_continue["test_cognitive_complexity_break_continue"Fn]
+  test_npath_complexity_simple["test_npath_complexity_simple"Fn]
+  test_npath_complexity_if_statement["test_npath_complexity_if_statement"Fn]
+  test_npath_complexity_if_else["test_npath_complexity_if_else"Fn]
+  test_npath_complexity_nested_conditions["test_npath_complexity_nested_conditions"Fn]
+  test_npath_complexity_loops["test_npath_complexity_loops"Fn]
+  test_npath_complexity_match_expression["test_npath_complexity_match_expression"Fn]
+  test_npath_complexity_complex_function["test_npath_complexity_complex_function"Fn]
+  complexitymetrics --> default
+  default --> volume
+  volume --> difficulty
+  difficulty --> effort
+  effort --> new
+  new --> analyze_complexity
+  analyze_complexity --> calculate_mccabe_complexity
+  calculate_mccabe_complexity --> calculate_cognitive_complexity
+  calculate_cognitive_complexity --> traverse_for_cognitive_complexity
+  traverse_for_cognitive_complexity --> get_cognitive_complexity_impact
+  get_cognitive_complexity_impact --> get_rust_cognitive_impact
+  get_rust_cognitive_impact --> get_javascript_cognitive_impact
+  get_javascript_cognitive_impact --> get_python_cognitive_impact
+  get_python_cognitive_impact --> get_c_cognitive_impact
+  get_c_cognitive_impact --> get_go_cognitive_impact
+  get_go_cognitive_impact --> is_logical_operator
+  is_logical_operator --> calculate_halstead_metrics
+  calculate_halstead_metrics --> traverse_for_halstead
+  traverse_for_halstead --> is_operator
+  is_operator --> is_operand
+  is_operand --> calculate_npath_complexity
+  calculate_npath_complexity --> traverse_for_npath
+  traverse_for_npath --> calculate_rust_npath
+  calculate_rust_npath --> calculate_js_npath
+  calculate_js_npath --> calculate_python_npath
+  calculate_python_npath --> calculate_c_npath
+  calculate_c_npath --> calculate_go_npath
+  calculate_go_npath --> calculate_default_npath
+  calculate_default_npath --> is_control_flow_node
+  is_control_flow_node --> calculate_expression_npath
+  calculate_expression_npath --> calculate_rust_expression_npath
+  calculate_rust_expression_npath --> calculate_js_expression_npath
+  calculate_js_expression_npath --> calculate_python_expression_npath
+  calculate_python_expression_npath --> calculate_c_expression_npath
+  calculate_c_expression_npath --> calculate_go_expression_npath
+  calculate_go_expression_npath --> count_lines_of_code
+  count_lines_of_code --> calculate_max_nesting_depth
+  calculate_max_nesting_depth --> traverse_for_max_depth
+  traverse_for_max_depth --> increases_nesting_depth
+  increases_nesting_depth --> test_mccabe_complexity_simple
+  test_mccabe_complexity_simple --> test_mccabe_complexity_with_conditions
+  test_mccabe_complexity_with_conditions --> test_halstead_metrics_basic
+  test_halstead_metrics_basic --> test_halstead_metrics_detailed
+  test_halstead_metrics_detailed --> test_halstead_metrics_empty_function
+  test_halstead_metrics_empty_function --> test_halstead_metrics_complex_function
+  test_halstead_metrics_complex_function --> test_cognitive_complexity_simple
+  test_cognitive_complexity_simple --> test_cognitive_complexity_basic_increment
+  test_cognitive_complexity_basic_increment --> test_cognitive_complexity_nesting_penalty
+  test_cognitive_complexity_nesting_penalty --> test_cognitive_complexity_logical_operators
+  test_cognitive_complexity_logical_operators --> test_cognitive_complexity_loops
+  test_cognitive_complexity_loops --> test_cognitive_complexity_match_expression
+  test_cognitive_complexity_match_expression --> test_cognitive_complexity_break_continue
+  test_cognitive_complexity_break_continue --> test_npath_complexity_simple
+  test_npath_complexity_simple --> test_npath_complexity_if_statement
+  test_npath_complexity_if_statement --> test_npath_complexity_if_else
+  test_npath_complexity_if_else --> test_npath_complexity_nested_conditions
+  test_npath_complexity_nested_conditions --> test_npath_complexity_loops
+  test_npath_complexity_loops --> test_npath_complexity_match_expression
+  test_npath_complexity_match_expression --> test_npath_complexity_complex_function
+  test_npath_complexity_complex_function --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class ComplexityMetrics {
+    +ComplexityMetrics()
+  }
+  class HalsteadMetrics {
+    +HalsteadMetrics()
+  }
+  class ComplexityAnalyzer {
+    +ComplexityAnalyzer()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

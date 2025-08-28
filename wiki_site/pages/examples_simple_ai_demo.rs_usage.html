@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - examples/simple_ai_demo.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>examples/simple_ai_demo.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 6</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 20</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+main"main (fn)"]
+  create_ai_service"create_ai_service (fn)"]
+  test_code_explanation"test_code_explanation (fn)"]
+  test_security_analysis"test_security_analysis (fn)"]
+  test_refactoring_suggestions"test_refactoring_suggestions (fn)"]
+  show_cache_stats"show_cache_stats (fn)"]
+  create_ai_service --> main
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  main["main"Fn]
+  create_ai_service["create_ai_service"Fn]
+  test_code_explanation["test_code_explanation"Fn]
+  test_security_analysis["test_security_analysis"Fn]
+  test_refactoring_suggestions["test_refactoring_suggestions"Fn]
+  show_cache_stats["show_cache_stats"Fn]
+  Start --> main
+  main --> create_ai_service
+  create_ai_service --> test_code_explanation
+  test_code_explanation --> test_security_analysis
+  test_security_analysis --> test_refactoring_suggestions
+  test_refactoring_suggestions --> show_cache_stats
+  show_cache_stats --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

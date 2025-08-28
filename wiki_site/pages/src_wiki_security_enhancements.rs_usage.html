@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/wiki/security_enhancements.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/wiki/security_enhancements.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 21</li>
+<li><strong>Structures:</strong> 10</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 88</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+partial_cmp"partial_cmp (fn)"]
+  cmp"cmp (fn)"]
+  default"default (fn)"]
+  new_with_config"new_with_config (fn)"]
+  new"new (fn)"]
+  analyze_security"analyze_security (fn)"]
+  build_semantic_graph_for_security"build_semantic_graph_for_security (fn)"]
+  classify_symbol_type"classify_symbol_type (fn)"]
+  has_potential_relationship"has_potential_relationship (fn)"]
+  identify_security_traces"identify_security_traces (fn)"]
+  trace_propagation_path"trace_propagation_path (fn)"]
+  calculate_impact_chain"calculate_impact_chain (fn)"]
+  generate_mitigations"generate_mitigations (fn)"]
+  identify_security_hotspots"identify_security_hotspots (fn)"]
+  severity_score"severity_score (fn)"]
+  convert_vulnerability_location"convert_vulnerability_location (fn)"]
+  generate_owasp_recommendations"generate_owasp_recommendations (fn)"]
+  analyze_file_owasp_categories"analyze_file_owasp_categories (fn)"]
+  get_category_recommendations"get_category_recommendations (fn)"]
+  generate_trace_diagram"generate_trace_diagram (fn)"]
+  generate_hotspot_diagram"generate_hotspot_diagram (fn)"]
+  trace_propagation_path --> identify_security_traces
+  generate_trace_diagram --> identify_security_traces
+  generate_hotspot_diagram --> identify_security_hotspots
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  securitytrace["SecurityTrace"]
+  Start --> securitytrace
+  securityvulnerabilityinfo["SecurityVulnerabilityInfo"]
+  Start --> securityvulnerabilityinfo
+  securitycallsite["SecurityCallSite"]
+  Start --> securitycallsite
+  securityimpact["SecurityImpact"]
+  Start --> securityimpact
+  securitycontext["SecurityContext"]
+  Start --> securitycontext
+  vulnerabilitylocation["VulnerabilityLocation"]
+  Start --> vulnerabilitylocation
+  securityhotspot["SecurityHotspot"]
+  Start --> securityhotspot
+  securitywikigenerator["SecurityWikiGenerator"]
+  Start --> securitywikigenerator
+  securitywikiconfig["SecurityWikiConfig"]
+  Start --> securitywikiconfig
+  securityanalysisresult["SecurityAnalysisResult"]
+  Start --> securityanalysisresult
+  partial_cmp["partial_cmp"Fn]
+  cmp["cmp"Fn]
+  default["default"Fn]
+  new_with_config["new_with_config"Fn]
+  new["new"Fn]
+  analyze_security["analyze_security"Fn]
+  build_semantic_graph_for_security["build_semantic_graph_for_security"Fn]
+  classify_symbol_type["classify_symbol_type"Fn]
+  has_potential_relationship["has_potential_relationship"Fn]
+  identify_security_traces["identify_security_traces"Fn]
+  trace_propagation_path["trace_propagation_path"Fn]
+  calculate_impact_chain["calculate_impact_chain"Fn]
+  generate_mitigations["generate_mitigations"Fn]
+  identify_security_hotspots["identify_security_hotspots"Fn]
+  severity_score["severity_score"Fn]
+  convert_vulnerability_location["convert_vulnerability_location"Fn]
+  generate_owasp_recommendations["generate_owasp_recommendations"Fn]
+  analyze_file_owasp_categories["analyze_file_owasp_categories"Fn]
+  get_category_recommendations["get_category_recommendations"Fn]
+  generate_trace_diagram["generate_trace_diagram"Fn]
+  generate_hotspot_diagram["generate_hotspot_diagram"Fn]
+  securitytrace --> partial_cmp
+  partial_cmp --> cmp
+  cmp --> default
+  default --> new_with_config
+  new_with_config --> new
+  new --> analyze_security
+  analyze_security --> build_semantic_graph_for_security
+  build_semantic_graph_for_security --> classify_symbol_type
+  classify_symbol_type --> has_potential_relationship
+  has_potential_relationship --> identify_security_traces
+  identify_security_traces --> trace_propagation_path
+  trace_propagation_path --> calculate_impact_chain
+  calculate_impact_chain --> generate_mitigations
+  generate_mitigations --> identify_security_hotspots
+  identify_security_hotspots --> severity_score
+  severity_score --> convert_vulnerability_location
+  convert_vulnerability_location --> generate_owasp_recommendations
+  generate_owasp_recommendations --> analyze_file_owasp_categories
+  analyze_file_owasp_categories --> get_category_recommendations
+  get_category_recommendations --> generate_trace_diagram
+  generate_trace_diagram --> generate_hotspot_diagram
+  generate_hotspot_diagram --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class SecurityTrace {
+    +SecurityTrace()
+  }
+  class SecurityVulnerabilityInfo {
+    +SecurityVulnerabilityInfo()
+  }
+  class SecurityCallSite {
+    +SecurityCallSite()
+  }
+  class SecurityImpact {
+    +SecurityImpact()
+  }
+  class SecurityContext {
+    +SecurityContext()
+  }
+  class VulnerabilityLocation {
+    +VulnerabilityLocation()
+  }
+  class SecurityHotspot {
+    +SecurityHotspot()
+  }
+  class SecurityWikiGenerator {
+    +SecurityWikiGenerator()
+  }
+  class SecurityWikiConfig {
+    +SecurityWikiConfig()
+  }
+  class SecurityAnalysisResult {
+    +SecurityAnalysisResult()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

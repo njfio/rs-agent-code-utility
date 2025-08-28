@@ -1,0 +1,265 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/code_evolution.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/code_evolution.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 40</li>
+<li><strong>Structures:</strong> 8</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 152</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  create_file_change"create_file_change (fn)"]
+  analyze_evolution"analyze_evolution (fn)"]
+  analyze_files"analyze_files (fn)"]
+  extract_git_history"extract_git_history (fn)"]
+  extract_file_history"extract_file_history (fn)"]
+  parse_git_log"parse_git_log (fn)"]
+  parse_commit_line"parse_commit_line (fn)"]
+  parse_numstat_line"parse_numstat_line (fn)"]
+  classify_change_type"classify_change_type (fn)"]
+  detect_patterns"detect_patterns (fn)"]
+  detect_file_patterns"detect_file_patterns (fn)"]
+  detect_hotspots"detect_hotspots (fn)"]
+  detect_hotspots_for_files"detect_hotspots_for_files (fn)"]
+  detect_coupled_changes"detect_coupled_changes (fn)"]
+  detect_coupled_changes_for_files"detect_coupled_changes_for_files (fn)"]
+  detect_knowledge_silos"detect_knowledge_silos (fn)"]
+  detect_knowledge_silos_for_files"detect_knowledge_silos_for_files (fn)"]
+  detect_technical_debt_patterns"detect_technical_debt_patterns (fn)"]
+  calculate_metrics"calculate_metrics (fn)"]
+  generate_file_insights"generate_file_insights (fn)"]
+  generate_specific_file_insights"generate_specific_file_insights (fn)"]
+  generate_file_insight"generate_file_insight (fn)"]
+  generate_recommendations"generate_recommendations (fn)"]
+  generate_targeted_recommendations"generate_targeted_recommendations (fn)"]
+  get_time_range_for_file"get_time_range_for_file (fn)"]
+  calculate_time_range_for_files"calculate_time_range_for_files (fn)"]
+  count_unique_commits"count_unique_commits (fn)"]
+  count_active_contributors"count_active_contributors (fn)"]
+  calculate_commit_frequency"calculate_commit_frequency (fn)"]
+  calculate_churn_rate"calculate_churn_rate (fn)"]
+  calculate_bus_factor"calculate_bus_factor (fn)"]
+  calculate_average_coupling_strength"calculate_average_coupling_strength (fn)"]
+  calculate_debt_trend"calculate_debt_trend (fn)"]
+  calculate_coverage_trend"calculate_coverage_trend (fn)"]
+  find_coupled_files"find_coupled_files (fn)"]
+  assess_risk_level"assess_risk_level (fn)"]
+  default"default (fn)"]
+  create_file_change --> analyze_files
+  create_file_change --> detect_hotspots_for_files
+  create_file_change --> detect_coupled_changes
+  create_file_change --> detect_coupled_changes_for_files
+  create_file_change --> detect_knowledge_silos_for_files
+  create_file_change --> calculate_time_range_for_files
+  create_file_change --> find_coupled_files
+  extract_file_history --> analyze_files
+  extract_file_history --> detect_hotspots_for_files
+  extract_file_history --> detect_coupled_changes_for_files
+  extract_file_history --> detect_knowledge_silos_for_files
+  extract_file_history --> calculate_time_range_for_files
+  extract_file_history --> find_coupled_files
+  parse_commit_line --> count_unique_commits
+  classify_change_type --> detect_coupled_changes
+  classify_change_type --> detect_coupled_changes_for_files
+  detect_file_patterns --> analyze_files
+  detect_file_patterns --> detect_hotspots_for_files
+  detect_file_patterns --> detect_coupled_changes_for_files
+  detect_file_patterns --> detect_knowledge_silos_for_files
+  detect_file_patterns --> calculate_time_range_for_files
+  detect_file_patterns --> find_coupled_files
+  generate_file_insights --> analyze_files
+  generate_file_insights --> detect_hotspots_for_files
+  generate_file_insights --> detect_coupled_changes_for_files
+  generate_file_insights --> detect_knowledge_silos_for_files
+  generate_file_insights --> calculate_time_range_for_files
+  generate_file_insights --> find_coupled_files
+  generate_specific_file_insights --> analyze_files
+  generate_specific_file_insights --> detect_hotspots_for_files
+  generate_specific_file_insights --> detect_coupled_changes_for_files
+  generate_specific_file_insights --> detect_knowledge_silos_for_files
+  generate_specific_file_insights --> calculate_time_range_for_files
+  generate_specific_file_insights --> find_coupled_files
+  generate_file_insight --> analyze_files
+  generate_file_insight --> detect_hotspots_for_files
+  generate_file_insight --> detect_coupled_changes_for_files
+  generate_file_insight --> detect_knowledge_silos_for_files
+  generate_file_insight --> generate_file_insights
+  generate_file_insight --> generate_specific_file_insights
+  generate_file_insight --> calculate_time_range_for_files
+  generate_file_insight --> find_coupled_files
+  get_time_range_for_file --> analyze_files
+  get_time_range_for_file --> detect_hotspots_for_files
+  get_time_range_for_file --> detect_coupled_changes_for_files
+  get_time_range_for_file --> detect_knowledge_silos_for_files
+  get_time_range_for_file --> generate_targeted_recommendations
+  get_time_range_for_file --> calculate_time_range_for_files
+  get_time_range_for_file --> find_coupled_files
+  calculate_commit_frequency --> count_unique_commits
+  calculate_churn_rate --> generate_file_insights
+  calculate_churn_rate --> generate_specific_file_insights
+  calculate_churn_rate --> generate_file_insight
+  calculate_churn_rate --> generate_recommendations
+  calculate_churn_rate --> generate_targeted_recommendations
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  codeevolutiontracker["CodeEvolutionTracker"]
+  Start --> codeevolutiontracker
+  filechange["FileChange"]
+  Start --> filechange
+  changepattern["ChangePattern"]
+  Start --> changepattern
+  evolutionmetrics["EvolutionMetrics"]
+  Start --> evolutionmetrics
+  evolutionconfig["EvolutionConfig"]
+  Start --> evolutionconfig
+  evolutionanalysisresult["EvolutionAnalysisResult"]
+  Start --> evolutionanalysisresult
+  fileinsight["FileInsight"]
+  Start --> fileinsight
+  evolutionrecommendation["EvolutionRecommendation"]
+  Start --> evolutionrecommendation
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  create_file_change["create_file_change"Fn]
+  analyze_evolution["analyze_evolution"Fn]
+  analyze_files["analyze_files"Fn]
+  extract_git_history["extract_git_history"Fn]
+  extract_file_history["extract_file_history"Fn]
+  parse_git_log["parse_git_log"Fn]
+  parse_commit_line["parse_commit_line"Fn]
+  parse_numstat_line["parse_numstat_line"Fn]
+  classify_change_type["classify_change_type"Fn]
+  detect_patterns["detect_patterns"Fn]
+  detect_file_patterns["detect_file_patterns"Fn]
+  detect_hotspots["detect_hotspots"Fn]
+  detect_hotspots_for_files["detect_hotspots_for_files"Fn]
+  detect_coupled_changes["detect_coupled_changes"Fn]
+  detect_coupled_changes_for_files["detect_coupled_changes_for_files"Fn]
+  detect_knowledge_silos["detect_knowledge_silos"Fn]
+  detect_knowledge_silos_for_files["detect_knowledge_silos_for_files"Fn]
+  detect_technical_debt_patterns["detect_technical_debt_patterns"Fn]
+  calculate_metrics["calculate_metrics"Fn]
+  generate_file_insights["generate_file_insights"Fn]
+  generate_specific_file_insights["generate_specific_file_insights"Fn]
+  generate_file_insight["generate_file_insight"Fn]
+  generate_recommendations["generate_recommendations"Fn]
+  generate_targeted_recommendations["generate_targeted_recommendations"Fn]
+  get_time_range_for_file["get_time_range_for_file"Fn]
+  calculate_time_range_for_files["calculate_time_range_for_files"Fn]
+  count_unique_commits["count_unique_commits"Fn]
+  count_active_contributors["count_active_contributors"Fn]
+  calculate_commit_frequency["calculate_commit_frequency"Fn]
+  calculate_churn_rate["calculate_churn_rate"Fn]
+  calculate_bus_factor["calculate_bus_factor"Fn]
+  calculate_average_coupling_strength["calculate_average_coupling_strength"Fn]
+  calculate_debt_trend["calculate_debt_trend"Fn]
+  calculate_coverage_trend["calculate_coverage_trend"Fn]
+  find_coupled_files["find_coupled_files"Fn]
+  assess_risk_level["assess_risk_level"Fn]
+  default["default"Fn]
+  codeevolutiontracker --> default
+  default --> new
+  new --> with_config
+  with_config --> create_file_change
+  create_file_change --> analyze_evolution
+  analyze_evolution --> analyze_files
+  analyze_files --> extract_git_history
+  extract_git_history --> extract_file_history
+  extract_file_history --> parse_git_log
+  parse_git_log --> parse_commit_line
+  parse_commit_line --> parse_numstat_line
+  parse_numstat_line --> classify_change_type
+  classify_change_type --> detect_patterns
+  detect_patterns --> detect_file_patterns
+  detect_file_patterns --> detect_hotspots
+  detect_hotspots --> detect_hotspots_for_files
+  detect_hotspots_for_files --> detect_coupled_changes
+  detect_coupled_changes --> detect_coupled_changes_for_files
+  detect_coupled_changes_for_files --> detect_knowledge_silos
+  detect_knowledge_silos --> detect_knowledge_silos_for_files
+  detect_knowledge_silos_for_files --> detect_technical_debt_patterns
+  detect_technical_debt_patterns --> calculate_metrics
+  calculate_metrics --> generate_file_insights
+  generate_file_insights --> generate_specific_file_insights
+  generate_specific_file_insights --> generate_file_insight
+  generate_file_insight --> generate_recommendations
+  generate_recommendations --> generate_targeted_recommendations
+  generate_targeted_recommendations --> get_time_range_for_file
+  get_time_range_for_file --> calculate_time_range_for_files
+  calculate_time_range_for_files --> count_unique_commits
+  count_unique_commits --> count_active_contributors
+  count_active_contributors --> calculate_commit_frequency
+  calculate_commit_frequency --> calculate_churn_rate
+  calculate_churn_rate --> calculate_bus_factor
+  calculate_bus_factor --> calculate_average_coupling_strength
+  calculate_average_coupling_strength --> calculate_debt_trend
+  calculate_debt_trend --> calculate_coverage_trend
+  calculate_coverage_trend --> find_coupled_files
+  find_coupled_files --> assess_risk_level
+  assess_risk_level --> default
+  default --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class CodeEvolutionTracker {
+    +CodeEvolutionTracker()
+  }
+  class FileChange {
+    +FileChange()
+  }
+  class ChangePattern {
+    +ChangePattern()
+  }
+  class EvolutionMetrics {
+    +EvolutionMetrics()
+  }
+  class EvolutionConfig {
+    +EvolutionConfig()
+  }
+  class EvolutionAnalysisResult {
+    +EvolutionAnalysisResult()
+  }
+  class FileInsight {
+    +FileInsight()
+  }
+  class EvolutionRecommendation {
+    +EvolutionRecommendation()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

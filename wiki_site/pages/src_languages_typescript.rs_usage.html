@@ -1,0 +1,450 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/typescript.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/typescript.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 57</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 161</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+is_function_declaration"is_function_declaration (fn)"]
+  is_function_expression"is_function_expression (fn)"]
+  is_arrow_function"is_arrow_function (fn)"]
+  is_function"is_function (fn)"]
+  is_class_declaration"is_class_declaration (fn)"]
+  is_interface_declaration"is_interface_declaration (fn)"]
+  is_type_alias_declaration"is_type_alias_declaration (fn)"]
+  is_enum_declaration"is_enum_declaration (fn)"]
+  is_namespace_declaration"is_namespace_declaration (fn)"]
+  is_method_signature"is_method_signature (fn)"]
+  is_property_signature"is_property_signature (fn)"]
+  is_method_definition"is_method_definition (fn)"]
+  is_decorator"is_decorator (fn)"]
+  is_generic_type"is_generic_type (fn)"]
+  function_name"function_name (fn)"]
+  class_name"class_name (fn)"]
+  interface_name"interface_name (fn)"]
+  type_alias_name"type_alias_name (fn)"]
+  enum_name"enum_name (fn)"]
+  namespace_name"namespace_name (fn)"]
+  method_name"method_name (fn)"]
+  has_type_annotations"has_type_annotations (fn)"]
+  function_return_type"function_return_type (fn)"]
+  function_parameters_with_types"function_parameters_with_types (fn)"]
+  generic_type_parameters"generic_type_parameters (fn)"]
+  is_public_member"is_public_member (fn)"]
+  is_private_member"is_private_member (fn)"]
+  is_protected_member"is_protected_member (fn)"]
+  is_static_member"is_static_member (fn)"]
+  is_readonly_member"is_readonly_member (fn)"]
+  get_decorators"get_decorators (fn)"]
+  find_functions"find_functions (fn)"]
+  find_classes"find_classes (fn)"]
+  find_interfaces"find_interfaces (fn)"]
+  find_type_aliases"find_type_aliases (fn)"]
+  find_enums"find_enums (fn)"]
+  find_namespaces"find_namespaces (fn)"]
+  find_generic_types"find_generic_types (fn)"]
+  find_mapped_types"find_mapped_types (fn)"]
+  find_decorators"find_decorators (fn)"]
+  find_conditional_types"find_conditional_types (fn)"]
+  functions_query"functions_query (fn)"]
+  classes_query"classes_query (fn)"]
+  interfaces_query"interfaces_query (fn)"]
+  type_aliases_query"type_aliases_query (fn)"]
+  enums_query"enums_query (fn)"]
+  namespaces_query"namespaces_query (fn)"]
+  methods_query"methods_query (fn)"]
+  detect_typescript_features"detect_typescript_features (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  test_typescript_function_detection"test_typescript_function_detection (fn)"]
+  test_typescript_class_detection"test_typescript_class_detection (fn)"]
+  test_typescript_interface_detection"test_typescript_interface_detection (fn)"]
+  test_typescript_type_alias_detection"test_typescript_type_alias_detection (fn)"]
+  test_typescript_enum_detection"test_typescript_enum_detection (fn)"]
+  test_typescript_features_detection"test_typescript_features_detection (fn)"]
+  test_function_parameters_with_types"test_function_parameters_with_types (fn)"]
+  is_function_declaration --> find_functions
+  is_function_declaration --> functions_query
+  is_function_expression --> find_functions
+  is_function_expression --> functions_query
+  is_arrow_function --> find_functions
+  is_arrow_function --> functions_query
+  is_function --> find_functions
+  is_function --> functions_query
+  is_class_declaration --> find_classes
+  is_class_declaration --> classes_query
+  is_interface_declaration --> find_interfaces
+  is_interface_declaration --> interfaces_query
+  is_type_alias_declaration --> function_parameters_with_types
+  is_type_alias_declaration --> find_type_aliases
+  is_type_alias_declaration --> find_generic_types
+  is_type_alias_declaration --> find_mapped_types
+  is_type_alias_declaration --> find_conditional_types
+  is_type_alias_declaration --> type_aliases_query
+  is_type_alias_declaration --> detect_typescript_features
+  is_type_alias_declaration --> test_typescript_function_detection
+  is_type_alias_declaration --> test_typescript_class_detection
+  is_type_alias_declaration --> test_typescript_interface_detection
+  is_type_alias_declaration --> test_typescript_type_alias_detection
+  is_type_alias_declaration --> test_typescript_enum_detection
+  is_type_alias_declaration --> test_typescript_features_detection
+  is_type_alias_declaration --> test_function_parameters_with_types
+  is_enum_declaration --> find_enums
+  is_enum_declaration --> enums_query
+  is_namespace_declaration --> find_namespaces
+  is_namespace_declaration --> namespaces_query
+  is_method_signature --> methods_query
+  is_method_definition --> methods_query
+  is_decorator --> get_decorators
+  is_decorator --> find_decorators
+  is_generic_type --> function_parameters_with_types
+  is_generic_type --> find_generic_types
+  is_generic_type --> find_mapped_types
+  is_generic_type --> find_conditional_types
+  is_generic_type --> detect_typescript_features
+  is_generic_type --> test_typescript_function_detection
+  is_generic_type --> test_typescript_class_detection
+  is_generic_type --> test_typescript_interface_detection
+  is_generic_type --> test_typescript_type_alias_detection
+  is_generic_type --> test_typescript_enum_detection
+  is_generic_type --> test_typescript_features_detection
+  is_generic_type --> test_function_parameters_with_types
+  function_name --> is_namespace_declaration
+  function_name --> namespace_name
+  function_name --> find_functions
+  function_name --> find_namespaces
+  function_name --> functions_query
+  function_name --> namespaces_query
+  class_name --> is_namespace_declaration
+  class_name --> namespace_name
+  class_name --> find_classes
+  class_name --> find_namespaces
+  class_name --> classes_query
+  class_name --> namespaces_query
+  interface_name --> is_namespace_declaration
+  interface_name --> namespace_name
+  interface_name --> find_interfaces
+  interface_name --> find_namespaces
+  interface_name --> interfaces_query
+  interface_name --> namespaces_query
+  type_alias_name --> is_namespace_declaration
+  type_alias_name --> namespace_name
+  type_alias_name --> function_parameters_with_types
+  type_alias_name --> find_type_aliases
+  type_alias_name --> find_namespaces
+  type_alias_name --> find_generic_types
+  type_alias_name --> find_mapped_types
+  type_alias_name --> find_conditional_types
+  type_alias_name --> type_aliases_query
+  type_alias_name --> namespaces_query
+  type_alias_name --> detect_typescript_features
+  type_alias_name --> test_typescript_function_detection
+  type_alias_name --> test_typescript_class_detection
+  type_alias_name --> test_typescript_interface_detection
+  type_alias_name --> test_typescript_type_alias_detection
+  type_alias_name --> test_typescript_enum_detection
+  type_alias_name --> test_typescript_features_detection
+  type_alias_name --> test_function_parameters_with_types
+  enum_name --> is_namespace_declaration
+  enum_name --> namespace_name
+  enum_name --> find_enums
+  enum_name --> find_namespaces
+  enum_name --> enums_query
+  enum_name --> namespaces_query
+  namespace_name --> is_namespace_declaration
+  namespace_name --> find_namespaces
+  namespace_name --> namespaces_query
+  method_name --> is_namespace_declaration
+  method_name --> namespace_name
+  method_name --> find_namespaces
+  method_name --> namespaces_query
+  method_name --> methods_query
+  has_type_annotations --> function_parameters_with_types
+  has_type_annotations --> find_generic_types
+  has_type_annotations --> find_mapped_types
+  has_type_annotations --> find_conditional_types
+  has_type_annotations --> detect_typescript_features
+  has_type_annotations --> test_typescript_function_detection
+  has_type_annotations --> test_typescript_class_detection
+  has_type_annotations --> test_typescript_interface_detection
+  has_type_annotations --> test_typescript_type_alias_detection
+  has_type_annotations --> test_typescript_enum_detection
+  has_type_annotations --> test_typescript_features_detection
+  has_type_annotations --> test_function_parameters_with_types
+  function_return_type --> function_parameters_with_types
+  function_return_type --> find_functions
+  function_return_type --> find_generic_types
+  function_return_type --> find_mapped_types
+  function_return_type --> find_conditional_types
+  function_return_type --> functions_query
+  function_return_type --> detect_typescript_features
+  function_return_type --> test_typescript_function_detection
+  function_return_type --> test_typescript_class_detection
+  function_return_type --> test_typescript_interface_detection
+  function_return_type --> test_typescript_type_alias_detection
+  function_return_type --> test_typescript_enum_detection
+  function_return_type --> test_typescript_features_detection
+  function_return_type --> test_function_parameters_with_types
+  function_parameters_with_types --> find_functions
+  function_parameters_with_types --> functions_query
+  function_parameters_with_types --> detect_typescript_features
+  function_parameters_with_types --> test_typescript_function_detection
+  function_parameters_with_types --> test_typescript_class_detection
+  function_parameters_with_types --> test_typescript_interface_detection
+  function_parameters_with_types --> test_typescript_type_alias_detection
+  function_parameters_with_types --> test_typescript_enum_detection
+  function_parameters_with_types --> test_typescript_features_detection
+  generic_type_parameters --> function_parameters_with_types
+  generic_type_parameters --> find_generic_types
+  generic_type_parameters --> find_mapped_types
+  generic_type_parameters --> find_conditional_types
+  generic_type_parameters --> detect_typescript_features
+  generic_type_parameters --> test_typescript_function_detection
+  generic_type_parameters --> test_typescript_class_detection
+  generic_type_parameters --> test_typescript_interface_detection
+  generic_type_parameters --> test_typescript_type_alias_detection
+  generic_type_parameters --> test_typescript_enum_detection
+  generic_type_parameters --> test_typescript_features_detection
+  generic_type_parameters --> test_function_parameters_with_types
+  find_type_aliases --> function_parameters_with_types
+  find_type_aliases --> find_generic_types
+  find_type_aliases --> find_mapped_types
+  find_type_aliases --> find_conditional_types
+  find_type_aliases --> detect_typescript_features
+  find_type_aliases --> test_typescript_function_detection
+  find_type_aliases --> test_typescript_class_detection
+  find_type_aliases --> test_typescript_interface_detection
+  find_type_aliases --> test_typescript_type_alias_detection
+  find_type_aliases --> test_typescript_enum_detection
+  find_type_aliases --> test_typescript_features_detection
+  find_type_aliases --> test_function_parameters_with_types
+  find_generic_types --> detect_typescript_features
+  find_generic_types --> test_typescript_function_detection
+  find_generic_types --> test_typescript_class_detection
+  find_generic_types --> test_typescript_interface_detection
+  find_generic_types --> test_typescript_type_alias_detection
+  find_generic_types --> test_typescript_enum_detection
+  find_generic_types --> test_typescript_features_detection
+  find_mapped_types --> detect_typescript_features
+  find_mapped_types --> test_typescript_function_detection
+  find_mapped_types --> test_typescript_class_detection
+  find_mapped_types --> test_typescript_interface_detection
+  find_mapped_types --> test_typescript_type_alias_detection
+  find_mapped_types --> test_typescript_enum_detection
+  find_mapped_types --> test_typescript_features_detection
+  find_conditional_types --> detect_typescript_features
+  find_conditional_types --> test_typescript_function_detection
+  find_conditional_types --> test_typescript_class_detection
+  find_conditional_types --> test_typescript_interface_detection
+  find_conditional_types --> test_typescript_type_alias_detection
+  find_conditional_types --> test_typescript_enum_detection
+  find_conditional_types --> test_typescript_features_detection
+  type_aliases_query --> function_parameters_with_types
+  type_aliases_query --> find_generic_types
+  type_aliases_query --> find_mapped_types
+  type_aliases_query --> find_conditional_types
+  type_aliases_query --> detect_typescript_features
+  type_aliases_query --> test_typescript_function_detection
+  type_aliases_query --> test_typescript_class_detection
+  type_aliases_query --> test_typescript_interface_detection
+  type_aliases_query --> test_typescript_type_alias_detection
+  type_aliases_query --> test_typescript_enum_detection
+  type_aliases_query --> test_typescript_features_detection
+  type_aliases_query --> test_function_parameters_with_types
+  detect_typescript_features --> test_typescript_function_detection
+  detect_typescript_features --> test_typescript_class_detection
+  detect_typescript_features --> test_typescript_interface_detection
+  detect_typescript_features --> test_typescript_type_alias_detection
+  detect_typescript_features --> test_typescript_enum_detection
+  detect_typescript_features --> test_typescript_features_detection
+  test_typescript_function_detection --> find_functions
+  test_typescript_function_detection --> functions_query
+  test_typescript_class_detection --> find_classes
+  test_typescript_class_detection --> classes_query
+  test_typescript_interface_detection --> find_interfaces
+  test_typescript_interface_detection --> interfaces_query
+  test_typescript_type_alias_detection --> function_parameters_with_types
+  test_typescript_type_alias_detection --> find_type_aliases
+  test_typescript_type_alias_detection --> find_generic_types
+  test_typescript_type_alias_detection --> find_mapped_types
+  test_typescript_type_alias_detection --> find_conditional_types
+  test_typescript_type_alias_detection --> type_aliases_query
+  test_typescript_type_alias_detection --> detect_typescript_features
+  test_typescript_type_alias_detection --> test_typescript_function_detection
+  test_typescript_type_alias_detection --> test_typescript_class_detection
+  test_typescript_type_alias_detection --> test_typescript_interface_detection
+  test_typescript_type_alias_detection --> test_typescript_enum_detection
+  test_typescript_type_alias_detection --> test_typescript_features_detection
+  test_typescript_type_alias_detection --> test_function_parameters_with_types
+  test_typescript_enum_detection --> find_enums
+  test_typescript_enum_detection --> enums_query
+  test_function_parameters_with_types --> find_functions
+  test_function_parameters_with_types --> functions_query
+  test_function_parameters_with_types --> detect_typescript_features
+  test_function_parameters_with_types --> test_typescript_function_detection
+  test_function_parameters_with_types --> test_typescript_class_detection
+  test_function_parameters_with_types --> test_typescript_interface_detection
+  test_function_parameters_with_types --> test_typescript_type_alias_detection
+  test_function_parameters_with_types --> test_typescript_enum_detection
+  test_function_parameters_with_types --> test_typescript_features_detection
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  typescriptsyntax["TypeScriptSyntax"]
+  Start --> typescriptsyntax
+  is_function_declaration["is_function_declaration"Fn]
+  is_function_expression["is_function_expression"Fn]
+  is_arrow_function["is_arrow_function"Fn]
+  is_function["is_function"Fn]
+  is_class_declaration["is_class_declaration"Fn]
+  is_interface_declaration["is_interface_declaration"Fn]
+  is_type_alias_declaration["is_type_alias_declaration"Fn]
+  is_enum_declaration["is_enum_declaration"Fn]
+  is_namespace_declaration["is_namespace_declaration"Fn]
+  is_method_signature["is_method_signature"Fn]
+  is_property_signature["is_property_signature"Fn]
+  is_method_definition["is_method_definition"Fn]
+  is_decorator["is_decorator"Fn]
+  is_generic_type["is_generic_type"Fn]
+  function_name["function_name"Fn]
+  class_name["class_name"Fn]
+  interface_name["interface_name"Fn]
+  type_alias_name["type_alias_name"Fn]
+  enum_name["enum_name"Fn]
+  namespace_name["namespace_name"Fn]
+  method_name["method_name"Fn]
+  has_type_annotations["has_type_annotations"Fn]
+  function_return_type["function_return_type"Fn]
+  function_parameters_with_types["function_parameters_with_types"Fn]
+  generic_type_parameters["generic_type_parameters"Fn]
+  is_public_member["is_public_member"Fn]
+  is_private_member["is_private_member"Fn]
+  is_protected_member["is_protected_member"Fn]
+  is_static_member["is_static_member"Fn]
+  is_readonly_member["is_readonly_member"Fn]
+  get_decorators["get_decorators"Fn]
+  find_functions["find_functions"Fn]
+  find_classes["find_classes"Fn]
+  find_interfaces["find_interfaces"Fn]
+  find_type_aliases["find_type_aliases"Fn]
+  find_enums["find_enums"Fn]
+  find_namespaces["find_namespaces"Fn]
+  find_generic_types["find_generic_types"Fn]
+  find_mapped_types["find_mapped_types"Fn]
+  find_decorators["find_decorators"Fn]
+  find_conditional_types["find_conditional_types"Fn]
+  functions_query["functions_query"Fn]
+  classes_query["classes_query"Fn]
+  interfaces_query["interfaces_query"Fn]
+  type_aliases_query["type_aliases_query"Fn]
+  enums_query["enums_query"Fn]
+  namespaces_query["namespaces_query"Fn]
+  methods_query["methods_query"Fn]
+  detect_typescript_features["detect_typescript_features"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  test_typescript_function_detection["test_typescript_function_detection"Fn]
+  test_typescript_class_detection["test_typescript_class_detection"Fn]
+  test_typescript_interface_detection["test_typescript_interface_detection"Fn]
+  test_typescript_type_alias_detection["test_typescript_type_alias_detection"Fn]
+  test_typescript_enum_detection["test_typescript_enum_detection"Fn]
+  test_typescript_features_detection["test_typescript_features_detection"Fn]
+  test_function_parameters_with_types["test_function_parameters_with_types"Fn]
+  typescriptsyntax --> is_function_declaration
+  is_function_declaration --> is_function_expression
+  is_function_expression --> is_arrow_function
+  is_arrow_function --> is_function
+  is_function --> is_class_declaration
+  is_class_declaration --> is_interface_declaration
+  is_interface_declaration --> is_type_alias_declaration
+  is_type_alias_declaration --> is_enum_declaration
+  is_enum_declaration --> is_namespace_declaration
+  is_namespace_declaration --> is_method_signature
+  is_method_signature --> is_property_signature
+  is_property_signature --> is_method_definition
+  is_method_definition --> is_decorator
+  is_decorator --> is_generic_type
+  is_generic_type --> function_name
+  function_name --> class_name
+  class_name --> interface_name
+  interface_name --> type_alias_name
+  type_alias_name --> enum_name
+  enum_name --> namespace_name
+  namespace_name --> method_name
+  method_name --> has_type_annotations
+  has_type_annotations --> function_return_type
+  function_return_type --> function_parameters_with_types
+  function_parameters_with_types --> generic_type_parameters
+  generic_type_parameters --> is_public_member
+  is_public_member --> is_private_member
+  is_private_member --> is_protected_member
+  is_protected_member --> is_static_member
+  is_static_member --> is_readonly_member
+  is_readonly_member --> get_decorators
+  get_decorators --> find_functions
+  find_functions --> find_classes
+  find_classes --> find_interfaces
+  find_interfaces --> find_type_aliases
+  find_type_aliases --> find_enums
+  find_enums --> find_namespaces
+  find_namespaces --> find_generic_types
+  find_generic_types --> find_mapped_types
+  find_mapped_types --> find_decorators
+  find_decorators --> find_conditional_types
+  find_conditional_types --> functions_query
+  functions_query --> classes_query
+  classes_query --> interfaces_query
+  interfaces_query --> type_aliases_query
+  type_aliases_query --> enums_query
+  enums_query --> namespaces_query
+  namespaces_query --> methods_query
+  methods_query --> detect_typescript_features
+  detect_typescript_features --> analyze_complexity
+  analyze_complexity --> test_typescript_function_detection
+  test_typescript_function_detection --> test_typescript_class_detection
+  test_typescript_class_detection --> test_typescript_interface_detection
+  test_typescript_interface_detection --> test_typescript_type_alias_detection
+  test_typescript_type_alias_detection --> test_typescript_enum_detection
+  test_typescript_enum_detection --> test_typescript_features_detection
+  test_typescript_features_detection --> test_function_parameters_with_types
+  test_function_parameters_with_types --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class TypeScriptSyntax {
+    +TypeScriptSyntax()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>
