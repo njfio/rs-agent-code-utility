@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/dependency_analysis_unit_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/dependency_analysis_unit_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 14</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 98</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+create_analysis_result_with_fs"create_analysis_result_with_fs (fn)"]
+  test_dependency_analyzer_creation"test_dependency_analyzer_creation (fn)"]
+  test_cargo_toml_dependency_detection"test_cargo_toml_dependency_detection (fn)"]
+  test_package_json_dependency_detection"test_package_json_dependency_detection (fn)"]
+  test_malformed_package_json_reports_error"test_malformed_package_json_reports_error (fn)"]
+  test_malformed_cargo_toml_reports_error"test_malformed_cargo_toml_reports_error (fn)"]
+  test_python_requirements_detection"test_python_requirements_detection (fn)"]
+  test_go_mod_dependency_detection"test_go_mod_dependency_detection (fn)"]
+  test_rust_source_imports_detection"test_rust_source_imports_detection (fn)"]
+  test_javascript_imports_detection"test_javascript_imports_detection (fn)"]
+  test_python_imports_detection"test_python_imports_detection (fn)"]
+  test_mixed_project_dependency_analysis"test_mixed_project_dependency_analysis (fn)"]
+  test_dependency_version_parsing"test_dependency_version_parsing (fn)"]
+  test_empty_project_analysis"test_empty_project_analysis (fn)"]
+  test_go_mod_dependency_detection --> test_cargo_toml_dependency_detection
+  test_go_mod_dependency_detection --> test_malformed_cargo_toml_reports_error
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  create_analysis_result_with_fs["create_analysis_result_with_fs"Fn]
+  test_dependency_analyzer_creation["test_dependency_analyzer_creation"Fn]
+  test_cargo_toml_dependency_detection["test_cargo_toml_dependency_detection"Fn]
+  test_package_json_dependency_detection["test_package_json_dependency_detection"Fn]
+  test_malformed_package_json_reports_error["test_malformed_package_json_reports_error"Fn]
+  test_malformed_cargo_toml_reports_error["test_malformed_cargo_toml_reports_error"Fn]
+  test_python_requirements_detection["test_python_requirements_detection"Fn]
+  test_go_mod_dependency_detection["test_go_mod_dependency_detection"Fn]
+  test_rust_source_imports_detection["test_rust_source_imports_detection"Fn]
+  test_javascript_imports_detection["test_javascript_imports_detection"Fn]
+  test_python_imports_detection["test_python_imports_detection"Fn]
+  test_mixed_project_dependency_analysis["test_mixed_project_dependency_analysis"Fn]
+  test_dependency_version_parsing["test_dependency_version_parsing"Fn]
+  test_empty_project_analysis["test_empty_project_analysis"Fn]
+  Start --> create_analysis_result_with_fs
+  create_analysis_result_with_fs --> test_dependency_analyzer_creation
+  test_dependency_analyzer_creation --> test_cargo_toml_dependency_detection
+  test_cargo_toml_dependency_detection --> test_package_json_dependency_detection
+  test_package_json_dependency_detection --> test_malformed_package_json_reports_error
+  test_malformed_package_json_reports_error --> test_malformed_cargo_toml_reports_error
+  test_malformed_cargo_toml_reports_error --> test_python_requirements_detection
+  test_python_requirements_detection --> test_go_mod_dependency_detection
+  test_go_mod_dependency_detection --> test_rust_source_imports_detection
+  test_rust_source_imports_detection --> test_javascript_imports_detection
+  test_javascript_imports_detection --> test_python_imports_detection
+  test_python_imports_detection --> test_mixed_project_dependency_analysis
+  test_mixed_project_dependency_analysis --> test_dependency_version_parsing
+  test_dependency_version_parsing --> test_empty_project_analysis
+  test_empty_project_analysis --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

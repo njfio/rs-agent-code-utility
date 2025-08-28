@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/parser.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/parser.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 24</li>
+<li><strong>Structures:</strong> 2</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 61</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_options"with_options (fn)"]
+  language"language (fn)"]
+  options"options (fn)"]
+  set_options"set_options (fn)"]
+  parse"parse (fn)"]
+  calculate_cache_key"calculate_cache_key (fn)"]
+  cache_tree"cache_tree (fn)"]
+  parse_bytes"parse_bytes (fn)"]
+  parse_file"parse_file (fn)"]
+  parse_incremental"parse_incremental (fn)"]
+  reset"reset (fn)"]
+  set_language"set_language (fn)"]
+  clone_parser"clone_parser (fn)"]
+  clear_cache"clear_cache (fn)"]
+  cache_stats"cache_stats (fn)"]
+  with_cache_size"with_cache_size (fn)"]
+  clone"clone (fn)"]
+  create_edit"create_edit (fn)"]
+  test_parser_creation"test_parser_creation (fn)"]
+  test_basic_parsing"test_basic_parsing (fn)"]
+  test_parse_options"test_parse_options (fn)"]
+  test_parser_clone"test_parser_clone (fn)"]
+  set_options --> reset
+  parse --> clone_parser
+  parse --> test_parser_creation
+  parse --> test_parser_clone
+  parse_bytes --> clone_parser
+  parse_bytes --> test_parser_creation
+  parse_bytes --> test_parser_clone
+  parse_file --> clone_parser
+  parse_file --> test_parser_creation
+  parse_file --> test_parser_clone
+  parse_incremental --> clone_parser
+  parse_incremental --> test_parser_creation
+  parse_incremental --> test_parser_clone
+  set_language --> reset
+  test_parse_options --> clone_parser
+  test_parse_options --> test_parser_creation
+  test_parse_options --> test_parser_clone
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  parseoptions["ParseOptions"]
+  Start --> parseoptions
+  parser["Parser"]
+  Start --> parser
+  default["default"Fn]
+  new["new"Fn]
+  with_options["with_options"Fn]
+  language["language"Fn]
+  options["options"Fn]
+  set_options["set_options"Fn]
+  parse["parse"Fn]
+  calculate_cache_key["calculate_cache_key"Fn]
+  cache_tree["cache_tree"Fn]
+  parse_bytes["parse_bytes"Fn]
+  parse_file["parse_file"Fn]
+  parse_incremental["parse_incremental"Fn]
+  reset["reset"Fn]
+  set_language["set_language"Fn]
+  clone_parser["clone_parser"Fn]
+  clear_cache["clear_cache"Fn]
+  cache_stats["cache_stats"Fn]
+  with_cache_size["with_cache_size"Fn]
+  clone["clone"Fn]
+  create_edit["create_edit"Fn]
+  test_parser_creation["test_parser_creation"Fn]
+  test_basic_parsing["test_basic_parsing"Fn]
+  test_parse_options["test_parse_options"Fn]
+  test_parser_clone["test_parser_clone"Fn]
+  parseoptions --> default
+  default --> new
+  new --> with_options
+  with_options --> language
+  language --> options
+  options --> set_options
+  set_options --> parse
+  parse --> calculate_cache_key
+  calculate_cache_key --> cache_tree
+  cache_tree --> parse_bytes
+  parse_bytes --> parse_file
+  parse_file --> parse_incremental
+  parse_incremental --> reset
+  reset --> set_language
+  set_language --> clone_parser
+  clone_parser --> clear_cache
+  clear_cache --> cache_stats
+  cache_stats --> with_cache_size
+  with_cache_size --> clone
+  clone --> create_edit
+  create_edit --> test_parser_creation
+  test_parser_creation --> test_basic_parsing
+  test_basic_parsing --> test_parse_options
+  test_parse_options --> test_parser_clone
+  test_parser_clone --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class ParseOptions {
+    +ParseOptions()
+  }
+  class Parser {
+    +Parser()
+  }
+  clone_parser ..> Parser : uses
+  test_parser_creation ..> Parser : uses
+  test_parser_clone ..> Parser : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

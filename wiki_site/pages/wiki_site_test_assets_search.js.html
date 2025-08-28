@@ -1,0 +1,285 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>wiki_site_test/assets/search.js</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script type="module" src="../assets/search.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>wiki_site_test/assets/search.js</h1></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<h4>Filters</h4>
+<select id="language-filter" class="search"><option value="">All Languages</option></select>
+<select id="file-type-filter" class="search"><option value="">All File Types</option></select>
+<select id="security-level-filter" class="search"><option value="">All Security Levels</option></select>
+<h4>Results</h4>
+<ul id="results"></ul>
+<a href="examples_ai_code_reviewer.rs.html" style="color: var(--accent);">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html" style="color: var(--accent);">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html" style="color: var(--accent);">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html" style="color: var(--accent);">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html" style="color: var(--accent);">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html" style="color: var(--accent);">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html" style="color: var(--accent);">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html" style="color: var(--accent);">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html" style="color: var(--accent);">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html" style="color: var(--accent);">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html" style="color: var(--accent);">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html" style="color: var(--accent);">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html" style="color: var(--accent);">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html" style="color: var(--accent);">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html" style="color: var(--accent);">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html" style="color: var(--accent);">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html" style="color: var(--accent);">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html" style="color: var(--accent);">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html" style="color: var(--accent);">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html" style="color: var(--accent);">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html" style="color: var(--accent);">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html" style="color: var(--accent);">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html" style="color: var(--accent);">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html" style="color: var(--accent);">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html" style="color: var(--accent);">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html" style="color: var(--accent);">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html" style="color: var(--accent);">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html" style="color: var(--accent);">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html" style="color: var(--accent);">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html" style="color: var(--accent);">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html" style="color: var(--accent);">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html" style="color: var(--accent);">examples/tdd_minimal.rs</a>
+<a href="site_assets_search.js.html" style="color: var(--accent);">site/assets/search.js</a>
+<a href="src_advanced_ai_analysis.rs.html" style="color: var(--accent);">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html" style="color: var(--accent);">src/advanced_security.rs</a>
+<a href="src_ai_cache.rs.html" style="color: var(--accent);">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html" style="color: var(--accent);">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html" style="color: var(--accent);">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html" style="color: var(--accent);">src/ai/mod.rs</a>
+<a href="src_ai_providers_anthropic.rs.html" style="color: var(--accent);">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html" style="color: var(--accent);">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html" style="color: var(--accent);">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_local.rs.html" style="color: var(--accent);">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html" style="color: var(--accent);">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html" style="color: var(--accent);">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html" style="color: var(--accent);">src/ai/providers/openai.rs</a>
+<a href="src_ai_service.rs.html" style="color: var(--accent);">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html" style="color: var(--accent);">src/ai/types.rs</a>
+<a href="src_ai_analysis.rs.html" style="color: var(--accent);">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html" style="color: var(--accent);">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html" style="color: var(--accent);">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html" style="color: var(--accent);">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html" style="color: var(--accent);">src/ast_transformation.rs</a>
+<a href="src_bin_main.rs.html" style="color: var(--accent);">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html" style="color: var(--accent);">src/bin/rts.rs</a>
+<a href="src_cli_commands_analyze.rs.html" style="color: var(--accent);">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html" style="color: var(--accent);">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html" style="color: var(--accent);">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html" style="color: var(--accent);">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html" style="color: var(--accent);">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html" style="color: var(--accent);">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html" style="color: var(--accent);">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html" style="color: var(--accent);">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html" style="color: var(--accent);">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html" style="color: var(--accent);">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html" style="color: var(--accent);">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html" style="color: var(--accent);">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html" style="color: var(--accent);">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html" style="color: var(--accent);">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html" style="color: var(--accent);">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html" style="color: var(--accent);">src/cli/commands/wiki.rs</a>
+<a href="src_cli_error.rs.html" style="color: var(--accent);">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html" style="color: var(--accent);">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html" style="color: var(--accent);">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html" style="color: var(--accent);">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html" style="color: var(--accent);">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html" style="color: var(--accent);">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html" style="color: var(--accent);">src/cli/utils.rs</a>
+<a href="src_code_evolution.rs.html" style="color: var(--accent);">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html" style="color: var(--accent);">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html" style="color: var(--accent);">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html" style="color: var(--accent);">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html" style="color: var(--accent);">src/constants.rs</a>
+<a href="src_control_flow.rs.html" style="color: var(--accent);">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html" style="color: var(--accent);">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html" style="color: var(--accent);">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html" style="color: var(--accent);">src/enhanced_security.rs</a>
+<a href="src_error.rs.html" style="color: var(--accent);">src/error.rs</a>
+<a href="src_file_cache.rs.html" style="color: var(--accent);">src/file_cache.rs</a>
+<a href="src_infrastructure_cache.rs.html" style="color: var(--accent);">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html" style="color: var(--accent);">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html" style="color: var(--accent);">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html" style="color: var(--accent);">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html" style="color: var(--accent);">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html" style="color: var(--accent);">src/infrastructure/rate_limiter.rs</a>
+<a href="src_intent_mapping.rs.html" style="color: var(--accent);">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html" style="color: var(--accent);">src/intent_mapping_stub.rs</a>
+<a href="src_languages_c.rs.html" style="color: var(--accent);">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html" style="color: var(--accent);">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html" style="color: var(--accent);">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html" style="color: var(--accent);">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html" style="color: var(--accent);">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html" style="color: var(--accent);">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html" style="color: var(--accent);">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html" style="color: var(--accent);">src/languages/typescript.rs</a>
+<a href="src_lib.rs.html" style="color: var(--accent);">src/lib.rs</a>
+<a href="src_main.rs.html" style="color: var(--accent);">src/main.rs</a>
+<a href="src_memory_tracker.rs.html" style="color: var(--accent);">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html" style="color: var(--accent);">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html" style="color: var(--accent);">src/performance_analysis.rs</a>
+<a href="src_query.rs.html" style="color: var(--accent);">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html" style="color: var(--accent);">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html" style="color: var(--accent);">src/refactoring.rs</a>
+<a href="src_security_mod.rs.html" style="color: var(--accent);">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html" style="color: var(--accent);">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html" style="color: var(--accent);">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html" style="color: var(--accent);">src/security/vulnerability_db.rs</a>
+<a href="src_semantic_context.rs.html" style="color: var(--accent);">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html" style="color: var(--accent);">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html" style="color: var(--accent);">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html" style="color: var(--accent);">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html" style="color: var(--accent);">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html" style="color: var(--accent);">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html" style="color: var(--accent);">src/test_coverage.rs</a>
+<a href="src_tree.rs.html" style="color: var(--accent);">src/tree.rs</a>
+<a href="src_wiki_mod.rs.html" style="color: var(--accent);">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html" style="color: var(--accent);">src/wiki/security_enhancements.rs</a>
+<a href="test_cli.rs.html" style="color: var(--accent);">test_cli.rs</a>
+<a href="test_code_map.rs.html" style="color: var(--accent);">test_code_map.rs</a>
+<a href="test_files_phase2_demo.rs.html" style="color: var(--accent);">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html" style="color: var(--accent);">test_files/sample.go</a>
+<a href="test_files_sample.ts.html" style="color: var(--accent);">test_files/sample.ts</a>
+<a href="test_rate_limiter.rs.html" style="color: var(--accent);">test_rate_limiter.rs</a>
+<a href="test_wiki_assets_search.js.html" style="color: var(--accent);">test_wiki/assets/search.js</a>
+<a href="tests_ai_service_tests.rs.html" style="color: var(--accent);">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html" style="color: var(--accent);">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html" style="color: var(--accent);">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html" style="color: var(--accent);">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html" style="color: var(--accent);">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html" style="color: var(--accent);">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html" style="color: var(--accent);">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html" style="color: var(--accent);">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html" style="color: var(--accent);">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html" style="color: var(--accent);">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html" style="color: var(--accent);">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html" style="color: var(--accent);">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html" style="color: var(--accent);">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html" style="color: var(--accent);">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html" style="color: var(--accent);">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html" style="color: var(--accent);">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html" style="color: var(--accent);">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html" style="color: var(--accent);">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html" style="color: var(--accent);">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html" style="color: var(--accent);">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html" style="color: var(--accent);">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html" style="color: var(--accent);">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html" style="color: var(--accent);">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html" style="color: var(--accent);">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html" style="color: var(--accent);">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html" style="color: var(--accent);">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html" style="color: var(--accent);">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html" style="color: var(--accent);">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html" style="color: var(--accent);">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html" style="color: var(--accent);">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html" style="color: var(--accent);">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html" style="color: var(--accent);">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html" style="color: var(--accent);">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html" style="color: var(--accent);">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html" style="color: var(--accent);">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html" style="color: var(--accent);">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html" style="color: var(--accent);">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html" style="color: var(--accent);">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html" style="color: var(--accent);">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html" style="color: var(--accent);">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html" style="color: var(--accent);">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html" style="color: var(--accent);">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html" style="color: var(--accent);">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html" style="color: var(--accent);">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html" style="color: var(--accent);">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html" style="color: var(--accent);">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html" style="color: var(--accent);">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html" style="color: var(--accent);">tests/wiki_sequence_methods.rs</a>
+<a href="wiki_site_assets_search.js.html" style="color: var(--accent);">wiki_site/assets/search.js</a>
+<a href="wiki_site_test_assets_search.js.html" style="color: var(--accent);">wiki_site_test/assets/search.js</a>
+
+
+</nav>
+<section class="article">
+<div class="card"><p><a href="../index.html">Home</a> > <strong>wiki_site_test/assets/search.js</strong></p></div>
+<div class="card"><h2>File Overview</h2><p>7 symbols, 71 lines</p></div>
+<div class="card">
+<h3>Control Flow</h3>
+<div style="overflow-x: auto; max-height: 400px; width: 100%;">
+<div class="mermaid" style="min-width: 600px;">flowchart TB
+  start(["Start"])
+  end(["End"])
+  start --> N0
+  N0(["identifier"])
+  N1(["call:getElementById"])
+  N0 --> N1
+  N2(["identifier"])
+  N1 --> N2
+  N3(["call:getElementById"])
+  N2 --> N3
+  N4(["identifier"])
+  N3 --> N4
+  N5(["call:getElementById"])
+  N4 --> N5
+  N6(["identifier"])
+  N5 --> N6
+  N7(["call:getElementById"])
+  N6 --> N7
+  N7 --> end
+
+</div>
+</div>
+</div>
+
+<div class="card">
+<h3>Call Sequence</h3>
+<div style="overflow-x: auto; max-height: 300px;">
+<div class="mermaid">sequenceDiagram
+  participant runsearch
+  participant getuniquevalues
+  participant getfiltervalues
+  participant filteritems
+  participant render
+  participant populatefilters
+  participant updatesearch
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>fetch: call
+  runsearch->>json: call
+  runsearch->>addeventlistener: call
+  runsearch->>addeventlistener: call
+  runsearch->>addeventlistener: call
+  runsearch->>addeventlistener: call
+  runsearch->>addeventlistener: call
+
+</div>
+</div>
+</div>
+<div class="card"><h3>Symbols in this file</h3><p>Click symbol names to jump to their definition, or 📚 to go back to main index.</p>
+<ul>
+<li id="symbol-runsearch"><a href="#symbol-runsearch"><code>runSearch</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-getuniquevalues"><a href="#symbol-getuniquevalues"><code>getUniqueValues</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-getfiltervalues"><a href="#symbol-getfiltervalues"><code>getFilterValues</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-filteritems"><a href="#symbol-filteritems"><code>filterItems</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-render"><a href="#symbol-render"><code>render</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-populatefilters"><a href="#symbol-populatefilters"><code>populateFilters</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-updatesearch"><a href="#symbol-updatesearch"><code>updateSearch</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+
+</ul>
+</div>
+
+
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/enhanced_security.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/enhanced_security.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 29</li>
+<li><strong>Structures:</strong> 7</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 123</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze"analyze (fn)"]
+  scan_dependencies"scan_dependencies (fn)"]
+  scan_cargo_dependencies"scan_cargo_dependencies (fn)"]
+  scan_npm_dependencies"scan_npm_dependencies (fn)"]
+  scan_python_dependencies"scan_python_dependencies (fn)"]
+  scan_go_dependencies"scan_go_dependencies (fn)"]
+  parse_and_analyze_owasp"parse_and_analyze_owasp (fn)"]
+  detect_language"detect_language (fn)"]
+  is_source_file"is_source_file (fn)"]
+  extract_package_name"extract_package_name (fn)"]
+  extract_python_package_name"extract_python_package_name (fn)"]
+  extract_go_package_name"extract_go_package_name (fn)"]
+  calculate_metrics"calculate_metrics (fn)"]
+  assess_compliance"assess_compliance (fn)"]
+  calculate_security_score"calculate_security_score (fn)"]
+  generate_remediation_roadmap"generate_remediation_roadmap (fn)"]
+  test_enhanced_security_config_default"test_enhanced_security_config_default (fn)"]
+  test_security_metrics_creation"test_security_metrics_creation (fn)"]
+  test_compliance_assessment_creation"test_compliance_assessment_creation (fn)"]
+  test_remediation_action_creation"test_remediation_action_creation (fn)"]
+  test_action_priority_ordering"test_action_priority_ordering (fn)"]
+  test_remediation_roadmap_creation"test_remediation_roadmap_creation (fn)"]
+  test_enhanced_security_result_creation"test_enhanced_security_result_creation (fn)"]
+  test_package_name_extraction"test_package_name_extraction (fn)"]
+  test_language_detection"test_language_detection (fn)"]
+  test_source_file_detection"test_source_file_detection (fn)"]
+  scan_go_dependencies --> scan_cargo_dependencies
+  detect_language --> test_language_detection
+  detect_language --> test_source_file_detection
+  extract_package_name --> test_package_name_extraction
+  extract_python_package_name --> test_package_name_extraction
+  extract_go_package_name --> scan_cargo_dependencies
+  extract_go_package_name --> test_package_name_extraction
+  assess_compliance --> test_compliance_assessment_creation
+  test_remediation_action_creation --> test_package_name_extraction
+  test_action_priority_ordering --> test_package_name_extraction
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  enhancedsecurityscanner["EnhancedSecurityScanner"]
+  Start --> enhancedsecurityscanner
+  enhancedsecurityconfig["EnhancedSecurityConfig"]
+  Start --> enhancedsecurityconfig
+  enhancedsecurityresult["EnhancedSecurityResult"]
+  Start --> enhancedsecurityresult
+  securitymetrics["SecurityMetrics"]
+  Start --> securitymetrics
+  complianceassessment["ComplianceAssessment"]
+  Start --> complianceassessment
+  remediationroadmap["RemediationRoadmap"]
+  Start --> remediationroadmap
+  remediationaction["RemediationAction"]
+  Start --> remediationaction
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze["analyze"Fn]
+  scan_dependencies["scan_dependencies"Fn]
+  scan_cargo_dependencies["scan_cargo_dependencies"Fn]
+  scan_npm_dependencies["scan_npm_dependencies"Fn]
+  scan_python_dependencies["scan_python_dependencies"Fn]
+  scan_go_dependencies["scan_go_dependencies"Fn]
+  parse_and_analyze_owasp["parse_and_analyze_owasp"Fn]
+  detect_language["detect_language"Fn]
+  is_source_file["is_source_file"Fn]
+  extract_package_name["extract_package_name"Fn]
+  extract_python_package_name["extract_python_package_name"Fn]
+  extract_go_package_name["extract_go_package_name"Fn]
+  calculate_metrics["calculate_metrics"Fn]
+  assess_compliance["assess_compliance"Fn]
+  calculate_security_score["calculate_security_score"Fn]
+  generate_remediation_roadmap["generate_remediation_roadmap"Fn]
+  test_enhanced_security_config_default["test_enhanced_security_config_default"Fn]
+  test_security_metrics_creation["test_security_metrics_creation"Fn]
+  test_compliance_assessment_creation["test_compliance_assessment_creation"Fn]
+  test_remediation_action_creation["test_remediation_action_creation"Fn]
+  test_action_priority_ordering["test_action_priority_ordering"Fn]
+  test_remediation_roadmap_creation["test_remediation_roadmap_creation"Fn]
+  test_enhanced_security_result_creation["test_enhanced_security_result_creation"Fn]
+  test_package_name_extraction["test_package_name_extraction"Fn]
+  test_language_detection["test_language_detection"Fn]
+  test_source_file_detection["test_source_file_detection"Fn]
+  enhancedsecurityscanner --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze
+  analyze --> scan_dependencies
+  scan_dependencies --> scan_cargo_dependencies
+  scan_cargo_dependencies --> scan_npm_dependencies
+  scan_npm_dependencies --> scan_python_dependencies
+  scan_python_dependencies --> scan_go_dependencies
+  scan_go_dependencies --> parse_and_analyze_owasp
+  parse_and_analyze_owasp --> detect_language
+  detect_language --> is_source_file
+  is_source_file --> extract_package_name
+  extract_package_name --> extract_python_package_name
+  extract_python_package_name --> extract_go_package_name
+  extract_go_package_name --> calculate_metrics
+  calculate_metrics --> assess_compliance
+  assess_compliance --> calculate_security_score
+  calculate_security_score --> generate_remediation_roadmap
+  generate_remediation_roadmap --> test_enhanced_security_config_default
+  test_enhanced_security_config_default --> test_security_metrics_creation
+  test_security_metrics_creation --> test_compliance_assessment_creation
+  test_compliance_assessment_creation --> test_remediation_action_creation
+  test_remediation_action_creation --> test_action_priority_ordering
+  test_action_priority_ordering --> test_remediation_roadmap_creation
+  test_remediation_roadmap_creation --> test_enhanced_security_result_creation
+  test_enhanced_security_result_creation --> test_package_name_extraction
+  test_package_name_extraction --> test_language_detection
+  test_language_detection --> test_source_file_detection
+  test_source_file_detection --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class EnhancedSecurityScanner {
+    +EnhancedSecurityScanner()
+  }
+  class EnhancedSecurityConfig {
+    +EnhancedSecurityConfig()
+  }
+  class EnhancedSecurityResult {
+    +EnhancedSecurityResult()
+  }
+  class SecurityMetrics {
+    +SecurityMetrics()
+  }
+  class ComplianceAssessment {
+    +ComplianceAssessment()
+  }
+  class RemediationRoadmap {
+    +RemediationRoadmap()
+  }
+  class RemediationAction {
+    +RemediationAction()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/infrastructure/database.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/infrastructure/database.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 11</li>
+<li><strong>Structures:</strong> 5</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 32</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  run_migrations"run_migrations (fn)"]
+  insert_default_secret_patterns"insert_default_secret_patterns (fn)"]
+  store_vulnerability"store_vulnerability (fn)"]
+  get_vulnerabilities_for_package"get_vulnerabilities_for_package (fn)"]
+  store_analysis_cache"store_analysis_cache (fn)"]
+  get_analysis_cache"get_analysis_cache (fn)"]
+  get_secret_patterns"get_secret_patterns (fn)"]
+  clean_expired_cache"clean_expired_cache (fn)"]
+  get_stats"get_stats (fn)"]
+  close"close (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  databasemanager["DatabaseManager"]
+  Start --> databasemanager
+  vulnerabilityrecord["VulnerabilityRecord"]
+  Start --> vulnerabilityrecord
+  analysiscacheentry["AnalysisCacheEntry"]
+  Start --> analysiscacheentry
+  secretpattern["SecretPattern"]
+  Start --> secretpattern
+  databasestats["DatabaseStats"]
+  Start --> databasestats
+  new["new"Fn]
+  run_migrations["run_migrations"Fn]
+  insert_default_secret_patterns["insert_default_secret_patterns"Fn]
+  store_vulnerability["store_vulnerability"Fn]
+  get_vulnerabilities_for_package["get_vulnerabilities_for_package"Fn]
+  store_analysis_cache["store_analysis_cache"Fn]
+  get_analysis_cache["get_analysis_cache"Fn]
+  get_secret_patterns["get_secret_patterns"Fn]
+  clean_expired_cache["clean_expired_cache"Fn]
+  get_stats["get_stats"Fn]
+  close["close"Fn]
+  databasemanager --> new
+  new --> run_migrations
+  run_migrations --> insert_default_secret_patterns
+  insert_default_secret_patterns --> store_vulnerability
+  store_vulnerability --> get_vulnerabilities_for_package
+  get_vulnerabilities_for_package --> store_analysis_cache
+  store_analysis_cache --> get_analysis_cache
+  get_analysis_cache --> get_secret_patterns
+  get_secret_patterns --> clean_expired_cache
+  clean_expired_cache --> get_stats
+  get_stats --> close
+  close --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class DatabaseManager {
+    +DatabaseManager()
+  }
+  class VulnerabilityRecord {
+    +VulnerabilityRecord()
+  }
+  class AnalysisCacheEntry {
+    +AnalysisCacheEntry()
+  }
+  class SecretPattern {
+    +SecretPattern()
+  }
+  class DatabaseStats {
+    +DatabaseStats()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

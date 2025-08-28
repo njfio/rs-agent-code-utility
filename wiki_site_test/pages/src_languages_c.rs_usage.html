@@ -1,0 +1,634 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/c.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/c.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 55</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 195</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+is_function_definition"is_function_definition (fn)"]
+  is_function_declaration"is_function_declaration (fn)"]
+  has_function_declarator"has_function_declarator (fn)"]
+  is_struct_declaration"is_struct_declaration (fn)"]
+  is_union_declaration"is_union_declaration (fn)"]
+  is_enum_declaration"is_enum_declaration (fn)"]
+  is_typedef_declaration"is_typedef_declaration (fn)"]
+  is_macro_definition"is_macro_definition (fn)"]
+  is_include_directive"is_include_directive (fn)"]
+  function_name"function_name (fn)"]
+  struct_name"struct_name (fn)"]
+  union_name"union_name (fn)"]
+  enum_name"enum_name (fn)"]
+  typedef_name"typedef_name (fn)"]
+  macro_name"macro_name (fn)"]
+  function_macro_name"function_macro_name (fn)"]
+  function_parameters"function_parameters (fn)"]
+  extract_parameter_name"extract_parameter_name (fn)"]
+  function_return_type"function_return_type (fn)"]
+  is_static_function"is_static_function (fn)"]
+  is_inline_function"is_inline_function (fn)"]
+  struct_fields"struct_fields (fn)"]
+  find_functions"find_functions (fn)"]
+  find_structs"find_structs (fn)"]
+  find_enums"find_enums (fn)"]
+  find_typedefs"find_typedefs (fn)"]
+  find_macros"find_macros (fn)"]
+  find_includes"find_includes (fn)"]
+  functions_query"functions_query (fn)"]
+  structs_query"structs_query (fn)"]
+  unions_query"unions_query (fn)"]
+  enums_query"enums_query (fn)"]
+  typedefs_query"typedefs_query (fn)"]
+  macros_query"macros_query (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  detect_c_features"detect_c_features (fn)"]
+  check_memory_patterns"check_memory_patterns (fn)"]
+  get_function_calls"get_function_calls (fn)"]
+  collect_function_calls"collect_function_calls (fn)"]
+  find_function_pointers"find_function_pointers (fn)"]
+  find_unions"find_unions (fn)"]
+  find_bit_fields"find_bit_fields (fn)"]
+  find_preprocessor_macros"find_preprocessor_macros (fn)"]
+  find_static_functions"find_static_functions (fn)"]
+  find_inline_functions"find_inline_functions (fn)"]
+  test_c_function_detection"test_c_function_detection (fn)"]
+  test_c_struct_detection"test_c_struct_detection (fn)"]
+  test_c_typedef_detection"test_c_typedef_detection (fn)"]
+  test_c_enum_detection"test_c_enum_detection (fn)"]
+  test_c_macro_detection"test_c_macro_detection (fn)"]
+  test_function_parameters"test_function_parameters (fn)"]
+  test_function_return_type"test_function_return_type (fn)"]
+  test_struct_fields"test_struct_fields (fn)"]
+  test_c_features_detection"test_c_features_detection (fn)"]
+  test_memory_pattern_analysis"test_memory_pattern_analysis (fn)"]
+  is_function_definition --> find_functions
+  is_function_definition --> functions_query
+  is_function_definition --> find_static_functions
+  is_function_definition --> find_inline_functions
+  is_function_definition --> test_memory_pattern_analysis
+  is_function_declaration --> find_functions
+  is_function_declaration --> functions_query
+  is_function_declaration --> find_static_functions
+  is_function_declaration --> find_inline_functions
+  is_function_declaration --> test_memory_pattern_analysis
+  has_function_declarator --> find_functions
+  has_function_declarator --> functions_query
+  has_function_declarator --> find_static_functions
+  has_function_declarator --> find_inline_functions
+  is_struct_declaration --> find_structs
+  is_struct_declaration --> structs_query
+  is_struct_declaration --> test_memory_pattern_analysis
+  is_union_declaration --> unions_query
+  is_union_declaration --> find_unions
+  is_union_declaration --> test_memory_pattern_analysis
+  is_enum_declaration --> find_enums
+  is_enum_declaration --> enums_query
+  is_enum_declaration --> test_memory_pattern_analysis
+  is_typedef_declaration --> find_typedefs
+  is_typedef_declaration --> typedefs_query
+  is_typedef_declaration --> test_memory_pattern_analysis
+  is_macro_definition --> find_macros
+  is_macro_definition --> macros_query
+  is_macro_definition --> find_preprocessor_macros
+  is_macro_definition --> test_memory_pattern_analysis
+  is_include_directive --> find_includes
+  is_include_directive --> test_memory_pattern_analysis
+  function_name --> find_functions
+  function_name --> functions_query
+  function_name --> find_static_functions
+  function_name --> find_inline_functions
+  struct_name --> find_structs
+  struct_name --> structs_query
+  union_name --> unions_query
+  union_name --> find_unions
+  enum_name --> find_enums
+  enum_name --> enums_query
+  typedef_name --> find_typedefs
+  typedef_name --> typedefs_query
+  macro_name --> find_macros
+  macro_name --> macros_query
+  macro_name --> find_preprocessor_macros
+  function_macro_name --> find_functions
+  function_macro_name --> find_macros
+  function_macro_name --> functions_query
+  function_macro_name --> macros_query
+  function_macro_name --> find_preprocessor_macros
+  function_macro_name --> find_static_functions
+  function_macro_name --> find_inline_functions
+  function_parameters --> find_functions
+  function_parameters --> functions_query
+  function_parameters --> find_static_functions
+  function_parameters --> find_inline_functions
+  extract_parameter_name --> function_parameters
+  extract_parameter_name --> test_function_parameters
+  function_return_type --> is_typedef_declaration
+  function_return_type --> typedef_name
+  function_return_type --> find_functions
+  function_return_type --> find_typedefs
+  function_return_type --> functions_query
+  function_return_type --> typedefs_query
+  function_return_type --> find_static_functions
+  function_return_type --> find_inline_functions
+  function_return_type --> test_c_typedef_detection
+  is_static_function --> find_functions
+  is_static_function --> functions_query
+  is_static_function --> find_static_functions
+  is_static_function --> find_inline_functions
+  is_static_function --> test_memory_pattern_analysis
+  is_inline_function --> find_functions
+  is_inline_function --> functions_query
+  is_inline_function --> find_static_functions
+  is_inline_function --> find_inline_functions
+  is_inline_function --> test_memory_pattern_analysis
+  struct_fields --> find_structs
+  struct_fields --> structs_query
+  detect_c_features --> is_function_definition
+  detect_c_features --> is_function_declaration
+  detect_c_features --> has_function_declarator
+  detect_c_features --> is_struct_declaration
+  detect_c_features --> is_union_declaration
+  detect_c_features --> is_enum_declaration
+  detect_c_features --> is_typedef_declaration
+  detect_c_features --> is_macro_definition
+  detect_c_features --> is_include_directive
+  detect_c_features --> function_name
+  detect_c_features --> struct_name
+  detect_c_features --> macro_name
+  detect_c_features --> function_macro_name
+  detect_c_features --> function_parameters
+  detect_c_features --> extract_parameter_name
+  detect_c_features --> function_return_type
+  detect_c_features --> is_static_function
+  detect_c_features --> is_inline_function
+  detect_c_features --> struct_fields
+  detect_c_features --> find_functions
+  detect_c_features --> find_structs
+  detect_c_features --> find_macros
+  detect_c_features --> find_includes
+  detect_c_features --> functions_query
+  detect_c_features --> structs_query
+  detect_c_features --> macros_query
+  detect_c_features --> analyze_complexity
+  detect_c_features --> check_memory_patterns
+  detect_c_features --> get_function_calls
+  detect_c_features --> collect_function_calls
+  detect_c_features --> find_function_pointers
+  detect_c_features --> find_preprocessor_macros
+  detect_c_features --> find_static_functions
+  detect_c_features --> find_inline_functions
+  detect_c_features --> test_c_function_detection
+  detect_c_features --> test_c_struct_detection
+  detect_c_features --> test_c_typedef_detection
+  detect_c_features --> test_c_enum_detection
+  detect_c_features --> test_c_macro_detection
+  detect_c_features --> test_function_parameters
+  detect_c_features --> test_function_return_type
+  detect_c_features --> test_struct_fields
+  detect_c_features --> test_c_features_detection
+  get_function_calls --> find_functions
+  get_function_calls --> functions_query
+  get_function_calls --> find_static_functions
+  get_function_calls --> find_inline_functions
+  collect_function_calls --> find_functions
+  collect_function_calls --> functions_query
+  collect_function_calls --> find_static_functions
+  collect_function_calls --> find_inline_functions
+  find_function_pointers --> find_functions
+  find_function_pointers --> functions_query
+  find_function_pointers --> find_static_functions
+  find_function_pointers --> find_inline_functions
+  test_c_function_detection --> is_function_definition
+  test_c_function_detection --> is_function_declaration
+  test_c_function_detection --> has_function_declarator
+  test_c_function_detection --> is_struct_declaration
+  test_c_function_detection --> is_union_declaration
+  test_c_function_detection --> is_enum_declaration
+  test_c_function_detection --> is_typedef_declaration
+  test_c_function_detection --> is_macro_definition
+  test_c_function_detection --> is_include_directive
+  test_c_function_detection --> function_name
+  test_c_function_detection --> struct_name
+  test_c_function_detection --> macro_name
+  test_c_function_detection --> function_macro_name
+  test_c_function_detection --> function_parameters
+  test_c_function_detection --> extract_parameter_name
+  test_c_function_detection --> function_return_type
+  test_c_function_detection --> is_static_function
+  test_c_function_detection --> is_inline_function
+  test_c_function_detection --> struct_fields
+  test_c_function_detection --> find_functions
+  test_c_function_detection --> find_structs
+  test_c_function_detection --> find_macros
+  test_c_function_detection --> find_includes
+  test_c_function_detection --> functions_query
+  test_c_function_detection --> structs_query
+  test_c_function_detection --> macros_query
+  test_c_function_detection --> analyze_complexity
+  test_c_function_detection --> detect_c_features
+  test_c_function_detection --> check_memory_patterns
+  test_c_function_detection --> get_function_calls
+  test_c_function_detection --> collect_function_calls
+  test_c_function_detection --> find_function_pointers
+  test_c_function_detection --> find_preprocessor_macros
+  test_c_function_detection --> find_static_functions
+  test_c_function_detection --> find_inline_functions
+  test_c_function_detection --> test_c_struct_detection
+  test_c_function_detection --> test_c_typedef_detection
+  test_c_function_detection --> test_c_enum_detection
+  test_c_function_detection --> test_c_macro_detection
+  test_c_function_detection --> test_function_parameters
+  test_c_function_detection --> test_function_return_type
+  test_c_function_detection --> test_struct_fields
+  test_c_function_detection --> test_c_features_detection
+  test_c_struct_detection --> is_function_definition
+  test_c_struct_detection --> is_function_declaration
+  test_c_struct_detection --> has_function_declarator
+  test_c_struct_detection --> is_struct_declaration
+  test_c_struct_detection --> is_union_declaration
+  test_c_struct_detection --> is_enum_declaration
+  test_c_struct_detection --> is_typedef_declaration
+  test_c_struct_detection --> is_macro_definition
+  test_c_struct_detection --> is_include_directive
+  test_c_struct_detection --> function_name
+  test_c_struct_detection --> struct_name
+  test_c_struct_detection --> macro_name
+  test_c_struct_detection --> function_macro_name
+  test_c_struct_detection --> function_parameters
+  test_c_struct_detection --> extract_parameter_name
+  test_c_struct_detection --> function_return_type
+  test_c_struct_detection --> is_static_function
+  test_c_struct_detection --> is_inline_function
+  test_c_struct_detection --> struct_fields
+  test_c_struct_detection --> find_functions
+  test_c_struct_detection --> find_structs
+  test_c_struct_detection --> find_macros
+  test_c_struct_detection --> find_includes
+  test_c_struct_detection --> functions_query
+  test_c_struct_detection --> structs_query
+  test_c_struct_detection --> macros_query
+  test_c_struct_detection --> analyze_complexity
+  test_c_struct_detection --> detect_c_features
+  test_c_struct_detection --> check_memory_patterns
+  test_c_struct_detection --> get_function_calls
+  test_c_struct_detection --> collect_function_calls
+  test_c_struct_detection --> find_function_pointers
+  test_c_struct_detection --> find_preprocessor_macros
+  test_c_struct_detection --> find_static_functions
+  test_c_struct_detection --> find_inline_functions
+  test_c_struct_detection --> test_c_function_detection
+  test_c_struct_detection --> test_c_typedef_detection
+  test_c_struct_detection --> test_c_enum_detection
+  test_c_struct_detection --> test_c_macro_detection
+  test_c_struct_detection --> test_function_parameters
+  test_c_struct_detection --> test_function_return_type
+  test_c_struct_detection --> test_struct_fields
+  test_c_struct_detection --> test_c_features_detection
+  test_c_typedef_detection --> is_function_definition
+  test_c_typedef_detection --> is_function_declaration
+  test_c_typedef_detection --> has_function_declarator
+  test_c_typedef_detection --> is_struct_declaration
+  test_c_typedef_detection --> is_union_declaration
+  test_c_typedef_detection --> is_enum_declaration
+  test_c_typedef_detection --> is_typedef_declaration
+  test_c_typedef_detection --> is_macro_definition
+  test_c_typedef_detection --> is_include_directive
+  test_c_typedef_detection --> function_name
+  test_c_typedef_detection --> struct_name
+  test_c_typedef_detection --> macro_name
+  test_c_typedef_detection --> function_macro_name
+  test_c_typedef_detection --> function_parameters
+  test_c_typedef_detection --> extract_parameter_name
+  test_c_typedef_detection --> function_return_type
+  test_c_typedef_detection --> is_static_function
+  test_c_typedef_detection --> is_inline_function
+  test_c_typedef_detection --> struct_fields
+  test_c_typedef_detection --> find_functions
+  test_c_typedef_detection --> find_structs
+  test_c_typedef_detection --> find_typedefs
+  test_c_typedef_detection --> find_macros
+  test_c_typedef_detection --> find_includes
+  test_c_typedef_detection --> functions_query
+  test_c_typedef_detection --> structs_query
+  test_c_typedef_detection --> typedefs_query
+  test_c_typedef_detection --> macros_query
+  test_c_typedef_detection --> analyze_complexity
+  test_c_typedef_detection --> detect_c_features
+  test_c_typedef_detection --> check_memory_patterns
+  test_c_typedef_detection --> get_function_calls
+  test_c_typedef_detection --> collect_function_calls
+  test_c_typedef_detection --> find_function_pointers
+  test_c_typedef_detection --> find_preprocessor_macros
+  test_c_typedef_detection --> find_static_functions
+  test_c_typedef_detection --> find_inline_functions
+  test_c_typedef_detection --> test_c_function_detection
+  test_c_typedef_detection --> test_c_struct_detection
+  test_c_typedef_detection --> test_c_enum_detection
+  test_c_typedef_detection --> test_c_macro_detection
+  test_c_typedef_detection --> test_function_parameters
+  test_c_typedef_detection --> test_function_return_type
+  test_c_typedef_detection --> test_struct_fields
+  test_c_typedef_detection --> test_c_features_detection
+  test_c_enum_detection --> is_function_definition
+  test_c_enum_detection --> is_function_declaration
+  test_c_enum_detection --> has_function_declarator
+  test_c_enum_detection --> is_struct_declaration
+  test_c_enum_detection --> is_union_declaration
+  test_c_enum_detection --> is_enum_declaration
+  test_c_enum_detection --> is_typedef_declaration
+  test_c_enum_detection --> is_macro_definition
+  test_c_enum_detection --> is_include_directive
+  test_c_enum_detection --> function_name
+  test_c_enum_detection --> struct_name
+  test_c_enum_detection --> macro_name
+  test_c_enum_detection --> function_macro_name
+  test_c_enum_detection --> function_parameters
+  test_c_enum_detection --> extract_parameter_name
+  test_c_enum_detection --> function_return_type
+  test_c_enum_detection --> is_static_function
+  test_c_enum_detection --> is_inline_function
+  test_c_enum_detection --> struct_fields
+  test_c_enum_detection --> find_functions
+  test_c_enum_detection --> find_structs
+  test_c_enum_detection --> find_enums
+  test_c_enum_detection --> find_macros
+  test_c_enum_detection --> find_includes
+  test_c_enum_detection --> functions_query
+  test_c_enum_detection --> structs_query
+  test_c_enum_detection --> enums_query
+  test_c_enum_detection --> macros_query
+  test_c_enum_detection --> analyze_complexity
+  test_c_enum_detection --> detect_c_features
+  test_c_enum_detection --> check_memory_patterns
+  test_c_enum_detection --> get_function_calls
+  test_c_enum_detection --> collect_function_calls
+  test_c_enum_detection --> find_function_pointers
+  test_c_enum_detection --> find_preprocessor_macros
+  test_c_enum_detection --> find_static_functions
+  test_c_enum_detection --> find_inline_functions
+  test_c_enum_detection --> test_c_function_detection
+  test_c_enum_detection --> test_c_struct_detection
+  test_c_enum_detection --> test_c_typedef_detection
+  test_c_enum_detection --> test_c_macro_detection
+  test_c_enum_detection --> test_function_parameters
+  test_c_enum_detection --> test_function_return_type
+  test_c_enum_detection --> test_struct_fields
+  test_c_enum_detection --> test_c_features_detection
+  test_c_macro_detection --> is_function_definition
+  test_c_macro_detection --> is_function_declaration
+  test_c_macro_detection --> has_function_declarator
+  test_c_macro_detection --> is_struct_declaration
+  test_c_macro_detection --> is_union_declaration
+  test_c_macro_detection --> is_enum_declaration
+  test_c_macro_detection --> is_typedef_declaration
+  test_c_macro_detection --> is_macro_definition
+  test_c_macro_detection --> is_include_directive
+  test_c_macro_detection --> function_name
+  test_c_macro_detection --> struct_name
+  test_c_macro_detection --> macro_name
+  test_c_macro_detection --> function_macro_name
+  test_c_macro_detection --> function_parameters
+  test_c_macro_detection --> extract_parameter_name
+  test_c_macro_detection --> function_return_type
+  test_c_macro_detection --> is_static_function
+  test_c_macro_detection --> is_inline_function
+  test_c_macro_detection --> struct_fields
+  test_c_macro_detection --> find_functions
+  test_c_macro_detection --> find_structs
+  test_c_macro_detection --> find_macros
+  test_c_macro_detection --> find_includes
+  test_c_macro_detection --> functions_query
+  test_c_macro_detection --> structs_query
+  test_c_macro_detection --> macros_query
+  test_c_macro_detection --> analyze_complexity
+  test_c_macro_detection --> detect_c_features
+  test_c_macro_detection --> check_memory_patterns
+  test_c_macro_detection --> get_function_calls
+  test_c_macro_detection --> collect_function_calls
+  test_c_macro_detection --> find_function_pointers
+  test_c_macro_detection --> find_preprocessor_macros
+  test_c_macro_detection --> find_static_functions
+  test_c_macro_detection --> find_inline_functions
+  test_c_macro_detection --> test_c_function_detection
+  test_c_macro_detection --> test_c_struct_detection
+  test_c_macro_detection --> test_c_typedef_detection
+  test_c_macro_detection --> test_c_enum_detection
+  test_c_macro_detection --> test_function_parameters
+  test_c_macro_detection --> test_function_return_type
+  test_c_macro_detection --> test_struct_fields
+  test_c_macro_detection --> test_c_features_detection
+  test_function_parameters --> find_functions
+  test_function_parameters --> functions_query
+  test_function_parameters --> find_static_functions
+  test_function_parameters --> find_inline_functions
+  test_function_return_type --> is_typedef_declaration
+  test_function_return_type --> typedef_name
+  test_function_return_type --> find_functions
+  test_function_return_type --> find_typedefs
+  test_function_return_type --> functions_query
+  test_function_return_type --> typedefs_query
+  test_function_return_type --> find_static_functions
+  test_function_return_type --> find_inline_functions
+  test_function_return_type --> test_c_typedef_detection
+  test_struct_fields --> find_structs
+  test_struct_fields --> structs_query
+  test_c_features_detection --> is_function_definition
+  test_c_features_detection --> is_function_declaration
+  test_c_features_detection --> has_function_declarator
+  test_c_features_detection --> is_struct_declaration
+  test_c_features_detection --> is_union_declaration
+  test_c_features_detection --> is_enum_declaration
+  test_c_features_detection --> is_typedef_declaration
+  test_c_features_detection --> is_macro_definition
+  test_c_features_detection --> is_include_directive
+  test_c_features_detection --> function_name
+  test_c_features_detection --> struct_name
+  test_c_features_detection --> macro_name
+  test_c_features_detection --> function_macro_name
+  test_c_features_detection --> function_parameters
+  test_c_features_detection --> extract_parameter_name
+  test_c_features_detection --> function_return_type
+  test_c_features_detection --> is_static_function
+  test_c_features_detection --> is_inline_function
+  test_c_features_detection --> struct_fields
+  test_c_features_detection --> find_functions
+  test_c_features_detection --> find_structs
+  test_c_features_detection --> find_macros
+  test_c_features_detection --> find_includes
+  test_c_features_detection --> functions_query
+  test_c_features_detection --> structs_query
+  test_c_features_detection --> macros_query
+  test_c_features_detection --> analyze_complexity
+  test_c_features_detection --> detect_c_features
+  test_c_features_detection --> check_memory_patterns
+  test_c_features_detection --> get_function_calls
+  test_c_features_detection --> collect_function_calls
+  test_c_features_detection --> find_function_pointers
+  test_c_features_detection --> find_preprocessor_macros
+  test_c_features_detection --> find_static_functions
+  test_c_features_detection --> find_inline_functions
+  test_c_features_detection --> test_c_function_detection
+  test_c_features_detection --> test_c_struct_detection
+  test_c_features_detection --> test_c_typedef_detection
+  test_c_features_detection --> test_c_enum_detection
+  test_c_features_detection --> test_c_macro_detection
+  test_c_features_detection --> test_function_parameters
+  test_c_features_detection --> test_function_return_type
+  test_c_features_detection --> test_struct_fields
+  test_memory_pattern_analysis --> check_memory_patterns
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  csyntax["CSyntax"]
+  Start --> csyntax
+  is_function_definition["is_function_definition"Fn]
+  is_function_declaration["is_function_declaration"Fn]
+  has_function_declarator["has_function_declarator"Fn]
+  is_struct_declaration["is_struct_declaration"Fn]
+  is_union_declaration["is_union_declaration"Fn]
+  is_enum_declaration["is_enum_declaration"Fn]
+  is_typedef_declaration["is_typedef_declaration"Fn]
+  is_macro_definition["is_macro_definition"Fn]
+  is_include_directive["is_include_directive"Fn]
+  function_name["function_name"Fn]
+  struct_name["struct_name"Fn]
+  union_name["union_name"Fn]
+  enum_name["enum_name"Fn]
+  typedef_name["typedef_name"Fn]
+  macro_name["macro_name"Fn]
+  function_macro_name["function_macro_name"Fn]
+  function_parameters["function_parameters"Fn]
+  extract_parameter_name["extract_parameter_name"Fn]
+  function_return_type["function_return_type"Fn]
+  is_static_function["is_static_function"Fn]
+  is_inline_function["is_inline_function"Fn]
+  struct_fields["struct_fields"Fn]
+  find_functions["find_functions"Fn]
+  find_structs["find_structs"Fn]
+  find_enums["find_enums"Fn]
+  find_typedefs["find_typedefs"Fn]
+  find_macros["find_macros"Fn]
+  find_includes["find_includes"Fn]
+  functions_query["functions_query"Fn]
+  structs_query["structs_query"Fn]
+  unions_query["unions_query"Fn]
+  enums_query["enums_query"Fn]
+  typedefs_query["typedefs_query"Fn]
+  macros_query["macros_query"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  detect_c_features["detect_c_features"Fn]
+  check_memory_patterns["check_memory_patterns"Fn]
+  get_function_calls["get_function_calls"Fn]
+  collect_function_calls["collect_function_calls"Fn]
+  find_function_pointers["find_function_pointers"Fn]
+  find_unions["find_unions"Fn]
+  find_bit_fields["find_bit_fields"Fn]
+  find_preprocessor_macros["find_preprocessor_macros"Fn]
+  find_static_functions["find_static_functions"Fn]
+  find_inline_functions["find_inline_functions"Fn]
+  test_c_function_detection["test_c_function_detection"Fn]
+  test_c_struct_detection["test_c_struct_detection"Fn]
+  test_c_typedef_detection["test_c_typedef_detection"Fn]
+  test_c_enum_detection["test_c_enum_detection"Fn]
+  test_c_macro_detection["test_c_macro_detection"Fn]
+  test_function_parameters["test_function_parameters"Fn]
+  test_function_return_type["test_function_return_type"Fn]
+  test_struct_fields["test_struct_fields"Fn]
+  test_c_features_detection["test_c_features_detection"Fn]
+  test_memory_pattern_analysis["test_memory_pattern_analysis"Fn]
+  csyntax --> is_function_definition
+  is_function_definition --> is_function_declaration
+  is_function_declaration --> has_function_declarator
+  has_function_declarator --> is_struct_declaration
+  is_struct_declaration --> is_union_declaration
+  is_union_declaration --> is_enum_declaration
+  is_enum_declaration --> is_typedef_declaration
+  is_typedef_declaration --> is_macro_definition
+  is_macro_definition --> is_include_directive
+  is_include_directive --> function_name
+  function_name --> struct_name
+  struct_name --> union_name
+  union_name --> enum_name
+  enum_name --> typedef_name
+  typedef_name --> macro_name
+  macro_name --> function_macro_name
+  function_macro_name --> function_parameters
+  function_parameters --> extract_parameter_name
+  extract_parameter_name --> function_return_type
+  function_return_type --> is_static_function
+  is_static_function --> is_inline_function
+  is_inline_function --> struct_fields
+  struct_fields --> find_functions
+  find_functions --> find_structs
+  find_structs --> find_enums
+  find_enums --> find_typedefs
+  find_typedefs --> find_macros
+  find_macros --> find_includes
+  find_includes --> functions_query
+  functions_query --> structs_query
+  structs_query --> unions_query
+  unions_query --> enums_query
+  enums_query --> typedefs_query
+  typedefs_query --> macros_query
+  macros_query --> analyze_complexity
+  analyze_complexity --> detect_c_features
+  detect_c_features --> check_memory_patterns
+  check_memory_patterns --> get_function_calls
+  get_function_calls --> collect_function_calls
+  collect_function_calls --> find_function_pointers
+  find_function_pointers --> find_unions
+  find_unions --> find_bit_fields
+  find_bit_fields --> find_preprocessor_macros
+  find_preprocessor_macros --> find_static_functions
+  find_static_functions --> find_inline_functions
+  find_inline_functions --> test_c_function_detection
+  test_c_function_detection --> test_c_struct_detection
+  test_c_struct_detection --> test_c_typedef_detection
+  test_c_typedef_detection --> test_c_enum_detection
+  test_c_enum_detection --> test_c_macro_detection
+  test_c_macro_detection --> test_function_parameters
+  test_function_parameters --> test_function_return_type
+  test_function_return_type --> test_struct_fields
+  test_struct_fields --> test_c_features_detection
+  test_c_features_detection --> test_memory_pattern_analysis
+  test_memory_pattern_analysis --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class CSyntax {
+    +CSyntax()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

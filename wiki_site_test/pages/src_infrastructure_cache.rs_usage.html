@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/infrastructure/cache.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/infrastructure/cache.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 20</li>
+<li><strong>Structures:</strong> 4</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 66</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  set"set (fn)"]
+  set_with_ttl"set_with_ttl (fn)"]
+  get"get (fn)"]
+  exists"exists (fn)"]
+  remove"remove (fn)"]
+  clear"clear (fn)"]
+  stats"stats (fn)"]
+  set_memory_entry"set_memory_entry (fn)"]
+  get_memory_entry"get_memory_entry (fn)"]
+  set_disk_entry"set_disk_entry (fn)"]
+  get_disk_entry"get_disk_entry (fn)"]
+  disk_entry_exists"disk_entry_exists (fn)"]
+  remove_disk_entry"remove_disk_entry (fn)"]
+  get_disk_file_path"get_disk_file_path (fn)"]
+  get_disk_stats"get_disk_stats (fn)"]
+  evict_lru_entries"evict_lru_entries (fn)"]
+  cleanup_task"cleanup_task (fn)"]
+  cleanup_expired_entries"cleanup_expired_entries (fn)"]
+  default"default (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  cache["Cache"]
+  Start --> cache
+  cacheentry["CacheEntry"]
+  Start --> cacheentry
+  cachestats["CacheStats"]
+  Start --> cachestats
+  cacheconfig["CacheConfig"]
+  Start --> cacheconfig
+  new["new"Fn]
+  set["set"Fn]
+  set_with_ttl["set_with_ttl"Fn]
+  get["get"Fn]
+  exists["exists"Fn]
+  remove["remove"Fn]
+  clear["clear"Fn]
+  stats["stats"Fn]
+  set_memory_entry["set_memory_entry"Fn]
+  get_memory_entry["get_memory_entry"Fn]
+  set_disk_entry["set_disk_entry"Fn]
+  get_disk_entry["get_disk_entry"Fn]
+  disk_entry_exists["disk_entry_exists"Fn]
+  remove_disk_entry["remove_disk_entry"Fn]
+  get_disk_file_path["get_disk_file_path"Fn]
+  get_disk_stats["get_disk_stats"Fn]
+  evict_lru_entries["evict_lru_entries"Fn]
+  cleanup_task["cleanup_task"Fn]
+  cleanup_expired_entries["cleanup_expired_entries"Fn]
+  default["default"Fn]
+  cache --> new
+  new --> set
+  set --> set_with_ttl
+  set_with_ttl --> get
+  get --> exists
+  exists --> remove
+  remove --> clear
+  clear --> stats
+  stats --> set_memory_entry
+  set_memory_entry --> get_memory_entry
+  get_memory_entry --> set_disk_entry
+  set_disk_entry --> get_disk_entry
+  get_disk_entry --> disk_entry_exists
+  disk_entry_exists --> remove_disk_entry
+  remove_disk_entry --> get_disk_file_path
+  get_disk_file_path --> get_disk_stats
+  get_disk_stats --> evict_lru_entries
+  evict_lru_entries --> cleanup_task
+  cleanup_task --> cleanup_expired_entries
+  cleanup_expired_entries --> default
+  default --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class Cache {
+    +Cache()
+  }
+  class CacheEntry {
+    +CacheEntry()
+  }
+  class CacheStats {
+    +CacheStats()
+  }
+  class CacheConfig {
+    +CacheConfig()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

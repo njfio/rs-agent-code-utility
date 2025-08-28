@@ -1,0 +1,360 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/symbol_table.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/symbol_table.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 46</li>
+<li><strong>Structures:</strong> 10</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 119</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  analyze"analyze (fn)"]
+  reset"reset (fn)"]
+  build_symbol_table"build_symbol_table (fn)"]
+  creates_scope"creates_scope (fn)"]
+  enter_scope"enter_scope (fn)"]
+  exit_scope"exit_scope (fn)"]
+  determine_scope_type"determine_scope_type (fn)"]
+  extract_scope_name"extract_scope_name (fn)"]
+  extract_symbol_definition"extract_symbol_definition (fn)"]
+  extract_rust_symbol_definition"extract_rust_symbol_definition (fn)"]
+  add_symbol"add_symbol (fn)"]
+  resolve_references"resolve_references (fn)"]
+  is_symbol_reference"is_symbol_reference (fn)"]
+  extract_symbol_reference"extract_symbol_reference (fn)"]
+  resolve_symbol"resolve_symbol (fn)"]
+  determine_reference_type"determine_reference_type (fn)"]
+  is_rust_item_public"is_rust_item_public (fn)"]
+  is_rust_let_mutable"is_rust_let_mutable (fn)"]
+  extract_rust_function_type"extract_rust_function_type (fn)"]
+  extract_rust_variable_type"extract_rust_variable_type (fn)"]
+  extract_rust_parameter_type"extract_rust_parameter_type (fn)"]
+  extract_rust_initial_value"extract_rust_initial_value (fn)"]
+  extract_js_symbol_definition"extract_js_symbol_definition (fn)"]
+  extract_python_symbol_definition"extract_python_symbol_definition (fn)"]
+  extract_c_symbol_definition"extract_c_symbol_definition (fn)"]
+  extract_go_symbol_definition"extract_go_symbol_definition (fn)"]
+  find_unresolved_references"find_unresolved_references (fn)"]
+  find_shadowing_warnings"find_shadowing_warnings (fn)"]
+  find_unused_symbols"find_unused_symbols (fn)"]
+  calculate_statistics"calculate_statistics (fn)"]
+  get_symbol"get_symbol (fn)"]
+  get_scope"get_scope (fn)"]
+  get_symbols_in_scope"get_symbols_in_scope (fn)"]
+  get_symbol_references"get_symbol_references (fn)"]
+  is_symbol_accessible"is_symbol_accessible (fn)"]
+  get_scope_chain"get_scope_chain (fn)"]
+  test_symbol_table_analyzer_creation"test_symbol_table_analyzer_creation (fn)"]
+  test_scope_creation_and_hierarchy"test_scope_creation_and_hierarchy (fn)"]
+  test_symbol_definition_creation"test_symbol_definition_creation (fn)"]
+  test_symbol_reference_creation"test_symbol_reference_creation (fn)"]
+  test_scope_type_variants"test_scope_type_variants (fn)"]
+  test_symbol_type_variants"test_symbol_type_variants (fn)"]
+  test_reference_type_variants"test_reference_type_variants (fn)"]
+  test_symbol_table_basic_operations"test_symbol_table_basic_operations (fn)"]
+  test_scope_chain_calculation"test_scope_chain_calculation (fn)"]
+  analyze --> test_symbol_table_analyzer_creation
+  build_symbol_table --> is_rust_let_mutable
+  build_symbol_table --> find_unused_symbols
+  build_symbol_table --> get_symbols_in_scope
+  extract_symbol_definition --> find_unused_symbols
+  extract_symbol_definition --> get_symbols_in_scope
+  extract_rust_symbol_definition --> find_unused_symbols
+  extract_rust_symbol_definition --> get_symbols_in_scope
+  add_symbol --> find_unused_symbols
+  add_symbol --> get_symbols_in_scope
+  resolve_references --> find_unresolved_references
+  is_symbol_reference --> resolve_references
+  is_symbol_reference --> find_unresolved_references
+  is_symbol_reference --> find_unused_symbols
+  is_symbol_reference --> calculate_statistics
+  is_symbol_reference --> get_symbols_in_scope
+  is_symbol_reference --> get_symbol_references
+  extract_symbol_reference --> resolve_references
+  extract_symbol_reference --> find_unresolved_references
+  extract_symbol_reference --> find_unused_symbols
+  extract_symbol_reference --> get_symbols_in_scope
+  extract_symbol_reference --> get_symbol_references
+  resolve_symbol --> find_unresolved_references
+  resolve_symbol --> find_unused_symbols
+  resolve_symbol --> get_symbols_in_scope
+  determine_reference_type --> resolve_references
+  determine_reference_type --> find_unresolved_references
+  determine_reference_type --> get_symbol_references
+  is_rust_item_public --> calculate_statistics
+  is_rust_let_mutable --> calculate_statistics
+  extract_js_symbol_definition --> find_unused_symbols
+  extract_js_symbol_definition --> get_symbols_in_scope
+  extract_python_symbol_definition --> find_unused_symbols
+  extract_python_symbol_definition --> get_symbols_in_scope
+  extract_c_symbol_definition --> creates_scope
+  extract_c_symbol_definition --> enter_scope
+  extract_c_symbol_definition --> exit_scope
+  extract_c_symbol_definition --> determine_scope_type
+  extract_c_symbol_definition --> extract_scope_name
+  extract_c_symbol_definition --> extract_symbol_definition
+  extract_c_symbol_definition --> extract_rust_symbol_definition
+  extract_c_symbol_definition --> resolve_references
+  extract_c_symbol_definition --> is_symbol_reference
+  extract_c_symbol_definition --> extract_symbol_reference
+  extract_c_symbol_definition --> determine_reference_type
+  extract_c_symbol_definition --> is_rust_item_public
+  extract_c_symbol_definition --> extract_rust_function_type
+  extract_c_symbol_definition --> extract_rust_variable_type
+  extract_c_symbol_definition --> extract_rust_parameter_type
+  extract_c_symbol_definition --> extract_rust_initial_value
+  extract_c_symbol_definition --> extract_js_symbol_definition
+  extract_c_symbol_definition --> extract_python_symbol_definition
+  extract_c_symbol_definition --> extract_go_symbol_definition
+  extract_c_symbol_definition --> find_unresolved_references
+  extract_c_symbol_definition --> find_unused_symbols
+  extract_c_symbol_definition --> calculate_statistics
+  extract_c_symbol_definition --> get_scope
+  extract_c_symbol_definition --> get_symbols_in_scope
+  extract_c_symbol_definition --> get_symbol_references
+  extract_c_symbol_definition --> is_symbol_accessible
+  extract_c_symbol_definition --> get_scope_chain
+  extract_c_symbol_definition --> test_symbol_table_analyzer_creation
+  extract_c_symbol_definition --> test_scope_creation_and_hierarchy
+  extract_c_symbol_definition --> test_symbol_definition_creation
+  extract_c_symbol_definition --> test_symbol_reference_creation
+  extract_c_symbol_definition --> test_scope_type_variants
+  extract_c_symbol_definition --> test_reference_type_variants
+  extract_c_symbol_definition --> test_symbol_table_basic_operations
+  extract_c_symbol_definition --> test_scope_chain_calculation
+  extract_go_symbol_definition --> find_unused_symbols
+  extract_go_symbol_definition --> get_symbols_in_scope
+  get_symbol --> find_unused_symbols
+  get_symbol --> get_symbols_in_scope
+  get_symbols_in_scope --> determine_scope_type
+  get_symbols_in_scope --> extract_symbol_definition
+  get_symbols_in_scope --> extract_rust_symbol_definition
+  get_symbols_in_scope --> determine_reference_type
+  get_symbols_in_scope --> extract_rust_initial_value
+  get_symbols_in_scope --> extract_js_symbol_definition
+  get_symbols_in_scope --> extract_python_symbol_definition
+  get_symbols_in_scope --> extract_c_symbol_definition
+  get_symbols_in_scope --> extract_go_symbol_definition
+  get_symbols_in_scope --> find_unresolved_references
+  get_symbols_in_scope --> find_shadowing_warnings
+  get_symbols_in_scope --> find_unused_symbols
+  get_symbols_in_scope --> get_scope_chain
+  get_symbols_in_scope --> test_symbol_definition_creation
+  get_symbols_in_scope --> test_scope_chain_calculation
+  get_symbol_references --> find_unused_symbols
+  get_symbol_references --> get_symbols_in_scope
+  is_symbol_accessible --> find_unused_symbols
+  is_symbol_accessible --> calculate_statistics
+  is_symbol_accessible --> get_symbols_in_scope
+  test_symbol_table_analyzer_creation --> is_rust_let_mutable
+  test_symbol_table_analyzer_creation --> find_unused_symbols
+  test_symbol_table_analyzer_creation --> get_symbols_in_scope
+  test_symbol_definition_creation --> find_unused_symbols
+  test_symbol_definition_creation --> get_symbols_in_scope
+  test_symbol_reference_creation --> resolve_references
+  test_symbol_reference_creation --> find_unresolved_references
+  test_symbol_reference_creation --> find_unused_symbols
+  test_symbol_reference_creation --> get_symbols_in_scope
+  test_symbol_reference_creation --> get_symbol_references
+  test_symbol_type_variants --> find_unused_symbols
+  test_symbol_type_variants --> get_symbols_in_scope
+  test_reference_type_variants --> resolve_references
+  test_reference_type_variants --> find_unresolved_references
+  test_reference_type_variants --> get_symbol_references
+  test_symbol_table_basic_operations --> is_rust_let_mutable
+  test_symbol_table_basic_operations --> find_unused_symbols
+  test_symbol_table_basic_operations --> get_symbols_in_scope
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  symboltableanalyzer["SymbolTableAnalyzer"]
+  Start --> symboltableanalyzer
+  symboltable["SymbolTable"]
+  Start --> symboltable
+  scope["Scope"]
+  Start --> scope
+  symboldefinition["SymbolDefinition"]
+  Start --> symboldefinition
+  symbolreference["SymbolReference"]
+  Start --> symbolreference
+  symbolresolution["SymbolResolution"]
+  Start --> symbolresolution
+  symbolanalysisresult["SymbolAnalysisResult"]
+  Start --> symbolanalysisresult
+  unresolvedreference["UnresolvedReference"]
+  Start --> unresolvedreference
+  shadowingwarning["ShadowingWarning"]
+  Start --> shadowingwarning
+  symbolstatistics["SymbolStatistics"]
+  Start --> symbolstatistics
+  new["new"Fn]
+  analyze["analyze"Fn]
+  reset["reset"Fn]
+  build_symbol_table["build_symbol_table"Fn]
+  creates_scope["creates_scope"Fn]
+  enter_scope["enter_scope"Fn]
+  exit_scope["exit_scope"Fn]
+  determine_scope_type["determine_scope_type"Fn]
+  extract_scope_name["extract_scope_name"Fn]
+  extract_symbol_definition["extract_symbol_definition"Fn]
+  extract_rust_symbol_definition["extract_rust_symbol_definition"Fn]
+  add_symbol["add_symbol"Fn]
+  resolve_references["resolve_references"Fn]
+  is_symbol_reference["is_symbol_reference"Fn]
+  extract_symbol_reference["extract_symbol_reference"Fn]
+  resolve_symbol["resolve_symbol"Fn]
+  determine_reference_type["determine_reference_type"Fn]
+  is_rust_item_public["is_rust_item_public"Fn]
+  is_rust_let_mutable["is_rust_let_mutable"Fn]
+  extract_rust_function_type["extract_rust_function_type"Fn]
+  extract_rust_variable_type["extract_rust_variable_type"Fn]
+  extract_rust_parameter_type["extract_rust_parameter_type"Fn]
+  extract_rust_initial_value["extract_rust_initial_value"Fn]
+  extract_js_symbol_definition["extract_js_symbol_definition"Fn]
+  extract_python_symbol_definition["extract_python_symbol_definition"Fn]
+  extract_c_symbol_definition["extract_c_symbol_definition"Fn]
+  extract_go_symbol_definition["extract_go_symbol_definition"Fn]
+  find_unresolved_references["find_unresolved_references"Fn]
+  find_shadowing_warnings["find_shadowing_warnings"Fn]
+  find_unused_symbols["find_unused_symbols"Fn]
+  calculate_statistics["calculate_statistics"Fn]
+  get_symbol["get_symbol"Fn]
+  get_scope["get_scope"Fn]
+  get_symbols_in_scope["get_symbols_in_scope"Fn]
+  get_symbol_references["get_symbol_references"Fn]
+  is_symbol_accessible["is_symbol_accessible"Fn]
+  get_scope_chain["get_scope_chain"Fn]
+  test_symbol_table_analyzer_creation["test_symbol_table_analyzer_creation"Fn]
+  test_scope_creation_and_hierarchy["test_scope_creation_and_hierarchy"Fn]
+  test_symbol_definition_creation["test_symbol_definition_creation"Fn]
+  test_symbol_reference_creation["test_symbol_reference_creation"Fn]
+  test_scope_type_variants["test_scope_type_variants"Fn]
+  test_symbol_type_variants["test_symbol_type_variants"Fn]
+  test_reference_type_variants["test_reference_type_variants"Fn]
+  test_symbol_table_basic_operations["test_symbol_table_basic_operations"Fn]
+  test_scope_chain_calculation["test_scope_chain_calculation"Fn]
+  symboltableanalyzer --> new
+  new --> analyze
+  analyze --> reset
+  reset --> build_symbol_table
+  build_symbol_table --> creates_scope
+  creates_scope --> enter_scope
+  enter_scope --> exit_scope
+  exit_scope --> determine_scope_type
+  determine_scope_type --> extract_scope_name
+  extract_scope_name --> extract_symbol_definition
+  extract_symbol_definition --> extract_rust_symbol_definition
+  extract_rust_symbol_definition --> add_symbol
+  add_symbol --> resolve_references
+  resolve_references --> is_symbol_reference
+  is_symbol_reference --> extract_symbol_reference
+  extract_symbol_reference --> resolve_symbol
+  resolve_symbol --> determine_reference_type
+  determine_reference_type --> is_rust_item_public
+  is_rust_item_public --> is_rust_let_mutable
+  is_rust_let_mutable --> extract_rust_function_type
+  extract_rust_function_type --> extract_rust_variable_type
+  extract_rust_variable_type --> extract_rust_parameter_type
+  extract_rust_parameter_type --> extract_rust_initial_value
+  extract_rust_initial_value --> extract_js_symbol_definition
+  extract_js_symbol_definition --> extract_python_symbol_definition
+  extract_python_symbol_definition --> extract_c_symbol_definition
+  extract_c_symbol_definition --> extract_go_symbol_definition
+  extract_go_symbol_definition --> find_unresolved_references
+  find_unresolved_references --> find_shadowing_warnings
+  find_shadowing_warnings --> find_unused_symbols
+  find_unused_symbols --> calculate_statistics
+  calculate_statistics --> get_symbol
+  get_symbol --> get_scope
+  get_scope --> get_symbols_in_scope
+  get_symbols_in_scope --> get_symbol_references
+  get_symbol_references --> is_symbol_accessible
+  is_symbol_accessible --> get_scope_chain
+  get_scope_chain --> test_symbol_table_analyzer_creation
+  test_symbol_table_analyzer_creation --> test_scope_creation_and_hierarchy
+  test_scope_creation_and_hierarchy --> test_symbol_definition_creation
+  test_symbol_definition_creation --> test_symbol_reference_creation
+  test_symbol_reference_creation --> test_scope_type_variants
+  test_scope_type_variants --> test_symbol_type_variants
+  test_symbol_type_variants --> test_reference_type_variants
+  test_reference_type_variants --> test_symbol_table_basic_operations
+  test_symbol_table_basic_operations --> test_scope_chain_calculation
+  test_scope_chain_calculation --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class SymbolTableAnalyzer {
+    +SymbolTableAnalyzer()
+  }
+  class SymbolTable {
+    +SymbolTable()
+  }
+  class Scope {
+    +Scope()
+  }
+  class SymbolDefinition {
+    +SymbolDefinition()
+  }
+  class SymbolReference {
+    +SymbolReference()
+  }
+  class SymbolResolution {
+    +SymbolResolution()
+  }
+  class SymbolAnalysisResult {
+    +SymbolAnalysisResult()
+  }
+  class UnresolvedReference {
+    +UnresolvedReference()
+  }
+  class ShadowingWarning {
+    +ShadowingWarning()
+  }
+  class SymbolStatistics {
+    +SymbolStatistics()
+  }
+  creates_scope ..> Scope : uses
+  enter_scope ..> Scope : uses
+  exit_scope ..> Scope : uses
+  determine_scope_type ..> Scope : uses
+  extract_scope_name ..> Scope : uses
+  get_scope ..> Scope : uses
+  get_symbols_in_scope ..> Scope : uses
+  get_scope_chain ..> Scope : uses
+  test_scope_creation_and_hierarchy ..> Scope : uses
+  test_scope_type_variants ..> Scope : uses
+  test_scope_chain_calculation ..> Scope : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

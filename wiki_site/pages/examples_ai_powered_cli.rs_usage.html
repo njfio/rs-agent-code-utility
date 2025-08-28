@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - examples/ai_powered_cli.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>examples/ai_powered_cli.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 9</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 27</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+main"main (fn)"]
+  handle_security_analysis"handle_security_analysis (fn)"]
+  analyze_file_security"analyze_file_security (fn)"]
+  analyze_directory_security"analyze_directory_security (fn)"]
+  handle_code_explanation"handle_code_explanation (fn)"]
+  handle_refactoring"handle_refactoring (fn)"]
+  handle_code_review"handle_code_review (fn)"]
+  handle_architecture_analysis"handle_architecture_analysis (fn)"]
+  detect_language"detect_language (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  cli["Cli"]
+  Start --> cli
+  main["main"Fn]
+  handle_security_analysis["handle_security_analysis"Fn]
+  analyze_file_security["analyze_file_security"Fn]
+  analyze_directory_security["analyze_directory_security"Fn]
+  handle_code_explanation["handle_code_explanation"Fn]
+  handle_refactoring["handle_refactoring"Fn]
+  handle_code_review["handle_code_review"Fn]
+  handle_architecture_analysis["handle_architecture_analysis"Fn]
+  detect_language["detect_language"Fn]
+  cli --> main
+  main --> handle_security_analysis
+  handle_security_analysis --> analyze_file_security
+  analyze_file_security --> analyze_directory_security
+  analyze_directory_security --> handle_code_explanation
+  handle_code_explanation --> handle_refactoring
+  handle_refactoring --> handle_code_review
+  handle_code_review --> handle_architecture_analysis
+  handle_architecture_analysis --> detect_language
+  detect_language --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class Cli {
+    +Cli()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

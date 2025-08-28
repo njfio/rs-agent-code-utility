@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/performance_optimizations_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/performance_optimizations_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 7</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 58</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+test_parser_caching_performance"test_parser_caching_performance (fn)"]
+  test_parser_cache_eviction"test_parser_cache_eviction (fn)"]
+  test_parser_cache_clear"test_parser_cache_clear (fn)"]
+  test_optimized_tree_traversal"test_optimized_tree_traversal (fn)"]
+  test_performance_analysis_optimizations"test_performance_analysis_optimizations (fn)"]
+  test_memory_allocation_optimization"test_memory_allocation_optimization (fn)"]
+  test_string_optimization_detection"test_string_optimization_detection (fn)"]
+  test_memory_allocation_optimization --> test_performance_analysis_optimizations
+  test_string_optimization_detection --> test_performance_analysis_optimizations
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  test_parser_caching_performance["test_parser_caching_performance"Fn]
+  test_parser_cache_eviction["test_parser_cache_eviction"Fn]
+  test_parser_cache_clear["test_parser_cache_clear"Fn]
+  test_optimized_tree_traversal["test_optimized_tree_traversal"Fn]
+  test_performance_analysis_optimizations["test_performance_analysis_optimizations"Fn]
+  test_memory_allocation_optimization["test_memory_allocation_optimization"Fn]
+  test_string_optimization_detection["test_string_optimization_detection"Fn]
+  Start --> test_parser_caching_performance
+  test_parser_caching_performance --> test_parser_cache_eviction
+  test_parser_cache_eviction --> test_parser_cache_clear
+  test_parser_cache_clear --> test_optimized_tree_traversal
+  test_optimized_tree_traversal --> test_performance_analysis_optimizations
+  test_performance_analysis_optimizations --> test_memory_allocation_optimization
+  test_memory_allocation_optimization --> test_string_optimization_detection
+  test_string_optimization_detection --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

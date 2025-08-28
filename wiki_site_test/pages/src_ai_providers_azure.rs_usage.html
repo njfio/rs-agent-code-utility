@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/ai/providers/azure.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/ai/providers/azure.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 7</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 10</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  provider"provider (fn)"]
+  capabilities"capabilities (fn)"]
+  validate_connection"validate_connection (fn)"]
+  process_request"process_request (fn)"]
+  best_model_for_feature"best_model_for_feature (fn)"]
+  rate_limit_info"rate_limit_info (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  azureprovider["AzureProvider"]
+  Start --> azureprovider
+  new["new"Fn]
+  provider["provider"Fn]
+  capabilities["capabilities"Fn]
+  validate_connection["validate_connection"Fn]
+  process_request["process_request"Fn]
+  best_model_for_feature["best_model_for_feature"Fn]
+  rate_limit_info["rate_limit_info"Fn]
+  azureprovider --> new
+  new --> provider
+  provider --> capabilities
+  capabilities --> validate_connection
+  validate_connection --> process_request
+  process_request --> best_model_for_feature
+  best_model_for_feature --> rate_limit_info
+  rate_limit_info --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AzureProvider {
+    +AzureProvider()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

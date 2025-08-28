@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/intent_mapping_stub.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/intent_mapping_stub.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 12</li>
+<li><strong>Structures:</strong> 6</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 46</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  add_requirement"add_requirement (fn)"]
+  add_implementation"add_implementation (fn)"]
+  create_mapping"create_mapping (fn)"]
+  analyze_mappings"analyze_mappings (fn)"]
+  get_requirements"get_requirements (fn)"]
+  get_implementations"get_implementations (fn)"]
+  get_mappings"get_mappings (fn)"]
+  validate_mapping"validate_mapping (fn)"]
+  discover_mappings"discover_mappings (fn)"]
+  default"default (fn)"]
+  add_requirement --> get_requirements
+  add_implementation --> get_implementations
+  create_mapping --> analyze_mappings
+  create_mapping --> get_mappings
+  create_mapping --> discover_mappings
+  validate_mapping --> analyze_mappings
+  validate_mapping --> get_mappings
+  validate_mapping --> discover_mappings
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  intentmappingsystem["IntentMappingSystem"]
+  Start --> intentmappingsystem
+  requirement["Requirement"]
+  Start --> requirement
+  implementation["Implementation"]
+  Start --> implementation
+  intentmapping["IntentMapping"]
+  Start --> intentmapping
+  mappinganalysisresult["MappingAnalysisResult"]
+  Start --> mappinganalysisresult
+  mappingconfig["MappingConfig"]
+  Start --> mappingconfig
+  default["default"Fn]
+  new["new"Fn]
+  add_requirement["add_requirement"Fn]
+  add_implementation["add_implementation"Fn]
+  create_mapping["create_mapping"Fn]
+  analyze_mappings["analyze_mappings"Fn]
+  get_requirements["get_requirements"Fn]
+  get_implementations["get_implementations"Fn]
+  get_mappings["get_mappings"Fn]
+  validate_mapping["validate_mapping"Fn]
+  discover_mappings["discover_mappings"Fn]
+  default["default"Fn]
+  intentmappingsystem --> default
+  default --> new
+  new --> add_requirement
+  add_requirement --> add_implementation
+  add_implementation --> create_mapping
+  create_mapping --> analyze_mappings
+  analyze_mappings --> get_requirements
+  get_requirements --> get_implementations
+  get_implementations --> get_mappings
+  get_mappings --> validate_mapping
+  validate_mapping --> discover_mappings
+  discover_mappings --> default
+  default --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class IntentMappingSystem {
+    +IntentMappingSystem()
+  }
+  class Requirement {
+    +Requirement()
+  }
+  class Implementation {
+    +Implementation()
+  }
+  class IntentMapping {
+    +IntentMapping()
+  }
+  class MappingAnalysisResult {
+    +MappingAnalysisResult()
+  }
+  class MappingConfig {
+    +MappingConfig()
+  }
+  add_requirement ..> Requirement : uses
+  add_implementation ..> Implementation : uses
+  get_requirements ..> Requirement : uses
+  get_implementations ..> Implementation : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

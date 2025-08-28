@@ -1,0 +1,679 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/advanced_security.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/advanced_security.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 92</li>
+<li><strong>Structures:</strong> 16</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 286</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  create_vulnerability_location"create_vulnerability_location (fn)"]
+  analyze"analyze (fn)"]
+  meets_severity_threshold"meets_severity_threshold (fn)"]
+  detect_owasp_vulnerabilities"detect_owasp_vulnerabilities (fn)"]
+  analyze_with_ast"analyze_with_ast (fn)"]
+  analyze_with_string_matching"analyze_with_string_matching (fn)"]
+  detect_command_injection_strings"detect_command_injection_strings (fn)"]
+  detect_path_traversal_strings"detect_path_traversal_strings (fn)"]
+  detect_insecure_random_strings"detect_insecure_random_strings (fn)"]
+  detect_xss_strings"detect_xss_strings (fn)"]
+  detect_access_control_issues"detect_access_control_issues (fn)"]
+  detect_cryptographic_failures"detect_cryptographic_failures (fn)"]
+  detect_injection_issues"detect_injection_issues (fn)"]
+  detect_insecure_design"detect_insecure_design (fn)"]
+  detect_security_misconfiguration"detect_security_misconfiguration (fn)"]
+  detect_secrets"detect_secrets (fn)"]
+  detect_api_key"detect_api_key (fn)"]
+  detect_password"detect_password (fn)"]
+  detect_token"detect_token (fn)"]
+  calculate_entropy"calculate_entropy (fn)"]
+  detect_input_validation_issues"detect_input_validation_issues (fn)"]
+  detect_injection_vulnerabilities"detect_injection_vulnerabilities (fn)"]
+  detect_best_practice_violations"detect_best_practice_violations (fn)"]
+  categorize_by_severity"categorize_by_severity (fn)"]
+  categorize_by_owasp"categorize_by_owasp (fn)"]
+  generate_security_recommendations"generate_security_recommendations (fn)"]
+  assess_compliance"assess_compliance (fn)"]
+  calculate_security_score"calculate_security_score (fn)"]
+  build_security_context"build_security_context (fn)"]
+  walk_node_for_context"walk_node_for_context (fn)"]
+  is_user_input_function"is_user_input_function (fn)"]
+  detect_sql_injection_ast"detect_sql_injection_ast (fn)"]
+  filter_sql_injection_false_positives"filter_sql_injection_false_positives (fn)"]
+  is_parameterized_query"is_parameterized_query (fn)"]
+  is_static_query"is_static_query (fn)"]
+  is_using_orm_or_query_builder"is_using_orm_or_query_builder (fn)"]
+  analyze_node_for_sql_injection"analyze_node_for_sql_injection (fn)"]
+  is_database_function"is_database_function (fn)"]
+  has_string_concatenation_in_args"has_string_concatenation_in_args (fn)"]
+  calculate_sql_injection_confidence"calculate_sql_injection_confidence (fn)"]
+  detect_command_injection_ast"detect_command_injection_ast (fn)"]
+  filter_command_injection_false_positives"filter_command_injection_false_positives (fn)"]
+  is_hardcoded_command"is_hardcoded_command (fn)"]
+  is_using_safe_command_execution"is_using_safe_command_execution (fn)"]
+  is_build_or_dev_script"is_build_or_dev_script (fn)"]
+  analyze_node_for_command_injection"analyze_node_for_command_injection (fn)"]
+  is_command_execution_function"is_command_execution_function (fn)"]
+  calculate_command_injection_confidence"calculate_command_injection_confidence (fn)"]
+  detect_hardcoded_secrets_ast"detect_hardcoded_secrets_ast (fn)"]
+  filter_secrets_false_positives"filter_secrets_false_positives (fn)"]
+  is_placeholder_secret"is_placeholder_secret (fn)"]
+  is_config_template"is_config_template (fn)"]
+  is_public_key_or_cert"is_public_key_or_cert (fn)"]
+  analyze_node_for_hardcoded_secrets"analyze_node_for_hardcoded_secrets (fn)"]
+  looks_like_secret"looks_like_secret (fn)"]
+  calculate_secret_confidence"calculate_secret_confidence (fn)"]
+  detect_weak_crypto_ast"detect_weak_crypto_ast (fn)"]
+  analyze_node_for_weak_crypto"analyze_node_for_weak_crypto (fn)"]
+  detect_access_control_ast"detect_access_control_ast (fn)"]
+  analyze_node_for_access_control"analyze_node_for_access_control (fn)"]
+  is_admin_function"is_admin_function (fn)"]
+  has_authorization_checks_in_body"has_authorization_checks_in_body (fn)"]
+  find_authorization_patterns"find_authorization_patterns (fn)"]
+  is_authorization_function"is_authorization_function (fn)"]
+  contains_authorization_keywords"contains_authorization_keywords (fn)"]
+  detect_enhanced_injection_ast"detect_enhanced_injection_ast (fn)"]
+  analyze_node_for_enhanced_sql_injection"analyze_node_for_enhanced_sql_injection (fn)"]
+  is_database_function_enhanced"is_database_function_enhanced (fn)"]
+  has_dynamic_sql_construction"has_dynamic_sql_construction (fn)"]
+  contains_sql_keywords"contains_sql_keywords (fn)"]
+  calculate_enhanced_sql_injection_confidence"calculate_enhanced_sql_injection_confidence (fn)"]
+  has_nearby_parameterized_patterns"has_nearby_parameterized_patterns (fn)"]
+  analyze_node_for_enhanced_command_injection"analyze_node_for_enhanced_command_injection (fn)"]
+  is_command_execution_function_enhanced"is_command_execution_function_enhanced (fn)"]
+  has_dynamic_command_construction"has_dynamic_command_construction (fn)"]
+  analyze_node_for_xss"analyze_node_for_xss (fn)"]
+  is_output_function"is_output_function (fn)"]
+  has_unescaped_user_input"has_unescaped_user_input (fn)"]
+  looks_like_user_input"looks_like_user_input (fn)"]
+  has_escaping_function"has_escaping_function (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  create_test_analysis_result"create_test_analysis_result (fn)"]
+  test_advanced_security_scanner_creation"test_advanced_security_scanner_creation (fn)"]
+  test_scan_analysis_result"test_scan_analysis_result (fn)"]
+  test_user_input_function_detection"test_user_input_function_detection (fn)"]
+  test_security_config_default"test_security_config_default (fn)"]
+  test_entropy_calculation"test_entropy_calculation (fn)"]
+  with_config --> detect_security_misconfiguration
+  detect_owasp_vulnerabilities --> test_user_input_function_detection
+  analyze_with_string_matching --> detect_command_injection_strings
+  analyze_with_string_matching --> detect_path_traversal_strings
+  analyze_with_string_matching --> detect_insecure_random_strings
+  analyze_with_string_matching --> detect_xss_strings
+  detect_command_injection_strings --> test_user_input_function_detection
+  detect_path_traversal_strings --> test_user_input_function_detection
+  detect_insecure_random_strings --> test_user_input_function_detection
+  detect_xss_strings --> test_user_input_function_detection
+  detect_access_control_issues --> test_user_input_function_detection
+  detect_cryptographic_failures --> test_user_input_function_detection
+  detect_injection_issues --> test_user_input_function_detection
+  detect_insecure_design --> test_user_input_function_detection
+  detect_security_misconfiguration --> test_user_input_function_detection
+  detect_secrets --> test_user_input_function_detection
+  detect_api_key --> contains_authorization_keywords
+  detect_api_key --> contains_sql_keywords
+  detect_api_key --> has_escaping_function
+  detect_api_key --> test_user_input_function_detection
+  detect_password --> test_user_input_function_detection
+  detect_token --> test_user_input_function_detection
+  detect_input_validation_issues --> test_user_input_function_detection
+  detect_injection_vulnerabilities --> test_user_input_function_detection
+  detect_best_practice_violations --> test_user_input_function_detection
+  categorize_by_severity --> has_nearby_parameterized_patterns
+  categorize_by_owasp --> has_nearby_parameterized_patterns
+  build_security_context --> is_using_orm_or_query_builder
+  is_user_input_function --> detect_access_control_issues
+  is_user_input_function --> detect_injection_issues
+  is_user_input_function --> detect_security_misconfiguration
+  is_user_input_function --> detect_input_validation_issues
+  is_user_input_function --> create_test_analysis_result
+  is_user_input_function --> test_scan_analysis_result
+  detect_sql_injection_ast --> test_user_input_function_detection
+  is_parameterized_query --> detect_access_control_issues
+  is_parameterized_query --> detect_injection_issues
+  is_parameterized_query --> detect_security_misconfiguration
+  is_parameterized_query --> detect_input_validation_issues
+  is_parameterized_query --> create_test_analysis_result
+  is_parameterized_query --> test_scan_analysis_result
+  is_static_query --> detect_access_control_issues
+  is_static_query --> detect_injection_issues
+  is_static_query --> detect_security_misconfiguration
+  is_static_query --> detect_input_validation_issues
+  is_static_query --> create_test_analysis_result
+  is_static_query --> test_scan_analysis_result
+  is_using_orm_or_query_builder --> detect_access_control_issues
+  is_using_orm_or_query_builder --> detect_injection_issues
+  is_using_orm_or_query_builder --> detect_security_misconfiguration
+  is_using_orm_or_query_builder --> detect_password
+  is_using_orm_or_query_builder --> detect_input_validation_issues
+  is_using_orm_or_query_builder --> categorize_by_severity
+  is_using_orm_or_query_builder --> categorize_by_owasp
+  is_using_orm_or_query_builder --> calculate_security_score
+  is_using_orm_or_query_builder --> walk_node_for_context
+  is_using_orm_or_query_builder --> analyze_node_for_sql_injection
+  is_using_orm_or_query_builder --> analyze_node_for_command_injection
+  is_using_orm_or_query_builder --> analyze_node_for_hardcoded_secrets
+  is_using_orm_or_query_builder --> analyze_node_for_weak_crypto
+  is_using_orm_or_query_builder --> analyze_node_for_access_control
+  is_using_orm_or_query_builder --> has_authorization_checks_in_body
+  is_using_orm_or_query_builder --> find_authorization_patterns
+  is_using_orm_or_query_builder --> is_authorization_function
+  is_using_orm_or_query_builder --> contains_authorization_keywords
+  is_using_orm_or_query_builder --> analyze_node_for_enhanced_sql_injection
+  is_using_orm_or_query_builder --> contains_sql_keywords
+  is_using_orm_or_query_builder --> analyze_node_for_enhanced_command_injection
+  is_using_orm_or_query_builder --> analyze_node_for_xss
+  is_using_orm_or_query_builder --> create_test_analysis_result
+  is_using_orm_or_query_builder --> test_scan_analysis_result
+  is_database_function --> detect_access_control_issues
+  is_database_function --> detect_injection_issues
+  is_database_function --> detect_security_misconfiguration
+  is_database_function --> detect_input_validation_issues
+  is_database_function --> create_test_analysis_result
+  is_database_function --> test_scan_analysis_result
+  has_string_concatenation_in_args --> analyze_with_string_matching
+  has_string_concatenation_in_args --> detect_command_injection_strings
+  has_string_concatenation_in_args --> detect_path_traversal_strings
+  has_string_concatenation_in_args --> detect_insecure_random_strings
+  has_string_concatenation_in_args --> detect_xss_strings
+  has_string_concatenation_in_args --> detect_injection_issues
+  has_string_concatenation_in_args --> detect_insecure_design
+  has_string_concatenation_in_args --> detect_input_validation_issues
+  has_string_concatenation_in_args --> detect_injection_vulnerabilities
+  has_string_concatenation_in_args --> is_user_input_function
+  has_string_concatenation_in_args --> detect_sql_injection_ast
+  has_string_concatenation_in_args --> filter_sql_injection_false_positives
+  has_string_concatenation_in_args --> is_using_orm_or_query_builder
+  has_string_concatenation_in_args --> analyze_node_for_sql_injection
+  has_string_concatenation_in_args --> calculate_sql_injection_confidence
+  has_string_concatenation_in_args --> detect_command_injection_ast
+  has_string_concatenation_in_args --> filter_command_injection_false_positives
+  has_string_concatenation_in_args --> is_using_safe_command_execution
+  has_string_concatenation_in_args --> analyze_node_for_command_injection
+  has_string_concatenation_in_args --> calculate_command_injection_confidence
+  has_string_concatenation_in_args --> is_admin_function
+  has_string_concatenation_in_args --> find_authorization_patterns
+  has_string_concatenation_in_args --> contains_authorization_keywords
+  has_string_concatenation_in_args --> detect_enhanced_injection_ast
+  has_string_concatenation_in_args --> analyze_node_for_enhanced_sql_injection
+  has_string_concatenation_in_args --> contains_sql_keywords
+  has_string_concatenation_in_args --> calculate_enhanced_sql_injection_confidence
+  has_string_concatenation_in_args --> analyze_node_for_enhanced_command_injection
+  has_string_concatenation_in_args --> has_unescaped_user_input
+  has_string_concatenation_in_args --> looks_like_user_input
+  has_string_concatenation_in_args --> has_escaping_function
+  has_string_concatenation_in_args --> test_user_input_function_detection
+  detect_command_injection_ast --> test_user_input_function_detection
+  is_hardcoded_command --> detect_access_control_issues
+  is_hardcoded_command --> detect_injection_issues
+  is_hardcoded_command --> detect_security_misconfiguration
+  is_hardcoded_command --> detect_input_validation_issues
+  is_hardcoded_command --> create_test_analysis_result
+  is_hardcoded_command --> test_scan_analysis_result
+  is_using_safe_command_execution --> detect_access_control_issues
+  is_using_safe_command_execution --> detect_injection_issues
+  is_using_safe_command_execution --> detect_security_misconfiguration
+  is_using_safe_command_execution --> detect_input_validation_issues
+  is_using_safe_command_execution --> create_test_analysis_result
+  is_using_safe_command_execution --> test_scan_analysis_result
+  is_build_or_dev_script --> detect_access_control_issues
+  is_build_or_dev_script --> detect_injection_issues
+  is_build_or_dev_script --> detect_security_misconfiguration
+  is_build_or_dev_script --> detect_password
+  is_build_or_dev_script --> detect_input_validation_issues
+  is_build_or_dev_script --> categorize_by_severity
+  is_build_or_dev_script --> categorize_by_owasp
+  is_build_or_dev_script --> calculate_security_score
+  is_build_or_dev_script --> walk_node_for_context
+  is_build_or_dev_script --> is_using_orm_or_query_builder
+  is_build_or_dev_script --> analyze_node_for_sql_injection
+  is_build_or_dev_script --> analyze_node_for_command_injection
+  is_build_or_dev_script --> analyze_node_for_hardcoded_secrets
+  is_build_or_dev_script --> analyze_node_for_weak_crypto
+  is_build_or_dev_script --> analyze_node_for_access_control
+  is_build_or_dev_script --> has_authorization_checks_in_body
+  is_build_or_dev_script --> find_authorization_patterns
+  is_build_or_dev_script --> is_authorization_function
+  is_build_or_dev_script --> contains_authorization_keywords
+  is_build_or_dev_script --> analyze_node_for_enhanced_sql_injection
+  is_build_or_dev_script --> contains_sql_keywords
+  is_build_or_dev_script --> analyze_node_for_enhanced_command_injection
+  is_build_or_dev_script --> analyze_node_for_xss
+  is_build_or_dev_script --> create_test_analysis_result
+  is_build_or_dev_script --> test_scan_analysis_result
+  is_command_execution_function --> detect_access_control_issues
+  is_command_execution_function --> detect_injection_issues
+  is_command_execution_function --> detect_security_misconfiguration
+  is_command_execution_function --> detect_input_validation_issues
+  is_command_execution_function --> create_test_analysis_result
+  is_command_execution_function --> test_scan_analysis_result
+  detect_hardcoded_secrets_ast --> test_user_input_function_detection
+  is_placeholder_secret --> detect_access_control_issues
+  is_placeholder_secret --> detect_injection_issues
+  is_placeholder_secret --> detect_security_misconfiguration
+  is_placeholder_secret --> detect_secrets
+  is_placeholder_secret --> detect_input_validation_issues
+  is_placeholder_secret --> detect_hardcoded_secrets_ast
+  is_placeholder_secret --> filter_secrets_false_positives
+  is_placeholder_secret --> analyze_node_for_hardcoded_secrets
+  is_placeholder_secret --> create_test_analysis_result
+  is_placeholder_secret --> test_scan_analysis_result
+  is_config_template --> detect_access_control_issues
+  is_config_template --> detect_injection_issues
+  is_config_template --> detect_security_misconfiguration
+  is_config_template --> detect_input_validation_issues
+  is_config_template --> create_test_analysis_result
+  is_config_template --> test_scan_analysis_result
+  is_public_key_or_cert --> detect_access_control_issues
+  is_public_key_or_cert --> detect_injection_issues
+  is_public_key_or_cert --> detect_security_misconfiguration
+  is_public_key_or_cert --> detect_password
+  is_public_key_or_cert --> detect_input_validation_issues
+  is_public_key_or_cert --> categorize_by_severity
+  is_public_key_or_cert --> categorize_by_owasp
+  is_public_key_or_cert --> calculate_security_score
+  is_public_key_or_cert --> walk_node_for_context
+  is_public_key_or_cert --> is_using_orm_or_query_builder
+  is_public_key_or_cert --> analyze_node_for_sql_injection
+  is_public_key_or_cert --> analyze_node_for_command_injection
+  is_public_key_or_cert --> analyze_node_for_hardcoded_secrets
+  is_public_key_or_cert --> analyze_node_for_weak_crypto
+  is_public_key_or_cert --> analyze_node_for_access_control
+  is_public_key_or_cert --> has_authorization_checks_in_body
+  is_public_key_or_cert --> find_authorization_patterns
+  is_public_key_or_cert --> is_authorization_function
+  is_public_key_or_cert --> contains_authorization_keywords
+  is_public_key_or_cert --> analyze_node_for_enhanced_sql_injection
+  is_public_key_or_cert --> contains_sql_keywords
+  is_public_key_or_cert --> analyze_node_for_enhanced_command_injection
+  is_public_key_or_cert --> analyze_node_for_xss
+  is_public_key_or_cert --> create_test_analysis_result
+  is_public_key_or_cert --> test_scan_analysis_result
+  looks_like_secret --> detect_secrets
+  looks_like_secret --> detect_hardcoded_secrets_ast
+  looks_like_secret --> filter_secrets_false_positives
+  looks_like_secret --> analyze_node_for_hardcoded_secrets
+  calculate_secret_confidence --> detect_secrets
+  calculate_secret_confidence --> detect_hardcoded_secrets_ast
+  calculate_secret_confidence --> filter_secrets_false_positives
+  calculate_secret_confidence --> analyze_node_for_hardcoded_secrets
+  detect_weak_crypto_ast --> detect_cryptographic_failures
+  detect_weak_crypto_ast --> test_user_input_function_detection
+  analyze_node_for_weak_crypto --> detect_cryptographic_failures
+  detect_access_control_ast --> test_user_input_function_detection
+  is_admin_function --> detect_access_control_issues
+  is_admin_function --> detect_injection_issues
+  is_admin_function --> detect_security_misconfiguration
+  is_admin_function --> detect_input_validation_issues
+  is_admin_function --> create_test_analysis_result
+  is_admin_function --> test_scan_analysis_result
+  has_authorization_checks_in_body --> analyze_with_string_matching
+  has_authorization_checks_in_body --> detect_command_injection_strings
+  has_authorization_checks_in_body --> detect_path_traversal_strings
+  has_authorization_checks_in_body --> detect_insecure_random_strings
+  has_authorization_checks_in_body --> detect_xss_strings
+  has_authorization_checks_in_body --> detect_injection_issues
+  has_authorization_checks_in_body --> detect_insecure_design
+  has_authorization_checks_in_body --> detect_input_validation_issues
+  has_authorization_checks_in_body --> detect_injection_vulnerabilities
+  has_authorization_checks_in_body --> is_user_input_function
+  has_authorization_checks_in_body --> detect_sql_injection_ast
+  has_authorization_checks_in_body --> filter_sql_injection_false_positives
+  has_authorization_checks_in_body --> is_using_orm_or_query_builder
+  has_authorization_checks_in_body --> analyze_node_for_sql_injection
+  has_authorization_checks_in_body --> has_string_concatenation_in_args
+  has_authorization_checks_in_body --> calculate_sql_injection_confidence
+  has_authorization_checks_in_body --> detect_command_injection_ast
+  has_authorization_checks_in_body --> filter_command_injection_false_positives
+  has_authorization_checks_in_body --> is_using_safe_command_execution
+  has_authorization_checks_in_body --> analyze_node_for_command_injection
+  has_authorization_checks_in_body --> calculate_command_injection_confidence
+  has_authorization_checks_in_body --> is_admin_function
+  has_authorization_checks_in_body --> find_authorization_patterns
+  has_authorization_checks_in_body --> contains_authorization_keywords
+  has_authorization_checks_in_body --> detect_enhanced_injection_ast
+  has_authorization_checks_in_body --> analyze_node_for_enhanced_sql_injection
+  has_authorization_checks_in_body --> contains_sql_keywords
+  has_authorization_checks_in_body --> calculate_enhanced_sql_injection_confidence
+  has_authorization_checks_in_body --> analyze_node_for_enhanced_command_injection
+  has_authorization_checks_in_body --> has_unescaped_user_input
+  has_authorization_checks_in_body --> looks_like_user_input
+  has_authorization_checks_in_body --> has_escaping_function
+  has_authorization_checks_in_body --> test_user_input_function_detection
+  is_authorization_function --> detect_access_control_issues
+  is_authorization_function --> detect_injection_issues
+  is_authorization_function --> detect_security_misconfiguration
+  is_authorization_function --> detect_input_validation_issues
+  is_authorization_function --> create_test_analysis_result
+  is_authorization_function --> test_scan_analysis_result
+  detect_enhanced_injection_ast --> test_user_input_function_detection
+  is_database_function_enhanced --> detect_access_control_issues
+  is_database_function_enhanced --> detect_injection_issues
+  is_database_function_enhanced --> detect_security_misconfiguration
+  is_database_function_enhanced --> detect_input_validation_issues
+  is_database_function_enhanced --> create_test_analysis_result
+  is_database_function_enhanced --> test_scan_analysis_result
+  is_command_execution_function_enhanced --> detect_access_control_issues
+  is_command_execution_function_enhanced --> detect_injection_issues
+  is_command_execution_function_enhanced --> detect_security_misconfiguration
+  is_command_execution_function_enhanced --> detect_input_validation_issues
+  is_command_execution_function_enhanced --> create_test_analysis_result
+  is_command_execution_function_enhanced --> test_scan_analysis_result
+  is_output_function --> detect_access_control_issues
+  is_output_function --> detect_injection_issues
+  is_output_function --> detect_security_misconfiguration
+  is_output_function --> detect_input_validation_issues
+  is_output_function --> create_test_analysis_result
+  is_output_function --> test_scan_analysis_result
+  test_scan_analysis_result --> test_advanced_security_scanner_creation
+  test_security_config_default --> detect_security_misconfiguration
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  advancedsecurityanalyzer["AdvancedSecurityAnalyzer"]
+  Start --> advancedsecurityanalyzer
+  advancedsecurityconfig["AdvancedSecurityConfig"]
+  Start --> advancedsecurityconfig
+  securitycontext["SecurityContext"]
+  Start --> securitycontext
+  advancedsecurityresult["AdvancedSecurityResult"]
+  Start --> advancedsecurityresult
+  securityvulnerability["SecurityVulnerability"]
+  Start --> securityvulnerability
+  vulnerabilitylocation["VulnerabilityLocation"]
+  Start --> vulnerabilitylocation
+  securityimpact["SecurityImpact"]
+  Start --> securityimpact
+  remediationguidance["RemediationGuidance"]
+  Start --> remediationguidance
+  codeexample["CodeExample"]
+  Start --> codeexample
+  detectedsecret["DetectedSecret"]
+  Start --> detectedsecret
+  inputvalidationissue["InputValidationIssue"]
+  Start --> inputvalidationissue
+  injectionvulnerability["InjectionVulnerability"]
+  Start --> injectionvulnerability
+  bestpracticeviolation["BestPracticeViolation"]
+  Start --> bestpracticeviolation
+  securityrecommendation["SecurityRecommendation"]
+  Start --> securityrecommendation
+  complianceassessment["ComplianceAssessment"]
+  Start --> complianceassessment
+  customsecurityrule["CustomSecurityRule"]
+  Start --> customsecurityrule
+  default["default"Fn]
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  create_vulnerability_location["create_vulnerability_location"Fn]
+  analyze["analyze"Fn]
+  meets_severity_threshold["meets_severity_threshold"Fn]
+  detect_owasp_vulnerabilities["detect_owasp_vulnerabilities"Fn]
+  analyze_with_ast["analyze_with_ast"Fn]
+  analyze_with_string_matching["analyze_with_string_matching"Fn]
+  detect_command_injection_strings["detect_command_injection_strings"Fn]
+  detect_path_traversal_strings["detect_path_traversal_strings"Fn]
+  detect_insecure_random_strings["detect_insecure_random_strings"Fn]
+  detect_xss_strings["detect_xss_strings"Fn]
+  detect_access_control_issues["detect_access_control_issues"Fn]
+  detect_cryptographic_failures["detect_cryptographic_failures"Fn]
+  detect_injection_issues["detect_injection_issues"Fn]
+  detect_insecure_design["detect_insecure_design"Fn]
+  detect_security_misconfiguration["detect_security_misconfiguration"Fn]
+  detect_secrets["detect_secrets"Fn]
+  detect_api_key["detect_api_key"Fn]
+  detect_password["detect_password"Fn]
+  detect_token["detect_token"Fn]
+  calculate_entropy["calculate_entropy"Fn]
+  detect_input_validation_issues["detect_input_validation_issues"Fn]
+  detect_injection_vulnerabilities["detect_injection_vulnerabilities"Fn]
+  detect_best_practice_violations["detect_best_practice_violations"Fn]
+  categorize_by_severity["categorize_by_severity"Fn]
+  categorize_by_owasp["categorize_by_owasp"Fn]
+  generate_security_recommendations["generate_security_recommendations"Fn]
+  assess_compliance["assess_compliance"Fn]
+  calculate_security_score["calculate_security_score"Fn]
+  build_security_context["build_security_context"Fn]
+  walk_node_for_context["walk_node_for_context"Fn]
+  is_user_input_function["is_user_input_function"Fn]
+  detect_sql_injection_ast["detect_sql_injection_ast"Fn]
+  filter_sql_injection_false_positives["filter_sql_injection_false_positives"Fn]
+  is_parameterized_query["is_parameterized_query"Fn]
+  is_static_query["is_static_query"Fn]
+  is_using_orm_or_query_builder["is_using_orm_or_query_builder"Fn]
+  analyze_node_for_sql_injection["analyze_node_for_sql_injection"Fn]
+  is_database_function["is_database_function"Fn]
+  has_string_concatenation_in_args["has_string_concatenation_in_args"Fn]
+  calculate_sql_injection_confidence["calculate_sql_injection_confidence"Fn]
+  detect_command_injection_ast["detect_command_injection_ast"Fn]
+  filter_command_injection_false_positives["filter_command_injection_false_positives"Fn]
+  is_hardcoded_command["is_hardcoded_command"Fn]
+  is_using_safe_command_execution["is_using_safe_command_execution"Fn]
+  is_build_or_dev_script["is_build_or_dev_script"Fn]
+  analyze_node_for_command_injection["analyze_node_for_command_injection"Fn]
+  is_command_execution_function["is_command_execution_function"Fn]
+  calculate_command_injection_confidence["calculate_command_injection_confidence"Fn]
+  detect_hardcoded_secrets_ast["detect_hardcoded_secrets_ast"Fn]
+  filter_secrets_false_positives["filter_secrets_false_positives"Fn]
+  is_placeholder_secret["is_placeholder_secret"Fn]
+  is_config_template["is_config_template"Fn]
+  is_public_key_or_cert["is_public_key_or_cert"Fn]
+  analyze_node_for_hardcoded_secrets["analyze_node_for_hardcoded_secrets"Fn]
+  looks_like_secret["looks_like_secret"Fn]
+  calculate_secret_confidence["calculate_secret_confidence"Fn]
+  detect_weak_crypto_ast["detect_weak_crypto_ast"Fn]
+  analyze_node_for_weak_crypto["analyze_node_for_weak_crypto"Fn]
+  detect_access_control_ast["detect_access_control_ast"Fn]
+  analyze_node_for_access_control["analyze_node_for_access_control"Fn]
+  is_admin_function["is_admin_function"Fn]
+  has_authorization_checks_in_body["has_authorization_checks_in_body"Fn]
+  find_authorization_patterns["find_authorization_patterns"Fn]
+  is_authorization_function["is_authorization_function"Fn]
+  contains_authorization_keywords["contains_authorization_keywords"Fn]
+  detect_enhanced_injection_ast["detect_enhanced_injection_ast"Fn]
+  analyze_node_for_enhanced_sql_injection["analyze_node_for_enhanced_sql_injection"Fn]
+  is_database_function_enhanced["is_database_function_enhanced"Fn]
+  has_dynamic_sql_construction["has_dynamic_sql_construction"Fn]
+  contains_sql_keywords["contains_sql_keywords"Fn]
+  calculate_enhanced_sql_injection_confidence["calculate_enhanced_sql_injection_confidence"Fn]
+  has_nearby_parameterized_patterns["has_nearby_parameterized_patterns"Fn]
+  analyze_node_for_enhanced_command_injection["analyze_node_for_enhanced_command_injection"Fn]
+  is_command_execution_function_enhanced["is_command_execution_function_enhanced"Fn]
+  has_dynamic_command_construction["has_dynamic_command_construction"Fn]
+  analyze_node_for_xss["analyze_node_for_xss"Fn]
+  is_output_function["is_output_function"Fn]
+  has_unescaped_user_input["has_unescaped_user_input"Fn]
+  looks_like_user_input["looks_like_user_input"Fn]
+  has_escaping_function["has_escaping_function"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  create_test_analysis_result["create_test_analysis_result"Fn]
+  test_advanced_security_scanner_creation["test_advanced_security_scanner_creation"Fn]
+  test_scan_analysis_result["test_scan_analysis_result"Fn]
+  test_user_input_function_detection["test_user_input_function_detection"Fn]
+  test_security_config_default["test_security_config_default"Fn]
+  test_entropy_calculation["test_entropy_calculation"Fn]
+  advancedsecurityanalyzer --> default
+  default --> default
+  default --> new
+  new --> with_config
+  with_config --> create_vulnerability_location
+  create_vulnerability_location --> analyze
+  analyze --> meets_severity_threshold
+  meets_severity_threshold --> detect_owasp_vulnerabilities
+  detect_owasp_vulnerabilities --> analyze_with_ast
+  analyze_with_ast --> analyze_with_string_matching
+  analyze_with_string_matching --> detect_command_injection_strings
+  detect_command_injection_strings --> detect_path_traversal_strings
+  detect_path_traversal_strings --> detect_insecure_random_strings
+  detect_insecure_random_strings --> detect_xss_strings
+  detect_xss_strings --> detect_access_control_issues
+  detect_access_control_issues --> detect_cryptographic_failures
+  detect_cryptographic_failures --> detect_injection_issues
+  detect_injection_issues --> detect_insecure_design
+  detect_insecure_design --> detect_security_misconfiguration
+  detect_security_misconfiguration --> detect_secrets
+  detect_secrets --> detect_api_key
+  detect_api_key --> detect_password
+  detect_password --> detect_token
+  detect_token --> calculate_entropy
+  calculate_entropy --> detect_input_validation_issues
+  detect_input_validation_issues --> detect_injection_vulnerabilities
+  detect_injection_vulnerabilities --> detect_best_practice_violations
+  detect_best_practice_violations --> categorize_by_severity
+  categorize_by_severity --> categorize_by_owasp
+  categorize_by_owasp --> generate_security_recommendations
+  generate_security_recommendations --> assess_compliance
+  assess_compliance --> calculate_security_score
+  calculate_security_score --> build_security_context
+  build_security_context --> walk_node_for_context
+  walk_node_for_context --> is_user_input_function
+  is_user_input_function --> detect_sql_injection_ast
+  detect_sql_injection_ast --> filter_sql_injection_false_positives
+  filter_sql_injection_false_positives --> is_parameterized_query
+  is_parameterized_query --> is_static_query
+  is_static_query --> is_using_orm_or_query_builder
+  is_using_orm_or_query_builder --> analyze_node_for_sql_injection
+  analyze_node_for_sql_injection --> is_database_function
+  is_database_function --> has_string_concatenation_in_args
+  has_string_concatenation_in_args --> calculate_sql_injection_confidence
+  calculate_sql_injection_confidence --> detect_command_injection_ast
+  detect_command_injection_ast --> filter_command_injection_false_positives
+  filter_command_injection_false_positives --> is_hardcoded_command
+  is_hardcoded_command --> is_using_safe_command_execution
+  is_using_safe_command_execution --> is_build_or_dev_script
+  is_build_or_dev_script --> analyze_node_for_command_injection
+  analyze_node_for_command_injection --> is_command_execution_function
+  is_command_execution_function --> calculate_command_injection_confidence
+  calculate_command_injection_confidence --> detect_hardcoded_secrets_ast
+  detect_hardcoded_secrets_ast --> filter_secrets_false_positives
+  filter_secrets_false_positives --> is_placeholder_secret
+  is_placeholder_secret --> is_config_template
+  is_config_template --> is_public_key_or_cert
+  is_public_key_or_cert --> analyze_node_for_hardcoded_secrets
+  analyze_node_for_hardcoded_secrets --> looks_like_secret
+  looks_like_secret --> calculate_secret_confidence
+  calculate_secret_confidence --> detect_weak_crypto_ast
+  detect_weak_crypto_ast --> analyze_node_for_weak_crypto
+  analyze_node_for_weak_crypto --> detect_access_control_ast
+  detect_access_control_ast --> analyze_node_for_access_control
+  analyze_node_for_access_control --> is_admin_function
+  is_admin_function --> has_authorization_checks_in_body
+  has_authorization_checks_in_body --> find_authorization_patterns
+  find_authorization_patterns --> is_authorization_function
+  is_authorization_function --> contains_authorization_keywords
+  contains_authorization_keywords --> detect_enhanced_injection_ast
+  detect_enhanced_injection_ast --> analyze_node_for_enhanced_sql_injection
+  analyze_node_for_enhanced_sql_injection --> is_database_function_enhanced
+  is_database_function_enhanced --> has_dynamic_sql_construction
+  has_dynamic_sql_construction --> contains_sql_keywords
+  contains_sql_keywords --> calculate_enhanced_sql_injection_confidence
+  calculate_enhanced_sql_injection_confidence --> has_nearby_parameterized_patterns
+  has_nearby_parameterized_patterns --> analyze_node_for_enhanced_command_injection
+  analyze_node_for_enhanced_command_injection --> is_command_execution_function_enhanced
+  is_command_execution_function_enhanced --> has_dynamic_command_construction
+  has_dynamic_command_construction --> analyze_node_for_xss
+  analyze_node_for_xss --> is_output_function
+  is_output_function --> has_unescaped_user_input
+  has_unescaped_user_input --> looks_like_user_input
+  looks_like_user_input --> has_escaping_function
+  has_escaping_function --> fmt
+  fmt --> fmt
+  fmt --> create_test_analysis_result
+  create_test_analysis_result --> test_advanced_security_scanner_creation
+  test_advanced_security_scanner_creation --> test_scan_analysis_result
+  test_scan_analysis_result --> test_user_input_function_detection
+  test_user_input_function_detection --> test_security_config_default
+  test_security_config_default --> test_entropy_calculation
+  test_entropy_calculation --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AdvancedSecurityAnalyzer {
+    +AdvancedSecurityAnalyzer()
+  }
+  class AdvancedSecurityConfig {
+    +AdvancedSecurityConfig()
+  }
+  class SecurityContext {
+    +SecurityContext()
+  }
+  class AdvancedSecurityResult {
+    +AdvancedSecurityResult()
+  }
+  class SecurityVulnerability {
+    +SecurityVulnerability()
+  }
+  class VulnerabilityLocation {
+    +VulnerabilityLocation()
+  }
+  class SecurityImpact {
+    +SecurityImpact()
+  }
+  class RemediationGuidance {
+    +RemediationGuidance()
+  }
+  class CodeExample {
+    +CodeExample()
+  }
+  class DetectedSecret {
+    +DetectedSecret()
+  }
+  class InputValidationIssue {
+    +InputValidationIssue()
+  }
+  class InjectionVulnerability {
+    +InjectionVulnerability()
+  }
+  class BestPracticeViolation {
+    +BestPracticeViolation()
+  }
+  class SecurityRecommendation {
+    +SecurityRecommendation()
+  }
+  class ComplianceAssessment {
+    +ComplianceAssessment()
+  }
+  class CustomSecurityRule {
+    +CustomSecurityRule()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/wiki/enhanced_ai.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/wiki/enhanced_ai.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 11</li>
+<li><strong>Structures:</strong> 6</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 51</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  generate_file_context"generate_file_context (fn)"]
+  generate_function_context"generate_function_context (fn)"]
+  generate_function_documentation"generate_function_documentation (fn)"]
+  generate_refactoring_suggestions"generate_refactoring_suggestions (fn)"]
+  generate_security_insights"generate_security_insights (fn)"]
+  assess_module_quality"assess_module_quality (fn)"]
+  extract_security_annotations"extract_security_annotations (fn)"]
+  generate_diagram_annotations"generate_diagram_annotations (fn)"]
+  generate_ai_content_with_fallback"generate_ai_content_with_fallback (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  aienhancementcontext["AIEnhancementContext"]
+  Start --> aienhancementcontext
+  functionaicontext["FunctionAIContext"]
+  Start --> functionaicontext
+  securityaiinsights["SecurityAIInsights"]
+  Start --> securityaiinsights
+  moduleassessment["ModuleAssessment"]
+  Start --> moduleassessment
+  enhancedaiconfig["EnhancedAIConfig"]
+  Start --> enhancedaiconfig
+  wikiaienhancer["WikiAIEnhancer"]
+  Start --> wikiaienhancer
+  default["default"Fn]
+  new["new"Fn]
+  generate_file_context["generate_file_context"Fn]
+  generate_function_context["generate_function_context"Fn]
+  generate_function_documentation["generate_function_documentation"Fn]
+  generate_refactoring_suggestions["generate_refactoring_suggestions"Fn]
+  generate_security_insights["generate_security_insights"Fn]
+  assess_module_quality["assess_module_quality"Fn]
+  extract_security_annotations["extract_security_annotations"Fn]
+  generate_diagram_annotations["generate_diagram_annotations"Fn]
+  generate_ai_content_with_fallback["generate_ai_content_with_fallback"Fn]
+  aienhancementcontext --> default
+  default --> new
+  new --> generate_file_context
+  generate_file_context --> generate_function_context
+  generate_function_context --> generate_function_documentation
+  generate_function_documentation --> generate_refactoring_suggestions
+  generate_refactoring_suggestions --> generate_security_insights
+  generate_security_insights --> assess_module_quality
+  assess_module_quality --> extract_security_annotations
+  extract_security_annotations --> generate_diagram_annotations
+  generate_diagram_annotations --> generate_ai_content_with_fallback
+  generate_ai_content_with_fallback --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AIEnhancementContext {
+    +AIEnhancementContext()
+  }
+  class FunctionAIContext {
+    +FunctionAIContext()
+  }
+  class SecurityAIInsights {
+    +SecurityAIInsights()
+  }
+  class ModuleAssessment {
+    +ModuleAssessment()
+  }
+  class EnhancedAIConfig {
+    +EnhancedAIConfig()
+  }
+  class WikiAIEnhancer {
+    +WikiAIEnhancer()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>
