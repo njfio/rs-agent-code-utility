@@ -313,6 +313,13 @@ impl AIConfig {
             if let Ok(api_key) = std::env::var(&env_key) {
                 config.api_key = Some(api_key);
             }
+
+            // Friendly fallback for Groq users who export GROQ_API_KEY
+            if matches!(provider, crate::ai::types::AIProvider::Groq) && config.api_key.is_none() {
+                if let Ok(api_key) = std::env::var("GROQ_API_KEY") {
+                    config.api_key = Some(api_key);
+                }
+            }
         }
         
         // Override default provider

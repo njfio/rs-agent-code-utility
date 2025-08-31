@@ -1,0 +1,2505 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>src/tree.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>src/tree.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">examples</summary>
+<a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_groq.rs.html">src/ai/providers/groq.rs</a>
+<a href="src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html">src/ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
+<a href="src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html">src/constants.rs</a>
+<a href="src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="src_error.rs.html">src/error.rs</a>
+<a href="src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="src_lib.rs.html">src/lib.rs</a>
+<a href="src_main.rs.html">src/main.rs</a>
+<a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="src_query.rs.html">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="src_tree.rs.html">src/tree.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
+<a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html">test_files/sample.go</a>
+<a href="test_files_sample.ts.html">test_files/sample.ts</a>
+</details>
+<details><summary class="folder">tests</summary>
+<a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
+<a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_wiki_siteC_assets_hljs.js.html">wiki_siteC/wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search.js.html">wiki_siteC/wiki_siteC/assets/search.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search_index.js.html">wiki_siteC/wiki_siteC/assets/search_index.js</a>
+</details>
+</details>
+</details>
+<details><summary class="folder">wiki_siteD</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteD_assets_hljs.js.html">wiki_siteD/assets/hljs.js</a>
+<a href="wiki_siteD_assets_search.js.html">wiki_siteD/assets/search.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteE</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteE_assets_hljs.js.html">wiki_siteE/assets/hljs.js</a>
+<a href="wiki_siteE_assets_search.js.html">wiki_siteE/assets/search.js</a>
+<a href="wiki_siteE_assets_search_index.js.html">wiki_siteE/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteF</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteF_assets_hljs.js.html">wiki_siteF/assets/hljs.js</a>
+<a href="wiki_siteF_assets_search.js.html">wiki_siteF/assets/search.js</a>
+<a href="wiki_siteF_assets_search_index.js.html">wiki_siteF/assets/search_index.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+
+
+</nav>
+<section class="article">
+<p>75 symbols, 383 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> src/tree.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 383<br><strong>Symbols:</strong> 75<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant new
+  participant inner
+  participant source
+  participant root_node
+  participant walk
+  participant edit
+  participant language
+  participant has_error
+  participant error_nodes
+  participant collect_error_nodes
+  participant find_nodes_by_kind
+  participant collect_nodes_by_kind
+  participant text_for_range
+  participant changed_ranges
+  participant new
+  participant inner
+  participant kind
+  participant text
+  participant byte_range
+  participant start_position
+  participant end_position
+  participant start_byte
+  participant end_byte
+  participant has_error
+  participant is_error
+  participant is_missing
+  participant is_named
+  participant parent
+  participant child_count
+  participant child
+  participant child_by_field_name
+  participant children
+  participant named_children
+  participant next_sibling
+  participant prev_sibling
+  participant walk
+  participant to_sexp
+  participant find_descendant
+  participant find_descendant_impl
+  participant find_descendants
+  participant collect_descendants
+  participant new
+  participant node
+  participant goto_first_child
+  participant goto_next_sibling
+  participant goto_parent
+  participant reset
+  participant field_name
+  participant test_syntax_tree_basic
+  participant test_node_navigation
+  participant test_find_nodes_by_kind
+  new->>inner: call
+  inner->>source: call
+  source->>root_node: call
+  root_node->>walk: call
+  walk->>edit: call
+  edit->>language: call
+  language->>has_error: call
+  has_error->>error_nodes: call
+  error_nodes->>collect_error_nodes: call
+  collect_error_nodes->>find_nodes_by_kind: call
+  find_nodes_by_kind->>collect_nodes_by_kind: call
+  collect_nodes_by_kind->>text_for_range: call
+  text_for_range->>changed_ranges: call
+  changed_ranges->>new: call
+  new->>inner: call
+  inner->>kind: call
+  kind->>text: call
+  text->>byte_range: call
+  byte_range->>start_position: call
+  start_position->>end_position: call
+  end_position->>start_byte: call
+  start_byte->>end_byte: call
+  end_byte->>has_error: call
+  has_error->>is_error: call
+  is_error->>is_missing: call
+  is_missing->>is_named: call
+  is_named->>parent: call
+  parent->>child_count: call
+  child_count->>child: call
+  child->>child_by_field_name: call
+  child_by_field_name->>children: call
+  children->>named_children: call
+  named_children->>next_sibling: call
+  next_sibling->>prev_sibling: call
+  prev_sibling->>walk: call
+  walk->>to_sexp: call
+  to_sexp->>find_descendant: call
+  find_descendant->>find_descendant_impl: call
+  find_descendant_impl->>find_descendants: call
+  find_descendants->>collect_descendants: call
+  collect_descendants->>new: call
+  new->>node: call
+  node->>goto_first_child: call
+  goto_first_child->>goto_next_sibling: call
+  goto_next_sibling->>goto_parent: call
+  goto_parent->>reset: call
+  reset->>field_name: call
+  field_name->>test_syntax_tree_basic: call
+  test_syntax_tree_basic->>test_node_navigation: call
+  test_node_navigation->>test_find_nodes_by_kind: call
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(51)</small></summary><ul><li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (15-20)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-15">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:15" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">15
+16
+17
+18
+19
+20
+</pre>
+    <pre><code id="code-new-15" class="lang-rust hljs">    pub(crate) fn new(tree: tree_sitter::Tree, source: String) -&gt; Self {
+        Self {
+            inner: tree,
+            source,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-inner"><code>inner</code> <small>function</small>
+<details><summary>View code (23-25)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-inner-23">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:23" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">23
+24
+25
+</pre>
+    <pre><code id="code-inner-23" class="lang-rust hljs">    pub(crate) fn inner(&amp;self) -&gt; &amp;tree_sitter::Tree {
+        &amp;self.inner
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>function</small>
+<details><summary>View code (28-30)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-28">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:28" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">28
+29
+30
+</pre>
+    <pre><code id="code-source-28" class="lang-rust hljs">    pub fn source(&amp;self) -&gt; &amp;str {
+        &amp;self.source
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-root-node"><code>root_node</code> <small>function</small>
+<details><summary>View code (33-35)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-root_node-33">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:33" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">33
+34
+35
+</pre>
+    <pre><code id="code-root_node-33" class="lang-rust hljs">    pub fn root_node(&amp;self) -&gt; Node&lt;&#39;_&gt; {
+        Node::new(self.inner.root_node(), &amp;self.source)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-walk"><code>walk</code> <small>function</small>
+<details><summary>View code (38-40)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-walk-38">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:38" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">38
+39
+40
+</pre>
+    <pre><code id="code-walk-38" class="lang-rust hljs">    pub fn walk(&amp;self) -&gt; TreeCursor&lt;&#39;_&gt; {
+        TreeCursor::new(self.inner.walk(), &amp;self.source)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-edit"><code>edit</code> <small>function</small>
+<details><summary>View code (43-45)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-edit-43">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:43" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">43
+44
+45
+</pre>
+    <pre><code id="code-edit-43" class="lang-rust hljs">    pub fn edit(&amp;mut self, edit: &amp;InputEdit) {
+        self.inner.edit(edit);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-language"><code>language</code> <small>function</small>
+<details><summary>View code (48-50)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-language-48">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:48" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">48
+49
+50
+</pre>
+    <pre><code id="code-language-48" class="lang-rust hljs">    pub fn language(&amp;self) -&gt; tree_sitter::Language {
+        self.inner.language().clone()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-error"><code>has_error</code> <small>function</small>
+<details><summary>View code (53-55)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_error-53">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:53" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">53
+54
+55
+</pre>
+    <pre><code id="code-has_error-53" class="lang-rust hljs">    pub fn has_error(&amp;self) -&gt; bool {
+        self.root_node().has_error()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-error-nodes"><code>error_nodes</code> <small>function</small>
+<details><summary>View code (58-62)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-error_nodes-58">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:58" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">58
+59
+60
+61
+62
+</pre>
+    <pre><code id="code-error_nodes-58" class="lang-rust hljs">    pub fn error_nodes(&amp;self) -&gt; Vec&lt;Node&lt;&#39;_&gt;&gt; {
+        let mut errors = Vec::new();
+        self.collect_error_nodes(self.root_node(), &amp;mut errors);
+        errors
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-collect-error-nodes"><code>collect_error_nodes</code> <small>function</small>
+<details><summary>View code (64-72)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-collect_error_nodes-64">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:64" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">64
+65
+66
+67
+68
+69
+70
+71
+72
+</pre>
+    <pre><code id="code-collect_error_nodes-64" class="lang-rust hljs">    fn collect_error_nodes&lt;&#39;a&gt;(&amp;self, node: Node&lt;&#39;a&gt;, errors: &amp;mut Vec&lt;Node&lt;&#39;a&gt;&gt;) {
+        if node.is_error() || node.is_missing() {
+            errors.push(node);
+        }
+
+        for child in node.children() {
+            self.collect_error_nodes(child, errors);
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-find-nodes-by-kind"><code>find_nodes_by_kind</code> <small>function</small>
+<details><summary>View code (75-80)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-find_nodes_by_kind-75">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:75" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">75
+76
+77
+78
+79
+80
+</pre>
+    <pre><code id="code-find_nodes_by_kind-75" class="lang-rust hljs">    pub fn find_nodes_by_kind(&amp;self, kind: &amp;str) -&gt; Vec&lt;Node&lt;&#39;_&gt;&gt; {
+        let mut nodes = Vec::with_capacity(32); // Pre-allocate for common case
+        self.collect_nodes_by_kind(self.root_node(), kind, &amp;mut nodes);
+        nodes.shrink_to_fit(); // Reclaim unused memory
+        nodes
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-collect-nodes-by-kind"><code>collect_nodes_by_kind</code> <small>function</small>
+<details><summary>View code (82-90)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-collect_nodes_by_kind-82">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:82" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">82
+83
+84
+85
+86
+87
+88
+89
+90
+</pre>
+    <pre><code id="code-collect_nodes_by_kind-82" class="lang-rust hljs">    fn collect_nodes_by_kind&lt;&#39;a&gt;(&amp;self, node: Node&lt;&#39;a&gt;, kind: &amp;str, nodes: &amp;mut Vec&lt;Node&lt;&#39;a&gt;&gt;) {
+        if node.kind() == kind {
+            nodes.push(node);
+        }
+
+        for child in node.children() {
+            self.collect_nodes_by_kind(child, kind, nodes);
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-text-for-range"><code>text_for_range</code> <small>function</small>
+<details><summary>View code (93-102)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-text_for_range-93">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:93" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+</pre>
+    <pre><code id="code-text_for_range-93" class="lang-rust hljs">    pub fn text_for_range(&amp;self, range: Range) -&gt; Result&lt;&amp;str&gt; {
+        let start = range.start_byte;
+        let end = range.end_byte;
+        
+        if end &gt; self.source.len() {
+            return Err(Error::tree_error(&quot;Range extends beyond source text&quot;));
+        }
+        
+        Ok(&amp;self.source[start..end])
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-changed-ranges"><code>changed_ranges</code> <small>function</small>
+<details><summary>View code (105-107)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-changed_ranges-105">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:105" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">105
+106
+107
+</pre>
+    <pre><code id="code-changed_ranges-105" class="lang-rust hljs">    pub fn changed_ranges(&amp;self, old_tree: &amp;SyntaxTree) -&gt; Vec&lt;Range&gt; {
+        self.inner.changed_ranges(&amp;old_tree.inner).collect()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (119-124)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-119">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:119" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">119
+120
+121
+122
+123
+124
+</pre>
+    <pre><code id="code-new-119" class="lang-rust hljs">    pub(crate) fn new(node: tree_sitter::Node&lt;&#39;a&gt;, source: &amp;&#39;a str) -&gt; Self {
+        Self {
+            inner: node,
+            source,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-inner"><code>inner</code> <small>function</small>
+<details><summary>View code (127-129)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-inner-127">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:127" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">127
+128
+129
+</pre>
+    <pre><code id="code-inner-127" class="lang-rust hljs">    pub fn inner(&amp;self) -&gt; tree_sitter::Node&lt;&#39;a&gt; {
+        self.inner
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-kind"><code>kind</code> <small>function</small>
+<details><summary>View code (132-134)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-kind-132">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:132" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">132
+133
+134
+</pre>
+    <pre><code id="code-kind-132" class="lang-rust hljs">    pub fn kind(&amp;self) -&gt; &amp;str {
+        self.inner.kind()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-text"><code>text</code> <small>function</small>
+<details><summary>View code (137-140)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-text-137">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:137" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">137
+138
+139
+140
+</pre>
+    <pre><code id="code-text-137" class="lang-rust hljs">    pub fn text(&amp;self) -&gt; Result&lt;&amp;&#39;a str&gt; {
+        self.inner.utf8_text(self.source.as_bytes())
+            .map_err(|e| Error::tree_error(&amp;format!(&quot;Failed to get node text: {}&quot;, e)))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-byte-range"><code>byte_range</code> <small>function</small>
+<details><summary>View code (143-150)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-byte_range-143">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:143" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">143
+144
+145
+146
+147
+148
+149
+150
+</pre>
+    <pre><code id="code-byte_range-143" class="lang-rust hljs">    pub fn byte_range(&amp;self) -&gt; Range {
+        Range {
+            start_byte: self.inner.start_byte(),
+            end_byte: self.inner.end_byte(),
+            start_point: self.inner.start_position(),
+            end_point: self.inner.end_position(),
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-start-position"><code>start_position</code> <small>function</small>
+<details><summary>View code (153-155)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-start_position-153">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:153" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">153
+154
+155
+</pre>
+    <pre><code id="code-start_position-153" class="lang-rust hljs">    pub fn start_position(&amp;self) -&gt; Point {
+        self.inner.start_position()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-end-position"><code>end_position</code> <small>function</small>
+<details><summary>View code (158-160)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-end_position-158">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:158" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">158
+159
+160
+</pre>
+    <pre><code id="code-end_position-158" class="lang-rust hljs">    pub fn end_position(&amp;self) -&gt; Point {
+        self.inner.end_position()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-start-byte"><code>start_byte</code> <small>function</small>
+<details><summary>View code (163-165)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-start_byte-163">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:163" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">163
+164
+165
+</pre>
+    <pre><code id="code-start_byte-163" class="lang-rust hljs">    pub fn start_byte(&amp;self) -&gt; usize {
+        self.inner.start_byte()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-end-byte"><code>end_byte</code> <small>function</small>
+<details><summary>View code (168-170)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-end_byte-168">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:168" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">168
+169
+170
+</pre>
+    <pre><code id="code-end_byte-168" class="lang-rust hljs">    pub fn end_byte(&amp;self) -&gt; usize {
+        self.inner.end_byte()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-error"><code>has_error</code> <small>function</small>
+<details><summary>View code (173-175)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_error-173">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:173" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">173
+174
+175
+</pre>
+    <pre><code id="code-has_error-173" class="lang-rust hljs">    pub fn has_error(&amp;self) -&gt; bool {
+        self.inner.has_error()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-is-error"><code>is_error</code> <small>function</small>
+<details><summary>View code (178-180)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-is_error-178">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:178" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">178
+179
+180
+</pre>
+    <pre><code id="code-is_error-178" class="lang-rust hljs">    pub fn is_error(&amp;self) -&gt; bool {
+        self.inner.is_error()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-is-missing"><code>is_missing</code> <small>function</small>
+<details><summary>View code (183-185)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-is_missing-183">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:183" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">183
+184
+185
+</pre>
+    <pre><code id="code-is_missing-183" class="lang-rust hljs">    pub fn is_missing(&amp;self) -&gt; bool {
+        self.inner.is_missing()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-is-named"><code>is_named</code> <small>function</small>
+<details><summary>View code (188-190)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-is_named-188">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:188" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">188
+189
+190
+</pre>
+    <pre><code id="code-is_named-188" class="lang-rust hljs">    pub fn is_named(&amp;self) -&gt; bool {
+        self.inner.is_named()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-parent"><code>parent</code> <small>function</small>
+<details><summary>View code (193-195)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-parent-193">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:193" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">193
+194
+195
+</pre>
+    <pre><code id="code-parent-193" class="lang-rust hljs">    pub fn parent(&amp;self) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.parent().map(|p| Node::new(p, self.source))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-child-count"><code>child_count</code> <small>function</small>
+<details><summary>View code (198-200)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-child_count-198">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:198" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">198
+199
+200
+</pre>
+    <pre><code id="code-child_count-198" class="lang-rust hljs">    pub fn child_count(&amp;self) -&gt; usize {
+        self.inner.child_count()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-child"><code>child</code> <small>function</small>
+<details><summary>View code (203-205)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-child-203">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:203" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">203
+204
+205
+</pre>
+    <pre><code id="code-child-203" class="lang-rust hljs">    pub fn child(&amp;self, index: usize) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.child(index).map(|c| Node::new(c, self.source))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-child-by-field-name"><code>child_by_field_name</code> <small>function</small>
+<details><summary>View code (208-210)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-child_by_field_name-208">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:208" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">208
+209
+210
+</pre>
+    <pre><code id="code-child_by_field_name-208" class="lang-rust hljs">    pub fn child_by_field_name(&amp;self, field_name: &amp;str) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.child_by_field_name(field_name).map(|c| Node::new(c, self.source))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-children"><code>children</code> <small>function</small>
+<details><summary>View code (213-217)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-children-213">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:213" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">213
+214
+215
+216
+217
+</pre>
+    <pre><code id="code-children-213" class="lang-rust hljs">    pub fn children(&amp;self) -&gt; Vec&lt;Node&lt;&#39;a&gt;&gt; {
+        (0..self.child_count())
+            .filter_map(|i| self.child(i))
+            .collect()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-named-children"><code>named_children</code> <small>function</small>
+<details><summary>View code (220-222)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-named_children-220">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:220" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">220
+221
+222
+</pre>
+    <pre><code id="code-named_children-220" class="lang-rust hljs">    pub fn named_children(&amp;self) -&gt; Vec&lt;Node&lt;&#39;a&gt;&gt; {
+        self.children().into_iter().filter(|c| c.is_named()).collect()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-next-sibling"><code>next_sibling</code> <small>function</small>
+<details><summary>View code (225-227)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-next_sibling-225">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:225" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">225
+226
+227
+</pre>
+    <pre><code id="code-next_sibling-225" class="lang-rust hljs">    pub fn next_sibling(&amp;self) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.next_sibling().map(|s| Node::new(s, self.source))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-prev-sibling"><code>prev_sibling</code> <small>function</small>
+<details><summary>View code (230-232)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-prev_sibling-230">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:230" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">230
+231
+232
+</pre>
+    <pre><code id="code-prev_sibling-230" class="lang-rust hljs">    pub fn prev_sibling(&amp;self) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.prev_sibling().map(|s| Node::new(s, self.source))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-walk"><code>walk</code> <small>function</small>
+<details><summary>View code (235-237)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-walk-235">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:235" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">235
+236
+237
+</pre>
+    <pre><code id="code-walk-235" class="lang-rust hljs">    pub fn walk(&amp;self) -&gt; TreeCursor&lt;&#39;a&gt; {
+        TreeCursor::new(self.inner.walk(), self.source)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-to-sexp"><code>to_sexp</code> <small>function</small>
+<details><summary>View code (240-242)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-to_sexp-240">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:240" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">240
+241
+242
+</pre>
+    <pre><code id="code-to_sexp-240" class="lang-rust hljs">    pub fn to_sexp(&amp;self) -&gt; String {
+        self.inner.to_sexp()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-find-descendant"><code>find_descendant</code> <small>function</small>
+<details><summary>View code (245-250)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-find_descendant-245">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:245" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">245
+246
+247
+248
+249
+250
+</pre>
+    <pre><code id="code-find_descendant-245" class="lang-rust hljs">    pub fn find_descendant&lt;F&gt;(&amp;self, predicate: F) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt;
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        self.find_descendant_impl(&amp;predicate)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-find-descendant-impl"><code>find_descendant_impl</code> <small>function</small>
+<details><summary>View code (252-267)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-find_descendant_impl-252">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:252" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+</pre>
+    <pre><code id="code-find_descendant_impl-252" class="lang-rust hljs">    fn find_descendant_impl&lt;F&gt;(&amp;self, predicate: &amp;F) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt;
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        if predicate(self) {
+            return Some(*self);
+        }
+
+        for child in self.children() {
+            if let Some(found) = child.find_descendant_impl(predicate) {
+                return Some(found);
+            }
+        }
+
+        None
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-find-descendants"><code>find_descendants</code> <small>function</small>
+<details><summary>View code (270-278)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-find_descendants-270">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:270" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">270
+271
+272
+273
+274
+275
+276
+277
+278
+</pre>
+    <pre><code id="code-find_descendants-270" class="lang-rust hljs">    pub fn find_descendants&lt;F&gt;(&amp;self, predicate: F) -&gt; Vec&lt;Node&lt;&#39;a&gt;&gt;
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        let mut results = Vec::with_capacity(16); // Pre-allocate for common case
+        self.collect_descendants(&amp;predicate, &amp;mut results);
+        results.shrink_to_fit(); // Reclaim unused memory
+        results
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-collect-descendants"><code>collect_descendants</code> <small>function</small>
+<details><summary>View code (280-291)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-collect_descendants-280">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:280" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+</pre>
+    <pre><code id="code-collect_descendants-280" class="lang-rust hljs">    fn collect_descendants&lt;F&gt;(&amp;self, predicate: &amp;F, results: &amp;mut Vec&lt;Node&lt;&#39;a&gt;&gt;)
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        if predicate(self) {
+            results.push(*self);
+        }
+
+        for child in self.children() {
+            child.collect_descendants(predicate, results);
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (302-307)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-302">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:302" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">302
+303
+304
+305
+306
+307
+</pre>
+    <pre><code id="code-new-302" class="lang-rust hljs">    pub(crate) fn new(cursor: tree_sitter::TreeCursor&lt;&#39;a&gt;, source: &amp;&#39;a str) -&gt; Self {
+        Self {
+            inner: cursor,
+            source,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-node"><code>node</code> <small>function</small>
+<details><summary>View code (310-312)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-node-310">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:310" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">310
+311
+312
+</pre>
+    <pre><code id="code-node-310" class="lang-rust hljs">    pub fn node(&amp;self) -&gt; Node&lt;&#39;a&gt; {
+        Node::new(self.inner.node(), self.source)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-goto-first-child"><code>goto_first_child</code> <small>function</small>
+<details><summary>View code (315-317)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-goto_first_child-315">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:315" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">315
+316
+317
+</pre>
+    <pre><code id="code-goto_first_child-315" class="lang-rust hljs">    pub fn goto_first_child(&amp;mut self) -&gt; bool {
+        self.inner.goto_first_child()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-goto-next-sibling"><code>goto_next_sibling</code> <small>function</small>
+<details><summary>View code (320-322)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-goto_next_sibling-320">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:320" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">320
+321
+322
+</pre>
+    <pre><code id="code-goto_next_sibling-320" class="lang-rust hljs">    pub fn goto_next_sibling(&amp;mut self) -&gt; bool {
+        self.inner.goto_next_sibling()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-goto-parent"><code>goto_parent</code> <small>function</small>
+<details><summary>View code (325-327)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-goto_parent-325">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:325" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">325
+326
+327
+</pre>
+    <pre><code id="code-goto_parent-325" class="lang-rust hljs">    pub fn goto_parent(&amp;mut self) -&gt; bool {
+        self.inner.goto_parent()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-reset"><code>reset</code> <small>function</small>
+<details><summary>View code (330-332)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-reset-330">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:330" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">330
+331
+332
+</pre>
+    <pre><code id="code-reset-330" class="lang-rust hljs">    pub fn reset(&amp;mut self, node: Node&lt;&#39;a&gt;) {
+        self.inner.reset(node.inner);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-field-name"><code>field_name</code> <small>function</small>
+<details><summary>View code (335-337)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-field_name-335">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:335" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">335
+336
+337
+</pre>
+    <pre><code id="code-field_name-335" class="lang-rust hljs">    pub fn field_name(&amp;self) -&gt; Option&lt;&amp;str&gt; {
+        self.inner.field_name()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-syntax-tree-basic"><code>test_syntax_tree_basic</code> <small>function</small>
+<details><summary>View code (348-356)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_syntax_tree_basic-348">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:348" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">348
+349
+350
+351
+352
+353
+354
+355
+356
+</pre>
+    <pre><code id="code-test_syntax_tree_basic-348" class="lang-rust hljs">    fn test_syntax_tree_basic() {
+        let parser = Parser::new(Language::Rust).unwrap();
+        let source = &quot;fn main() { println!(\&quot;Hello, world!\&quot;); }&quot;;
+        let tree = parser.parse(source, None).unwrap();
+
+        assert_eq!(tree.root_node().kind(), &quot;source_file&quot;);
+        assert!(!tree.has_error());
+        assert_eq!(tree.source(), source);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-node-navigation"><code>test_node_navigation</code> <small>function</small>
+<details><summary>View code (359-372)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_node_navigation-359">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:359" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+</pre>
+    <pre><code id="code-test_node_navigation-359" class="lang-rust hljs">    fn test_node_navigation() {
+        let parser = Parser::new(Language::Rust).unwrap();
+        let source = &quot;fn main() { let x = 42; }&quot;;
+        let tree = parser.parse(source, None).unwrap();
+
+        let root = tree.root_node();
+        assert!(root.child_count() &gt; 0);
+
+        let function = root.child(0).unwrap();
+        assert_eq!(function.kind(), &quot;function_item&quot;);
+
+        let name = function.child_by_field_name(&quot;name&quot;).unwrap();
+        assert_eq!(name.text().unwrap(), &quot;main&quot;);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-find-nodes-by-kind"><code>test_find_nodes_by_kind</code> <small>function</small>
+<details><summary>View code (375-382)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_find_nodes_by_kind-375">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:375" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">375
+376
+377
+378
+379
+380
+381
+382
+</pre>
+    <pre><code id="code-test_find_nodes_by_kind-375" class="lang-rust hljs">    fn test_find_nodes_by_kind() {
+        let parser = Parser::new(Language::Rust).unwrap();
+        let source = &quot;fn foo() {} fn bar() {}&quot;;
+        let tree = parser.parse(source, None).unwrap();
+
+        let functions = tree.find_nodes_by_kind(&quot;function_item&quot;);
+        assert_eq!(functions.len(), 2);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(18)</small></summary><ul><li id="symbol-errors"><code>errors</code> <small>variable</small>
+<details><summary>View code (59-59)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-errors-59">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:59" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">59
+</pre>
+    <pre><code id="code-errors-59" class="lang-rust hljs">        let mut errors = Vec::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-nodes"><code>nodes</code> <small>variable</small>
+<details><summary>View code (76-76)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-nodes-76">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:76" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">76
+</pre>
+    <pre><code id="code-nodes-76" class="lang-rust hljs">        let mut nodes = Vec::with_capacity(32); // Pre-allocate for common case</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-start"><code>start</code> <small>variable</small>
+<details><summary>View code (94-94)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-start-94">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:94" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">94
+</pre>
+    <pre><code id="code-start-94" class="lang-rust hljs">        let start = range.start_byte;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-end"><code>end</code> <small>variable</small>
+<details><summary>View code (95-95)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-end-95">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:95" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">95
+</pre>
+    <pre><code id="code-end-95" class="lang-rust hljs">        let end = range.end_byte;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-results"><code>results</code> <small>variable</small>
+<details><summary>View code (274-274)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-results-274">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:274" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">274
+</pre>
+    <pre><code id="code-results-274" class="lang-rust hljs">        let mut results = Vec::with_capacity(16); // Pre-allocate for common case</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small>
+<details><summary>View code (349-349)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-parser-349">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:349" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">349
+</pre>
+    <pre><code id="code-parser-349" class="lang-rust hljs">        let parser = Parser::new(Language::Rust).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (350-350)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-350">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:350" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">350
+</pre>
+    <pre><code id="code-source-350" class="lang-rust hljs">        let source = &quot;fn main() { println!(\&quot;Hello, world!\&quot;); }&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small>
+<details><summary>View code (351-351)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tree-351">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:351" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">351
+</pre>
+    <pre><code id="code-tree-351" class="lang-rust hljs">        let tree = parser.parse(source, None).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small>
+<details><summary>View code (360-360)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-parser-360">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:360" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">360
+</pre>
+    <pre><code id="code-parser-360" class="lang-rust hljs">        let parser = Parser::new(Language::Rust).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (361-361)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-361">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:361" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">361
+</pre>
+    <pre><code id="code-source-361" class="lang-rust hljs">        let source = &quot;fn main() { let x = 42; }&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small>
+<details><summary>View code (362-362)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tree-362">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:362" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">362
+</pre>
+    <pre><code id="code-tree-362" class="lang-rust hljs">        let tree = parser.parse(source, None).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-root"><code>root</code> <small>variable</small>
+<details><summary>View code (364-364)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-root-364">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:364" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">364
+</pre>
+    <pre><code id="code-root-364" class="lang-rust hljs">        let root = tree.root_node();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-function"><code>function</code> <small>variable</small>
+<details><summary>View code (367-367)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-function-367">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:367" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">367
+</pre>
+    <pre><code id="code-function-367" class="lang-rust hljs">        let function = root.child(0).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-name"><code>name</code> <small>variable</small>
+<details><summary>View code (370-370)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-name-370">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:370" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">370
+</pre>
+    <pre><code id="code-name-370" class="lang-rust hljs">        let name = function.child_by_field_name(&quot;name&quot;).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small>
+<details><summary>View code (376-376)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-parser-376">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:376" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">376
+</pre>
+    <pre><code id="code-parser-376" class="lang-rust hljs">        let parser = Parser::new(Language::Rust).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (377-377)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-377">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:377" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">377
+</pre>
+    <pre><code id="code-source-377" class="lang-rust hljs">        let source = &quot;fn foo() {} fn bar() {}&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small>
+<details><summary>View code (378-378)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tree-378">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:378" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">378
+</pre>
+    <pre><code id="code-tree-378" class="lang-rust hljs">        let tree = parser.parse(source, None).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-functions"><code>functions</code> <small>variable</small>
+<details><summary>View code (380-380)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-functions-380">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:380" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">380
+</pre>
+    <pre><code id="code-functions-380" class="lang-rust hljs">        let functions = tree.find_nodes_by_kind(&quot;function_item&quot;);</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(6)</small></summary><ul><li id="symbol-syntaxtree"><code>SyntaxTree</code> <small>struct</small>
+<details><summary>View code (8-11)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-syntaxtree-8">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:8" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">8
+9
+10
+11
+</pre>
+    <pre><code id="code-syntaxtree-8" class="lang-rust hljs">pub struct SyntaxTree {
+    inner: tree_sitter::Tree,
+    source: String,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-node"><code>Node</code> <small>struct</small>
+<details><summary>View code (112-115)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-node-112">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:112" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">112
+113
+114
+115
+</pre>
+    <pre><code id="code-node-112" class="lang-rust hljs">pub struct Node&lt;&#39;a&gt; {
+    inner: tree_sitter::Node&lt;&#39;a&gt;,
+    source: &amp;&#39;a str,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-treecursor"><code>TreeCursor</code> <small>struct</small>
+<details><summary>View code (295-298)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-treecursor-295">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:295" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">295
+296
+297
+298
+</pre>
+    <pre><code id="code-treecursor-295" class="lang-rust hljs">pub struct TreeCursor&lt;&#39;a&gt; {
+    inner: tree_sitter::TreeCursor&lt;&#39;a&gt;,
+    source: &amp;&#39;a str,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-syntaxtree"><code>SyntaxTree</code> <small>impl</small>
+<details><summary>View code (13-108)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-syntaxtree-13">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:13" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+</pre>
+    <pre><code id="code-syntaxtree-13" class="lang-rust hljs">impl SyntaxTree {
+    /// Create a new syntax tree
+    pub(crate) fn new(tree: tree_sitter::Tree, source: String) -&gt; Self {
+        Self {
+            inner: tree,
+            source,
+        }
+    }
+
+    /// Get the underlying tree-sitter tree
+    pub(crate) fn inner(&amp;self) -&gt; &amp;tree_sitter::Tree {
+        &amp;self.inner
+    }
+
+    /// Get the source code
+    pub fn source(&amp;self) -&gt; &amp;str {
+        &amp;self.source
+    }
+
+    /// Get the root node of the tree
+    pub fn root_node(&amp;self) -&gt; Node&lt;&#39;_&gt; {
+        Node::new(self.inner.root_node(), &amp;self.source)
+    }
+
+    /// Create a tree cursor for traversing the tree
+    pub fn walk(&amp;self) -&gt; TreeCursor&lt;&#39;_&gt; {
+        TreeCursor::new(self.inner.walk(), &amp;self.source)
+    }
+
+    /// Edit the tree with the given input edit
+    pub fn edit(&amp;mut self, edit: &amp;InputEdit) {
+        self.inner.edit(edit);
+    }
+
+    /// Get the language of this tree
+    pub fn language(&amp;self) -&gt; tree_sitter::Language {
+        self.inner.language().clone()
+    }
+
+    /// Check if the tree has any parse errors
+    pub fn has_error(&amp;self) -&gt; bool {
+        self.root_node().has_error()
+    }
+
+    /// Get all nodes with errors
+    pub fn error_nodes(&amp;self) -&gt; Vec&lt;Node&lt;&#39;_&gt;&gt; {
+        let mut errors = Vec::new();
+        self.collect_error_nodes(self.root_node(), &amp;mut errors);
+        errors
+    }
+
+    fn collect_error_nodes&lt;&#39;a&gt;(&amp;self, node: Node&lt;&#39;a&gt;, errors: &amp;mut Vec&lt;Node&lt;&#39;a&gt;&gt;) {
+        if node.is_error() || node.is_missing() {
+            errors.push(node);
+        }
+
+        for child in node.children() {
+            self.collect_error_nodes(child, errors);
+        }
+    }
+
+    /// Find all nodes of a specific kind (optimized with pre-allocation)
+    pub fn find_nodes_by_kind(&amp;self, kind: &amp;str) -&gt; Vec&lt;Node&lt;&#39;_&gt;&gt; {
+        let mut nodes = Vec::with_capacity(32); // Pre-allocate for common case
+        self.collect_nodes_by_kind(self.root_node(), kind, &amp;mut nodes);
+        nodes.shrink_to_fit(); // Reclaim unused memory
+        nodes
+    }
+
+    fn collect_nodes_by_kind&lt;&#39;a&gt;(&amp;self, node: Node&lt;&#39;a&gt;, kind: &amp;str, nodes: &amp;mut Vec&lt;Node&lt;&#39;a&gt;&gt;) {
+        if node.kind() == kind {
+            nodes.push(node);
+        }
+
+        for child in node.children() {
+            self.collect_nodes_by_kind(child, kind, nodes);
+        }
+    }
+
+    /// Get the text content of a range
+    pub fn text_for_range(&amp;self, range: Range) -&gt; Result&lt;&amp;str&gt; {
+        let start = range.start_byte;
+        let end = range.end_byte;
+        
+        if end &gt; self.source.len() {
+            return Err(Error::tree_error(&quot;Range extends beyond source text&quot;));
+        }
+        
+        Ok(&amp;self.source[start..end])
+    }
+
+    /// Get changed ranges between this tree and another tree
+    pub fn changed_ranges(&amp;self, old_tree: &amp;SyntaxTree) -&gt; Vec&lt;Range&gt; {
+        self.inner.changed_ranges(&amp;old_tree.inner).collect()
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-node"><code>Node</code> <small>impl</small>
+<details><summary>View code (117-292)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-node-117">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:117" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+</pre>
+    <pre><code id="code-node-117" class="lang-rust hljs">impl&lt;&#39;a&gt; Node&lt;&#39;a&gt; {
+    /// Create a new node wrapper
+    pub(crate) fn new(node: tree_sitter::Node&lt;&#39;a&gt;, source: &amp;&#39;a str) -&gt; Self {
+        Self {
+            inner: node,
+            source,
+        }
+    }
+
+    /// Get the underlying tree-sitter node
+    pub fn inner(&amp;self) -&gt; tree_sitter::Node&lt;&#39;a&gt; {
+        self.inner
+    }
+
+    /// Get the kind of this node
+    pub fn kind(&amp;self) -&gt; &amp;str {
+        self.inner.kind()
+    }
+
+    /// Get the text content of this node
+    pub fn text(&amp;self) -&gt; Result&lt;&amp;&#39;a str&gt; {
+        self.inner.utf8_text(self.source.as_bytes())
+            .map_err(|e| Error::tree_error(&amp;format!(&quot;Failed to get node text: {}&quot;, e)))
+    }
+
+    /// Get the byte range of this node
+    pub fn byte_range(&amp;self) -&gt; Range {
+        Range {
+            start_byte: self.inner.start_byte(),
+            end_byte: self.inner.end_byte(),
+            start_point: self.inner.start_position(),
+            end_point: self.inner.end_position(),
+        }
+    }
+
+    /// Get the start position of this node
+    pub fn start_position(&amp;self) -&gt; Point {
+        self.inner.start_position()
+    }
+
+    /// Get the end position of this node
+    pub fn end_position(&amp;self) -&gt; Point {
+        self.inner.end_position()
+    }
+
+    /// Get the start byte offset of this node
+    pub fn start_byte(&amp;self) -&gt; usize {
+        self.inner.start_byte()
+    }
+
+    /// Get the end byte offset of this node
+    pub fn end_byte(&amp;self) -&gt; usize {
+        self.inner.end_byte()
+    }
+
+    /// Check if this node has an error
+    pub fn has_error(&amp;self) -&gt; bool {
+        self.inner.has_error()
+    }
+
+    /// Check if this node is an error node
+    pub fn is_error(&amp;self) -&gt; bool {
+        self.inner.is_error()
+    }
+
+    /// Check if this node is missing
+    pub fn is_missing(&amp;self) -&gt; bool {
+        self.inner.is_missing()
+    }
+
+    /// Check if this node is named
+    pub fn is_named(&amp;self) -&gt; bool {
+        self.inner.is_named()
+    }
+
+    /// Get the parent of this node
+    pub fn parent(&amp;self) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.parent().map(|p| Node::new(p, self.source))
+    }
+
+    /// Get the number of children
+    pub fn child_count(&amp;self) -&gt; usize {
+        self.inner.child_count()
+    }
+
+    /// Get a child by index
+    pub fn child(&amp;self, index: usize) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.child(index).map(|c| Node::new(c, self.source))
+    }
+
+    /// Get a child by field name
+    pub fn child_by_field_name(&amp;self, field_name: &amp;str) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.child_by_field_name(field_name).map(|c| Node::new(c, self.source))
+    }
+
+    /// Get all children
+    pub fn children(&amp;self) -&gt; Vec&lt;Node&lt;&#39;a&gt;&gt; {
+        (0..self.child_count())
+            .filter_map(|i| self.child(i))
+            .collect()
+    }
+
+    /// Get all named children
+    pub fn named_children(&amp;self) -&gt; Vec&lt;Node&lt;&#39;a&gt;&gt; {
+        self.children().into_iter().filter(|c| c.is_named()).collect()
+    }
+
+    /// Get the next sibling
+    pub fn next_sibling(&amp;self) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.next_sibling().map(|s| Node::new(s, self.source))
+    }
+
+    /// Get the previous sibling
+    pub fn prev_sibling(&amp;self) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt; {
+        self.inner.prev_sibling().map(|s| Node::new(s, self.source))
+    }
+
+    /// Walk the tree starting from this node
+    pub fn walk(&amp;self) -&gt; TreeCursor&lt;&#39;a&gt; {
+        TreeCursor::new(self.inner.walk(), self.source)
+    }
+
+    /// Get the S-expression representation of this node
+    pub fn to_sexp(&amp;self) -&gt; String {
+        self.inner.to_sexp()
+    }
+
+    /// Find the first descendant node that matches a predicate
+    pub fn find_descendant&lt;F&gt;(&amp;self, predicate: F) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt;
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        self.find_descendant_impl(&amp;predicate)
+    }
+
+    fn find_descendant_impl&lt;F&gt;(&amp;self, predicate: &amp;F) -&gt; Option&lt;Node&lt;&#39;a&gt;&gt;
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        if predicate(self) {
+            return Some(*self);
+        }
+
+        for child in self.children() {
+            if let Some(found) = child.find_descendant_impl(predicate) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    /// Find all descendant nodes that match a predicate (optimized)
+    pub fn find_descendants&lt;F&gt;(&amp;self, predicate: F) -&gt; Vec&lt;Node&lt;&#39;a&gt;&gt;
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        let mut results = Vec::with_capacity(16); // Pre-allocate for common case
+        self.collect_descendants(&amp;predicate, &amp;mut results);
+        results.shrink_to_fit(); // Reclaim unused memory
+        results
+    }
+
+    fn collect_descendants&lt;F&gt;(&amp;self, predicate: &amp;F, results: &amp;mut Vec&lt;Node&lt;&#39;a&gt;&gt;)
+    where
+        F: Fn(&amp;Node&lt;&#39;a&gt;) -&gt; bool,
+    {
+        if predicate(self) {
+            results.push(*self);
+        }
+
+        for child in self.children() {
+            child.collect_descendants(predicate, results);
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-treecursor"><code>TreeCursor</code> <small>impl</small>
+<details><summary>View code (300-338)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-treecursor-300">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/tree.rs:300" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+</pre>
+    <pre><code id="code-treecursor-300" class="lang-rust hljs">impl&lt;&#39;a&gt; TreeCursor&lt;&#39;a&gt; {
+    /// Create a new tree cursor wrapper
+    pub(crate) fn new(cursor: tree_sitter::TreeCursor&lt;&#39;a&gt;, source: &amp;&#39;a str) -&gt; Self {
+        Self {
+            inner: cursor,
+            source,
+        }
+    }
+
+    /// Get the current node
+    pub fn node(&amp;self) -&gt; Node&lt;&#39;a&gt; {
+        Node::new(self.inner.node(), self.source)
+    }
+
+    /// Move to the first child
+    pub fn goto_first_child(&amp;mut self) -&gt; bool {
+        self.inner.goto_first_child()
+    }
+
+    /// Move to the next sibling
+    pub fn goto_next_sibling(&amp;mut self) -&gt; bool {
+        self.inner.goto_next_sibling()
+    }
+
+    /// Move to the parent
+    pub fn goto_parent(&amp;mut self) -&gt; bool {
+        self.inner.goto_parent()
+    }
+
+    /// Reset the cursor to a specific node
+    pub fn reset(&amp;mut self, node: Node&lt;&#39;a&gt;) {
+        self.inner.reset(node.inner);
+    }
+
+    /// Get the field name of the current node
+    pub fn field_name(&amp;self) -&gt; Option&lt;&amp;str&gt; {
+        self.inner.field_name()
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

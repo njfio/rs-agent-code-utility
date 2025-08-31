@@ -11,6 +11,8 @@ pub fn execute(
     ai: bool,
     ai_mock: bool,
     ai_config: Option<&PathBuf>,
+    ai_provider: Option<&str>,
+    ai_json: bool,
     enhanced_ai: bool,
     function_enhancement: bool,
     security_insights: bool,
@@ -29,9 +31,11 @@ pub fn execute(
         .with_enhanced_ai(enhanced_ai)
         .with_function_enhancement(function_enhancement)
         .with_security_insights(security_insights)
-        .with_refactoring_hints(refactoring_hints);
+        .with_refactoring_hints(refactoring_hints)
+        .with_ai_json(ai_json);
 
     if let Some(cfg) = ai_config { builder = builder.with_ai_config_path(cfg); }
+    if let Some(provider) = ai_provider { builder = builder.with_ai_provider(provider); }
 
     let cfg = builder
         .build()

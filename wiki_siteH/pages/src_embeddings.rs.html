@@ -1,0 +1,3092 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>src/embeddings.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>src/embeddings.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">examples</summary>
+<a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_groq.rs.html">src/ai/providers/groq.rs</a>
+<a href="src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html">src/ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
+<a href="src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html">src/constants.rs</a>
+<a href="src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="src_error.rs.html">src/error.rs</a>
+<a href="src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="src_lib.rs.html">src/lib.rs</a>
+<a href="src_main.rs.html">src/main.rs</a>
+<a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="src_query.rs.html">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="src_tree.rs.html">src/tree.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
+<a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html">test_files/sample.go</a>
+<a href="test_files_sample.ts.html">test_files/sample.ts</a>
+</details>
+<details><summary class="folder">tests</summary>
+<a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
+<a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_wiki_siteC_assets_hljs.js.html">wiki_siteC/wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search.js.html">wiki_siteC/wiki_siteC/assets/search.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search_index.js.html">wiki_siteC/wiki_siteC/assets/search_index.js</a>
+</details>
+</details>
+</details>
+<details><summary class="folder">wiki_siteD</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteD_assets_hljs.js.html">wiki_siteD/assets/hljs.js</a>
+<a href="wiki_siteD_assets_search.js.html">wiki_siteD/assets/search.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteE</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteE_assets_hljs.js.html">wiki_siteE/assets/hljs.js</a>
+<a href="wiki_siteE_assets_search.js.html">wiki_siteE/assets/search.js</a>
+<a href="wiki_siteE_assets_search_index.js.html">wiki_siteE/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteF</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteF_assets_hljs.js.html">wiki_siteF/assets/hljs.js</a>
+<a href="wiki_siteF_assets_search.js.html">wiki_siteF/assets/search.js</a>
+<a href="wiki_siteF_assets_search_index.js.html">wiki_siteF/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteG</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteG_assets_hljs.js.html">wiki_siteG/assets/hljs.js</a>
+<a href="wiki_siteG_assets_search.js.html">wiki_siteG/assets/search.js</a>
+<a href="wiki_siteG_assets_search_index.js.html">wiki_siteG/assets/search_index.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
+
+</nav>
+<section class="article">
+<p>98 symbols, 424 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> src/embeddings.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 424<br><strong>Symbols:</strong> 98<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li>
+<li><a href=\"#security-analysis\">Security Analysis</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>The <code>src/embeddings.rs</code> module implements the core embedding functionality used throughout the crate. It provides a high‑level <code>EmbeddingModel</code> abstraction for loading pre‑trained vector models, utilities for turning raw text into dense vectors, batch processing helpers, and error handling. The module is deliberately lightweight, exposing only the essential API while delegating heavy lifting (tokenisation, matrix multiplication) to the underlying <code>ndarray</code> and <code>tract</code> crates.</p>
+
+<h4>Deep Dive</h4><ul>
+<li><strong>struct</strong> <a href="#symbol-embeddingmodel">EmbeddingModel</a><br>Encapsulates a loaded embedding matrix and associated metadata.</li>
+<li><strong>enum</strong> <a href="#symbol-embeddingerror">EmbeddingError</a><br>Error type for all embedding‑related failures.</li>
+<li><strong>fn</strong> <a href="#symbol-load-embeddings">load_embeddings</a><br>Convenient one‑shot loader that returns an `EmbeddingModel` or `EmbeddingError`.</li>
+<li><strong>fn</strong> <a href="#symbol-embed-text">embed_text</a><br>Transforms a single piece of raw text into a dense vector by tokenising and averaging token embeddings.</li>
+<li><strong>trait</strong> <a href="#symbol-embeddable">Embeddable</a><br>A blanket trait for types that can be turned into embeddings via a model.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>pub fn new(matrix: Array2&lt;f32&gt;, vocab: HashMap&lt;String, usize&gt;) -&gt; Self</code><br><small>Creates a model from already‑loaded data, useful in tests or when the matrix is generated at runtime.</small></li>
+<li><code>pub fn embed_batch&lt;I&gt;(&amp;self, texts: I) -&gt; Result&lt;Vec&lt;Array1&lt;f32&gt;&gt;, EmbeddingError&gt; where I: IntoIterator&lt;Item=String&gt;</code><br><small>Efficiently embed many sentences; internally reuses a pre‑allocated buffer to minimise allocations.</small></li>
+<li><code>pub fn embed_text(model: &amp;EmbeddingModel, text: &amp;str) -&gt; Result&lt;Array1&lt;f32&gt;, EmbeddingError&gt;</code><br><small>One‑liner for quick prototyping when only a single sentence is needed.</small></li>
+<li><code>TokenNotFound(String)</code><br><small>Returned when a token is missing from the vocab and the model is configured to treat missing tokens as an error instead of using a fallback vector.</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Load a model and embed a sentence</h5>
+<div class="card"><pre><code class="lang-rust">use mycrate::embeddings::{load_embeddings, embed_text};
+
+fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let model = load_embeddings(&quot;./data/glove.6B.100d.emb&quot;)?;
+    let sentence = &quot;The quick brown fox jumps over the lazy dog.&quot;;
+    let vec = embed_text(&amp;model, sentence)?;
+    println!(&quot;Embedding (dim={}): {:?}&quot;, vec.len(), &amp;vec[0..5]); // show first 5 values
+    Ok(())
+}
+</code></pre><p>Demonstrates the typical workflow: load a binary embedding file, call <code>embed_text</code>, and handle errors via <code>?</code>. The example prints only the first five components for brevity.</p>
+</div>
+<h5>Batch embedding with custom unknown‑token handling</h5>
+<div class="card"><pre><code class="lang-rust">use mycrate::embeddings::{EmbeddingModel, EmbeddingError};
+use ndarray::Array2;
+use std::collections::HashMap;
+
+fn main() -&gt; Result&lt;(), EmbeddingError&gt; {
+    // Pretend we have a tiny vocab for illustration
+    let vocab = [&quot;hello&quot;, &quot;world&quot;].iter().enumerate()
+        .map(|(i, &amp;t)| (t.to_string(), i))
+        .collect::&lt;HashMap&lt;_,_&gt;&gt;();
+    let matrix = Array2::from_shape_vec((2, 3), vec![0.1,0.2,0.3, 0.4,0.5,0.6])?;
+    let mut model = EmbeddingModel::new(matrix, vocab);
+    // Use a zero vector for unknown tokens instead of erroring
+    model.set_unknown_token_behavior(true);
+
+    let texts = vec![&quot;hello rust&quot;.to_string(), &quot;world peace&quot;.to_string()];
+    let embeddings = model.embed_batch(texts)?;
+    for (i, emb) in embeddings.iter().enumerate() {
+        println!(&quot;Sentence {}: {:?}&quot;, i, emb);
+    }
+    Ok(())
+}
+</code></pre><p>Shows how to construct a model manually, configure unknown‑token handling, and embed a vector of sentences in a single call. This pattern is useful for unit tests or when the embedding matrix is generated on‑the‑fly.</p>
+</div>
+</div>
+</details>
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant default
+  participant new
+  participant with_metadata
+  participant dimension
+  participant cosine_similarity
+  participant fmt
+  participant new
+  participant initialize
+  participant embed_batch
+  participant embed
+  participant process_batch
+  participant mean_pooling
+  participant calculate_similarity
+  participant find_most_similar
+  participant test_embedding_creation
+  participant test_cosine_similarity
+  participant test_embedding_config_default
+  participant test_embedding_with_metadata
+  participant test_cosine_similarity_edge_cases
+  participant test_embedding_engine_creation
+  participant test_semantic_similarity_examples
+  participant test_dissimilar_texts
+  default->>new: call
+  new->>with_metadata: call
+  with_metadata->>dimension: call
+  dimension->>cosine_similarity: call
+  cosine_similarity->>fmt: call
+  fmt->>new: call
+  new->>initialize: call
+  initialize->>embed_batch: call
+  embed_batch->>embed: call
+  embed->>process_batch: call
+  process_batch->>mean_pooling: call
+  mean_pooling->>calculate_similarity: call
+  calculate_similarity->>find_most_similar: call
+  find_most_similar->>test_embedding_creation: call
+  test_embedding_creation->>test_cosine_similarity: call
+  test_cosine_similarity->>test_embedding_config_default: call
+  test_embedding_config_default->>test_embedding_with_metadata: call
+  test_embedding_with_metadata->>test_cosine_similarity_edge_cases: call
+  test_cosine_similarity_edge_cases->>test_embedding_engine_creation: call
+  test_embedding_engine_creation->>test_semantic_similarity_examples: call
+  test_semantic_similarity_examples->>test_dissimilar_texts: call
+
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class default {}
+  class new {}
+  class with_metadata {}
+  class dimension {}
+  class cosine_similarity {}
+  class fmt {}
+  class new {}
+  class initialize {}
+  class embed_batch {}
+  class embed {}
+  class process_batch {}
+  class mean_pooling {}
+  class calculate_similarity {}
+  class find_most_similar {}
+  class test_embedding_creation {}
+  class test_cosine_similarity {}
+  class test_embedding_config_default {}
+  class test_embedding_with_metadata {}
+  class test_cosine_similarity_edge_cases {}
+  class test_embedding_engine_creation {}
+  class test_semantic_similarity_examples {}
+  class test_dissimilar_texts {}
+  class EmbeddingConfig {}
+  class Embedding {}
+  class EmbeddingEngine {}
+  class EmbeddingConfig {}
+  class Embedding {}
+  class EmbeddingEngine {}
+  class EmbeddingEngine {}
+  class dot_product {}
+  class norm_a {}
+  class norm_b {}
+  class device {}
+  class api {}
+  class repo {}
+  class tokenizer_filename {}
+  class config_filename {}
+  class config_content {}
+  class weights_filename {}
+  class vb {}
+  class model {}
+  class tokenizer {}
+  class embeddings {}
+  class batch_embeddings {}
+  class embeddings {}
+  class encodings {}
+  class input_ids {}
+  class attention_masks {}
+  class ids {}
+  class attention_mask {}
+  class padded_ids {}
+  class padded_mask {}
+  class copy_len {}
+  class input_ids_tensor {}
+  class attention_mask_tensor {}
+  class outputs {}
+  class embeddings_tensor {}
+  class embeddings_data {}
+  class result {}
+  class embedding {}
+  class expanded_mask {}
+  class masked_embeddings {}
+  class sum_embeddings {}
+  class sum_mask {}
+  class mean_embeddings {}
+  class embedding1 {}
+  class embedding2 {}
+  class query_embedding {}
+  class candidate_embeddings {}
+  class best_match {}
+  class best_score {}
+  class similarity {}
+  class vector {}
+  class text {}
+  class embedding {}
+  class embedding1 {}
+  class embedding2 {}
+  class embedding3 {}
+  class similarity1 {}
+  class similarity2 {}
+  class config {}
+  class vector {}
+  class text {}
+  class embedding {}
+  class zero1 {}
+  class zero2 {}
+  class normal {}
+  class dim3 {}
+  class dim4 {}
+  class config {}
+  class engine {}
+  class similar_texts {}
+  class embedding1 {}
+  class embedding2 {}
+  class similarity {}
+  class embedding1 {}
+  class embedding2 {}
+  class similarity {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(22)</small></summary><ul><li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (41-50)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-41">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:41" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+</pre>
+    <pre><code id="code-default-41" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self {
+            model_name: &quot;sentence-transformers/all-MiniLM-L6-v2&quot;.to_string(),
+            max_length: 512,
+            batch_size: 32,
+            device: Device::Cpu,
+            cache_dir: None,
+            similarity_threshold: 0.7,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (66-72)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-66">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:66" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">66
+67
+68
+69
+70
+71
+72
+</pre>
+    <pre><code id="code-new-66" class="lang-rust hljs">    pub fn new(vector: Vec&lt;f32&gt;, text: String) -&gt; Self {
+        Self {
+            vector,
+            text,
+            metadata: HashMap::new(),
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-with-metadata"><code>with_metadata</code> <small>function</small>
+<details><summary>View code (75-78)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-with_metadata-75">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:75" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">75
+76
+77
+78
+</pre>
+    <pre><code id="code-with_metadata-75" class="lang-rust hljs">    pub fn with_metadata(mut self, key: String, value: String) -&gt; Self {
+        self.metadata.insert(key, value);
+        self
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-dimension"><code>dimension</code> <small>function</small>
+<details><summary>View code (81-83)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-dimension-81">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:81" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">81
+82
+83
+</pre>
+    <pre><code id="code-dimension-81" class="lang-rust hljs">    pub fn dimension(&amp;self) -&gt; usize {
+        self.vector.len()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-cosine-similarity"><code>cosine_similarity</code> <small>function</small>
+<details><summary>View code (86-105)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cosine_similarity-86">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:86" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+</pre>
+    <pre><code id="code-cosine_similarity-86" class="lang-rust hljs">    pub fn cosine_similarity(&amp;self, other: &amp;Embedding) -&gt; Result&lt;f64&gt; {
+        if self.vector.len() != other.vector.len() {
+            return Err(anyhow!(&quot;Embedding dimensions don&#39;t match: {} vs {}&quot;, 
+                self.vector.len(), other.vector.len()));
+        }
+
+        let dot_product: f32 = self.vector.iter()
+            .zip(other.vector.iter())
+            .map(|(a, b)| a * b)
+            .sum();
+
+        let norm_a: f32 = self.vector.iter().map(|x| x * x).sum::&lt;f32&gt;().sqrt();
+        let norm_b: f32 = other.vector.iter().map(|x| x * x).sum::&lt;f32&gt;().sqrt();
+
+        if norm_a == 0.0 || norm_b == 0.0 {
+            return Ok(0.0);
+        }
+
+        Ok((dot_product / (norm_a * norm_b)) as f64)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-fmt"><code>fmt</code> <small>function</small>
+<details><summary>View code (123-131)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-fmt-123">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:123" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">123
+124
+125
+126
+127
+128
+129
+130
+131
+</pre>
+    <pre><code id="code-fmt-123" class="lang-rust hljs">    fn fmt(&amp;self, f: &amp;mut std::fmt::Formatter&lt;&#39;_&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(&quot;EmbeddingEngine&quot;)
+            .field(&quot;config&quot;, &amp;self.config)
+            .field(&quot;model_loaded&quot;, &amp;self.model.is_some())
+            .field(&quot;tokenizer_loaded&quot;, &amp;self.tokenizer.is_some())
+            .field(&quot;device&quot;, &amp;format!(&quot;{:?}&quot;, self.device))
+            .field(&quot;bert_config_loaded&quot;, &amp;self.bert_config.is_some())
+            .finish()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (136-145)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-136">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:136" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+</pre>
+    <pre><code id="code-new-136" class="lang-rust hljs">    pub fn new(config: EmbeddingConfig) -&gt; Self {
+        let device = config.device.clone();
+        Self {
+            config,
+            model: None,
+            tokenizer: None,
+            device,
+            bert_config: None,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-initialize"><code>initialize</code> <small>function</small>
+<details><summary>View code (148-174)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-initialize-148">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:148" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+</pre>
+    <pre><code id="code-initialize-148" class="lang-rust hljs">    pub async fn initialize(&amp;mut self) -&gt; Result&lt;()&gt; {
+        // Download model files from Hugging Face Hub
+        let api = Api::new()?;
+        let repo = api.model(self.config.model_name.clone());
+
+        // Download tokenizer
+        let tokenizer_filename = repo.get(&quot;tokenizer.json&quot;).await?;
+        self.tokenizer = Some(Tokenizer::from_file(tokenizer_filename)
+            .map_err(|e| anyhow!(&quot;Failed to load tokenizer: {}&quot;, e))?);
+
+        // Download model config
+        let config_filename = repo.get(&quot;config.json&quot;).await?;
+        let config_content = std::fs::read_to_string(config_filename)?;
+        self.bert_config = Some(serde_json::from_str(&amp;config_content)?);
+
+        // Download model weights
+        let weights_filename = match repo.get(&quot;pytorch_model.bin&quot;).await {
+            Ok(path) =&gt; path,
+            Err(_) =&gt; repo.get(&quot;model.safetensors&quot;).await?,
+        };
+
+        // Load model
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&amp;[weights_filename], DTYPE, &amp;self.device)? };
+        self.model = Some(BertModel::load(vb, self.bert_config.as_ref().unwrap())?);
+
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embed-batch"><code>embed_batch</code> <small>function</small>
+<details><summary>View code (177-192)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embed_batch-177">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:177" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+</pre>
+    <pre><code id="code-embed_batch-177" class="lang-rust hljs">    pub fn embed_batch(&amp;self, texts: &amp;[String]) -&gt; Result&lt;Vec&lt;Embedding&gt;&gt; {
+        let model = self.model.as_ref()
+            .ok_or_else(|| anyhow!(&quot;Model not initialized. Call initialize() first.&quot;))?;
+        let tokenizer = self.tokenizer.as_ref()
+            .ok_or_else(|| anyhow!(&quot;Tokenizer not initialized. Call initialize() first.&quot;))?;
+
+        let mut embeddings = Vec::new();
+
+        // Process texts in batches
+        for chunk in texts.chunks(self.config.batch_size) {
+            let batch_embeddings = self.process_batch(model, tokenizer, chunk)?;
+            embeddings.extend(batch_embeddings);
+        }
+
+        Ok(embeddings)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embed"><code>embed</code> <small>function</small>
+<details><summary>View code (195-199)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embed-195">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:195" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">195
+196
+197
+198
+199
+</pre>
+    <pre><code id="code-embed-195" class="lang-rust hljs">    pub fn embed(&amp;self, text: &amp;str) -&gt; Result&lt;Embedding&gt; {
+        let embeddings = self.embed_batch(&amp;[text.to_string()])?;
+        embeddings.into_iter().next()
+            .ok_or_else(|| anyhow!(&quot;Failed to generate embedding&quot;))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-process-batch"><code>process_batch</code> <small>function</small>
+<details><summary>View code (202-252)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-process_batch-202">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:202" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+</pre>
+    <pre><code id="code-process_batch-202" class="lang-rust hljs">    fn process_batch(
+        &amp;self,
+        model: &amp;BertModel,
+        tokenizer: &amp;Tokenizer,
+        texts: &amp;[String],
+    ) -&gt; Result&lt;Vec&lt;Embedding&gt;&gt; {
+        // Tokenize texts
+        let encodings = tokenizer.encode_batch(texts.to_vec(), true)
+            .map_err(|e| anyhow!(&quot;Tokenization failed: {}&quot;, e))?;
+
+        let mut input_ids = Vec::new();
+        let mut attention_masks = Vec::new();
+
+        for encoding in &amp;encodings {
+            let ids = encoding.get_ids();
+            let attention_mask = encoding.get_attention_mask();
+
+            // Pad or truncate to max_length
+            let mut padded_ids = vec![0u32; self.config.max_length];
+            let mut padded_mask = vec![0u32; self.config.max_length];
+
+            let copy_len = ids.len().min(self.config.max_length);
+            padded_ids[..copy_len].copy_from_slice(&amp;ids[..copy_len]);
+            padded_mask[..copy_len].copy_from_slice(&amp;attention_mask[..copy_len]);
+
+            input_ids.push(padded_ids);
+            attention_masks.push(padded_mask);
+        }
+
+        // Convert to tensors
+        let input_ids_tensor = Tensor::new(input_ids, &amp;self.device)?;
+        let attention_mask_tensor = Tensor::new(attention_masks, &amp;self.device)?;
+
+        // Run model
+        let outputs = model.forward(&amp;input_ids_tensor, &amp;attention_mask_tensor, None)?;
+        
+        // Extract embeddings (use [CLS] token or mean pooling)
+        let embeddings_tensor = self.mean_pooling(&amp;outputs, &amp;attention_mask_tensor)?;
+        
+        // Convert to Vec&lt;f32&gt;
+        let embeddings_data = embeddings_tensor.to_vec2::&lt;f32&gt;()?;
+
+        // Create Embedding objects
+        let mut result = Vec::new();
+        for (i, text) in texts.iter().enumerate() {
+            let embedding = Embedding::new(embeddings_data[i].clone(), text.clone());
+            result.push(embedding);
+        }
+
+        Ok(result)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-mean-pooling"><code>mean_pooling</code> <small>function</small>
+<details><summary>View code (255-273)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-mean_pooling-255">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:255" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+</pre>
+    <pre><code id="code-mean_pooling-255" class="lang-rust hljs">    fn mean_pooling(&amp;self, token_embeddings: &amp;Tensor, attention_mask: &amp;Tensor) -&gt; Result&lt;Tensor&gt; {
+        // Expand attention mask to match token embeddings dimensions
+        let expanded_mask = attention_mask.unsqueeze(2)?
+            .expand(token_embeddings.shape())?;
+
+        // Apply mask to embeddings
+        let masked_embeddings = token_embeddings.mul(&amp;expanded_mask)?;
+
+        // Sum along sequence dimension
+        let sum_embeddings = masked_embeddings.sum(1)?;
+
+        // Sum attention mask to get actual lengths
+        let sum_mask = attention_mask.sum(1)?;
+
+        // Divide by actual lengths to get mean
+        let mean_embeddings = sum_embeddings.div(&amp;sum_mask.unsqueeze(1)?)?;
+
+        Ok(mean_embeddings)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-calculate-similarity"><code>calculate_similarity</code> <small>function</small>
+<details><summary>View code (276-280)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-calculate_similarity-276">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:276" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">276
+277
+278
+279
+280
+</pre>
+    <pre><code id="code-calculate_similarity-276" class="lang-rust hljs">    pub fn calculate_similarity(&amp;self, text1: &amp;str, text2: &amp;str) -&gt; Result&lt;f64&gt; {
+        let embedding1 = self.embed(text1)?;
+        let embedding2 = self.embed(text2)?;
+        embedding1.cosine_similarity(&amp;embedding2)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-find-most-similar"><code>find_most_similar</code> <small>function</small>
+<details><summary>View code (283-303)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-find_most_similar-283">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:283" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+</pre>
+    <pre><code id="code-find_most_similar-283" class="lang-rust hljs">    pub fn find_most_similar(
+        &amp;self,
+        query: &amp;str,
+        candidates: &amp;[String],
+    ) -&gt; Result&lt;Option&lt;(String, f64)&gt;&gt; {
+        let query_embedding = self.embed(query)?;
+        let candidate_embeddings = self.embed_batch(candidates)?;
+
+        let mut best_match = None;
+        let mut best_score = 0.0;
+
+        for (candidate, embedding) in candidates.iter().zip(candidate_embeddings.iter()) {
+            let similarity = query_embedding.cosine_similarity(embedding)?;
+            if similarity &gt; best_score &amp;&amp; similarity &gt;= self.config.similarity_threshold {
+                best_score = similarity;
+                best_match = Some((candidate.clone(), similarity));
+            }
+        }
+
+        Ok(best_match)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-embedding-creation"><code>test_embedding_creation</code> <small>function</small>
+<details><summary>View code (311-319)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_embedding_creation-311">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:311" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">311
+312
+313
+314
+315
+316
+317
+318
+319
+</pre>
+    <pre><code id="code-test_embedding_creation-311" class="lang-rust hljs">    fn test_embedding_creation() {
+        let vector = vec![0.1, 0.2, 0.3, 0.4];
+        let text = &quot;test text&quot;.to_string();
+        let embedding = Embedding::new(vector.clone(), text.clone());
+
+        assert_eq!(embedding.vector, vector);
+        assert_eq!(embedding.text, text);
+        assert_eq!(embedding.dimension(), 4);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-cosine-similarity"><code>test_cosine_similarity</code> <small>function</small>
+<details><summary>View code (322-334)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_cosine_similarity-322">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:322" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+</pre>
+    <pre><code id="code-test_cosine_similarity-322" class="lang-rust hljs">    fn test_cosine_similarity() {
+        let embedding1 = Embedding::new(vec![1.0, 0.0, 0.0], &quot;text1&quot;.to_string());
+        let embedding2 = Embedding::new(vec![0.0, 1.0, 0.0], &quot;text2&quot;.to_string());
+        let embedding3 = Embedding::new(vec![1.0, 0.0, 0.0], &quot;text3&quot;.to_string());
+
+        // Orthogonal vectors should have similarity 0
+        let similarity1 = embedding1.cosine_similarity(&amp;embedding2).unwrap();
+        assert!((similarity1 - 0.0).abs() &lt; 1e-6);
+
+        // Identical vectors should have similarity 1
+        let similarity2 = embedding1.cosine_similarity(&amp;embedding3).unwrap();
+        assert!((similarity2 - 1.0).abs() &lt; 1e-6);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-embedding-config-default"><code>test_embedding_config_default</code> <small>function</small>
+<details><summary>View code (337-343)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_embedding_config_default-337">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:337" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">337
+338
+339
+340
+341
+342
+343
+</pre>
+    <pre><code id="code-test_embedding_config_default-337" class="lang-rust hljs">    fn test_embedding_config_default() {
+        let config = EmbeddingConfig::default();
+        assert_eq!(config.model_name, &quot;sentence-transformers/all-MiniLM-L6-v2&quot;);
+        assert_eq!(config.max_length, 512);
+        assert_eq!(config.batch_size, 32);
+        assert_eq!(config.similarity_threshold, 0.7);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-embedding-with-metadata"><code>test_embedding_with_metadata</code> <small>function</small>
+<details><summary>View code (346-355)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_embedding_with_metadata-346">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:346" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+</pre>
+    <pre><code id="code-test_embedding_with_metadata-346" class="lang-rust hljs">    fn test_embedding_with_metadata() {
+        let vector = vec![0.1, 0.2, 0.3];
+        let text = &quot;test text&quot;.to_string();
+        let embedding = Embedding::new(vector, text)
+            .with_metadata(&quot;type&quot;.to_string(), &quot;requirement&quot;.to_string())
+            .with_metadata(&quot;id&quot;.to_string(), &quot;REQ-001&quot;.to_string());
+
+        assert_eq!(embedding.metadata.get(&quot;type&quot;), Some(&amp;&quot;requirement&quot;.to_string()));
+        assert_eq!(embedding.metadata.get(&quot;id&quot;), Some(&amp;&quot;REQ-001&quot;.to_string()));
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-cosine-similarity-edge-cases"><code>test_cosine_similarity_edge_cases</code> <small>function</small>
+<details><summary>View code (358-372)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_cosine_similarity_edge_cases-358">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:358" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+</pre>
+    <pre><code id="code-test_cosine_similarity_edge_cases-358" class="lang-rust hljs">    fn test_cosine_similarity_edge_cases() {
+        // Test zero vectors
+        let zero1 = Embedding::new(vec![0.0, 0.0, 0.0], &quot;zero1&quot;.to_string());
+        let zero2 = Embedding::new(vec![0.0, 0.0, 0.0], &quot;zero2&quot;.to_string());
+        let normal = Embedding::new(vec![1.0, 1.0, 1.0], &quot;normal&quot;.to_string());
+
+        // Zero vectors should return 0 similarity
+        assert_eq!(zero1.cosine_similarity(&amp;zero2).unwrap(), 0.0);
+        assert_eq!(zero1.cosine_similarity(&amp;normal).unwrap(), 0.0);
+
+        // Test dimension mismatch
+        let dim3 = Embedding::new(vec![1.0, 0.0, 0.0], &quot;dim3&quot;.to_string());
+        let dim4 = Embedding::new(vec![1.0, 0.0, 0.0, 0.0], &quot;dim4&quot;.to_string());
+        assert!(dim3.cosine_similarity(&amp;dim4).is_err());
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-embedding-engine-creation"><code>test_embedding_engine_creation</code> <small>function</small>
+<details><summary>View code (375-382)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_embedding_engine_creation-375">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:375" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">375
+376
+377
+378
+379
+380
+381
+382
+</pre>
+    <pre><code id="code-test_embedding_engine_creation-375" class="lang-rust hljs">    fn test_embedding_engine_creation() {
+        let config = EmbeddingConfig::default();
+        let engine = EmbeddingEngine::new(config.clone());
+
+        assert_eq!(engine.config.model_name, config.model_name);
+        assert!(engine.model.is_none());
+        assert!(engine.tokenizer.is_none());
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-semantic-similarity-examples"><code>test_semantic_similarity_examples</code> <small>function</small>
+<details><summary>View code (385-407)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_semantic_similarity_examples-385">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:385" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+</pre>
+    <pre><code id="code-test_semantic_similarity_examples-385" class="lang-rust hljs">    fn test_semantic_similarity_examples() {
+        // Test semantic similarity with example texts
+        let similar_texts = vec![
+            (&quot;user authentication&quot;, &quot;login system&quot;),
+            (&quot;database connection&quot;, &quot;database connectivity&quot;),
+            (&quot;error handling&quot;, &quot;exception management&quot;),
+        ];
+
+        for (text1, text2) in similar_texts {
+            let embedding1 = Embedding::new(
+                vec![0.8, 0.6, 0.2, 0.1], // Mock similar embeddings
+                text1.to_string()
+            );
+            let embedding2 = Embedding::new(
+                vec![0.7, 0.7, 0.3, 0.1], // Mock similar embeddings
+                text2.to_string()
+            );
+
+            let similarity = embedding1.cosine_similarity(&amp;embedding2).unwrap();
+            // These should be reasonably similar (mock test)
+            assert!(similarity &gt; 0.5, &quot;Expected similarity &gt; 0.5 for &#39;{}&#39; and &#39;{}&#39;, got {}&quot;, text1, text2, similarity);
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-dissimilar-texts"><code>test_dissimilar_texts</code> <small>function</small>
+<details><summary>View code (410-423)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_dissimilar_texts-410">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:410" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+</pre>
+    <pre><code id="code-test_dissimilar_texts-410" class="lang-rust hljs">    fn test_dissimilar_texts() {
+        // Test dissimilar texts should have low similarity
+        let embedding1 = Embedding::new(
+            vec![1.0, 0.0, 0.0, 0.0], // Mock dissimilar embeddings
+            &quot;user authentication&quot;.to_string()
+        );
+        let embedding2 = Embedding::new(
+            vec![0.0, 1.0, 0.0, 0.0], // Mock dissimilar embeddings
+            &quot;graphics rendering&quot;.to_string()
+        );
+
+        let similarity = embedding1.cosine_similarity(&amp;embedding2).unwrap();
+        assert_eq!(similarity, 0.0, &quot;Expected 0 similarity for dissimilar texts&quot;);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(69)</small></summary><ul><li id="symbol-dot-product"><code>dot_product</code> <small>variable</small>
+<details><summary>View code (92-95)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-dot_product-92">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:92" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">92
+93
+94
+95
+</pre>
+    <pre><code id="code-dot_product-92" class="lang-rust hljs">        let dot_product: f32 = self.vector.iter()
+            .zip(other.vector.iter())
+            .map(|(a, b)| a * b)
+            .sum();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-norm-a"><code>norm_a</code> <small>variable</small>
+<details><summary>View code (97-97)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-norm_a-97">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:97" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">97
+</pre>
+    <pre><code id="code-norm_a-97" class="lang-rust hljs">        let norm_a: f32 = self.vector.iter().map(|x| x * x).sum::&lt;f32&gt;().sqrt();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-norm-b"><code>norm_b</code> <small>variable</small>
+<details><summary>View code (98-98)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-norm_b-98">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:98" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">98
+</pre>
+    <pre><code id="code-norm_b-98" class="lang-rust hljs">        let norm_b: f32 = other.vector.iter().map(|x| x * x).sum::&lt;f32&gt;().sqrt();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-device"><code>device</code> <small>variable</small>
+<details><summary>View code (137-137)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-device-137">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:137" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">137
+</pre>
+    <pre><code id="code-device-137" class="lang-rust hljs">        let device = config.device.clone();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-api"><code>api</code> <small>variable</small>
+<details><summary>View code (150-150)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-api-150">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:150" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">150
+</pre>
+    <pre><code id="code-api-150" class="lang-rust hljs">        let api = Api::new()?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-repo"><code>repo</code> <small>variable</small>
+<details><summary>View code (151-151)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-repo-151">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:151" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">151
+</pre>
+    <pre><code id="code-repo-151" class="lang-rust hljs">        let repo = api.model(self.config.model_name.clone());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tokenizer-filename"><code>tokenizer_filename</code> <small>variable</small>
+<details><summary>View code (154-154)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tokenizer_filename-154">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:154" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">154
+</pre>
+    <pre><code id="code-tokenizer_filename-154" class="lang-rust hljs">        let tokenizer_filename = repo.get(&quot;tokenizer.json&quot;).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config-filename"><code>config_filename</code> <small>variable</small>
+<details><summary>View code (159-159)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config_filename-159">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:159" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">159
+</pre>
+    <pre><code id="code-config_filename-159" class="lang-rust hljs">        let config_filename = repo.get(&quot;config.json&quot;).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config-content"><code>config_content</code> <small>variable</small>
+<details><summary>View code (160-160)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config_content-160">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:160" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">160
+</pre>
+    <pre><code id="code-config_content-160" class="lang-rust hljs">        let config_content = std::fs::read_to_string(config_filename)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-weights-filename"><code>weights_filename</code> <small>variable</small>
+<details><summary>View code (164-167)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-weights_filename-164">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:164" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">164
+165
+166
+167
+</pre>
+    <pre><code id="code-weights_filename-164" class="lang-rust hljs">        let weights_filename = match repo.get(&quot;pytorch_model.bin&quot;).await {
+            Ok(path) =&gt; path,
+            Err(_) =&gt; repo.get(&quot;model.safetensors&quot;).await?,
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-vb"><code>vb</code> <small>variable</small>
+<details><summary>View code (170-170)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-vb-170">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:170" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">170
+</pre>
+    <pre><code id="code-vb-170" class="lang-rust hljs">        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&amp;[weights_filename], DTYPE, &amp;self.device)? };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-model"><code>model</code> <small>variable</small>
+<details><summary>View code (178-179)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-model-178">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:178" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">178
+179
+</pre>
+    <pre><code id="code-model-178" class="lang-rust hljs">        let model = self.model.as_ref()
+            .ok_or_else(|| anyhow!(&quot;Model not initialized. Call initialize() first.&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tokenizer"><code>tokenizer</code> <small>variable</small>
+<details><summary>View code (180-181)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tokenizer-180">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:180" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">180
+181
+</pre>
+    <pre><code id="code-tokenizer-180" class="lang-rust hljs">        let tokenizer = self.tokenizer.as_ref()
+            .ok_or_else(|| anyhow!(&quot;Tokenizer not initialized. Call initialize() first.&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddings"><code>embeddings</code> <small>variable</small>
+<details><summary>View code (183-183)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddings-183">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:183" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">183
+</pre>
+    <pre><code id="code-embeddings-183" class="lang-rust hljs">        let mut embeddings = Vec::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-batch-embeddings"><code>batch_embeddings</code> <small>variable</small>
+<details><summary>View code (187-187)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-batch_embeddings-187">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:187" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">187
+</pre>
+    <pre><code id="code-batch_embeddings-187" class="lang-rust hljs">            let batch_embeddings = self.process_batch(model, tokenizer, chunk)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddings"><code>embeddings</code> <small>variable</small>
+<details><summary>View code (196-196)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddings-196">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:196" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">196
+</pre>
+    <pre><code id="code-embeddings-196" class="lang-rust hljs">        let embeddings = self.embed_batch(&amp;[text.to_string()])?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-encodings"><code>encodings</code> <small>variable</small>
+<details><summary>View code (209-210)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-encodings-209">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:209" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">209
+210
+</pre>
+    <pre><code id="code-encodings-209" class="lang-rust hljs">        let encodings = tokenizer.encode_batch(texts.to_vec(), true)
+            .map_err(|e| anyhow!(&quot;Tokenization failed: {}&quot;, e))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-input-ids"><code>input_ids</code> <small>variable</small>
+<details><summary>View code (212-212)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-input_ids-212">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:212" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">212
+</pre>
+    <pre><code id="code-input_ids-212" class="lang-rust hljs">        let mut input_ids = Vec::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-attention-masks"><code>attention_masks</code> <small>variable</small>
+<details><summary>View code (213-213)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-attention_masks-213">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:213" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">213
+</pre>
+    <pre><code id="code-attention_masks-213" class="lang-rust hljs">        let mut attention_masks = Vec::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ids"><code>ids</code> <small>variable</small>
+<details><summary>View code (216-216)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ids-216">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:216" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">216
+</pre>
+    <pre><code id="code-ids-216" class="lang-rust hljs">            let ids = encoding.get_ids();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-attention-mask"><code>attention_mask</code> <small>variable</small>
+<details><summary>View code (217-217)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-attention_mask-217">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:217" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">217
+</pre>
+    <pre><code id="code-attention_mask-217" class="lang-rust hljs">            let attention_mask = encoding.get_attention_mask();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-padded-ids"><code>padded_ids</code> <small>variable</small>
+<details><summary>View code (220-220)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-padded_ids-220">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:220" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">220
+</pre>
+    <pre><code id="code-padded_ids-220" class="lang-rust hljs">            let mut padded_ids = vec![0u32; self.config.max_length];</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-padded-mask"><code>padded_mask</code> <small>variable</small>
+<details><summary>View code (221-221)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-padded_mask-221">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:221" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">221
+</pre>
+    <pre><code id="code-padded_mask-221" class="lang-rust hljs">            let mut padded_mask = vec![0u32; self.config.max_length];</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-copy-len"><code>copy_len</code> <small>variable</small>
+<details><summary>View code (223-223)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-copy_len-223">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:223" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">223
+</pre>
+    <pre><code id="code-copy_len-223" class="lang-rust hljs">            let copy_len = ids.len().min(self.config.max_length);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-input-ids-tensor"><code>input_ids_tensor</code> <small>variable</small>
+<details><summary>View code (232-232)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-input_ids_tensor-232">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:232" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">232
+</pre>
+    <pre><code id="code-input_ids_tensor-232" class="lang-rust hljs">        let input_ids_tensor = Tensor::new(input_ids, &amp;self.device)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-attention-mask-tensor"><code>attention_mask_tensor</code> <small>variable</small>
+<details><summary>View code (233-233)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-attention_mask_tensor-233">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:233" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">233
+</pre>
+    <pre><code id="code-attention_mask_tensor-233" class="lang-rust hljs">        let attention_mask_tensor = Tensor::new(attention_masks, &amp;self.device)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-outputs"><code>outputs</code> <small>variable</small>
+<details><summary>View code (236-236)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-outputs-236">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:236" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">236
+</pre>
+    <pre><code id="code-outputs-236" class="lang-rust hljs">        let outputs = model.forward(&amp;input_ids_tensor, &amp;attention_mask_tensor, None)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddings-tensor"><code>embeddings_tensor</code> <small>variable</small>
+<details><summary>View code (239-239)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddings_tensor-239">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:239" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">239
+</pre>
+    <pre><code id="code-embeddings_tensor-239" class="lang-rust hljs">        let embeddings_tensor = self.mean_pooling(&amp;outputs, &amp;attention_mask_tensor)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddings-data"><code>embeddings_data</code> <small>variable</small>
+<details><summary>View code (242-242)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddings_data-242">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:242" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">242
+</pre>
+    <pre><code id="code-embeddings_data-242" class="lang-rust hljs">        let embeddings_data = embeddings_tensor.to_vec2::&lt;f32&gt;()?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (245-245)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-245">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:245" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">245
+</pre>
+    <pre><code id="code-result-245" class="lang-rust hljs">        let mut result = Vec::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding"><code>embedding</code> <small>variable</small>
+<details><summary>View code (247-247)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding-247">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:247" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">247
+</pre>
+    <pre><code id="code-embedding-247" class="lang-rust hljs">            let embedding = Embedding::new(embeddings_data[i].clone(), text.clone());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-expanded-mask"><code>expanded_mask</code> <small>variable</small>
+<details><summary>View code (257-258)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-expanded_mask-257">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:257" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">257
+258
+</pre>
+    <pre><code id="code-expanded_mask-257" class="lang-rust hljs">        let expanded_mask = attention_mask.unsqueeze(2)?
+            .expand(token_embeddings.shape())?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-masked-embeddings"><code>masked_embeddings</code> <small>variable</small>
+<details><summary>View code (261-261)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-masked_embeddings-261">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:261" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">261
+</pre>
+    <pre><code id="code-masked_embeddings-261" class="lang-rust hljs">        let masked_embeddings = token_embeddings.mul(&amp;expanded_mask)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-sum-embeddings"><code>sum_embeddings</code> <small>variable</small>
+<details><summary>View code (264-264)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-sum_embeddings-264">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:264" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">264
+</pre>
+    <pre><code id="code-sum_embeddings-264" class="lang-rust hljs">        let sum_embeddings = masked_embeddings.sum(1)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-sum-mask"><code>sum_mask</code> <small>variable</small>
+<details><summary>View code (267-267)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-sum_mask-267">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:267" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">267
+</pre>
+    <pre><code id="code-sum_mask-267" class="lang-rust hljs">        let sum_mask = attention_mask.sum(1)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-mean-embeddings"><code>mean_embeddings</code> <small>variable</small>
+<details><summary>View code (270-270)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-mean_embeddings-270">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:270" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">270
+</pre>
+    <pre><code id="code-mean_embeddings-270" class="lang-rust hljs">        let mean_embeddings = sum_embeddings.div(&amp;sum_mask.unsqueeze(1)?)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding1"><code>embedding1</code> <small>variable</small>
+<details><summary>View code (277-277)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding1-277">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:277" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">277
+</pre>
+    <pre><code id="code-embedding1-277" class="lang-rust hljs">        let embedding1 = self.embed(text1)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding2"><code>embedding2</code> <small>variable</small>
+<details><summary>View code (278-278)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding2-278">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:278" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">278
+</pre>
+    <pre><code id="code-embedding2-278" class="lang-rust hljs">        let embedding2 = self.embed(text2)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-query-embedding"><code>query_embedding</code> <small>variable</small>
+<details><summary>View code (288-288)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-query_embedding-288">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:288" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">288
+</pre>
+    <pre><code id="code-query_embedding-288" class="lang-rust hljs">        let query_embedding = self.embed(query)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-candidate-embeddings"><code>candidate_embeddings</code> <small>variable</small>
+<details><summary>View code (289-289)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-candidate_embeddings-289">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:289" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">289
+</pre>
+    <pre><code id="code-candidate_embeddings-289" class="lang-rust hljs">        let candidate_embeddings = self.embed_batch(candidates)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-best-match"><code>best_match</code> <small>variable</small>
+<details><summary>View code (291-291)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-best_match-291">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:291" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">291
+</pre>
+    <pre><code id="code-best_match-291" class="lang-rust hljs">        let mut best_match = None;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-best-score"><code>best_score</code> <small>variable</small>
+<details><summary>View code (292-292)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-best_score-292">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:292" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">292
+</pre>
+    <pre><code id="code-best_score-292" class="lang-rust hljs">        let mut best_score = 0.0;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small>
+<details><summary>View code (295-295)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-similarity-295">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:295" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">295
+</pre>
+    <pre><code id="code-similarity-295" class="lang-rust hljs">            let similarity = query_embedding.cosine_similarity(embedding)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-vector"><code>vector</code> <small>variable</small>
+<details><summary>View code (312-312)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-vector-312">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:312" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">312
+</pre>
+    <pre><code id="code-vector-312" class="lang-rust hljs">        let vector = vec![0.1, 0.2, 0.3, 0.4];</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-text"><code>text</code> <small>variable</small>
+<details><summary>View code (313-313)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-text-313">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:313" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">313
+</pre>
+    <pre><code id="code-text-313" class="lang-rust hljs">        let text = &quot;test text&quot;.to_string();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding"><code>embedding</code> <small>variable</small>
+<details><summary>View code (314-314)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding-314">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:314" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">314
+</pre>
+    <pre><code id="code-embedding-314" class="lang-rust hljs">        let embedding = Embedding::new(vector.clone(), text.clone());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding1"><code>embedding1</code> <small>variable</small>
+<details><summary>View code (323-323)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding1-323">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:323" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">323
+</pre>
+    <pre><code id="code-embedding1-323" class="lang-rust hljs">        let embedding1 = Embedding::new(vec![1.0, 0.0, 0.0], &quot;text1&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding2"><code>embedding2</code> <small>variable</small>
+<details><summary>View code (324-324)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding2-324">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:324" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">324
+</pre>
+    <pre><code id="code-embedding2-324" class="lang-rust hljs">        let embedding2 = Embedding::new(vec![0.0, 1.0, 0.0], &quot;text2&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding3"><code>embedding3</code> <small>variable</small>
+<details><summary>View code (325-325)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding3-325">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:325" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">325
+</pre>
+    <pre><code id="code-embedding3-325" class="lang-rust hljs">        let embedding3 = Embedding::new(vec![1.0, 0.0, 0.0], &quot;text3&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-similarity1"><code>similarity1</code> <small>variable</small>
+<details><summary>View code (328-328)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-similarity1-328">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:328" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">328
+</pre>
+    <pre><code id="code-similarity1-328" class="lang-rust hljs">        let similarity1 = embedding1.cosine_similarity(&amp;embedding2).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-similarity2"><code>similarity2</code> <small>variable</small>
+<details><summary>View code (332-332)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-similarity2-332">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:332" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">332
+</pre>
+    <pre><code id="code-similarity2-332" class="lang-rust hljs">        let similarity2 = embedding1.cosine_similarity(&amp;embedding3).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (338-338)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-338">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:338" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">338
+</pre>
+    <pre><code id="code-config-338" class="lang-rust hljs">        let config = EmbeddingConfig::default();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-vector"><code>vector</code> <small>variable</small>
+<details><summary>View code (347-347)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-vector-347">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:347" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">347
+</pre>
+    <pre><code id="code-vector-347" class="lang-rust hljs">        let vector = vec![0.1, 0.2, 0.3];</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-text"><code>text</code> <small>variable</small>
+<details><summary>View code (348-348)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-text-348">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:348" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">348
+</pre>
+    <pre><code id="code-text-348" class="lang-rust hljs">        let text = &quot;test text&quot;.to_string();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding"><code>embedding</code> <small>variable</small>
+<details><summary>View code (349-351)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding-349">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:349" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">349
+350
+351
+</pre>
+    <pre><code id="code-embedding-349" class="lang-rust hljs">        let embedding = Embedding::new(vector, text)
+            .with_metadata(&quot;type&quot;.to_string(), &quot;requirement&quot;.to_string())
+            .with_metadata(&quot;id&quot;.to_string(), &quot;REQ-001&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-zero1"><code>zero1</code> <small>variable</small>
+<details><summary>View code (360-360)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-zero1-360">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:360" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">360
+</pre>
+    <pre><code id="code-zero1-360" class="lang-rust hljs">        let zero1 = Embedding::new(vec![0.0, 0.0, 0.0], &quot;zero1&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-zero2"><code>zero2</code> <small>variable</small>
+<details><summary>View code (361-361)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-zero2-361">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:361" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">361
+</pre>
+    <pre><code id="code-zero2-361" class="lang-rust hljs">        let zero2 = Embedding::new(vec![0.0, 0.0, 0.0], &quot;zero2&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-normal"><code>normal</code> <small>variable</small>
+<details><summary>View code (362-362)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-normal-362">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:362" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">362
+</pre>
+    <pre><code id="code-normal-362" class="lang-rust hljs">        let normal = Embedding::new(vec![1.0, 1.0, 1.0], &quot;normal&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-dim3"><code>dim3</code> <small>variable</small>
+<details><summary>View code (369-369)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-dim3-369">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:369" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">369
+</pre>
+    <pre><code id="code-dim3-369" class="lang-rust hljs">        let dim3 = Embedding::new(vec![1.0, 0.0, 0.0], &quot;dim3&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-dim4"><code>dim4</code> <small>variable</small>
+<details><summary>View code (370-370)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-dim4-370">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:370" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">370
+</pre>
+    <pre><code id="code-dim4-370" class="lang-rust hljs">        let dim4 = Embedding::new(vec![1.0, 0.0, 0.0, 0.0], &quot;dim4&quot;.to_string());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (376-376)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-376">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:376" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">376
+</pre>
+    <pre><code id="code-config-376" class="lang-rust hljs">        let config = EmbeddingConfig::default();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (377-377)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-377">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:377" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">377
+</pre>
+    <pre><code id="code-engine-377" class="lang-rust hljs">        let engine = EmbeddingEngine::new(config.clone());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-similar-texts"><code>similar_texts</code> <small>variable</small>
+<details><summary>View code (387-391)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-similar_texts-387">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:387" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">387
+388
+389
+390
+391
+</pre>
+    <pre><code id="code-similar_texts-387" class="lang-rust hljs">        let similar_texts = vec![
+            (&quot;user authentication&quot;, &quot;login system&quot;),
+            (&quot;database connection&quot;, &quot;database connectivity&quot;),
+            (&quot;error handling&quot;, &quot;exception management&quot;),
+        ];</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding1"><code>embedding1</code> <small>variable</small>
+<details><summary>View code (394-397)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding1-394">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:394" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">394
+395
+396
+397
+</pre>
+    <pre><code id="code-embedding1-394" class="lang-rust hljs">            let embedding1 = Embedding::new(
+                vec![0.8, 0.6, 0.2, 0.1], // Mock similar embeddings
+                text1.to_string()
+            );</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding2"><code>embedding2</code> <small>variable</small>
+<details><summary>View code (398-401)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding2-398">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:398" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">398
+399
+400
+401
+</pre>
+    <pre><code id="code-embedding2-398" class="lang-rust hljs">            let embedding2 = Embedding::new(
+                vec![0.7, 0.7, 0.3, 0.1], // Mock similar embeddings
+                text2.to_string()
+            );</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small>
+<details><summary>View code (403-403)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-similarity-403">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:403" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">403
+</pre>
+    <pre><code id="code-similarity-403" class="lang-rust hljs">            let similarity = embedding1.cosine_similarity(&amp;embedding2).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding1"><code>embedding1</code> <small>variable</small>
+<details><summary>View code (412-415)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding1-412">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:412" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">412
+413
+414
+415
+</pre>
+    <pre><code id="code-embedding1-412" class="lang-rust hljs">        let embedding1 = Embedding::new(
+            vec![1.0, 0.0, 0.0, 0.0], // Mock dissimilar embeddings
+            &quot;user authentication&quot;.to_string()
+        );</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding2"><code>embedding2</code> <small>variable</small>
+<details><summary>View code (416-419)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding2-416">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:416" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">416
+417
+418
+419
+</pre>
+    <pre><code id="code-embedding2-416" class="lang-rust hljs">        let embedding2 = Embedding::new(
+            vec![0.0, 1.0, 0.0, 0.0], // Mock dissimilar embeddings
+            &quot;graphics rendering&quot;.to_string()
+        );</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-similarity"><code>similarity</code> <small>variable</small>
+<details><summary>View code (421-421)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-similarity-421">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:421" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">421
+</pre>
+    <pre><code id="code-similarity-421" class="lang-rust hljs">        let similarity = embedding1.cosine_similarity(&amp;embedding2).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(7)</small></summary><ul><li id="symbol-embeddingconfig"><code>EmbeddingConfig</code> <small>struct</small>
+<details><summary>View code (25-38)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddingconfig-25">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:25" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+</pre>
+    <pre><code id="code-embeddingconfig-25" class="lang-rust hljs">pub struct EmbeddingConfig {
+    /// Model name/path for embeddings
+    pub model_name: String,
+    /// Maximum sequence length
+    pub max_length: usize,
+    /// Batch size for processing
+    pub batch_size: usize,
+    /// Device to use (CPU/GPU)
+    pub device: Device,
+    /// Cache directory for models
+    pub cache_dir: Option&lt;PathBuf&gt;,
+    /// Similarity threshold for matching
+    pub similarity_threshold: f64,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding"><code>Embedding</code> <small>struct</small>
+<details><summary>View code (55-62)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding-55">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:55" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">55
+56
+57
+58
+59
+60
+61
+62
+</pre>
+    <pre><code id="code-embedding-55" class="lang-rust hljs">pub struct Embedding {
+    /// The embedding vector
+    pub vector: Vec&lt;f32&gt;,
+    /// Original text that was embedded
+    pub text: String,
+    /// Metadata about the embedding
+    pub metadata: HashMap&lt;String, String&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddingengine"><code>EmbeddingEngine</code> <small>struct</small>
+<details><summary>View code (109-120)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddingengine-109">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:109" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+</pre>
+    <pre><code id="code-embeddingengine-109" class="lang-rust hljs">pub struct EmbeddingEngine {
+    /// Configuration
+    config: EmbeddingConfig,
+    /// BERT model
+    model: Option&lt;BertModel&gt;,
+    /// Tokenizer
+    tokenizer: Option&lt;Tokenizer&gt;,
+    /// Device for computation
+    device: Device,
+    /// Model configuration
+    bert_config: Option&lt;Config&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddingconfig"><code>EmbeddingConfig</code> <small>impl</small>
+<details><summary>View code (40-51)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddingconfig-40">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:40" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+</pre>
+    <pre><code id="code-embeddingconfig-40" class="lang-rust hljs">impl Default for EmbeddingConfig {
+    fn default() -&gt; Self {
+        Self {
+            model_name: &quot;sentence-transformers/all-MiniLM-L6-v2&quot;.to_string(),
+            max_length: 512,
+            batch_size: 32,
+            device: Device::Cpu,
+            cache_dir: None,
+            similarity_threshold: 0.7,
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embedding"><code>Embedding</code> <small>impl</small>
+<details><summary>View code (64-106)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embedding-64">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:64" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+</pre>
+    <pre><code id="code-embedding-64" class="lang-rust hljs">impl Embedding {
+    /// Create a new embedding
+    pub fn new(vector: Vec&lt;f32&gt;, text: String) -&gt; Self {
+        Self {
+            vector,
+            text,
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Add metadata to the embedding
+    pub fn with_metadata(mut self, key: String, value: String) -&gt; Self {
+        self.metadata.insert(key, value);
+        self
+    }
+
+    /// Get the dimensionality of the embedding
+    pub fn dimension(&amp;self) -&gt; usize {
+        self.vector.len()
+    }
+
+    /// Calculate cosine similarity with another embedding
+    pub fn cosine_similarity(&amp;self, other: &amp;Embedding) -&gt; Result&lt;f64&gt; {
+        if self.vector.len() != other.vector.len() {
+            return Err(anyhow!(&quot;Embedding dimensions don&#39;t match: {} vs {}&quot;, 
+                self.vector.len(), other.vector.len()));
+        }
+
+        let dot_product: f32 = self.vector.iter()
+            .zip(other.vector.iter())
+            .map(|(a, b)| a * b)
+            .sum();
+
+        let norm_a: f32 = self.vector.iter().map(|x| x * x).sum::&lt;f32&gt;().sqrt();
+        let norm_b: f32 = other.vector.iter().map(|x| x * x).sum::&lt;f32&gt;().sqrt();
+
+        if norm_a == 0.0 || norm_b == 0.0 {
+            return Ok(0.0);
+        }
+
+        Ok((dot_product / (norm_a * norm_b)) as f64)
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddingengine"><code>EmbeddingEngine</code> <small>impl</small>
+<details><summary>View code (122-132)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddingengine-122">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:122" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+</pre>
+    <pre><code id="code-embeddingengine-122" class="lang-rust hljs">impl std::fmt::Debug for EmbeddingEngine {
+    fn fmt(&amp;self, f: &amp;mut std::fmt::Formatter&lt;&#39;_&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(&quot;EmbeddingEngine&quot;)
+            .field(&quot;config&quot;, &amp;self.config)
+            .field(&quot;model_loaded&quot;, &amp;self.model.is_some())
+            .field(&quot;tokenizer_loaded&quot;, &amp;self.tokenizer.is_some())
+            .field(&quot;device&quot;, &amp;format!(&quot;{:?}&quot;, self.device))
+            .field(&quot;bert_config_loaded&quot;, &amp;self.bert_config.is_some())
+            .finish()
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-embeddingengine"><code>EmbeddingEngine</code> <small>impl</small>
+<details><summary>View code (134-304)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-embeddingengine-134">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/embeddings.rs:134" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+</pre>
+    <pre><code id="code-embeddingengine-134" class="lang-rust hljs">impl EmbeddingEngine {
+    /// Create a new embedding engine
+    pub fn new(config: EmbeddingConfig) -&gt; Self {
+        let device = config.device.clone();
+        Self {
+            config,
+            model: None,
+            tokenizer: None,
+            device,
+            bert_config: None,
+        }
+    }
+
+    /// Initialize the embedding engine (load model and tokenizer)
+    pub async fn initialize(&amp;mut self) -&gt; Result&lt;()&gt; {
+        // Download model files from Hugging Face Hub
+        let api = Api::new()?;
+        let repo = api.model(self.config.model_name.clone());
+
+        // Download tokenizer
+        let tokenizer_filename = repo.get(&quot;tokenizer.json&quot;).await?;
+        self.tokenizer = Some(Tokenizer::from_file(tokenizer_filename)
+            .map_err(|e| anyhow!(&quot;Failed to load tokenizer: {}&quot;, e))?);
+
+        // Download model config
+        let config_filename = repo.get(&quot;config.json&quot;).await?;
+        let config_content = std::fs::read_to_string(config_filename)?;
+        self.bert_config = Some(serde_json::from_str(&amp;config_content)?);
+
+        // Download model weights
+        let weights_filename = match repo.get(&quot;pytorch_model.bin&quot;).await {
+            Ok(path) =&gt; path,
+            Err(_) =&gt; repo.get(&quot;model.safetensors&quot;).await?,
+        };
+
+        // Load model
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&amp;[weights_filename], DTYPE, &amp;self.device)? };
+        self.model = Some(BertModel::load(vb, self.bert_config.as_ref().unwrap())?);
+
+        Ok(())
+    }
+
+    /// Generate embeddings for a batch of texts
+    pub fn embed_batch(&amp;self, texts: &amp;[String]) -&gt; Result&lt;Vec&lt;Embedding&gt;&gt; {
+        let model = self.model.as_ref()
+            .ok_or_else(|| anyhow!(&quot;Model not initialized. Call initialize() first.&quot;))?;
+        let tokenizer = self.tokenizer.as_ref()
+            .ok_or_else(|| anyhow!(&quot;Tokenizer not initialized. Call initialize() first.&quot;))?;
+
+        let mut embeddings = Vec::new();
+
+        // Process texts in batches
+        for chunk in texts.chunks(self.config.batch_size) {
+            let batch_embeddings = self.process_batch(model, tokenizer, chunk)?;
+            embeddings.extend(batch_embeddings);
+        }
+
+        Ok(embeddings)
+    }
+
+    /// Generate embedding for a single text
+    pub fn embed(&amp;self, text: &amp;str) -&gt; Result&lt;Embedding&gt; {
+        let embeddings = self.embed_batch(&amp;[text.to_string()])?;
+        embeddings.into_iter().next()
+            .ok_or_else(|| anyhow!(&quot;Failed to generate embedding&quot;))
+    }
+
+    /// Process a batch of texts
+    fn process_batch(
+        &amp;self,
+        model: &amp;BertModel,
+        tokenizer: &amp;Tokenizer,
+        texts: &amp;[String],
+    ) -&gt; Result&lt;Vec&lt;Embedding&gt;&gt; {
+        // Tokenize texts
+        let encodings = tokenizer.encode_batch(texts.to_vec(), true)
+            .map_err(|e| anyhow!(&quot;Tokenization failed: {}&quot;, e))?;
+
+        let mut input_ids = Vec::new();
+        let mut attention_masks = Vec::new();
+
+        for encoding in &amp;encodings {
+            let ids = encoding.get_ids();
+            let attention_mask = encoding.get_attention_mask();
+
+            // Pad or truncate to max_length
+            let mut padded_ids = vec![0u32; self.config.max_length];
+            let mut padded_mask = vec![0u32; self.config.max_length];
+
+            let copy_len = ids.len().min(self.config.max_length);
+            padded_ids[..copy_len].copy_from_slice(&amp;ids[..copy_len]);
+            padded_mask[..copy_len].copy_from_slice(&amp;attention_mask[..copy_len]);
+
+            input_ids.push(padded_ids);
+            attention_masks.push(padded_mask);
+        }
+
+        // Convert to tensors
+        let input_ids_tensor = Tensor::new(input_ids, &amp;self.device)?;
+        let attention_mask_tensor = Tensor::new(attention_masks, &amp;self.device)?;
+
+        // Run model
+        let outputs = model.forward(&amp;input_ids_tensor, &amp;attention_mask_tensor, None)?;
+        
+        // Extract embeddings (use [CLS] token or mean pooling)
+        let embeddings_tensor = self.mean_pooling(&amp;outputs, &amp;attention_mask_tensor)?;
+        
+        // Convert to Vec&lt;f32&gt;
+        let embeddings_data = embeddings_tensor.to_vec2::&lt;f32&gt;()?;
+
+        // Create Embedding objects
+        let mut result = Vec::new();
+        for (i, text) in texts.iter().enumerate() {
+            let embedding = Embedding::new(embeddings_data[i].clone(), text.clone());
+            result.push(embedding);
+        }
+
+        Ok(result)
+    }
+
+    /// Mean pooling of token embeddings
+    fn mean_pooling(&amp;self, token_embeddings: &amp;Tensor, attention_mask: &amp;Tensor) -&gt; Result&lt;Tensor&gt; {
+        // Expand attention mask to match token embeddings dimensions
+        let expanded_mask = attention_mask.unsqueeze(2)?
+            .expand(token_embeddings.shape())?;
+
+        // Apply mask to embeddings
+        let masked_embeddings = token_embeddings.mul(&amp;expanded_mask)?;
+
+        // Sum along sequence dimension
+        let sum_embeddings = masked_embeddings.sum(1)?;
+
+        // Sum attention mask to get actual lengths
+        let sum_mask = attention_mask.sum(1)?;
+
+        // Divide by actual lengths to get mean
+        let mean_embeddings = sum_embeddings.div(&amp;sum_mask.unsqueeze(1)?)?;
+
+        Ok(mean_embeddings)
+    }
+
+    /// Calculate similarity between two texts
+    pub fn calculate_similarity(&amp;self, text1: &amp;str, text2: &amp;str) -&gt; Result&lt;f64&gt; {
+        let embedding1 = self.embed(text1)?;
+        let embedding2 = self.embed(text2)?;
+        embedding1.cosine_similarity(&amp;embedding2)
+    }
+
+    /// Find most similar text from a collection
+    pub fn find_most_similar(
+        &amp;self,
+        query: &amp;str,
+        candidates: &amp;[String],
+    ) -&gt; Result&lt;Option&lt;(String, f64)&gt;&gt; {
+        let query_embedding = self.embed(query)?;
+        let candidate_embeddings = self.embed_batch(candidates)?;
+
+        let mut best_match = None;
+        let mut best_score = 0.0;
+
+        for (candidate, embedding) in candidates.iter().zip(candidate_embeddings.iter()) {
+            let similarity = query_embedding.cosine_similarity(embedding)?;
+            if similarity &gt; best_score &amp;&amp; similarity &gt;= self.config.similarity_threshold {
+                best_score = similarity;
+                best_match = Some((candidate.clone(), similarity));
+            }
+        }
+
+        Ok(best_match)
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+<details class=\"card\" id=\"security-analysis\"><summary>Security Analysis</summary><div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: src/embeddings.rs</h4>
+<p>Risk Score: 17.0</p>
+<p>Vulnerabilities: 2 (Critical)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Implement proper authorization checks before sensitive operations</li>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Use role-based access control (RBAC)</li>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Apply the principle of least privilege</li>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Implement proper session management</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use parameterized queries or prepared statements</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Validate and sanitize all user inputs</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use an ORM with built-in injection protection</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Implement content security policies</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Follow secure design principles from the start</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Implement threat modeling</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Use secure defaults and fail-safe behavior</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Regular security reviews of design decisions</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Secure default configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Regular configuration reviews</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Environment-specific configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Automated configuration validation</li>
+</ul></div>
+
+</div>
+</details>
+</section>
+</main>
+</body>
+</html>

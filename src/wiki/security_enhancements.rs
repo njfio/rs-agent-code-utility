@@ -6,11 +6,11 @@
 use crate::advanced_security::{AdvancedSecurityAnalyzer, AdvancedSecurityConfig, SecuritySeverity, OwaspCategory};
 use crate::analyzer::{AnalysisResult, FileInfo};
 
-use crate::{Error, Result};
-use crate::semantic_graph::{SemanticGraphQuery, GraphNode, GraphEdge, NodeType, RelationshipType};
+use crate::Result;
+use crate::semantic_graph::SemanticGraphQuery;
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::fmt::Write as FmtWrite;
 
 /// Security trace information for vulnerability propagation
@@ -432,7 +432,7 @@ impl SecurityWikiGenerator {
 
     /// Identify security hotspots
     fn identify_security_hotspots(&self, security_result: &crate::advanced_security::AdvancedSecurityResult,
-                               analysis: &AnalysisResult) -> Result<Vec<SecurityHotspot>> {
+                               _analysis: &AnalysisResult) -> Result<Vec<SecurityHotspot>> {
         let mut hotspots = HashMap::new();
 
         // Group vulnerabilities by file
@@ -503,8 +503,19 @@ impl SecurityWikiGenerator {
 
             for category in categories {
                 let recommendations = self.get_category_recommendations(&category);
+                let cat_label = html_escape(&category);
+                let cat_html = if let Some(url) = self.owasp_category_url(&category) {
+                    format!("<a href=\"{}\" target=\"_blank\" rel=\"noopener\">{}</a>", url, cat_label)
+                } else {
+                    cat_label
+                };
                 for rec in recommendations {
-                    let _ = writeln!(&mut html, "<li><strong>{}:</strong> {}</li>", category, rec);
+                    let _ = writeln!(
+                        &mut html,
+                        "<li><strong>{}:</strong> {}</li>",
+                        cat_html,
+                        html_escape(&rec)
+                    );
                 }
             }
 
@@ -596,12 +607,12 @@ impl SecurityWikiGenerator {
         let mut diagram = String::new();
 
         let _ = writeln!(&mut diagram, "graph TD");
-        let _ = writeln!(&mut diagram, "  A[\"{}\"]", trace.source.title);
-        let _ = writeln!(&mut diagram, "  A --> B[\"Impact: {:.1}\"]", trace.impact_chain[0].score);
+        let _ = writeln!(&mut diagram, "  A[{}]", trace.source.title);
+        let _ = writeln!(&mut diagram, "  A --> B[Impact: {:.1}]", trace.impact_chain[0].score);
 
         for (i, call_site) in trace.propagation_path.iter().enumerate() {
             let node_id = format!("C{}", i);
-            let _ = writeln!(&mut diagram, "  {}([\"{}\"])", node_id, call_site.function_name);
+            let _ = writeln!(&mut diagram, "  {}([{}])", node_id, call_site.function_name);
 
             if i == 0 {
                 let _ = writeln!(&mut diagram, "  B --> {}", node_id);
@@ -612,7 +623,7 @@ impl SecurityWikiGenerator {
 
             if i < trace.impact_chain.len() - 1 {
                 let next_impact = format!("D{}", i);
-                let _ = writeln!(&mut diagram, "  {}[\"Impact: {:.1}\"]", next_impact, trace.impact_chain[i + 1].score);
+                let _ = writeln!(&mut diagram, "  {}[Impact: {:.1}]", next_impact, trace.impact_chain[i + 1].score);
                 let _ = writeln!(&mut diagram, "  {} --> {}", node_id, next_impact);
             }
         }
@@ -633,13 +644,57 @@ impl SecurityWikiGenerator {
                 _ => "green",
             };
 
-            let _ = writeln!(&mut diagram, "  H{}[\"{}\\nRisk: {:.1}\\nVulnerabilities: {}\"]", 
+            let _ = writeln!(&mut diagram, "  H{}[{}\\nRisk: {:.1}\\nVulnerabilities: {}]", 
                            i, hotspot.location.file.display(), hotspot.risk_score, hotspot.vulnerability_count);
             let _ = writeln!(&mut diagram, "  style H{} fill:{};", i, severity_color);
         }
 
         diagram
     }
+
+    /// Map OWASP Top 10 2021 categories to official documentation URLs
+    fn owasp_category_url(&self, category: &str) -> Option<&'static str> {
+        // Match by code prefix to tolerate formatting differences
+        if category.contains("A01:2021") {
+            Some("https://owasp.org/Top10/A01_2021-Broken_Access_Control/")
+        } else if category.contains("A02:2021") {
+            Some("https://owasp.org/Top10/A02_2021-Cryptographic_Failures/")
+        } else if category.contains("A03:2021") {
+            Some("https://owasp.org/Top10/A03_2021-Injection/")
+        } else if category.contains("A04:2021") {
+            Some("https://owasp.org/Top10/A04_2021-Insecure_Design/")
+        } else if category.contains("A05:2021") {
+            Some("https://owasp.org/Top10/A05_2021-Security_Misconfiguration/")
+        } else if category.contains("A06:2021") {
+            Some("https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/")
+        } else if category.contains("A07:2021") {
+            Some("https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/")
+        } else if category.contains("A08:2021") {
+            Some("https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/")
+        } else if category.contains("A09:2021") {
+            Some("https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/")
+        } else if category.contains("A10:2021") {
+            Some("https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/")
+        } else {
+            None
+        }
+    }
+}
+
+// Minimal HTML escaping (keep independent of wiki::mod.rs helper)
+fn html_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(ch),
+        }
+    }
+    out
 }
 
 /// Result of security analysis for wiki generation

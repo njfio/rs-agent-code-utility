@@ -35,7 +35,7 @@ fn index_and_file_pages_include_ai_mock_sections() -> Result<()> {
 
     // index.html contains an AI block
     let index = fs::read_to_string(out.path().join("index.html"))?;
-    assert!(index.contains("AI Insights"), "Index should include AI insights header");
+    assert!(index.contains("AI Commentary"), "Index should include AI commentary header");
 
     // a file page contains specific AI subsections
     let pages = out.path().join("pages");
@@ -43,7 +43,7 @@ fn index_and_file_pages_include_ai_mock_sections() -> Result<()> {
     for e in fs::read_dir(&pages)? {
         let e = e?;
         let c = fs::read_to_string(e.path())?;
-        if c.contains("AI Insights") && c.contains("Module Overview") && c.contains("Function Docs") && c.contains("Refactoring Suggestions") && c.contains("Security Insights") {
+        if c.contains("AI Commentary") && c.contains("Module Overview") && c.contains("Function Docs") && c.contains("Refactoring Suggestions") && c.contains("Security Insights") {
             found = Some(c);
             break;
         }
@@ -51,4 +51,3 @@ fn index_and_file_pages_include_ai_mock_sections() -> Result<()> {
     assert!(found.is_some(), "File page should include all AI insight sections");
     Ok(())
 }
-

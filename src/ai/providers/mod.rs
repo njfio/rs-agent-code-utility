@@ -12,6 +12,7 @@ pub mod google;
 pub mod azure;
 pub mod local;
 pub mod ollama;
+pub mod groq;
 
 /// Provider implementation trait
 #[async_trait]
@@ -86,6 +87,10 @@ pub async fn create_provider(
         }
         AIProvider::Ollama => {
             let provider = ollama::OllamaProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+        AIProvider::Groq => {
+            let provider = groq::GroqProvider::new(config).await?;
             Ok(Box::new(provider))
         }
     }

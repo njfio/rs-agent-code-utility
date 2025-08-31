@@ -34,6 +34,7 @@ rayon = "1.8"
 petgraph = "0.6"
 ignore = "0.4"
 crc32fast = "1.4"
+pulldown-cmark = "0.10"
 
 # Security fixes - ring will be updated via dependency resolution
 

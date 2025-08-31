@@ -13,6 +13,7 @@ pub enum AIProvider {
     AzureOpenAI,
     Local,
     Ollama,
+    Groq,
 }
 
 /// AI model specifications

@@ -57,7 +57,8 @@ impl CfgBuilder {
     /// Create a new CFG builder for the specified language
     pub fn new(language: &str) -> Self {
         Self {
-            language: language.to_string(),
+            // Normalize to lowercase to align with other modules
+            language: language.to_lowercase(),
         }
     }
 
@@ -271,7 +272,13 @@ impl CfgBuilder {
             "python" => matches!(kind, "if_statement" | "conditional_expression"),
             "c" | "cpp" | "c++" => matches!(kind, "if_statement" | "switch_statement" | "conditional_expression"),
             "go" => matches!(kind, "if_statement" | "switch_statement"),
-            _ => kind.contains("if") || kind.contains("switch") || kind.contains("conditional"),
+            // Be conservative in fallback to avoid matching identifiers (e.g., "identifier" contains "if")
+            _ => matches!(
+                kind,
+                "if" | "if_statement" | "if_expression"
+                    | "switch" | "switch_statement" | "switch_expression"
+                    | "conditional_expression"
+            ),
         }
     }
 
@@ -283,7 +290,13 @@ impl CfgBuilder {
             "python" => matches!(kind, "for_statement" | "while_statement"),
             "c" | "cpp" | "c++" => matches!(kind, "for_statement" | "while_statement" | "do_statement"),
             "go" => matches!(kind, "for_statement"),
-            _ => kind.contains("for") || kind.contains("while") || kind.contains("loop"),
+            _ => matches!(
+                kind,
+                "for" | "for_statement" | "for_expression"
+                    | "while" | "while_statement" | "while_expression"
+                    | "do" | "do_statement"
+                    | "loop" | "loop_expression"
+            ),
         }
     }
     /// Check if a node kind represents a function call
@@ -301,7 +314,7 @@ impl CfgBuilder {
     /// Extract simple call details (best-effort) using SyntaxTree for text
     fn extract_call_details_with_tree(&self, tree: &SyntaxTree, node: tree_sitter::Node<'_>) -> (String, Vec<String>) {
         // Heuristic per language to get callee identifier text
-        let kind = node.kind();
+        let _kind = node.kind();
         let mut cursor = node.walk();
         // For method_call_expression in Rust, the function name is a child named "name"
         if node.kind() == "method_call_expression" {
@@ -340,7 +353,16 @@ impl CfgBuilder {
 
     /// Check if a node kind represents a return statement
     fn is_return(&self, kind: &str) -> bool {
-        kind.contains("return")
+        match self.language.as_str() {
+            // Known language-specific return node kinds
+            "rust" => matches!(kind, "return_expression"),
+            "javascript" | "typescript" => matches!(kind, "return_statement"),
+            "python" => matches!(kind, "return_statement"),
+            "c" | "cpp" | "c++" => matches!(kind, "return_statement"),
+            "go" => matches!(kind, "return_statement"),
+            // Conservative fallback
+            _ => matches!(kind, "return" | "return_statement" | "return_expression"),
+        }
     }
 
     /// Build CFG for conditional statements

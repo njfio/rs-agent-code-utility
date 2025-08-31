@@ -4,1754 +4,1988 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>src/infrastructure/rate_limiter.rs</title>
 <link rel="stylesheet" href="../assets/style.css">
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
 </head>
 <body>
-<header><h1>src/infrastructure/rate_limiter.rs</h1></header>
+<header><h1>src/infrastructure/rate_limiter.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
 <main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_groq.rs.html">src/ai/providers/groq.rs</a>
+<a href="src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+<a href="src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html">src/ai/types.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+<a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+<a href="src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+<a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html">src/constants.rs</a>
+<a href="src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="src_error.rs.html">src/error.rs</a>
+<a href="src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+<a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+<a href="src_lib.rs.html">src/lib.rs</a>
+<a href="src_main.rs.html">src/main.rs</a>
+<a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="src_query.rs.html">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+<a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="src_tree.rs.html">src/tree.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html">test_files/sample.go</a>
+<a href="test_files_sample.ts.html">test_files/sample.ts</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+<a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+<a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
+<a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
+<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+
+
+</nav>
 <section class="article">
 <p>78 symbols, 471 lines</p>
+
 <div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
-  start(["Start"])
-  end(["End"])
+  start([Start])
+  end([End])
   start --> N0
-  N0(["identifier"])
-  N1(["identifier"])
+  N0([identifier])
+  N1([identifier])
   N0 -->|true| N1
   N0 -->|false| N1
-  N2(["identifier"])
+  N2([identifier])
   N1 -->|true| N2
   N1 -->|false| N2
-  N3(["identifier"])
+  N3([identifier])
   N2 -->|true| N3
   N2 -->|false| N3
-  N4(["identifier"])
+  N4([identifier])
   N3 -->|true| N4
   N3 -->|false| N4
-  N5(["identifier"])
+  N5([identifier])
   N4 -->|true| N5
   N4 -->|false| N5
-  N6(["identifier"])
+  N6([identifier])
   N5 -->|true| N6
   N5 -->|false| N6
-  N7(["identifier"])
+  N7([identifier])
   N6 -->|true| N7
   N6 -->|false| N7
-  N8(["identifier"])
+  N8([identifier])
   N7 -->|true| N8
   N7 -->|false| N8
-  N9(["identifier"])
+  N9([identifier])
   N8 -->|true| N9
   N8 -->|false| N9
-  N10(["scoped_identifier"])
+  N10([scoped_identifier])
   N9 -->|true| N10
   N9 -->|false| N10
-  N11(["identifier"])
+  N11([identifier])
   N10 -->|true| N11
   N10 -->|false| N11
-  N12(["identifier"])
+  N12([identifier])
   N11 -->|true| N12
   N11 -->|false| N12
-  N13(["scoped_identifier"])
+  N13([scoped_identifier])
   N12 -->|true| N13
   N12 -->|false| N13
-  N14(["scoped_identifier"])
+  N14([scoped_identifier])
   N13 -->|true| N14
   N13 -->|false| N14
-  N15(["identifier"])
+  N15([identifier])
   N14 -->|true| N15
   N14 -->|false| N15
-  N16(["identifier"])
+  N16([identifier])
   N15 -->|true| N16
   N15 -->|false| N16
-  N17(["identifier"])
+  N17([identifier])
   N16 -->|true| N17
   N16 -->|false| N17
-  N18(["scoped_identifier"])
+  N18([scoped_identifier])
   N17 -->|true| N18
   N17 -->|false| N18
-  N19(["scoped_identifier"])
+  N19([scoped_identifier])
   N18 -->|true| N19
   N18 -->|false| N19
-  N20(["identifier"])
+  N20([identifier])
   N19 -->|true| N20
   N19 -->|false| N20
-  N21(["identifier"])
+  N21([identifier])
   N20 -->|true| N21
   N20 -->|false| N21
-  N22(["identifier"])
+  N22([identifier])
   N21 -->|true| N22
   N21 -->|false| N22
-  N23(["scoped_identifier"])
+  N23([scoped_identifier])
   N22 -->|true| N23
   N22 -->|false| N23
-  N24(["scoped_identifier"])
+  N24([scoped_identifier])
   N23 -->|true| N24
   N23 -->|false| N24
-  N25(["identifier"])
+  N25([identifier])
   N24 -->|true| N25
   N24 -->|false| N25
-  N26(["identifier"])
+  N26([identifier])
   N25 -->|true| N26
   N25 -->|false| N26
-  N27(["identifier"])
+  N27([identifier])
   N26 -->|true| N27
   N26 -->|false| N27
-  N28(["scoped_identifier"])
+  N28([scoped_identifier])
   N27 -->|true| N28
   N27 -->|false| N28
-  N29(["scoped_identifier"])
+  N29([scoped_identifier])
   N28 -->|true| N29
   N28 -->|false| N29
-  N30(["identifier"])
+  N30([identifier])
   N29 -->|true| N30
   N29 -->|false| N30
-  N31(["identifier"])
+  N31([identifier])
   N30 -->|true| N31
   N30 -->|false| N31
-  N32(["identifier"])
+  N32([identifier])
   N31 -->|true| N32
   N31 -->|false| N32
-  N33(["scoped_identifier"])
+  N33([scoped_identifier])
   N32 -->|true| N33
   N32 -->|false| N33
-  N34(["scoped_identifier"])
+  N34([scoped_identifier])
   N33 -->|true| N34
   N33 -->|false| N34
-  N35(["identifier"])
+  N35([identifier])
   N34 -->|true| N35
   N34 -->|false| N35
-  N36(["identifier"])
+  N36([identifier])
   N35 -->|true| N36
   N35 -->|false| N36
-  N37(["identifier"])
+  N37([identifier])
   N36 -->|true| N37
   N36 -->|false| N37
-  N38(["identifier"])
+  N38([identifier])
   N37 -->|true| N38
   N37 -->|false| N38
-  N39(["identifier"])
+  N39([identifier])
   N38 -->|true| N39
   N38 -->|false| N39
-  N40(["identifier"])
+  N40([identifier])
   N39 -->|true| N40
   N39 -->|false| N40
-  N41(["identifier"])
+  N41([identifier])
   N40 -->|true| N41
   N40 -->|false| N41
-  N42(["identifier"])
+  N42([identifier])
   N41 -->|true| N42
   N41 -->|false| N42
-  N43(["identifier"])
+  N43([identifier])
   N42 -->|true| N43
   N42 -->|false| N43
-  N44(["identifier"])
+  N44([identifier])
   N43 -->|true| N44
   N43 -->|false| N44
-  N45(["identifier"])
+  N45([identifier])
   N44 -->|true| N45
   N44 -->|false| N45
-  N46(["visibility_modifier"])
+  N46([visibility_modifier])
   N45 -->|true| N46
   N45 -->|false| N46
-  N47(["type_identifier"])
+  N47([type_identifier])
   N46 -->|true| N47
   N46 -->|false| N47
-  N48(["field_identifier"])
+  N48([field_identifier])
   N47 -->|true| N48
   N47 -->|false| N48
-  N49(["type_identifier"])
+  N49([type_identifier])
   N48 -->|true| N49
   N48 -->|false| N49
-  N50(["type_identifier"])
+  N50([type_identifier])
   N49 -->|true| N50
   N49 -->|false| N50
-  N51(["type_identifier"])
+  N51([type_identifier])
   N50 -->|true| N51
   N50 -->|false| N51
-  N52(["type_identifier"])
+  N52([type_identifier])
   N51 -->|true| N52
   N51 -->|false| N52
-  N53(["type_identifier"])
+  N53([type_identifier])
   N52 -->|true| N53
   N52 -->|false| N53
-  N54(["identifier"])
+  N54([identifier])
   N53 -->|true| N54
   N53 -->|false| N54
-  N55(["identifier"])
+  N55([identifier])
   N54 -->|true| N55
   N54 -->|false| N55
-  N56(["visibility_modifier"])
+  N56([visibility_modifier])
   N55 -->|true| N56
   N55 -->|false| N56
-  N57(["type_identifier"])
+  N57([type_identifier])
   N56 -->|true| N57
   N56 -->|false| N57
-  N58(["field_identifier"])
+  N58([field_identifier])
   N57 -->|true| N58
   N57 -->|false| N58
-  N59(["type_identifier"])
+  N59([type_identifier])
   N58 -->|true| N59
   N58 -->|false| N59
-  N60(["type_identifier"])
+  N60([type_identifier])
   N59 -->|true| N60
   N59 -->|false| N60
-  N61(["type_identifier"])
+  N61([type_identifier])
   N60 -->|true| N61
   N60 -->|false| N61
-  N62(["type_identifier"])
+  N62([type_identifier])
   N61 -->|true| N62
   N61 -->|false| N62
-  N63(["type_identifier"])
+  N63([type_identifier])
   N62 -->|true| N63
   N62 -->|false| N63
-  N64(["type_identifier"])
+  N64([type_identifier])
   N63 -->|true| N64
   N63 -->|false| N64
-  N65(["field_identifier"])
+  N65([field_identifier])
   N64 -->|true| N65
   N64 -->|false| N65
-  N66(["type_identifier"])
+  N66([type_identifier])
   N65 -->|true| N66
   N65 -->|false| N66
-  N67(["field_identifier"])
+  N67([field_identifier])
   N66 -->|true| N67
   N66 -->|false| N67
-  N68(["field_identifier"])
+  N68([field_identifier])
   N67 -->|true| N68
   N67 -->|false| N68
-  N69(["field_identifier"])
+  N69([field_identifier])
   N68 -->|true| N69
   N68 -->|false| N69
-  N70(["type_identifier"])
+  N70([type_identifier])
   N69 -->|true| N70
   N69 -->|false| N70
-  N71(["type_identifier"])
+  N71([type_identifier])
   N70 -->|true| N71
   N70 -->|false| N71
-  N72(["type_identifier"])
+  N72([type_identifier])
   N71 -->|true| N72
   N71 -->|false| N72
-  N73(["identifier"])
+  N73([identifier])
   N72 -->|true| N73
   N72 -->|false| N73
-  N74(["identifier"])
+  N74([identifier])
   N73 -->|true| N74
   N73 -->|false| N74
-  N75(["identifier"])
+  N75([identifier])
   N74 -->|true| N75
   N74 -->|false| N75
-  N76(["type_identifier"])
+  N76([type_identifier])
   N75 -->|true| N76
   N75 -->|false| N76
-  N77(["field_identifier"])
+  N77([field_identifier])
   N76 -->|true| N77
   N76 -->|false| N77
-  N78(["field_identifier"])
+  N78([field_identifier])
   N77 -->|true| N78
   N77 -->|false| N78
-  N79(["field_identifier"])
+  N79([field_identifier])
   N78 -->|true| N79
   N78 -->|false| N79
-  N80(["scoped_type_identifier"])
+  N80([scoped_type_identifier])
   N79 -->|true| N80
   N79 -->|false| N80
-  N81(["scoped_identifier"])
+  N81([scoped_identifier])
   N80 -->|true| N81
   N80 -->|false| N81
-  N82(["identifier"])
+  N82([identifier])
   N81 -->|true| N82
   N81 -->|false| N82
-  N83(["identifier"])
+  N83([identifier])
   N82 -->|true| N83
   N82 -->|false| N83
-  N84(["type_identifier"])
+  N84([type_identifier])
   N83 -->|true| N84
   N83 -->|false| N84
-  N85(["field_identifier"])
+  N85([field_identifier])
   N84 -->|true| N85
   N84 -->|false| N85
-  N86(["field_identifier"])
+  N86([field_identifier])
   N85 -->|true| N86
   N85 -->|false| N86
-  N87(["type_identifier"])
+  N87([type_identifier])
   N86 -->|true| N87
   N86 -->|false| N87
-  N88(["scoped_type_identifier"])
+  N88([scoped_type_identifier])
   N87 -->|true| N88
   N87 -->|false| N88
-  N89(["scoped_identifier"])
+  N89([scoped_identifier])
   N88 -->|true| N89
   N88 -->|false| N89
-  N90(["identifier"])
+  N90([identifier])
   N89 -->|true| N90
   N89 -->|false| N90
-  N91(["identifier"])
+  N91([identifier])
   N90 -->|true| N91
   N90 -->|false| N91
-  N92(["type_identifier"])
+  N92([type_identifier])
   N91 -->|true| N92
   N91 -->|false| N92
-  N93(["type_identifier"])
+  N93([type_identifier])
   N92 -->|true| N93
   N92 -->|false| N93
-  N94(["for"])
+  N94([for])
   N94 -->|repeat| N94
   N93 --> N94
-  N95(["type_identifier"])
+  N95([type_identifier])
   N94 -->|true| N95
   N94 -->|false| N95
-  N96(["identifier"])
+  N96([identifier])
   N95 -->|true| N96
   N95 -->|false| N96
-  N97(["type_identifier"])
+  N97([type_identifier])
   N96 -->|true| N97
   N96 -->|false| N97
-  N98(["type_identifier"])
+  N98([type_identifier])
   N97 -->|true| N98
   N97 -->|false| N98
-  N99(["field_identifier"])
+  N99([field_identifier])
   N98 -->|true| N99
   N98 -->|false| N99
-  N100(["field_identifier"])
+  N100([field_identifier])
   N99 -->|true| N100
   N99 -->|false| N100
-  N101(["field_identifier"])
+  N101([field_identifier])
   N100 -->|true| N101
   N100 -->|false| N101
-  N102(["call:now"])
+  N102([call:now])
   N101 --> N102
-  N103(["field_identifier"])
+  N103([field_identifier])
   N102 -->|true| N103
   N102 -->|false| N103
-  N104(["field_identifier"])
+  N104([field_identifier])
   N103 -->|true| N104
   N103 -->|false| N104
-  N105(["identifier"])
+  N105([identifier])
   N104 -->|true| N105
   N104 -->|false| N105
-  N106(["identifier"])
+  N106([identifier])
   N105 -->|true| N106
   N105 -->|false| N106
-  N107(["identifier"])
+  N107([identifier])
   N106 -->|true| N107
   N106 -->|false| N107
-  N108(["identifier"])
+  N108([identifier])
   N107 -->|true| N108
   N107 -->|false| N108
-  N109(["visibility_modifier"])
+  N109([visibility_modifier])
   N108 -->|true| N109
   N108 -->|false| N109
-  N110(["type_identifier"])
+  N110([type_identifier])
   N109 -->|true| N110
   N109 -->|false| N110
-  N111(["visibility_modifier"])
+  N111([visibility_modifier])
   N110 -->|true| N111
   N110 -->|false| N111
-  N112(["field_identifier"])
+  N112([field_identifier])
   N111 -->|true| N112
   N111 -->|false| N112
-  N113(["type_identifier"])
+  N113([type_identifier])
   N112 -->|true| N113
   N112 -->|false| N113
-  N114(["visibility_modifier"])
+  N114([visibility_modifier])
   N113 -->|true| N114
   N113 -->|false| N114
-  N115(["field_identifier"])
+  N115([field_identifier])
   N114 -->|true| N115
   N114 -->|false| N115
-  N116(["visibility_modifier"])
+  N116([visibility_modifier])
   N115 -->|true| N116
   N115 -->|false| N116
-  N117(["field_identifier"])
+  N117([field_identifier])
   N116 -->|true| N117
   N116 -->|false| N117
-  N118(["type_identifier"])
+  N118([type_identifier])
   N117 -->|true| N118
   N117 -->|false| N118
-  N119(["visibility_modifier"])
+  N119([visibility_modifier])
   N118 -->|true| N119
   N118 -->|false| N119
-  N120(["field_identifier"])
+  N120([field_identifier])
   N119 -->|true| N120
   N119 -->|false| N120
-  N121(["visibility_modifier"])
+  N121([visibility_modifier])
   N120 -->|true| N121
   N120 -->|false| N121
-  N122(["field_identifier"])
+  N122([field_identifier])
   N121 -->|true| N122
   N121 -->|false| N122
-  N123(["type_identifier"])
+  N123([type_identifier])
   N122 -->|true| N123
   N122 -->|false| N123
-  N124(["identifier"])
+  N124([identifier])
   N123 -->|true| N124
   N123 -->|false| N124
-  N125(["identifier"])
+  N125([identifier])
   N124 -->|true| N125
   N124 -->|false| N125
-  N126(["identifier"])
+  N126([identifier])
   N125 -->|true| N126
   N125 -->|false| N126
-  N127(["visibility_modifier"])
+  N127([visibility_modifier])
   N126 -->|true| N127
   N126 -->|false| N127
-  N128(["type_identifier"])
+  N128([type_identifier])
   N127 -->|true| N128
   N127 -->|false| N128
-  N129(["identifier"])
+  N129([identifier])
   N128 -->|true| N129
   N128 -->|false| N129
-  N130(["identifier"])
+  N130([identifier])
   N129 -->|true| N130
   N129 -->|false| N130
-  N131(["field_identifier"])
+  N131([field_identifier])
   N130 -->|true| N131
   N130 -->|false| N131
-  N132(["type_identifier"])
+  N132([type_identifier])
   N131 -->|true| N132
   N131 -->|false| N132
-  N133(["identifier"])
+  N133([identifier])
   N132 -->|true| N133
   N132 -->|false| N133
-  N134(["type_identifier"])
+  N134([type_identifier])
   N133 -->|true| N134
   N133 -->|false| N134
-  N135(["identifier"])
+  N135([identifier])
   N134 -->|true| N135
   N134 -->|false| N135
-  N136(["identifier"])
+  N136([identifier])
   N135 -->|true| N136
   N135 -->|false| N136
-  N137(["identifier"])
+  N137([identifier])
   N136 -->|true| N137
   N136 -->|false| N137
-  N138(["visibility_modifier"])
+  N138([visibility_modifier])
   N137 -->|true| N138
   N137 -->|false| N138
-  N139(["type_identifier"])
+  N139([type_identifier])
   N138 -->|true| N139
   N138 -->|false| N139
-  N140(["visibility_modifier"])
+  N140([visibility_modifier])
   N139 -->|true| N140
   N139 -->|false| N140
-  N141(["field_identifier"])
+  N141([field_identifier])
   N140 -->|true| N141
   N140 -->|false| N141
-  N142(["type_identifier"])
+  N142([type_identifier])
   N141 -->|true| N142
   N141 -->|false| N142
-  N143(["visibility_modifier"])
+  N143([visibility_modifier])
   N142 -->|true| N143
   N142 -->|false| N143
-  N144(["field_identifier"])
+  N144([field_identifier])
   N143 -->|true| N144
   N143 -->|false| N144
-  N145(["type_identifier"])
+  N145([type_identifier])
   N144 -->|true| N145
   N144 -->|false| N145
-  N146(["visibility_modifier"])
+  N146([visibility_modifier])
   N145 -->|true| N146
   N145 -->|false| N146
-  N147(["field_identifier"])
+  N147([field_identifier])
   N146 -->|true| N147
   N146 -->|false| N147
-  N148(["visibility_modifier"])
+  N148([visibility_modifier])
   N147 -->|true| N148
   N147 -->|false| N148
-  N149(["field_identifier"])
+  N149([field_identifier])
   N148 -->|true| N149
   N148 -->|false| N149
-  N150(["type_identifier"])
+  N150([type_identifier])
   N149 -->|true| N150
   N149 -->|false| N150
-  N151(["for"])
+  N151([for])
   N151 -->|repeat| N151
   N150 --> N151
-  N152(["type_identifier"])
+  N152([type_identifier])
   N151 -->|true| N152
   N151 -->|false| N152
-  N153(["identifier"])
+  N153([identifier])
   N152 -->|true| N153
   N152 -->|false| N153
-  N154(["type_identifier"])
+  N154([type_identifier])
   N153 -->|true| N154
   N153 -->|false| N154
-  N155(["type_identifier"])
+  N155([type_identifier])
   N154 -->|true| N155
   N154 -->|false| N155
-  N156(["field_identifier"])
+  N156([field_identifier])
   N155 -->|true| N156
   N155 -->|false| N156
-  N157(["call:from_millis"])
+  N157([call:from_millis])
   N156 --> N157
-  N158(["field_identifier"])
+  N158([field_identifier])
   N157 -->|true| N158
   N157 -->|false| N158
-  N159(["call:from_secs"])
+  N159([call:from_secs])
   N158 --> N159
-  N160(["field_identifier"])
+  N160([field_identifier])
   N159 -->|true| N160
   N159 -->|false| N160
-  N161(["field_identifier"])
+  N161([field_identifier])
   N160 -->|true| N161
   N160 -->|false| N161
-  N162(["type_identifier"])
+  N162([type_identifier])
   N161 -->|true| N162
   N161 -->|false| N162
-  N163(["visibility_modifier"])
+  N163([visibility_modifier])
   N162 -->|true| N163
   N162 -->|false| N163
-  N164(["identifier"])
+  N164([identifier])
   N163 -->|true| N164
   N163 -->|false| N164
-  N165(["type_identifier"])
+  N165([type_identifier])
   N164 -->|true| N165
   N164 -->|false| N165
-  N166(["type_identifier"])
+  N166([type_identifier])
   N165 -->|true| N166
   N165 -->|false| N166
-  N167(["field_identifier"])
+  N167([field_identifier])
   N166 -->|true| N167
   N166 -->|false| N167
-  N168(["call:new"])
+  N168([call:new])
   N167 --> N168
-  N169(["visibility_modifier"])
+  N169([visibility_modifier])
   N168 -->|true| N169
   N168 -->|false| N169
-  N170(["function_modifiers"])
+  N170([function_modifiers])
   N169 -->|true| N170
   N169 -->|false| N170
-  N171(["identifier"])
+  N171([identifier])
   N170 -->|true| N171
   N170 -->|false| N171
-  N172(["identifier"])
+  N172([identifier])
   N171 -->|true| N172
   N171 -->|false| N172
-  N173(["type_identifier"])
+  N173([type_identifier])
   N172 -->|true| N173
   N172 -->|false| N173
-  N174(["type_identifier"])
+  N174([type_identifier])
   N173 -->|true| N174
   N173 -->|false| N174
-  N175(["identifier"])
+  N175([identifier])
   N174 -->|true| N175
   N174 -->|false| N175
-  N176(["call:new"])
+  N176([call:new])
   N175 --> N176
-  N177(["mutable_specifier"])
+  N177([mutable_specifier])
   N176 -->|true| N177
   N176 -->|false| N177
-  N178(["identifier"])
+  N178([identifier])
   N177 -->|true| N178
   N177 -->|false| N178
-  N179(["call:write"])
+  N179([call:write])
   N178 --> N179
-  N180(["call:insert"])
+  N180([call:insert])
   N179 --> N180
-  N181(["call:Ok"])
+  N181([call:Ok])
   N180 --> N181
-  N182(["visibility_modifier"])
+  N182([visibility_modifier])
   N181 -->|true| N182
   N181 -->|false| N182
-  N183(["function_modifiers"])
+  N183([function_modifiers])
   N182 -->|true| N183
   N182 -->|false| N183
-  N184(["identifier"])
+  N184([identifier])
   N183 -->|true| N184
   N183 -->|false| N184
-  N185(["identifier"])
+  N185([identifier])
   N184 -->|true| N185
   N184 -->|false| N185
-  N186(["type_identifier"])
+  N186([type_identifier])
   N185 -->|true| N186
   N185 -->|false| N186
-  N187(["identifier"])
+  N187([identifier])
   N186 -->|true| N187
   N186 -->|false| N187
-  N188(["call:read"])
+  N188([call:read])
   N187 --> N188
-  N189(["if_expression"])
+  N189([if_expression])
   N188 -->|true| N189
   N188 -->|false| N189
-  N190(["if"])
+  N190([if])
   N189 -->|true| N190
   N189 -->|false| N190
-  N191(["identifier"])
+  N191([identifier])
   N190 -->|true| N191
   N190 -->|false| N191
-  N192(["identifier"])
+  N192([identifier])
   N191 -->|true| N192
   N191 -->|false| N192
-  N193(["call:get"])
+  N193([call:get])
   N192 --> N193
-  N194(["call:wait_for_permit"])
+  N194([call:wait_for_permit])
   N193 --> N194
-  N195(["call:Err"])
+  N195([call:Err])
   N194 --> N195
-  N196(["visibility_modifier"])
+  N196([visibility_modifier])
   N195 -->|true| N196
   N195 -->|false| N196
-  N197(["function_modifiers"])
+  N197([function_modifiers])
   N196 -->|true| N197
   N196 -->|false| N197
-  N198(["identifier"])
+  N198([identifier])
   N197 -->|true| N198
   N197 -->|false| N198
-  N199(["identifier"])
+  N199([identifier])
   N198 -->|true| N199
   N198 -->|false| N199
-  N200(["type_identifier"])
+  N200([type_identifier])
   N199 -->|true| N200
   N199 -->|false| N200
-  N201(["type_identifier"])
+  N201([type_identifier])
   N200 -->|true| N201
   N200 -->|false| N201
-  N202(["identifier"])
+  N202([identifier])
   N201 -->|true| N202
   N201 -->|false| N202
-  N203(["call:read"])
+  N203([call:read])
   N202 --> N203
-  N204(["if_expression"])
+  N204([if_expression])
   N203 -->|true| N204
   N203 -->|false| N204
-  N205(["if"])
+  N205([if])
   N204 -->|true| N205
   N204 -->|false| N205
-  N206(["identifier"])
+  N206([identifier])
   N205 -->|true| N206
   N205 -->|false| N206
-  N207(["identifier"])
+  N207([identifier])
   N206 -->|true| N207
   N206 -->|false| N207
-  N208(["call:get"])
+  N208([call:get])
   N207 --> N208
-  N209(["call:Ok"])
+  N209([call:Ok])
   N208 --> N209
-  N210(["call:Err"])
+  N210([call:Err])
   N209 --> N210
-  N211(["visibility_modifier"])
+  N211([visibility_modifier])
   N210 -->|true| N211
   N210 -->|false| N211
-  N212(["function_modifiers"])
+  N212([function_modifiers])
   N211 -->|true| N212
   N211 -->|false| N212
-  N213(["identifier"])
+  N213([identifier])
   N212 -->|true| N213
   N212 -->|false| N213
-  N214(["identifier"])
+  N214([identifier])
   N213 -->|true| N214
   N213 -->|false| N214
-  N215(["type_identifier"])
+  N215([type_identifier])
   N214 -->|true| N215
   N214 -->|false| N215
-  N216(["type_identifier"])
+  N216([type_identifier])
   N215 -->|true| N216
   N215 -->|false| N216
-  N217(["identifier"])
+  N217([identifier])
   N216 -->|true| N217
   N216 -->|false| N217
-  N218(["call:read"])
+  N218([call:read])
   N217 --> N218
-  N219(["if_expression"])
+  N219([if_expression])
   N218 -->|true| N219
   N218 -->|false| N219
-  N220(["if"])
+  N220([if])
   N219 -->|true| N220
   N219 -->|false| N220
-  N221(["identifier"])
+  N221([identifier])
   N220 -->|true| N221
   N220 -->|false| N221
-  N222(["identifier"])
+  N222([identifier])
   N221 -->|true| N222
   N221 -->|false| N222
-  N223(["call:get"])
+  N223([call:get])
   N222 --> N223
-  N224(["call:Ok"])
+  N224([call:Ok])
   N223 --> N224
-  N225(["call:Err"])
+  N225([call:Err])
   N224 --> N225
-  N226(["visibility_modifier"])
+  N226([visibility_modifier])
   N225 -->|true| N226
   N225 -->|false| N226
-  N227(["function_modifiers"])
+  N227([function_modifiers])
   N226 -->|true| N227
   N226 -->|false| N227
-  N228(["identifier"])
+  N228([identifier])
   N227 -->|true| N228
   N227 -->|false| N228
-  N229(["type_identifier"])
+  N229([type_identifier])
   N228 -->|true| N229
   N228 -->|false| N229
-  N230(["type_identifier"])
+  N230([type_identifier])
   N229 -->|true| N230
   N229 -->|false| N230
-  N231(["identifier"])
+  N231([identifier])
   N230 -->|true| N231
   N230 -->|false| N231
-  N232(["call:read"])
+  N232([call:read])
   N231 --> N232
-  N233(["call:collect"])
+  N233([call:collect])
   N232 --> N233
-  N234(["type_identifier"])
+  N234([type_identifier])
   N233 -->|true| N234
   N233 -->|false| N234
-  N235(["visibility_modifier"])
+  N235([visibility_modifier])
   N234 -->|true| N235
   N234 -->|false| N235
-  N236(["identifier"])
+  N236([identifier])
   N235 -->|true| N236
   N235 -->|false| N236
-  N237(["identifier"])
+  N237([identifier])
   N236 -->|true| N237
   N236 -->|false| N237
-  N238(["type_identifier"])
+  N238([type_identifier])
   N237 -->|true| N238
   N237 -->|false| N238
-  N239(["type_identifier"])
+  N239([type_identifier])
   N238 -->|true| N239
   N238 -->|false| N239
-  N240(["type_identifier"])
+  N240([type_identifier])
   N239 -->|true| N240
   N239 -->|false| N240
-  N241(["identifier"])
+  N241([identifier])
   N240 -->|true| N241
   N240 -->|false| N241
-  N242(["call:ok_or_else"])
+  N242([call:ok_or_else])
   N241 --> N242
-  N243(["identifier"])
+  N243([identifier])
   N242 -->|true| N243
   N242 -->|false| N243
-  N244(["call:per_minute"])
+  N244([call:per_minute])
   N243 --> N244
-  N245(["identifier"])
+  N245([identifier])
   N244 -->|true| N245
   N244 -->|false| N245
-  N246(["call:new"])
+  N246([call:new])
   N245 --> N246
-  N247(["identifier"])
+  N247([identifier])
   N246 -->|true| N247
   N246 -->|false| N247
-  N248(["identifier"])
+  N248([identifier])
   N247 -->|true| N248
   N247 -->|false| N248
-  N249(["identifier"])
+  N249([identifier])
   N248 -->|true| N249
   N248 -->|false| N249
-  N250(["identifier"])
+  N250([identifier])
   N249 -->|true| N250
   N249 -->|false| N250
-  N251(["identifier"])
+  N251([identifier])
   N250 -->|true| N251
   N250 -->|false| N251
-  N252(["call:Ok"])
+  N252([call:Ok])
   N251 --> N252
-  N253(["visibility_modifier"])
+  N253([visibility_modifier])
   N252 -->|true| N253
   N252 -->|false| N253
-  N254(["function_modifiers"])
+  N254([function_modifiers])
   N253 -->|true| N254
   N253 -->|false| N254
-  N255(["identifier"])
+  N255([identifier])
   N254 -->|true| N255
   N254 -->|false| N255
-  N256(["type_identifier"])
+  N256([type_identifier])
   N255 -->|true| N256
   N255 -->|false| N256
-  N257(["call:until_ready"])
+  N257([call:until_ready])
   N256 --> N257
-  N258(["mutable_specifier"])
+  N258([mutable_specifier])
   N257 -->|true| N258
   N257 -->|false| N258
-  N259(["identifier"])
+  N259([identifier])
   N258 -->|true| N259
   N258 -->|false| N259
-  N260(["call:write"])
+  N260([call:write])
   N259 --> N260
-  N261(["identifier"])
+  N261([identifier])
   N260 -->|true| N261
   N260 -->|false| N261
-  N262(["field_identifier"])
+  N262([field_identifier])
   N261 -->|true| N262
   N261 -->|false| N262
-  N263(["identifier"])
+  N263([identifier])
   N262 -->|true| N263
   N262 -->|false| N263
-  N264(["identifier"])
+  N264([identifier])
   N263 -->|true| N264
   N263 -->|false| N264
-  N265(["call:Ok"])
+  N265([call:Ok])
   N264 --> N265
-  N266(["visibility_modifier"])
+  N266([visibility_modifier])
   N265 -->|true| N266
   N265 -->|false| N266
-  N267(["identifier"])
+  N267([identifier])
   N266 -->|true| N267
   N266 -->|false| N267
-  N268(["type_identifier"])
+  N268([type_identifier])
   N267 -->|true| N268
   N267 -->|false| N268
-  N269(["call:check"])
+  N269([call:check])
   N268 --> N269
-  N270(["identifier"])
+  N270([identifier])
   N269 -->|true| N270
   N269 -->|false| N270
-  N271(["if_expression"])
+  N271([if_expression])
   N270 -->|true| N271
   N270 -->|false| N271
-  N272(["if"])
+  N272([if])
   N271 -->|true| N272
   N271 -->|false| N272
-  N273(["identifier"])
+  N273([identifier])
   N272 -->|true| N273
   N272 -->|false| N273
-  N274(["mutable_specifier"])
+  N274([mutable_specifier])
   N273 -->|true| N274
   N273 -->|false| N274
-  N275(["identifier"])
+  N275([identifier])
   N274 -->|true| N275
   N274 -->|false| N275
-  N276(["call:try_write"])
+  N276([call:try_write])
   N275 --> N276
-  N277(["identifier"])
+  N277([identifier])
   N276 -->|true| N277
   N276 -->|false| N277
-  N278(["field_identifier"])
+  N278([field_identifier])
   N277 -->|true| N278
   N277 -->|false| N278
-  N279(["identifier"])
+  N279([identifier])
   N278 -->|true| N279
   N278 -->|false| N279
-  N280(["identifier"])
+  N280([identifier])
   N279 -->|true| N280
   N279 -->|false| N280
-  N281(["scoped_identifier"])
+  N281([scoped_identifier])
   N280 -->|true| N281
   N280 -->|false| N281
-  N282(["identifier"])
+  N282([identifier])
   N281 -->|true| N282
   N281 -->|false| N282
-  N283(["identifier"])
+  N283([identifier])
   N282 -->|true| N283
   N282 -->|false| N283
-  N284(["identifier"])
+  N284([identifier])
   N283 -->|true| N284
   N283 -->|false| N284
-  N285(["identifier"])
+  N285([identifier])
   N284 -->|true| N285
   N284 -->|false| N285
-  N286(["if_expression"])
+  N286([if_expression])
   N285 -->|true| N286
   N285 -->|false| N286
-  N287(["if"])
+  N287([if])
   N286 -->|true| N287
   N286 -->|false| N287
-  N288(["identifier"])
+  N288([identifier])
   N287 -->|true| N288
   N287 -->|false| N288
-  N289(["mutable_specifier"])
+  N289([mutable_specifier])
   N288 -->|true| N289
   N288 -->|false| N289
-  N290(["identifier"])
+  N290([identifier])
   N289 -->|true| N290
   N289 -->|false| N290
-  N291(["call:try_write"])
+  N291([call:try_write])
   N290 --> N291
-  N292(["identifier"])
+  N292([identifier])
   N291 -->|true| N292
   N291 -->|false| N292
-  N293(["field_identifier"])
+  N293([field_identifier])
   N292 -->|true| N293
   N292 -->|false| N293
-  N294(["identifier"])
+  N294([identifier])
   N293 -->|true| N294
   N293 -->|false| N294
-  N295(["call:wait_time_from"])
+  N295([call:wait_time_from])
   N294 --> N295
-  N296(["identifier"])
+  N296([identifier])
   N295 -->|true| N296
   N295 -->|false| N296
-  N297(["identifier"])
+  N297([identifier])
   N296 -->|true| N297
   N296 -->|false| N297
-  N298(["identifier"])
+  N298([identifier])
   N297 -->|true| N298
   N297 -->|false| N298
-  N299(["scoped_type_identifier"])
+  N299([scoped_type_identifier])
   N298 -->|true| N299
   N298 -->|false| N299
-  N300(["identifier"])
+  N300([identifier])
   N299 -->|true| N300
   N299 -->|false| N300
-  N301(["type_identifier"])
+  N301([type_identifier])
   N300 -->|true| N301
   N300 -->|false| N301
-  N302(["identifier"])
+  N302([identifier])
   N301 -->|true| N302
   N301 -->|false| N302
-  N303(["visibility_modifier"])
+  N303([visibility_modifier])
   N302 -->|true| N303
   N302 -->|false| N303
-  N304(["identifier"])
+  N304([identifier])
   N303 -->|true| N304
   N303 -->|false| N304
-  N305(["type_identifier"])
+  N305([type_identifier])
   N304 -->|true| N305
   N304 -->|false| N305
-  N306(["identifier"])
+  N306([identifier])
   N305 -->|true| N306
   N305 -->|false| N306
-  N307(["if_expression"])
+  N307([if_expression])
   N306 -->|true| N307
   N306 -->|false| N307
-  N308(["if"])
+  N308([if])
   N307 -->|true| N308
   N307 -->|false| N308
-  N309(["identifier"])
+  N309([identifier])
   N308 -->|true| N309
   N308 -->|false| N309
-  N310(["identifier"])
+  N310([identifier])
   N309 -->|true| N310
   N309 -->|false| N310
-  N311(["call:try_read"])
+  N311([call:try_read])
   N310 --> N311
-  N312(["call:clone"])
+  N312([call:clone])
   N311 --> N312
-  N313(["call:default"])
+  N313([call:default])
   N312 --> N313
-  N314(["identifier"])
+  N314([identifier])
   N313 -->|true| N314
   N313 -->|false| N314
-  N315(["call:elapsed"])
+  N315([call:elapsed])
   N314 --> N315
-  N316(["identifier"])
+  N316([identifier])
   N315 -->|true| N316
   N315 -->|false| N316
-  N317(["call:as_secs"])
+  N317([call:as_secs])
   N316 --> N317
-  N318(["field_identifier"])
+  N318([field_identifier])
   N317 -->|true| N318
   N317 -->|false| N318
-  N319(["identifier"])
+  N319([identifier])
   N318 -->|true| N319
   N318 -->|false| N319
-  N320(["call:min"])
+  N320([call:min])
   N319 --> N320
-  N321(["type_identifier"])
+  N321([type_identifier])
   N320 -->|true| N321
   N320 -->|false| N321
-  N322(["field_identifier"])
+  N322([field_identifier])
   N321 -->|true| N322
   N321 -->|false| N322
-  N323(["call:clone"])
+  N323([call:clone])
   N322 --> N323
-  N324(["field_identifier"])
+  N324([field_identifier])
   N323 -->|true| N324
   N323 -->|false| N324
-  N325(["field_identifier"])
+  N325([field_identifier])
   N324 -->|true| N325
   N324 -->|false| N325
-  N326(["field_identifier"])
+  N326([field_identifier])
   N325 -->|true| N326
   N325 -->|false| N326
-  N327(["field_identifier"])
+  N327([field_identifier])
   N326 -->|true| N327
   N326 -->|false| N327
-  N328(["identifier"])
+  N328([identifier])
   N327 -->|true| N328
   N327 -->|false| N328
-  N329(["field_identifier"])
+  N329([field_identifier])
   N328 -->|true| N329
   N328 -->|false| N329
-  N330(["identifier"])
+  N330([identifier])
   N329 -->|true| N330
   N329 -->|false| N330
-  N331(["field_identifier"])
+  N331([field_identifier])
   N330 -->|true| N331
   N330 -->|false| N331
-  N332(["field_identifier"])
+  N332([field_identifier])
   N331 -->|true| N332
   N331 -->|false| N332
-  N333(["identifier"])
+  N333([identifier])
   N332 -->|true| N333
   N332 -->|false| N333
-  N334(["field_identifier"])
+  N334([field_identifier])
   N333 -->|true| N334
   N333 -->|false| N334
-  N335(["visibility_modifier"])
+  N335([visibility_modifier])
   N334 -->|true| N335
   N334 -->|false| N335
-  N336(["function_modifiers"])
+  N336([function_modifiers])
   N335 -->|true| N336
   N335 -->|false| N336
-  N337(["identifier"])
+  N337([identifier])
   N336 -->|true| N337
   N336 -->|false| N337
-  N338(["mutable_specifier"])
+  N338([mutable_specifier])
   N337 -->|true| N338
   N337 -->|false| N338
-  N339(["identifier"])
+  N339([identifier])
   N338 -->|true| N339
   N338 -->|false| N339
-  N340(["call:write"])
+  N340([call:write])
   N339 --> N340
-  N341(["identifier"])
+  N341([identifier])
   N340 -->|true| N341
   N340 -->|false| N341
-  N342(["field_identifier"])
+  N342([field_identifier])
   N341 -->|true| N342
   N341 -->|false| N342
-  N343(["identifier"])
+  N343([identifier])
   N342 -->|true| N343
   N342 -->|false| N343
-  N344(["field_identifier"])
+  N344([field_identifier])
   N343 -->|true| N344
   N343 -->|false| N344
-  N345(["identifier"])
+  N345([identifier])
   N344 -->|true| N345
   N344 -->|false| N345
-  N346(["field_identifier"])
+  N346([field_identifier])
   N345 -->|true| N346
   N345 -->|false| N346
-  N347(["call:now"])
+  N347([call:now])
   N346 --> N347
-  N348(["visibility_modifier"])
+  N348([visibility_modifier])
   N347 -->|true| N348
   N347 -->|false| N348
-  N349(["identifier"])
+  N349([identifier])
   N348 -->|true| N349
   N348 -->|false| N349
-  N350(["field_identifier"])
+  N350([field_identifier])
   N349 -->|true| N350
   N349 -->|false| N350
-  N351(["visibility_modifier"])
+  N351([visibility_modifier])
   N350 -->|true| N351
   N350 -->|false| N351
-  N352(["function_modifiers"])
+  N352([function_modifiers])
   N351 -->|true| N352
   N351 -->|false| N352
-  N353(["identifier"])
+  N353([identifier])
   N352 -->|true| N353
   N352 -->|false| N353
-  N354(["mutable_specifier"])
+  N354([mutable_specifier])
   N353 -->|true| N354
   N353 -->|false| N354
-  N355(["identifier"])
+  N355([identifier])
   N354 -->|true| N355
   N354 -->|false| N355
-  N356(["call:write"])
+  N356([call:write])
   N355 --> N356
-  N357(["identifier"])
+  N357([identifier])
   N356 -->|true| N357
   N356 -->|false| N357
-  N358(["field_identifier"])
+  N358([field_identifier])
   N357 -->|true| N358
   N357 -->|false| N358
-  N359(["identifier"])
+  N359([identifier])
   N358 -->|true| N359
   N358 -->|false| N359
-  N360(["field_identifier"])
+  N360([field_identifier])
   N359 -->|true| N360
   N359 -->|false| N360
-  N361(["identifier"])
+  N361([identifier])
   N360 -->|true| N361
   N360 -->|false| N361
-  N362(["visibility_modifier"])
+  N362([visibility_modifier])
   N361 -->|true| N362
   N361 -->|false| N362
-  N363(["function_modifiers"])
+  N363([function_modifiers])
   N362 -->|true| N363
   N362 -->|false| N363
-  N364(["identifier"])
+  N364([identifier])
   N363 -->|true| N364
   N363 -->|false| N364
-  N365(["mutable_specifier"])
+  N365([mutable_specifier])
   N364 -->|true| N365
   N364 -->|false| N365
-  N366(["identifier"])
+  N366([identifier])
   N365 -->|true| N366
   N365 -->|false| N366
-  N367(["call:write"])
+  N367([call:write])
   N366 --> N367
-  N368(["identifier"])
+  N368([identifier])
   N367 -->|true| N368
   N367 -->|false| N368
-  N369(["field_identifier"])
+  N369([field_identifier])
   N368 -->|true| N369
   N368 -->|false| N369
-  N370(["identifier"])
+  N370([identifier])
   N369 -->|true| N370
   N369 -->|false| N370
-  N371(["field_identifier"])
+  N371([field_identifier])
   N370 -->|true| N371
   N370 -->|false| N371
-  N372(["call:Some"])
+  N372([call:Some])
   N371 --> N372
-  N373(["visibility_modifier"])
+  N373([visibility_modifier])
   N372 -->|true| N373
   N372 -->|false| N373
-  N374(["function_modifiers"])
+  N374([function_modifiers])
   N373 -->|true| N374
   N373 -->|false| N374
-  N375(["identifier"])
+  N375([identifier])
   N374 -->|true| N375
   N374 -->|false| N375
-  N376(["identifier"])
+  N376([identifier])
   N375 -->|true| N376
   N375 -->|false| N376
-  N377(["type_identifier"])
+  N377([type_identifier])
   N376 -->|true| N377
   N376 -->|false| N377
-  N378(["type_identifier"])
+  N378([type_identifier])
   N377 -->|true| N378
   N377 -->|false| N378
-  N379(["identifier"])
+  N379([identifier])
   N378 -->|true| N379
   N378 -->|false| N379
-  N380(["call:read"])
+  N380([call:read])
   N379 --> N380
-  N381(["if_expression"])
+  N381([if_expression])
   N380 -->|true| N381
   N380 -->|false| N381
-  N382(["if"])
+  N382([if])
   N381 -->|true| N382
   N381 -->|false| N382
-  N383(["identifier"])
+  N383([identifier])
   N382 -->|true| N383
   N382 -->|false| N383
-  N384(["field_identifier"])
+  N384([field_identifier])
   N383 -->|true| N384
   N383 -->|false| N384
-  N385(["identifier"])
+  N385([identifier])
   N384 -->|true| N385
   N384 -->|false| N385
-  N386(["call:as_millis"])
+  N386([call:as_millis])
   N385 --> N386
-  N387(["identifier"])
+  N387([identifier])
   N386 -->|true| N387
   N386 -->|false| N387
-  N388(["call:powi"])
+  N388([call:powi])
   N387 --> N388
-  N389(["identifier"])
+  N389([identifier])
   N388 -->|true| N389
   N388 -->|false| N389
-  N390(["identifier"])
+  N390([identifier])
   N389 -->|true| N390
   N389 -->|false| N390
-  N391(["identifier"])
+  N391([identifier])
   N390 -->|true| N391
   N390 -->|false| N391
-  N392(["mutable_specifier"])
+  N392([mutable_specifier])
   N391 -->|true| N392
   N391 -->|false| N392
-  N393(["identifier"])
+  N393([identifier])
   N392 -->|true| N393
   N392 -->|false| N393
-  N394(["call:from_millis"])
+  N394([call:from_millis])
   N393 --> N394
-  N395(["if_expression"])
+  N395([if_expression])
   N394 -->|true| N395
   N394 -->|false| N395
-  N396(["if"])
+  N396([if])
   N395 -->|true| N396
   N395 -->|false| N396
-  N397(["identifier"])
+  N397([identifier])
   N396 -->|true| N397
   N396 -->|false| N397
-  N398(["identifier"])
+  N398([identifier])
   N397 -->|true| N398
   N397 -->|false| N398
-  N399(["field_identifier"])
+  N399([field_identifier])
   N398 -->|true| N399
   N398 -->|false| N399
-  N400(["identifier"])
+  N400([identifier])
   N399 -->|true| N400
   N399 -->|false| N400
-  N401(["identifier"])
+  N401([identifier])
   N400 -->|true| N401
   N400 -->|false| N401
-  N402(["field_identifier"])
+  N402([field_identifier])
   N401 -->|true| N402
   N401 -->|false| N402
-  N403(["if_expression"])
+  N403([if_expression])
   N402 -->|true| N403
   N402 -->|false| N403
-  N404(["if"])
+  N404([if])
   N403 -->|true| N404
   N403 -->|false| N404
-  N405(["identifier"])
+  N405([identifier])
   N404 -->|true| N405
   N404 -->|false| N405
-  N406(["field_identifier"])
+  N406([field_identifier])
   N405 -->|true| N406
   N405 -->|false| N406
-  N407(["scoped_identifier"])
+  N407([scoped_identifier])
   N406 -->|true| N407
   N406 -->|false| N407
-  N408(["identifier"])
+  N408([identifier])
   N407 -->|true| N408
   N407 -->|false| N408
-  N409(["identifier"])
+  N409([identifier])
   N408 -->|true| N409
   N408 -->|false| N409
-  N410(["identifier"])
+  N410([identifier])
   N409 -->|true| N410
   N409 -->|false| N410
-  N411(["call:gen_range"])
+  N411([call:gen_range])
   N410 --> N411
-  N412(["identifier"])
+  N412([identifier])
   N411 -->|true| N412
   N411 -->|false| N412
-  N413(["call:from_millis"])
+  N413([call:from_millis])
   N412 --> N413
-  N414(["identifier"])
+  N414([identifier])
   N413 -->|true| N414
   N413 -->|false| N414
-  N415(["visibility_modifier"])
+  N415([visibility_modifier])
   N414 -->|true| N415
   N414 -->|false| N415
-  N416(["function_modifiers"])
+  N416([function_modifiers])
   N415 -->|true| N416
   N415 -->|false| N416
-  N417(["identifier"])
+  N417([identifier])
   N416 -->|true| N417
   N416 -->|false| N417
-  N418(["identifier"])
+  N418([identifier])
   N417 -->|true| N418
   N417 -->|false| N418
-  N419(["type_identifier"])
+  N419([type_identifier])
   N418 -->|true| N419
   N418 -->|false| N419
-  N420(["type_identifier"])
+  N420([type_identifier])
   N419 -->|true| N420
   N419 -->|false| N420
-  N421(["identifier"])
+  N421([identifier])
   N420 -->|true| N421
   N420 -->|false| N421
-  N422(["call:calculate_backoff_delay"])
+  N422([call:calculate_backoff_delay])
   N421 --> N422
-  N423(["if_expression"])
+  N423([if_expression])
   N422 -->|true| N423
   N422 -->|false| N423
-  N424(["if"])
+  N424([if])
   N423 -->|true| N424
   N423 -->|false| N424
-  N425(["call:is_zero"])
+  N425([call:is_zero])
   N424 --> N425
-  N426(["identifier"])
+  N426([identifier])
   N425 -->|true| N426
   N425 -->|false| N426
-  N427(["identifier"])
+  N427([identifier])
   N426 -->|true| N427
   N426 -->|false| N427
-  N428(["identifier"])
+  N428([identifier])
   N427 -->|true| N428
   N427 -->|false| N428
-  N429(["call:sleep"])
+  N429([call:sleep])
   N428 --> N429
-  N430(["call:wait_for_permit"])
+  N430([call:wait_for_permit])
   N429 --> N430
-  N431(["identifier"])
+  N431([identifier])
   N430 -->|true| N431
   N430 -->|false| N431
-  N432(["identifier"])
+  N432([identifier])
   N431 -->|true| N432
   N431 -->|false| N432
-  N433(["identifier"])
+  N433([identifier])
   N432 -->|true| N433
   N432 -->|false| N433
-  N434(["visibility_modifier"])
+  N434([visibility_modifier])
   N433 -->|true| N434
   N433 -->|false| N434
-  N435(["type_identifier"])
+  N435([type_identifier])
   N434 -->|true| N435
   N434 -->|false| N435
-  N436(["visibility_modifier"])
+  N436([visibility_modifier])
   N435 -->|true| N436
   N435 -->|false| N436
-  N437(["field_identifier"])
+  N437([field_identifier])
   N436 -->|true| N437
   N436 -->|false| N437
-  N438(["type_identifier"])
+  N438([type_identifier])
   N437 -->|true| N438
   N437 -->|false| N438
-  N439(["visibility_modifier"])
+  N439([visibility_modifier])
   N438 -->|true| N439
   N438 -->|false| N439
-  N440(["field_identifier"])
+  N440([field_identifier])
   N439 -->|true| N440
   N439 -->|false| N440
-  N441(["visibility_modifier"])
+  N441([visibility_modifier])
   N440 -->|true| N441
   N440 -->|false| N441
-  N442(["field_identifier"])
+  N442([field_identifier])
   N441 -->|true| N442
   N441 -->|false| N442
-  N443(["visibility_modifier"])
+  N443([visibility_modifier])
   N442 -->|true| N443
   N442 -->|false| N443
-  N444(["field_identifier"])
+  N444([field_identifier])
   N443 -->|true| N444
   N443 -->|false| N444
-  N445(["visibility_modifier"])
+  N445([visibility_modifier])
   N444 -->|true| N445
   N444 -->|false| N445
-  N446(["field_identifier"])
+  N446([field_identifier])
   N445 -->|true| N446
   N445 -->|false| N446
-  N447(["visibility_modifier"])
+  N447([visibility_modifier])
   N446 -->|true| N447
   N446 -->|false| N447
-  N448(["field_identifier"])
+  N448([field_identifier])
   N447 -->|true| N448
   N447 -->|false| N448
-  N449(["identifier"])
+  N449([identifier])
   N448 -->|true| N449
   N448 -->|false| N449
-  N450(["identifier"])
+  N450([identifier])
   N449 -->|true| N450
   N449 -->|false| N450
-  N451(["visibility_modifier"])
+  N451([visibility_modifier])
   N450 -->|true| N451
   N450 -->|false| N451
-  N452(["type_identifier"])
+  N452([type_identifier])
   N451 -->|true| N452
   N451 -->|false| N452
-  N453(["field_identifier"])
+  N453([field_identifier])
   N452 -->|true| N453
   N452 -->|false| N453
-  N454(["type_identifier"])
+  N454([type_identifier])
   N453 -->|true| N454
   N453 -->|false| N454
-  N455(["field_identifier"])
+  N455([field_identifier])
   N454 -->|true| N455
   N454 -->|false| N455
-  N456(["type_identifier"])
+  N456([type_identifier])
   N455 -->|true| N456
   N455 -->|false| N456
-  N457(["scoped_type_identifier"])
+  N457([scoped_type_identifier])
   N456 -->|true| N457
   N456 -->|false| N457
-  N458(["scoped_identifier"])
+  N458([scoped_identifier])
   N457 -->|true| N458
   N457 -->|false| N458
-  N459(["identifier"])
+  N459([identifier])
   N458 -->|true| N459
   N458 -->|false| N459
-  N460(["identifier"])
+  N460([identifier])
   N459 -->|true| N460
   N459 -->|false| N460
-  N461(["type_identifier"])
+  N461([type_identifier])
   N460 -->|true| N461
   N460 -->|false| N461
-  N462(["field_identifier"])
+  N462([field_identifier])
   N461 -->|true| N462
   N461 -->|false| N462
-  N463(["field_identifier"])
+  N463([field_identifier])
   N462 -->|true| N463
   N462 -->|false| N463
-  N464(["field_identifier"])
+  N464([field_identifier])
   N463 -->|true| N464
   N463 -->|false| N464
-  N465(["type_identifier"])
+  N465([type_identifier])
   N464 -->|true| N465
   N464 -->|false| N465
-  N466(["visibility_modifier"])
+  N466([visibility_modifier])
   N465 -->|true| N466
   N465 -->|false| N466
-  N467(["identifier"])
+  N467([identifier])
   N466 -->|true| N467
   N466 -->|false| N467
-  N468(["identifier"])
+  N468([identifier])
   N467 -->|true| N468
   N467 -->|false| N468
-  N469(["type_identifier"])
+  N469([type_identifier])
   N468 -->|true| N469
   N468 -->|false| N469
-  N470(["identifier"])
+  N470([identifier])
   N469 -->|true| N470
   N469 -->|false| N470
-  N471(["identifier"])
+  N471([identifier])
   N470 -->|true| N471
   N470 -->|false| N471
-  N472(["identifier"])
+  N472([identifier])
   N471 -->|true| N472
   N471 -->|false| N472
-  N473(["type_identifier"])
+  N473([type_identifier])
   N472 -->|true| N473
   N472 -->|false| N473
-  N474(["type_identifier"])
+  N474([type_identifier])
   N473 -->|true| N474
   N473 -->|false| N474
-  N475(["identifier"])
+  N475([identifier])
   N474 -->|true| N475
   N474 -->|false| N475
-  N476(["type_identifier"])
+  N476([type_identifier])
   N475 -->|true| N476
   N475 -->|false| N476
-  N477(["identifier"])
+  N477([identifier])
   N476 -->|true| N477
   N476 -->|false| N477
-  N478(["field_identifier"])
+  N478([field_identifier])
   N477 -->|true| N478
   N477 -->|false| N478
-  N479(["identifier"])
+  N479([identifier])
   N478 -->|true| N479
   N478 -->|false| N479
-  N480(["field_identifier"])
+  N480([field_identifier])
   N479 -->|true| N480
   N479 -->|false| N480
-  N481(["call:Some"])
+  N481([call:Some])
   N480 --> N481
-  N482(["field_identifier"])
+  N482([field_identifier])
   N481 -->|true| N482
   N481 -->|false| N482
-  N483(["field_identifier"])
+  N483([field_identifier])
   N482 -->|true| N483
   N482 -->|false| N483
-  N484(["call:from_secs"])
+  N484([call:from_secs])
   N483 --> N484
-  N485(["identifier"])
+  N485([identifier])
   N484 -->|true| N485
   N484 -->|false| N485
-  N486(["call:new"])
+  N486([call:new])
   N485 --> N486
-  N487(["call:Ok"])
+  N487([call:Ok])
   N486 --> N487
-  N488(["visibility_modifier"])
+  N488([visibility_modifier])
   N487 -->|true| N488
   N487 -->|false| N488
-  N489(["function_modifiers"])
+  N489([function_modifiers])
   N488 -->|true| N489
   N488 -->|false| N489
-  N490(["identifier"])
+  N490([identifier])
   N489 -->|true| N490
   N489 -->|false| N490
-  N491(["identifier"])
+  N491([identifier])
   N490 -->|true| N491
   N490 -->|false| N491
-  N492(["mutable_specifier"])
+  N492([mutable_specifier])
   N491 -->|true| N492
   N491 -->|false| N492
-  N493(["identifier"])
+  N493([identifier])
   N492 -->|true| N493
   N492 -->|false| N493
-  N494(["call:write"])
+  N494([call:write])
   N493 --> N494
-  N495(["if_expression"])
+  N495([if_expression])
   N494 -->|true| N495
   N494 -->|false| N495
-  N496(["if"])
+  N496([if])
   N495 -->|true| N496
   N495 -->|false| N496
-  N497(["identifier"])
+  N497([identifier])
   N496 -->|true| N497
   N496 -->|false| N497
-  N498(["identifier"])
+  N498([identifier])
   N497 -->|true| N498
   N497 -->|false| N498
-  N499(["identifier"])
+  N499([identifier])
   N498 -->|true| N499
   N498 -->|false| N499
-  N500(["field_identifier"])
+  N500([field_identifier])
   N499 -->|true| N500
   N499 -->|false| N500
-  N501(["identifier"])
+  N501([identifier])
   N500 -->|true| N501
   N500 -->|false| N501
-  N502(["call:max"])
+  N502([call:max])
   N501 --> N502
-  N503(["identifier"])
+  N503([identifier])
   N502 -->|true| N503
   N502 -->|false| N503
-  N504(["identifier"])
+  N504([identifier])
   N503 -->|true| N504
   N503 -->|false| N504
-  N505(["identifier"])
+  N505([identifier])
   N504 -->|true| N505
   N504 -->|false| N505
-  N506(["identifier"])
+  N506([identifier])
   N505 -->|true| N506
   N505 -->|false| N506
-  N507(["identifier"])
+  N507([identifier])
   N506 -->|true| N507
   N506 -->|false| N507
-  N508(["identifier"])
+  N508([identifier])
   N507 -->|true| N508
   N507 -->|false| N508
-  N509(["field_identifier"])
+  N509([field_identifier])
   N508 -->|true| N509
   N508 -->|false| N509
-  N510(["identifier"])
+  N510([identifier])
   N509 -->|true| N510
   N509 -->|false| N510
-  N511(["call:min"])
+  N511([call:min])
   N510 --> N511
-  N512(["identifier"])
+  N512([identifier])
   N511 -->|true| N512
   N511 -->|false| N512
-  N513(["identifier"])
+  N513([identifier])
   N512 -->|true| N513
   N512 -->|false| N513
-  N514(["identifier"])
+  N514([identifier])
   N513 -->|true| N514
   N513 -->|false| N514
-  N515(["identifier"])
+  N515([identifier])
   N514 -->|true| N515
   N514 -->|false| N515
-  N516(["visibility_modifier"])
+  N516([visibility_modifier])
   N515 -->|true| N516
   N515 -->|false| N516
-  N517(["function_modifiers"])
+  N517([function_modifiers])
   N516 -->|true| N517
   N516 -->|false| N517
-  N518(["identifier"])
+  N518([identifier])
   N517 -->|true| N518
   N517 -->|false| N518
-  N519(["call:read"])
+  N519([call:read])
   N518 --> N519
-  N520(["visibility_modifier"])
+  N520([visibility_modifier])
   N519 -->|true| N520
   N519 -->|false| N520
-  N521(["type_identifier"])
+  N521([type_identifier])
   N520 -->|true| N521
   N520 -->|false| N521
-  N522(["type_identifier"])
+  N522([type_identifier])
   N521 -->|true| N522
   N521 -->|false| N522
-  N523(["visibility_modifier"])
+  N523([visibility_modifier])
   N522 -->|true| N523
   N522 -->|false| N523
-  N524(["identifier"])
+  N524([identifier])
   N523 -->|true| N524
   N523 -->|false| N524
-  N525(["type_identifier"])
+  N525([type_identifier])
   N524 -->|true| N525
   N524 -->|false| N525
-  N526(["type_identifier"])
+  N526([type_identifier])
   N525 -->|true| N526
   N525 -->|false| N526
-  N527(["identifier"])
+  N527([identifier])
   N526 -->|true| N527
   N526 -->|false| N527
-  N528(["type_identifier"])
+  N528([type_identifier])
   N527 -->|true| N528
   N527 -->|false| N528
-  N529(["field_identifier"])
+  N529([field_identifier])
   N528 -->|true| N529
   N528 -->|false| N529
-  N530(["call:to_string"])
+  N530([call:to_string])
   N529 --> N530
-  N531(["field_identifier"])
+  N531([field_identifier])
   N530 -->|true| N531
   N530 -->|false| N531
-  N532(["field_identifier"])
+  N532([field_identifier])
   N531 -->|true| N532
   N531 -->|false| N532
-  N533(["call:Some"])
+  N533([call:Some])
   N532 --> N533
-  N534(["field_identifier"])
+  N534([field_identifier])
   N533 -->|true| N534
   N533 -->|false| N534
-  N535(["field_identifier"])
+  N535([field_identifier])
   N534 -->|true| N535
   N534 -->|false| N535
-  N536(["call:from_secs"])
+  N536([call:from_secs])
   N535 --> N536
-  N537(["call:new"])
+  N537([call:new])
   N536 --> N537
-  N538(["visibility_modifier"])
+  N538([visibility_modifier])
   N537 -->|true| N538
   N537 -->|false| N538
-  N539(["identifier"])
+  N539([identifier])
   N538 -->|true| N539
   N538 -->|false| N539
-  N540(["type_identifier"])
+  N540([type_identifier])
   N539 -->|true| N540
   N539 -->|false| N540
-  N541(["type_identifier"])
+  N541([type_identifier])
   N540 -->|true| N541
   N540 -->|false| N541
-  N542(["identifier"])
+  N542([identifier])
   N541 -->|true| N542
   N541 -->|false| N542
-  N543(["type_identifier"])
+  N543([type_identifier])
   N542 -->|true| N543
   N542 -->|false| N543
-  N544(["field_identifier"])
+  N544([field_identifier])
   N543 -->|true| N544
   N543 -->|false| N544
-  N545(["call:to_string"])
+  N545([call:to_string])
   N544 --> N545
-  N546(["field_identifier"])
+  N546([field_identifier])
   N545 -->|true| N546
   N545 -->|false| N546
-  N547(["field_identifier"])
+  N547([field_identifier])
   N546 -->|true| N547
   N546 -->|false| N547
-  N548(["call:Some"])
+  N548([call:Some])
   N547 --> N548
-  N549(["field_identifier"])
+  N549([field_identifier])
   N548 -->|true| N549
   N548 -->|false| N549
-  N550(["field_identifier"])
+  N550([field_identifier])
   N549 -->|true| N550
   N549 -->|false| N550
-  N551(["call:from_secs"])
+  N551([call:from_secs])
   N550 --> N551
-  N552(["call:new"])
+  N552([call:new])
   N551 --> N552
-  N553(["visibility_modifier"])
+  N553([visibility_modifier])
   N552 -->|true| N553
   N552 -->|false| N553
-  N554(["identifier"])
+  N554([identifier])
   N553 -->|true| N554
   N553 -->|false| N554
-  N555(["type_identifier"])
+  N555([type_identifier])
   N554 -->|true| N555
   N554 -->|false| N555
-  N556(["type_identifier"])
+  N556([type_identifier])
   N555 -->|true| N556
   N555 -->|false| N556
-  N557(["identifier"])
+  N557([identifier])
   N556 -->|true| N557
   N556 -->|false| N557
-  N558(["type_identifier"])
+  N558([type_identifier])
   N557 -->|true| N558
   N557 -->|false| N558
-  N559(["field_identifier"])
+  N559([field_identifier])
   N558 -->|true| N559
   N558 -->|false| N559
-  N560(["call:to_string"])
+  N560([call:to_string])
   N559 --> N560
-  N561(["field_identifier"])
+  N561([field_identifier])
   N560 -->|true| N561
   N560 -->|false| N561
-  N562(["field_identifier"])
+  N562([field_identifier])
   N561 -->|true| N562
   N561 -->|false| N562
-  N563(["call:Some"])
+  N563([call:Some])
   N562 --> N563
-  N564(["field_identifier"])
+  N564([field_identifier])
   N563 -->|true| N564
   N563 -->|false| N564
-  N565(["field_identifier"])
+  N565([field_identifier])
   N564 -->|true| N565
   N564 -->|false| N565
-  N566(["call:from_secs"])
+  N566([call:from_secs])
   N565 --> N566
-  N567(["call:new"])
+  N567([call:new])
   N566 --> N567
-  N568(["visibility_modifier"])
+  N568([visibility_modifier])
   N567 -->|true| N568
   N567 -->|false| N568
-  N569(["identifier"])
+  N569([identifier])
   N568 -->|true| N569
   N568 -->|false| N569
-  N570(["type_identifier"])
+  N570([type_identifier])
   N569 -->|true| N570
   N569 -->|false| N570
-  N571(["type_identifier"])
+  N571([type_identifier])
   N570 -->|true| N571
   N570 -->|false| N571
-  N572(["identifier"])
+  N572([identifier])
   N571 -->|true| N572
   N571 -->|false| N572
-  N573(["type_identifier"])
+  N573([type_identifier])
   N572 -->|true| N573
   N572 -->|false| N573
-  N574(["field_identifier"])
+  N574([field_identifier])
   N573 -->|true| N574
   N573 -->|false| N574
-  N575(["call:to_string"])
+  N575([call:to_string])
   N574 --> N575
-  N576(["field_identifier"])
+  N576([field_identifier])
   N575 -->|true| N576
   N575 -->|false| N576
-  N577(["field_identifier"])
+  N577([field_identifier])
   N576 -->|true| N577
   N576 -->|false| N577
-  N578(["call:Some"])
+  N578([call:Some])
   N577 --> N578
-  N579(["field_identifier"])
+  N579([field_identifier])
   N578 -->|true| N579
   N578 -->|false| N579
-  N580(["field_identifier"])
+  N580([field_identifier])
   N579 -->|true| N580
   N579 -->|false| N580
-  N581(["call:from_secs"])
+  N581([call:from_secs])
   N580 --> N581
-  N582(["call:new"])
+  N582([call:new])
   N581 --> N582
-  N583(["visibility_modifier"])
+  N583([visibility_modifier])
   N582 -->|true| N583
   N582 -->|false| N583
-  N584(["identifier"])
+  N584([identifier])
   N583 -->|true| N584
   N583 -->|false| N584
-  N585(["type_identifier"])
+  N585([type_identifier])
   N584 -->|true| N585
   N584 -->|false| N585
-  N586(["type_identifier"])
+  N586([type_identifier])
   N585 -->|true| N586
   N585 -->|false| N586
-  N587(["identifier"])
+  N587([identifier])
   N586 -->|true| N587
   N586 -->|false| N587
-  N588(["type_identifier"])
+  N588([type_identifier])
   N587 -->|true| N588
   N587 -->|false| N588
-  N589(["field_identifier"])
+  N589([field_identifier])
   N588 -->|true| N589
   N588 -->|false| N589
-  N590(["call:to_string"])
+  N590([call:to_string])
   N589 --> N590
-  N591(["field_identifier"])
+  N591([field_identifier])
   N590 -->|true| N591
   N590 -->|false| N591
-  N592(["field_identifier"])
+  N592([field_identifier])
   N591 -->|true| N592
   N591 -->|false| N592
-  N593(["call:Some"])
+  N593([call:Some])
   N592 --> N593
-  N594(["field_identifier"])
+  N594([field_identifier])
   N593 -->|true| N594
   N593 -->|false| N594
-  N595(["field_identifier"])
+  N595([field_identifier])
   N594 -->|true| N595
   N594 -->|false| N595
-  N596(["call:from_secs"])
+  N596([call:from_secs])
   N595 --> N596
-  N597(["call:new"])
+  N597([call:new])
   N596 --> N597
-  N598(["visibility_modifier"])
+  N598([visibility_modifier])
   N597 -->|true| N598
   N597 -->|false| N598
-  N599(["function_modifiers"])
+  N599([function_modifiers])
   N598 -->|true| N599
   N598 -->|false| N599
-  N600(["identifier"])
+  N600([identifier])
   N599 -->|true| N600
   N599 -->|false| N600
-  N601(["type_identifier"])
+  N601([type_identifier])
   N600 -->|true| N601
   N600 -->|false| N601
-  N602(["type_identifier"])
+  N602([type_identifier])
   N601 -->|true| N602
   N601 -->|false| N602
-  N603(["identifier"])
+  N603([identifier])
   N602 -->|true| N603
   N602 -->|false| N603
-  N604(["call:new"])
+  N604([call:new])
   N603 --> N604
-  N605(["call:add_service"])
+  N605([call:add_service])
   N604 --> N605
-  N606(["call:add_service"])
+  N606([call:add_service])
   N605 --> N606
-  N607(["call:add_service"])
+  N607([call:add_service])
   N606 --> N607
-  N608(["call:Ok"])
+  N608([call:Ok])
   N607 --> N608
   N608 --> end
 
@@ -1872,89 +2106,2587 @@
 
 </div></div>
 <div class="card"><h3>Symbols</h3>
-<ul>
-<li id="symbol-default"><code>default</code> <small>function</small></li>
-<li id="symbol-default"><code>default</code> <small>function</small></li>
-<li id="symbol-new"><code>new</code> <small>function</small></li>
-<li id="symbol-add_service"><code>add_service</code> <small>function</small></li>
-<li id="symbol-wait_for_permit"><code>wait_for_permit</code> <small>function</small></li>
-<li id="symbol-check_permit"><code>check_permit</code> <small>function</small></li>
-<li id="symbol-get_stats"><code>get_stats</code> <small>function</small></li>
-<li id="symbol-get_services"><code>get_services</code> <small>function</small></li>
-<li id="symbol-new"><code>new</code> <small>function</small></li>
-<li id="symbol-wait_for_permit"><code>wait_for_permit</code> <small>function</small></li>
-<li id="symbol-check_permit"><code>check_permit</code> <small>function</small></li>
-<li id="symbol-get_stats"><code>get_stats</code> <small>function</small></li>
-<li id="symbol-reset_stats"><code>reset_stats</code> <small>function</small></li>
-<li id="symbol-service_name"><code>service_name</code> <small>function</small></li>
-<li id="symbol-record_success"><code>record_success</code> <small>function</small></li>
-<li id="symbol-record_failure"><code>record_failure</code> <small>function</small></li>
-<li id="symbol-calculate_backoff_delay"><code>calculate_backoff_delay</code> <small>function</small></li>
-<li id="symbol-wait_with_backoff"><code>wait_with_backoff</code> <small>function</small></li>
-<li id="symbol-new"><code>new</code> <small>function</small></li>
-<li id="symbol-adjust_rate"><code>adjust_rate</code> <small>function</small></li>
-<li id="symbol-get_current_rate"><code>get_current_rate</code> <small>function</small></li>
-<li id="symbol-nvd_limiter"><code>nvd_limiter</code> <small>function</small></li>
-<li id="symbol-nvd_limiter_with_key"><code>nvd_limiter_with_key</code> <small>function</small></li>
-<li id="symbol-osv_limiter"><code>osv_limiter</code> <small>function</small></li>
-<li id="symbol-github_limiter"><code>github_limiter</code> <small>function</small></li>
-<li id="symbol-github_limiter_with_token"><code>github_limiter_with_token</code> <small>function</small></li>
-<li id="symbol-create_default_multi_limiter"><code>create_default_multi_limiter</code> <small>function</small></li>
-<li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>struct</small></li>
-<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>struct</small></li>
-<li id="symbol-servicestats"><code>ServiceStats</code> <small>struct</small></li>
-<li id="symbol-ratelimitconfig"><code>RateLimitConfig</code> <small>struct</small></li>
-<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>struct</small></li>
-<li id="symbol-ratelimitstats"><code>RateLimitStats</code> <small>struct</small></li>
-<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>struct</small></li>
-<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>struct</small></li>
-<li id="symbol-ratelimitresult"><code>RateLimitResult</code> <small>enum</small></li>
-<li id="symbol-servicestats"><code>ServiceStats</code> <small>impl</small></li>
-<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>impl</small></li>
-<li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>impl</small></li>
-<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>impl</small></li>
-<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>impl</small></li>
-<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>impl</small></li>
-<li id="symbol-service_limiter"><code>service_limiter</code> <small>variable</small></li>
-<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
-<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
-<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
-<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
-<li id="symbol-limiters"><code>limiters</code> <small>variable</small></li>
-<li id="symbol-requests_per_minute"><code>requests_per_minute</code> <small>variable</small></li>
-<li id="symbol-quota"><code>quota</code> <small>variable</small></li>
-<li id="symbol-limiter"><code>limiter</code> <small>variable</small></li>
-<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
-<li id="symbol-retry_after"><code>retry_after</code> <small>variable</small></li>
-<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
-<li id="symbol-elapsed"><code>elapsed</code> <small>variable</small></li>
-<li id="symbol-tokens_replenished"><code>tokens_replenished</code> <small>variable</small></li>
-<li id="symbol-current_tokens"><code>current_tokens</code> <small>variable</small></li>
-<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
-<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
-<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
-<li id="symbol-stats"><code>stats</code> <small>variable</small></li>
-<li id="symbol-base_delay"><code>base_delay</code> <small>variable</small></li>
-<li id="symbol-multiplier"><code>multiplier</code> <small>variable</small></li>
-<li id="symbol-delay_ms"><code>delay_ms</code> <small>variable</small></li>
-<li id="symbol-delay"><code>delay</code> <small>variable</small></li>
-<li id="symbol-jitter_factor"><code>jitter_factor</code> <small>variable</small></li>
-<li id="symbol-backoff_delay"><code>backoff_delay</code> <small>variable</small></li>
-<li id="symbol-config"><code>config</code> <small>variable</small></li>
-<li id="symbol-base_limiter"><code>base_limiter</code> <small>variable</small></li>
-<li id="symbol-current_rate"><code>current_rate</code> <small>variable</small></li>
-<li id="symbol-new_rate"><code>new_rate</code> <small>variable</small></li>
-<li id="symbol-new_rate"><code>new_rate</code> <small>variable</small></li>
-<li id="symbol-config"><code>config</code> <small>variable</small></li>
-<li id="symbol-config"><code>config</code> <small>variable</small></li>
-<li id="symbol-config"><code>config</code> <small>variable</small></li>
-<li id="symbol-config"><code>config</code> <small>variable</small></li>
-<li id="symbol-config"><code>config</code> <small>variable</small></li>
-<li id="symbol-multi_limiter"><code>multi_limiter</code> <small>variable</small></li>
-
-</ul>
+<details><summary><strong>Functions</strong> <small>(27)</small></summary><ul><li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (42-50)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-42">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:42" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">42
+43
+44
+45
+46
+47
+48
+49
+50
+</pre>
+    <pre><code id="code-default-42" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self {
+            total_requests: 0,
+            total_limited: 0,
+            last_reset: std::time::Instant::now(),
+            consecutive_failures: 0,
+            last_failure: None,
+        }
+    }</code></pre>
+  </div>
 </div>
+</details></li>
+<li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (81-88)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-81">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:81" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">81
+82
+83
+84
+85
+86
+87
+88
+</pre>
+    <pre><code id="code-default-81" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self {
+            initial_delay: Duration::from_millis(100),
+            max_delay: Duration::from_secs(60),
+            multiplier: 2.0,
+            jitter: true,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (93-97)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-93">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:93" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">93
+94
+95
+96
+97
+</pre>
+    <pre><code id="code-new-93" class="lang-rust hljs">    pub fn new() -&gt; Self {
+        Self {
+            limiters: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-add-service"><code>add_service</code> <small>function</small>
+<details><summary>View code (100-105)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-add_service-100">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:100" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">100
+101
+102
+103
+104
+105
+</pre>
+    <pre><code id="code-add_service-100" class="lang-rust hljs">    pub async fn add_service(&amp;self, config: RateLimitConfig) -&gt; Result&lt;()&gt; {
+        let service_limiter = ServiceRateLimiter::new(config)?;
+        let mut limiters = self.limiters.write().await;
+        limiters.insert(service_limiter.service_name.clone(), service_limiter);
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-wait-for-permit"><code>wait_for_permit</code> <small>function</small>
+<details><summary>View code (108-115)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-wait_for_permit-108">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:108" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">108
+109
+110
+111
+112
+113
+114
+115
+</pre>
+    <pre><code id="code-wait_for_permit-108" class="lang-rust hljs">    pub async fn wait_for_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;()&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            limiter.wait_for_permit().await
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-check-permit"><code>check_permit</code> <small>function</small>
+<details><summary>View code (118-125)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-check_permit-118">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:118" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">118
+119
+120
+121
+122
+123
+124
+125
+</pre>
+    <pre><code id="code-check_permit-118" class="lang-rust hljs">    pub async fn check_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitResult&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.check_permit())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-stats"><code>get_stats</code> <small>function</small>
+<details><summary>View code (128-135)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_stats-128">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:128" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">128
+129
+130
+131
+132
+133
+134
+135
+</pre>
+    <pre><code id="code-get_stats-128" class="lang-rust hljs">    pub async fn get_stats(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitStats&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.get_stats())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-services"><code>get_services</code> <small>function</small>
+<details><summary>View code (138-141)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_services-138">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:138" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">138
+139
+140
+141
+</pre>
+    <pre><code id="code-get_services-138" class="lang-rust hljs">    pub async fn get_services(&amp;self) -&gt; Vec&lt;String&gt; {
+        let limiters = self.limiters.read().await;
+        limiters.keys().cloned().collect()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (146-169)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-146">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:146" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+</pre>
+    <pre><code id="code-new-146" class="lang-rust hljs">    pub fn new(config: RateLimitConfig) -&gt; Result&lt;Self&gt; {
+        let requests_per_minute = NonZeroU32::new(config.requests_per_minute)
+            .ok_or_else(|| anyhow!(&quot;Requests per minute must be &gt; 0&quot;))?;
 
+        let quota = Quota::per_minute(requests_per_minute);
+        let limiter = Arc::new(GovRateLimiter::direct(quota));
+
+        debug!(&quot;Created rate limiter for {}: {} requests/minute&quot;, 
+               config.service_name, config.requests_per_minute);
+
+        Ok(Self {
+            limiter,
+            service_name: config.service_name,
+            requests_per_minute: config.requests_per_minute,
+            burst_size: config.burst_size.unwrap_or(config.requests_per_minute),
+            stats: Arc::new(RwLock::new(ServiceStats {
+                total_requests: 0,
+                total_limited: 0,
+                last_reset: std::time::Instant::now(),
+                consecutive_failures: 0,
+                last_failure: None,
+            })),
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-wait-for-permit"><code>wait_for_permit</code> <small>function</small>
+<details><summary>View code (172-183)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-wait_for_permit-172">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:172" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+</pre>
+    <pre><code id="code-wait_for_permit-172" class="lang-rust hljs">    pub async fn wait_for_permit(&amp;self) -&gt; Result&lt;()&gt; {
+        self.limiter.until_ready().await;
+
+        // Update statistics
+        {
+            let mut stats = self.stats.write().await;
+            stats.total_requests += 1;
+        }
+
+        debug!(&quot;Rate limit permit granted for {}&quot;, self.service_name);
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-check-permit"><code>check_permit</code> <small>function</small>
+<details><summary>View code (186-207)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-check_permit-186">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:186" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+</pre>
+    <pre><code id="code-check_permit-186" class="lang-rust hljs">    pub fn check_permit(&amp;self) -&gt; RateLimitResult {
+        match self.limiter.check() {
+            Ok(_) =&gt; {
+                // Update statistics for successful request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_requests += 1;
+                }
+                debug!(&quot;Rate limit check passed for {}&quot;, self.service_name);
+                RateLimitResult::Allowed
+            }
+            Err(negative) =&gt; {
+                // Update statistics for limited request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_limited += 1;
+                }
+                let retry_after = negative.wait_time_from(governor::clock::DefaultClock::default().now());
+                warn!(&quot;Rate limit exceeded for {}, retry after: {:?}&quot;,
+                      self.service_name, retry_after);
+                RateLimitResult::Limited { retry_after }
+            }
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-stats"><code>get_stats</code> <small>function</small>
+<details><summary>View code (210-230)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_stats-210">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:210" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+</pre>
+    <pre><code id="code-get_stats-210" class="lang-rust hljs">    pub fn get_stats(&amp;self) -&gt; RateLimitStats {
+        let stats = if let Ok(stats) = self.stats.try_read() {
+            stats.clone()
+        } else {
+            ServiceStats::default()
+        };
+
+        // Estimate current tokens based on time elapsed and rate
+        let elapsed = stats.last_reset.elapsed();
+        let tokens_replenished = (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;
+        let current_tokens = tokens_replenished.min(self.burst_size);
+
+        RateLimitStats {
+            service_name: self.service_name.clone(),
+            requests_per_minute: self.requests_per_minute,
+            burst_size: self.burst_size,
+            current_tokens,
+            total_requests: stats.total_requests,
+            total_limited: stats.total_limited,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-reset-stats"><code>reset_stats</code> <small>function</small>
+<details><summary>View code (233-238)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-reset_stats-233">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:233" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">233
+234
+235
+236
+237
+238
+</pre>
+    <pre><code id="code-reset_stats-233" class="lang-rust hljs">    pub async fn reset_stats(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.total_requests = 0;
+        stats.total_limited = 0;
+        stats.last_reset = std::time::Instant::now();
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-service-name"><code>service_name</code> <small>function</small>
+<details><summary>View code (241-243)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-service_name-241">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:241" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">241
+242
+243
+</pre>
+    <pre><code id="code-service_name-241" class="lang-rust hljs">    pub fn service_name(&amp;self) -&gt; &amp;str {
+        &amp;self.service_name
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-record-success"><code>record_success</code> <small>function</small>
+<details><summary>View code (246-250)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-record_success-246">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:246" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">246
+247
+248
+249
+250
+</pre>
+    <pre><code id="code-record_success-246" class="lang-rust hljs">    pub async fn record_success(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures = 0;
+        stats.last_failure = None;
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-record-failure"><code>record_failure</code> <small>function</small>
+<details><summary>View code (253-257)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-record_failure-253">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:253" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">253
+254
+255
+256
+257
+</pre>
+    <pre><code id="code-record_failure-253" class="lang-rust hljs">    pub async fn record_failure(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures += 1;
+        stats.last_failure = Some(std::time::Instant::now());
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-calculate-backoff-delay"><code>calculate_backoff_delay</code> <small>function</small>
+<details><summary>View code (260-287)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-calculate_backoff_delay-260">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:260" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+</pre>
+    <pre><code id="code-calculate_backoff_delay-260" class="lang-rust hljs">    pub async fn calculate_backoff_delay(&amp;self, config: &amp;BackoffConfig) -&gt; Duration {
+        let stats = self.stats.read().await;
+
+        if stats.consecutive_failures == 0 {
+            return Duration::from_millis(0);
+        }
+
+        // Calculate exponential delay
+        let base_delay = config.initial_delay.as_millis() as f64;
+        let multiplier = config.multiplier.powi(stats.consecutive_failures as i32 - 1);
+        let delay_ms = (base_delay * multiplier) as u64;
+
+        let mut delay = Duration::from_millis(delay_ms);
+
+        // Cap at max delay
+        if delay &gt; config.max_delay {
+            delay = config.max_delay;
+        }
+
+        // Add jitter if enabled
+        if config.jitter {
+            use rand::Rng;
+            let jitter_factor = rand::thread_rng().gen_range(0.5..1.5);
+            delay = Duration::from_millis((delay.as_millis() as f64 * jitter_factor) as u64);
+        }
+
+        delay
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-wait-with-backoff"><code>wait_with_backoff</code> <small>function</small>
+<details><summary>View code (290-300)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-wait_with_backoff-290">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:290" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+</pre>
+    <pre><code id="code-wait_with_backoff-290" class="lang-rust hljs">    pub async fn wait_with_backoff(&amp;self, config: &amp;BackoffConfig) -&gt; Result&lt;()&gt; {
+        let backoff_delay = self.calculate_backoff_delay(config).await;
+
+        if !backoff_delay.is_zero() {
+            debug!(&quot;Applying exponential backoff for {}: {:?}&quot;,
+                   self.service_name, backoff_delay);
+            tokio::time::sleep(backoff_delay).await;
+        }
+
+        self.wait_for_permit().await
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (326-349)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-326">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:326" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+</pre>
+    <pre><code id="code-new-326" class="lang-rust hljs">    pub fn new(
+        service_name: String,
+        initial_rate: u32,
+        min_rate: u32,
+        max_rate: u32,
+    ) -&gt; Result&lt;Self&gt; {
+        let config = RateLimitConfig {
+            service_name,
+            requests_per_minute: initial_rate,
+            burst_size: Some(initial_rate),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+
+        let base_limiter = ServiceRateLimiter::new(config)?;
+
+        Ok(Self {
+            base_limiter,
+            current_rate: Arc::new(tokio::sync::RwLock::new(initial_rate)),
+            min_rate,
+            max_rate,
+            adjustment_factor: 0.1, // 10% adjustment
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-adjust-rate"><code>adjust_rate</code> <small>function</small>
+<details><summary>View code (352-368)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-adjust_rate-352">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:352" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+</pre>
+    <pre><code id="code-adjust_rate-352" class="lang-rust hljs">    pub async fn adjust_rate(&amp;self, response_indicates_rate_limit: bool) {
+        let mut current_rate = self.current_rate.write().await;
+        
+        if response_indicates_rate_limit {
+            // Decrease rate
+            let new_rate = (*current_rate as f64 * (1.0 - self.adjustment_factor)) as u32;
+            *current_rate = new_rate.max(self.min_rate);
+            warn!(&quot;Decreased rate limit for {} to {}&quot;, 
+                  self.base_limiter.service_name, *current_rate);
+        } else {
+            // Gradually increase rate
+            let new_rate = (*current_rate as f64 * (1.0 + self.adjustment_factor * 0.1)) as u32;
+            *current_rate = new_rate.min(self.max_rate);
+            debug!(&quot;Increased rate limit for {} to {}&quot;, 
+                   self.base_limiter.service_name, *current_rate);
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-current-rate"><code>get_current_rate</code> <small>function</small>
+<details><summary>View code (371-373)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_current_rate-371">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:371" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">371
+372
+373
+</pre>
+    <pre><code id="code-get_current_rate-371" class="lang-rust hljs">    pub async fn get_current_rate(&amp;self) -&gt; u32 {
+        *self.current_rate.read().await
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-nvd-limiter"><code>nvd_limiter</code> <small>function</small>
+<details><summary>View code (381-390)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-nvd_limiter-381">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:381" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+</pre>
+    <pre><code id="code-nvd_limiter-381" class="lang-rust hljs">    pub fn nvd_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50, // NVD limit without API key
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-nvd-limiter-with-key"><code>nvd_limiter_with_key</code> <small>function</small>
+<details><summary>View code (393-402)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-nvd_limiter_with_key-393">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:393" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+</pre>
+    <pre><code id="code-nvd_limiter_with_key-393" class="lang-rust hljs">    pub fn nvd_limiter_with_key() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd_with_key&quot;.to_string(),
+            requests_per_minute: 100, // Higher limit with API key
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-osv-limiter"><code>osv_limiter</code> <small>function</small>
+<details><summary>View code (405-414)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-osv_limiter-405">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:405" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+</pre>
+    <pre><code id="code-osv_limiter-405" class="lang-rust hljs">    pub fn osv_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-github-limiter"><code>github_limiter</code> <small>function</small>
+<details><summary>View code (417-426)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-github_limiter-417">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:417" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+</pre>
+    <pre><code id="code-github_limiter-417" class="lang-rust hljs">    pub fn github_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60, // GitHub limit without token
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-github-limiter-with-token"><code>github_limiter_with_token</code> <small>function</small>
+<details><summary>View code (429-438)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-github_limiter_with_token-429">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:429" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+</pre>
+    <pre><code id="code-github_limiter_with_token-429" class="lang-rust hljs">    pub fn github_limiter_with_token() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github_with_token&quot;.to_string(),
+            requests_per_minute: 5000, // Much higher limit with token
+            burst_size: Some(100),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-create-default-multi-limiter"><code>create_default_multi_limiter</code> <small>function</small>
+<details><summary>View code (441-470)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-create_default_multi_limiter-441">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:441" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+</pre>
+    <pre><code id="code-create_default_multi_limiter-441" class="lang-rust hljs">    pub async fn create_default_multi_limiter() -&gt; Result&lt;MultiServiceRateLimiter&gt; {
+        let multi_limiter = MultiServiceRateLimiter::new();
+
+        // Add common service limiters
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        }).await?;
+
+        Ok(multi_limiter)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(36)</small></summary><ul><li id="symbol-service-limiter"><code>service_limiter</code> <small>variable</small>
+<details><summary>View code (101-101)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-service_limiter-101">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:101" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">101
+</pre>
+    <pre><code id="code-service_limiter-101" class="lang-rust hljs">        let service_limiter = ServiceRateLimiter::new(config)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (102-102)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-102">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:102" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">102
+</pre>
+    <pre><code id="code-limiters-102" class="lang-rust hljs">        let mut limiters = self.limiters.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (109-109)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-109">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:109" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">109
+</pre>
+    <pre><code id="code-limiters-109" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (119-119)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-119">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:119" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">119
+</pre>
+    <pre><code id="code-limiters-119" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (129-129)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-129">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:129" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">129
+</pre>
+    <pre><code id="code-limiters-129" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (139-139)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-139">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:139" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">139
+</pre>
+    <pre><code id="code-limiters-139" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-requests-per-minute"><code>requests_per_minute</code> <small>variable</small>
+<details><summary>View code (147-148)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-requests_per_minute-147">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:147" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">147
+148
+</pre>
+    <pre><code id="code-requests_per_minute-147" class="lang-rust hljs">        let requests_per_minute = NonZeroU32::new(config.requests_per_minute)
+            .ok_or_else(|| anyhow!(&quot;Requests per minute must be &gt; 0&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-quota"><code>quota</code> <small>variable</small>
+<details><summary>View code (150-150)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-quota-150">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:150" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">150
+</pre>
+    <pre><code id="code-quota-150" class="lang-rust hljs">        let quota = Quota::per_minute(requests_per_minute);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiter"><code>limiter</code> <small>variable</small>
+<details><summary>View code (151-151)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiter-151">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:151" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">151
+</pre>
+    <pre><code id="code-limiter-151" class="lang-rust hljs">        let limiter = Arc::new(GovRateLimiter::direct(quota));</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (177-177)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-177">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:177" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">177
+</pre>
+    <pre><code id="code-stats-177" class="lang-rust hljs">            let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-retry-after"><code>retry_after</code> <small>variable</small>
+<details><summary>View code (201-201)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-retry_after-201">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:201" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">201
+</pre>
+    <pre><code id="code-retry_after-201" class="lang-rust hljs">                let retry_after = negative.wait_time_from(governor::clock::DefaultClock::default().now());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (211-215)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-211">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:211" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">211
+212
+213
+214
+215
+</pre>
+    <pre><code id="code-stats-211" class="lang-rust hljs">        let stats = if let Ok(stats) = self.stats.try_read() {
+            stats.clone()
+        } else {
+            ServiceStats::default()
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-elapsed"><code>elapsed</code> <small>variable</small>
+<details><summary>View code (218-218)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-elapsed-218">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:218" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">218
+</pre>
+    <pre><code id="code-elapsed-218" class="lang-rust hljs">        let elapsed = stats.last_reset.elapsed();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tokens-replenished"><code>tokens_replenished</code> <small>variable</small>
+<details><summary>View code (219-219)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tokens_replenished-219">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:219" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">219
+</pre>
+    <pre><code id="code-tokens_replenished-219" class="lang-rust hljs">        let tokens_replenished = (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-current-tokens"><code>current_tokens</code> <small>variable</small>
+<details><summary>View code (220-220)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-current_tokens-220">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:220" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">220
+</pre>
+    <pre><code id="code-current_tokens-220" class="lang-rust hljs">        let current_tokens = tokens_replenished.min(self.burst_size);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (234-234)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-234">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:234" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">234
+</pre>
+    <pre><code id="code-stats-234" class="lang-rust hljs">        let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (247-247)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-247">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:247" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">247
+</pre>
+    <pre><code id="code-stats-247" class="lang-rust hljs">        let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (254-254)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-254">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:254" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">254
+</pre>
+    <pre><code id="code-stats-254" class="lang-rust hljs">        let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (261-261)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-261">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:261" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">261
+</pre>
+    <pre><code id="code-stats-261" class="lang-rust hljs">        let stats = self.stats.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-base-delay"><code>base_delay</code> <small>variable</small>
+<details><summary>View code (268-268)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-base_delay-268">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:268" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">268
+</pre>
+    <pre><code id="code-base_delay-268" class="lang-rust hljs">        let base_delay = config.initial_delay.as_millis() as f64;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-multiplier"><code>multiplier</code> <small>variable</small>
+<details><summary>View code (269-269)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multiplier-269">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:269" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">269
+</pre>
+    <pre><code id="code-multiplier-269" class="lang-rust hljs">        let multiplier = config.multiplier.powi(stats.consecutive_failures as i32 - 1);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-delay-ms"><code>delay_ms</code> <small>variable</small>
+<details><summary>View code (270-270)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-delay_ms-270">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:270" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">270
+</pre>
+    <pre><code id="code-delay_ms-270" class="lang-rust hljs">        let delay_ms = (base_delay * multiplier) as u64;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-delay"><code>delay</code> <small>variable</small>
+<details><summary>View code (272-272)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-delay-272">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:272" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">272
+</pre>
+    <pre><code id="code-delay-272" class="lang-rust hljs">        let mut delay = Duration::from_millis(delay_ms);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-jitter-factor"><code>jitter_factor</code> <small>variable</small>
+<details><summary>View code (282-282)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-jitter_factor-282">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:282" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">282
+</pre>
+    <pre><code id="code-jitter_factor-282" class="lang-rust hljs">            let jitter_factor = rand::thread_rng().gen_range(0.5..1.5);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoff-delay"><code>backoff_delay</code> <small>variable</small>
+<details><summary>View code (291-291)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoff_delay-291">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:291" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">291
+</pre>
+    <pre><code id="code-backoff_delay-291" class="lang-rust hljs">        let backoff_delay = self.calculate_backoff_delay(config).await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (332-338)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-332">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:332" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">332
+333
+334
+335
+336
+337
+338
+</pre>
+    <pre><code id="code-config-332" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name,
+            requests_per_minute: initial_rate,
+            burst_size: Some(initial_rate),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-base-limiter"><code>base_limiter</code> <small>variable</small>
+<details><summary>View code (340-340)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-base_limiter-340">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:340" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">340
+</pre>
+    <pre><code id="code-base_limiter-340" class="lang-rust hljs">        let base_limiter = ServiceRateLimiter::new(config)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-current-rate"><code>current_rate</code> <small>variable</small>
+<details><summary>View code (353-353)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-current_rate-353">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:353" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">353
+</pre>
+    <pre><code id="code-current_rate-353" class="lang-rust hljs">        let mut current_rate = self.current_rate.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new-rate"><code>new_rate</code> <small>variable</small>
+<details><summary>View code (357-357)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new_rate-357">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:357" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">357
+</pre>
+    <pre><code id="code-new_rate-357" class="lang-rust hljs">            let new_rate = (*current_rate as f64 * (1.0 - self.adjustment_factor)) as u32;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new-rate"><code>new_rate</code> <small>variable</small>
+<details><summary>View code (363-363)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new_rate-363">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:363" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">363
+</pre>
+    <pre><code id="code-new_rate-363" class="lang-rust hljs">            let new_rate = (*current_rate as f64 * (1.0 + self.adjustment_factor * 0.1)) as u32;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (382-388)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-382">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:382" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">382
+383
+384
+385
+386
+387
+388
+</pre>
+    <pre><code id="code-config-382" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50, // NVD limit without API key
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (394-400)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-394">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:394" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">394
+395
+396
+397
+398
+399
+400
+</pre>
+    <pre><code id="code-config-394" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;nvd_with_key&quot;.to_string(),
+            requests_per_minute: 100, // Higher limit with API key
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (406-412)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-406">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:406" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">406
+407
+408
+409
+410
+411
+412
+</pre>
+    <pre><code id="code-config-406" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (418-424)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-418">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:418" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">418
+419
+420
+421
+422
+423
+424
+</pre>
+    <pre><code id="code-config-418" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60, // GitHub limit without token
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (430-436)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-430">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:430" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">430
+431
+432
+433
+434
+435
+436
+</pre>
+    <pre><code id="code-config-430" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;github_with_token&quot;.to_string(),
+            requests_per_minute: 5000, // Much higher limit with token
+            burst_size: Some(100),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-multi-limiter"><code>multi_limiter</code> <small>variable</small>
+<details><summary>View code (442-442)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multi_limiter-442">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:442" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">442
+</pre>
+    <pre><code id="code-multi_limiter-442" class="lang-rust hljs">        let multi_limiter = MultiServiceRateLimiter::new();</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(15)</small></summary><ul><li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>struct</small>
+<details><summary>View code (17-19)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multiserviceratelimiter-17">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:17" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">17
+18
+19
+</pre>
+    <pre><code id="code-multiserviceratelimiter-17" class="lang-rust hljs">pub struct MultiServiceRateLimiter {
+    limiters: Arc&lt;RwLock&lt;HashMap&lt;String, ServiceRateLimiter&gt;&gt;&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>struct</small>
+<details><summary>View code (23-29)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-serviceratelimiter-23">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:23" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">23
+24
+25
+26
+27
+28
+29
+</pre>
+    <pre><code id="code-serviceratelimiter-23" class="lang-rust hljs">pub struct ServiceRateLimiter {
+    limiter: Arc&lt;GovRateLimiter&lt;NotKeyed, InMemoryState, DefaultClock, NoOpMiddleware&gt;&gt;,
+    service_name: String,
+    requests_per_minute: u32,
+    burst_size: u32,
+    stats: Arc&lt;RwLock&lt;ServiceStats&gt;&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-servicestats"><code>ServiceStats</code> <small>struct</small>
+<details><summary>View code (33-39)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-servicestats-33">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:33" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">33
+34
+35
+36
+37
+38
+39
+</pre>
+    <pre><code id="code-servicestats-33" class="lang-rust hljs">struct ServiceStats {
+    total_requests: u64,
+    total_limited: u64,
+    last_reset: std::time::Instant,
+    consecutive_failures: u32,
+    last_failure: Option&lt;std::time::Instant&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimitconfig"><code>RateLimitConfig</code> <small>struct</small>
+<details><summary>View code (55-61)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitconfig-55">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:55" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">55
+56
+57
+58
+59
+60
+61
+</pre>
+    <pre><code id="code-ratelimitconfig-55" class="lang-rust hljs">pub struct RateLimitConfig {
+    pub service_name: String,
+    pub requests_per_minute: u32,
+    pub burst_size: Option&lt;u32&gt;,
+    pub enable_backoff: bool,
+    pub max_backoff_duration: Duration,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>struct</small>
+<details><summary>View code (73-78)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoffconfig-73">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:73" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">73
+74
+75
+76
+77
+78
+</pre>
+    <pre><code id="code-backoffconfig-73" class="lang-rust hljs">pub struct BackoffConfig {
+    pub initial_delay: Duration,
+    pub max_delay: Duration,
+    pub multiplier: f64,
+    pub jitter: bool,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimitstats"><code>RateLimitStats</code> <small>struct</small>
+<details><summary>View code (305-312)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitstats-305">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:305" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">305
+306
+307
+308
+309
+310
+311
+312
+</pre>
+    <pre><code id="code-ratelimitstats-305" class="lang-rust hljs">pub struct RateLimitStats {
+    pub service_name: String,
+    pub requests_per_minute: u32,
+    pub burst_size: u32,
+    pub current_tokens: u32,
+    pub total_requests: u64,
+    pub total_limited: u64,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>struct</small>
+<details><summary>View code (316-322)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-adaptiveratelimiter-316">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:316" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">316
+317
+318
+319
+320
+321
+322
+</pre>
+    <pre><code id="code-adaptiveratelimiter-316" class="lang-rust hljs">pub struct AdaptiveRateLimiter {
+    base_limiter: ServiceRateLimiter,
+    current_rate: Arc&lt;tokio::sync::RwLock&lt;u32&gt;&gt;,
+    min_rate: u32,
+    max_rate: u32,
+    adjustment_factor: f64,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>struct</small>
+<details><summary>View code (377-377)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimiterfactory-377">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:377" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">377
+</pre>
+    <pre><code id="code-ratelimiterfactory-377" class="lang-rust hljs">pub struct RateLimiterFactory;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimitresult"><code>RateLimitResult</code> <small>enum</small>
+<details><summary>View code (65-69)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitresult-65">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:65" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">65
+66
+67
+68
+69
+</pre>
+    <pre><code id="code-ratelimitresult-65" class="lang-rust hljs">pub enum RateLimitResult {
+    Allowed,
+    Limited { retry_after: Duration },
+    Error(String),
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-servicestats"><code>ServiceStats</code> <small>impl</small>
+<details><summary>View code (41-51)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-servicestats-41">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:41" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+</pre>
+    <pre><code id="code-servicestats-41" class="lang-rust hljs">impl Default for ServiceStats {
+    fn default() -&gt; Self {
+        Self {
+            total_requests: 0,
+            total_limited: 0,
+            last_reset: std::time::Instant::now(),
+            consecutive_failures: 0,
+            last_failure: None,
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>impl</small>
+<details><summary>View code (80-89)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoffconfig-80">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:80" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+</pre>
+    <pre><code id="code-backoffconfig-80" class="lang-rust hljs">impl Default for BackoffConfig {
+    fn default() -&gt; Self {
+        Self {
+            initial_delay: Duration::from_millis(100),
+            max_delay: Duration::from_secs(60),
+            multiplier: 2.0,
+            jitter: true,
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>impl</small>
+<details><summary>View code (91-142)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multiserviceratelimiter-91">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:91" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+</pre>
+    <pre><code id="code-multiserviceratelimiter-91" class="lang-rust hljs">impl MultiServiceRateLimiter {
+    /// Create a new multi-service rate limiter
+    pub fn new() -&gt; Self {
+        Self {
+            limiters: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Add a rate limiter for a specific service
+    pub async fn add_service(&amp;self, config: RateLimitConfig) -&gt; Result&lt;()&gt; {
+        let service_limiter = ServiceRateLimiter::new(config)?;
+        let mut limiters = self.limiters.write().await;
+        limiters.insert(service_limiter.service_name.clone(), service_limiter);
+        Ok(())
+    }
+
+    /// Wait for permission to make a request to a service
+    pub async fn wait_for_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;()&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            limiter.wait_for_permit().await
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }
+
+    /// Check if a request can be made immediately
+    pub async fn check_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitResult&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.check_permit())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }
+
+    /// Get rate limiting statistics for a service
+    pub async fn get_stats(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitStats&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.get_stats())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }
+
+    /// Get all configured services
+    pub async fn get_services(&amp;self) -&gt; Vec&lt;String&gt; {
+        let limiters = self.limiters.read().await;
+        limiters.keys().cloned().collect()
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>impl</small>
+<details><summary>View code (144-301)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-serviceratelimiter-144">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:144" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+</pre>
+    <pre><code id="code-serviceratelimiter-144" class="lang-rust hljs">impl ServiceRateLimiter {
+    /// Create a new service rate limiter
+    pub fn new(config: RateLimitConfig) -&gt; Result&lt;Self&gt; {
+        let requests_per_minute = NonZeroU32::new(config.requests_per_minute)
+            .ok_or_else(|| anyhow!(&quot;Requests per minute must be &gt; 0&quot;))?;
+
+        let quota = Quota::per_minute(requests_per_minute);
+        let limiter = Arc::new(GovRateLimiter::direct(quota));
+
+        debug!(&quot;Created rate limiter for {}: {} requests/minute&quot;, 
+               config.service_name, config.requests_per_minute);
+
+        Ok(Self {
+            limiter,
+            service_name: config.service_name,
+            requests_per_minute: config.requests_per_minute,
+            burst_size: config.burst_size.unwrap_or(config.requests_per_minute),
+            stats: Arc::new(RwLock::new(ServiceStats {
+                total_requests: 0,
+                total_limited: 0,
+                last_reset: std::time::Instant::now(),
+                consecutive_failures: 0,
+                last_failure: None,
+            })),
+        })
+    }
+
+    /// Wait for permission to make a request
+    pub async fn wait_for_permit(&amp;self) -&gt; Result&lt;()&gt; {
+        self.limiter.until_ready().await;
+
+        // Update statistics
+        {
+            let mut stats = self.stats.write().await;
+            stats.total_requests += 1;
+        }
+
+        debug!(&quot;Rate limit permit granted for {}&quot;, self.service_name);
+        Ok(())
+    }
+
+    /// Check if a request can be made immediately
+    pub fn check_permit(&amp;self) -&gt; RateLimitResult {
+        match self.limiter.check() {
+            Ok(_) =&gt; {
+                // Update statistics for successful request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_requests += 1;
+                }
+                debug!(&quot;Rate limit check passed for {}&quot;, self.service_name);
+                RateLimitResult::Allowed
+            }
+            Err(negative) =&gt; {
+                // Update statistics for limited request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_limited += 1;
+                }
+                let retry_after = negative.wait_time_from(governor::clock::DefaultClock::default().now());
+                warn!(&quot;Rate limit exceeded for {}, retry after: {:?}&quot;,
+                      self.service_name, retry_after);
+                RateLimitResult::Limited { retry_after }
+            }
+        }
+    }
+
+    /// Get rate limiting statistics
+    pub fn get_stats(&amp;self) -&gt; RateLimitStats {
+        let stats = if let Ok(stats) = self.stats.try_read() {
+            stats.clone()
+        } else {
+            ServiceStats::default()
+        };
+
+        // Estimate current tokens based on time elapsed and rate
+        let elapsed = stats.last_reset.elapsed();
+        let tokens_replenished = (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;
+        let current_tokens = tokens_replenished.min(self.burst_size);
+
+        RateLimitStats {
+            service_name: self.service_name.clone(),
+            requests_per_minute: self.requests_per_minute,
+            burst_size: self.burst_size,
+            current_tokens,
+            total_requests: stats.total_requests,
+            total_limited: stats.total_limited,
+        }
+    }
+
+    /// Reset statistics (useful for periodic reporting)
+    pub async fn reset_stats(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.total_requests = 0;
+        stats.total_limited = 0;
+        stats.last_reset = std::time::Instant::now();
+    }
+
+    /// Get the service name
+    pub fn service_name(&amp;self) -&gt; &amp;str {
+        &amp;self.service_name
+    }
+
+    /// Record a successful request (resets backoff)
+    pub async fn record_success(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures = 0;
+        stats.last_failure = None;
+    }
+
+    /// Record a failed request (increases backoff)
+    pub async fn record_failure(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures += 1;
+        stats.last_failure = Some(std::time::Instant::now());
+    }
+
+    /// Calculate exponential backoff delay
+    pub async fn calculate_backoff_delay(&amp;self, config: &amp;BackoffConfig) -&gt; Duration {
+        let stats = self.stats.read().await;
+
+        if stats.consecutive_failures == 0 {
+            return Duration::from_millis(0);
+        }
+
+        // Calculate exponential delay
+        let base_delay = config.initial_delay.as_millis() as f64;
+        let multiplier = config.multiplier.powi(stats.consecutive_failures as i32 - 1);
+        let delay_ms = (base_delay * multiplier) as u64;
+
+        let mut delay = Duration::from_millis(delay_ms);
+
+        // Cap at max delay
+        if delay &gt; config.max_delay {
+            delay = config.max_delay;
+        }
+
+        // Add jitter if enabled
+        if config.jitter {
+            use rand::Rng;
+            let jitter_factor = rand::thread_rng().gen_range(0.5..1.5);
+            delay = Duration::from_millis((delay.as_millis() as f64 * jitter_factor) as u64);
+        }
+
+        delay
+    }
+
+    /// Wait with exponential backoff if needed
+    pub async fn wait_with_backoff(&amp;self, config: &amp;BackoffConfig) -&gt; Result&lt;()&gt; {
+        let backoff_delay = self.calculate_backoff_delay(config).await;
+
+        if !backoff_delay.is_zero() {
+            debug!(&quot;Applying exponential backoff for {}: {:?}&quot;,
+                   self.service_name, backoff_delay);
+            tokio::time::sleep(backoff_delay).await;
+        }
+
+        self.wait_for_permit().await
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>impl</small>
+<details><summary>View code (324-374)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-adaptiveratelimiter-324">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:324" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+</pre>
+    <pre><code id="code-adaptiveratelimiter-324" class="lang-rust hljs">impl AdaptiveRateLimiter {
+    /// Create a new adaptive rate limiter
+    pub fn new(
+        service_name: String,
+        initial_rate: u32,
+        min_rate: u32,
+        max_rate: u32,
+    ) -&gt; Result&lt;Self&gt; {
+        let config = RateLimitConfig {
+            service_name,
+            requests_per_minute: initial_rate,
+            burst_size: Some(initial_rate),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+
+        let base_limiter = ServiceRateLimiter::new(config)?;
+
+        Ok(Self {
+            base_limiter,
+            current_rate: Arc::new(tokio::sync::RwLock::new(initial_rate)),
+            min_rate,
+            max_rate,
+            adjustment_factor: 0.1, // 10% adjustment
+        })
+    }
+
+    /// Adjust rate based on API response
+    pub async fn adjust_rate(&amp;self, response_indicates_rate_limit: bool) {
+        let mut current_rate = self.current_rate.write().await;
+        
+        if response_indicates_rate_limit {
+            // Decrease rate
+            let new_rate = (*current_rate as f64 * (1.0 - self.adjustment_factor)) as u32;
+            *current_rate = new_rate.max(self.min_rate);
+            warn!(&quot;Decreased rate limit for {} to {}&quot;, 
+                  self.base_limiter.service_name, *current_rate);
+        } else {
+            // Gradually increase rate
+            let new_rate = (*current_rate as f64 * (1.0 + self.adjustment_factor * 0.1)) as u32;
+            *current_rate = new_rate.min(self.max_rate);
+            debug!(&quot;Increased rate limit for {} to {}&quot;, 
+                   self.base_limiter.service_name, *current_rate);
+        }
+    }
+
+    /// Get current rate
+    pub async fn get_current_rate(&amp;self) -&gt; u32 {
+        *self.current_rate.read().await
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>impl</small>
+<details><summary>View code (379-471)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimiterfactory-379">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:379" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+</pre>
+    <pre><code id="code-ratelimiterfactory-379" class="lang-rust hljs">impl RateLimiterFactory {
+    /// Create rate limiter for NVD API
+    pub fn nvd_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50, // NVD limit without API key
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for NVD API with API key
+    pub fn nvd_limiter_with_key() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd_with_key&quot;.to_string(),
+            requests_per_minute: 100, // Higher limit with API key
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for OSV API
+    pub fn osv_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for GitHub API
+    pub fn github_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60, // GitHub limit without token
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for GitHub API with token
+    pub fn github_limiter_with_token() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github_with_token&quot;.to_string(),
+            requests_per_minute: 5000, // Much higher limit with token
+            burst_size: Some(100),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create a multi-service rate limiter with common configurations
+    pub async fn create_default_multi_limiter() -&gt; Result&lt;MultiServiceRateLimiter&gt; {
+        let multi_limiter = MultiServiceRateLimiter::new();
+
+        // Add common service limiters
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        }).await?;
+
+        Ok(multi_limiter)
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</div>
 
 </section>
 </main>

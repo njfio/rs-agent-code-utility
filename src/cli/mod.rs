@@ -419,6 +419,14 @@ pub enum Commands {
         /// Path to AI configuration file
         #[arg(long, value_name = "FILE")]
         ai_config: Option<PathBuf>,
+
+        /// Preferred AI provider (e.g. groq, openai)
+        #[arg(long, value_parser = ["groq","openai","anthropic","google","azureopenai","local","ollama"])]
+        ai_provider: Option<String>,
+
+        /// Request JSON responses from the AI (faster to render, more structured)
+        #[arg(long, default_value_t = false)]
+        ai_json: bool,
     },
 }
 

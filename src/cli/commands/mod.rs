@@ -123,7 +123,7 @@ impl Execute for Commands {
             Commands::Watch { path, interval, max_iterations, depth } => {
                 watch::execute(path, *interval, *max_iterations, depth)
             }
-            Commands::Wiki { path, output, include_api, include_examples, depth, ai, ai_mock, ai_config } => {
+            Commands::Wiki { path, output, include_api, include_examples, depth, ai, ai_mock, ai_config, ai_provider, ai_json } => {
                 wiki::execute(
                     path,
                     output.as_ref(),
@@ -133,6 +133,8 @@ impl Execute for Commands {
                     *ai,
                     *ai_mock,
                     ai_config.as_ref(),
+                    ai_provider.as_deref(),
+                    *ai_json,
                     *ai, // enhanced_ai (same as ai for now)
                     *ai, // function_enhancement (same as ai for now)
                     *ai, // security_insights (same as ai for now)

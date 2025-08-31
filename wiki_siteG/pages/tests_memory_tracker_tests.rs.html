@@ -1,0 +1,1957 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tests/memory_tracker_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>tests/memory_tracker_tests.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">examples</summary>
+<a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_groq.rs.html">src/ai/providers/groq.rs</a>
+<a href="src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html">src/ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
+<a href="src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html">src/constants.rs</a>
+<a href="src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="src_error.rs.html">src/error.rs</a>
+<a href="src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="src_lib.rs.html">src/lib.rs</a>
+<a href="src_main.rs.html">src/main.rs</a>
+<a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="src_query.rs.html">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="src_tree.rs.html">src/tree.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
+<a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html">test_files/sample.go</a>
+<a href="test_files_sample.ts.html">test_files/sample.ts</a>
+</details>
+<details><summary class="folder">tests</summary>
+<a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
+<a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_wiki_siteC_assets_hljs.js.html">wiki_siteC/wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search.js.html">wiki_siteC/wiki_siteC/assets/search.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search_index.js.html">wiki_siteC/wiki_siteC/assets/search_index.js</a>
+</details>
+</details>
+</details>
+<details><summary class="folder">wiki_siteD</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteD_assets_hljs.js.html">wiki_siteD/assets/hljs.js</a>
+<a href="wiki_siteD_assets_search.js.html">wiki_siteD/assets/search.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteE</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteE_assets_hljs.js.html">wiki_siteE/assets/hljs.js</a>
+<a href="wiki_siteE_assets_search.js.html">wiki_siteE/assets/search.js</a>
+<a href="wiki_siteE_assets_search_index.js.html">wiki_siteE/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteF</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteF_assets_hljs.js.html">wiki_siteF/assets/hljs.js</a>
+<a href="wiki_siteF_assets_search.js.html">wiki_siteF/assets/search.js</a>
+<a href="wiki_siteF_assets_search_index.js.html">wiki_siteF/assets/search_index.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
+
+</nav>
+<section class="article">
+<p>51 symbols, 326 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> tests/memory_tracker_tests.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 326<br><strong>Symbols:</strong> 51<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#symbols\">Symbols</a></li>
+<li><a href=\"#security-analysis\">Security Analysis</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>This module contains the integration tests for the MemoryTracker component. The tests verify allocation/deallocation accounting, thread‑safety, leak detection, and proper reset behavior. They exercise the public API of src/memory_tracker.rs using a mock allocator and Rust's standard test harness.</p>
+
+<h4>Deep Dive</h4><ul>
+<li><strong>fn</strong> <a href="#symbol-setup-tracker">setup_tracker</a><br>Creates a fresh MemoryTracker instance wrapped in an Arc for shared use across test threads.</li>
+<li><strong>struct</strong> <a href="#symbol-mockallocator">MockAllocator</a><br>A lightweight allocator that forwards allocation requests to the MemoryTracker and records the size of each operation.</li>
+<li><strong>test</strong> <a href="#symbol-test-allocation-tracking">test_allocation_tracking</a><br>Ensures that MemoryTracker::track_alloc correctly increments the current usage counter.</li>
+<li><strong>test</strong> <a href="#symbol-test-deallocation-tracking">test_deallocation_tracking</a><br>Verifies that deallocation reduces the usage counter appropriately.</li>
+<li><strong>test</strong> <a href="#symbol-test-threaded-tracking">test_threaded_tracking</a><br>Confirms that the tracker is safe to use from multiple threads concurrently.</li>
+<li><strong>test</strong> <a href="#symbol-test-memory-leak-detection">test_memory_leak_detection</a><br>Demonstrates the leak detection helper provided by MemoryTracker.</li>
+<li><strong>test</strong> <a href="#symbol-test-reset-behavior">test_reset_behavior</a><br>Checks that MemoryTracker::reset clears all internal state.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>pub fn new() -&gt; Self</code><br><small>Creates a fresh tracker; typically wrapped in Arc when shared across threads.</small></li>
+<li><code>pub fn track_alloc(&amp;self, size: usize)</code><br><small>Called by an allocator whenever memory is allocated. Increments the internal usage counter and records the allocation.</small></li>
+<li><code>pub fn track_dealloc(&amp;self, size: usize)</code><br><small>Called on deallocation; decrements usage and removes the corresponding record.</small></li>
+<li><code>pub fn current_usage(&amp;self) -&gt; usize</code><br><small>Returns the total number of bytes currently tracked as allocated.</small></li>
+<li><code>pub fn reset(&amp;self)</code><br><small>Clears all bookkeeping; useful between independent test cases to avoid cross‑test contamination.</small></li>
+<li><code>pub fn detect_leaks(&amp;self) -&gt; Vec&lt;LeakInfo&gt;</code><br><small>Scans internal state for allocations without matching deallocations and returns details for each leak.</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Basic usage in a single‑threaded test</h5>
+<div class="card"><pre><code class="lang-rust">let tracker = Arc::new(MemoryTracker::new());
+let allocator = MockAllocator::new(tracker.clone());
+let ptr = allocator.alloc(128);
+assert_eq!(tracker.current_usage(), 128);
+allocator.dealloc(ptr, 128);
+assert_eq!(tracker.current_usage(), 0);</code></pre><p>Shows the typical pattern: create a tracker, wrap it in Arc, use a mock allocator to perform allocations, and assert on the usage counter.</p>
+</div>
+<h5>Concurrent tracking across threads</h5>
+<div class="card"><pre><code class="lang-rust">let tracker = Arc::new(MemoryTracker::new());
+let mut handles = Vec::new();
+for _ in 0..8 {
+    let t = tracker.clone();
+    handles.push(std::thread::spawn(move || {
+        let alloc = MockAllocator::new(t.clone());
+        for _ in 0..1000 {
+            let size = rand::random::&lt;usize&gt;() % 1024 + 1;
+            let ptr = alloc.alloc(size);
+            alloc.dealloc(ptr, size);
+        }
+    }));
+}
+for h in handles { h.join().unwrap(); }
+assert_eq!(tracker.current_usage(), 0);</code></pre><p>Demonstrates that the tracker can be safely shared across threads; after all work the usage returns to zero, confirming proper synchronization.</p>
+</div>
+<h4>Security</h4>
+<strong>Risks</strong><ul>
+<li>Exposing raw pointers from MockAllocator in test logs could leak address information useful to an attacker in a real binary.</li>
+</ul>
+<strong>Mitigations</strong><ul>
+<li>Limit test output to sizes only; avoid printing pointer values. Use #[cfg(test)] to ensure mock code never ships in production.</li>
+</ul>
+<h4>Performance</h4>
+<strong>Concerns</strong><ul>
+<li>Each allocation/deallocation incurs a lock acquisition on the tracker, which can add measurable overhead in tight loops.</li>
+</ul>
+<strong>Tips</strong><ul>
+<li>Enable the &quot;fast&quot; feature flag in Cargo.toml to switch the tracker to a lock‑free atomic counter for benchmarks, or compile tests with --release when measuring pure algorithmic performance.</li>
+</ul>
+<h4>Tags</h4><p>testing, memory, rust, tracker, concurrency</p>
+<h4>Related</h4><ul>
+<li><a href="pages/src_memory_tracker.rs.html">src/memory_tracker.rs</a> - Implementation of the MemoryTracker struct and its public API.</li>
+<li><a href="pages/src_utils.rs.html">src/utils.rs</a> - Utility functions used by the tracker for backtrace capture and size formatting.</li>
+</ul>
+</div>
+</details>
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant create_test_analysis_result
+  participant test_memory_tracker_creation
+  participant test_memory_tracker_with_config
+  participant test_rust_allocation_detection
+  participant test_memory_leak_detection
+  participant test_cpp_allocation_detection
+  participant test_allocation_patterns
+  participant test_memory_statistics
+  participant test_fragmentation_analysis
+  participant test_call_stack_analysis
+  create_test_analysis_result->>from: call
+  create_test_analysis_result->>to_string: call
+  create_test_analysis_result->>len: call
+  create_test_analysis_result->>count: call
+  create_test_analysis_result->>new: call
+  create_test_analysis_result->>insert: call
+  create_test_analysis_result->>from: call
+  create_test_analysis_result->>count: call
+  create_test_analysis_result->>default: call
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(10)</small></summary><ul><li id="symbol-create-test-analysis-result"><code>create_test_analysis_result</code> <small>function</small>
+<details><summary>View code (8-33)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-create_test_analysis_result-8">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:8" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+</pre>
+    <pre><code id="code-create_test_analysis_result-8" class="lang-rust hljs">fn create_test_analysis_result(code: &amp;str, language: &amp;str, filename: &amp;str) -&gt; AnalysisResult {
+    let file_info = FileInfo {
+        path: PathBuf::from(filename),
+        language: language.to_string(),
+        size: code.len(),
+        lines: code.lines().count(),
+        parsed_successfully: true,
+        parse_errors: vec![],
+        symbols: vec![],
+        security_vulnerabilities: vec![],
+    };
+
+    let mut languages = HashMap::new();
+    languages.insert(language.to_string(), 1);
+
+    AnalysisResult {
+        root_path: PathBuf::from(&quot;.&quot;),
+        total_files: 1,
+        parsed_files: 1,
+        error_files: 0,
+        total_lines: code.lines().count(),
+        languages,
+        files: vec![file_info],
+        config: rust_tree_sitter::AnalysisConfig::default(),
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-memory-tracker-creation"><code>test_memory_tracker_creation</code> <small>function</small>
+<details><summary>View code (36-43)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_memory_tracker_creation-36">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:36" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">36
+37
+38
+39
+40
+41
+42
+43
+</pre>
+    <pre><code id="code-test_memory_tracker_creation-36" class="lang-rust hljs">fn test_memory_tracker_creation() {
+    let tracker = MemoryTracker::new();
+    let stats = tracker.get_statistics();
+    
+    assert_eq!(stats.total_allocations, 0);
+    assert_eq!(stats.total_deallocations, 0);
+    assert_eq!(stats.current_bytes_in_use, 0);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-memory-tracker-with-config"><code>test_memory_tracker_with_config</code> <small>function</small>
+<details><summary>View code (46-62)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_memory_tracker_with_config-46">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:46" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+</pre>
+    <pre><code id="code-test_memory_tracker_with_config-46" class="lang-rust hljs">fn test_memory_tracker_with_config() {
+    let config = MemoryTrackingConfig {
+        track_heap_allocations: true,
+        track_stack_allocations: true,
+        detect_memory_leaks: true,
+        track_allocation_patterns: true,
+        track_fragmentation: true,
+        min_allocation_size: 64,
+        max_call_stack_depth: 15,
+        real_time_tracking: true,
+    };
+    
+    let tracker = MemoryTracker::with_config(config.clone());
+    assert_eq!(tracker.get_config().min_allocation_size, 64);
+    assert_eq!(tracker.get_config().max_call_stack_depth, 15);
+    assert!(tracker.get_config().real_time_tracking);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-rust-allocation-detection"><code>test_rust_allocation_detection</code> <small>function</small>
+<details><summary>View code (65-107)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_rust_allocation_detection-65">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:65" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+</pre>
+    <pre><code id="code-test_rust_allocation_detection-65" class="lang-rust hljs">fn test_rust_allocation_detection() {
+    let mut tracker = MemoryTracker::new();
+    
+    // Create a mock analysis result with Rust code
+    let rust_code = r#&quot;
+fn main() {
+    let mut vec = Vec::new();
+    for i in 0..1000 {
+        vec.push(i);
+        let s = String::new();
+        let map = HashMap::new();
+    }
+    
+    let boxed = Box::new(42);
+    let capacity_vec = Vec::with_capacity(100);
+}
+&quot;#;
+    
+    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;test.rs&quot;);
+    
+    // Write the test file
+    std::fs::write(&quot;test.rs&quot;, rust_code).unwrap();
+    
+    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();
+    
+    // Clean up
+    std::fs::remove_file(&quot;test.rs&quot;).ok();
+    
+    // Verify allocation hotspots were detected
+    assert!(!result.allocation_hotspots.is_empty());
+    
+    // Check for specific allocation types
+    let has_vec_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::VectorAllocation);
+    let has_string_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::StringAllocation);
+    let has_box_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::HeapAllocation);
+    
+    assert!(has_vec_allocation, &quot;Should detect Vec allocations&quot;);
+    assert!(has_string_allocation, &quot;Should detect String allocations&quot;);
+    assert!(has_box_allocation, &quot;Should detect Box allocations&quot;);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-memory-leak-detection"><code>test_memory_leak_detection</code> <small>function</small>
+<details><summary>View code (110-156)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_memory_leak_detection-110">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:110" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+</pre>
+    <pre><code id="code-test_memory_leak_detection-110" class="lang-rust hljs">fn test_memory_leak_detection() {
+    let mut tracker = MemoryTracker::new();
+    
+    // Rust code with potential memory leaks
+    let rust_code = r#&quot;
+use std::rc::Rc;
+use std::cell::RefCell;
+
+fn create_cycle() {
+    let a = Rc::new(RefCell::new(None));
+    let b = Rc::new(RefCell::new(Some(a.clone())));
+    *a.borrow_mut() = Some(b.clone());
+}
+
+fn explicit_leak() {
+    let data = Box::new(vec![1, 2, 3, 4, 5]);
+    Box::leak(data);
+}
+
+fn forget_memory() {
+    let data = Box::new(&quot;important data&quot;);
+    std::mem::forget(data);
+}
+&quot;#;
+    
+    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;leak_test.rs&quot;);
+    
+    // Write the test file
+    std::fs::write(&quot;leak_test.rs&quot;, rust_code).unwrap();
+    
+    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();
+    
+    // Clean up
+    std::fs::remove_file(&quot;leak_test.rs&quot;).ok();
+    
+    // Verify leak candidates were detected
+    assert!(!result.leak_candidates.is_empty());
+    
+    // Check for specific leak types
+    let has_reference_cycle = result.leak_candidates.iter()
+        .any(|l| l.leak_type == LeakType::ReferenceCycle);
+    let has_direct_leak = result.leak_candidates.iter()
+        .any(|l| l.leak_type == LeakType::DirectLeak);
+    
+    assert!(has_reference_cycle, &quot;Should detect reference cycles&quot;);
+    assert!(has_direct_leak, &quot;Should detect explicit leaks&quot;);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-cpp-allocation-detection"><code>test_cpp_allocation_detection</code> <small>function</small>
+<details><summary>View code (159-199)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_cpp_allocation_detection-159">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:159" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+</pre>
+    <pre><code id="code-test_cpp_allocation_detection-159" class="lang-rust hljs">fn test_cpp_allocation_detection() {
+    let mut tracker = MemoryTracker::new();
+    
+    let cpp_code = r#&quot;
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+
+int main() {
+    for (int i = 0; i &lt; 1000; ++i) {
+        int* ptr = new int(i);
+        char* buffer = (char*)malloc(1024);
+        
+        std::vector&lt;int&gt; vec;
+        vec.push_back(i);
+        
+        // Missing delete and free - potential leaks
+    }
+    return 0;
+}
+&quot;#;
+    
+    let analysis_result = create_test_analysis_result(cpp_code, &quot;cpp&quot;, &quot;test.cpp&quot;);
+    
+    // Write the test file
+    std::fs::write(&quot;test.cpp&quot;, cpp_code).unwrap();
+    
+    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();
+    
+    // Clean up
+    std::fs::remove_file(&quot;test.cpp&quot;).ok();
+    
+    // Verify allocations and potential leaks were detected
+    assert!(!result.allocation_hotspots.is_empty());
+    assert!(!result.leak_candidates.is_empty());
+    
+    // Check for heap allocations
+    let has_heap_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::HeapAllocation);
+    
+    assert!(has_heap_allocation, &quot;Should detect heap allocations&quot;);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-allocation-patterns"><code>test_allocation_patterns</code> <small>function</small>
+<details><summary>View code (202-242)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_allocation_patterns-202">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:202" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+</pre>
+    <pre><code id="code-test_allocation_patterns-202" class="lang-rust hljs">fn test_allocation_patterns() {
+    let mut tracker = MemoryTracker::new();
+    
+    let rust_code = r#&quot;
+fn process_data() {
+    let mut results = Vec::new();
+    for item in data.iter() {
+        let processed = String::from(item);
+        results.push(processed);
+    }
+}
+
+fn create_lookup_table() {
+    let mut table = HashMap::new();
+    for i in 0..1000 {
+        table.insert(i, format!(&quot;value_{}&quot;, i));
+    }
+}
+&quot;#;
+    
+    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;patterns.rs&quot;);
+    
+    // Write the test file
+    std::fs::write(&quot;patterns.rs&quot;, rust_code).unwrap();
+    
+    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();
+    
+    // Clean up
+    std::fs::remove_file(&quot;patterns.rs&quot;).ok();
+    
+    // Verify allocation patterns were detected
+    assert!(!result.allocation_patterns.is_empty());
+    
+    // Check for specific usage patterns
+    let has_growing_collections = result.allocation_patterns.iter()
+        .any(|p| p.usage_pattern == UsagePattern::GrowingCollections);
+    let has_frequent_churn = result.allocation_patterns.iter()
+        .any(|p| p.usage_pattern == UsagePattern::FrequentChurn);
+    
+    assert!(has_growing_collections || has_frequent_churn, &quot;Should detect allocation patterns&quot;);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-memory-statistics"><code>test_memory_statistics</code> <small>function</small>
+<details><summary>View code (245-256)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_memory_statistics-245">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:245" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+</pre>
+    <pre><code id="code-test_memory_statistics-245" class="lang-rust hljs">fn test_memory_statistics() {
+    let tracker = MemoryTracker::new();
+    let stats = tracker.get_statistics();
+    
+    // Test initial state
+    assert_eq!(stats.total_allocations, 0);
+    assert_eq!(stats.total_deallocations, 0);
+    assert_eq!(stats.active_allocations, 0);
+    assert_eq!(stats.current_bytes_in_use, 0);
+    assert_eq!(stats.allocation_rate, 0.0);
+    assert_eq!(stats.deallocation_rate, 0.0);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-fragmentation-analysis"><code>test_fragmentation_analysis</code> <small>function</small>
+<details><summary>View code (259-285)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_fragmentation_analysis-259">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:259" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+</pre>
+    <pre><code id="code-test_fragmentation_analysis-259" class="lang-rust hljs">fn test_fragmentation_analysis() {
+    let mut tracker = MemoryTracker::new();
+    
+    // Code with many small allocations (potential fragmentation)
+    let rust_code = r#&quot;
+fn fragment_memory() {
+    for i in 0..10000 {
+        let small_vec = vec![i; 4]; // Small allocations
+        let tiny_string = format!(&quot;{}&quot;, i); // More small allocations
+    }
+}
+&quot;#;
+    
+    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;fragment.rs&quot;);
+    
+    // Write the test file
+    std::fs::write(&quot;fragment.rs&quot;, rust_code).unwrap();
+    
+    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();
+    
+    // Clean up
+    std::fs::remove_file(&quot;fragment.rs&quot;).ok();
+    
+    // Verify fragmentation analysis
+    assert!(result.fragmentation_analysis.fragmentation_percentage &gt;= 0.0);
+    assert!(result.fragmentation_analysis.fragmentation_percentage &lt;= 100.0);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-call-stack-analysis"><code>test_call_stack_analysis</code> <small>function</small>
+<details><summary>View code (288-326)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_call_stack_analysis-288">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:288" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+</pre>
+    <pre><code id="code-test_call_stack_analysis-288" class="lang-rust hljs">fn test_call_stack_analysis() {
+    let mut tracker = MemoryTracker::new();
+    
+    let rust_code = r#&quot;
+fn allocate_data() -&gt; Vec&lt;i32&gt; {
+    Vec::with_capacity(1000)
+}
+
+fn process_items() {
+    let data = allocate_data();
+    for item in data {
+        let result = String::from(&quot;processed&quot;);
+    }
+}
+
+fn main() {
+    process_items();
+}
+&quot;#;
+    
+    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;callstack.rs&quot;);
+    
+    // Write the test file
+    std::fs::write(&quot;callstack.rs&quot;, rust_code).unwrap();
+    
+    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();
+    
+    // Clean up
+    std::fs::remove_file(&quot;callstack.rs&quot;).ok();
+    
+    // Verify call stack analysis
+    assert!(!result.call_stacks.is_empty());
+    
+    // Check that call stacks have frames
+    let has_frames = result.call_stacks.iter()
+        .any(|cs| !cs.frames.is_empty());
+    
+    assert!(has_frames, &quot;Call stacks should have frames&quot;);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(41)</small></summary><ul><li id="symbol-file-info"><code>file_info</code> <small>variable</small>
+<details><summary>View code (9-18)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-file_info-9">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:9" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+</pre>
+    <pre><code id="code-file_info-9" class="lang-rust hljs">    let file_info = FileInfo {
+        path: PathBuf::from(filename),
+        language: language.to_string(),
+        size: code.len(),
+        lines: code.lines().count(),
+        parsed_successfully: true,
+        parse_errors: vec![],
+        symbols: vec![],
+        security_vulnerabilities: vec![],
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-languages"><code>languages</code> <small>variable</small>
+<details><summary>View code (20-20)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-languages-20">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:20" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">20
+</pre>
+    <pre><code id="code-languages-20" class="lang-rust hljs">    let mut languages = HashMap::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (37-37)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-37">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:37" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">37
+</pre>
+    <pre><code id="code-tracker-37" class="lang-rust hljs">    let tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (38-38)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-38">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:38" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">38
+</pre>
+    <pre><code id="code-stats-38" class="lang-rust hljs">    let stats = tracker.get_statistics();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (47-56)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-47">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:47" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+</pre>
+    <pre><code id="code-config-47" class="lang-rust hljs">    let config = MemoryTrackingConfig {
+        track_heap_allocations: true,
+        track_stack_allocations: true,
+        detect_memory_leaks: true,
+        track_allocation_patterns: true,
+        track_fragmentation: true,
+        min_allocation_size: 64,
+        max_call_stack_depth: 15,
+        real_time_tracking: true,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (58-58)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-58">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:58" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">58
+</pre>
+    <pre><code id="code-tracker-58" class="lang-rust hljs">    let tracker = MemoryTracker::with_config(config.clone());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (66-66)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-66">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:66" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">66
+</pre>
+    <pre><code id="code-tracker-66" class="lang-rust hljs">    let mut tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rust-code"><code>rust_code</code> <small>variable</small>
+<details><summary>View code (69-81)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rust_code-69">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:69" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+</pre>
+    <pre><code id="code-rust_code-69" class="lang-rust hljs">    let rust_code = r#&quot;
+fn main() {
+    let mut vec = Vec::new();
+    for i in 0..1000 {
+        vec.push(i);
+        let s = String::new();
+        let map = HashMap::new();
+    }
+    
+    let boxed = Box::new(42);
+    let capacity_vec = Vec::with_capacity(100);
+}
+&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-analysis-result"><code>analysis_result</code> <small>variable</small>
+<details><summary>View code (83-83)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-analysis_result-83">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:83" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">83
+</pre>
+    <pre><code id="code-analysis_result-83" class="lang-rust hljs">    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;test.rs&quot;);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (88-88)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-88">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:88" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">88
+</pre>
+    <pre><code id="code-result-88" class="lang-rust hljs">    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-vec-allocation"><code>has_vec_allocation</code> <small>variable</small>
+<details><summary>View code (97-98)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_vec_allocation-97">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:97" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">97
+98
+</pre>
+    <pre><code id="code-has_vec_allocation-97" class="lang-rust hljs">    let has_vec_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::VectorAllocation);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-string-allocation"><code>has_string_allocation</code> <small>variable</small>
+<details><summary>View code (99-100)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_string_allocation-99">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:99" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">99
+100
+</pre>
+    <pre><code id="code-has_string_allocation-99" class="lang-rust hljs">    let has_string_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::StringAllocation);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-box-allocation"><code>has_box_allocation</code> <small>variable</small>
+<details><summary>View code (101-102)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_box_allocation-101">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:101" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">101
+102
+</pre>
+    <pre><code id="code-has_box_allocation-101" class="lang-rust hljs">    let has_box_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::HeapAllocation);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (111-111)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-111">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:111" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">111
+</pre>
+    <pre><code id="code-tracker-111" class="lang-rust hljs">    let mut tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rust-code"><code>rust_code</code> <small>variable</small>
+<details><summary>View code (114-133)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rust_code-114">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:114" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+</pre>
+    <pre><code id="code-rust_code-114" class="lang-rust hljs">    let rust_code = r#&quot;
+use std::rc::Rc;
+use std::cell::RefCell;
+
+fn create_cycle() {
+    let a = Rc::new(RefCell::new(None));
+    let b = Rc::new(RefCell::new(Some(a.clone())));
+    *a.borrow_mut() = Some(b.clone());
+}
+
+fn explicit_leak() {
+    let data = Box::new(vec![1, 2, 3, 4, 5]);
+    Box::leak(data);
+}
+
+fn forget_memory() {
+    let data = Box::new(&quot;important data&quot;);
+    std::mem::forget(data);
+}
+&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-analysis-result"><code>analysis_result</code> <small>variable</small>
+<details><summary>View code (135-135)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-analysis_result-135">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:135" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">135
+</pre>
+    <pre><code id="code-analysis_result-135" class="lang-rust hljs">    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;leak_test.rs&quot;);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (140-140)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-140">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:140" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">140
+</pre>
+    <pre><code id="code-result-140" class="lang-rust hljs">    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-reference-cycle"><code>has_reference_cycle</code> <small>variable</small>
+<details><summary>View code (149-150)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_reference_cycle-149">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:149" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">149
+150
+</pre>
+    <pre><code id="code-has_reference_cycle-149" class="lang-rust hljs">    let has_reference_cycle = result.leak_candidates.iter()
+        .any(|l| l.leak_type == LeakType::ReferenceCycle);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-direct-leak"><code>has_direct_leak</code> <small>variable</small>
+<details><summary>View code (151-152)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_direct_leak-151">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:151" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">151
+152
+</pre>
+    <pre><code id="code-has_direct_leak-151" class="lang-rust hljs">    let has_direct_leak = result.leak_candidates.iter()
+        .any(|l| l.leak_type == LeakType::DirectLeak);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (160-160)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-160">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:160" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">160
+</pre>
+    <pre><code id="code-tracker-160" class="lang-rust hljs">    let mut tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-cpp-code"><code>cpp_code</code> <small>variable</small>
+<details><summary>View code (162-178)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cpp_code-162">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:162" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+</pre>
+    <pre><code id="code-cpp_code-162" class="lang-rust hljs">    let cpp_code = r#&quot;
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+
+int main() {
+    for (int i = 0; i &lt; 1000; ++i) {
+        int* ptr = new int(i);
+        char* buffer = (char*)malloc(1024);
+        
+        std::vector&lt;int&gt; vec;
+        vec.push_back(i);
+        
+        // Missing delete and free - potential leaks
+    }
+    return 0;
+}
+&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-analysis-result"><code>analysis_result</code> <small>variable</small>
+<details><summary>View code (180-180)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-analysis_result-180">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:180" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">180
+</pre>
+    <pre><code id="code-analysis_result-180" class="lang-rust hljs">    let analysis_result = create_test_analysis_result(cpp_code, &quot;cpp&quot;, &quot;test.cpp&quot;);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (185-185)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-185">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:185" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">185
+</pre>
+    <pre><code id="code-result-185" class="lang-rust hljs">    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-heap-allocation"><code>has_heap_allocation</code> <small>variable</small>
+<details><summary>View code (195-196)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_heap_allocation-195">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:195" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">195
+196
+</pre>
+    <pre><code id="code-has_heap_allocation-195" class="lang-rust hljs">    let has_heap_allocation = result.allocation_hotspots.iter()
+        .any(|h| h.allocation_type == AllocationType::HeapAllocation);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (203-203)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-203">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:203" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">203
+</pre>
+    <pre><code id="code-tracker-203" class="lang-rust hljs">    let mut tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rust-code"><code>rust_code</code> <small>variable</small>
+<details><summary>View code (205-220)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rust_code-205">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:205" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+</pre>
+    <pre><code id="code-rust_code-205" class="lang-rust hljs">    let rust_code = r#&quot;
+fn process_data() {
+    let mut results = Vec::new();
+    for item in data.iter() {
+        let processed = String::from(item);
+        results.push(processed);
+    }
+}
+
+fn create_lookup_table() {
+    let mut table = HashMap::new();
+    for i in 0..1000 {
+        table.insert(i, format!(&quot;value_{}&quot;, i));
+    }
+}
+&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-analysis-result"><code>analysis_result</code> <small>variable</small>
+<details><summary>View code (222-222)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-analysis_result-222">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:222" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">222
+</pre>
+    <pre><code id="code-analysis_result-222" class="lang-rust hljs">    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;patterns.rs&quot;);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (227-227)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-227">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:227" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">227
+</pre>
+    <pre><code id="code-result-227" class="lang-rust hljs">    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-growing-collections"><code>has_growing_collections</code> <small>variable</small>
+<details><summary>View code (236-237)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_growing_collections-236">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:236" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">236
+237
+</pre>
+    <pre><code id="code-has_growing_collections-236" class="lang-rust hljs">    let has_growing_collections = result.allocation_patterns.iter()
+        .any(|p| p.usage_pattern == UsagePattern::GrowingCollections);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-frequent-churn"><code>has_frequent_churn</code> <small>variable</small>
+<details><summary>View code (238-239)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_frequent_churn-238">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:238" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">238
+239
+</pre>
+    <pre><code id="code-has_frequent_churn-238" class="lang-rust hljs">    let has_frequent_churn = result.allocation_patterns.iter()
+        .any(|p| p.usage_pattern == UsagePattern::FrequentChurn);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (246-246)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-246">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:246" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">246
+</pre>
+    <pre><code id="code-tracker-246" class="lang-rust hljs">    let tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (247-247)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-247">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:247" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">247
+</pre>
+    <pre><code id="code-stats-247" class="lang-rust hljs">    let stats = tracker.get_statistics();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (260-260)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-260">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:260" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">260
+</pre>
+    <pre><code id="code-tracker-260" class="lang-rust hljs">    let mut tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rust-code"><code>rust_code</code> <small>variable</small>
+<details><summary>View code (263-270)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rust_code-263">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:263" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">263
+264
+265
+266
+267
+268
+269
+270
+</pre>
+    <pre><code id="code-rust_code-263" class="lang-rust hljs">    let rust_code = r#&quot;
+fn fragment_memory() {
+    for i in 0..10000 {
+        let small_vec = vec![i; 4]; // Small allocations
+        let tiny_string = format!(&quot;{}&quot;, i); // More small allocations
+    }
+}
+&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-analysis-result"><code>analysis_result</code> <small>variable</small>
+<details><summary>View code (272-272)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-analysis_result-272">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:272" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">272
+</pre>
+    <pre><code id="code-analysis_result-272" class="lang-rust hljs">    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;fragment.rs&quot;);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (277-277)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-277">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:277" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">277
+</pre>
+    <pre><code id="code-result-277" class="lang-rust hljs">    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tracker"><code>tracker</code> <small>variable</small>
+<details><summary>View code (289-289)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tracker-289">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:289" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">289
+</pre>
+    <pre><code id="code-tracker-289" class="lang-rust hljs">    let mut tracker = MemoryTracker::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rust-code"><code>rust_code</code> <small>variable</small>
+<details><summary>View code (291-306)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rust_code-291">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:291" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+</pre>
+    <pre><code id="code-rust_code-291" class="lang-rust hljs">    let rust_code = r#&quot;
+fn allocate_data() -&gt; Vec&lt;i32&gt; {
+    Vec::with_capacity(1000)
+}
+
+fn process_items() {
+    let data = allocate_data();
+    for item in data {
+        let result = String::from(&quot;processed&quot;);
+    }
+}
+
+fn main() {
+    process_items();
+}
+&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-analysis-result"><code>analysis_result</code> <small>variable</small>
+<details><summary>View code (308-308)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-analysis_result-308">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:308" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">308
+</pre>
+    <pre><code id="code-analysis_result-308" class="lang-rust hljs">    let analysis_result = create_test_analysis_result(rust_code, &quot;rust&quot;, &quot;callstack.rs&quot;);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (313-313)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-313">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:313" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">313
+</pre>
+    <pre><code id="code-result-313" class="lang-rust hljs">    let result = tracker.analyze_memory_allocations(&amp;analysis_result).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-has-frames"><code>has_frames</code> <small>variable</small>
+<details><summary>View code (322-323)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-has_frames-322">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/memory_tracker_tests.rs:322" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">322
+323
+</pre>
+    <pre><code id="code-has_frames-322" class="lang-rust hljs">    let has_frames = result.call_stacks.iter()
+        .any(|cs| !cs.frames.is_empty());</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
+
+</details>
+<details class=\"card\" id=\"security-analysis\"><summary>Security Analysis</summary><div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: tests/memory_tracker_tests.rs</h4>
+<p>Risk Score: 7.0</p>
+<p>Vulnerabilities: 1 (High)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use parameterized queries or prepared statements</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Validate and sanitize all user inputs</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use an ORM with built-in injection protection</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Implement content security policies</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Secure default configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Regular configuration reviews</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Environment-specific configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Automated configuration validation</li>
+</ul></div>
+
+</div>
+</details>
+</section>
+</main>
+</body>
+</html>

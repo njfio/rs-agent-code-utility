@@ -1,0 +1,3358 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tests/ast_transformation.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>tests/ast_transformation.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">examples</summary>
+<a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_groq.rs.html">src/ai/providers/groq.rs</a>
+<a href="src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html">src/ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
+<a href="src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html">src/constants.rs</a>
+<a href="src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="src_error.rs.html">src/error.rs</a>
+<a href="src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="src_lib.rs.html">src/lib.rs</a>
+<a href="src_main.rs.html">src/main.rs</a>
+<a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="src_query.rs.html">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="src_tree.rs.html">src/tree.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
+<a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html">test_files/sample.go</a>
+<a href="test_files_sample.ts.html">test_files/sample.ts</a>
+</details>
+<details><summary class="folder">tests</summary>
+<a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
+<a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+<details><summary class="folder">wiki_siteC</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteC_wiki_siteC_assets_hljs.js.html">wiki_siteC/wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search.js.html">wiki_siteC/wiki_siteC/assets/search.js</a>
+<a href="wiki_siteC_wiki_siteC_assets_search_index.js.html">wiki_siteC/wiki_siteC/assets/search_index.js</a>
+</details>
+</details>
+</details>
+<details><summary class="folder">wiki_siteD</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteD_assets_hljs.js.html">wiki_siteD/assets/hljs.js</a>
+<a href="wiki_siteD_assets_search.js.html">wiki_siteD/assets/search.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteE</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteE_assets_hljs.js.html">wiki_siteE/assets/hljs.js</a>
+<a href="wiki_siteE_assets_search.js.html">wiki_siteE/assets/search.js</a>
+<a href="wiki_siteE_assets_search_index.js.html">wiki_siteE/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_siteF</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_siteF_assets_hljs.js.html">wiki_siteF/assets/hljs.js</a>
+<a href="wiki_siteF_assets_search.js.html">wiki_siteF/assets/search.js</a>
+<a href="wiki_siteF_assets_search_index.js.html">wiki_siteF/assets/search_index.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+
+
+</nav>
+<section class="article">
+<p>68 symbols, 655 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> tests/ast_transformation.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 655<br><strong>Symbols:</strong> 68<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant test_ast_transformation_engine_creation
+  participant test_ast_transformation_engine_with_config
+  participant test_semantic_validator_creation
+  participant test_semantic_validator_with_config
+  participant test_simple_replace_transformation
+  participant test_simple_insert_transformation
+  participant test_simple_delete_transformation
+  participant test_multiple_transformations
+  participant test_transformation_with_syntax_error
+  participant test_validation_with_strict_mode
+  participant test_extract_method_transformation
+  participant test_rename_variable_transformation
+  participant test_inline_variable_transformation
+  participant test_invalid_identifier_rename
+  participant test_keyword_rename_conflict
+  test_ast_transformation_engine_creation->>new: call
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(15)</small></summary><ul><li id="symbol-test-ast-transformation-engine-creation"><code>test_ast_transformation_engine_creation</code> <small>function</small>
+<details><summary>View code (13-18)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_ast_transformation_engine_creation-13">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:13" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">13
+14
+15
+16
+17
+18
+</pre>
+    <pre><code id="code-test_ast_transformation_engine_creation-13" class="lang-rust hljs">fn test_ast_transformation_engine_creation() {
+    let engine = AstTransformationEngine::new();
+    assert!(engine.config.enable_semantic_validation);
+    assert!(engine.config.enable_rollback);
+    assert_eq!(engine.config.max_transformation_depth, 10);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-ast-transformation-engine-with-config"><code>test_ast_transformation_engine_with_config</code> <small>function</small>
+<details><summary>View code (21-35)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_ast_transformation_engine_with_config-21">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:21" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+</pre>
+    <pre><code id="code-test_ast_transformation_engine_with_config-21" class="lang-rust hljs">fn test_ast_transformation_engine_with_config() {
+    let config = TransformationConfig {
+        enable_semantic_validation: false,
+        enable_rollback: false,
+        max_transformation_depth: 5,
+        enable_safety_checks: false,
+        preserve_formatting: false,
+        enable_incremental: false,
+    };
+    
+    let engine = AstTransformationEngine::with_config(config.clone());
+    assert!(!engine.config.enable_semantic_validation);
+    assert!(!engine.config.enable_rollback);
+    assert_eq!(engine.config.max_transformation_depth, 5);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-semantic-validator-creation"><code>test_semantic_validator_creation</code> <small>function</small>
+<details><summary>View code (38-45)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_semantic_validator_creation-38">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:38" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">38
+39
+40
+41
+42
+43
+44
+45
+</pre>
+    <pre><code id="code-test_semantic_validator_creation-38" class="lang-rust hljs">fn test_semantic_validator_creation() {
+    let validator = SemanticValidator::new();
+    assert!(validator.config.enable_scope_analysis);
+    assert!(validator.config.enable_type_checking);
+    assert!(validator.config.enable_control_flow_analysis);
+    assert!(validator.config.enable_data_flow_analysis);
+    assert!(!validator.config.strict_mode);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-semantic-validator-with-config"><code>test_semantic_validator_with_config</code> <small>function</small>
+<details><summary>View code (48-63)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_semantic_validator_with_config-48">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:48" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+</pre>
+    <pre><code id="code-test_semantic_validator_with_config-48" class="lang-rust hljs">fn test_semantic_validator_with_config() {
+    let config = ValidationConfig {
+        enable_scope_analysis: false,
+        enable_type_checking: false,
+        enable_control_flow_analysis: false,
+        enable_data_flow_analysis: false,
+        strict_mode: true,
+    };
+    
+    let validator = SemanticValidator::with_config(config);
+    assert!(!validator.config.enable_scope_analysis);
+    assert!(!validator.config.enable_type_checking);
+    assert!(!validator.config.enable_control_flow_analysis);
+    assert!(!validator.config.enable_data_flow_analysis);
+    assert!(validator.config.strict_mode);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-simple-replace-transformation"><code>test_simple_replace_transformation</code> <small>function</small>
+<details><summary>View code (66-110)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_simple_replace_transformation-66">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:66" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+</pre>
+    <pre><code id="code-test_simple_replace_transformation-66" class="lang-rust hljs">fn test_simple_replace_transformation() {
+    let engine = AstTransformationEngine::new();
+    let source = &quot;fn main() { println!(\&quot;Hello, world!\&quot;); }&quot;;
+    
+    let transformation = Transformation {
+        id: &quot;test_replace_1&quot;.to_string(),
+        transformation_type: TransformationType::Replace,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 21,
+                byte_offset: 21,
+            },
+            end_position: Position {
+                line: 0,
+                column: 36,
+                byte_offset: 36,
+            },
+            node_kind: &quot;string_literal&quot;.to_string(),
+        },
+        original_code: &quot;\&quot;Hello, world!\&quot;&quot;.to_string(),
+        new_code: &quot;\&quot;Hello, Rust!\&quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Replace greeting message&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+    
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+    assert!(result.success);
+    assert_eq!(result.applied_transformations.len(), 1);
+    assert_eq!(result.failed_transformations.len(), 0);
+    assert!(result.updated_source.contains(&quot;Hello, Rust!&quot;));
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-simple-insert-transformation"><code>test_simple_insert_transformation</code> <small>function</small>
+<details><summary>View code (113-157)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_simple_insert_transformation-113">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:113" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+</pre>
+    <pre><code id="code-test_simple_insert_transformation-113" class="lang-rust hljs">fn test_simple_insert_transformation() {
+    let engine = AstTransformationEngine::new();
+    let source = &quot;fn main() {\n}&quot;;
+    
+    let transformation = Transformation {
+        id: &quot;test_insert_1&quot;.to_string(),
+        transformation_type: TransformationType::Insert,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 12,
+                byte_offset: 12,
+            },
+            end_position: Position {
+                line: 0,
+                column: 12,
+                byte_offset: 12,
+            },
+            node_kind: &quot;block&quot;.to_string(),
+        },
+        original_code: &quot;&quot;.to_string(),
+        new_code: &quot;\n    println!(\&quot;Hello, world!\&quot;);&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Insert print statement&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+    
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+    assert!(result.success);
+    assert_eq!(result.applied_transformations.len(), 1);
+    assert_eq!(result.failed_transformations.len(), 0);
+    assert!(result.updated_source.contains(&quot;println!&quot;));
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-simple-delete-transformation"><code>test_simple_delete_transformation</code> <small>function</small>
+<details><summary>View code (160-204)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_simple_delete_transformation-160">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:160" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+</pre>
+    <pre><code id="code-test_simple_delete_transformation-160" class="lang-rust hljs">fn test_simple_delete_transformation() {
+    let engine = AstTransformationEngine::new();
+    let source = &quot;fn main() {\n    println!(\&quot;Hello, world!\&quot;);\n    // This is a comment\n}&quot;;
+    
+    let transformation = Transformation {
+        id: &quot;test_delete_1&quot;.to_string(),
+        transformation_type: TransformationType::Delete,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 2,
+                column: 4,
+                byte_offset: 44,
+            },
+            end_position: Position {
+                line: 2,
+                column: 25,
+                byte_offset: 65,
+            },
+            node_kind: &quot;line_comment&quot;.to_string(),
+        },
+        original_code: &quot;// This is a comment&quot;.to_string(),
+        new_code: &quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Remove comment&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: Vec::new(),
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+    
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+    assert!(result.success);
+    assert_eq!(result.applied_transformations.len(), 1);
+    assert_eq!(result.failed_transformations.len(), 0);
+    assert!(!result.updated_source.contains(&quot;// This is a comment&quot;));
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-multiple-transformations"><code>test_multiple_transformations</code> <small>function</small>
+<details><summary>View code (207-288)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_multiple_transformations-207">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:207" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+</pre>
+    <pre><code id="code-test_multiple_transformations-207" class="lang-rust hljs">fn test_multiple_transformations() {
+    let engine = AstTransformationEngine::new();
+    let source = &quot;fn main() {\n    let x = 5;\n    println!(\&quot;{}\&quot;, x);\n}&quot;;
+    
+    let transformations = vec![
+        Transformation {
+            id: &quot;test_multi_1&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;test.rs&quot;),
+                start_position: Position {
+                    line: 1,
+                    column: 12,
+                    byte_offset: 24,
+                },
+                end_position: Position {
+                    line: 1,
+                    column: 13,
+                    byte_offset: 25,
+                },
+                node_kind: &quot;integer_literal&quot;.to_string(),
+            },
+            original_code: &quot;5&quot;.to_string(),
+            new_code: &quot;10&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Change value from 5 to 10&quot;.to_string(),
+                confidence: 1.0,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;main&quot;.to_string()],
+                    affected_variables: vec![&quot;x&quot;.to_string()],
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+        Transformation {
+            id: &quot;test_multi_2&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;test.rs&quot;),
+                start_position: Position {
+                    line: 2,
+                    column: 4,
+                    byte_offset: 31,
+                },
+                end_position: Position {
+                    line: 2,
+                    column: 22,
+                    byte_offset: 49,
+                },
+                node_kind: &quot;macro_invocation&quot;.to_string(),
+            },
+            original_code: &quot;println!(\&quot;{}\&quot;, x)&quot;.to_string(),
+            new_code: &quot;println!(\&quot;Value: {}\&quot;, x)&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Add label to print statement&quot;.to_string(),
+                confidence: 0.9,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;main&quot;.to_string()],
+                    affected_variables: Vec::new(),
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+    ];
+    
+    let result = engine.apply_transformations(source, Language::Rust, &amp;transformations).unwrap();
+    assert!(result.success);
+    assert_eq!(result.applied_transformations.len(), 2);
+    assert_eq!(result.failed_transformations.len(), 0);
+    assert!(result.updated_source.contains(&quot;10&quot;));
+    assert!(result.updated_source.contains(&quot;Value:&quot;));
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-transformation-with-syntax-error"><code>test_transformation_with_syntax_error</code> <small>function</small>
+<details><summary>View code (291-336)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_transformation_with_syntax_error-291">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:291" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+</pre>
+    <pre><code id="code-test_transformation_with_syntax_error-291" class="lang-rust hljs">fn test_transformation_with_syntax_error() {
+    let engine = AstTransformationEngine::new();
+    let source = &quot;fn main() { println!(\&quot;Hello, world!\&quot;); }&quot;;
+    
+    // This transformation would create invalid syntax
+    let transformation = Transformation {
+        id: &quot;test_syntax_error&quot;.to_string(),
+        transformation_type: TransformationType::Replace,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 0,
+                byte_offset: 0,
+            },
+            end_position: Position {
+                line: 0,
+                column: 2,
+                byte_offset: 2,
+            },
+            node_kind: &quot;function_item&quot;.to_string(),
+        },
+        original_code: &quot;fn&quot;.to_string(),
+        new_code: &quot;invalid_keyword&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Invalid transformation that breaks syntax&quot;.to_string(),
+            confidence: 0.1,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::High,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+    
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+    assert!(!result.success);
+    assert_eq!(result.applied_transformations.len(), 0);
+    assert_eq!(result.failed_transformations.len(), 1);
+    assert_eq!(result.updated_source, source); // Should remain unchanged
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-validation-with-strict-mode"><code>test_validation_with_strict_mode</code> <small>function</small>
+<details><summary>View code (339-391)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_validation_with_strict_mode-339">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:339" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+</pre>
+    <pre><code id="code-test_validation_with_strict_mode-339" class="lang-rust hljs">fn test_validation_with_strict_mode() {
+    let config = ValidationConfig {
+        enable_scope_analysis: true,
+        enable_type_checking: true,
+        enable_control_flow_analysis: true,
+        enable_data_flow_analysis: true,
+        strict_mode: true,
+    };
+    
+    let validator = SemanticValidator::with_config(config);
+    let parser = Parser::new(Language::Rust).unwrap();
+    let source = &quot;fn main() { let x = 5; }&quot;;
+    let tree = parser.parse(source, None).unwrap();
+    
+    let transformation = Transformation {
+        id: &quot;test_validation&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;y&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Rename variable x to y&quot;.to_string(),
+            confidence: 0.8,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+    
+    let result = validator.validate_transformation(&amp;tree, &amp;transformation, Language::Rust).unwrap();
+    assert!(result.is_valid); // Should pass basic validation
+    assert!(result.confidence &gt; 0.0);
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-extract-method-transformation"><code>test_extract_method_transformation</code> <small>function</small>
+<details><summary>View code (394-449)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_extract_method_transformation-394">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:394" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+</pre>
+    <pre><code id="code-test_extract_method_transformation-394" class="lang-rust hljs">fn test_extract_method_transformation() {
+    let engine = AstTransformationEngine::new();
+    let source = r#&quot;fn main() {
+    let x = 5;
+    let y = 10;
+    let result = x + y;
+    println!(&quot;Result: {}&quot;, result);
+}&quot;#;
+
+    let transformation = Transformation {
+        id: &quot;extract_calculation&quot;.to_string(),
+        transformation_type: TransformationType::ExtractMethod,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 2,
+                column: 4,
+                byte_offset: 32,
+            },
+            end_position: Position {
+                line: 3,
+                column: 24,
+                byte_offset: 67,
+            },
+            node_kind: &quot;block&quot;.to_string(),
+        },
+        original_code: &quot;let y = 10;\n    let result = x + y;&quot;.to_string(),
+        new_code: &quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Extract method: calculate_sum&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Medium,
+                affected_lines: 2,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string(), &quot;y&quot;.to_string(), &quot;result&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+
+    // Extract method transformation is complex and may not succeed in all cases
+    // The important thing is that the transformation engine handles it gracefully
+    assert!(result.applied_transformations.len() + result.failed_transformations.len() == 1);
+
+    // If it fails, it should provide meaningful error information
+    if !result.success {
+        assert!(!result.failed_transformations.is_empty());
+        assert!(!result.failed_transformations[0].failure_reason.is_empty());
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-rename-variable-transformation"><code>test_rename_variable_transformation</code> <small>function</small>
+<details><summary>View code (452-503)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_rename_variable_transformation-452">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:452" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+</pre>
+    <pre><code id="code-test_rename_variable_transformation-452" class="lang-rust hljs">fn test_rename_variable_transformation() {
+    let engine = AstTransformationEngine::new();
+    let source = r#&quot;fn main() {
+    let old_name = 42;
+    println!(&quot;Value: {}&quot;, old_name);
+    let result = old_name * 2;
+}&quot;#;
+
+    let transformation = Transformation {
+        id: &quot;rename_variable&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 1,
+                column: 8,
+                byte_offset: 20,
+            },
+            end_position: Position {
+                line: 1,
+                column: 16,
+                byte_offset: 28,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;old_name&quot;.to_string(),
+        new_code: &quot;new_name&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Rename variable from old_name to new_name&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 3,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;old_name&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+
+    // The transformation should succeed and rename all occurrences
+    assert!(result.success);
+    assert_eq!(result.applied_transformations.len(), 1);
+    assert_eq!(result.failed_transformations.len(), 0);
+    assert!(result.updated_source.contains(&quot;new_name&quot;));
+    assert!(!result.updated_source.contains(&quot;old_name&quot;));
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-inline-variable-transformation"><code>test_inline_variable_transformation</code> <small>function</small>
+<details><summary>View code (506-557)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_inline_variable_transformation-506">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:506" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+</pre>
+    <pre><code id="code-test_inline_variable_transformation-506" class="lang-rust hljs">fn test_inline_variable_transformation() {
+    let engine = AstTransformationEngine::new();
+    let source = r#&quot;fn main() {
+    let temp = 42;
+    let result = temp * 2;
+    println!(&quot;Result: {}&quot;, result);
+}&quot;#;
+
+    let transformation = Transformation {
+        id: &quot;inline_variable&quot;.to_string(),
+        transformation_type: TransformationType::Inline,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 1,
+                column: 4,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 1,
+                column: 18,
+                byte_offset: 30,
+            },
+            node_kind: &quot;let_declaration&quot;.to_string(),
+        },
+        original_code: &quot;temp&quot;.to_string(),
+        new_code: &quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Inline variable temp&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 2,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;temp&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+
+    // The transformation should succeed and inline the variable
+    assert!(result.success);
+    assert_eq!(result.applied_transformations.len(), 1);
+    assert_eq!(result.failed_transformations.len(), 0);
+    // The variable should be inlined (temp replaced with 42)
+    assert!(result.updated_source.contains(&quot;42 * 2&quot;) || result.updated_source.contains(&quot;let result = 42&quot;));
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-invalid-identifier-rename"><code>test_invalid_identifier_rename</code> <small>function</small>
+<details><summary>View code (560-606)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_invalid_identifier_rename-560">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:560" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+</pre>
+    <pre><code id="code-test_invalid_identifier_rename-560" class="lang-rust hljs">fn test_invalid_identifier_rename() {
+    let engine = AstTransformationEngine::new();
+    let source = r#&quot;fn main() { let x = 5; }&quot;#;
+
+    let transformation = Transformation {
+        id: &quot;invalid_rename&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;123invalid&quot;.to_string(), // Invalid identifier
+        metadata: TransformationMetadata {
+            description: &quot;Rename to invalid identifier&quot;.to_string(),
+            confidence: 0.1,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::High,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+
+    // The transformation should fail due to invalid identifier
+    assert!(!result.success);
+    assert_eq!(result.applied_transformations.len(), 0);
+    assert_eq!(result.failed_transformations.len(), 1);
+    assert_eq!(result.updated_source, source); // Should remain unchanged
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-keyword-rename-conflict"><code>test_keyword_rename_conflict</code> <small>function</small>
+<details><summary>View code (609-655)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_keyword_rename_conflict-609">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:609" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+</pre>
+    <pre><code id="code-test_keyword_rename_conflict-609" class="lang-rust hljs">fn test_keyword_rename_conflict() {
+    let engine = AstTransformationEngine::new();
+    let source = r#&quot;fn main() { let x = 5; }&quot;#;
+
+    let transformation = Transformation {
+        id: &quot;keyword_rename&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;fn&quot;.to_string(), // Rust keyword
+        metadata: TransformationMetadata {
+            description: &quot;Rename to Rust keyword&quot;.to_string(),
+            confidence: 0.1,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::High,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+
+    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();
+
+    // The transformation should fail due to keyword conflict
+    assert!(!result.success);
+    assert_eq!(result.applied_transformations.len(), 0);
+    assert_eq!(result.failed_transformations.len(), 1);
+    assert_eq!(result.updated_source, source); // Should remain unchanged
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(53)</small></summary><ul><li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (14-14)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-14">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:14" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">14
+</pre>
+    <pre><code id="code-engine-14" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (22-29)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-22">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:22" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">22
+23
+24
+25
+26
+27
+28
+29
+</pre>
+    <pre><code id="code-config-22" class="lang-rust hljs">    let config = TransformationConfig {
+        enable_semantic_validation: false,
+        enable_rollback: false,
+        max_transformation_depth: 5,
+        enable_safety_checks: false,
+        preserve_formatting: false,
+        enable_incremental: false,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (31-31)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-31">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:31" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">31
+</pre>
+    <pre><code id="code-engine-31" class="lang-rust hljs">    let engine = AstTransformationEngine::with_config(config.clone());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validator"><code>validator</code> <small>variable</small>
+<details><summary>View code (39-39)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validator-39">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:39" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">39
+</pre>
+    <pre><code id="code-validator-39" class="lang-rust hljs">    let validator = SemanticValidator::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (49-55)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-49">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:49" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">49
+50
+51
+52
+53
+54
+55
+</pre>
+    <pre><code id="code-config-49" class="lang-rust hljs">    let config = ValidationConfig {
+        enable_scope_analysis: false,
+        enable_type_checking: false,
+        enable_control_flow_analysis: false,
+        enable_data_flow_analysis: false,
+        strict_mode: true,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validator"><code>validator</code> <small>variable</small>
+<details><summary>View code (57-57)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validator-57">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:57" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">57
+</pre>
+    <pre><code id="code-validator-57" class="lang-rust hljs">    let validator = SemanticValidator::with_config(config);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (67-67)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-67">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:67" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">67
+</pre>
+    <pre><code id="code-engine-67" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (68-68)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-68">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:68" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">68
+</pre>
+    <pre><code id="code-source-68" class="lang-rust hljs">    let source = &quot;fn main() { println!(\&quot;Hello, world!\&quot;); }&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (70-103)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-70">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:70" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+</pre>
+    <pre><code id="code-transformation-70" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;test_replace_1&quot;.to_string(),
+        transformation_type: TransformationType::Replace,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 21,
+                byte_offset: 21,
+            },
+            end_position: Position {
+                line: 0,
+                column: 36,
+                byte_offset: 36,
+            },
+            node_kind: &quot;string_literal&quot;.to_string(),
+        },
+        original_code: &quot;\&quot;Hello, world!\&quot;&quot;.to_string(),
+        new_code: &quot;\&quot;Hello, Rust!\&quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Replace greeting message&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (105-105)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-105">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:105" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">105
+</pre>
+    <pre><code id="code-result-105" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (114-114)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-114">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:114" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">114
+</pre>
+    <pre><code id="code-engine-114" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (115-115)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-115">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:115" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">115
+</pre>
+    <pre><code id="code-source-115" class="lang-rust hljs">    let source = &quot;fn main() {\n}&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (117-150)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-117">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:117" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+</pre>
+    <pre><code id="code-transformation-117" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;test_insert_1&quot;.to_string(),
+        transformation_type: TransformationType::Insert,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 12,
+                byte_offset: 12,
+            },
+            end_position: Position {
+                line: 0,
+                column: 12,
+                byte_offset: 12,
+            },
+            node_kind: &quot;block&quot;.to_string(),
+        },
+        original_code: &quot;&quot;.to_string(),
+        new_code: &quot;\n    println!(\&quot;Hello, world!\&quot;);&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Insert print statement&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (152-152)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-152">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:152" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">152
+</pre>
+    <pre><code id="code-result-152" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (161-161)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-161">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:161" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">161
+</pre>
+    <pre><code id="code-engine-161" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (162-162)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-162">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:162" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">162
+</pre>
+    <pre><code id="code-source-162" class="lang-rust hljs">    let source = &quot;fn main() {\n    println!(\&quot;Hello, world!\&quot;);\n    // This is a comment\n}&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (164-197)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-164">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:164" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+</pre>
+    <pre><code id="code-transformation-164" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;test_delete_1&quot;.to_string(),
+        transformation_type: TransformationType::Delete,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 2,
+                column: 4,
+                byte_offset: 44,
+            },
+            end_position: Position {
+                line: 2,
+                column: 25,
+                byte_offset: 65,
+            },
+            node_kind: &quot;line_comment&quot;.to_string(),
+        },
+        original_code: &quot;// This is a comment&quot;.to_string(),
+        new_code: &quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Remove comment&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: Vec::new(),
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (199-199)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-199">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:199" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">199
+</pre>
+    <pre><code id="code-result-199" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (208-208)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-208">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:208" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">208
+</pre>
+    <pre><code id="code-engine-208" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (209-209)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-209">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:209" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">209
+</pre>
+    <pre><code id="code-source-209" class="lang-rust hljs">    let source = &quot;fn main() {\n    let x = 5;\n    println!(\&quot;{}\&quot;, x);\n}&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformations"><code>transformations</code> <small>variable</small>
+<details><summary>View code (211-280)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformations-211">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:211" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+</pre>
+    <pre><code id="code-transformations-211" class="lang-rust hljs">    let transformations = vec![
+        Transformation {
+            id: &quot;test_multi_1&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;test.rs&quot;),
+                start_position: Position {
+                    line: 1,
+                    column: 12,
+                    byte_offset: 24,
+                },
+                end_position: Position {
+                    line: 1,
+                    column: 13,
+                    byte_offset: 25,
+                },
+                node_kind: &quot;integer_literal&quot;.to_string(),
+            },
+            original_code: &quot;5&quot;.to_string(),
+            new_code: &quot;10&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Change value from 5 to 10&quot;.to_string(),
+                confidence: 1.0,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;main&quot;.to_string()],
+                    affected_variables: vec![&quot;x&quot;.to_string()],
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+        Transformation {
+            id: &quot;test_multi_2&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;test.rs&quot;),
+                start_position: Position {
+                    line: 2,
+                    column: 4,
+                    byte_offset: 31,
+                },
+                end_position: Position {
+                    line: 2,
+                    column: 22,
+                    byte_offset: 49,
+                },
+                node_kind: &quot;macro_invocation&quot;.to_string(),
+            },
+            original_code: &quot;println!(\&quot;{}\&quot;, x)&quot;.to_string(),
+            new_code: &quot;println!(\&quot;Value: {}\&quot;, x)&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Add label to print statement&quot;.to_string(),
+                confidence: 0.9,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;main&quot;.to_string()],
+                    affected_variables: Vec::new(),
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+    ];</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (282-282)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-282">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:282" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">282
+</pre>
+    <pre><code id="code-result-282" class="lang-rust hljs">    let result = engine.apply_transformations(source, Language::Rust, &amp;transformations).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (292-292)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-292">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:292" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">292
+</pre>
+    <pre><code id="code-engine-292" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (293-293)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-293">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:293" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">293
+</pre>
+    <pre><code id="code-source-293" class="lang-rust hljs">    let source = &quot;fn main() { println!(\&quot;Hello, world!\&quot;); }&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (296-329)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-296">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:296" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+</pre>
+    <pre><code id="code-transformation-296" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;test_syntax_error&quot;.to_string(),
+        transformation_type: TransformationType::Replace,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 0,
+                byte_offset: 0,
+            },
+            end_position: Position {
+                line: 0,
+                column: 2,
+                byte_offset: 2,
+            },
+            node_kind: &quot;function_item&quot;.to_string(),
+        },
+        original_code: &quot;fn&quot;.to_string(),
+        new_code: &quot;invalid_keyword&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Invalid transformation that breaks syntax&quot;.to_string(),
+            confidence: 0.1,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::High,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (331-331)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-331">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:331" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">331
+</pre>
+    <pre><code id="code-result-331" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (340-346)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-340">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:340" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">340
+341
+342
+343
+344
+345
+346
+</pre>
+    <pre><code id="code-config-340" class="lang-rust hljs">    let config = ValidationConfig {
+        enable_scope_analysis: true,
+        enable_type_checking: true,
+        enable_control_flow_analysis: true,
+        enable_data_flow_analysis: true,
+        strict_mode: true,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validator"><code>validator</code> <small>variable</small>
+<details><summary>View code (348-348)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validator-348">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:348" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">348
+</pre>
+    <pre><code id="code-validator-348" class="lang-rust hljs">    let validator = SemanticValidator::with_config(config);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small>
+<details><summary>View code (349-349)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-parser-349">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:349" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">349
+</pre>
+    <pre><code id="code-parser-349" class="lang-rust hljs">    let parser = Parser::new(Language::Rust).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (350-350)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-350">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:350" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">350
+</pre>
+    <pre><code id="code-source-350" class="lang-rust hljs">    let source = &quot;fn main() { let x = 5; }&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small>
+<details><summary>View code (351-351)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tree-351">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:351" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">351
+</pre>
+    <pre><code id="code-tree-351" class="lang-rust hljs">    let tree = parser.parse(source, None).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (353-386)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-353">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:353" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+</pre>
+    <pre><code id="code-transformation-353" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;test_validation&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;y&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Rename variable x to y&quot;.to_string(),
+            confidence: 0.8,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (388-388)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-388">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:388" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">388
+</pre>
+    <pre><code id="code-result-388" class="lang-rust hljs">    let result = validator.validate_transformation(&amp;tree, &amp;transformation, Language::Rust).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (395-395)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-395">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:395" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">395
+</pre>
+    <pre><code id="code-engine-395" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (396-401)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-396">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:396" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">396
+397
+398
+399
+400
+401
+</pre>
+    <pre><code id="code-source-396" class="lang-rust hljs">    let source = r#&quot;fn main() {
+    let x = 5;
+    let y = 10;
+    let result = x + y;
+    println!(&quot;Result: {}&quot;, result);
+}&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (403-436)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-403">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:403" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+</pre>
+    <pre><code id="code-transformation-403" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;extract_calculation&quot;.to_string(),
+        transformation_type: TransformationType::ExtractMethod,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 2,
+                column: 4,
+                byte_offset: 32,
+            },
+            end_position: Position {
+                line: 3,
+                column: 24,
+                byte_offset: 67,
+            },
+            node_kind: &quot;block&quot;.to_string(),
+        },
+        original_code: &quot;let y = 10;\n    let result = x + y;&quot;.to_string(),
+        new_code: &quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Extract method: calculate_sum&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Medium,
+                affected_lines: 2,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string(), &quot;y&quot;.to_string(), &quot;result&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (438-438)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-438">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:438" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">438
+</pre>
+    <pre><code id="code-result-438" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (453-453)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-453">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:453" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">453
+</pre>
+    <pre><code id="code-engine-453" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (454-458)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-454">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:454" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">454
+455
+456
+457
+458
+</pre>
+    <pre><code id="code-source-454" class="lang-rust hljs">    let source = r#&quot;fn main() {
+    let old_name = 42;
+    println!(&quot;Value: {}&quot;, old_name);
+    let result = old_name * 2;
+}&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (460-493)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-460">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:460" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+</pre>
+    <pre><code id="code-transformation-460" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;rename_variable&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 1,
+                column: 8,
+                byte_offset: 20,
+            },
+            end_position: Position {
+                line: 1,
+                column: 16,
+                byte_offset: 28,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;old_name&quot;.to_string(),
+        new_code: &quot;new_name&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Rename variable from old_name to new_name&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 3,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;old_name&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (495-495)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-495">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:495" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">495
+</pre>
+    <pre><code id="code-result-495" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (507-507)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-507">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:507" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">507
+</pre>
+    <pre><code id="code-engine-507" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (508-512)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-508">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:508" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">508
+509
+510
+511
+512
+</pre>
+    <pre><code id="code-source-508" class="lang-rust hljs">    let source = r#&quot;fn main() {
+    let temp = 42;
+    let result = temp * 2;
+    println!(&quot;Result: {}&quot;, result);
+}&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (514-547)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-514">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:514" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+</pre>
+    <pre><code id="code-transformation-514" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;inline_variable&quot;.to_string(),
+        transformation_type: TransformationType::Inline,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 1,
+                column: 4,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 1,
+                column: 18,
+                byte_offset: 30,
+            },
+            node_kind: &quot;let_declaration&quot;.to_string(),
+        },
+        original_code: &quot;temp&quot;.to_string(),
+        new_code: &quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Inline variable temp&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 2,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;temp&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (549-549)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-549">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:549" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">549
+</pre>
+    <pre><code id="code-result-549" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (561-561)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-561">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:561" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">561
+</pre>
+    <pre><code id="code-engine-561" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (562-562)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-562">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:562" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">562
+</pre>
+    <pre><code id="code-source-562" class="lang-rust hljs">    let source = r#&quot;fn main() { let x = 5; }&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (564-597)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-564">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:564" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+</pre>
+    <pre><code id="code-transformation-564" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;invalid_rename&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;123invalid&quot;.to_string(), // Invalid identifier
+        metadata: TransformationMetadata {
+            description: &quot;Rename to invalid identifier&quot;.to_string(),
+            confidence: 0.1,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::High,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (599-599)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-599">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:599" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">599
+</pre>
+    <pre><code id="code-result-599" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (610-610)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-610">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:610" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">610
+</pre>
+    <pre><code id="code-engine-610" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source"><code>source</code> <small>variable</small>
+<details><summary>View code (611-611)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source-611">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:611" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">611
+</pre>
+    <pre><code id="code-source-611" class="lang-rust hljs">    let source = r#&quot;fn main() { let x = 5; }&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation"><code>transformation</code> <small>variable</small>
+<details><summary>View code (613-646)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation-613">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:613" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+</pre>
+    <pre><code id="code-transformation-613" class="lang-rust hljs">    let transformation = Transformation {
+        id: &quot;keyword_rename&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;test.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;fn&quot;.to_string(), // Rust keyword
+        metadata: TransformationMetadata {
+            description: &quot;Rename to Rust keyword&quot;.to_string(),
+            confidence: 0.1,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::High,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result"><code>result</code> <small>variable</small>
+<details><summary>View code (648-648)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result-648">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/ast_transformation.rs:648" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">648
+</pre>
+    <pre><code id="code-result-648" class="lang-rust hljs">    let result = engine.apply_transformation(source, Language::Rust, &amp;transformation).unwrap();</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

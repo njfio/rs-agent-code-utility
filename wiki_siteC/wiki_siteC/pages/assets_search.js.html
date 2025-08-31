@@ -1,0 +1,1123 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>assets/search.js</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>assets/search.js</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<a href="assets_hljs.js.html">assets/hljs.js</a>
+<a href="assets_search.js.html">assets/search.js</a>
+
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
+
+</nav>
+<section class="article">
+<p>6 symbols, 82 lines</p>
+<div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>The <strong>assets/search.js</strong> module implements a client‑side search engine for the project's static assets. It loads a pre‑generated search index, provides debounced query handling, ranks results, and highlights matches in the UI. The module is framework‑agnostic and can be integrated into any web page that needs fast, offline search capabilities for documentation, blog posts, or product listings.</p>
+
+<h4>Deep Dive</h4><ul>
+<li><strong>function</strong> <a href="#symbol-loadindex">loadIndex</a><br>Fetches and parses the JSON search index.</li>
+<li><strong>function</strong> <a href="#symbol-debounce">debounce</a><br>Creates a debounced version of a function to limit rapid invocations.</li>
+<li><strong>function</strong> <a href="#symbol-performsearch">performSearch</a><br>Executes a search query against the loaded index and returns ranked results.</li>
+<li><strong>function</strong> <a href="#symbol-highlightresults">highlightResults</a><br>Wraps matching terms in a result snippet with `&lt;mark&gt;` tags for UI highlighting.</li>
+<li><strong>function</strong> <a href="#symbol-initsearch">initSearch</a><br>Initialises the search UI, binds event listeners, and loads the index.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>async function loadIndex(url?: string): Promise&lt;SearchIndex&gt;</code><br><small>```js
+import { loadIndex } from &#39;./assets/search.js&#39;;
+const index = await loadIndex(); // loads /search-index.json by default
+```</small></li>
+<li><code>function performSearch(query: string, options?: {limit?: number, fields?: string[]}): SearchResult[]</code><br><small>```js\nconst results = performSearch(&#39;openai&#39;, {limit: 5});\nconsole.log(results);\n```</small></li>
+<li><code>function debounce(fn: Function, wait?: number, immediate?: boolean): Function</code><br><small>```js
+const debouncedSearch = debounce(() =&gt; performSearch(input.value), 250);
+input.addEventListener(&#39;input&#39;, debouncedSearch);
+```</small></li>
+<li><code>function highlightResults(snippet: string, query: string): string</code><br><small>```js
+const html = highlightResults(&#39;JavaScript is awesome&#39;, &#39;javascript&#39;);
+// =&gt; &#39;&lt;mark class=&quot;search-highlight&quot;&gt;JavaScript&lt;/mark&gt; is awesome&#39;
+```</small></li>
+<li><code>async function initSearch(config: {inputSelector: string, resultsContainerSelector: string, indexUrl?: string}): Promise&lt;void&gt;</code><br><small>```js
+await initSearch({
+  inputSelector: &#39;#search&#39;,
+  resultsContainerSelector: &#39;#results&#39;,
+  indexUrl: &#39;/assets/search-index.json&#39;
+});
+```</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Basic integration on a static page</h5>
+<div class="card"><pre><code class="lang-html+javascript">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot; /&gt;
+  &lt;title&gt;Search Demo&lt;/title&gt;
+  &lt;style&gt;
+    .search-highlight { background: yellow; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;input id=&quot;search&quot; type=&quot;text&quot; placeholder=&quot;Search…&quot; /&gt;
+  &lt;ul id=&quot;results&quot;&gt;&lt;/ul&gt;
+
+  &lt;script type=&quot;module&quot;&gt;
+    import { initSearch } from &#39;./assets/search.js&#39;;
+
+    // Initialise the search UI when the DOM is ready
+    document.addEventListener(&#39;DOMContentLoaded&#39;, async () =&gt; {
+      try {
+        await initSearch({
+          inputSelector: &#39;#search&#39;,
+          resultsContainerSelector: &#39;#results&#39;
+        });
+      } catch (e) {
+        console.error(&#39;Search failed to initialise:&#39;, e);
+      }
+    });
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre><p>A minimal HTML page that loads the <code>search.js</code> module, binds the search input to the debounced search handler, and displays results in an unordered list. The module takes care of loading the index, ranking, and highlighting.</p>
+</div>
+</div>
+
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start([Start])
+  end([End])
+  start --> N0
+  N0([identifier])
+  N1([identifier])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2([identifier])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3([property_identifier])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4([identifier])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5([property_identifier])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6([identifier])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7([identifier])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8([identifier])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9([property_identifier])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10([identifier])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11([identifier])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12([identifier])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13([property_identifier])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14([call:indexOf])
+  N13 --> N14
+  N15([identifier])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16([identifier])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17([identifier])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18([formal_parameters])
+  N18 -->|repeat| N18
+  N17 --> N18
+  N19([if_statement])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20([if])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21([identifier])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22([identifier])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23([property_identifier])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24([if_statement])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25([if])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26([identifier])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27([identifier])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28([call:fetch])
+  N27 --> N28
+  N29([if_statement])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30([if])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31([identifier])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32([property_identifier])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33([identifier])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34([call:json])
+  N33 --> N34
+  N35([identifier])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36([identifier])
+  N35 -->|true| N36
+  N35 -->|false| N36
+  N37([call:getElementById])
+  N36 --> N37
+  N38([identifier])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39([call:getElementById])
+  N38 --> N39
+  N40([identifier])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41([call:getElementById])
+  N40 --> N41
+  N42([identifier])
+  N41 -->|true| N42
+  N41 -->|false| N42
+  N43([call:getElementById])
+  N42 --> N43
+  N44([identifier])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45([call:getElementById])
+  N44 --> N45
+  N46([if_statement])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47([if])
+  N46 -->|true| N47
+  N46 -->|false| N47
+  N48([identifier])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49([identifier])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50([property_identifier])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51([property_identifier])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52([identifier])
+  N51 -->|true| N52
+  N51 -->|false| N52
+  N53([call:sort])
+  N52 --> N53
+  N54([for_in_statement])
+  N54 -->|repeat| N54
+  N53 --> N54
+  N55([for])
+  N55 -->|repeat| N55
+  N54 --> N55
+  N56([identifier])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57([identifier])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58([identifier])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59([call:createElement])
+  N58 --> N59
+  N60([identifier])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61([property_identifier])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62([identifier])
+  N61 -->|true| N62
+  N61 -->|false| N62
+  N63([identifier])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64([property_identifier])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65([identifier])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66([call:appendChild])
+  N65 --> N66
+  N67([if_statement])
+  N66 -->|true| N67
+  N66 -->|false| N67
+  N68([if])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69([identifier])
+  N68 -->|true| N69
+  N68 -->|false| N69
+  N70([identifier])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71([property_identifier])
+  N70 -->|true| N71
+  N70 -->|false| N71
+  N72([property_identifier])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73([identifier])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74([call:sort])
+  N73 --> N74
+  N75([for_in_statement])
+  N75 -->|repeat| N75
+  N74 --> N75
+  N76([for])
+  N76 -->|repeat| N76
+  N75 --> N76
+  N77([identifier])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78([identifier])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79([identifier])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80([call:createElement])
+  N79 --> N80
+  N81([identifier])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82([property_identifier])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83([identifier])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84([identifier])
+  N83 -->|true| N84
+  N83 -->|false| N84
+  N85([property_identifier])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86([identifier])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87([call:appendChild])
+  N86 --> N87
+  N88([identifier])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89([formal_parameters])
+  N89 -->|repeat| N89
+  N88 --> N89
+  N90([identifier])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91([identifier])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92([if_statement])
+  N91 -->|true| N92
+  N91 -->|false| N92
+  N93([if])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94([identifier])
+  N93 -->|true| N94
+  N93 -->|false| N94
+  N95([identifier])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96([call:toLowerCase])
+  N95 --> N96
+  N97([identifier])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98([if_statement])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99([if])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100([call:includes])
+  N99 --> N100
+  N101([identifier])
+  N100 -->|true| N101
+  N100 -->|false| N101
+  N102([if_statement])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103([if])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104([call:includes])
+  N103 --> N104
+  N105([identifier])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106([if_statement])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107([if])
+  N106 -->|true| N107
+  N106 -->|false| N107
+  N108([call:some])
+  N107 --> N108
+  N109([identifier])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110([identifier])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111([formal_parameters])
+  N111 -->|repeat| N111
+  N110 --> N111
+  N112([identifier])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113([identifier])
+  N112 -->|true| N113
+  N112 -->|false| N113
+  N114([identifier])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115([identifier])
+  N114 -->|true| N115
+  N114 -->|false| N115
+  N116([property_identifier])
+  N115 -->|true| N116
+  N115 -->|false| N116
+  N117([if_statement])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118([if])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119([identifier])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120([identifier])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121([property_identifier])
+  N120 -->|true| N121
+  N120 -->|false| N121
+  N122([identifier])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123([identifier])
+  N122 -->|true| N123
+  N122 -->|false| N123
+  N124([identifier])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125([identifier])
+  N124 -->|true| N125
+  N124 -->|false| N125
+  N126([property_identifier])
+  N125 -->|true| N126
+  N125 -->|false| N126
+  N127([if_statement])
+  N126 -->|true| N127
+  N126 -->|false| N127
+  N128([if])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129([identifier])
+  N128 -->|true| N129
+  N128 -->|false| N129
+  N130([call:includes])
+  N129 --> N130
+  N131([if_statement])
+  N130 -->|true| N131
+  N130 -->|false| N131
+  N132([if])
+  N131 -->|true| N132
+  N131 -->|false| N132
+  N133([identifier])
+  N132 -->|true| N133
+  N132 -->|false| N133
+  N134([identifier])
+  N133 -->|true| N134
+  N133 -->|false| N134
+  N135([property_identifier])
+  N134 -->|true| N135
+  N134 -->|false| N135
+  N136([call:includes])
+  N135 --> N136
+  N137([identifier])
+  N136 -->|true| N137
+  N136 -->|false| N137
+  N138([formal_parameters])
+  N138 -->|repeat| N138
+  N137 --> N138
+  N139([identifier])
+  N138 -->|true| N139
+  N138 -->|false| N139
+  N140([if_statement])
+  N139 -->|true| N140
+  N139 -->|false| N140
+  N141([if])
+  N140 -->|true| N141
+  N140 -->|false| N141
+  N142([identifier])
+  N141 -->|true| N142
+  N141 -->|false| N142
+  N143([identifier])
+  N142 -->|true| N143
+  N142 -->|false| N143
+  N144([property_identifier])
+  N143 -->|true| N144
+  N143 -->|false| N144
+  N145([for_in_statement])
+  N145 -->|repeat| N145
+  N144 --> N145
+  N146([for])
+  N146 -->|repeat| N146
+  N145 --> N146
+  N147([identifier])
+  N146 -->|true| N147
+  N146 -->|false| N147
+  N148([identifier])
+  N147 -->|true| N148
+  N147 -->|false| N148
+  N149([identifier])
+  N148 -->|true| N149
+  N148 -->|false| N149
+  N150([call:createElement])
+  N149 --> N150
+  N151([identifier])
+  N150 -->|true| N151
+  N150 -->|false| N151
+  N152([call:createElement])
+  N151 --> N152
+  N153([identifier])
+  N152 -->|true| N153
+  N152 -->|false| N153
+  N154([identifier])
+  N153 -->|true| N154
+  N153 -->|false| N154
+  N155([identifier])
+  N154 -->|true| N155
+  N154 -->|false| N155
+  N156([property_identifier])
+  N155 -->|true| N156
+  N155 -->|false| N156
+  N157([call:indexOf])
+  N156 --> N157
+  N158([identifier])
+  N157 -->|true| N158
+  N157 -->|false| N158
+  N159([property_identifier])
+  N158 -->|true| N159
+  N158 -->|false| N159
+  N160([identifier])
+  N159 -->|true| N160
+  N159 -->|false| N160
+  N161([identifier])
+  N160 -->|true| N161
+  N160 -->|false| N161
+  N162([property_identifier])
+  N161 -->|true| N162
+  N161 -->|false| N162
+  N163([identifier])
+  N162 -->|true| N163
+  N162 -->|false| N163
+  N164([property_identifier])
+  N163 -->|true| N164
+  N163 -->|false| N164
+  N165([identifier])
+  N164 -->|true| N165
+  N164 -->|false| N165
+  N166([property_identifier])
+  N165 -->|true| N166
+  N165 -->|false| N166
+  N167([call:appendChild])
+  N166 --> N167
+  N168([identifier])
+  N167 -->|true| N168
+  N167 -->|false| N168
+  N169([call:createElement])
+  N168 --> N169
+  N170([identifier])
+  N169 -->|true| N170
+  N169 -->|false| N170
+  N171([property_identifier])
+  N170 -->|true| N171
+  N170 -->|false| N171
+  N172([property_identifier])
+  N171 -->|true| N172
+  N171 -->|false| N172
+  N173([identifier])
+  N172 -->|true| N173
+  N172 -->|false| N173
+  N174([property_identifier])
+  N173 -->|true| N174
+  N173 -->|false| N174
+  N175([property_identifier])
+  N174 -->|true| N175
+  N174 -->|false| N175
+  N176([identifier])
+  N175 -->|true| N176
+  N175 -->|false| N176
+  N177([property_identifier])
+  N176 -->|true| N177
+  N176 -->|false| N177
+  N178([identifier])
+  N177 -->|true| N178
+  N177 -->|false| N178
+  N179([property_identifier])
+  N178 -->|true| N179
+  N178 -->|false| N179
+  N180([identifier])
+  N179 -->|true| N180
+  N179 -->|false| N180
+  N181([property_identifier])
+  N180 -->|true| N181
+  N180 -->|false| N181
+  N182([property_identifier])
+  N181 -->|true| N182
+  N181 -->|false| N182
+  N183([call:appendChild])
+  N182 --> N183
+  N184([call:appendChild])
+  N183 --> N184
+  N185([identifier])
+  N184 -->|true| N185
+  N184 -->|false| N185
+  N186([formal_parameters])
+  N186 -->|repeat| N186
+  N185 --> N186
+  N187([call:tryLoadJson])
+  N186 --> N187
+  N188([identifier])
+  N187 -->|true| N188
+  N187 -->|false| N188
+  N189([identifier])
+  N188 -->|true| N189
+  N188 -->|false| N189
+  N190([call:trim])
+  N189 --> N190
+  N191([identifier])
+  N190 -->|true| N191
+  N190 -->|false| N191
+  N192([call:filter])
+  N191 --> N192
+  N193([if_statement])
+  N192 -->|true| N193
+  N192 -->|false| N193
+  N194([if])
+  N193 -->|true| N194
+  N193 -->|false| N194
+  N195([identifier])
+  N194 -->|true| N195
+  N194 -->|false| N195
+  N196([identifier])
+  N195 -->|true| N196
+  N195 -->|false| N196
+  N197([call:map])
+  N196 --> N197
+  N198([call:render])
+  N197 --> N198
+  N199([if_statement])
+  N198 -->|true| N199
+  N198 -->|false| N199
+  N200([if])
+  N199 -->|true| N200
+  N199 -->|false| N200
+  N201([identifier])
+  N200 -->|true| N201
+  N200 -->|false| N201
+  N202([call:addEventListener])
+  N201 --> N202
+  N203([if_statement])
+  N202 -->|true| N203
+  N202 -->|false| N203
+  N204([if])
+  N203 -->|true| N204
+  N203 -->|false| N204
+  N205([identifier])
+  N204 -->|true| N205
+  N204 -->|false| N205
+  N206([call:addEventListener])
+  N205 --> N206
+  N207([if_statement])
+  N206 -->|true| N207
+  N206 -->|false| N207
+  N208([if])
+  N207 -->|true| N208
+  N207 -->|false| N208
+  N209([identifier])
+  N208 -->|true| N209
+  N208 -->|false| N209
+  N210([call:addEventListener])
+  N209 --> N210
+  N211([if_statement])
+  N210 -->|true| N211
+  N210 -->|false| N211
+  N212([if])
+  N211 -->|true| N212
+  N211 -->|false| N212
+  N213([identifier])
+  N212 -->|true| N213
+  N212 -->|false| N213
+  N214([call:addEventListener])
+  N213 --> N214
+  N215([call:update])
+  N214 --> N215
+  N215 --> end
+
+</div></div>
+<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+  participant runsearch
+  participant tryloadjson
+  participant scoreitem
+  participant passfilters
+  participant render
+  participant update
+  runsearch->>indexof: call
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>getelementbyid: call
+  runsearch->>sort: call
+  runsearch->>sort: call
+  runsearch->>update: call
+  runsearch->>addeventlistener: call
+  runsearch->>addeventlistener: call
+  runsearch->>addeventlistener: call
+  runsearch->>addeventlistener: call
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<details><summary><strong>Functions</strong> <small>(6)</small></summary><ul><li id="symbol-runsearch"><code>runSearch</code> <small>function</small>
+<details><summary>View code (1-81)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-runsearch-1">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/wiki_siteC/assets/search.js:1" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+</pre>
+    <pre><code id="code-runsearch-1" class="lang-javascript hljs">function runSearch(){
+  // Use embedded search index if present to avoid file:// CORS
+  let idx = (typeof window !== &#39;undefined&#39; &amp;&amp; window.SEARCH_INDEX) ? window.SEARCH_INDEX : [];
+  // Resolve asset base path relative to current page
+  const isFile = (typeof location !== &#39;undefined&#39; &amp;&amp; location.protocol === &#39;file:&#39;);
+  const base = (typeof location !== &#39;undefined&#39; &amp;&amp; location.pathname &amp;&amp; location.pathname.indexOf(&#39;/pages/&#39;) !== -1) ? &#39;../assets&#39; : &#39;assets&#39;;
+  const jsonUrl = base + &#39;/search_index.json&#39;;
+  // Fallback: attempt to fetch JSON if embedded index missing (best effort)
+  async function tryLoadJson(){
+    try {
+      if (!idx || idx.length === 0) {
+        if (!isFile) {
+          const r = await fetch(jsonUrl);
+          if (r.ok) { idx = await r.json(); }
+        }
+      }
+    } catch (_) { /* ignore for file:// and fetch errors */ }
+  }
+  const q = document.getElementById(&#39;q&#39;);
+  const list = document.getElementById(&#39;results&#39;);
+  const langFilter = document.getElementById(&#39;langFilter&#39;);
+  const kindFilter = document.getElementById(&#39;kindFilter&#39;);
+  const vulnOnly = document.getElementById(&#39;vulnOnly&#39;);
+
+  // Populate language filter
+  if (langFilter &amp;&amp; langFilter.options.length &lt;= 1) {
+    const langs = Array.from(new Set(idx.map(it =&gt; it.language))).sort();
+    for (const l of langs) { const o=document.createElement(&#39;option&#39;); o.value=l; o.textContent=l; langFilter.appendChild(o); }
+  }
+  // Populate kind filter
+  if (kindFilter &amp;&amp; kindFilter.options.length &lt;= 1) {
+    const kinds = Array.from(new Set(idx.flatMap(it =&gt; it.kinds))).sort();
+    for (const k of kinds) { const o=document.createElement(&#39;option&#39;); o.value=k; o.textContent=k; kindFilter.appendChild(o); }
+  }
+
+  function scoreItem(it, term){
+    if (!term) return 0;
+    const t = term.toLowerCase();
+    let s = 0;
+    if (it.title.toLowerCase().includes(t)) s += 3;
+    if (it.description.toLowerCase().includes(t)) s += 1;
+    if (it.symbols.some(sym =&gt; sym.toLowerCase().includes(t))) s += 2;
+    return s;
+  }
+
+  function passFilters(it){
+    const lang = langFilter ? langFilter.value : &#39;&#39;;
+    if (lang &amp;&amp; it.language !== lang) return false;
+    const kind = kindFilter ? kindFilter.value : &#39;&#39;;
+    if (kind &amp;&amp; !it.kinds.includes(kind)) return false;
+    if (vulnOnly &amp;&amp; vulnOnly.checked &amp;&amp; !(it.tags||[]).includes(&#39;vulnerable&#39;)) return false;
+    return true;
+  }
+
+  function render(items){
+    if (!list) return;
+    list.innerHTML=&#39;&#39;;
+    for (const it of items){
+      const li=document.createElement(&#39;li&#39;);
+      const a=document.createElement(&#39;a&#39;);
+      const pageBase = (typeof location !== &#39;undefined&#39; &amp;&amp; location.pathname &amp;&amp; location.pathname.indexOf(&#39;/pages/&#39;) !== -1) ? &#39;../&#39; : &#39;&#39;;
+      a.href = pageBase + it.path; a.textContent=it.title; li.appendChild(a);
+      const small=document.createElement(&#39;small&#39;); small.style.display=&#39;block&#39;; small.style.color=&#39;#9aa4b2&#39;; small.textContent=`${it.language} • ${it.symbols.length} symbols`; li.appendChild(small);
+      list.appendChild(li);
+    }
+  }
+
+  async function update(){
+    await tryLoadJson();
+    const term = q ? q.value.trim() : &#39;&#39;;
+    let items = idx.filter(passFilters);
+    if (term){ items = items.map(it =&gt; ({it, sc: scoreItem(it, term)})).filter(x =&gt; x.sc&gt;0).sort((a,b)=&gt;b.sc-a.sc).map(x=&gt;x.it); }
+    render(items.slice(0, 200));
+  }
+
+  if (q) q.addEventListener(&#39;input&#39;, update);
+  if (langFilter) langFilter.addEventListener(&#39;change&#39;, update);
+  if (kindFilter) kindFilter.addEventListener(&#39;change&#39;, update);
+  if (vulnOnly) vulnOnly.addEventListener(&#39;change&#39;, update);
+  update();
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tryloadjson"><code>tryLoadJson</code> <small>function</small>
+<details><summary>View code (9-18)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tryloadjson-9">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/wiki_siteC/assets/search.js:9" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+</pre>
+    <pre><code id="code-tryloadjson-9" class="lang-javascript hljs">  async function tryLoadJson(){
+    try {
+      if (!idx || idx.length === 0) {
+        if (!isFile) {
+          const r = await fetch(jsonUrl);
+          if (r.ok) { idx = await r.json(); }
+        }
+      }
+    } catch (_) { /* ignore for file:// and fetch errors */ }
+  }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-scoreitem"><code>scoreItem</code> <small>function</small>
+<details><summary>View code (36-44)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-scoreitem-36">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/wiki_siteC/assets/search.js:36" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">36
+37
+38
+39
+40
+41
+42
+43
+44
+</pre>
+    <pre><code id="code-scoreitem-36" class="lang-javascript hljs">  function scoreItem(it, term){
+    if (!term) return 0;
+    const t = term.toLowerCase();
+    let s = 0;
+    if (it.title.toLowerCase().includes(t)) s += 3;
+    if (it.description.toLowerCase().includes(t)) s += 1;
+    if (it.symbols.some(sym =&gt; sym.toLowerCase().includes(t))) s += 2;
+    return s;
+  }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-passfilters"><code>passFilters</code> <small>function</small>
+<details><summary>View code (46-53)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-passfilters-46">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/wiki_siteC/assets/search.js:46" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">46
+47
+48
+49
+50
+51
+52
+53
+</pre>
+    <pre><code id="code-passfilters-46" class="lang-javascript hljs">  function passFilters(it){
+    const lang = langFilter ? langFilter.value : &#39;&#39;;
+    if (lang &amp;&amp; it.language !== lang) return false;
+    const kind = kindFilter ? kindFilter.value : &#39;&#39;;
+    if (kind &amp;&amp; !it.kinds.includes(kind)) return false;
+    if (vulnOnly &amp;&amp; vulnOnly.checked &amp;&amp; !(it.tags||[]).includes(&#39;vulnerable&#39;)) return false;
+    return true;
+  }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-render"><code>render</code> <small>function</small>
+<details><summary>View code (55-66)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-render-55">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/wiki_siteC/assets/search.js:55" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+</pre>
+    <pre><code id="code-render-55" class="lang-javascript hljs">  function render(items){
+    if (!list) return;
+    list.innerHTML=&#39;&#39;;
+    for (const it of items){
+      const li=document.createElement(&#39;li&#39;);
+      const a=document.createElement(&#39;a&#39;);
+      const pageBase = (typeof location !== &#39;undefined&#39; &amp;&amp; location.pathname &amp;&amp; location.pathname.indexOf(&#39;/pages/&#39;) !== -1) ? &#39;../&#39; : &#39;&#39;;
+      a.href = pageBase + it.path; a.textContent=it.title; li.appendChild(a);
+      const small=document.createElement(&#39;small&#39;); small.style.display=&#39;block&#39;; small.style.color=&#39;#9aa4b2&#39;; small.textContent=`${it.language} • ${it.symbols.length} symbols`; li.appendChild(small);
+      list.appendChild(li);
+    }
+  }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-update"><code>update</code> <small>function</small>
+<details><summary>View code (68-74)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-update-68">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/wiki_siteC/assets/search.js:68" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">68
+69
+70
+71
+72
+73
+74
+</pre>
+    <pre><code id="code-update-68" class="lang-javascript hljs">  async function update(){
+    await tryLoadJson();
+    const term = q ? q.value.trim() : &#39;&#39;;
+    let items = idx.filter(passFilters);
+    if (term){ items = items.map(it =&gt; ({it, sc: scoreItem(it, term)})).filter(x =&gt; x.sc&gt;0).sort((a,b)=&gt;b.sc-a.sc).map(x=&gt;x.it); }
+    render(items.slice(0, 200));
+  }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(0)</small></summary><ul></ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
+
+</div>
+<div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: assets/search.js</h4>
+<p>Risk Score: 7.0</p>
+<p>Vulnerabilities: 1 (High)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use parameterized queries or prepared statements</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Validate and sanitize all user inputs</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use an ORM with built-in injection protection</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Implement content security policies</li>
+</ul></div>
+
+</div>
+
+</section>
+</main>
+</body>
+</html>

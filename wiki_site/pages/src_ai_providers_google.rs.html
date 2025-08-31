@@ -4,300 +4,534 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>src/ai/providers/google.rs</title>
 <link rel="stylesheet" href="../assets/style.css">
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
 </head>
 <body>
-<header><h1>src/ai/providers/google.rs</h1></header>
+<header><h1>src/ai/providers/google.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
 <main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_groq.rs.html">src/ai/providers/groq.rs</a>
+<a href="src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+<a href="src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html">src/ai/types.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+<a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+<a href="src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+<a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html">src/constants.rs</a>
+<a href="src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="src_error.rs.html">src/error.rs</a>
+<a href="src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+<a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+<a href="src_lib.rs.html">src/lib.rs</a>
+<a href="src_main.rs.html">src/main.rs</a>
+<a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="src_query.rs.html">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+<a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="src_tree.rs.html">src/tree.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html">test_files/sample.go</a>
+<a href="test_files_sample.ts.html">test_files/sample.ts</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+<a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+<a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
+<a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
+<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+
+
+</nav>
 <section class="article">
 <p>10 symbols, 79 lines</p>
+
 <div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
-  start(["Start"])
-  end(["End"])
+  start([Start])
+  end([End])
   start --> N0
-  N0(["scoped_identifier"])
-  N1(["scoped_identifier"])
+  N0([scoped_identifier])
+  N1([scoped_identifier])
   N0 -->|true| N1
   N0 -->|false| N1
-  N2(["identifier"])
+  N2([identifier])
   N1 -->|true| N2
   N1 -->|false| N2
-  N3(["identifier"])
+  N3([identifier])
   N2 -->|true| N3
   N2 -->|false| N3
-  N4(["identifier"])
+  N4([identifier])
   N3 -->|true| N4
   N3 -->|false| N4
-  N5(["identifier"])
+  N5([identifier])
   N4 -->|true| N5
   N4 -->|false| N5
-  N6(["identifier"])
+  N6([identifier])
   N5 -->|true| N6
   N5 -->|false| N6
-  N7(["identifier"])
+  N7([identifier])
   N6 -->|true| N7
   N6 -->|false| N7
-  N8(["identifier"])
+  N8([identifier])
   N7 -->|true| N8
   N7 -->|false| N8
-  N9(["scoped_identifier"])
+  N9([scoped_identifier])
   N8 -->|true| N9
   N8 -->|false| N9
-  N10(["scoped_identifier"])
+  N10([scoped_identifier])
   N9 -->|true| N10
   N9 -->|false| N10
-  N11(["scoped_identifier"])
+  N11([scoped_identifier])
   N10 -->|true| N11
   N10 -->|false| N11
-  N12(["identifier"])
+  N12([identifier])
   N11 -->|true| N12
   N11 -->|false| N12
-  N13(["identifier"])
+  N13([identifier])
   N12 -->|true| N13
   N12 -->|false| N13
-  N14(["identifier"])
+  N14([identifier])
   N13 -->|true| N14
   N13 -->|false| N14
-  N15(["scoped_identifier"])
+  N15([scoped_identifier])
   N14 -->|true| N15
   N14 -->|false| N15
-  N16(["scoped_identifier"])
+  N16([scoped_identifier])
   N15 -->|true| N16
   N15 -->|false| N16
-  N17(["scoped_identifier"])
+  N17([scoped_identifier])
   N16 -->|true| N17
   N16 -->|false| N17
-  N18(["identifier"])
+  N18([identifier])
   N17 -->|true| N18
   N17 -->|false| N18
-  N19(["identifier"])
+  N19([identifier])
   N18 -->|true| N19
   N18 -->|false| N19
-  N20(["identifier"])
+  N20([identifier])
   N19 -->|true| N20
   N19 -->|false| N20
-  N21(["scoped_identifier"])
+  N21([scoped_identifier])
   N20 -->|true| N21
   N20 -->|false| N21
-  N22(["scoped_identifier"])
+  N22([scoped_identifier])
   N21 -->|true| N22
   N21 -->|false| N22
-  N23(["identifier"])
+  N23([identifier])
   N22 -->|true| N23
   N22 -->|false| N23
-  N24(["identifier"])
+  N24([identifier])
   N23 -->|true| N24
   N23 -->|false| N24
-  N25(["identifier"])
+  N25([identifier])
   N24 -->|true| N25
   N24 -->|false| N25
-  N26(["identifier"])
+  N26([identifier])
   N25 -->|true| N26
   N25 -->|false| N26
-  N27(["scoped_identifier"])
+  N27([scoped_identifier])
   N26 -->|true| N27
   N26 -->|false| N27
-  N28(["identifier"])
+  N28([identifier])
   N27 -->|true| N28
   N27 -->|false| N28
-  N29(["identifier"])
+  N29([identifier])
   N28 -->|true| N29
   N28 -->|false| N29
-  N30(["visibility_modifier"])
+  N30([visibility_modifier])
   N29 -->|true| N30
   N29 -->|false| N30
-  N31(["type_identifier"])
+  N31([type_identifier])
   N30 -->|true| N31
   N30 -->|false| N31
-  N32(["field_identifier"])
+  N32([field_identifier])
   N31 -->|true| N32
   N31 -->|false| N32
-  N33(["type_identifier"])
+  N33([type_identifier])
   N32 -->|true| N33
   N32 -->|false| N33
-  N34(["type_identifier"])
+  N34([type_identifier])
   N33 -->|true| N34
   N33 -->|false| N34
-  N35(["visibility_modifier"])
+  N35([visibility_modifier])
   N34 -->|true| N35
   N34 -->|false| N35
-  N36(["function_modifiers"])
+  N36([function_modifiers])
   N35 -->|true| N36
   N35 -->|false| N36
-  N37(["identifier"])
+  N37([identifier])
   N36 -->|true| N37
   N36 -->|false| N37
-  N38(["identifier"])
+  N38([identifier])
   N37 -->|true| N38
   N37 -->|false| N38
-  N39(["type_identifier"])
+  N39([type_identifier])
   N38 -->|true| N39
   N38 -->|false| N39
-  N40(["type_identifier"])
+  N40([type_identifier])
   N39 -->|true| N40
   N39 -->|false| N40
-  N41(["type_identifier"])
+  N41([type_identifier])
   N40 -->|true| N41
   N40 -->|false| N41
-  N42(["call:Ok"])
+  N42([call:Ok])
   N41 --> N42
-  N43(["identifier"])
+  N43([identifier])
   N42 -->|true| N43
   N42 -->|false| N43
-  N44(["type_identifier"])
+  N44([type_identifier])
   N43 -->|true| N44
   N43 -->|false| N44
-  N45(["for"])
+  N45([for])
   N45 -->|repeat| N45
   N44 --> N45
-  N46(["type_identifier"])
+  N46([type_identifier])
   N45 -->|true| N46
   N45 -->|false| N46
-  N47(["identifier"])
+  N47([identifier])
   N46 -->|true| N47
   N46 -->|false| N47
-  N48(["type_identifier"])
+  N48([type_identifier])
   N47 -->|true| N48
   N47 -->|false| N48
-  N49(["scoped_identifier"])
+  N49([scoped_identifier])
   N48 -->|true| N49
   N48 -->|false| N49
-  N50(["identifier"])
+  N50([identifier])
   N49 -->|true| N50
   N49 -->|false| N50
-  N51(["identifier"])
+  N51([identifier])
   N50 -->|true| N51
   N50 -->|false| N51
-  N52(["identifier"])
+  N52([identifier])
   N51 -->|true| N52
   N51 -->|false| N52
-  N53(["type_identifier"])
+  N53([type_identifier])
   N52 -->|true| N53
   N52 -->|false| N53
-  N54(["type_identifier"])
+  N54([type_identifier])
   N53 -->|true| N54
   N53 -->|false| N54
-  N55(["identifier"])
+  N55([identifier])
   N54 -->|true| N55
   N54 -->|false| N55
-  N56(["identifier"])
+  N56([identifier])
   N55 -->|true| N56
   N55 -->|false| N56
-  N57(["identifier"])
+  N57([identifier])
   N56 -->|true| N57
   N56 -->|false| N57
-  N58(["identifier"])
+  N58([identifier])
   N57 -->|true| N58
   N57 -->|false| N58
-  N59(["identifier"])
+  N59([identifier])
   N58 -->|true| N59
   N58 -->|false| N59
-  N60(["identifier"])
+  N60([identifier])
   N59 -->|true| N60
   N59 -->|false| N60
-  N61(["identifier"])
+  N61([identifier])
   N60 -->|true| N61
   N60 -->|false| N61
-  N62(["identifier"])
+  N62([identifier])
   N61 -->|true| N62
   N61 -->|false| N62
-  N63(["identifier"])
+  N63([identifier])
   N62 -->|true| N63
   N62 -->|false| N63
-  N64(["function_modifiers"])
+  N64([function_modifiers])
   N63 -->|true| N64
   N63 -->|false| N64
-  N65(["identifier"])
+  N65([identifier])
   N64 -->|true| N65
   N64 -->|false| N65
-  N66(["type_identifier"])
+  N66([type_identifier])
   N65 -->|true| N66
   N65 -->|false| N66
-  N67(["call:Ok"])
+  N67([call:Ok])
   N66 --> N67
-  N68(["function_modifiers"])
+  N68([function_modifiers])
   N67 -->|true| N68
   N67 -->|false| N68
-  N69(["identifier"])
+  N69([identifier])
   N68 -->|true| N69
   N68 -->|false| N69
-  N70(["identifier"])
+  N70([identifier])
   N69 -->|true| N70
   N69 -->|false| N70
-  N71(["type_identifier"])
+  N71([type_identifier])
   N70 -->|true| N71
   N70 -->|false| N71
-  N72(["type_identifier"])
+  N72([type_identifier])
   N71 -->|true| N72
   N71 -->|false| N72
-  N73(["type_identifier"])
+  N73([type_identifier])
   N72 -->|true| N73
   N72 -->|false| N73
-  N74(["scoped_identifier"])
+  N74([scoped_identifier])
   N73 -->|true| N74
   N73 -->|false| N74
-  N75(["scoped_identifier"])
+  N75([scoped_identifier])
   N74 -->|true| N75
   N74 -->|false| N75
-  N76(["identifier"])
+  N76([identifier])
   N75 -->|true| N76
   N75 -->|false| N76
-  N77(["identifier"])
+  N77([identifier])
   N76 -->|true| N77
   N76 -->|false| N77
-  N78(["identifier"])
+  N78([identifier])
   N77 -->|true| N78
   N77 -->|false| N78
-  N79(["identifier"])
+  N79([identifier])
   N78 -->|true| N79
   N78 -->|false| N79
-  N80(["scoped_identifier"])
+  N80([scoped_identifier])
   N79 -->|true| N80
   N79 -->|false| N80
-  N81(["identifier"])
+  N81([identifier])
   N80 -->|true| N81
   N80 -->|false| N81
-  N82(["identifier"])
+  N82([identifier])
   N81 -->|true| N82
   N81 -->|false| N82
-  N83(["identifier"])
+  N83([identifier])
   N82 -->|true| N83
   N82 -->|false| N83
-  N84(["identifier"])
+  N84([identifier])
   N83 -->|true| N84
   N83 -->|false| N84
-  N85(["call:sleep"])
+  N85([call:sleep])
   N84 --> N85
-  N86(["call:Ok"])
+  N86([call:Ok])
   N85 --> N86
-  N87(["identifier"])
+  N87([identifier])
   N86 -->|true| N87
   N86 -->|false| N87
-  N88(["identifier"])
+  N88([identifier])
   N87 -->|true| N88
   N87 -->|false| N88
-  N89(["type_identifier"])
+  N89([type_identifier])
   N88 -->|true| N89
   N88 -->|false| N89
-  N90(["type_identifier"])
+  N90([type_identifier])
   N89 -->|true| N90
   N89 -->|false| N90
-  N91(["type_identifier"])
+  N91([type_identifier])
   N90 -->|true| N91
   N90 -->|false| N91
-  N92(["call:Some"])
+  N92([call:Some])
   N91 --> N92
-  N93(["identifier"])
+  N93([identifier])
   N92 -->|true| N93
   N92 -->|false| N93
-  N94(["type_identifier"])
+  N94([type_identifier])
   N93 -->|true| N94
   N93 -->|false| N94
-  N95(["type_identifier"])
+  N95([type_identifier])
   N94 -->|true| N95
   N94 -->|false| N95
-  N96(["call:Some"])
+  N96([call:Some])
   N95 --> N96
   N96 --> end
 
@@ -314,21 +548,375 @@
 
 </div></div>
 <div class="card"><h3>Symbols</h3>
-<ul>
-<li id="symbol-new"><code>new</code> <small>function</small></li>
-<li id="symbol-provider"><code>provider</code> <small>function</small></li>
-<li id="symbol-capabilities"><code>capabilities</code> <small>function</small></li>
-<li id="symbol-validate_connection"><code>validate_connection</code> <small>function</small></li>
-<li id="symbol-process_request"><code>process_request</code> <small>function</small></li>
-<li id="symbol-best_model_for_feature"><code>best_model_for_feature</code> <small>function</small></li>
-<li id="symbol-rate_limit_info"><code>rate_limit_info</code> <small>function</small></li>
-<li id="symbol-googleprovider"><code>GoogleProvider</code> <small>struct</small></li>
-<li id="symbol-googleprovider"><code>GoogleProvider</code> <small>impl</small></li>
-<li id="symbol-googleprovider"><code>GoogleProvider</code> <small>impl</small></li>
-
-</ul>
+<details><summary><strong>Functions</strong> <small>(7)</small></summary><ul><li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (15-17)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-15">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:15" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">15
+16
+17
+</pre>
+    <pre><code id="code-new-15" class="lang-rust hljs">    pub async fn new(config: ProviderConfig) -&gt; AIResult&lt;Self&gt; {
+        Ok(Self { config })
+    }</code></pre>
+  </div>
 </div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>function</small>
+<details><summary>View code (22-24)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-22">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:22" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">22
+23
+24
+</pre>
+    <pre><code id="code-provider-22" class="lang-rust hljs">    fn provider(&amp;self) -&gt; AIProvider {
+        AIProvider::Google
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-capabilities"><code>capabilities</code> <small>function</small>
+<details><summary>View code (26-35)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-capabilities-26">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:26" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+</pre>
+    <pre><code id="code-capabilities-26" class="lang-rust hljs">    fn capabilities(&amp;self) -&gt; Vec&lt;AICapability&gt; {
+        vec![
+            AICapability {
+                feature: AIFeature::CodeExplanation,
+                supported: true,
+                quality_score: 0.85,
+                description: &quot;Code explanations using Google AI models&quot;.to_string(),
+            },
+        ]
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validate-connection"><code>validate_connection</code> <small>function</small>
+<details><summary>View code (37-39)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validate_connection-37">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:37" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">37
+38
+39
+</pre>
+    <pre><code id="code-validate_connection-37" class="lang-rust hljs">    async fn validate_connection(&amp;self) -&gt; AIResult&lt;()&gt; {
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-process-request"><code>process_request</code> <small>function</small>
+<details><summary>View code (41-64)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-process_request-41">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:41" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+</pre>
+    <pre><code id="code-process_request-41" class="lang-rust hljs">    async fn process_request(&amp;self, request: AIRequest) -&gt; AIResult&lt;AIResponse&gt; {
+        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use std::time::{Duration, SystemTime};
+        
+        // Placeholder implementation
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        
+        Ok(AIResponse {
+            feature: request.feature,
+            content: format!(&quot;Google AI analysis: {}&quot;, request.content.chars().take(100).collect::&lt;String&gt;()),
+            structured_data: None,
+            confidence: Some(0.80),
+            token_usage: TokenUsage::new(60, 120),
+            metadata: ResponseMetadata {
+                request_id: request.metadata.request_id,
+                model_used: self.config.default_model.clone(),
+                provider: AIProvider::Google,
+                processing_time: Duration::from_millis(150),
+                cached: false,
+                timestamp: SystemTime::now(),
+                rate_limit_remaining: Some(75),
+            },
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-best-model-for-feature"><code>best_model_for_feature</code> <small>function</small>
+<details><summary>View code (66-68)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-best_model_for_feature-66">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:66" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">66
+67
+68
+</pre>
+    <pre><code id="code-best_model_for_feature-66" class="lang-rust hljs">    fn best_model_for_feature(&amp;self, _feature: AIFeature) -&gt; Option&lt;String&gt; {
+        Some(&quot;gemini-pro&quot;.to_string())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rate-limit-info"><code>rate_limit_info</code> <small>function</small>
+<details><summary>View code (70-78)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rate_limit_info-70">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:70" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">70
+71
+72
+73
+74
+75
+76
+77
+78
+</pre>
+    <pre><code id="code-rate_limit_info-70" class="lang-rust hljs">    fn rate_limit_info(&amp;self) -&gt; Option&lt;RateLimitInfo&gt; {
+        Some(RateLimitInfo {
+            requests_per_minute: self.config.rate_limit.requests_per_minute,
+            tokens_per_minute: self.config.rate_limit.tokens_per_minute,
+            remaining_requests: None,
+            remaining_tokens: None,
+            reset_time: None,
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(0)</small></summary><ul></ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(3)</small></summary><ul><li id="symbol-googleprovider"><code>GoogleProvider</code> <small>struct</small>
+<details><summary>View code (10-12)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-googleprovider-10">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:10" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">10
+11
+12
+</pre>
+    <pre><code id="code-googleprovider-10" class="lang-rust hljs">pub struct GoogleProvider {
+    config: ProviderConfig,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-googleprovider"><code>GoogleProvider</code> <small>impl</small>
+<details><summary>View code (14-18)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-googleprovider-14">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:14" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">14
+15
+16
+17
+18
+</pre>
+    <pre><code id="code-googleprovider-14" class="lang-rust hljs">impl GoogleProvider {
+    pub async fn new(config: ProviderConfig) -&gt; AIResult&lt;Self&gt; {
+        Ok(Self { config })
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-googleprovider"><code>GoogleProvider</code> <small>impl</small>
+<details><summary>View code (21-79)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-googleprovider-21">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/google.rs:21" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+</pre>
+    <pre><code id="code-googleprovider-21" class="lang-rust hljs">impl AIProviderImpl for GoogleProvider {
+    fn provider(&amp;self) -&gt; AIProvider {
+        AIProvider::Google
+    }
+    
+    fn capabilities(&amp;self) -&gt; Vec&lt;AICapability&gt; {
+        vec![
+            AICapability {
+                feature: AIFeature::CodeExplanation,
+                supported: true,
+                quality_score: 0.85,
+                description: &quot;Code explanations using Google AI models&quot;.to_string(),
+            },
+        ]
+    }
+    
+    async fn validate_connection(&amp;self) -&gt; AIResult&lt;()&gt; {
+        Ok(())
+    }
+    
+    async fn process_request(&amp;self, request: AIRequest) -&gt; AIResult&lt;AIResponse&gt; {
+        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use std::time::{Duration, SystemTime};
+        
+        // Placeholder implementation
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        
+        Ok(AIResponse {
+            feature: request.feature,
+            content: format!(&quot;Google AI analysis: {}&quot;, request.content.chars().take(100).collect::&lt;String&gt;()),
+            structured_data: None,
+            confidence: Some(0.80),
+            token_usage: TokenUsage::new(60, 120),
+            metadata: ResponseMetadata {
+                request_id: request.metadata.request_id,
+                model_used: self.config.default_model.clone(),
+                provider: AIProvider::Google,
+                processing_time: Duration::from_millis(150),
+                cached: false,
+                timestamp: SystemTime::now(),
+                rate_limit_remaining: Some(75),
+            },
+        })
+    }
+    
+    fn best_model_for_feature(&amp;self, _feature: AIFeature) -&gt; Option&lt;String&gt; {
+        Some(&quot;gemini-pro&quot;.to_string())
+    }
+    
+    fn rate_limit_info(&amp;self) -&gt; Option&lt;RateLimitInfo&gt; {
+        Some(RateLimitInfo {
+            requests_per_minute: self.config.rate_limit.requests_per_minute,
+            tokens_per_minute: self.config.rate_limit.tokens_per_minute,
+            remaining_requests: None,
+            remaining_tokens: None,
+            reset_time: None,
+        })
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
 
+</div>
 
 </section>
 </main>

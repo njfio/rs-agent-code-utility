@@ -1,0 +1,2678 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>examples/ast_transformation_demo.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>examples/ast_transformation_demo.rs</h1></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+<a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_groq.rs.html">src/ai/providers/groq.rs</a>
+<a href="src_ai_providers_local.rs.html">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+<a href="src_ai_service.rs.html">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html">src/ai/types.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+<a href="src_bin_main.rs.html">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+<a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+<a href="src_cli_error.rs.html">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+<a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html">src/constants.rs</a>
+<a href="src_control_flow.rs.html">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
+<a href="src_error.rs.html">src/error.rs</a>
+<a href="src_file_cache.rs.html">src/file_cache.rs</a>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+<a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+<a href="src_lib.rs.html">src/lib.rs</a>
+<a href="src_main.rs.html">src/main.rs</a>
+<a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html">src/performance_analysis.rs</a>
+<a href="src_query.rs.html">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html">src/refactoring.rs</a>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+<a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
+<a href="src_tree.rs.html">src/tree.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html">test_files/sample.go</a>
+<a href="test_files_sample.ts.html">test_files/sample.ts</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+<a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
+<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
+
+</nav>
+<section class="article">
+<p>17 symbols, 288 lines</p>
+<div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>The <code>examples/ast_transformation_demo.rs</code> file demonstrates how to parse, traverse, and transform a Rust Abstract Syntax Tree (AST) using the <code>syn</code> crate together with <code>quote</code> for code generation. It showcases a simple visitor that rewrites function names, adds logging statements, and then prints the transformed source code. This example serves as a practical reference for building procedural macros or source‑code analysis tools.</p>
+
+<h4>Deep Dive</h4><ul>
+<li><strong>function</strong> <a href="#symbol-main">main</a><br>Entry point that reads a Rust source file, parses it into an AST, applies transformations, and prints the result.</li>
+<li><strong>struct</strong> <a href="#symbol-transformer">Transformer</a><br>A mutable visitor that implements `syn::visit_mut::VisitMut` to perform in‑place AST modifications.</li>
+<li><strong>method</strong> <a href="#symbol-rename-function">rename_function</a><br>Utility that constructs a new identifier for a function based on a naming convention.</li>
+<li><strong>method</strong> <a href="#symbol-inject-logging">inject_logging</a><br>Inserts a `println!` macro call at the beginning of a function body.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>fn parse_file(src: &amp;str) -&gt; Result&lt;File, syn::Error&gt;</code><br><small>Parses a complete Rust source file into a `syn::File` AST. Used in `main` to obtain the mutable AST representation.</small></li>
+<li><code>trait VisitMut { fn visit_item_fn_mut(&amp;mut self, i: &amp;mut ItemFn); /* … */ }</code><br><small>Implemented by `Transformer` to walk and mutate the AST in place.</small></li>
+<li><code>macro quote! { $($tt:tt)* } -&gt; proc_macro2::TokenStream</code><br><small>Generates new Rust code fragments (e.g., the logging statement) that are inserted into the AST.</small></li>
+<li><code>fn new&lt;S: AsRef&lt;str&gt;&gt;(s: S, span: Span) -&gt; Ident</code><br><small>Creates a fresh identifier when renaming functions.</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Full transformation pipeline</h5>
+<div class="card"><pre><code class="lang-rust">use anyhow::Result;
+use quote::ToTokens;
+use syn::{parse_file, visit_mut::VisitMut, ItemFn, Ident};
+use proc_macro2::Span;
+
+struct Transformer {
+    add_logging: bool,
+}
+
+impl Transformer {
+    fn new() -&gt; Self { Self { add_logging: true } }
+
+    fn rename_function(&amp;self, orig: &amp;Ident) -&gt; Ident {
+        Ident::new(&amp;format!(&quot;transformed_{}&quot;, orig), Span::call_site())
+    }
+
+    fn inject_logging(&amp;self, fn_name: &amp;Ident, block: &amp;mut syn::Block) {
+        let stmt: syn::Stmt = syn::parse_quote! {
+            println!(&quot;Entering {}&quot;, stringify!(#fn_name));
+        };
+        block.stmts.insert(0, stmt);
+    }
+}
+
+impl VisitMut for Transformer {
+    fn visit_item_fn_mut(&amp;mut self, i: &amp;mut ItemFn) {
+        // rename
+        i.sig.ident = self.rename_function(&amp;i.sig.ident);
+        // optional logging
+        if self.add_logging {
+            self.inject_logging(&amp;i.sig.ident, &amp;mut i.block);
+        }
+        // continue walking nested items
+        syn::visit_mut::visit_item_fn_mut(self, i);
+    }
+}
+
+fn main() -&gt; Result&lt;()&gt; {
+    let src = std::fs::read_to_string(&quot;src/lib.rs&quot;)?;
+    let mut ast = parse_file(&amp;src)?;
+    Transformer::new().visit_file_mut(&amp;mut ast);
+    println!(&quot;{}&quot;, ast.into_token_stream());
+    Ok(())
+}</code></pre><p>The example reads a source file, parses it, applies the <code>Transformer</code> visitor to rename each function and prepend a logging statement, then prints the transformed source. It demonstrates the typical workflow for AST‑based code generation.</p>
+</div>
+<h4>Security</h4>
+<strong>Risks</strong><ul>
+<li>If the transformed code is later compiled from untrusted input, malicious macro expansions could be injected via crafted identifiers.</li>
+<li>Using `quote!` with interpolated user data without sanitization may lead to code injection.</li>
+</ul>
+<strong>Mitigations</strong><ul>
+<li>Validate or whitelist identifiers before renaming or inserting them into the AST.</li>
+<li>Prefer `syn::parse_str` over `quote!` for user‑provided snippets, as it performs syntax validation.</li>
+<li>Run the generated code in a sandboxed environment when dealing with untrusted sources.</li>
+</ul>
+<h4>Performance</h4>
+<strong>Concerns</strong><ul>
+<li>Parsing and visiting the entire AST is O(n) in the size of the source; very large crates may incur noticeable latency.</li>
+<li>Repeatedly allocating new `Ident` objects can increase memory pressure.</li>
+</ul>
+<strong>Tips</strong><ul>
+<li>Cache the result of `parse_file` when performing multiple passes.</li>
+<li>Reuse a single `Transformer` instance across files to avoid repeated allocations of configuration data.</li>
+<li>Enable the `nightly` feature `proc_macro_span` if precise span preservation is required without extra copying.</li>
+</ul>
+<h4>Related</h4><ul>
+<li><a href="pages/examples_proc_macro_demo.rs.html">examples/proc_macro_demo.rs</a> - Shows how to turn the same AST transformation logic into a procedural macro.</li>
+<li><a href="pages/src_lib.rs.html">src/lib.rs</a> - Contains the library code that the demo parses and transforms.</li>
+<li><a href="pages/Cargo.toml.html">Cargo.toml</a> - Lists the `syn`, `quote`, and `anyhow` dependencies required for the example.</li>
+</ul>
+</div>
+
+<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
+  start([Start])
+  end([End])
+  start --> N0
+  N0([identifier])
+  N1([identifier])
+  N0 -->|true| N1
+  N0 -->|false| N1
+  N2([identifier])
+  N1 -->|true| N2
+  N1 -->|false| N2
+  N3([identifier])
+  N2 -->|true| N3
+  N2 -->|false| N3
+  N4([identifier])
+  N3 -->|true| N4
+  N3 -->|false| N4
+  N5([identifier])
+  N4 -->|true| N5
+  N4 -->|false| N5
+  N6([identifier])
+  N5 -->|true| N6
+  N5 -->|false| N6
+  N7([identifier])
+  N6 -->|true| N7
+  N6 -->|false| N7
+  N8([identifier])
+  N7 -->|true| N8
+  N7 -->|false| N8
+  N9([scoped_identifier])
+  N8 -->|true| N9
+  N8 -->|false| N9
+  N10([identifier])
+  N9 -->|true| N10
+  N9 -->|false| N10
+  N11([identifier])
+  N10 -->|true| N11
+  N10 -->|false| N11
+  N12([identifier])
+  N11 -->|true| N12
+  N11 -->|false| N12
+  N13([identifier])
+  N12 -->|true| N13
+  N12 -->|false| N13
+  N14([identifier])
+  N13 -->|true| N14
+  N13 -->|false| N14
+  N15([identifier])
+  N14 -->|true| N15
+  N14 -->|false| N15
+  N16([identifier])
+  N15 -->|true| N16
+  N15 -->|false| N16
+  N17([scoped_identifier])
+  N16 -->|true| N17
+  N16 -->|false| N17
+  N18([identifier])
+  N17 -->|true| N18
+  N17 -->|false| N18
+  N19([identifier])
+  N18 -->|true| N19
+  N18 -->|false| N19
+  N20([scoped_identifier])
+  N19 -->|true| N20
+  N19 -->|false| N20
+  N21([scoped_identifier])
+  N20 -->|true| N21
+  N20 -->|false| N21
+  N22([identifier])
+  N21 -->|true| N22
+  N21 -->|false| N22
+  N23([identifier])
+  N22 -->|true| N23
+  N22 -->|false| N23
+  N24([identifier])
+  N23 -->|true| N24
+  N23 -->|false| N24
+  N25([identifier])
+  N24 -->|true| N25
+  N24 -->|false| N25
+  N26([type_identifier])
+  N25 -->|true| N26
+  N25 -->|false| N26
+  N27([type_identifier])
+  N26 -->|true| N27
+  N26 -->|false| N27
+  N28([scoped_type_identifier])
+  N27 -->|true| N28
+  N27 -->|false| N28
+  N29([scoped_identifier])
+  N28 -->|true| N29
+  N28 -->|false| N29
+  N30([identifier])
+  N29 -->|true| N30
+  N29 -->|false| N30
+  N31([identifier])
+  N30 -->|true| N31
+  N30 -->|false| N31
+  N32([type_identifier])
+  N31 -->|true| N32
+  N31 -->|false| N32
+  N33([identifier])
+  N32 -->|true| N33
+  N32 -->|false| N33
+  N34([identifier])
+  N33 -->|true| N34
+  N33 -->|false| N34
+  N35([identifier])
+  N34 -->|true| N35
+  N34 -->|false| N35
+  N36([call:new])
+  N35 --> N36
+  N37([identifier])
+  N36 -->|true| N37
+  N36 -->|false| N37
+  N38([identifier])
+  N37 -->|true| N38
+  N37 -->|false| N38
+  N39([identifier])
+  N38 -->|true| N39
+  N38 -->|false| N39
+  N40([identifier])
+  N39 -->|true| N40
+  N39 -->|false| N40
+  N41([identifier])
+  N40 -->|true| N41
+  N40 -->|false| N41
+  N42([identifier])
+  N41 -->|true| N42
+  N41 -->|false| N42
+  N43([identifier])
+  N42 -->|true| N43
+  N42 -->|false| N43
+  N44([identifier])
+  N43 -->|true| N44
+  N43 -->|false| N44
+  N45([type_identifier])
+  N44 -->|true| N45
+  N44 -->|false| N45
+  N46([field_identifier])
+  N45 -->|true| N46
+  N45 -->|false| N46
+  N47([call:to_string])
+  N46 --> N47
+  N48([field_identifier])
+  N47 -->|true| N48
+  N47 -->|false| N48
+  N49([scoped_identifier])
+  N48 -->|true| N49
+  N48 -->|false| N49
+  N50([identifier])
+  N49 -->|true| N50
+  N49 -->|false| N50
+  N51([identifier])
+  N50 -->|true| N51
+  N50 -->|false| N51
+  N52([field_identifier])
+  N51 -->|true| N52
+  N51 -->|false| N52
+  N53([type_identifier])
+  N52 -->|true| N53
+  N52 -->|false| N53
+  N54([field_identifier])
+  N53 -->|true| N54
+  N53 -->|false| N54
+  N55([call:from])
+  N54 --> N55
+  N56([field_identifier])
+  N55 -->|true| N56
+  N55 -->|false| N56
+  N57([type_identifier])
+  N56 -->|true| N57
+  N56 -->|false| N57
+  N58([field_identifier])
+  N57 -->|true| N58
+  N57 -->|false| N58
+  N59([field_identifier])
+  N58 -->|true| N59
+  N58 -->|false| N59
+  N60([field_identifier])
+  N59 -->|true| N60
+  N59 -->|false| N60
+  N61([field_identifier])
+  N60 -->|true| N61
+  N60 -->|false| N61
+  N62([type_identifier])
+  N61 -->|true| N62
+  N61 -->|false| N62
+  N63([field_identifier])
+  N62 -->|true| N63
+  N62 -->|false| N63
+  N64([field_identifier])
+  N63 -->|true| N64
+  N63 -->|false| N64
+  N65([field_identifier])
+  N64 -->|true| N65
+  N64 -->|false| N65
+  N66([field_identifier])
+  N65 -->|true| N66
+  N65 -->|false| N66
+  N67([call:to_string])
+  N66 --> N67
+  N68([field_identifier])
+  N67 -->|true| N68
+  N67 -->|false| N68
+  N69([call:to_string])
+  N68 --> N69
+  N70([field_identifier])
+  N69 -->|true| N70
+  N69 -->|false| N70
+  N71([call:to_string])
+  N70 --> N71
+  N72([field_identifier])
+  N71 -->|true| N72
+  N71 -->|false| N72
+  N73([type_identifier])
+  N72 -->|true| N73
+  N72 -->|false| N73
+  N74([field_identifier])
+  N73 -->|true| N74
+  N73 -->|false| N74
+  N75([call:to_string])
+  N74 --> N75
+  N76([field_identifier])
+  N75 -->|true| N76
+  N75 -->|false| N76
+  N77([field_identifier])
+  N76 -->|true| N77
+  N76 -->|false| N77
+  N78([type_identifier])
+  N77 -->|true| N78
+  N77 -->|false| N78
+  N79([field_identifier])
+  N78 -->|true| N79
+  N78 -->|false| N79
+  N80([scoped_identifier])
+  N79 -->|true| N80
+  N79 -->|false| N80
+  N81([identifier])
+  N80 -->|true| N81
+  N80 -->|false| N81
+  N82([identifier])
+  N81 -->|true| N82
+  N81 -->|false| N82
+  N83([field_identifier])
+  N82 -->|true| N83
+  N82 -->|false| N83
+  N84([scoped_identifier])
+  N83 -->|true| N84
+  N83 -->|false| N84
+  N85([identifier])
+  N84 -->|true| N85
+  N84 -->|false| N85
+  N86([identifier])
+  N85 -->|true| N86
+  N85 -->|false| N86
+  N87([field_identifier])
+  N86 -->|true| N87
+  N86 -->|false| N87
+  N88([field_identifier])
+  N87 -->|true| N88
+  N87 -->|false| N88
+  N89([identifier])
+  N88 -->|true| N89
+  N88 -->|false| N89
+  N90([identifier])
+  N89 -->|true| N90
+  N89 -->|false| N90
+  N91([field_identifier])
+  N90 -->|true| N91
+  N90 -->|false| N91
+  N92([call:new])
+  N91 --> N92
+  N93([field_identifier])
+  N92 -->|true| N93
+  N92 -->|false| N93
+  N94([call:new])
+  N93 --> N94
+  N95([field_identifier])
+  N94 -->|true| N95
+  N94 -->|false| N95
+  N96([identifier])
+  N95 -->|true| N96
+  N95 -->|false| N96
+  N97([field_identifier])
+  N96 -->|true| N97
+  N96 -->|false| N97
+  N98([identifier])
+  N97 -->|true| N98
+  N97 -->|false| N98
+  N99([identifier])
+  N98 -->|true| N99
+  N98 -->|false| N99
+  N100([call:apply_transformation])
+  N99 --> N100
+  N101([if_expression])
+  N100 -->|true| N101
+  N100 -->|false| N101
+  N102([if])
+  N101 -->|true| N102
+  N101 -->|false| N102
+  N103([identifier])
+  N102 -->|true| N103
+  N102 -->|false| N103
+  N104([field_identifier])
+  N103 -->|true| N104
+  N103 -->|false| N104
+  N105([identifier])
+  N104 -->|true| N105
+  N104 -->|false| N105
+  N106([identifier])
+  N105 -->|true| N106
+  N105 -->|false| N106
+  N107([identifier])
+  N106 -->|true| N107
+  N106 -->|false| N107
+  N108([identifier])
+  N107 -->|true| N108
+  N107 -->|false| N108
+  N109([identifier])
+  N108 -->|true| N109
+  N108 -->|false| N109
+  N110([identifier])
+  N109 -->|true| N110
+  N109 -->|false| N110
+  N111([identifier])
+  N110 -->|true| N111
+  N110 -->|false| N111
+  N112([identifier])
+  N111 -->|true| N112
+  N111 -->|false| N112
+  N113([identifier])
+  N112 -->|true| N113
+  N112 -->|false| N113
+  N114([identifier])
+  N113 -->|true| N114
+  N113 -->|false| N114
+  N115([for_expression])
+  N115 -->|repeat| N115
+  N114 --> N115
+  N116([for])
+  N116 -->|repeat| N116
+  N115 --> N116
+  N117([identifier])
+  N116 -->|true| N117
+  N116 -->|false| N117
+  N118([identifier])
+  N117 -->|true| N118
+  N117 -->|false| N118
+  N119([field_identifier])
+  N118 -->|true| N119
+  N118 -->|false| N119
+  N120([identifier])
+  N119 -->|true| N120
+  N119 -->|false| N120
+  N121([identifier])
+  N120 -->|true| N121
+  N120 -->|false| N121
+  N122([identifier])
+  N121 -->|true| N122
+  N121 -->|false| N122
+  N123([identifier])
+  N122 -->|true| N123
+  N122 -->|false| N123
+  N124([identifier])
+  N123 -->|true| N124
+  N123 -->|false| N124
+  N125([identifier])
+  N124 -->|true| N125
+  N124 -->|false| N125
+  N126([identifier])
+  N125 -->|true| N126
+  N125 -->|false| N126
+  N127([identifier])
+  N126 -->|true| N127
+  N126 -->|false| N127
+  N128([identifier])
+  N127 -->|true| N128
+  N127 -->|false| N128
+  N129([identifier])
+  N128 -->|true| N129
+  N128 -->|false| N129
+  N130([identifier])
+  N129 -->|true| N130
+  N129 -->|false| N130
+  N131([identifier])
+  N130 -->|true| N131
+  N130 -->|false| N131
+  N132([identifier])
+  N131 -->|true| N132
+  N131 -->|false| N132
+  N133([identifier])
+  N132 -->|true| N133
+  N132 -->|false| N133
+  N134([identifier])
+  N133 -->|true| N134
+  N133 -->|false| N134
+  N135([identifier])
+  N134 -->|true| N135
+  N134 -->|false| N135
+  N136([identifier])
+  N135 -->|true| N136
+  N135 -->|false| N136
+  N137([identifier])
+  N136 -->|true| N137
+  N136 -->|false| N137
+  N138([identifier])
+  N137 -->|true| N138
+  N137 -->|false| N138
+  N139([identifier])
+  N138 -->|true| N139
+  N138 -->|false| N139
+  N140([identifier])
+  N139 -->|true| N140
+  N139 -->|false| N140
+  N141([identifier])
+  N140 -->|true| N141
+  N140 -->|false| N141
+  N142([identifier])
+  N141 -->|true| N142
+  N141 -->|false| N142
+  N143([identifier])
+  N142 -->|true| N143
+  N142 -->|false| N143
+  N144([identifier])
+  N143 -->|true| N144
+  N143 -->|false| N144
+  N145([identifier])
+  N144 -->|true| N145
+  N144 -->|false| N145
+  N146([identifier])
+  N145 -->|true| N146
+  N145 -->|false| N146
+  N147([identifier])
+  N146 -->|true| N147
+  N146 -->|false| N147
+  N148([identifier])
+  N147 -->|true| N148
+  N147 -->|false| N148
+  N149([identifier])
+  N148 -->|true| N149
+  N148 -->|false| N149
+  N150([identifier])
+  N149 -->|true| N150
+  N149 -->|false| N150
+  N151([identifier])
+  N150 -->|true| N151
+  N150 -->|false| N151
+  N152([identifier])
+  N151 -->|true| N152
+  N151 -->|false| N152
+  N153([identifier])
+  N152 -->|true| N153
+  N152 -->|false| N153
+  N154([identifier])
+  N153 -->|true| N154
+  N153 -->|false| N154
+  N155([identifier])
+  N154 -->|true| N155
+  N154 -->|false| N155
+  N156([identifier])
+  N155 -->|true| N156
+  N155 -->|false| N156
+  N157([identifier])
+  N156 -->|true| N157
+  N156 -->|false| N157
+  N158([identifier])
+  N157 -->|true| N158
+  N157 -->|false| N158
+  N159([identifier])
+  N158 -->|true| N159
+  N158 -->|false| N159
+  N160([identifier])
+  N159 -->|true| N160
+  N159 -->|false| N160
+  N161([identifier])
+  N160 -->|true| N161
+  N160 -->|false| N161
+  N162([identifier])
+  N161 -->|true| N162
+  N161 -->|false| N162
+  N163([identifier])
+  N162 -->|true| N163
+  N162 -->|false| N163
+  N164([identifier])
+  N163 -->|true| N164
+  N163 -->|false| N164
+  N165([identifier])
+  N164 -->|true| N165
+  N164 -->|false| N165
+  N166([identifier])
+  N165 -->|true| N166
+  N165 -->|false| N166
+  N167([identifier])
+  N166 -->|true| N167
+  N166 -->|false| N167
+  N168([identifier])
+  N167 -->|true| N168
+  N167 -->|false| N168
+  N169([identifier])
+  N168 -->|true| N169
+  N168 -->|false| N169
+  N170([identifier])
+  N169 -->|true| N170
+  N169 -->|false| N170
+  N171([identifier])
+  N170 -->|true| N171
+  N170 -->|false| N171
+  N172([identifier])
+  N171 -->|true| N172
+  N171 -->|false| N172
+  N173([identifier])
+  N172 -->|true| N173
+  N172 -->|false| N173
+  N174([identifier])
+  N173 -->|true| N174
+  N173 -->|false| N174
+  N175([identifier])
+  N174 -->|true| N175
+  N174 -->|false| N175
+  N176([identifier])
+  N175 -->|true| N176
+  N175 -->|false| N176
+  N177([identifier])
+  N176 -->|true| N177
+  N176 -->|false| N177
+  N178([identifier])
+  N177 -->|true| N178
+  N177 -->|false| N178
+  N179([identifier])
+  N178 -->|true| N179
+  N178 -->|false| N179
+  N180([identifier])
+  N179 -->|true| N180
+  N179 -->|false| N180
+  N181([identifier])
+  N180 -->|true| N181
+  N180 -->|false| N181
+  N182([identifier])
+  N181 -->|true| N182
+  N181 -->|false| N182
+  N183([identifier])
+  N182 -->|true| N183
+  N182 -->|false| N183
+  N184([identifier])
+  N183 -->|true| N184
+  N183 -->|false| N184
+  N185([identifier])
+  N184 -->|true| N185
+  N184 -->|false| N185
+  N186([identifier])
+  N185 -->|true| N186
+  N185 -->|false| N186
+  N187([identifier])
+  N186 -->|true| N187
+  N186 -->|false| N187
+  N188([identifier])
+  N187 -->|true| N188
+  N187 -->|false| N188
+  N189([identifier])
+  N188 -->|true| N189
+  N188 -->|false| N189
+  N190([identifier])
+  N189 -->|true| N190
+  N189 -->|false| N190
+  N191([identifier])
+  N190 -->|true| N191
+  N190 -->|false| N191
+  N192([identifier])
+  N191 -->|true| N192
+  N191 -->|false| N192
+  N193([identifier])
+  N192 -->|true| N193
+  N192 -->|false| N193
+  N194([identifier])
+  N193 -->|true| N194
+  N193 -->|false| N194
+  N195([identifier])
+  N194 -->|true| N195
+  N194 -->|false| N195
+  N196([identifier])
+  N195 -->|true| N196
+  N195 -->|false| N196
+  N197([identifier])
+  N196 -->|true| N197
+  N196 -->|false| N197
+  N198([identifier])
+  N197 -->|true| N198
+  N197 -->|false| N198
+  N199([identifier])
+  N198 -->|true| N199
+  N198 -->|false| N199
+  N200([identifier])
+  N199 -->|true| N200
+  N199 -->|false| N200
+  N201([identifier])
+  N200 -->|true| N201
+  N200 -->|false| N201
+  N202([identifier])
+  N201 -->|true| N202
+  N201 -->|false| N202
+  N203([identifier])
+  N202 -->|true| N203
+  N202 -->|false| N203
+  N204([identifier])
+  N203 -->|true| N204
+  N203 -->|false| N204
+  N205([identifier])
+  N204 -->|true| N205
+  N204 -->|false| N205
+  N206([identifier])
+  N205 -->|true| N206
+  N205 -->|false| N206
+  N207([identifier])
+  N206 -->|true| N207
+  N206 -->|false| N207
+  N208([identifier])
+  N207 -->|true| N208
+  N207 -->|false| N208
+  N209([identifier])
+  N208 -->|true| N209
+  N208 -->|false| N209
+  N210([identifier])
+  N209 -->|true| N210
+  N209 -->|false| N210
+  N211([identifier])
+  N210 -->|true| N211
+  N210 -->|false| N211
+  N212([identifier])
+  N211 -->|true| N212
+  N211 -->|false| N212
+  N213([identifier])
+  N212 -->|true| N213
+  N212 -->|false| N213
+  N214([identifier])
+  N213 -->|true| N214
+  N213 -->|false| N214
+  N215([identifier])
+  N214 -->|true| N215
+  N214 -->|false| N215
+  N216([identifier])
+  N215 -->|true| N216
+  N215 -->|false| N216
+  N217([identifier])
+  N216 -->|true| N217
+  N216 -->|false| N217
+  N218([identifier])
+  N217 -->|true| N218
+  N217 -->|false| N218
+  N219([identifier])
+  N218 -->|true| N219
+  N218 -->|false| N219
+  N220([identifier])
+  N219 -->|true| N220
+  N219 -->|false| N220
+  N221([identifier])
+  N220 -->|true| N221
+  N220 -->|false| N221
+  N222([identifier])
+  N221 -->|true| N222
+  N221 -->|false| N222
+  N223([identifier])
+  N222 -->|true| N223
+  N222 -->|false| N223
+  N224([identifier])
+  N223 -->|true| N224
+  N223 -->|false| N224
+  N225([identifier])
+  N224 -->|true| N225
+  N224 -->|false| N225
+  N226([identifier])
+  N225 -->|true| N226
+  N225 -->|false| N226
+  N227([identifier])
+  N226 -->|true| N227
+  N226 -->|false| N227
+  N228([identifier])
+  N227 -->|true| N228
+  N227 -->|false| N228
+  N229([identifier])
+  N228 -->|true| N229
+  N228 -->|false| N229
+  N230([identifier])
+  N229 -->|true| N230
+  N229 -->|false| N230
+  N231([identifier])
+  N230 -->|true| N231
+  N230 -->|false| N231
+  N232([identifier])
+  N231 -->|true| N232
+  N231 -->|false| N232
+  N233([identifier])
+  N232 -->|true| N233
+  N232 -->|false| N233
+  N234([identifier])
+  N233 -->|true| N234
+  N233 -->|false| N234
+  N235([identifier])
+  N234 -->|true| N235
+  N234 -->|false| N235
+  N236([identifier])
+  N235 -->|true| N236
+  N235 -->|false| N236
+  N237([identifier])
+  N236 -->|true| N237
+  N236 -->|false| N237
+  N238([identifier])
+  N237 -->|true| N238
+  N237 -->|false| N238
+  N239([identifier])
+  N238 -->|true| N239
+  N238 -->|false| N239
+  N240([call:apply_transformations])
+  N239 --> N240
+  N241([if_expression])
+  N240 -->|true| N241
+  N240 -->|false| N241
+  N242([if])
+  N241 -->|true| N242
+  N241 -->|false| N242
+  N243([identifier])
+  N242 -->|true| N243
+  N242 -->|false| N243
+  N244([field_identifier])
+  N243 -->|true| N244
+  N243 -->|false| N244
+  N245([identifier])
+  N244 -->|true| N245
+  N244 -->|false| N245
+  N246([identifier])
+  N245 -->|true| N246
+  N245 -->|false| N246
+  N247([identifier])
+  N246 -->|true| N247
+  N246 -->|false| N247
+  N248([identifier])
+  N247 -->|true| N248
+  N247 -->|false| N248
+  N249([identifier])
+  N248 -->|true| N249
+  N248 -->|false| N249
+  N250([identifier])
+  N249 -->|true| N250
+  N249 -->|false| N250
+  N251([identifier])
+  N250 -->|true| N251
+  N250 -->|false| N251
+  N252([identifier])
+  N251 -->|true| N252
+  N251 -->|false| N252
+  N253([identifier])
+  N252 -->|true| N253
+  N252 -->|false| N253
+  N254([identifier])
+  N253 -->|true| N254
+  N253 -->|false| N254
+  N255([identifier])
+  N254 -->|true| N255
+  N254 -->|false| N255
+  N256([identifier])
+  N255 -->|true| N256
+  N255 -->|false| N256
+  N257([identifier])
+  N256 -->|true| N257
+  N256 -->|false| N257
+  N258([identifier])
+  N257 -->|true| N258
+  N257 -->|false| N258
+  N259([identifier])
+  N258 -->|true| N259
+  N258 -->|false| N259
+  N260([identifier])
+  N259 -->|true| N260
+  N259 -->|false| N260
+  N261([identifier])
+  N260 -->|true| N261
+  N260 -->|false| N261
+  N262([identifier])
+  N261 -->|true| N262
+  N261 -->|false| N262
+  N263([identifier])
+  N262 -->|true| N263
+  N262 -->|false| N263
+  N264([identifier])
+  N263 -->|true| N264
+  N263 -->|false| N264
+  N265([identifier])
+  N264 -->|true| N265
+  N264 -->|false| N265
+  N266([identifier])
+  N265 -->|true| N266
+  N265 -->|false| N266
+  N267([identifier])
+  N266 -->|true| N267
+  N266 -->|false| N267
+  N268([identifier])
+  N267 -->|true| N268
+  N267 -->|false| N268
+  N269([identifier])
+  N268 -->|true| N269
+  N268 -->|false| N269
+  N270([type_identifier])
+  N269 -->|true| N270
+  N269 -->|false| N270
+  N271([field_identifier])
+  N270 -->|true| N271
+  N270 -->|false| N271
+  N272([field_identifier])
+  N271 -->|true| N272
+  N271 -->|false| N272
+  N273([field_identifier])
+  N272 -->|true| N273
+  N272 -->|false| N273
+  N274([field_identifier])
+  N273 -->|true| N274
+  N273 -->|false| N274
+  N275([field_identifier])
+  N274 -->|true| N275
+  N274 -->|false| N275
+  N276([identifier])
+  N275 -->|true| N276
+  N275 -->|false| N276
+  N277([call:with_config])
+  N276 --> N277
+  N278([identifier])
+  N277 -->|true| N278
+  N277 -->|false| N278
+  N279([call:new])
+  N278 --> N279
+  N280([identifier])
+  N279 -->|true| N280
+  N279 -->|false| N280
+  N281([identifier])
+  N280 -->|true| N281
+  N280 -->|false| N281
+  N282([call:parse])
+  N281 --> N282
+  N283([identifier])
+  N282 -->|true| N283
+  N282 -->|false| N283
+  N284([identifier])
+  N283 -->|true| N284
+  N283 -->|false| N284
+  N285([identifier])
+  N284 -->|true| N285
+  N284 -->|false| N285
+  N286([type_identifier])
+  N285 -->|true| N286
+  N285 -->|false| N286
+  N287([field_identifier])
+  N286 -->|true| N287
+  N286 -->|false| N287
+  N288([call:to_string])
+  N287 --> N288
+  N289([field_identifier])
+  N288 -->|true| N289
+  N288 -->|false| N289
+  N290([scoped_identifier])
+  N289 -->|true| N290
+  N289 -->|false| N290
+  N291([identifier])
+  N290 -->|true| N291
+  N290 -->|false| N291
+  N292([identifier])
+  N291 -->|true| N292
+  N291 -->|false| N292
+  N293([field_identifier])
+  N292 -->|true| N293
+  N292 -->|false| N293
+  N294([type_identifier])
+  N293 -->|true| N294
+  N293 -->|false| N294
+  N295([field_identifier])
+  N294 -->|true| N295
+  N294 -->|false| N295
+  N296([call:from])
+  N295 --> N296
+  N297([field_identifier])
+  N296 -->|true| N297
+  N296 -->|false| N297
+  N298([type_identifier])
+  N297 -->|true| N298
+  N297 -->|false| N298
+  N299([field_identifier])
+  N298 -->|true| N299
+  N298 -->|false| N299
+  N300([field_identifier])
+  N299 -->|true| N300
+  N299 -->|false| N300
+  N301([field_identifier])
+  N300 -->|true| N301
+  N300 -->|false| N301
+  N302([field_identifier])
+  N301 -->|true| N302
+  N301 -->|false| N302
+  N303([type_identifier])
+  N302 -->|true| N303
+  N302 -->|false| N303
+  N304([field_identifier])
+  N303 -->|true| N304
+  N303 -->|false| N304
+  N305([field_identifier])
+  N304 -->|true| N305
+  N304 -->|false| N305
+  N306([field_identifier])
+  N305 -->|true| N306
+  N305 -->|false| N306
+  N307([field_identifier])
+  N306 -->|true| N307
+  N306 -->|false| N307
+  N308([call:to_string])
+  N307 --> N308
+  N309([field_identifier])
+  N308 -->|true| N309
+  N308 -->|false| N309
+  N310([call:to_string])
+  N309 --> N310
+  N311([field_identifier])
+  N310 -->|true| N311
+  N310 -->|false| N311
+  N312([call:to_string])
+  N311 --> N312
+  N313([field_identifier])
+  N312 -->|true| N313
+  N312 -->|false| N313
+  N314([type_identifier])
+  N313 -->|true| N314
+  N313 -->|false| N314
+  N315([field_identifier])
+  N314 -->|true| N315
+  N314 -->|false| N315
+  N316([call:to_string])
+  N315 --> N316
+  N317([field_identifier])
+  N316 -->|true| N317
+  N316 -->|false| N317
+  N318([field_identifier])
+  N317 -->|true| N318
+  N317 -->|false| N318
+  N319([type_identifier])
+  N318 -->|true| N319
+  N318 -->|false| N319
+  N320([field_identifier])
+  N319 -->|true| N320
+  N319 -->|false| N320
+  N321([scoped_identifier])
+  N320 -->|true| N321
+  N320 -->|false| N321
+  N322([identifier])
+  N321 -->|true| N322
+  N321 -->|false| N322
+  N323([identifier])
+  N322 -->|true| N323
+  N322 -->|false| N323
+  N324([field_identifier])
+  N323 -->|true| N324
+  N323 -->|false| N324
+  N325([scoped_identifier])
+  N324 -->|true| N325
+  N324 -->|false| N325
+  N326([identifier])
+  N325 -->|true| N326
+  N325 -->|false| N326
+  N327([identifier])
+  N326 -->|true| N327
+  N326 -->|false| N327
+  N328([field_identifier])
+  N327 -->|true| N328
+  N327 -->|false| N328
+  N329([field_identifier])
+  N328 -->|true| N329
+  N328 -->|false| N329
+  N330([identifier])
+  N329 -->|true| N330
+  N329 -->|false| N330
+  N331([identifier])
+  N330 -->|true| N331
+  N330 -->|false| N331
+  N332([field_identifier])
+  N331 -->|true| N332
+  N331 -->|false| N332
+  N333([identifier])
+  N332 -->|true| N333
+  N332 -->|false| N333
+  N334([identifier])
+  N333 -->|true| N334
+  N333 -->|false| N334
+  N335([field_identifier])
+  N334 -->|true| N335
+  N334 -->|false| N335
+  N336([call:new])
+  N335 --> N336
+  N337([field_identifier])
+  N336 -->|true| N337
+  N336 -->|false| N337
+  N338([identifier])
+  N337 -->|true| N338
+  N337 -->|false| N338
+  N339([field_identifier])
+  N338 -->|true| N339
+  N338 -->|false| N339
+  N340([identifier])
+  N339 -->|true| N340
+  N339 -->|false| N340
+  N341([identifier])
+  N340 -->|true| N341
+  N340 -->|false| N341
+  N342([call:validate_transformation])
+  N341 --> N342
+  N343([identifier])
+  N342 -->|true| N343
+  N342 -->|false| N343
+  N344([identifier])
+  N343 -->|true| N344
+  N343 -->|false| N344
+  N345([identifier])
+  N344 -->|true| N345
+  N344 -->|false| N345
+  N346([identifier])
+  N345 -->|true| N346
+  N345 -->|false| N346
+  N347([identifier])
+  N346 -->|true| N347
+  N346 -->|false| N347
+  N348([identifier])
+  N347 -->|true| N348
+  N347 -->|false| N348
+  N349([identifier])
+  N348 -->|true| N349
+  N348 -->|false| N349
+  N350([identifier])
+  N349 -->|true| N350
+  N349 -->|false| N350
+  N351([identifier])
+  N350 -->|true| N351
+  N350 -->|false| N351
+  N352([identifier])
+  N351 -->|true| N352
+  N351 -->|false| N352
+  N353([identifier])
+  N352 -->|true| N353
+  N352 -->|false| N353
+  N354([identifier])
+  N353 -->|true| N354
+  N353 -->|false| N354
+  N355([identifier])
+  N354 -->|true| N355
+  N354 -->|false| N355
+  N356([identifier])
+  N355 -->|true| N356
+  N355 -->|false| N356
+  N357([identifier])
+  N356 -->|true| N357
+  N356 -->|false| N357
+  N358([if_expression])
+  N357 -->|true| N358
+  N357 -->|false| N358
+  N359([if])
+  N358 -->|true| N359
+  N358 -->|false| N359
+  N360([call:is_empty])
+  N359 --> N360
+  N361([identifier])
+  N360 -->|true| N361
+  N360 -->|false| N361
+  N362([for_expression])
+  N362 -->|repeat| N362
+  N361 --> N362
+  N363([for])
+  N363 -->|repeat| N363
+  N362 --> N363
+  N364([identifier])
+  N363 -->|true| N364
+  N363 -->|false| N364
+  N365([identifier])
+  N364 -->|true| N365
+  N364 -->|false| N365
+  N366([field_identifier])
+  N365 -->|true| N366
+  N365 -->|false| N366
+  N367([identifier])
+  N366 -->|true| N367
+  N366 -->|false| N367
+  N368([identifier])
+  N367 -->|true| N368
+  N367 -->|false| N368
+  N369([identifier])
+  N368 -->|true| N369
+  N368 -->|false| N369
+  N370([identifier])
+  N369 -->|true| N370
+  N369 -->|false| N370
+  N371([identifier])
+  N370 -->|true| N371
+  N370 -->|false| N371
+  N372([if_expression])
+  N371 -->|true| N372
+  N371 -->|false| N372
+  N373([if])
+  N372 -->|true| N373
+  N372 -->|false| N373
+  N374([call:is_empty])
+  N373 --> N374
+  N375([identifier])
+  N374 -->|true| N375
+  N374 -->|false| N375
+  N376([for_expression])
+  N376 -->|repeat| N376
+  N375 --> N376
+  N377([for])
+  N377 -->|repeat| N377
+  N376 --> N377
+  N378([identifier])
+  N377 -->|true| N378
+  N377 -->|false| N378
+  N379([identifier])
+  N378 -->|true| N379
+  N378 -->|false| N379
+  N380([field_identifier])
+  N379 -->|true| N380
+  N379 -->|false| N380
+  N381([identifier])
+  N380 -->|true| N381
+  N380 -->|false| N381
+  N382([identifier])
+  N381 -->|true| N382
+  N381 -->|false| N382
+  N383([identifier])
+  N382 -->|true| N383
+  N382 -->|false| N383
+  N384([identifier])
+  N383 -->|true| N384
+  N383 -->|false| N384
+  N385([identifier])
+  N384 -->|true| N385
+  N384 -->|false| N385
+  N386([identifier])
+  N385 -->|true| N386
+  N385 -->|false| N386
+  N387([identifier])
+  N386 -->|true| N387
+  N386 -->|false| N387
+  N388([identifier])
+  N387 -->|true| N388
+  N387 -->|false| N388
+  N389([type_identifier])
+  N388 -->|true| N389
+  N388 -->|false| N389
+  N390([field_identifier])
+  N389 -->|true| N390
+  N389 -->|false| N390
+  N391([field_identifier])
+  N390 -->|true| N391
+  N390 -->|false| N391
+  N392([field_identifier])
+  N391 -->|true| N392
+  N391 -->|false| N392
+  N393([field_identifier])
+  N392 -->|true| N393
+  N392 -->|false| N393
+  N394([field_identifier])
+  N393 -->|true| N394
+  N393 -->|false| N394
+  N395([field_identifier])
+  N394 -->|true| N395
+  N394 -->|false| N395
+  N396([identifier])
+  N395 -->|true| N396
+  N395 -->|false| N396
+  N397([call:with_config])
+  N396 --> N397
+  N398([identifier])
+  N397 -->|true| N398
+  N397 -->|false| N398
+  N399([identifier])
+  N398 -->|true| N399
+  N398 -->|false| N399
+  N400([identifier])
+  N399 -->|true| N400
+  N399 -->|false| N400
+  N401([identifier])
+  N400 -->|true| N401
+  N400 -->|false| N401
+  N402([identifier])
+  N401 -->|true| N402
+  N401 -->|false| N402
+  N403([identifier])
+  N402 -->|true| N403
+  N402 -->|false| N403
+  N404([identifier])
+  N403 -->|true| N404
+  N403 -->|false| N404
+  N405([identifier])
+  N404 -->|true| N405
+  N404 -->|false| N405
+  N406([identifier])
+  N405 -->|true| N406
+  N405 -->|false| N406
+  N407([identifier])
+  N406 -->|true| N407
+  N406 -->|false| N407
+  N408([identifier])
+  N407 -->|true| N408
+  N407 -->|false| N408
+  N409([identifier])
+  N408 -->|true| N409
+  N408 -->|false| N409
+  N410([identifier])
+  N409 -->|true| N410
+  N409 -->|false| N410
+  N411([identifier])
+  N410 -->|true| N411
+  N410 -->|false| N411
+  N412([identifier])
+  N411 -->|true| N412
+  N411 -->|false| N412
+  N413([call:Ok])
+  N412 --> N413
+  N413 --> end
+
+</div></div>
+<div class="card"><h3>Symbols</h3>
+<details><summary><strong>Functions</strong> <small>(1)</small></summary><ul><li id="symbol-main"><code>main</code> <small>function</small>
+<details><summary>View code (12-288)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-main-12">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:12" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+</pre>
+    <pre><code id="code-main-12" class="lang-rust hljs">fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    println!(&quot;🔧 AST Transformation Engine Demo&quot;);
+    println!(&quot;==================================\n&quot;);
+
+    // Create transformation engine with default configuration
+    let engine = AstTransformationEngine::new();
+    println!(&quot;✅ Created AST transformation engine&quot;);
+
+    // Example 1: Simple string replacement
+    println!(&quot;\n📝 Example 1: Simple String Replacement&quot;);
+    println!(&quot;----------------------------------------&quot;);
+    
+    let source1 = r#&quot;fn main() {
+    println!(&quot;Hello, world!&quot;);
+    let x = 42;
+}&quot;#;
+    
+    println!(&quot;Original code:&quot;);
+    println!(&quot;{}&quot;, source1);
+    
+    let transformation1 = Transformation {
+        id: &quot;replace_greeting&quot;.to_string(),
+        transformation_type: TransformationType::Replace,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;example.rs&quot;),
+            start_position: Position {
+                line: 1,
+                column: 13,
+                byte_offset: 25,
+            },
+            end_position: Position {
+                line: 1,
+                column: 28,
+                byte_offset: 40,
+            },
+            node_kind: &quot;string_literal&quot;.to_string(),
+        },
+        original_code: &quot;\&quot;Hello, world!\&quot;&quot;.to_string(),
+        new_code: &quot;\&quot;Hello, Rust!\&quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Replace greeting message&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+    
+    let result1 = engine.apply_transformation(source1, Language::Rust, &amp;transformation1)?;
+    
+    if result1.success {
+        println!(&quot;\n✅ Transformation successful!&quot;);
+        println!(&quot;Updated code:&quot;);
+        println!(&quot;{}&quot;, result1.updated_source);
+        println!(&quot;Confidence: {:.1}%&quot;, result1.validation_summary.overall_confidence * 100.0);
+    } else {
+        println!(&quot;❌ Transformation failed&quot;);
+        for failure in &amp;result1.failed_transformations {
+            println!(&quot;  Reason: {}&quot;, failure.failure_reason);
+        }
+    }
+
+    // Example 2: Multiple transformations
+    println!(&quot;\n📝 Example 2: Multiple Transformations&quot;);
+    println!(&quot;--------------------------------------&quot;);
+    
+    let source2 = r#&quot;fn calculate() {
+    let a = 5;
+    let b = 10;
+    println!(&quot;Result: {}&quot;, a + b);
+}&quot;#;
+    
+    println!(&quot;Original code:&quot;);
+    println!(&quot;{}&quot;, source2);
+    
+    let transformations = vec![
+        Transformation {
+            id: &quot;change_value_a&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;example.rs&quot;),
+                start_position: Position {
+                    line: 1,
+                    column: 12,
+                    byte_offset: 28,
+                },
+                end_position: Position {
+                    line: 1,
+                    column: 13,
+                    byte_offset: 29,
+                },
+                node_kind: &quot;integer_literal&quot;.to_string(),
+            },
+            original_code: &quot;5&quot;.to_string(),
+            new_code: &quot;15&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Change value of a from 5 to 15&quot;.to_string(),
+                confidence: 1.0,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;calculate&quot;.to_string()],
+                    affected_variables: vec![&quot;a&quot;.to_string()],
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+        Transformation {
+            id: &quot;change_value_b&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;example.rs&quot;),
+                start_position: Position {
+                    line: 2,
+                    column: 12,
+                    byte_offset: 43,
+                },
+                end_position: Position {
+                    line: 2,
+                    column: 14,
+                    byte_offset: 45,
+                },
+                node_kind: &quot;integer_literal&quot;.to_string(),
+            },
+            original_code: &quot;10&quot;.to_string(),
+            new_code: &quot;25&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Change value of b from 10 to 25&quot;.to_string(),
+                confidence: 1.0,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;calculate&quot;.to_string()],
+                    affected_variables: vec![&quot;b&quot;.to_string()],
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+    ];
+    
+    let result2 = engine.apply_transformations(source2, Language::Rust, &amp;transformations)?;
+    
+    if result2.success {
+        println!(&quot;\n✅ All transformations successful!&quot;);
+        println!(&quot;Updated code:&quot;);
+        println!(&quot;{}&quot;, result2.updated_source);
+        println!(&quot;Applied {} transformations&quot;, result2.applied_transformations.len());
+        println!(&quot;Overall confidence: {:.1}%&quot;, result2.validation_summary.overall_confidence * 100.0);
+    } else {
+        println!(&quot;❌ Some transformations failed&quot;);
+        println!(&quot;Applied {} transformations&quot;, result2.applied_transformations.len());
+        println!(&quot;Failed {} transformations&quot;, result2.failed_transformations.len());
+    }
+
+    // Example 3: Semantic validation
+    println!(&quot;\n📝 Example 3: Semantic Validation&quot;);
+    println!(&quot;----------------------------------&quot;);
+    
+    let config = ValidationConfig {
+        enable_scope_analysis: true,
+        enable_type_checking: true,
+        enable_control_flow_analysis: true,
+        enable_data_flow_analysis: true,
+        strict_mode: false,
+    };
+    
+    let validator = SemanticValidator::with_config(config);
+    let parser = Parser::new(Language::Rust)?;
+    let source3 = &quot;fn test() { let x = 42; println!(\&quot;{}\&quot;, x); }&quot;;
+    let tree = parser.parse(source3, None)?;
+    
+    println!(&quot;Source code: {}&quot;, source3);
+    
+    let transformation3 = Transformation {
+        id: &quot;rename_variable&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;example.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;value&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Rename variable x to value&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;test&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };
+    
+    let validation_result = validator.validate_transformation(&amp;tree, &amp;transformation3, Language::Rust)?;
+    
+    println!(&quot;\n🔍 Validation Results:&quot;);
+    println!(&quot;  Valid: {}&quot;, validation_result.is_valid);
+    println!(&quot;  Confidence: {:.1}%&quot;, validation_result.confidence * 100.0);
+    println!(&quot;  Errors: {}&quot;, validation_result.errors.len());
+    println!(&quot;  Warnings: {}&quot;, validation_result.warnings.len());
+    
+    if !validation_result.errors.is_empty() {
+        println!(&quot;  Validation Errors:&quot;);
+        for error in &amp;validation_result.errors {
+            println!(&quot;    - {}: {}&quot;, error.code, error.message);
+        }
+    }
+    
+    if !validation_result.warnings.is_empty() {
+        println!(&quot;  Validation Warnings:&quot;);
+        for warning in &amp;validation_result.warnings {
+            println!(&quot;    - {}: {}&quot;, warning.code, warning.message);
+        }
+    }
+
+    // Example 4: Configuration options
+    println!(&quot;\n📝 Example 4: Custom Configuration&quot;);
+    println!(&quot;-----------------------------------&quot;);
+    
+    let custom_config = TransformationConfig {
+        enable_semantic_validation: true,
+        enable_rollback: true,
+        max_transformation_depth: 5,
+        enable_safety_checks: true,
+        preserve_formatting: true,
+        enable_incremental: false,
+    };
+    
+    let _custom_engine = AstTransformationEngine::with_config(custom_config);
+    
+    println!(&quot;✅ Created custom transformation engine with:&quot;);
+    println!(&quot;  - Semantic validation: enabled&quot;);
+    println!(&quot;  - Rollback support: enabled&quot;);
+    println!(&quot;  - Max transformation depth: 5&quot;);
+    println!(&quot;  - Safety checks: enabled&quot;);
+    println!(&quot;  - Preserve formatting: enabled&quot;);
+    println!(&quot;  - Incremental mode: disabled&quot;);
+
+    println!(&quot;\n🎉 AST Transformation Engine Demo Complete!&quot;);
+    println!(&quot;The engine provides safe, validated code transformations with:&quot;);
+    println!(&quot;  • Syntax validation to prevent broken code&quot;);
+    println!(&quot;  • Semantic analysis for transformation safety&quot;);
+    println!(&quot;  • Multiple transformation types (replace, insert, delete, etc.)&quot;);
+    println!(&quot;  • Configurable validation and safety checks&quot;);
+    println!(&quot;  • Language-specific transformation rules&quot;);
+    println!(&quot;  • Rollback capabilities for failed transformations&quot;);
+
+    Ok(())
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(16)</small></summary><ul><li id="symbol-engine"><code>engine</code> <small>variable</small>
+<details><summary>View code (17-17)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-engine-17">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:17" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">17
+</pre>
+    <pre><code id="code-engine-17" class="lang-rust hljs">    let engine = AstTransformationEngine::new();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source1"><code>source1</code> <small>variable</small>
+<details><summary>View code (24-27)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source1-24">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:24" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">24
+25
+26
+27
+</pre>
+    <pre><code id="code-source1-24" class="lang-rust hljs">    let source1 = r#&quot;fn main() {
+    println!(&quot;Hello, world!&quot;);
+    let x = 42;
+}&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation1"><code>transformation1</code> <small>variable</small>
+<details><summary>View code (32-65)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation1-32">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:32" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+</pre>
+    <pre><code id="code-transformation1-32" class="lang-rust hljs">    let transformation1 = Transformation {
+        id: &quot;replace_greeting&quot;.to_string(),
+        transformation_type: TransformationType::Replace,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;example.rs&quot;),
+            start_position: Position {
+                line: 1,
+                column: 13,
+                byte_offset: 25,
+            },
+            end_position: Position {
+                line: 1,
+                column: 28,
+                byte_offset: 40,
+            },
+            node_kind: &quot;string_literal&quot;.to_string(),
+        },
+        original_code: &quot;\&quot;Hello, world!\&quot;&quot;.to_string(),
+        new_code: &quot;\&quot;Hello, Rust!\&quot;&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Replace greeting message&quot;.to_string(),
+            confidence: 1.0,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;main&quot;.to_string()],
+                affected_variables: Vec::new(),
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result1"><code>result1</code> <small>variable</small>
+<details><summary>View code (67-67)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result1-67">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:67" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">67
+</pre>
+    <pre><code id="code-result1-67" class="lang-rust hljs">    let result1 = engine.apply_transformation(source1, Language::Rust, &amp;transformation1)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source2"><code>source2</code> <small>variable</small>
+<details><summary>View code (85-89)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source2-85">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:85" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">85
+86
+87
+88
+89
+</pre>
+    <pre><code id="code-source2-85" class="lang-rust hljs">    let source2 = r#&quot;fn calculate() {
+    let a = 5;
+    let b = 10;
+    println!(&quot;Result: {}&quot;, a + b);
+}&quot;#;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformations"><code>transformations</code> <small>variable</small>
+<details><summary>View code (94-163)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformations-94">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:94" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+</pre>
+    <pre><code id="code-transformations-94" class="lang-rust hljs">    let transformations = vec![
+        Transformation {
+            id: &quot;change_value_a&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;example.rs&quot;),
+                start_position: Position {
+                    line: 1,
+                    column: 12,
+                    byte_offset: 28,
+                },
+                end_position: Position {
+                    line: 1,
+                    column: 13,
+                    byte_offset: 29,
+                },
+                node_kind: &quot;integer_literal&quot;.to_string(),
+            },
+            original_code: &quot;5&quot;.to_string(),
+            new_code: &quot;15&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Change value of a from 5 to 15&quot;.to_string(),
+                confidence: 1.0,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;calculate&quot;.to_string()],
+                    affected_variables: vec![&quot;a&quot;.to_string()],
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+        Transformation {
+            id: &quot;change_value_b&quot;.to_string(),
+            transformation_type: TransformationType::Replace,
+            target_location: TransformationLocation {
+                file_path: PathBuf::from(&quot;example.rs&quot;),
+                start_position: Position {
+                    line: 2,
+                    column: 12,
+                    byte_offset: 43,
+                },
+                end_position: Position {
+                    line: 2,
+                    column: 14,
+                    byte_offset: 45,
+                },
+                node_kind: &quot;integer_literal&quot;.to_string(),
+            },
+            original_code: &quot;10&quot;.to_string(),
+            new_code: &quot;25&quot;.to_string(),
+            metadata: TransformationMetadata {
+                description: &quot;Change value of b from 10 to 25&quot;.to_string(),
+                confidence: 1.0,
+                impact: TransformationImpact {
+                    scope: ImpactScope::Local,
+                    risk_level: RiskLevel::Low,
+                    affected_lines: 1,
+                    affected_functions: vec![&quot;calculate&quot;.to_string()],
+                    affected_variables: vec![&quot;b&quot;.to_string()],
+                },
+                dependencies: Vec::new(),
+                rollback_info: None,
+            },
+            validation_result: None,
+        },
+    ];</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-result2"><code>result2</code> <small>variable</small>
+<details><summary>View code (165-165)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-result2-165">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:165" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">165
+</pre>
+    <pre><code id="code-result2-165" class="lang-rust hljs">    let result2 = engine.apply_transformations(source2, Language::Rust, &amp;transformations)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (183-189)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-183">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:183" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">183
+184
+185
+186
+187
+188
+189
+</pre>
+    <pre><code id="code-config-183" class="lang-rust hljs">    let config = ValidationConfig {
+        enable_scope_analysis: true,
+        enable_type_checking: true,
+        enable_control_flow_analysis: true,
+        enable_data_flow_analysis: true,
+        strict_mode: false,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validator"><code>validator</code> <small>variable</small>
+<details><summary>View code (191-191)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validator-191">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:191" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">191
+</pre>
+    <pre><code id="code-validator-191" class="lang-rust hljs">    let validator = SemanticValidator::with_config(config);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-parser"><code>parser</code> <small>variable</small>
+<details><summary>View code (192-192)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-parser-192">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:192" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">192
+</pre>
+    <pre><code id="code-parser-192" class="lang-rust hljs">    let parser = Parser::new(Language::Rust)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-source3"><code>source3</code> <small>variable</small>
+<details><summary>View code (193-193)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-source3-193">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:193" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">193
+</pre>
+    <pre><code id="code-source3-193" class="lang-rust hljs">    let source3 = &quot;fn test() { let x = 42; println!(\&quot;{}\&quot;, x); }&quot;;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tree"><code>tree</code> <small>variable</small>
+<details><summary>View code (194-194)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tree-194">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:194" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">194
+</pre>
+    <pre><code id="code-tree-194" class="lang-rust hljs">    let tree = parser.parse(source3, None)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-transformation3"><code>transformation3</code> <small>variable</small>
+<details><summary>View code (198-231)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-transformation3-198">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:198" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+</pre>
+    <pre><code id="code-transformation3-198" class="lang-rust hljs">    let transformation3 = Transformation {
+        id: &quot;rename_variable&quot;.to_string(),
+        transformation_type: TransformationType::Rename,
+        target_location: TransformationLocation {
+            file_path: PathBuf::from(&quot;example.rs&quot;),
+            start_position: Position {
+                line: 0,
+                column: 16,
+                byte_offset: 16,
+            },
+            end_position: Position {
+                line: 0,
+                column: 17,
+                byte_offset: 17,
+            },
+            node_kind: &quot;identifier&quot;.to_string(),
+        },
+        original_code: &quot;x&quot;.to_string(),
+        new_code: &quot;value&quot;.to_string(),
+        metadata: TransformationMetadata {
+            description: &quot;Rename variable x to value&quot;.to_string(),
+            confidence: 0.9,
+            impact: TransformationImpact {
+                scope: ImpactScope::Local,
+                risk_level: RiskLevel::Low,
+                affected_lines: 1,
+                affected_functions: vec![&quot;test&quot;.to_string()],
+                affected_variables: vec![&quot;x&quot;.to_string()],
+            },
+            dependencies: Vec::new(),
+            rollback_info: None,
+        },
+        validation_result: None,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validation-result"><code>validation_result</code> <small>variable</small>
+<details><summary>View code (233-233)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validation_result-233">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:233" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">233
+</pre>
+    <pre><code id="code-validation_result-233" class="lang-rust hljs">    let validation_result = validator.validate_transformation(&amp;tree, &amp;transformation3, Language::Rust)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-custom-config"><code>custom_config</code> <small>variable</small>
+<details><summary>View code (259-266)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-custom_config-259">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:259" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">259
+260
+261
+262
+263
+264
+265
+266
+</pre>
+    <pre><code id="code-custom_config-259" class="lang-rust hljs">    let custom_config = TransformationConfig {
+        enable_semantic_validation: true,
+        enable_rollback: true,
+        max_transformation_depth: 5,
+        enable_safety_checks: true,
+        preserve_formatting: true,
+        enable_incremental: false,
+    };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-custom-engine"><code>_custom_engine</code> <small>variable</small>
+<details><summary>View code (268-268)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-custom_engine-268">Copy</button>
+    <a class="open-in-editor" href="vscode://file/./examples/ast_transformation_demo.rs:268" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">268
+</pre>
+    <pre><code id="code-custom_engine-268" class="lang-rust hljs">    let _custom_engine = AstTransformationEngine::with_config(custom_config);</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
+
+</div>
+<div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: examples/ast_transformation_demo.rs</h4>
+<p>Risk Score: 28.0</p>
+<p>Vulnerabilities: 4 (High)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use parameterized queries or prepared statements</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Validate and sanitize all user inputs</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use an ORM with built-in injection protection</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Implement content security policies</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Secure default configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Regular configuration reviews</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Environment-specific configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Automated configuration validation</li>
+</ul></div>
+
+</div>
+
+</section>
+</main>
+</body>
+</html>
