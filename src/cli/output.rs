@@ -26,10 +26,17 @@ pub enum OutputFormat {
     Text,
     Html,
     Csv,
+    Template(String),
 }
 
 impl OutputFormat {
     pub fn from_str(s: &str) -> Result<Self, String> {
+        // Check for template format first (case-sensitive)
+        if s.starts_with("template:") {
+            let template_name = s.strip_prefix("template:").unwrap_or(s);
+            return Ok(OutputFormat::Template(template_name.to_string()));
+        }
+
         match s.to_lowercase().as_str() {
             "table" => Ok(OutputFormat::Table),
             "json" => Ok(OutputFormat::Json),
@@ -39,13 +46,21 @@ impl OutputFormat {
             "text" => Ok(OutputFormat::Text),
             "html" => Ok(OutputFormat::Html),
             "csv" => Ok(OutputFormat::Csv),
-            _ => Err(format!("Unsupported format: {}. Supported: table, json, sarif, markdown, summary, text, html, csv", s)),
+            _ => Err(format!("Unsupported format: {}. Supported: table, json, sarif, markdown, summary, text, html, csv, template:<name>", s)),
         }
     }
 
     pub fn supported_formats() -> Vec<&'static str> {
         vec![
-            "table", "json", "sarif", "markdown", "summary", "text", "html", "csv",
+            "table",
+            "json",
+            "sarif",
+            "markdown",
+            "summary",
+            "text",
+            "html",
+            "csv",
+            "template:<name>",
         ]
     }
 }
@@ -786,17 +801,13 @@ impl OutputHandler {
         }
     }
 
+    /// Output analysis result with consistent formatting across all formats
     pub fn output_analysis_result(
         &self,
         result: &crate::AnalysisResult,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        match self.format {
-            OutputFormat::Table => {
-                print_enhanced_summary(result);
-                if let Some(path) = &self.output_path {
-                    save_analysis_result_to_file(result, path, &self.format)?;
-                }
-            }
+        match &self.format {
+            // Structured formats - no informational output, just data
             OutputFormat::Json => {
                 let json = serde_json::to_string_pretty(result)?;
                 if let Some(path) = &self.output_path {
@@ -804,6 +815,48 @@ impl OutputHandler {
                     print_success(&format!("JSON results saved to {}", path.display()));
                 } else {
                     println!("{}", json);
+                }
+            }
+            OutputFormat::Sarif => {
+                // SARIF format would require additional implementation
+                print_warning("SARIF format not yet implemented, using JSON instead");
+                let json = serde_json::to_string_pretty(result)?;
+                if let Some(path) = &self.output_path {
+                    std::fs::write(path, json)?;
+                    print_success(&format!("Results saved to {}", path.display()));
+                } else {
+                    println!("{}", json);
+                }
+            }
+            OutputFormat::Csv => {
+                let csv = generate_csv_output(result);
+                if let Some(path) = &self.output_path {
+                    std::fs::write(path, csv)?;
+                    print_success(&format!("CSV data saved to {}", path.display()));
+                } else {
+                    println!("{}", csv);
+                }
+            }
+            OutputFormat::Template(template_name) => {
+                self.output_with_template(result, template_name)?;
+            }
+            // Human-readable formats with enhanced output
+            OutputFormat::Table => {
+                print_enhanced_summary(result);
+                if let Some(path) = &self.output_path {
+                    save_analysis_result_to_file(result, path, &self.format)?;
+                }
+            }
+            OutputFormat::Summary => {
+                print_enhanced_summary(result);
+                if let Some(path) = &self.output_path {
+                    save_analysis_result_to_file(result, path, &self.format)?;
+                }
+            }
+            OutputFormat::Text => {
+                print_enhanced_summary(result);
+                if let Some(path) = &self.output_path {
+                    save_analysis_result_to_file(result, path, &self.format)?;
                 }
             }
             OutputFormat::Markdown => {
@@ -824,32 +877,206 @@ impl OutputHandler {
                     println!("{}", html);
                 }
             }
-            OutputFormat::Summary => {
-                print_enhanced_summary(result);
-            }
-            OutputFormat::Text => {
-                print_enhanced_summary(result);
-            }
-            OutputFormat::Csv => {
-                let csv = generate_csv_output(result);
-                if let Some(path) = &self.output_path {
-                    std::fs::write(path, csv)?;
-                    print_success(&format!("CSV data saved to {}", path.display()));
-                } else {
-                    println!("{}", csv);
+        }
+
+        Ok(())
+    }
+
+    /// Output symbols with consistent formatting across all formats
+    pub fn output_symbols(
+        &self,
+        symbols: &[(crate::Symbol, String)],
+        file_count: usize,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match self.format {
+            // Structured formats - no informational output, just data
+            OutputFormat::Json => {
+                // Group symbols by file for JSON output with deterministic key order
+                let mut symbols_by_file: std::collections::BTreeMap<String, Vec<&crate::Symbol>> =
+                    std::collections::BTreeMap::new();
+                for (symbol, file_path) in symbols {
+                    symbols_by_file
+                        .entry(file_path.clone())
+                        .or_default()
+                        .push(symbol);
                 }
-            }
-            OutputFormat::Sarif => {
-                // SARIF format would require additional implementation
-                print_warning("SARIF format not yet implemented, using JSON instead");
-                let json = serde_json::to_string_pretty(result)?;
+                let json = serde_json::to_string_pretty(&symbols_by_file)?;
                 if let Some(path) = &self.output_path {
                     std::fs::write(path, json)?;
-                    print_success(&format!("Results saved to {}", path.display()));
+                    print_success(&format!("JSON symbols saved to {}", path.display()));
                 } else {
                     println!("{}", json);
                 }
             }
+            OutputFormat::Csv => {
+                let mut csv = String::from("Symbol,Type,File,Line,Visibility\n");
+                for (symbol, file_path) in symbols {
+                    csv.push_str(&format!(
+                        "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
+                        symbol.name.replace("\"", "\"\""),
+                        symbol.kind,
+                        file_path.replace("\"", "\"\""),
+                        symbol.start_line,
+                        symbol.visibility
+                    ));
+                }
+                if let Some(path) = &self.output_path {
+                    std::fs::write(path, csv)?;
+                    print_success(&format!("CSV symbols saved to {}", path.display()));
+                } else {
+                    println!("{}", csv);
+                }
+            }
+            // Human-readable formats with enhanced output
+            _ => {
+                print_enhanced_header(
+                    "🔧 SYMBOL ANALYSIS",
+                    Some(&format!(
+                        "Found {} symbols across {} files",
+                        symbols.len(),
+                        file_count
+                    )),
+                    "blue",
+                );
+
+                if symbols.is_empty() {
+                    print_info("No symbols found in the specified path");
+                    return Ok(());
+                }
+
+                // Convert to enhanced table rows
+                let rows: Vec<SymbolRow> = symbols
+                    .iter()
+                    .map(|(symbol, file_path)| SymbolRow {
+                        name: symbol.name.clone(),
+                        kind: format_symbol_type(&symbol.kind),
+                        file: file_path.clone(),
+                        line: symbol.start_line.to_string(),
+                        visibility: symbol.visibility.clone(),
+                    })
+                    .collect();
+
+                let table = Table::new(rows);
+                println!("\n{}", table);
+
+                // Enhanced summary with symbol type breakdown
+                println!("\n{}", "SYMBOL SUMMARY".bright_yellow().bold());
+                println!("{}", "─".repeat(40));
+
+                let mut symbol_types = std::collections::HashMap::new();
+                for (symbol, _) in symbols {
+                    *symbol_types.entry(&symbol.kind).or_insert(0) += 1;
+                }
+
+                let mut symbol_vec: Vec<_> = symbol_types.into_iter().collect();
+                symbol_vec.sort_by(|a, b| b.1.cmp(&a.1));
+
+                for (kind, count) in symbol_vec.iter().take(5) {
+                    let percentage = (*count as f64 / symbols.len() as f64) * 100.0;
+                    let icon = match kind.to_lowercase().as_str() {
+                        "function" => "🔧",
+                        "class" | "struct" => "🏗️",
+                        "method" => "⚡",
+                        "variable" => "📦",
+                        _ => "🔸",
+                    };
+                    println!("   {} {}: {} ({:.1}%)", icon, kind, count, percentage);
+                }
+
+                if let Some(path) = &self.output_path {
+                    // For file output, create the grouped structure
+                    let mut symbols_by_file: std::collections::BTreeMap<
+                        String,
+                        Vec<&crate::Symbol>,
+                    > = std::collections::BTreeMap::new();
+                    for (symbol, file_path) in symbols {
+                        symbols_by_file
+                            .entry(file_path.clone())
+                            .or_default()
+                            .push(symbol);
+                    }
+                    save_output_to_file(&symbols_by_file, path, &self.format)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Output analysis result using a custom template
+    pub fn output_with_template(
+        &self,
+        result: &crate::AnalysisResult,
+        template_name: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let engine = TemplateEngine::new();
+
+        if let Some(template) = engine.get_template(template_name) {
+            // Prepare template data
+            let mut data = HashMap::new();
+            data.insert("total_files".to_string(), result.files.len().to_string());
+            data.insert("total_lines".to_string(), result.total_lines.to_string());
+            data.insert("languages".to_string(), result.languages.len().to_string());
+
+            let total_symbols: usize = result.files.iter().map(|f| f.symbols.len()).sum();
+            data.insert("total_symbols".to_string(), total_symbols.to_string());
+
+            // Add largest file info
+            if let Some(largest_file) = result.files.iter().max_by_key(|f| f.size) {
+                data.insert(
+                    "largest_file".to_string(),
+                    largest_file.path.to_string_lossy().to_string(),
+                );
+            }
+
+            // Add most complex file info
+            if let Some(most_complex) = result.files.iter().max_by_key(|f| f.symbols.len()) {
+                data.insert(
+                    "most_complex".to_string(),
+                    most_complex.path.to_string_lossy().to_string(),
+                );
+            }
+
+            // Add timestamp
+            data.insert("timestamp".to_string(), chrono::Utc::now().to_rfc3339());
+
+            // Add averages
+            let avg_lines = if result.files.is_empty() {
+                0.0
+            } else {
+                result.total_lines as f64 / result.files.len() as f64
+            };
+            let avg_symbols = if result.files.is_empty() {
+                0.0
+            } else {
+                total_symbols as f64 / result.files.len() as f64
+            };
+            data.insert("avg_lines".to_string(), format!("{:.1}", avg_lines));
+            data.insert("avg_symbols".to_string(), format!("{:.1}", avg_symbols));
+
+            // Add language breakdown
+            let mut lang_breakdown = String::new();
+            let mut langs: Vec<_> = result.languages.iter().collect();
+            langs.sort_by(|a, b| b.1.cmp(a.1));
+            for (lang, count) in langs.iter().take(5) {
+                let percentage = (**count as f64 / result.files.len() as f64) * 100.0;
+                lang_breakdown.push_str(&format!(
+                    "- {}: {} files ({:.1}%)\n",
+                    lang, count, percentage
+                ));
+            }
+            data.insert("language_breakdown".to_string(), lang_breakdown);
+
+            let rendered = template.render(&data);
+
+            if let Some(path) = &self.output_path {
+                std::fs::write(path, &rendered)?;
+                print_success(&format!("Template output saved to {}", path.display()));
+            } else {
+                println!("{}", rendered);
+            }
+        } else {
+            return Err(format!("Template '{}' not found", template_name).into());
         }
 
         Ok(())
@@ -857,6 +1084,7 @@ impl OutputHandler {
 }
 
 /// Template system for custom output formats
+#[derive(Clone)]
 pub struct OutputTemplate {
     pub name: String,
     pub template: String,
@@ -892,21 +1120,129 @@ impl OutputTemplate {
     }
 }
 
-/// Predefined templates for common output formats
-pub fn get_template(name: &str) -> Option<OutputTemplate> {
-    match name {
-        "simple_summary" => Some(OutputTemplate::new(
-            "simple_summary",
-            "Codebase contains {{{total_files}}} files with {{{total_lines}}} lines of code in {{{languages}}} languages."
-        )),
-        "detailed_report" => Some(OutputTemplate::new(
-            "detailed_report",
-            "# Codebase Report\n\n- Files: {{{total_files}}}\n- Lines: {{{total_lines}}}\n- Languages: {{{languages}}}\n- Symbols: {{{total_symbols}}}\n\nGenerated on: {{{timestamp}}}"
-        )),
-        "ci_summary" => Some(OutputTemplate::new(
-            "ci_summary",
-            "::set-output name=files::{{{total_files}}}\n::set-output name=lines::{{{total_lines}}}\n::set-output name=languages::{{{languages}}}"
-        )),
-        _ => None,
+/// Enhanced template system with custom format support
+pub struct TemplateEngine {
+    templates: HashMap<String, OutputTemplate>,
+}
+
+impl TemplateEngine {
+    pub fn new() -> Self {
+        let mut engine = Self {
+            templates: HashMap::new(),
+        };
+        engine.load_builtin_templates();
+        engine
     }
+
+    fn load_builtin_templates(&mut self) {
+        // Simple summary templates
+        self.templates.insert(
+            "simple_summary".to_string(),
+            OutputTemplate::new(
+                "simple_summary",
+                "Codebase contains {{{total_files}}} files with {{{total_lines}}} lines of code in {{{languages}}} languages."
+            )
+        );
+
+        self.templates.insert(
+            "compact_summary".to_string(),
+            OutputTemplate::new(
+                "compact_summary",
+                "{{{total_files}}} files, {{{total_lines}}} lines, {{{languages}}} languages, {{{total_symbols}}} symbols"
+            )
+        );
+
+        // Detailed report templates
+        self.templates.insert(
+            "detailed_report".to_string(),
+            OutputTemplate::new(
+                "detailed_report",
+                "# Codebase Analysis Report\n\n## Overview\n- **Files:** {{{total_files}}}\n- **Lines:** {{{total_lines}}}\n- **Languages:** {{{languages}}}\n- **Symbols:** {{{total_symbols}}}\n\n## Statistics\n- **Largest File:** {{{largest_file}}}\n- **Most Complex:** {{{most_complex}}}\n\n*Generated on: {{{timestamp}}}*"
+            )
+        );
+
+        self.templates.insert(
+            "security_report".to_string(),
+            OutputTemplate::new(
+                "security_report",
+                "# Security Analysis Report\n\n## Summary\n- **Total Issues:** {{{security_issues}}}\n- **Critical:** {{{critical_count}}}\n- **High:** {{{high_count}}}\n- **Files Scanned:** {{{total_files}}}\n\n## Recommendations\n{{{security_recommendations}}}\n\n*Generated on: {{{timestamp}}}*"
+            )
+        );
+
+        // CI/CD templates
+        self.templates.insert(
+            "ci_summary".to_string(),
+            OutputTemplate::new(
+                "ci_summary",
+                "::set-output name=files::{{{total_files}}}\n::set-output name=lines::{{{total_lines}}}\n::set-output name=languages::{{{languages}}}\n::set-output name=symbols::{{{total_symbols}}}"
+            )
+        );
+
+        self.templates.insert(
+            "github_summary".to_string(),
+            OutputTemplate::new(
+                "github_summary",
+                "## 📊 Codebase Analysis\n\n| Metric | Value |\n|--------|-------|\n| Files | {{{total_files}}} |\n| Lines | {{{total_lines}}} |\n| Languages | {{{languages}}} |\n| Symbols | {{{total_symbols}}} |"
+            )
+        );
+
+        // Custom format templates
+        self.templates.insert(
+            "json_minimal".to_string(),
+            OutputTemplate::new(
+                "json_minimal",
+                "{\"files\":{{{total_files}}},\"lines\":{{{total_lines}}},\"languages\":{{{languages}}},\"symbols\":{{{total_symbols}}}}"
+            )
+        );
+
+        self.templates.insert(
+            "xml_report".to_string(),
+            OutputTemplate::new(
+                "xml_report",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<codebase-analysis>\n  <files>{{{total_files}}}</files>\n  <lines>{{{total_lines}}}</lines>\n  <languages>{{{languages}}}</languages>\n  <symbols>{{{total_symbols}}}</symbols>\n  <generated>{{{timestamp}}}</generated>\n</codebase-analysis>"
+            )
+        );
+
+        // Development templates
+        self.templates.insert(
+            "dev_status".to_string(),
+            OutputTemplate::new(
+                "dev_status",
+                "🚀 Development Status\nFiles: {{{total_files}}} | Lines: {{{total_lines}}} | Languages: {{{languages}}}\nLast updated: {{{timestamp}}}"
+            )
+        );
+
+        self.templates.insert(
+            "code_metrics".to_string(),
+            OutputTemplate::new(
+                "code_metrics",
+                "# Code Metrics\n\n## Size Metrics\n- Total Files: {{{total_files}}}\n- Total Lines: {{{total_lines}}}\n- Average Lines/File: {{{avg_lines}}}\n\n## Language Distribution\n{{{language_breakdown}}}\n\n## Complexity\n- Total Symbols: {{{total_symbols}}}\n- Average Symbols/File: {{{avg_symbols}}}"
+            )
+        );
+    }
+
+    pub fn get_template(&self, name: &str) -> Option<&OutputTemplate> {
+        self.templates.get(name)
+    }
+
+    pub fn add_template(&mut self, name: String, template: OutputTemplate) {
+        self.templates.insert(name, template);
+    }
+
+    pub fn list_templates(&self) -> Vec<&str> {
+        let mut names: Vec<&str> = self.templates.keys().map(|s| s.as_str()).collect();
+        names.sort();
+        names
+    }
+
+    pub fn render_template(&self, name: &str, data: &HashMap<String, String>) -> Option<String> {
+        self.get_template(name)
+            .map(|template| template.render(data))
+    }
+}
+
+/// Predefined templates for common output formats (legacy function)
+pub fn get_template(name: &str) -> Option<OutputTemplate> {
+    let engine = TemplateEngine::new();
+    engine.get_template(name).cloned()
 }

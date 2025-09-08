@@ -28,7 +28,20 @@ pub fn execute(
 ) -> CliResult<()> {
     // Validate inputs
     validate_path(path)?;
-    validate_format(format, &["table", "json", "summary", "sarif"])?;
+
+    // Allow template formats by checking if format starts with "template:"
+    let allowed_formats = if format.starts_with("template:") {
+        vec!["template:"] // Allow any template format
+    } else {
+        vec![
+            "table", "json", "summary", "sarif", "markdown", "text", "html", "csv",
+        ]
+    };
+
+    // Validate format using OutputFormat::from_str for comprehensive validation
+    if OutputFormat::from_str(format).is_err() {
+        return Err(CliError::UnsupportedFormat(format.to_string()));
+    }
 
     if let Some(output_path) = output {
         validate_output_path(output_path)?;
@@ -63,44 +76,23 @@ pub fn execute(
     let output_format =
         OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
 
-    // Finish progress bar and handle output based on format
+    // Create output handler for consistent formatting
+    let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
+
+    // Handle progress bar based on output format
     match output_format {
+        // Structured formats - suppress informational output
         OutputFormat::Json | OutputFormat::Sarif | OutputFormat::Csv => {
-            // Suppress all non-JSON output for structured formats
             pb.finish_and_clear();
-            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
-            output_handler.output_analysis_result(&result)?;
         }
-        OutputFormat::Table => {
-            pb.finish_with_message("Analysis complete!");
-            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
-            print_info(&format!(
-                "Analysis completed successfully - {} files processed",
-                result.files.len()
-            ));
-            print_enhanced_summary(&result);
-            if let Some(output_path) = output {
-                output_handler.output_analysis_result(&result)?;
-            }
-        }
-        OutputFormat::Summary => {
-            pb.finish_with_message("Analysis complete!");
-            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
-            print_info(&format!(
-                "Analysis completed successfully - {} files processed",
-                result.files.len()
-            ));
-            print_enhanced_summary(&result);
-            if let Some(output_path) = output {
-                output_handler.output_analysis_result(&result)?;
-            }
-        }
+        // Human-readable formats - show completion message
         _ => {
             pb.finish_with_message("Analysis complete!");
-            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
-            output_handler.output_analysis_result(&result)?;
         }
     }
+
+    // Use OutputHandler for all formats - it handles the logic internally
+    output_handler.output_analysis_result(&result)?;
 
     // Print additional details if requested
     if detailed && result.files.len() > 0 {
