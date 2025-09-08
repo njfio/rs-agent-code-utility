@@ -1,16 +1,21 @@
 //! Real rate limiting infrastructure for API calls
-//! 
+//!
 //! Provides token bucket and sliding window rate limiting
 //! with per-service configuration and automatic backoff.
 
-use governor::{Quota, RateLimiter as GovRateLimiter, state::{NotKeyed, InMemoryState}, clock::{DefaultClock, Clock}, middleware::NoOpMiddleware};
+use anyhow::{anyhow, Result};
+use governor::{
+    clock::{Clock, DefaultClock},
+    middleware::NoOpMiddleware,
+    state::{InMemoryState, NotKeyed},
+    Quota, RateLimiter as GovRateLimiter,
+};
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{debug, warn};
-use anyhow::{Result, anyhow};
 
 /// Multi-service rate limiter with different limits per service
 #[derive(Clone)]
@@ -110,7 +115,10 @@ impl MultiServiceRateLimiter {
         if let Some(limiter) = limiters.get(service_name) {
             limiter.wait_for_permit().await
         } else {
-            Err(anyhow!("No rate limiter configured for service: {}", service_name))
+            Err(anyhow!(
+                "No rate limiter configured for service: {}",
+                service_name
+            ))
         }
     }
 
@@ -120,7 +128,10 @@ impl MultiServiceRateLimiter {
         if let Some(limiter) = limiters.get(service_name) {
             Ok(limiter.check_permit())
         } else {
-            Err(anyhow!("No rate limiter configured for service: {}", service_name))
+            Err(anyhow!(
+                "No rate limiter configured for service: {}",
+                service_name
+            ))
         }
     }
 
@@ -130,7 +141,10 @@ impl MultiServiceRateLimiter {
         if let Some(limiter) = limiters.get(service_name) {
             Ok(limiter.get_stats())
         } else {
-            Err(anyhow!("No rate limiter configured for service: {}", service_name))
+            Err(anyhow!(
+                "No rate limiter configured for service: {}",
+                service_name
+            ))
         }
     }
 
@@ -150,8 +164,10 @@ impl ServiceRateLimiter {
         let quota = Quota::per_minute(requests_per_minute);
         let limiter = Arc::new(GovRateLimiter::direct(quota));
 
-        debug!("Created rate limiter for {}: {} requests/minute", 
-               config.service_name, config.requests_per_minute);
+        debug!(
+            "Created rate limiter for {}: {} requests/minute",
+            config.service_name, config.requests_per_minute
+        );
 
         Ok(Self {
             limiter,
@@ -198,9 +214,12 @@ impl ServiceRateLimiter {
                 if let Ok(mut stats) = self.stats.try_write() {
                     stats.total_limited += 1;
                 }
-                let retry_after = negative.wait_time_from(governor::clock::DefaultClock::default().now());
-                warn!("Rate limit exceeded for {}, retry after: {:?}",
-                      self.service_name, retry_after);
+                let retry_after =
+                    negative.wait_time_from(governor::clock::DefaultClock::default().now());
+                warn!(
+                    "Rate limit exceeded for {}, retry after: {:?}",
+                    self.service_name, retry_after
+                );
                 RateLimitResult::Limited { retry_after }
             }
         }
@@ -216,7 +235,8 @@ impl ServiceRateLimiter {
 
         // Estimate current tokens based on time elapsed and rate
         let elapsed = stats.last_reset.elapsed();
-        let tokens_replenished = (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;
+        let tokens_replenished =
+            (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;
         let current_tokens = tokens_replenished.min(self.burst_size);
 
         RateLimitStats {
@@ -266,7 +286,9 @@ impl ServiceRateLimiter {
 
         // Calculate exponential delay
         let base_delay = config.initial_delay.as_millis() as f64;
-        let multiplier = config.multiplier.powi(stats.consecutive_failures as i32 - 1);
+        let multiplier = config
+            .multiplier
+            .powi(stats.consecutive_failures as i32 - 1);
         let delay_ms = (base_delay * multiplier) as u64;
 
         let mut delay = Duration::from_millis(delay_ms);
@@ -291,8 +313,10 @@ impl ServiceRateLimiter {
         let backoff_delay = self.calculate_backoff_delay(config).await;
 
         if !backoff_delay.is_zero() {
-            debug!("Applying exponential backoff for {}: {:?}",
-                   self.service_name, backoff_delay);
+            debug!(
+                "Applying exponential backoff for {}: {:?}",
+                self.service_name, backoff_delay
+            );
             tokio::time::sleep(backoff_delay).await;
         }
 
@@ -351,19 +375,23 @@ impl AdaptiveRateLimiter {
     /// Adjust rate based on API response
     pub async fn adjust_rate(&self, response_indicates_rate_limit: bool) {
         let mut current_rate = self.current_rate.write().await;
-        
+
         if response_indicates_rate_limit {
             // Decrease rate
             let new_rate = (*current_rate as f64 * (1.0 - self.adjustment_factor)) as u32;
             *current_rate = new_rate.max(self.min_rate);
-            warn!("Decreased rate limit for {} to {}", 
-                  self.base_limiter.service_name, *current_rate);
+            warn!(
+                "Decreased rate limit for {} to {}",
+                self.base_limiter.service_name, *current_rate
+            );
         } else {
             // Gradually increase rate
             let new_rate = (*current_rate as f64 * (1.0 + self.adjustment_factor * 0.1)) as u32;
             *current_rate = new_rate.min(self.max_rate);
-            debug!("Increased rate limit for {} to {}", 
-                   self.base_limiter.service_name, *current_rate);
+            debug!(
+                "Increased rate limit for {} to {}",
+                self.base_limiter.service_name, *current_rate
+            );
         }
     }
 
@@ -442,29 +470,35 @@ impl RateLimiterFactory {
         let multi_limiter = MultiServiceRateLimiter::new();
 
         // Add common service limiters
-        multi_limiter.add_service(RateLimitConfig {
-            service_name: "nvd".to_string(),
-            requests_per_minute: 50,
-            burst_size: Some(10),
-            enable_backoff: true,
-            max_backoff_duration: Duration::from_secs(120),
-        }).await?;
+        multi_limiter
+            .add_service(RateLimitConfig {
+                service_name: "nvd".to_string(),
+                requests_per_minute: 50,
+                burst_size: Some(10),
+                enable_backoff: true,
+                max_backoff_duration: Duration::from_secs(120),
+            })
+            .await?;
 
-        multi_limiter.add_service(RateLimitConfig {
-            service_name: "osv".to_string(),
-            requests_per_minute: 100,
-            burst_size: Some(20),
-            enable_backoff: true,
-            max_backoff_duration: Duration::from_secs(30),
-        }).await?;
+        multi_limiter
+            .add_service(RateLimitConfig {
+                service_name: "osv".to_string(),
+                requests_per_minute: 100,
+                burst_size: Some(20),
+                enable_backoff: true,
+                max_backoff_duration: Duration::from_secs(30),
+            })
+            .await?;
 
-        multi_limiter.add_service(RateLimitConfig {
-            service_name: "github".to_string(),
-            requests_per_minute: 60,
-            burst_size: Some(10),
-            enable_backoff: true,
-            max_backoff_duration: Duration::from_secs(300),
-        }).await?;
+        multi_limiter
+            .add_service(RateLimitConfig {
+                service_name: "github".to_string(),
+                requests_per_minute: 60,
+                burst_size: Some(10),
+                enable_backoff: true,
+                max_backoff_duration: Duration::from_secs(300),
+            })
+            .await?;
 
         Ok(multi_limiter)
     }

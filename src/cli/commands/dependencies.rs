@@ -1,13 +1,15 @@
 //! Dependencies command implementation
-//! 
+//!
 //! Provides comprehensive dependency analysis with security scanning and license compliance.
 
-use std::path::PathBuf;
-use colored::*;
-use crate::{CodebaseAnalyzer, DependencyAnalyzer};
-use crate::cli::error::{CliError, CliResult, validate_path, validate_format};
-use crate::cli::utils::{create_progress_bar, create_analysis_config, validate_output_path, print_success};
+use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
+use crate::cli::utils::{
+    create_analysis_config, create_progress_bar, print_success, validate_output_path,
+};
+use crate::{CodebaseAnalyzer, DependencyAnalyzer};
+use colored::*;
+use std::path::PathBuf;
 
 /// Execute the dependencies command
 pub fn execute(
@@ -23,24 +25,25 @@ pub fn execute(
     // Validate inputs
     validate_path(path)?;
     validate_format(format, &["table", "json", "markdown"])?;
-    
+
     if let Some(output_path) = output {
         validate_output_path(output_path)?;
     }
-    
+
     // Create progress bar
     let pb = create_progress_bar("Analyzing dependencies...");
-    
+
     // Configure analyzer
     let config = create_analysis_config(1024, 20, "full", false, None, None, None, false)?;
-    let mut analyzer = CodebaseAnalyzer::with_config(config)
-        .map_err(|e| CliError::Dependencies(e.to_string()))?;
-    
+    let mut analyzer =
+        CodebaseAnalyzer::with_config(config).map_err(|e| CliError::Dependencies(e.to_string()))?;
+
     // Run analysis first
     pb.set_message("Analyzing codebase...");
-    let analysis_result = analyzer.analyze_directory(path)
+    let analysis_result = analyzer
+        .analyze_directory(path)
         .map_err(|e| CliError::Dependencies(e.to_string()))?;
-    
+
     // Run dependency analysis
     pb.set_message("Analyzing dependencies...");
     let mut dep_config = crate::DependencyConfig::default();
@@ -51,39 +54,67 @@ pub fn execute(
     dep_config.graph_analysis = graph;
 
     let dependency_analyzer = DependencyAnalyzer::with_config(dep_config);
-    let dependency_result = dependency_analyzer.analyze(&analysis_result)
+    let dependency_result = dependency_analyzer
+        .analyze(&analysis_result)
         .map_err(|e| CliError::Dependencies(e.to_string()))?;
-    
+
     pb.finish_with_message("Dependency analysis complete!");
-    
+
     // Display results based on format
-    let output_format = OutputFormat::from_str(format)
-        .map_err(|e| CliError::UnsupportedFormat(e))?;
-    
+    let output_format =
+        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+
     match output_format {
         OutputFormat::Json => {
             let json = serde_json::to_string_pretty(&dependency_result)?;
             if let Some(output_path) = output {
                 std::fs::write(output_path, &json)?;
-                print_success(&format!("Dependency report saved to {}", output_path.display()));
+                print_success(&format!(
+                    "Dependency report saved to {}",
+                    output_path.display()
+                ));
             } else {
                 println!("{}", json);
             }
         }
         OutputFormat::Markdown => {
-            print_dependencies_markdown(&dependency_result, vulnerabilities, licenses, outdated, graph);
+            print_dependencies_markdown(
+                &dependency_result,
+                vulnerabilities,
+                licenses,
+                outdated,
+                graph,
+            );
             if let Some(output_path) = output {
-                let markdown = render_dependencies_markdown(&dependency_result, vulnerabilities, licenses, outdated, graph);
+                let markdown = render_dependencies_markdown(
+                    &dependency_result,
+                    vulnerabilities,
+                    licenses,
+                    outdated,
+                    graph,
+                );
                 std::fs::write(output_path, markdown)?;
-                print_success(&format!("Dependency report saved to {}", output_path.display()));
+                print_success(&format!(
+                    "Dependency report saved to {}",
+                    output_path.display()
+                ));
             }
         }
         OutputFormat::Table | _ => {
-            print_dependencies_table(&dependency_result, vulnerabilities, licenses, outdated, graph);
+            print_dependencies_table(
+                &dependency_result,
+                vulnerabilities,
+                licenses,
+                outdated,
+                graph,
+            );
             if let Some(output_path) = output {
                 let json = serde_json::to_string_pretty(&dependency_result)?;
                 std::fs::write(output_path, json)?;
-                print_success(&format!("Dependency report saved to {}", output_path.display()));
+                print_success(&format!(
+                    "Dependency report saved to {}",
+                    output_path.display()
+                ));
             }
         }
     }
@@ -98,7 +129,7 @@ pub fn execute(
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -113,16 +144,40 @@ fn print_dependencies_table(
     println!("{}", "=".repeat(60).bright_blue());
 
     println!("\n{}", "📊 SUMMARY".bright_cyan().bold());
-    println!("Total Dependencies: {}", dependency_result.total_dependencies.to_string().bright_white());
-    println!("Direct Dependencies: {}", dependency_result.direct_dependencies.to_string().bright_green());
-    println!("Transitive Dependencies: {}", dependency_result.transitive_dependencies.to_string().bright_yellow());
+    println!(
+        "Total Dependencies: {}",
+        dependency_result
+            .total_dependencies
+            .to_string()
+            .bright_white()
+    );
+    println!(
+        "Direct Dependencies: {}",
+        dependency_result
+            .direct_dependencies
+            .to_string()
+            .bright_green()
+    );
+    println!(
+        "Transitive Dependencies: {}",
+        dependency_result
+            .transitive_dependencies
+            .to_string()
+            .bright_yellow()
+    );
 
     if !dependency_result.package_managers.is_empty() {
         println!("\n{}", "📦 PACKAGE MANAGERS".bright_cyan().bold());
         for pm in &dependency_result.package_managers {
-            println!("  {} - {} dependencies",
+            println!(
+                "  {} - {} dependencies",
                 pm.manager.to_string().bright_blue(),
-                dependency_result.dependencies_by_manager.get(&pm.manager).unwrap_or(&0).to_string().bright_white()
+                dependency_result
+                    .dependencies_by_manager
+                    .get(&pm.manager)
+                    .unwrap_or(&0)
+                    .to_string()
+                    .bright_white()
             );
         }
     }
@@ -130,7 +185,8 @@ fn print_dependencies_table(
     if show_vulnerabilities && !dependency_result.vulnerabilities.is_empty() {
         println!("\n{}", "🚨 VULNERABILITIES".bright_red().bold());
         for vuln in &dependency_result.vulnerabilities {
-            println!("  {} - {} ({})",
+            println!(
+                "  {} - {} ({})",
                 vuln.dependency.bright_white(),
                 vuln.title.bright_red(),
                 vuln.severity.to_string().bright_yellow()
@@ -138,10 +194,16 @@ fn print_dependencies_table(
         }
     }
 
-    if show_licenses && !dependency_result.license_analysis.compliance_issues.is_empty() {
+    if show_licenses
+        && !dependency_result
+            .license_analysis
+            .compliance_issues
+            .is_empty()
+    {
         println!("\n{}", "⚖️ LICENSE ISSUES".bright_yellow().bold());
         for issue in &dependency_result.license_analysis.compliance_issues {
-            println!("  {} - {} license issue",
+            println!(
+                "  {} - {} license issue",
                 issue.dependency.bright_white(),
                 issue.issue_type.to_string().bright_yellow()
             );
@@ -151,7 +213,8 @@ fn print_dependencies_table(
     if show_outdated && !dependency_result.outdated_dependencies.is_empty() {
         println!("\n{}", "📅 OUTDATED DEPENDENCIES".bright_yellow().bold());
         for outdated in &dependency_result.outdated_dependencies {
-            println!("  {} {} → {} ({})",
+            println!(
+                "  {} {} → {} ({})",
                 outdated.name.bright_white(),
                 outdated.current_version.bright_red(),
                 outdated.latest_version.bright_green(),
@@ -162,15 +225,42 @@ fn print_dependencies_table(
 
     if show_graph {
         println!("\n{}", "🕸️ DEPENDENCY GRAPH".bright_cyan().bold());
-        println!("  Nodes: {}", dependency_result.graph_analysis.total_nodes.to_string().bright_white());
-        println!("  Max Depth: {}", dependency_result.graph_analysis.max_depth.to_string().bright_white());
-        println!("  Circular Dependencies: {}", dependency_result.graph_analysis.circular_dependencies.len().to_string().bright_red());
+        println!(
+            "  Nodes: {}",
+            dependency_result
+                .graph_analysis
+                .total_nodes
+                .to_string()
+                .bright_white()
+        );
+        println!(
+            "  Max Depth: {}",
+            dependency_result
+                .graph_analysis
+                .max_depth
+                .to_string()
+                .bright_white()
+        );
+        println!(
+            "  Circular Dependencies: {}",
+            dependency_result
+                .graph_analysis
+                .circular_dependencies
+                .len()
+                .to_string()
+                .bright_red()
+        );
     }
 
     if !dependency_result.security_recommendations.is_empty() {
         println!("\n{}", "💡 SECURITY RECOMMENDATIONS".bright_green().bold());
-        for (i, rec) in dependency_result.security_recommendations.iter().enumerate() {
-            println!("{}. {} (Priority: {})",
+        for (i, rec) in dependency_result
+            .security_recommendations
+            .iter()
+            .enumerate()
+        {
+            println!(
+                "{}. {} (Priority: {})",
                 format!("{}", i + 1).bright_cyan(),
                 rec.recommendation.bright_white(),
                 rec.priority.to_string().bright_yellow()
@@ -189,16 +279,29 @@ fn print_dependencies_markdown(
     println!("# 🔍 Dependency Analysis Report\n");
 
     println!("## 📊 Summary\n");
-    println!("- **Total Dependencies**: {}", dependency_result.total_dependencies);
-    println!("- **Direct Dependencies**: {}", dependency_result.direct_dependencies);
-    println!("- **Transitive Dependencies**: {}", dependency_result.transitive_dependencies);
+    println!(
+        "- **Total Dependencies**: {}",
+        dependency_result.total_dependencies
+    );
+    println!(
+        "- **Direct Dependencies**: {}",
+        dependency_result.direct_dependencies
+    );
+    println!(
+        "- **Transitive Dependencies**: {}",
+        dependency_result.transitive_dependencies
+    );
 
     if !dependency_result.package_managers.is_empty() {
         println!("\n## 📦 Package Managers\n");
         for pm in &dependency_result.package_managers {
-            println!("- **{}**: {} dependencies",
+            println!(
+                "- **{}**: {} dependencies",
                 pm.manager,
-                dependency_result.dependencies_by_manager.get(&pm.manager).unwrap_or(&0)
+                dependency_result
+                    .dependencies_by_manager
+                    .get(&pm.manager)
+                    .unwrap_or(&0)
             );
         }
     }
@@ -213,10 +316,16 @@ fn print_dependencies_markdown(
         }
     }
 
-    if show_licenses && !dependency_result.license_analysis.compliance_issues.is_empty() {
+    if show_licenses
+        && !dependency_result
+            .license_analysis
+            .compliance_issues
+            .is_empty()
+    {
         println!("\n## ⚖️ License Compliance Issues\n");
         for issue in &dependency_result.license_analysis.compliance_issues {
-            println!("- **{}**: {} license issue - {}",
+            println!(
+                "- **{}**: {} license issue - {}",
                 issue.dependency,
                 issue.issue_type.to_string(),
                 issue.description
@@ -227,7 +336,8 @@ fn print_dependencies_markdown(
     if show_outdated && !dependency_result.outdated_dependencies.is_empty() {
         println!("\n## 📅 Outdated Dependencies\n");
         for outdated in &dependency_result.outdated_dependencies {
-            println!("- **{}**: {} → {} ({})",
+            println!(
+                "- **{}**: {} → {} ({})",
                 outdated.name,
                 outdated.current_version,
                 outdated.latest_version,
@@ -238,9 +348,18 @@ fn print_dependencies_markdown(
 
     if show_graph {
         println!("\n## 🕸️ Dependency Graph Analysis\n");
-        println!("- **Total Nodes**: {}", dependency_result.graph_analysis.total_nodes);
-        println!("- **Maximum Depth**: {}", dependency_result.graph_analysis.max_depth);
-        println!("- **Circular Dependencies**: {}", dependency_result.graph_analysis.circular_dependencies.len());
+        println!(
+            "- **Total Nodes**: {}",
+            dependency_result.graph_analysis.total_nodes
+        );
+        println!(
+            "- **Maximum Depth**: {}",
+            dependency_result.graph_analysis.max_depth
+        );
+        println!(
+            "- **Circular Dependencies**: {}",
+            dependency_result.graph_analysis.circular_dependencies.len()
+        );
     }
 }
 
@@ -253,20 +372,41 @@ fn render_dependencies_markdown(
 ) -> String {
     use std::fmt::Write;
     let mut out = String::new();
-    
+
     writeln!(out, "# 🔍 Dependency Analysis Report\n").unwrap();
     writeln!(out, "## 📊 Summary\n").unwrap();
-    writeln!(out, "- **Total Dependencies**: {}", dependency_result.total_dependencies).unwrap();
-    writeln!(out, "- **Direct Dependencies**: {}", dependency_result.direct_dependencies).unwrap();
-    writeln!(out, "- **Transitive Dependencies**: {}", dependency_result.transitive_dependencies).unwrap();
+    writeln!(
+        out,
+        "- **Total Dependencies**: {}",
+        dependency_result.total_dependencies
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "- **Direct Dependencies**: {}",
+        dependency_result.direct_dependencies
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "- **Transitive Dependencies**: {}",
+        dependency_result.transitive_dependencies
+    )
+    .unwrap();
 
     if !dependency_result.package_managers.is_empty() {
         writeln!(out, "\n## 📦 Package Managers\n").unwrap();
         for pm in &dependency_result.package_managers {
-            writeln!(out, "- **{}**: {} dependencies",
+            writeln!(
+                out,
+                "- **{}**: {} dependencies",
                 pm.manager,
-                dependency_result.dependencies_by_manager.get(&pm.manager).unwrap_or(&0)
-            ).unwrap();
+                dependency_result
+                    .dependencies_by_manager
+                    .get(&pm.manager)
+                    .unwrap_or(&0)
+            )
+            .unwrap();
         }
     }
 
@@ -280,36 +420,62 @@ fn render_dependencies_markdown(
         }
     }
 
-    if show_licenses && !dependency_result.license_analysis.compliance_issues.is_empty() {
+    if show_licenses
+        && !dependency_result
+            .license_analysis
+            .compliance_issues
+            .is_empty()
+    {
         writeln!(out, "\n## ⚖️ License Compliance Issues\n").unwrap();
         for issue in &dependency_result.license_analysis.compliance_issues {
-            writeln!(out, "- **{}**: {} license issue - {}",
+            writeln!(
+                out,
+                "- **{}**: {} license issue - {}",
                 issue.dependency,
                 issue.issue_type.to_string(),
                 issue.description
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 
     if show_outdated && !dependency_result.outdated_dependencies.is_empty() {
         writeln!(out, "\n## 📅 Outdated Dependencies\n").unwrap();
         for outdated in &dependency_result.outdated_dependencies {
-            writeln!(out, "- **{}**: {} → {} ({})",
+            writeln!(
+                out,
+                "- **{}**: {} → {} ({})",
                 outdated.name,
                 outdated.current_version,
                 outdated.latest_version,
                 outdated.urgency.to_string()
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 
     if show_graph {
         writeln!(out, "\n## 🕸️ Dependency Graph Analysis\n").unwrap();
-        writeln!(out, "- **Total Nodes**: {}", dependency_result.graph_analysis.total_nodes).unwrap();
-        writeln!(out, "- **Maximum Depth**: {}", dependency_result.graph_analysis.max_depth).unwrap();
-        writeln!(out, "- **Circular Dependencies**: {}", dependency_result.graph_analysis.circular_dependencies.len()).unwrap();
+        writeln!(
+            out,
+            "- **Total Nodes**: {}",
+            dependency_result.graph_analysis.total_nodes
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "- **Maximum Depth**: {}",
+            dependency_result.graph_analysis.max_depth
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "- **Circular Dependencies**: {}",
+            dependency_result.graph_analysis.circular_dependencies.len()
+        )
+        .unwrap();
     }
-    
+
     out
 }
 
@@ -317,22 +483,13 @@ fn render_dependencies_markdown(
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    
+
     #[test]
     fn test_dependencies_command_validation() {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
-        
-        let result = execute(
-            &path,
-            "table",
-            false,
-            false,
-            false,
-            false,
-            false,
-            None,
-        );
+
+        let result = execute(&path, "table", false, false, false, false, false, None);
         assert!(result.is_ok());
     }
 }

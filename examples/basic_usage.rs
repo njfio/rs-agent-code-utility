@@ -1,6 +1,6 @@
 //! Basic usage example for the rust_tree_sitter library
 
-use rust_tree_sitter::{Parser, Language, Query, QueryBuilder};
+use rust_tree_sitter::{Language, Parser, Query, QueryBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Rust Tree-sitter Library - Basic Usage Example ===\n");
@@ -65,14 +65,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Finding Functions ===");
     let functions = tree.find_nodes_by_kind("function_item");
     println!("Found {} function(s):", functions.len());
-    
+
     for (i, func) in functions.iter().enumerate() {
         if let Some(name_node) = func.child_by_field_name("name") {
             if let Ok(name) = name_node.text() {
                 println!("  {}. Function: {}", i + 1, name);
-                println!("     Position: {}:{} - {}:{}", 
-                    func.start_position().row + 1, func.start_position().column,
-                    func.end_position().row + 1, func.end_position().column);
+                println!(
+                    "     Position: {}:{} - {}:{}",
+                    func.start_position().row + 1,
+                    func.start_position().column,
+                    func.end_position().row + 1,
+                    func.end_position().column
+                );
             }
         }
     }
@@ -81,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Finding Structs ===");
     let structs = tree.find_nodes_by_kind("struct_item");
     println!("Found {} struct(s):", structs.len());
-    
+
     for (i, struct_node) in structs.iter().enumerate() {
         if let Some(name_node) = struct_node.child_by_field_name("name") {
             if let Ok(name) = name_node.text() {
@@ -94,7 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Finding Impl Blocks ===");
     let impls = tree.find_nodes_by_kind("impl_item");
     println!("Found {} impl block(s):", impls.len());
-    
+
     for (i, impl_node) in impls.iter().enumerate() {
         if let Some(type_node) = impl_node.child_by_field_name("type") {
             if let Ok(type_name) = type_node.text() {
@@ -105,18 +109,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Using queries for more sophisticated pattern matching
     println!("\n=== Using Queries ===");
-    
+
     // Query for public functions
-    let pub_func_query = Query::new(Language::Rust, r#"
+    let pub_func_query = Query::new(
+        Language::Rust,
+        r#"
         (function_item
             (visibility_modifier) @visibility
             name: (identifier) @name
         ) @function
-    "#)?;
-    
+    "#,
+    )?;
+
     let matches = pub_func_query.matches(&tree)?;
     println!("Found {} public function(s):", matches.len());
-    
+
     for (i, query_match) in matches.iter().enumerate() {
         if let Some(name_capture) = query_match.capture_by_name(&pub_func_query, "name") {
             if let Ok(name) = name_capture.text() {
@@ -132,7 +139,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .find_kind("struct_item", "struct")
         .find_kind("impl_item", "impl")
         .build()?;
-    
+
     let builder_matches = builder_query.matches(&tree)?;
     println!("Query builder found {} matches", builder_matches.len());
 
@@ -140,13 +147,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Language Detection ===");
     let test_files = vec![
         "main.rs",
-        "script.py", 
+        "script.py",
         "app.js",
         "program.c",
         "code.cpp",
-        "unknown.txt"
+        "unknown.txt",
     ];
-    
+
     for file in test_files {
         match rust_tree_sitter::detect_language_from_path(file) {
             Some(lang) => println!("  {}: {} ({})", file, lang.name(), lang.version()),
@@ -158,8 +165,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Supported Languages ===");
     let languages = rust_tree_sitter::supported_languages();
     for lang_info in languages {
-        println!("  {} v{} (extensions: {})", 
-            lang_info.name, 
+        println!(
+            "  {} v{} (extensions: {})",
+            lang_info.name,
             lang_info.version,
             lang_info.file_extensions.join(", ")
         );

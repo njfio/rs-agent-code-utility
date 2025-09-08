@@ -1,9 +1,9 @@
 //! Anthropic Claude provider implementation
 
-use crate::ai::types::{AIProvider, AIRequest, AIResponse, AICapability, AIFeature};
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::{AIError, AIResult};
 use crate::ai::providers::{AIProviderImpl, RateLimitInfo};
+use crate::ai::types::{AICapability, AIFeature, AIProvider, AIRequest, AIResponse};
 use async_trait::async_trait;
 
 /// Anthropic provider implementation
@@ -19,26 +19,30 @@ pub struct AnthropicProvider {
 
 impl AnthropicProvider {
     pub async fn new(config: ProviderConfig) -> AIResult<Self> {
-        let api_key = config.api_key
+        let api_key = config
+            .api_key
             .as_ref()
             .ok_or_else(|| AIError::configuration("Anthropic API key is required"))?
             .clone();
-        
-        let base_url = config.base_url
+
+        let base_url = config
+            .base_url
             .clone()
             .unwrap_or_else(|| "https://api.anthropic.com/v1".to_string());
-        
+
         #[cfg(feature = "net")]
         let client = Some(
             reqwest::Client::builder()
                 .timeout(config.timeout)
                 .build()
-                .map_err(|e| AIError::configuration(format!("Failed to create HTTP client: {}", e)))?
+                .map_err(|e| {
+                    AIError::configuration(format!("Failed to create HTTP client: {}", e))
+                })?,
         );
-        
+
         #[cfg(not(feature = "net"))]
         let client = None;
-        
+
         Ok(Self {
             config,
             client,
@@ -83,7 +87,7 @@ impl AIProviderImpl for AnthropicProvider {
     fn provider(&self) -> AIProvider {
         AIProvider::Anthropic
     }
-    
+
     fn capabilities(&self) -> Vec<AICapability> {
         vec![
             AICapability {
@@ -106,28 +110,28 @@ impl AIProviderImpl for AnthropicProvider {
             },
         ]
     }
-    
+
     async fn validate_connection(&self) -> AIResult<()> {
         // TODO: Implement actual Anthropic API validation
         #[cfg(not(feature = "net"))]
         return Err(AIError::configuration("Network features not enabled"));
-        
+
         #[cfg(feature = "net")]
         {
             // Placeholder implementation
             Ok(())
         }
     }
-    
+
     async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
         #[cfg(not(feature = "net"))]
         return Err(AIError::configuration("Network features not enabled"));
 
         #[cfg(feature = "net")]
         {
-            use crate::ai::types::{TokenUsage, ResponseMetadata};
-            use std::time::{Duration, SystemTime};
+            use crate::ai::types::{ResponseMetadata, TokenUsage};
             use serde::{Deserialize, Serialize};
+            use std::time::{Duration, SystemTime};
 
             #[derive(Serialize)]
             struct AnthropicRequest {
@@ -163,22 +167,23 @@ impl AIProviderImpl for AnthropicProvider {
             let system_prompt = self.create_system_prompt(request.feature);
 
             let anthropic_request = AnthropicRequest {
-                model: request.model_preferences
+                model: request
+                    .model_preferences
                     .as_ref()
                     .and_then(|models| models.first())
                     .cloned()
                     .unwrap_or_else(|| self.config.default_model.clone()),
                 max_tokens: request.max_tokens.unwrap_or(2048),
-                messages: vec![
-                    AnthropicMessage {
-                        role: "user".to_string(),
-                        content: format!("{}\n\n{}", system_prompt, request.content),
-                    },
-                ],
+                messages: vec![AnthropicMessage {
+                    role: "user".to_string(),
+                    content: format!("{}\n\n{}", system_prompt, request.content),
+                }],
                 temperature: request.temperature,
             };
 
-            let client = self.client.as_ref()
+            let client = self
+                .client
+                .as_ref()
                 .ok_or_else(|| AIError::configuration("HTTP client not available"))?;
 
             let start_time = SystemTime::now();
@@ -192,25 +197,37 @@ impl AIProviderImpl for AnthropicProvider {
                 .await
                 .map_err(|e| AIError::network(format!("Request failed: {}", e)))?;
 
-            let processing_time = start_time.elapsed()
+            let processing_time = start_time
+                .elapsed()
                 .unwrap_or_else(|_| Duration::from_millis(0));
 
             if !response.status().is_success() {
                 let status = response.status();
-                let error_text = response.text().await
+                let error_text = response
+                    .text()
+                    .await
                     .unwrap_or_else(|_| "Unknown error".to_string());
 
                 return match status.as_u16() {
                     401 => Err(AIError::authentication("Anthropic", "Invalid API key")),
-                    429 => Err(AIError::rate_limit("Anthropic", Some(Duration::from_secs(60)))),
-                    _ => Err(AIError::provider("Anthropic", format!("HTTP {}: {}", status, error_text))),
+                    429 => Err(AIError::rate_limit(
+                        "Anthropic",
+                        Some(Duration::from_secs(60)),
+                    )),
+                    _ => Err(AIError::provider(
+                        "Anthropic",
+                        format!("HTTP {}: {}", status, error_text),
+                    )),
                 };
             }
 
-            let anthropic_response: AnthropicResponse = response.json().await
-                .map_err(|e| AIError::response_parsing(format!("Failed to parse Anthropic response: {}", e)))?;
+            let anthropic_response: AnthropicResponse = response.json().await.map_err(|e| {
+                AIError::response_parsing(format!("Failed to parse Anthropic response: {}", e))
+            })?;
 
-            let content = anthropic_response.content.into_iter()
+            let content = anthropic_response
+                .content
+                .into_iter()
                 .map(|c| c.text)
                 .collect::<Vec<_>>()
                 .join("\n");
@@ -236,11 +253,11 @@ impl AIProviderImpl for AnthropicProvider {
             })
         }
     }
-    
+
     fn best_model_for_feature(&self, _feature: AIFeature) -> Option<String> {
         Some("claude-3-sonnet-20240229".to_string())
     }
-    
+
     fn rate_limit_info(&self) -> Option<RateLimitInfo> {
         Some(RateLimitInfo {
             requests_per_minute: self.config.rate_limit.requests_per_minute,

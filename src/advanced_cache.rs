@@ -376,10 +376,10 @@ where
 {
     pub fn new(config: CacheConfig) -> Result<Self> {
         fs::create_dir_all(&config.cache_dir).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to create cache directory: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to create cache directory: {}",
+                e
+            )))
         })?;
 
         Ok(Self {
@@ -403,17 +403,17 @@ where
 
         // Check if file is expired by reading metadata
         let metadata = fs::metadata(&cache_path).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to read cache metadata: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to read cache metadata: {}",
+                e
+            )))
         })?;
 
         let modified = metadata.modified().map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to get file modification time: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to get file modification time: {}",
+                e
+            )))
         })?;
 
         let age = SystemTime::now()
@@ -428,19 +428,19 @@ where
 
         // Read and decompress
         let compressed_data = fs::read(&cache_path).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to read cache file: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to read cache file: {}",
+                e
+            )))
         })?;
 
         let mut decoder = GzDecoder::new(&compressed_data[..]);
         let mut json_data = String::new();
         decoder.read_to_string(&mut json_data).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to decompress cache data: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to decompress cache data: {}",
+                e
+            )))
         })?;
 
         let entry: CacheEntry<T> =
@@ -484,24 +484,24 @@ where
         let mut encoder =
             GzEncoder::new(Vec::new(), Compression::new(self.config.compression_level));
         encoder.write_all(json_data.as_bytes()).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to compress cache data: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to compress cache data: {}",
+                e
+            )))
         })?;
 
         let compressed_data = encoder.finish().map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to finish compression: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to finish compression: {}",
+                e
+            )))
         })?;
 
         fs::write(&cache_path, compressed_data).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to write cache file: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to write cache file: {}",
+                e
+            )))
         })?;
 
         // Update disk usage stats
@@ -598,7 +598,7 @@ where
 pub struct AdvancedCache<T> {
     memory: MemoryCache<T>,
     disk: Option<DiskCache<T>>,
-    config: CacheConfig,
+    _config: CacheConfig,
 }
 
 impl<T> AdvancedCache<T>
@@ -615,7 +615,7 @@ where
         Ok(Self {
             memory: MemoryCache::new(config.clone()),
             disk,
-            config,
+            _config: config,
         })
     }
 

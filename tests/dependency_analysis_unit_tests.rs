@@ -1,13 +1,13 @@
 //! Comprehensive unit tests for dependency analysis functionality
-//! 
+//!
 //! These tests verify the accuracy and reliability of dependency detection
 //! and analysis across different package managers and programming languages.
 
-use rust_tree_sitter::{DependencyAnalyzer, AnalysisResult, FileInfo, Result};
-use std::path::PathBuf;
+use rust_tree_sitter::{AnalysisResult, DependencyAnalyzer, FileInfo, Result};
 use std::collections::HashMap;
-use tempfile::TempDir;
 use std::fs;
+use std::path::PathBuf;
+use tempfile::TempDir;
 
 fn create_analysis_result_with_fs(specs: Vec<(&str, &str, &str)>) -> (TempDir, AnalysisResult) {
     let temp_dir = TempDir::new().expect("failed to create temp project dir");
@@ -16,7 +16,9 @@ fn create_analysis_result_with_fs(specs: Vec<(&str, &str, &str)>) -> (TempDir, A
     let mut files: Vec<FileInfo> = Vec::new();
     for (rel, content, language) in specs {
         let p = root.join(rel);
-        if let Some(parent) = p.parent() { fs::create_dir_all(parent).unwrap(); }
+        if let Some(parent) = p.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
         fs::write(&p, content).expect("failed to write test file");
 
         files.push(FileInfo {
@@ -57,7 +59,7 @@ fn test_dependency_analyzer_creation() {
 #[test]
 fn test_cargo_toml_dependency_detection() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let cargo_toml_content = r#"
 [package]
 name = "test-project"
@@ -77,34 +79,39 @@ criterion = "0.5"
 [build-dependencies]
 cc = "1.0"
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("Cargo.toml", cargo_toml_content, "toml")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("Cargo.toml", cargo_toml_content, "toml")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect Cargo dependencies
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let serde_found = dependency_result.dependencies.iter()
+
+    let serde_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "serde");
-    let tokio_found = dependency_result.dependencies.iter()
+    let tokio_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "tokio");
-    let anyhow_found = dependency_result.dependencies.iter()
+    let anyhow_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "anyhow");
-    
+
     assert!(serde_found, "serde dependency should be detected");
     assert!(tokio_found, "tokio dependency should be detected");
     assert!(anyhow_found, "anyhow dependency should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_package_json_dependency_detection() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let package_json_content = r#"
 {
   "name": "test-project",
@@ -126,27 +133,32 @@ fn test_package_json_dependency_detection() -> Result<()> {
   }
 }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("package.json", package_json_content, "json")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("package.json", package_json_content, "json")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect npm dependencies
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let express_found = dependency_result.dependencies.iter()
+
+    let express_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "express");
-    let lodash_found = dependency_result.dependencies.iter()
+    let lodash_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "lodash");
-    let jest_found = dependency_result.dependencies.iter()
+    let jest_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "jest");
-    
+
     assert!(express_found, "express dependency should be detected");
     assert!(lodash_found, "lodash dependency should be detected");
     assert!(jest_found, "jest dev dependency should be detected");
-    
+
     Ok(())
 }
 
@@ -156,9 +168,8 @@ fn test_malformed_package_json_reports_error() {
 
     let bad_json = "{ \n  \"dependencies\": { \n    \"express\": ^4.18.0 \n  } \n}"; // missing quotes around version
 
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("package.json", bad_json, "json")
-    ]);
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("package.json", bad_json, "json")]);
 
     let res = analyzer.analyze(&analysis_result);
     assert!(res.is_err());
@@ -172,9 +183,8 @@ fn test_malformed_cargo_toml_reports_error() {
 
     let bad_toml = "[dependencies]\nserde = { version = 1.0 }"; // version must be string
 
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("Cargo.toml", bad_toml, "toml")
-    ]);
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("Cargo.toml", bad_toml, "toml")]);
 
     let res = analyzer.analyze(&analysis_result);
     assert!(res.is_err());
@@ -185,7 +195,7 @@ fn test_malformed_cargo_toml_reports_error() {
 #[test]
 fn test_python_requirements_detection() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let requirements_content = r#"
 # Core dependencies
 requests==2.28.0
@@ -202,34 +212,39 @@ mypy>=0.950
 matplotlib==3.5.0  # For plotting
 scikit-learn>=1.1.0  # Machine learning
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("requirements.txt", requirements_content, "text")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("requirements.txt", requirements_content, "text")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect Python dependencies
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let requests_found = dependency_result.dependencies.iter()
+
+    let requests_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "requests");
-    let numpy_found = dependency_result.dependencies.iter()
+    let numpy_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "numpy");
-    let pandas_found = dependency_result.dependencies.iter()
+    let pandas_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "pandas");
-    
+
     assert!(requests_found, "requests dependency should be detected");
     assert!(numpy_found, "numpy dependency should be detected");
     assert!(pandas_found, "pandas dependency should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_go_mod_dependency_detection() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let go_mod_content = r#"
 module github.com/example/test-project
 
@@ -248,34 +263,39 @@ require (
     github.com/gin-contrib/sse v0.1.0 // indirect
 )
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("go.mod", go_mod_content, "go")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("go.mod", go_mod_content, "go")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect Go dependencies
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let gin_found = dependency_result.dependencies.iter()
+
+    let gin_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name.contains("gin-gonic/gin"));
-    let testify_found = dependency_result.dependencies.iter()
+    let testify_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name.contains("stretchr/testify"));
-    let crypto_found = dependency_result.dependencies.iter()
+    let crypto_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name.contains("golang.org/x/crypto"));
-    
+
     assert!(gin_found, "gin dependency should be detected");
     assert!(testify_found, "testify dependency should be detected");
     assert!(crypto_found, "crypto dependency should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_rust_source_imports_detection() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let rust_source = r#"
 use std::collections::HashMap;
 use std::fs;
@@ -299,34 +319,39 @@ fn main() {
     println!("Hello, world!");
 }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("main.rs", rust_source, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("main.rs", rust_source, "Rust")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect imports from source code
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let serde_import = dependency_result.dependencies.iter()
+
+    let serde_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "serde");
-    let tokio_import = dependency_result.dependencies.iter()
+    let tokio_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "tokio");
-    let anyhow_import = dependency_result.dependencies.iter()
+    let anyhow_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "anyhow");
-    
+
     assert!(serde_import, "serde import should be detected");
     assert!(tokio_import, "tokio import should be detected");
     assert!(anyhow_import, "anyhow import should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_javascript_imports_detection() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let js_source = r#"
 import express from 'express';
 import { Router } from 'express';
@@ -349,34 +374,39 @@ export default function app() {
     return router;
 }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("app.js", js_source, "JavaScript")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("app.js", js_source, "JavaScript")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect JavaScript imports
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let express_import = dependency_result.dependencies.iter()
+
+    let express_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "express");
-    let lodash_import = dependency_result.dependencies.iter()
+    let lodash_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "lodash");
-    let axios_import = dependency_result.dependencies.iter()
+    let axios_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "axios");
-    
+
     assert!(express_import, "express import should be detected");
     assert!(lodash_import, "lodash import should be detected");
     assert!(axios_import, "axios import should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_python_imports_detection() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let python_source = r#"
 import os
 import sys
@@ -402,40 +432,45 @@ def main():
     app = Flask(__name__)
     return app
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("app.py", python_source, "Python")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("app.py", python_source, "Python")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect Python imports
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let requests_import = dependency_result.dependencies.iter()
+
+    let requests_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "requests");
-    let numpy_import = dependency_result.dependencies.iter()
+    let numpy_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "numpy");
-    let flask_import = dependency_result.dependencies.iter()
+    let flask_import = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "flask");
-    
+
     assert!(requests_import, "requests import should be detected");
     assert!(numpy_import, "numpy import should be detected");
     assert!(flask_import, "flask import should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_mixed_project_dependency_analysis() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let cargo_toml = r#"
 [dependencies]
 serde = "1.0"
 tokio = "1.0"
     "#;
-    
+
     let package_json = r#"
 {
   "dependencies": {
@@ -444,17 +479,17 @@ tokio = "1.0"
   }
 }
     "#;
-    
+
     let rust_code = r#"
 use serde::Serialize;
 use std::collections::HashMap;
     "#;
-    
+
     let js_code = r#"
 import express from 'express';
 import lodash from 'lodash';
     "#;
-    
+
     let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
         ("Cargo.toml", cargo_toml, "toml"),
         ("package.json", package_json, "json"),
@@ -462,25 +497,29 @@ import lodash from 'lodash';
         ("src/app.js", js_code, "JavaScript"),
     ]);
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should detect dependencies from both Rust and JavaScript
     assert!(!dependency_result.dependencies.is_empty());
-    
-    let has_rust_deps = dependency_result.dependencies.iter()
+
+    let has_rust_deps = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "serde" || d.name == "tokio");
-    let has_js_deps = dependency_result.dependencies.iter()
+    let has_js_deps = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "express" || d.name == "lodash");
-    
+
     assert!(has_rust_deps, "Should detect Rust dependencies");
     assert!(has_js_deps, "Should detect JavaScript dependencies");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_dependency_version_parsing() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
+
     let cargo_toml_content = r#"
 [dependencies]
 serde = "1.0.136"
@@ -488,36 +527,35 @@ tokio = { version = "1.21.0", features = ["full"] }
 anyhow = ">=1.0.0"
 clap = "~4.0.0"
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("Cargo.toml", cargo_toml_content, "toml")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("Cargo.toml", cargo_toml_content, "toml")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Should parse version information
-    let serde_dep = dependency_result.dependencies.iter()
+    let serde_dep = dependency_result
+        .dependencies
+        .iter()
         .find(|d| d.name == "serde");
-    
+
     if let Some(dep) = serde_dep {
         assert!(!dep.version.is_empty(), "Version should be parsed");
     }
-    
+
     Ok(())
 }
 
 #[test]
 fn test_empty_project_analysis() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("empty.rs", "", "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![("empty.rs", "", "Rust")]);
+
     let dependency_result = analyzer.analyze(&analysis_result)?;
-    
+
     // Empty project should have no dependencies
     assert_eq!(dependency_result.dependencies.len(), 0);
-    
+
     Ok(())
 }

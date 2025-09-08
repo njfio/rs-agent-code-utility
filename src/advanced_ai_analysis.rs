@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Advanced AI analyzer for deep semantic code understanding
 #[derive(Debug, Clone)]
@@ -675,7 +675,15 @@ impl AdvancedAIAnalyzer {
     pub fn with_config(config: AdvancedAIConfig) -> Self {
         Self { config }
     }
+}
 
+impl Default for AdvancedAIAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AdvancedAIAnalyzer {
     /// Perform comprehensive AI analysis on a codebase
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<AdvancedAIResult> {
         // Perform semantic analysis
@@ -747,7 +755,10 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Perform semantic analysis on the codebase
-    fn perform_semantic_analysis(&self, analysis_result: &AnalysisResult) -> Result<SemanticAnalysis> {
+    fn perform_semantic_analysis(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<SemanticAnalysis> {
         let mut concepts = Vec::new();
         let mut abstractions = Vec::new();
         let mut clusters = Vec::new();
@@ -778,12 +789,17 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Identify semantic concepts in the codebase
-    fn identify_semantic_concepts(&self, analysis_result: &AnalysisResult) -> Result<Vec<SemanticConcept>> {
+    fn identify_semantic_concepts(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<SemanticConcept>> {
         let mut concepts = Vec::new();
 
         // Analyze file names and symbols for business logic concepts
         for file in &analysis_result.files {
-            let file_name = file.path.file_stem()
+            let file_name = file
+                .path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -802,7 +818,10 @@ impl AdvancedAIAnalyzer {
             }
 
             // Identify data management concepts
-            if file_name.contains("database") || file_name.contains("db") || file_name.contains("repository") {
+            if file_name.contains("database")
+                || file_name.contains("db")
+                || file_name.contains("repository")
+            {
                 concepts.push(SemanticConcept {
                     name: "Data Management".to_string(),
                     description: "Code related to data storage and retrieval".to_string(),
@@ -815,10 +834,14 @@ impl AdvancedAIAnalyzer {
             }
 
             // Identify security concepts
-            if file_name.contains("auth") || file_name.contains("security") || file_name.contains("crypto") {
+            if file_name.contains("auth")
+                || file_name.contains("security")
+                || file_name.contains("crypto")
+            {
                 concepts.push(SemanticConcept {
                     name: "Security".to_string(),
-                    description: "Code related to authentication, authorization, and security".to_string(),
+                    description: "Code related to authentication, authorization, and security"
+                        .to_string(),
                     category: ConceptCategory::Security,
                     confidence: 0.85,
                     files: vec![file.path.clone()],
@@ -828,10 +851,14 @@ impl AdvancedAIAnalyzer {
             }
 
             // Identify API concepts
-            if file_name.contains("api") || file_name.contains("endpoint") || file_name.contains("route") {
+            if file_name.contains("api")
+                || file_name.contains("endpoint")
+                || file_name.contains("route")
+            {
                 concepts.push(SemanticConcept {
                     name: "API Interface".to_string(),
-                    description: "Code related to API endpoints and external interfaces".to_string(),
+                    description: "Code related to API endpoints and external interfaces"
+                        .to_string(),
                     category: ConceptCategory::Integration,
                     confidence: 0.8,
                     files: vec![file.path.clone()],
@@ -845,7 +872,10 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Analyze code abstractions
-    fn analyze_code_abstractions(&self, analysis_result: &AnalysisResult) -> Result<Vec<CodeAbstraction>> {
+    fn analyze_code_abstractions(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<CodeAbstraction>> {
         let mut abstractions = Vec::new();
 
         for file in &analysis_result.files {
@@ -855,7 +885,10 @@ impl AdvancedAIAnalyzer {
                         name: symbol.name.clone(),
                         abstraction_type: AbstractionType::Function,
                         level: self.calculate_abstraction_level(&symbol.name),
-                        purpose: format!("Function {} provides specific functionality", symbol.name),
+                        purpose: format!(
+                            "Function {} provides specific functionality",
+                            symbol.name
+                        ),
                         implementation: "Function implementation details".to_string(),
                         usage_patterns: vec!["Direct function call".to_string()],
                         quality_metrics: AbstractionQuality {
@@ -871,9 +904,16 @@ impl AdvancedAIAnalyzer {
                         name: symbol.name.clone(),
                         abstraction_type: AbstractionType::Class,
                         level: self.calculate_abstraction_level(&symbol.name),
-                        purpose: format!("Class {} encapsulates related data and behavior", symbol.name),
-                        implementation: "Class implementation with methods and properties".to_string(),
-                        usage_patterns: vec!["Object instantiation".to_string(), "Method invocation".to_string()],
+                        purpose: format!(
+                            "Class {} encapsulates related data and behavior",
+                            symbol.name
+                        ),
+                        implementation: "Class implementation with methods and properties"
+                            .to_string(),
+                        usage_patterns: vec![
+                            "Object instantiation".to_string(),
+                            "Method invocation".to_string(),
+                        ],
                         quality_metrics: AbstractionQuality {
                             cohesion: 8.0,
                             coupling: 4.0,
@@ -894,7 +934,10 @@ impl AdvancedAIAnalyzer {
         let name_lower = name.to_lowercase();
 
         // Higher level abstractions tend to have more generic names
-        if name_lower.contains("manager") || name_lower.contains("service") || name_lower.contains("controller") {
+        if name_lower.contains("manager")
+            || name_lower.contains("service")
+            || name_lower.contains("controller")
+        {
             8
         } else if name_lower.contains("handler") || name_lower.contains("processor") {
             6
@@ -906,7 +949,10 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Create semantic clusters of related functionality
-    fn create_semantic_clusters(&self, analysis_result: &AnalysisResult) -> Result<Vec<SemanticCluster>> {
+    fn create_semantic_clusters(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<SemanticCluster>> {
         let mut clusters = Vec::new();
 
         // Group files by common themes
@@ -915,16 +961,27 @@ impl AdvancedAIAnalyzer {
         let mut ui_files = Vec::new();
 
         for file in &analysis_result.files {
-            let file_name = file.path.file_stem()
+            let file_name = file
+                .path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_lowercase();
 
-            if file_name.contains("auth") || file_name.contains("login") || file_name.contains("security") {
+            if file_name.contains("auth")
+                || file_name.contains("login")
+                || file_name.contains("security")
+            {
                 auth_files.push(file.path.clone());
-            } else if file_name.contains("data") || file_name.contains("db") || file_name.contains("repository") {
+            } else if file_name.contains("data")
+                || file_name.contains("db")
+                || file_name.contains("repository")
+            {
                 data_files.push(file.path.clone());
-            } else if file_name.contains("ui") || file_name.contains("view") || file_name.contains("component") {
+            } else if file_name.contains("ui")
+                || file_name.contains("view")
+                || file_name.contains("component")
+            {
                 ui_files.push(file.path.clone());
             }
         }
@@ -934,7 +991,11 @@ impl AdvancedAIAnalyzer {
                 name: "Authentication & Security".to_string(),
                 description: "Files related to user authentication and security".to_string(),
                 files: auth_files,
-                functions: vec!["login".to_string(), "authenticate".to_string(), "authorize".to_string()],
+                functions: vec![
+                    "login".to_string(),
+                    "authenticate".to_string(),
+                    "authorize".to_string(),
+                ],
                 cohesion: 0.85,
                 purpose: "Handle user authentication and security concerns".to_string(),
                 improvements: vec![
@@ -963,7 +1024,10 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Generate domain-specific insights
-    fn generate_domain_insights(&self, analysis_result: &AnalysisResult) -> Result<Vec<DomainInsight>> {
+    fn generate_domain_insights(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<DomainInsight>> {
         let mut insights = Vec::new();
 
         // Analyze the overall project structure to infer domain
@@ -971,8 +1035,7 @@ impl AdvancedAIAnalyzer {
         let languages = &analysis_result.languages;
 
         // Web application domain insight
-        if languages.contains_key("JavaScript") ||
-           languages.contains_key("TypeScript") {
+        if languages.contains_key("JavaScript") || languages.contains_key("TypeScript") {
             insights.push(DomainInsight {
                 domain: "Web Application".to_string(),
                 insight: "This appears to be a web application with client-side JavaScript/TypeScript code".to_string(),
@@ -990,9 +1053,10 @@ impl AdvancedAIAnalyzer {
         }
 
         // System programming domain insight
-        if languages.contains_key("Rust") ||
-           languages.contains_key("C") ||
-           languages.contains_key("C++") {
+        if languages.contains_key("Rust")
+            || languages.contains_key("C")
+            || languages.contains_key("C++")
+        {
             insights.push(DomainInsight {
                 domain: "System Programming".to_string(),
                 insight: "This appears to be a system-level application with focus on performance and safety".to_string(),
@@ -1032,17 +1096,26 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Calculate semantic complexity score
-    fn calculate_semantic_complexity(&self, concepts: &[SemanticConcept], abstractions: &[CodeAbstraction]) -> f64 {
+    fn calculate_semantic_complexity(
+        &self,
+        concepts: &[SemanticConcept],
+        abstractions: &[CodeAbstraction],
+    ) -> f64 {
         let concept_complexity = concepts.len() as f64 * 0.1;
-        let abstraction_complexity = abstractions.iter()
+        let abstraction_complexity = abstractions
+            .iter()
             .map(|a| a.level as f64 / 10.0)
-            .sum::<f64>() / abstractions.len().max(1) as f64;
+            .sum::<f64>()
+            / abstractions.len().max(1) as f64;
 
         (concept_complexity + abstraction_complexity) / 2.0
     }
 
     /// Detect architecture patterns in the codebase
-    fn detect_architecture_patterns(&self, analysis_result: &AnalysisResult) -> Result<Vec<ArchitecturePattern>> {
+    fn detect_architecture_patterns(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<ArchitecturePattern>> {
         let mut patterns = Vec::new();
 
         // Detect MVC pattern
@@ -1064,13 +1137,18 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Detect MVC pattern
-    fn detect_mvc_pattern(&self, analysis_result: &AnalysisResult) -> Result<Option<ArchitecturePattern>> {
+    fn detect_mvc_pattern(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Option<ArchitecturePattern>> {
         let mut model_files = Vec::new();
         let mut view_files = Vec::new();
         let mut controller_files = Vec::new();
 
         for file in &analysis_result.files {
-            let file_name = file.path.file_stem()
+            let file_name = file
+                .path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -1116,7 +1194,8 @@ impl AdvancedAIAnalyzer {
             return Ok(Some(ArchitecturePattern {
                 name: "Model-View-Controller (MVC)".to_string(),
                 pattern_type: PatternType::MVC,
-                description: "Separates application logic into three interconnected components".to_string(),
+                description: "Separates application logic into three interconnected components"
+                    .to_string(),
                 confidence: 0.85,
                 files: all_files,
                 components,
@@ -1137,11 +1216,16 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Detect Repository pattern
-    fn detect_repository_pattern(&self, analysis_result: &AnalysisResult) -> Result<Option<ArchitecturePattern>> {
+    fn detect_repository_pattern(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Option<ArchitecturePattern>> {
         let mut repository_files = Vec::new();
 
         for file in &analysis_result.files {
-            let file_name = file.path.file_stem()
+            let file_name = file
+                .path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -1152,19 +1236,18 @@ impl AdvancedAIAnalyzer {
         }
 
         if !repository_files.is_empty() {
-            let components = vec![
-                PatternComponent {
-                    name: "Repository".to_string(),
-                    role: "Data access abstraction layer".to_string(),
-                    files: repository_files.clone(),
-                    quality_score: 8.5,
-                }
-            ];
+            let components = vec![PatternComponent {
+                name: "Repository".to_string(),
+                role: "Data access abstraction layer".to_string(),
+                files: repository_files.clone(),
+                quality_score: 8.5,
+            }];
 
             return Ok(Some(ArchitecturePattern {
                 name: "Repository Pattern".to_string(),
                 pattern_type: PatternType::Repository,
-                description: "Encapsulates data access logic and provides a uniform interface".to_string(),
+                description: "Encapsulates data access logic and provides a uniform interface"
+                    .to_string(),
                 confidence: 0.9,
                 files: repository_files,
                 components,
@@ -1185,11 +1268,16 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Detect Factory pattern
-    fn detect_factory_pattern(&self, analysis_result: &AnalysisResult) -> Result<Option<ArchitecturePattern>> {
+    fn detect_factory_pattern(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Option<ArchitecturePattern>> {
         let mut factory_files = Vec::new();
 
         for file in &analysis_result.files {
-            let file_name = file.path.file_stem()
+            let file_name = file
+                .path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -1200,19 +1288,18 @@ impl AdvancedAIAnalyzer {
         }
 
         if !factory_files.is_empty() {
-            let components = vec![
-                PatternComponent {
-                    name: "Factory".to_string(),
-                    role: "Object creation abstraction".to_string(),
-                    files: factory_files.clone(),
-                    quality_score: 7.5,
-                }
-            ];
+            let components = vec![PatternComponent {
+                name: "Factory".to_string(),
+                role: "Object creation abstraction".to_string(),
+                files: factory_files.clone(),
+                quality_score: 7.5,
+            }];
 
             return Ok(Some(ArchitecturePattern {
                 name: "Factory Pattern".to_string(),
                 pattern_type: PatternType::Factory,
-                description: "Creates objects without specifying their concrete classes".to_string(),
+                description: "Creates objects without specifying their concrete classes"
+                    .to_string(),
                 confidence: 0.8,
                 files: factory_files,
                 components,
@@ -1268,8 +1355,13 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Calculate maintainability metrics
-    fn calculate_maintainability_metrics(&self, analysis_result: &AnalysisResult) -> MaintainabilityMetrics {
-        let total_functions = analysis_result.files.iter()
+    fn calculate_maintainability_metrics(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> MaintainabilityMetrics {
+        let total_functions = analysis_result
+            .files
+            .iter()
             .flat_map(|f| &f.symbols)
             .filter(|s| s.kind == "function")
             .count();
@@ -1290,11 +1382,11 @@ impl AdvancedAIAnalyzer {
         let maintainability_index = 100.0 - (avg_complexity * 2.0) - (avg_function_length / 10.0);
 
         MaintainabilityMetrics {
-            maintainability_index: maintainability_index.max(0.0).min(100.0),
+            maintainability_index: maintainability_index.clamp(0.0, 100.0),
             avg_complexity,
             avg_function_length,
             avg_inheritance_depth: 2.0, // Simplified
-            coupling_score: 4.0, // Simplified
+            coupling_score: 4.0,        // Simplified
         }
     }
 
@@ -1314,8 +1406,8 @@ impl AdvancedAIAnalyzer {
 
         ReadabilityAssessment {
             readability_score: (naming_quality + comment_quality) / 2.0,
-            naming_quality: naming_quality.max(0.0).min(10.0),
-            comment_quality: comment_quality.max(0.0).min(10.0),
+            naming_quality: naming_quality.clamp(0.0, 10.0),
+            comment_quality: comment_quality.clamp(0.0, 10.0),
             structure_clarity: 7.0,
             consistency: 7.5,
         }
@@ -1343,8 +1435,7 @@ impl AdvancedAIAnalyzer {
                     if symbol.visibility == "public" {
                         public_functions += 1;
                     }
-                    total_function_lines +=
-                        symbol.end_line.saturating_sub(symbol.start_line) + 1;
+                    total_function_lines += symbol.end_line.saturating_sub(symbol.start_line) + 1;
                 }
             }
         }
@@ -1379,14 +1470,10 @@ impl AdvancedAIAnalyzer {
         DesignQuality {
             solid_adherence: ((1.0 - pub_ratio).max(0.0) * 10.0).min(10.0),
             dry_adherence: ((1.0 - duplicate_ratio).max(0.0) * 10.0).min(10.0),
-            kiss_adherence: ((1.0 - (avg_function_length / 50.0).min(1.0)) * 10.0)
-                .max(0.0)
-                .min(10.0),
-            separation_of_concerns:
-                ((1.0 - (avg_functions_per_file / 20.0).min(1.0)) * 10.0)
-                    .max(0.0)
-                    .min(10.0),
-            abstraction_quality: (doc_ratio * 10.0).max(0.0).min(10.0),
+            kiss_adherence: ((1.0 - (avg_function_length / 50.0).min(1.0)) * 10.0).clamp(0.0, 10.0),
+            separation_of_concerns: ((1.0 - (avg_functions_per_file / 20.0).min(1.0)) * 10.0)
+                .clamp(0.0, 10.0),
+            abstraction_quality: (doc_ratio * 10.0).clamp(0.0, 10.0),
         }
     }
 
@@ -1399,7 +1486,8 @@ impl AdvancedAIAnalyzer {
         for file in &analysis_result.files {
             if let Ok(content) = std::fs::read_to_string(&file.path) {
                 for line in content.lines() {
-                    if line.to_lowercase().contains("todo") || line.to_lowercase().contains("fixme") {
+                    if line.to_lowercase().contains("todo") || line.to_lowercase().contains("fixme")
+                    {
                         documentation_debt += 0.5;
                         debt_items.push(DebtItem {
                             description: format!("Unresolved TODO/FIXME comment: {}", line.trim()),
@@ -1419,7 +1507,7 @@ impl AdvancedAIAnalyzer {
         let mut code_quality_debt = 0.0;
         let mut architecture_debt = 0.0;
         for smell in &smells {
-            let debt_weight = self.calculate_smell_debt_weight(&smell);
+            let debt_weight = self.calculate_smell_debt_weight(smell);
             code_quality_debt += debt_weight;
             if smell.name.contains("Large") {
                 architecture_debt += debt_weight * 1.5; // Architecture issues have higher impact
@@ -1432,7 +1520,7 @@ impl AdvancedAIAnalyzer {
                 SmellSeverity::Low => DebtSeverity::Low,
             };
 
-            let (effort, impact) = self.calculate_debt_effort_impact(&smell, analysis_result);
+            let (effort, impact) = self.calculate_debt_effort_impact(smell, analysis_result);
 
             debt_items.push(DebtItem {
                 description: smell.description.clone(),
@@ -1455,7 +1543,8 @@ impl AdvancedAIAnalyzer {
         TechnicalDebtAnalysis {
             total_debt,
             debt_by_category,
-            high_priority_debt: debt_items.into_iter()
+            high_priority_debt: debt_items
+                .into_iter()
                 .filter(|d| matches!(d.severity, DebtSeverity::High | DebtSeverity::Critical))
                 .collect(),
             estimated_effort,
@@ -1480,7 +1569,11 @@ impl AdvancedAIAnalyzer {
             if file.lines > 500 {
                 smells.push(CodeSmell {
                     name: "Large File".to_string(),
-                    description: format!("File {} has {} lines, which may be too large", file.path.display(), file.lines),
+                    description: format!(
+                        "File {} has {} lines, which may be too large",
+                        file.path.display(),
+                        file.lines
+                    ),
                     category: SmellCategory::Bloaters,
                     location: file.path.clone(),
                     severity: SmellSeverity::Medium,
@@ -1496,7 +1589,11 @@ impl AdvancedAIAnalyzer {
             if function_count > 20 {
                 smells.push(CodeSmell {
                     name: "Large Class/Module".to_string(),
-                    description: format!("File {} has {} functions, which may indicate too many responsibilities", file.path.display(), function_count),
+                    description: format!(
+                        "File {} has {} functions, which may indicate too many responsibilities",
+                        file.path.display(),
+                        function_count
+                    ),
                     category: SmellCategory::Bloaters,
                     location: file.path.clone(),
                     severity: SmellSeverity::Medium,
@@ -1521,17 +1618,25 @@ impl AdvancedAIAnalyzer {
     ) -> u8 {
         let maintainability_score = maintainability.maintainability_index * 0.3;
         let readability_score = readability.readability_score * 10.0 * 0.25;
-        let design_score = (design_quality.solid_adherence + design_quality.dry_adherence +
-                           design_quality.kiss_adherence + design_quality.separation_of_concerns +
-                           design_quality.abstraction_quality) * 2.0 * 0.25;
+        let design_score = (design_quality.solid_adherence
+            + design_quality.dry_adherence
+            + design_quality.kiss_adherence
+            + design_quality.separation_of_concerns
+            + design_quality.abstraction_quality)
+            * 2.0
+            * 0.25;
         let debt_penalty = (technical_debt.total_debt / 100.0) * 20.0;
 
         let total_score = maintainability_score + readability_score + design_score - debt_penalty;
-        total_score.max(0.0).min(100.0) as u8
+        total_score.clamp(0.0, 100.0) as u8
     }
 
     /// Generate learning paths for developers
-    fn generate_learning_paths(&self, analysis_result: &AnalysisResult, quality_assessment: &QualityAssessment) -> Result<Vec<LearningPath>> {
+    fn generate_learning_paths(
+        &self,
+        analysis_result: &AnalysisResult,
+        quality_assessment: &QualityAssessment,
+    ) -> Result<Vec<LearningPath>> {
         let mut paths = Vec::new();
 
         // Generate path based on detected languages
@@ -1544,12 +1649,18 @@ impl AdvancedAIAnalyzer {
                     LearningStep {
                         title: "Ownership and Borrowing".to_string(),
                         description: "Master Rust's unique memory management system".to_string(),
-                        code_examples: analysis_result.files.iter()
-                            .filter(|f| f.path.extension().map_or(false, |ext| ext == "rs"))
+                        code_examples: analysis_result
+                            .files
+                            .iter()
+                            .filter(|f| f.path.extension().is_some_and(|ext| ext == "rs"))
                             .map(|f| f.path.clone())
                             .take(3)
                             .collect(),
-                        concepts: vec!["Ownership".to_string(), "Borrowing".to_string(), "Lifetimes".to_string()],
+                        concepts: vec![
+                            "Ownership".to_string(),
+                            "Borrowing".to_string(),
+                            "Lifetimes".to_string(),
+                        ],
                         exercises: vec![
                             "Implement a custom smart pointer".to_string(),
                             "Create a memory-safe data structure".to_string(),
@@ -1559,7 +1670,11 @@ impl AdvancedAIAnalyzer {
                         title: "Error Handling".to_string(),
                         description: "Learn idiomatic error handling in Rust".to_string(),
                         code_examples: Vec::new(),
-                        concepts: vec!["Result".to_string(), "Option".to_string(), "Error traits".to_string()],
+                        concepts: vec![
+                            "Result".to_string(),
+                            "Option".to_string(),
+                            "Error traits".to_string(),
+                        ],
                         exercises: vec![
                             "Implement custom error types".to_string(),
                             "Use the ? operator effectively".to_string(),
@@ -1568,14 +1683,12 @@ impl AdvancedAIAnalyzer {
                 ],
                 estimated_time: 40.0,
                 prerequisites: vec!["Basic Rust syntax".to_string()],
-                resources: vec![
-                    LearningResource {
-                        title: "The Rust Programming Language".to_string(),
-                        resource_type: ResourceType::Book,
-                        url: "https://doc.rust-lang.org/book/".to_string(),
-                        description: "Official Rust book".to_string(),
-                    },
-                ],
+                resources: vec![LearningResource {
+                    title: "The Rust Programming Language".to_string(),
+                    resource_type: ResourceType::Book,
+                    url: "https://doc.rust-lang.org/book/".to_string(),
+                    description: "Official Rust book".to_string(),
+                }],
             });
         }
 
@@ -1614,14 +1727,15 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Analyze relationships between code components
-    fn analyze_relationships(&self, analysis_result: &AnalysisResult) -> Result<Vec<CodeRelationship>> {
+    fn analyze_relationships(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<CodeRelationship>> {
         let mut relationships = Vec::new();
 
         // Analyze file dependencies based on naming patterns
         for file in &analysis_result.files {
-            let file_name = file.path.file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("");
+            let file_name = file.path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
             // Look for related files
             for other_file in &analysis_result.files {
@@ -1629,7 +1743,9 @@ impl AdvancedAIAnalyzer {
                     continue;
                 }
 
-                let other_name = other_file.path.file_stem()
+                let other_name = other_file
+                    .path
+                    .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("");
 
@@ -1640,7 +1756,8 @@ impl AdvancedAIAnalyzer {
                         source: file.path.display().to_string(),
                         target: other_file.path.display().to_string(),
                         strength: 0.8,
-                        description: "Controller likely depends on model for data operations".to_string(),
+                        description: "Controller likely depends on model for data operations"
+                            .to_string(),
                         change_impact: ChangeImpact::High,
                     });
                 } else if file_name.contains("service") && other_name.contains("repository") {
@@ -1649,7 +1766,8 @@ impl AdvancedAIAnalyzer {
                         source: file.path.display().to_string(),
                         target: other_file.path.display().to_string(),
                         strength: 0.9,
-                        description: "Service layer depends on repository for data access".to_string(),
+                        description: "Service layer depends on repository for data access"
+                            .to_string(),
                         change_impact: ChangeImpact::High,
                     });
                 }
@@ -1660,7 +1778,10 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Generate documentation insights
-    fn generate_documentation_insights(&self, analysis_result: &AnalysisResult) -> Result<Vec<DocumentationInsight>> {
+    fn generate_documentation_insights(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<DocumentationInsight>> {
         let mut insights = Vec::new();
 
         for file in &analysis_result.files {
@@ -1709,7 +1830,8 @@ impl AdvancedAIAnalyzer {
 
     /// Infer module purpose from file path
     fn infer_module_purpose(&self, path: &std::path::Path) -> String {
-        let file_name = path.file_stem()
+        let file_name = path
+            .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("")
             .to_lowercase();
@@ -1726,7 +1848,8 @@ impl AdvancedAIAnalyzer {
             "configuration management"
         } else {
             "core application functionality"
-        }.to_string()
+        }
+        .to_string()
     }
 
     /// Infer function purpose from name
@@ -1747,7 +1870,8 @@ impl AdvancedAIAnalyzer {
             "processes data or handles events"
         } else {
             "performs specific business logic"
-        }.to_string()
+        }
+        .to_string()
     }
 
     /// Generate AI recommendations
@@ -1763,7 +1887,8 @@ impl AdvancedAIAnalyzer {
         if semantic_analysis.complexity_score > 0.7 {
             recommendations.push(AIRecommendation {
                 category: "Semantic Complexity".to_string(),
-                recommendation: "Consider simplifying the semantic complexity of the codebase".to_string(),
+                recommendation: "Consider simplifying the semantic complexity of the codebase"
+                    .to_string(),
                 priority: RecommendationPriority::Medium,
                 confidence: 0.8,
                 implementation_steps: vec![
@@ -1811,7 +1936,10 @@ impl AdvancedAIAnalyzer {
         if quality_assessment.overall_score < 70 {
             recommendations.push(AIRecommendation {
                 category: "Code Quality".to_string(),
-                recommendation: format!("Improve overall code quality (current score: {})", quality_assessment.overall_score),
+                recommendation: format!(
+                    "Improve overall code quality (current score: {})",
+                    quality_assessment.overall_score
+                ),
                 priority: RecommendationPriority::High,
                 confidence: 0.9,
                 implementation_steps: vec![
@@ -1867,10 +1995,14 @@ impl AdvancedAIAnalyzer {
     ) -> u8 {
         let semantic_score = (1.0 - semantic_analysis.complexity_score) * 30.0;
         let quality_score = quality_assessment.overall_score as f64 * 0.5;
-        let pattern_score = if architecture_patterns.is_empty() { 0.0 } else { 20.0 };
+        let pattern_score = if architecture_patterns.is_empty() {
+            0.0
+        } else {
+            20.0
+        };
 
         let total_score = semantic_score + quality_score + pattern_score;
-        total_score.max(0.0).min(100.0) as u8
+        total_score.clamp(0.0, 100.0) as u8
     }
 
     /// Calculate real average complexity based on AST analysis
@@ -1954,26 +2086,59 @@ impl AdvancedAIAnalyzer {
         // Language-specific control flow patterns
         let control_patterns = match language.to_lowercase().as_str() {
             "rust" => vec![
-                "if_expression", "while_expression", "for_expression", "loop_expression",
-                "match_expression", "match_arm", "if_let_expression", "while_let_expression"
+                "if_expression",
+                "while_expression",
+                "for_expression",
+                "loop_expression",
+                "match_expression",
+                "match_arm",
+                "if_let_expression",
+                "while_let_expression",
             ],
             "python" => vec![
-                "if_statement", "while_statement", "for_statement", "try_statement",
-                "except_clause", "with_statement", "match_statement", "case_clause"
+                "if_statement",
+                "while_statement",
+                "for_statement",
+                "try_statement",
+                "except_clause",
+                "with_statement",
+                "match_statement",
+                "case_clause",
             ],
             "javascript" | "typescript" => vec![
-                "if_statement", "while_statement", "for_statement", "for_in_statement",
-                "switch_statement", "try_statement", "catch_clause", "conditional_expression"
+                "if_statement",
+                "while_statement",
+                "for_statement",
+                "for_in_statement",
+                "switch_statement",
+                "try_statement",
+                "catch_clause",
+                "conditional_expression",
             ],
             "c" | "cpp" | "c++" => vec![
-                "if_statement", "while_statement", "for_statement", "do_statement",
-                "switch_statement", "case_statement", "conditional_expression"
+                "if_statement",
+                "while_statement",
+                "for_statement",
+                "do_statement",
+                "switch_statement",
+                "case_statement",
+                "conditional_expression",
             ],
             "go" => vec![
-                "if_statement", "for_statement", "switch_statement", "type_switch_statement",
-                "case_clause", "select_statement", "communication_clause"
+                "if_statement",
+                "for_statement",
+                "switch_statement",
+                "type_switch_statement",
+                "case_clause",
+                "select_statement",
+                "communication_clause",
             ],
-            _ => vec!["if_statement", "while_statement", "for_statement", "switch_statement"],
+            _ => vec![
+                "if_statement",
+                "while_statement",
+                "for_statement",
+                "switch_statement",
+            ],
         };
 
         // Count control flow constructs
@@ -2006,9 +2171,15 @@ impl AdvancedAIAnalyzer {
     }
 
     /// Calculate effort and impact for debt items based on real analysis
-    fn calculate_debt_effort_impact(&self, smell: &CodeSmell, analysis_result: &AnalysisResult) -> (f64, f64) {
+    fn calculate_debt_effort_impact(
+        &self,
+        smell: &CodeSmell,
+        analysis_result: &AnalysisResult,
+    ) -> (f64, f64) {
         // Find the file this smell relates to
-        let file_info = analysis_result.files.iter()
+        let file_info = analysis_result
+            .files
+            .iter()
             .find(|f| f.path == smell.location);
 
         let effort = match smell.name.as_str() {
@@ -2021,16 +2192,17 @@ impl AdvancedAIAnalyzer {
                 } else {
                     3.0
                 }
-            },
+            }
             "Large Class/Module" => {
                 if let Some(file) = file_info {
                     // Effort based on number of functions and their complexity
-                    let function_count = file.symbols.iter().filter(|s| s.kind == "function").count();
-                    (function_count as f64 / 5.0).min(8.0).max(2.0)
+                    let function_count =
+                        file.symbols.iter().filter(|s| s.kind == "function").count();
+                    (function_count as f64 / 5.0).clamp(2.0, 8.0)
                 } else {
                     4.0
                 }
-            },
+            }
             _ => {
                 // Default effort calculation based on severity
                 match smell.severity {
@@ -2044,10 +2216,10 @@ impl AdvancedAIAnalyzer {
 
         let impact = match smell.category {
             SmellCategory::ChangePreventers => effort * 1.8, // High impact on maintainability
-            SmellCategory::Bloaters => effort * 1.5,        // Medium-high impact
+            SmellCategory::Bloaters => effort * 1.5,         // Medium-high impact
             SmellCategory::OOAbusers => effort * 1.6,
-            SmellCategory::Couplers => effort * 1.7,        // High impact on modularity
-            SmellCategory::Dispensables => effort * 1.2,    // Lower impact
+            SmellCategory::Couplers => effort * 1.7, // High impact on modularity
+            SmellCategory::Dispensables => effort * 1.2, // Lower impact
         };
 
         (effort, impact)
@@ -2079,11 +2251,11 @@ impl Default for QualityAssessment {
                 coupling_score: 3.0,         // Lower coupling is better
             },
             readability: ReadabilityAssessment {
-                readability_score: 6.5,      // Above average readability
-                naming_quality: 7.0,         // Good naming is achievable
-                comment_quality: 5.5,        // Moderate commenting
-                structure_clarity: 6.0,      // Clear structure
-                consistency: 6.5,            // Good consistency
+                readability_score: 6.5, // Above average readability
+                naming_quality: 7.0,    // Good naming is achievable
+                comment_quality: 5.5,   // Moderate commenting
+                structure_clarity: 6.0, // Clear structure
+                consistency: 6.5,       // Good consistency
             },
             design_quality: DesignQuality {
                 solid_adherence: 6.0,        // Good SOLID principles

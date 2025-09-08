@@ -6,18 +6,19 @@ use std::fs;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 Debug GPT-5 Response");
     println!("========================");
-    
-    let api_key = env::var("OPENAI_API_KEY")
-        .expect("OPENAI_API_KEY environment variable not set");
-    
+
+    let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable not set");
+
     // Simple test with your actual lib.rs
-    let lib_content = fs::read_to_string("src/lib.rs")
-        .expect("Failed to read src/lib.rs");
-    
-    println!("📁 Analyzing: src/lib.rs ({} lines)", lib_content.lines().count());
-    
+    let lib_content = fs::read_to_string("src/lib.rs").expect("Failed to read src/lib.rs");
+
+    println!(
+        "📁 Analyzing: src/lib.rs ({} lines)",
+        lib_content.lines().count()
+    );
+
     let client = reqwest::Client::new();
-    
+
     let request = json!({
         "model": "gpt-5",
         "messages": [{
@@ -29,9 +30,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }],
         "max_completion_tokens": 500
     });
-    
+
     println!("\n🧠 Making GPT-5 API call...");
-    
+
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
         .header("Authorization", format!("Bearer {}", api_key))
@@ -39,26 +40,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .json(&request)
         .send()
         .await?;
-    
+
     println!("📊 Status: {}", response.status());
-    
+
     if response.status().is_success() {
         let response_body: serde_json::Value = response.json().await?;
-        
+
         // Debug: Print the entire response structure
         println!("\n🔍 DEBUG: Full Response Structure:");
         println!("{}", serde_json::to_string_pretty(&response_body)?);
-        
+
         // Try to extract content
         if let Some(choices) = response_body["choices"].as_array() {
             println!("\n✅ Found choices array with {} items", choices.len());
-            
+
             if let Some(first_choice) = choices.first() {
                 println!("✅ Found first choice");
-                
+
                 if let Some(message) = first_choice["message"].as_object() {
                     println!("✅ Found message object");
-                    
+
                     if let Some(content) = message["content"].as_str() {
                         println!("✅ Found content string");
                         println!("\n🎯 GPT-5 Analysis:");
@@ -70,20 +71,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 } else {
                     println!("❌ No message object found in choice");
-                    println!("Choice keys: {:?}", first_choice.as_object().unwrap().keys().collect::<Vec<_>>());
+                    println!(
+                        "Choice keys: {:?}",
+                        first_choice.as_object().unwrap().keys().collect::<Vec<_>>()
+                    );
                 }
             } else {
                 println!("❌ No first choice found");
             }
         } else {
             println!("❌ No choices array found");
-            println!("Response keys: {:?}", response_body.as_object().unwrap().keys().collect::<Vec<_>>());
+            println!(
+                "Response keys: {:?}",
+                response_body
+                    .as_object()
+                    .unwrap()
+                    .keys()
+                    .collect::<Vec<_>>()
+            );
         }
-        
     } else {
         let error_text = response.text().await?;
         println!("❌ API call failed: {}", error_text);
     }
-    
+
     Ok(())
 }

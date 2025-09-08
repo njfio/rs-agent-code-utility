@@ -1,5 +1,5 @@
 //! Enhanced dependency analysis for security and architecture insights
-//! 
+//!
 //! This module provides comprehensive dependency analysis including:
 //! - Package manager integration (Cargo, npm, pip, go.mod)
 //! - Vulnerability scanning of dependencies
@@ -9,12 +9,12 @@
 
 use crate::{AnalysisResult, Result};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::fs;
 use std::collections::HashSet;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Dependency analyzer for comprehensive dependency insights
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -30,7 +30,10 @@ impl std::fmt::Debug for DependencyAnalyzer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DependencyAnalyzer")
             .field("config", &self.config)
-            .field("provider", &self.provider.as_ref().map(|_| "VulnerabilityProvider"))
+            .field(
+                "provider",
+                &self.provider.as_ref().map(|_| "VulnerabilityProvider"),
+            )
             .finish()
     }
 }
@@ -443,7 +446,9 @@ pub trait VulnerabilityProvider {
 pub struct NoopVulnProvider;
 
 impl VulnerabilityProvider for NoopVulnProvider {
-    fn enrich(&self, _deps: &[Dependency]) -> Vec<DependencyVulnerability> { Vec::new() }
+    fn enrich(&self, _deps: &[Dependency]) -> Vec<DependencyVulnerability> {
+        Vec::new()
+    }
 }
 
 impl DependencyAnalyzer {
@@ -457,7 +462,10 @@ impl DependencyAnalyzer {
 
     /// Create a new dependency analyzer with custom configuration
     pub fn with_config(config: DependencyConfig) -> Self {
-        Self { config, provider: None }
+        Self {
+            config,
+            provider: None,
+        }
     }
 
     /// Attach an external vulnerability provider (scaffold; may be a stub)
@@ -488,18 +496,18 @@ impl DependencyAnalyzer {
             security_advisories: 0,
         }
     }
-    
+
     /// Analyze dependencies in a codebase
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<DependencyAnalysisResult> {
         let root_path = &analysis_result.root_path;
-        
+
         // Detect package managers
         let package_managers = self.detect_package_managers(root_path)?;
-        
+
         // Extract dependencies from each package manager
         let mut all_dependencies = Vec::new();
         let mut dependencies_by_manager = HashMap::new();
-        
+
         for pm_info in &package_managers {
             let deps = self.extract_dependencies(&pm_info)?;
             let count = deps.len();
@@ -510,7 +518,7 @@ impl DependencyAnalyzer {
         // Also scan source files for imports to infer dependencies
         let inferred = self.extract_source_imports(root_path, &analysis_result.files)?;
         all_dependencies.extend(inferred);
-        
+
         // Analyze vulnerabilities
         let vulnerabilities = if self.config.vulnerability_scanning {
             if let Some(ref p) = self.provider {
@@ -521,43 +529,45 @@ impl DependencyAnalyzer {
         } else {
             Vec::new()
         };
-        
+
         // Analyze licenses
         let license_analysis = if self.config.license_compliance {
             self.analyze_licenses(&all_dependencies)?
         } else {
             LicenseAnalysis::default()
         };
-        
+
         // Detect outdated dependencies
         let outdated_dependencies = if self.config.outdated_detection {
             self.detect_outdated_dependencies(&all_dependencies)?
         } else {
             Vec::new()
         };
-        
+
         // Analyze dependency graph
         let graph_analysis = if self.config.graph_analysis {
             self.analyze_dependency_graph(&all_dependencies)?
         } else {
             DependencyGraphAnalysis::default()
         };
-        
+
         // Generate security recommendations
         let security_recommendations = self.generate_security_recommendations(
             &vulnerabilities,
             &outdated_dependencies,
             &license_analysis,
         )?;
-        
-        let direct_deps = all_dependencies.iter()
+
+        let direct_deps = all_dependencies
+            .iter()
             .filter(|d| d.dependency_type == DependencyType::Direct)
             .count();
-        
-        let transitive_deps = all_dependencies.iter()
+
+        let transitive_deps = all_dependencies
+            .iter()
             .filter(|d| d.dependency_type == DependencyType::Transitive)
             .count();
-        
+
         Ok(DependencyAnalysisResult {
             total_dependencies: all_dependencies.len(),
             direct_dependencies: direct_deps,
@@ -584,7 +594,11 @@ impl DependencyAnalyzer {
             package_managers.push(PackageManagerInfo {
                 manager: PackageManager::Cargo,
                 config_file: cargo_toml,
-                lock_file: if lock_file.exists() { Some(lock_file) } else { None },
+                lock_file: if lock_file.exists() {
+                    Some(lock_file)
+                } else {
+                    None
+                },
                 dependency_count: 0, // Will be filled later
                 version: None,
             });
@@ -622,7 +636,10 @@ impl DependencyAnalyzer {
             package_managers.push(PackageManagerInfo {
                 manager: PackageManager::Poetry,
                 config_file: pyproject_toml,
-                lock_file: root_path.join("poetry.lock").exists().then(|| root_path.join("poetry.lock")),
+                lock_file: root_path
+                    .join("poetry.lock")
+                    .exists()
+                    .then(|| root_path.join("poetry.lock")),
                 dependency_count: 0,
                 version: None,
             });
@@ -630,7 +647,10 @@ impl DependencyAnalyzer {
             package_managers.push(PackageManagerInfo {
                 manager: PackageManager::Pipenv,
                 config_file: pipfile,
-                lock_file: root_path.join("Pipfile.lock").exists().then(|| root_path.join("Pipfile.lock")),
+                lock_file: root_path
+                    .join("Pipfile.lock")
+                    .exists()
+                    .then(|| root_path.join("Pipfile.lock")),
                 dependency_count: 0,
                 version: None,
             });
@@ -650,7 +670,10 @@ impl DependencyAnalyzer {
             package_managers.push(PackageManagerInfo {
                 manager: PackageManager::GoMod,
                 config_file: go_mod,
-                lock_file: root_path.join("go.sum").exists().then(|| root_path.join("go.sum")),
+                lock_file: root_path
+                    .join("go.sum")
+                    .exists()
+                    .then(|| root_path.join("go.sum")),
                 dependency_count: 0,
                 version: None,
             });
@@ -677,8 +700,9 @@ impl DependencyAnalyzer {
         let mut dependencies = Vec::new();
 
         // Parse Cargo.toml using proper TOML parsing
-        let toml_value: toml::Value = toml::from_str(&content)
-            .map_err(|e| crate::error::Error::parse_error(format!("Failed to parse Cargo.toml: {}", e)))?;
+        let toml_value: toml::Value = toml::from_str(&content).map_err(|e| {
+            crate::error::Error::parse_error(format!("Failed to parse Cargo.toml: {}", e))
+        })?;
 
         // Extract regular dependencies
         if let Some(deps) = toml_value.get("dependencies").and_then(|d| d.as_table()) {
@@ -713,7 +737,10 @@ impl DependencyAnalyzer {
 
         // Extract dev dependencies if configured
         if self.config.include_dev_dependencies {
-            if let Some(dev_deps) = toml_value.get("dev-dependencies").and_then(|d| d.as_table()) {
+            if let Some(dev_deps) = toml_value
+                .get("dev-dependencies")
+                .and_then(|d| d.as_table())
+            {
                 for (name, version_spec) in dev_deps {
                     let (version, _) = self.parse_cargo_dependency_spec(version_spec);
                     dependencies.push(Self::create_dependency(
@@ -727,7 +754,10 @@ impl DependencyAnalyzer {
         }
 
         // Extract build dependencies
-        if let Some(build_deps) = toml_value.get("build-dependencies").and_then(|d| d.as_table()) {
+        if let Some(build_deps) = toml_value
+            .get("build-dependencies")
+            .and_then(|d| d.as_table())
+        {
             for (name, version_spec) in build_deps {
                 let (version, _) = self.parse_cargo_dependency_spec(version_spec);
                 dependencies.push(Self::create_dependency(
@@ -745,17 +775,20 @@ impl DependencyAnalyzer {
     /// Parse a Cargo dependency specification
     fn parse_cargo_dependency_spec(&self, version_spec: &toml::Value) -> (String, DependencyType) {
         match version_spec {
-            toml::Value::String(version) => {
-                (version.clone(), DependencyType::Direct)
-            }
+            toml::Value::String(version) => (version.clone(), DependencyType::Direct),
             toml::Value::Table(table) => {
                 // Handle complex dependency specifications
-                let version = table.get("version")
+                let version = table
+                    .get("version")
                     .and_then(|v| v.as_str())
                     .unwrap_or("*")
                     .to_string();
 
-                let dependency_type = if table.get("optional").and_then(|v| v.as_bool()).unwrap_or(false) {
+                let dependency_type = if table
+                    .get("optional")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+                {
                     DependencyType::Optional
                 } else {
                     DependencyType::Direct
@@ -763,7 +796,7 @@ impl DependencyAnalyzer {
 
                 (version, dependency_type)
             }
-            _ => ("*".to_string(), DependencyType::Direct)
+            _ => ("*".to_string(), DependencyType::Direct),
         }
     }
 
@@ -773,13 +806,18 @@ impl DependencyAnalyzer {
         let mut dependencies = Vec::new();
 
         // Parse package.json using serde_json
-        let package_json: serde_json::Value = serde_json::from_str(&content)
-            .map_err(|e| crate::error::Error::parse_error(format!("Failed to parse package.json: {}", e)))?;
+        let package_json: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
+            crate::error::Error::parse_error(format!("Failed to parse package.json: {}", e))
+        })?;
 
         // Extract regular dependencies
         if let Some(deps) = package_json.get("dependencies").and_then(|d| d.as_object()) {
             for (name, version) in deps {
-                if !version.is_string() { return Err(crate::error::Error::parse_error("Invalid version type in package.json: expected string".to_string())); }
+                if !version.is_string() {
+                    return Err(crate::error::Error::parse_error(
+                        "Invalid version type in package.json: expected string".to_string(),
+                    ));
+                }
                 let version_str = version.as_str().unwrap_or("*").to_string();
                 dependencies.push(Dependency {
                     name: name.clone(),
@@ -800,9 +838,16 @@ impl DependencyAnalyzer {
 
         // Extract dev dependencies if configured
         if self.config.include_dev_dependencies {
-            if let Some(dev_deps) = package_json.get("devDependencies").and_then(|d| d.as_object()) {
+            if let Some(dev_deps) = package_json
+                .get("devDependencies")
+                .and_then(|d| d.as_object())
+            {
                 for (name, version) in dev_deps {
-                    if !version.is_string() { return Err(crate::error::Error::parse_error("Invalid version type in package.json: expected string".to_string())); }
+                    if !version.is_string() {
+                        return Err(crate::error::Error::parse_error(
+                            "Invalid version type in package.json: expected string".to_string(),
+                        ));
+                    }
                     let version_str = version.as_str().unwrap_or("*").to_string();
                     dependencies.push(Dependency {
                         name: name.clone(),
@@ -823,9 +868,16 @@ impl DependencyAnalyzer {
         }
 
         // Extract peer dependencies
-        if let Some(peer_deps) = package_json.get("peerDependencies").and_then(|d| d.as_object()) {
+        if let Some(peer_deps) = package_json
+            .get("peerDependencies")
+            .and_then(|d| d.as_object())
+        {
             for (name, version) in peer_deps {
-                if !version.is_string() { return Err(crate::error::Error::parse_error("Invalid version type in package.json: expected string".to_string())); }
+                if !version.is_string() {
+                    return Err(crate::error::Error::parse_error(
+                        "Invalid version type in package.json: expected string".to_string(),
+                    ));
+                }
                 let version_str = version.as_str().unwrap_or("*").to_string();
                 dependencies.push(Dependency {
                     name: name.clone(),
@@ -845,9 +897,16 @@ impl DependencyAnalyzer {
         }
 
         // Extract optional dependencies
-        if let Some(opt_deps) = package_json.get("optionalDependencies").and_then(|d| d.as_object()) {
+        if let Some(opt_deps) = package_json
+            .get("optionalDependencies")
+            .and_then(|d| d.as_object())
+        {
             for (name, version) in opt_deps {
-                if !version.is_string() { return Err(crate::error::Error::parse_error("Invalid version type in package.json: expected string".to_string())); }
+                if !version.is_string() {
+                    return Err(crate::error::Error::parse_error(
+                        "Invalid version type in package.json: expected string".to_string(),
+                    ));
+                }
                 let version_str = version.as_str().unwrap_or("*").to_string();
                 dependencies.push(Dependency {
                     name: name.clone(),
@@ -870,19 +929,30 @@ impl DependencyAnalyzer {
     }
 
     /// Extract dependencies by scanning source imports across languages
-    fn extract_source_imports(&self, root: &Path, files: &[crate::FileInfo]) -> Result<Vec<Dependency>> {
+    fn extract_source_imports(
+        &self,
+        root: &Path,
+        files: &[crate::FileInfo],
+    ) -> Result<Vec<Dependency>> {
         let mut deps = Vec::new();
         let mut seen: HashSet<(String, PackageManager)> = HashSet::new();
 
         for fi in files {
             let full = root.join(&fi.path);
-            let Ok(content) = fs::read_to_string(&full) else { continue };
+            let Ok(content) = fs::read_to_string(&full) else {
+                continue;
+            };
             match fi.language.as_str() {
                 "Rust" => {
                     for name in Self::scan_rust_imports(&content) {
                         let key = (name.clone(), PackageManager::Cargo);
                         if seen.insert(key.clone()) {
-                            deps.push(Self::create_dependency(&name, "*".to_string(), PackageManager::Cargo, DependencyType::Direct));
+                            deps.push(Self::create_dependency(
+                                &name,
+                                "*".to_string(),
+                                PackageManager::Cargo,
+                                DependencyType::Direct,
+                            ));
                         }
                     }
                 }
@@ -890,7 +960,12 @@ impl DependencyAnalyzer {
                     for name in Self::scan_js_imports(&content) {
                         let key = (name.clone(), PackageManager::Npm);
                         if seen.insert(key.clone()) {
-                            deps.push(Self::create_dependency(&name, "*".to_string(), PackageManager::Npm, DependencyType::Direct));
+                            deps.push(Self::create_dependency(
+                                &name,
+                                "*".to_string(),
+                                PackageManager::Npm,
+                                DependencyType::Direct,
+                            ));
                         }
                     }
                 }
@@ -898,7 +973,12 @@ impl DependencyAnalyzer {
                     for name in Self::scan_python_imports(&content) {
                         let key = (name.clone(), PackageManager::Pip);
                         if seen.insert(key.clone()) {
-                            deps.push(Self::create_dependency(&name, "*".to_string(), PackageManager::Pip, DependencyType::Direct));
+                            deps.push(Self::create_dependency(
+                                &name,
+                                "*".to_string(),
+                                PackageManager::Pip,
+                                DependencyType::Direct,
+                            ));
                         }
                     }
                 }
@@ -916,14 +996,25 @@ impl DependencyAnalyzer {
             if l.starts_with("use ") {
                 // use foo::bar::{...}
                 let after = &l[4..];
-                let first = after.split(|c: char| c == ':' || c.is_whitespace() || c == '{').next().unwrap_or("");
-                if !matches!(first, "" | "crate" | "self" | "super" | "std" | "core" | "alloc") {
+                let first = after
+                    .split(|c: char| c == ':' || c.is_whitespace() || c == '{')
+                    .next()
+                    .unwrap_or("");
+                if !matches!(
+                    first,
+                    "" | "crate" | "self" | "super" | "std" | "core" | "alloc"
+                ) {
                     names.push(first.to_string());
                 }
             } else if l.starts_with("extern crate ") {
                 let after = &l[13..];
-                let name = after.split(|c: char| c == ';' || c.is_whitespace()).next().unwrap_or("");
-                if !name.is_empty() { names.push(name.to_string()); }
+                let name = after
+                    .split(|c: char| c == ';' || c.is_whitespace())
+                    .next()
+                    .unwrap_or("");
+                if !name.is_empty() {
+                    names.push(name.to_string());
+                }
             }
         }
         names
@@ -946,16 +1037,18 @@ impl DependencyAnalyzer {
             // import 'pkg'; side-effect import
             if l.starts_with("import ") && !l.contains(" from ") {
                 // e.g., import 'dotenv/config'
-                if let Some(start) = l.find('\'') { // '
-                    let spec = &l[start+1..];
-                    if let Some(end) = spec.find('\'') { // '
+                if let Some(start) = l.find('\'') {
+                    // '
+                    let spec = &l[start + 1..];
+                    if let Some(end) = spec.find('\'') {
+                        // '
                         let s = &spec[..end];
                         if !s.starts_with("./") && !s.starts_with("../") {
                             names.push(Self::normalize_js_pkg(s));
                         }
                     }
                 } else if let Some(start) = l.find('"') {
-                    let spec = &l[start+1..];
+                    let spec = &l[start + 1..];
                     if let Some(end) = spec.find('"') {
                         let s = &spec[..end];
                         if !s.starts_with("./") && !s.starts_with("../") {
@@ -970,7 +1063,9 @@ impl DependencyAnalyzer {
                 if let Some(end) = rest.find(')') {
                     let inside = &rest[..end];
                     let inside = inside.trim_matches(&['"', '\'', ' '][..]);
-                    if !inside.starts_with("./") && !inside.starts_with("../") { names.push(Self::normalize_js_pkg(inside)); }
+                    if !inside.starts_with("./") && !inside.starts_with("../") {
+                        names.push(Self::normalize_js_pkg(inside));
+                    }
                 }
             }
             // dynamic import('pkg')
@@ -979,7 +1074,9 @@ impl DependencyAnalyzer {
                 if let Some(end) = rest.find(')') {
                     let inside = &rest[..end];
                     let inside = inside.trim_matches(&['"', '\'', ' '][..]);
-                    if !inside.starts_with("./") && !inside.starts_with("../") { names.push(Self::normalize_js_pkg(inside)); }
+                    if !inside.starts_with("./") && !inside.starts_with("../") {
+                        names.push(Self::normalize_js_pkg(inside));
+                    }
                 }
             }
             // export * from 'pkg'
@@ -1019,13 +1116,20 @@ impl DependencyAnalyzer {
             if l.starts_with("import ") {
                 // import module [as alias]
                 let after = &l[7..];
-                let first = after.split(|c: char| c.is_whitespace() || c == ',').next().unwrap_or("");
-                if !first.is_empty() && !first.starts_with('.') { names.push(first.split('.').next().unwrap().to_string()); }
+                let first = after
+                    .split(|c: char| c.is_whitespace() || c == ',')
+                    .next()
+                    .unwrap_or("");
+                if !first.is_empty() && !first.starts_with('.') {
+                    names.push(first.split('.').next().unwrap().to_string());
+                }
             } else if l.starts_with("from ") {
                 // from module import ...
                 let after = &l[5..];
                 let module = after.split_whitespace().next().unwrap_or("");
-                if !module.is_empty() && !module.starts_with('.') { names.push(module.split('.').next().unwrap().to_string()); }
+                if !module.is_empty() && !module.starts_with('.') {
+                    names.push(module.split('.').next().unwrap().to_string());
+                }
             }
         }
         names
@@ -1070,9 +1174,10 @@ impl DependencyAnalyzer {
             }
             _ => {
                 // Fallback for other Python package managers
-                return Err(crate::error::Error::parse_error(
-                    format!("Unsupported Python package manager: {:?}", pm_info.manager)
-                ));
+                return Err(crate::error::Error::parse_error(format!(
+                    "Unsupported Python package manager: {:?}",
+                    pm_info.manager
+                )));
             }
         }
 
@@ -1147,7 +1252,10 @@ impl DependencyAnalyzer {
     }
 
     /// Analyze vulnerabilities in dependencies
-    fn analyze_vulnerabilities(&self, dependencies: &[Dependency]) -> Result<Vec<DependencyVulnerability>> {
+    fn analyze_vulnerabilities(
+        &self,
+        dependencies: &[Dependency],
+    ) -> Result<Vec<DependencyVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Simulate vulnerability detection
@@ -1158,7 +1266,10 @@ impl DependencyAnalyzer {
                     dependency: dep.name.clone(),
                     affected_versions: format!("<= {}", dep.version),
                     title: format!("Security vulnerability in {}", dep.name),
-                    description: format!("A security vulnerability has been identified in {} version {}", dep.name, dep.version),
+                    description: format!(
+                        "A security vulnerability has been identified in {} version {}",
+                        dep.name, dep.version
+                    ),
                     severity: VulnerabilitySeverity::Medium,
                     cvss_score: Some(6.5),
                     cve: Some("CVE-2024-0001".to_string()),
@@ -1191,8 +1302,12 @@ impl DependencyAnalyzer {
                         dependency: dep.name.clone(),
                         license: license.clone(),
                         issue_type: LicenseIssueType::Copyleft,
-                        description: format!("{} uses a copyleft license which may require source disclosure", dep.name),
-                        recommendation: "Review license compatibility with your project".to_string(),
+                        description: format!(
+                            "{} uses a copyleft license which may require source disclosure",
+                            dep.name
+                        ),
+                        recommendation: "Review license compatibility with your project"
+                            .to_string(),
                     });
                 }
             } else {
@@ -1202,17 +1317,25 @@ impl DependencyAnalyzer {
                     license: "Unknown".to_string(),
                     issue_type: LicenseIssueType::Unknown,
                     description: format!("License information not available for {}", dep.name),
-                    recommendation: "Investigate and document the license for this dependency".to_string(),
+                    recommendation: "Investigate and document the license for this dependency"
+                        .to_string(),
                 });
             }
         }
 
-        let compatible_licenses = vec!["MIT".to_string(), "Apache-2.0".to_string(), "BSD-3-Clause".to_string()];
+        let compatible_licenses = vec![
+            "MIT".to_string(),
+            "Apache-2.0".to_string(),
+            "BSD-3-Clause".to_string(),
+        ];
         let incompatible_licenses = vec!["GPL-3.0".to_string(), "AGPL-3.0".to_string()];
 
         let compliance_status = if compliance_issues.is_empty() {
             ComplianceStatus::Compliant
-        } else if compliance_issues.iter().any(|issue| matches!(issue.issue_type, LicenseIssueType::Incompatible)) {
+        } else if compliance_issues
+            .iter()
+            .any(|issue| matches!(issue.issue_type, LicenseIssueType::Incompatible))
+        {
             ComplianceStatus::NonCompliant
         } else {
             ComplianceStatus::Warning
@@ -1231,11 +1354,17 @@ impl DependencyAnalyzer {
 
     /// Check if a license is copyleft
     fn is_copyleft_license(&self, license: &str) -> bool {
-        matches!(license, "GPL-2.0" | "GPL-3.0" | "LGPL-2.1" | "LGPL-3.0" | "AGPL-3.0")
+        matches!(
+            license,
+            "GPL-2.0" | "GPL-3.0" | "LGPL-2.1" | "LGPL-3.0" | "AGPL-3.0"
+        )
     }
 
     /// Detect outdated dependencies
-    fn detect_outdated_dependencies(&self, dependencies: &[Dependency]) -> Result<Vec<OutdatedDependency>> {
+    fn detect_outdated_dependencies(
+        &self,
+        dependencies: &[Dependency],
+    ) -> Result<Vec<OutdatedDependency>> {
         let mut outdated = Vec::new();
 
         for dep in dependencies {
@@ -1275,18 +1404,23 @@ impl DependencyAnalyzer {
     }
 
     /// Analyze dependency graph
-    fn analyze_dependency_graph(&self, dependencies: &[Dependency]) -> Result<DependencyGraphAnalysis> {
+    fn analyze_dependency_graph(
+        &self,
+        dependencies: &[Dependency],
+    ) -> Result<DependencyGraphAnalysis> {
         let total_nodes = dependencies.len();
         let total_edges = dependencies.len(); // Simplified
 
         // Detect circular dependencies (simplified)
-        let circular_dependencies = vec![
-            CircularDependency {
-                cycle: vec!["package-a".to_string(), "package-b".to_string(), "package-a".to_string()],
-                length: 2,
-                impact: CircularDependencyImpact::Medium,
-            }
-        ];
+        let circular_dependencies = vec![CircularDependency {
+            cycle: vec![
+                "package-a".to_string(),
+                "package-b".to_string(),
+                "package-a".to_string(),
+            ],
+            length: 2,
+            impact: CircularDependencyImpact::Medium,
+        }];
 
         // Find popular dependencies
         let mut dependency_counts = HashMap::new();
@@ -1310,7 +1444,8 @@ impl DependencyAnalyzer {
         let clusters = vec![
             DependencyCluster {
                 name: "Web Framework".to_string(),
-                dependencies: dependencies.iter()
+                dependencies: dependencies
+                    .iter()
                     .filter(|d| d.name.contains("web") || d.name.contains("http"))
                     .map(|d| d.name.as_str())
                     .map(str::to_string)
@@ -1319,7 +1454,8 @@ impl DependencyAnalyzer {
             },
             DependencyCluster {
                 name: "Testing".to_string(),
-                dependencies: dependencies.iter()
+                dependencies: dependencies
+                    .iter()
                     .filter(|d| d.dependency_type == DependencyType::Development)
                     .map(|d| d.name.as_str())
                     .map(str::to_string)
@@ -1358,21 +1494,34 @@ impl DependencyAnalyzer {
         if !vulnerabilities.is_empty() {
             recommendations.push(SecurityRecommendation {
                 category: "Vulnerability Management".to_string(),
-                recommendation: format!("Address {} security vulnerabilities in dependencies", vulnerabilities.len()),
+                recommendation: format!(
+                    "Address {} security vulnerabilities in dependencies",
+                    vulnerabilities.len()
+                ),
                 priority: RecommendationPriority::Critical,
-                affected_dependencies: vulnerabilities.iter().map(|v| v.dependency.clone()).collect(),
+                affected_dependencies: vulnerabilities
+                    .iter()
+                    .map(|v| v.dependency.clone())
+                    .collect(),
                 difficulty: ImplementationDifficulty::Medium,
             });
         }
 
         if !outdated.is_empty() {
-            let critical_updates = outdated.iter().filter(|o| o.urgency == UpdateUrgency::Critical).count();
+            let critical_updates = outdated
+                .iter()
+                .filter(|o| o.urgency == UpdateUrgency::Critical)
+                .count();
             if critical_updates > 0 {
                 recommendations.push(SecurityRecommendation {
                     category: "Dependency Updates".to_string(),
-                    recommendation: format!("Update {} critical dependencies immediately", critical_updates),
+                    recommendation: format!(
+                        "Update {} critical dependencies immediately",
+                        critical_updates
+                    ),
                     priority: RecommendationPriority::High,
-                    affected_dependencies: outdated.iter()
+                    affected_dependencies: outdated
+                        .iter()
                         .filter(|o| o.urgency == UpdateUrgency::Critical)
                         .map(|o| o.name.clone())
                         .collect(),
@@ -1386,7 +1535,9 @@ impl DependencyAnalyzer {
                 category: "License Compliance".to_string(),
                 recommendation: "Review and resolve license compliance issues".to_string(),
                 priority: RecommendationPriority::Medium,
-                affected_dependencies: license_analysis.compliance_issues.iter()
+                affected_dependencies: license_analysis
+                    .compliance_issues
+                    .iter()
                     .map(|issue| issue.dependency.clone())
                     .collect(),
                 difficulty: ImplementationDifficulty::Hard,
@@ -1405,9 +1556,14 @@ impl DependencyAnalyzer {
     }
 
     /// Parse Poetry dependencies from pyproject.toml
-    fn parse_poetry_dependencies(&self, content: &str, dependencies: &mut Vec<Dependency>) -> Result<()> {
-        let toml_value: toml::Value = toml::from_str(content)
-            .map_err(|e| crate::error::Error::parse_error(format!("Failed to parse pyproject.toml: {}", e)))?;
+    fn parse_poetry_dependencies(
+        &self,
+        content: &str,
+        dependencies: &mut Vec<Dependency>,
+    ) -> Result<()> {
+        let toml_value: toml::Value = toml::from_str(content).map_err(|e| {
+            crate::error::Error::parse_error(format!("Failed to parse pyproject.toml: {}", e))
+        })?;
 
         // Extract dependencies from [tool.poetry.dependencies]
         if let Some(poetry) = toml_value.get("tool").and_then(|t| t.get("poetry")) {
@@ -1459,7 +1615,8 @@ impl DependencyAnalyzer {
 
             // Extract dev dependencies if configured
             if self.config.include_dev_dependencies {
-                if let Some(dev_deps) = poetry.get("group")
+                if let Some(dev_deps) = poetry
+                    .get("group")
                     .and_then(|g| g.get("dev"))
                     .and_then(|d| d.get("dependencies"))
                     .and_then(|d| d.as_table())
@@ -1467,12 +1624,11 @@ impl DependencyAnalyzer {
                     for (name, version_spec) in dev_deps {
                         let version = match version_spec {
                             toml::Value::String(v) => v.clone(),
-                            toml::Value::Table(t) => {
-                                t.get("version")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("*")
-                                    .to_string()
-                            }
+                            toml::Value::Table(t) => t
+                                .get("version")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("*")
+                                .to_string(),
                             _ => "*".to_string(),
                         };
 
@@ -1499,9 +1655,14 @@ impl DependencyAnalyzer {
     }
 
     /// Parse Pipenv dependencies from Pipfile
-    fn parse_pipfile_dependencies(&self, content: &str, dependencies: &mut Vec<Dependency>) -> Result<()> {
-        let toml_value: toml::Value = toml::from_str(content)
-            .map_err(|e| crate::error::Error::parse_error(format!("Failed to parse Pipfile: {}", e)))?;
+    fn parse_pipfile_dependencies(
+        &self,
+        content: &str,
+        dependencies: &mut Vec<Dependency>,
+    ) -> Result<()> {
+        let toml_value: toml::Value = toml::from_str(content).map_err(|e| {
+            crate::error::Error::parse_error(format!("Failed to parse Pipfile: {}", e))
+        })?;
 
         // Extract dependencies from [packages]
         if let Some(packages) = toml_value.get("packages").and_then(|p| p.as_table()) {
@@ -1541,12 +1702,11 @@ impl DependencyAnalyzer {
                 for (name, version_spec) in dev_packages {
                     let version = match version_spec {
                         toml::Value::String(v) => v.clone(),
-                        toml::Value::Table(t) => {
-                            t.get("version")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("*")
-                                .to_string()
-                        }
+                        toml::Value::Table(t) => t
+                            .get("version")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("*")
+                            .to_string(),
                         _ => "*".to_string(),
                     };
 

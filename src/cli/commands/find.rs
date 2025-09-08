@@ -1,10 +1,10 @@
 //! Find command implementation
 
-use std::path::PathBuf;
-use crate::cli::error::{CliResult, validate_path};
+use crate::cli::error::{validate_path, CliResult};
 use crate::cli::utils::create_progress_bar;
 use crate::CodebaseAnalyzer;
 use colored::Colorize;
+use std::path::PathBuf;
 
 pub fn execute(
     path: &PathBuf,
@@ -18,9 +18,10 @@ pub fn execute(
     let pb = create_progress_bar("Finding symbols...");
 
     // Analyze the codebase
-    let mut analyzer = CodebaseAnalyzer::new()
-        .map_err(|e| format!("Failed to create analyzer: {}", e))?;
-    let analysis_result = analyzer.analyze_directory(path)
+    let mut analyzer =
+        CodebaseAnalyzer::new().map_err(|e| format!("Failed to create analyzer: {}", e))?;
+    let analysis_result = analyzer
+        .analyze_directory(path)
         .map_err(|e| format!("Failed to analyze directory: {}", e))?;
 
     pb.set_message("Searching symbols...");
@@ -31,7 +32,9 @@ pub fn execute(
     for file in &analysis_result.files {
         // Filter by language if specified
         if let Some(lang_filter) = language {
-            if let Some(detected_lang) = crate::detect_language_from_path(&file.path.to_string_lossy()) {
+            if let Some(detected_lang) =
+                crate::detect_language_from_path(&file.path.to_string_lossy())
+            {
                 if detected_lang.name().to_lowercase() != lang_filter.to_lowercase() {
                     continue;
                 }
@@ -43,14 +46,22 @@ pub fn execute(
         for symbol in &file.symbols {
             // Filter by name if specified
             if let Some(name_filter) = name {
-                if !symbol.name.to_lowercase().contains(&name_filter.to_lowercase()) {
+                if !symbol
+                    .name
+                    .to_lowercase()
+                    .contains(&name_filter.to_lowercase())
+                {
                     continue;
                 }
             }
 
             // Filter by symbol type if specified
             if let Some(type_filter) = symbol_type {
-                if !symbol.kind.to_lowercase().contains(&type_filter.to_lowercase()) {
+                if !symbol
+                    .kind
+                    .to_lowercase()
+                    .contains(&type_filter.to_lowercase())
+                {
                     continue;
                 }
             }
@@ -74,7 +85,8 @@ pub fn execute(
         return Ok(());
     }
 
-    println!("\n{} {} matching symbols found:\n",
+    println!(
+        "\n{} {} matching symbols found:\n",
         "Found".green().bold(),
         matching_symbols.len().to_string().cyan().bold()
     );
@@ -125,13 +137,16 @@ pub fn execute(
         };
 
         // Print symbol information
-        println!("  {} {} {} {} {}",
+        println!(
+            "  {} {} {} {} {}",
             format!("{}:", symbol.start_line).white().dimmed(),
             type_str,
             visibility_str,
             symbol.name.white().bold(),
             if let Some(ref doc) = symbol.documentation {
-                format!("// {}", doc.lines().next().unwrap_or("")).white().dimmed()
+                format!("// {}", doc.lines().next().unwrap_or(""))
+                    .white()
+                    .dimmed()
             } else {
                 "".white()
             }

@@ -68,7 +68,7 @@ pub struct MemoryStats {
 pub struct MemoryMappedFile {
     mmap: Mmap,
     file_size: usize,
-    path: std::path::PathBuf,
+    _path: std::path::PathBuf,
 }
 
 impl MemoryMappedFile {
@@ -102,7 +102,7 @@ impl MemoryMappedFile {
         Ok(Self {
             mmap,
             file_size,
-            path: path.as_ref().to_path_buf(),
+            _path: path.as_ref().to_path_buf(),
         })
     }
 
@@ -242,7 +242,7 @@ impl<T: Default + Clone> Clone for MemoryPool<T> {
 }
 
 #[derive(Debug, Clone, Default)]
-struct PoolStats {
+pub struct PoolStats {
     allocations: u64,
     deallocations: u64,
     hits: u64,

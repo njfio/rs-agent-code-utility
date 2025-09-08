@@ -2,10 +2,8 @@
 //!
 //! Provides comprehensive codebase analysis with standardized output formats.
 
-use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
-use crate::cli::output::{
-    print_enhanced_summary, print_info, print_success, OutputFormat, OutputHandler,
-};
+use crate::cli::error::{validate_path, CliError, CliResult};
+use crate::cli::output::{OutputFormat, OutputHandler};
 use crate::cli::utils::{create_analysis_config, create_progress_bar, validate_output_path};
 use crate::CodebaseAnalyzer;
 use colored::Colorize;
@@ -28,15 +26,6 @@ pub fn execute(
 ) -> CliResult<()> {
     // Validate inputs
     validate_path(path)?;
-
-    // Allow template formats by checking if format starts with "template:"
-    let allowed_formats = if format.starts_with("template:") {
-        vec!["template:"] // Allow any template format
-    } else {
-        vec![
-            "table", "json", "summary", "sarif", "markdown", "text", "html", "csv",
-        ]
-    };
 
     // Validate format using OutputFormat::from_str for comprehensive validation
     if OutputFormat::from_str(format).is_err() {

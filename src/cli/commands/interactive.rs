@@ -181,16 +181,16 @@ impl Helper for InteractiveHelper {}
 
 // Custom highlighter for syntax highlighting
 struct InteractiveHighlighter {
-    syntax_set: SyntaxSet,
-    theme_set: ThemeSet,
+    _syntax_set: SyntaxSet,
+    _theme_set: ThemeSet,
     bracket_highlighter: MatchingBracketHighlighter,
 }
 
 impl Clone for InteractiveHighlighter {
     fn clone(&self) -> Self {
         Self {
-            syntax_set: SyntaxSet::load_defaults_newlines(),
-            theme_set: ThemeSet::load_defaults(),
+            _syntax_set: SyntaxSet::load_defaults_newlines(),
+            _theme_set: ThemeSet::load_defaults(),
             bracket_highlighter: MatchingBracketHighlighter::new(),
         }
     }
@@ -202,25 +202,26 @@ impl InteractiveHighlighter {
         let theme_set = ThemeSet::load_defaults();
 
         Self {
-            syntax_set,
-            theme_set,
+            _syntax_set: syntax_set,
+            _theme_set: theme_set,
             bracket_highlighter: MatchingBracketHighlighter::new(),
         }
     }
 
+    #[allow(dead_code)]
     fn highlight_code(&self, code: &str, language: &str) -> String {
         let syntax = self
-            .syntax_set
+            ._syntax_set
             .find_syntax_by_extension(language)
-            .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text());
+            .unwrap_or_else(|| self._syntax_set.find_syntax_plain_text());
 
-        let theme = &self.theme_set.themes["base16-ocean.dark"];
+        let theme = &self._theme_set.themes["base16-ocean.dark"];
         let mut highlighter = HighlightLines::new(syntax, theme);
 
         let mut highlighted = String::new();
         for line in LinesWithEndings::from(code) {
             let ranges: Vec<(Style, &str)> =
-                highlighter.highlight_line(line, &self.syntax_set).unwrap();
+                highlighter.highlight_line(line, &self._syntax_set).unwrap();
             highlighted.push_str(&as_24_bit_terminal_escaped(&ranges[..], true));
         }
 
@@ -260,7 +261,7 @@ impl Validator for InteractiveValidator {
 #[derive(Clone)]
 struct SessionState {
     last_command: Option<String>,
-    favorite_commands: Vec<String>,
+    _favorite_commands: Vec<String>,
     search_history: Vec<String>,
 }
 
@@ -268,7 +269,7 @@ impl SessionState {
     fn new() -> Self {
         Self {
             last_command: None,
-            favorite_commands: Vec::new(),
+            _favorite_commands: Vec::new(),
             search_history: Vec::new(),
         }
     }

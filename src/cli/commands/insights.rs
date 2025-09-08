@@ -1,9 +1,9 @@
 //! Insights command implementation
 
-use std::path::PathBuf;
-use crate::cli::error::{CliResult, validate_path};
+use crate::cli::error::{validate_path, CliResult};
 use crate::cli::utils::create_progress_bar;
-use crate::{CodebaseAnalyzer, AutomatedReasoningEngine, ReasoningConfig};
+use crate::{AutomatedReasoningEngine, CodebaseAnalyzer, ReasoningConfig};
+use std::path::PathBuf;
 
 pub fn execute(path: &PathBuf, focus: &str, format: &str) -> CliResult<()> {
     validate_path(path)?;
@@ -16,7 +16,8 @@ pub fn execute(path: &PathBuf, focus: &str, format: &str) -> CliResult<()> {
         analyzer.analyze_file(path)
     } else {
         analyzer.analyze_directory(path)
-    }.map_err(|e| format!("Failed to analyze path: {}", e))?;
+    }
+    .map_err(|e| format!("Failed to analyze path: {}", e))?;
 
     pb.set_message("Generating insights...");
 
@@ -32,7 +33,8 @@ pub fn execute(path: &PathBuf, focus: &str, format: &str) -> CliResult<()> {
     };
 
     let mut reasoning_engine = AutomatedReasoningEngine::with_config(reasoning_config);
-    let reasoning_result = reasoning_engine.analyze_code(&analysis_result)
+    let reasoning_result = reasoning_engine
+        .analyze_code(&analysis_result)
         .map_err(|e| format!("Failed to analyze code: {}", e))?;
 
     pb.finish_with_message("Insights generated!");
@@ -50,38 +52,44 @@ pub fn execute(path: &PathBuf, focus: &str, format: &str) -> CliResult<()> {
     Ok(())
 }
 
-fn filter_insights_by_focus(result: &crate::ReasoningResult, focus: &str) -> crate::ReasoningResult {
+fn filter_insights_by_focus(
+    result: &crate::ReasoningResult,
+    focus: &str,
+) -> crate::ReasoningResult {
     let mut filtered_result = result.clone();
 
     match focus.to_lowercase().as_str() {
         "security" => {
             filtered_result.insights.retain(|insight| {
-                insight.insight_type == crate::InsightType::Security ||
-                insight.description.to_lowercase().contains("security") ||
-                insight.description.to_lowercase().contains("vulnerability")
+                insight.insight_type == crate::InsightType::Security
+                    || insight.description.to_lowercase().contains("security")
+                    || insight.description.to_lowercase().contains("vulnerability")
             });
-        },
+        }
         "performance" => {
             filtered_result.insights.retain(|insight| {
-                insight.insight_type == crate::InsightType::Performance ||
-                insight.description.to_lowercase().contains("performance") ||
-                insight.description.to_lowercase().contains("optimization")
+                insight.insight_type == crate::InsightType::Performance
+                    || insight.description.to_lowercase().contains("performance")
+                    || insight.description.to_lowercase().contains("optimization")
             });
-        },
+        }
         "quality" => {
             filtered_result.insights.retain(|insight| {
-                insight.insight_type == crate::InsightType::CodeSmell ||
-                insight.description.to_lowercase().contains("quality") ||
-                insight.description.to_lowercase().contains("maintainability")
+                insight.insight_type == crate::InsightType::CodeSmell
+                    || insight.description.to_lowercase().contains("quality")
+                    || insight
+                        .description
+                        .to_lowercase()
+                        .contains("maintainability")
             });
-        },
+        }
         "architecture" => {
             filtered_result.insights.retain(|insight| {
-                insight.insight_type == crate::InsightType::DesignPattern ||
-                insight.description.to_lowercase().contains("architecture") ||
-                insight.description.to_lowercase().contains("design")
+                insight.insight_type == crate::InsightType::DesignPattern
+                    || insight.description.to_lowercase().contains("architecture")
+                    || insight.description.to_lowercase().contains("design")
             });
-        },
+        }
         _ => {
             // "all" or any other value - keep all insights
         }
@@ -127,7 +135,10 @@ fn display_markdown(result: &crate::ReasoningResult, focus: &str) -> CliResult<(
     if !result.derived_facts.is_empty() {
         println!("## Derived Facts\n");
         for fact in &result.derived_facts {
-            println!("- **{}**: {} (confidence: {:.2})", fact.predicate, fact.id, fact.confidence);
+            println!(
+                "- **{}**: {} (confidence: {:.2})",
+                fact.predicate, fact.id, fact.confidence
+            );
         }
         println!();
     }
@@ -144,7 +155,11 @@ fn display_markdown(result: &crate::ReasoningResult, focus: &str) -> CliResult<(
 fn display_table(result: &crate::ReasoningResult, focus: &str) -> CliResult<()> {
     use colored::Colorize;
 
-    println!("{} {}", "🔍 Code Insights Report".blue().bold(), format!("(Focus: {})", focus).white().dimmed());
+    println!(
+        "{} {}",
+        "🔍 Code Insights Report".blue().bold(),
+        format!("(Focus: {})", focus).white().dimmed()
+    );
     println!("{}", "═".repeat(60).blue());
 
     // Key insights
@@ -153,18 +168,33 @@ fn display_table(result: &crate::ReasoningResult, focus: &str) -> CliResult<()> 
         println!("{}", "─".repeat(50).yellow());
 
         for insight in &result.insights {
-            println!("\n{} {:?}", "•".cyan(), insight.insight_type.to_string().white().bold());
+            println!(
+                "\n{} {:?}",
+                "•".cyan(),
+                insight.insight_type.to_string().white().bold()
+            );
             println!("{}", insight.description);
 
             if !insight.evidence.is_empty() {
-                println!("{} {}", "Evidence:".green().bold(), insight.evidence.join(", ").white().dimmed());
+                println!(
+                    "{} {}",
+                    "Evidence:".green().bold(),
+                    insight.evidence.join(", ").white().dimmed()
+                );
             }
 
-            println!("{} {:.2}", "Confidence:".magenta().bold(), insight.confidence);
+            println!(
+                "{} {:.2}",
+                "Confidence:".magenta().bold(),
+                insight.confidence
+            );
         }
         println!();
     } else {
-        println!("\n{}", format!("No insights found for focus: {}", focus).yellow());
+        println!(
+            "\n{}",
+            format!("No insights found for focus: {}", focus).yellow()
+        );
     }
 
     // Derived facts
@@ -173,7 +203,12 @@ fn display_table(result: &crate::ReasoningResult, focus: &str) -> CliResult<()> 
         println!("{}", "─".repeat(50).green());
 
         for fact in &result.derived_facts {
-            println!("• {}: {} (confidence: {:.2})", fact.predicate.yellow().bold(), fact.id, fact.confidence);
+            println!(
+                "• {}: {} (confidence: {:.2})",
+                fact.predicate.yellow().bold(),
+                fact.id,
+                fact.confidence
+            );
         }
         println!();
     }
@@ -181,9 +216,21 @@ fn display_table(result: &crate::ReasoningResult, focus: &str) -> CliResult<()> 
     // Metrics
     println!("{}", "📈 Analysis Metrics".magenta().bold());
     println!("{}", "─".repeat(50).magenta());
-    println!("• {}: {}ms", "Total Time".cyan().bold(), result.metrics.total_time_ms);
-    println!("• {}: {}", "Facts Derived".cyan().bold(), result.derived_facts.len());
-    println!("• {}: {}", "Insights Generated".cyan().bold(), result.insights.len());
+    println!(
+        "• {}: {}ms",
+        "Total Time".cyan().bold(),
+        result.metrics.total_time_ms
+    );
+    println!(
+        "• {}: {}",
+        "Facts Derived".cyan().bold(),
+        result.derived_facts.len()
+    );
+    println!(
+        "• {}: {}",
+        "Insights Generated".cyan().bold(),
+        result.insights.len()
+    );
 
     Ok(())
 }

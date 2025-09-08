@@ -2,7 +2,6 @@
 
 use crate::cli::error::CliResult;
 use colored::*;
-use tabled::Table;
 
 pub fn execute() -> CliResult<()> {
     println!("\n{}", "🔤 SUPPORTED LANGUAGES".bright_cyan().bold());

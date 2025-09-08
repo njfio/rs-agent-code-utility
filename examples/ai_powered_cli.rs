@@ -1,9 +1,9 @@
+use clap::{Parser, Subcommand};
 use rust_tree_sitter::{
+    ai::{AIError, AIFeature, AIRequest, AIResult, AIServiceBuilder},
     CodebaseAnalyzer,
-    ai::{AIServiceBuilder, AIFeature, AIRequest, AIResult, AIError}
 };
 use std::path::PathBuf;
-use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "ai-code-assistant")]
@@ -12,11 +12,11 @@ use clap::{Parser, Subcommand};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-    
+
     /// Use mock AI providers for testing
     #[arg(long, global = true)]
     mock: bool,
-    
+
     /// Verbose output
     #[arg(short, long, global = true)]
     verbose: bool,
@@ -69,7 +69,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    
+
     // Initialize AI service
     let ai_service = if cli.mock {
         println!("🤖 Using mock AI providers for demonstration");
@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .build()
             .await?
     };
-    
+
     match cli.command {
         Commands::Security { path, format } => {
             handle_security_analysis(&ai_service, &path, &format, cli.verbose).await?;
@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             handle_architecture_analysis(&ai_service, &path, diagram, cli.verbose).await?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -114,7 +114,7 @@ async fn handle_security_analysis(
 ) -> AIResult<()> {
     println!("🔒 Security Analysis");
     println!("===================");
-    
+
     if path.is_file() {
         analyze_file_security(ai_service, path, format, verbose).await?;
     } else if path.is_dir() {
@@ -122,7 +122,7 @@ async fn handle_security_analysis(
     } else {
         return Err(AIError::configuration("Path does not exist".to_string()));
     }
-    
+
     Ok(())
 }
 
@@ -134,13 +134,13 @@ async fn analyze_file_security(
 ) -> AIResult<()> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| AIError::configuration(format!("Failed to read file: {}", e)))?;
-    
+
     if verbose {
         println!("📁 Analyzing file: {}", path.display());
         println!("📊 File size: {} bytes", content.len());
         println!("📝 Lines: {}", content.lines().count());
     }
-    
+
     let security_context = format!(
         "SECURITY ANALYSIS REQUEST\n\
         \n\
@@ -164,43 +164,44 @@ async fn analyze_file_security(
         detect_language(path),
         content
     );
-    
+
     let request = AIRequest::new(AIFeature::SecurityAnalysis, security_context);
-    
+
     match ai_service.process_request(request).await {
-        Ok(response) => {
-            match format {
-                "json" => {
-                    println!("{}", serde_json::json!({
+        Ok(response) => match format {
+            "json" => {
+                println!(
+                    "{}",
+                    serde_json::json!({
                         "file": path.display().to_string(),
                         "analysis": response.content,
                         "model": response.metadata.model_used,
                         "tokens": response.token_usage.total_tokens
-                    }));
-                }
-                "markdown" => {
-                    println!("# Security Analysis: {}\n", path.display());
-                    println!("**Model**: {}\n", response.metadata.model_used);
-                    println!("**Tokens Used**: {}\n", response.token_usage.total_tokens);
-                    println!("## Analysis\n");
-                    println!("{}", response.content);
-                }
-                _ => {
-                    println!("🛡️  Security Analysis Results:");
-                    println!("   File: {}", path.display());
-                    println!("   Model: {}", response.metadata.model_used);
-                    println!("   Tokens: {}", response.token_usage.total_tokens);
-                    println!("\n📋 Findings:");
-                    println!("{}", response.content);
-                }
+                    })
+                );
             }
-        }
+            "markdown" => {
+                println!("# Security Analysis: {}\n", path.display());
+                println!("**Model**: {}\n", response.metadata.model_used);
+                println!("**Tokens Used**: {}\n", response.token_usage.total_tokens);
+                println!("## Analysis\n");
+                println!("{}", response.content);
+            }
+            _ => {
+                println!("🛡️  Security Analysis Results:");
+                println!("   File: {}", path.display());
+                println!("   Model: {}", response.metadata.model_used);
+                println!("   Tokens: {}", response.token_usage.total_tokens);
+                println!("\n📋 Findings:");
+                println!("{}", response.content);
+            }
+        },
         Err(e) => {
             eprintln!("❌ Security analysis failed: {}", e);
             return Err(e);
         }
     }
-    
+
     Ok(())
 }
 
@@ -212,32 +213,45 @@ async fn analyze_directory_security(
 ) -> AIResult<()> {
     let mut analyzer = CodebaseAnalyzer::new()
         .map_err(|e| AIError::configuration(format!("Analyzer error: {}", e)))?;
-    
-    let analysis = analyzer.analyze_directory(path)
+
+    let analysis = analyzer
+        .analyze_directory(path)
         .map_err(|e| AIError::configuration(format!("Analysis error: {}", e)))?;
-    
+
     if verbose {
         println!("📁 Analyzing directory: {}", path.display());
         println!("📊 Files found: {}", analysis.files.len());
-        println!("📝 Total symbols: {}", 
-            analysis.files.iter().map(|f| f.symbols.len()).sum::<usize>());
+        println!(
+            "📝 Total symbols: {}",
+            analysis
+                .files
+                .iter()
+                .map(|f| f.symbols.len())
+                .sum::<usize>()
+        );
     }
-    
+
     println!("\n🔍 Security Analysis Summary:");
     println!("============================");
-    
-    for file in analysis.files.iter().take(5) { // Limit to first 5 files for demo
+
+    for file in analysis.files.iter().take(5) {
+        // Limit to first 5 files for demo
         if !file.security_vulnerabilities.is_empty() {
             println!("\n📄 File: {}", file.path.display());
-            println!("🚨 Vulnerabilities found: {}", file.security_vulnerabilities.len());
-            
+            println!(
+                "🚨 Vulnerabilities found: {}",
+                file.security_vulnerabilities.len()
+            );
+
             for vuln in &file.security_vulnerabilities {
-                println!("   • {:?} (Line {}): {}",
-                    vuln.severity, vuln.location.start_line, vuln.description);
+                println!(
+                    "   • {:?} (Line {}): {}",
+                    vuln.severity, vuln.location.start_line, vuln.description
+                );
             }
         }
     }
-    
+
     // Generate overall security assessment
     let security_summary = format!(
         "CODEBASE SECURITY ASSESSMENT\n\
@@ -255,16 +269,27 @@ async fn analyze_directory_security(
         4. Risk prioritization matrix",
         path.display(),
         analysis.files.len(),
-        analysis.files.iter().map(|f| &f.language).collect::<std::collections::HashSet<_>>(),
-        analysis.files.iter()
+        analysis
+            .files
+            .iter()
+            .map(|f| &f.language)
+            .collect::<std::collections::HashSet<_>>(),
+        analysis
+            .files
+            .iter()
             .flat_map(|f| &f.security_vulnerabilities)
-            .map(|v| format!("  - {:?} ({}): {}", v.severity, v.location.file.display(), v.description))
+            .map(|v| format!(
+                "  - {:?} ({}): {}",
+                v.severity,
+                v.location.file.display(),
+                v.description
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
-    
+
     let request = AIRequest::new(AIFeature::SecurityAnalysis, security_summary);
-    
+
     match ai_service.process_request(request).await {
         Ok(response) => {
             println!("\n🛡️  Overall Security Assessment:");
@@ -274,7 +299,7 @@ async fn analyze_directory_security(
             eprintln!("❌ Security assessment failed: {}", e);
         }
     }
-    
+
     Ok(())
 }
 
@@ -286,10 +311,10 @@ async fn handle_code_explanation(
 ) -> AIResult<()> {
     println!("📚 Code Explanation");
     println!("==================");
-    
+
     let content = std::fs::read_to_string(path)
         .map_err(|e| AIError::configuration(format!("Failed to read file: {}", e)))?;
-    
+
     let explanation_context = if let Some(symbol_name) = symbol {
         format!(
             "CODE EXPLANATION REQUEST\n\
@@ -334,9 +359,9 @@ async fn handle_code_explanation(
             content
         )
     };
-    
+
     let request = AIRequest::new(AIFeature::CodeExplanation, explanation_context);
-    
+
     match ai_service.process_request(request).await {
         Ok(response) => {
             println!("📖 Code Explanation for: {}", path.display());
@@ -353,7 +378,7 @@ async fn handle_code_explanation(
             return Err(e);
         }
     }
-    
+
     Ok(())
 }
 
@@ -365,17 +390,19 @@ async fn handle_refactoring(
 ) -> AIResult<()> {
     println!("🔧 Refactoring Suggestions");
     println!("==========================");
-    
+
     let content = std::fs::read_to_string(path)
         .map_err(|e| AIError::configuration(format!("Failed to read file: {}", e)))?;
-    
+
     let refactor_focus = match focus {
-        "performance" => "performance optimization, memory efficiency, and algorithmic improvements",
+        "performance" => {
+            "performance optimization, memory efficiency, and algorithmic improvements"
+        }
         "readability" => "code clarity, maintainability, and documentation improvements",
         "security" => "security hardening, input validation, and vulnerability remediation",
-        _ => "overall code quality, including performance, readability, and security aspects"
+        _ => "overall code quality, including performance, readability, and security aspects",
     };
-    
+
     let refactor_context = format!(
         "REFACTORING REQUEST\n\
         \n\
@@ -399,9 +426,9 @@ async fn handle_refactoring(
         content,
         refactor_focus
     );
-    
+
     let request = AIRequest::new(AIFeature::RefactoringSuggestions, refactor_context);
-    
+
     match ai_service.process_request(request).await {
         Ok(response) => {
             println!("🔄 Refactoring Suggestions for: {}", path.display());
@@ -416,7 +443,7 @@ async fn handle_refactoring(
             return Err(e);
         }
     }
-    
+
     Ok(())
 }
 
@@ -428,11 +455,14 @@ async fn handle_code_review(
 ) -> AIResult<()> {
     println!("👨‍💻 Code Review");
     println!("===============");
-    
+
     // Implementation similar to previous examples but integrated into CLI
-    println!("🔍 Performing comprehensive code review for: {}", path.display());
+    println!(
+        "🔍 Performing comprehensive code review for: {}",
+        path.display()
+    );
     println!("📋 Review complete! (Implementation details in previous examples)");
-    
+
     Ok(())
 }
 
@@ -444,11 +474,11 @@ async fn handle_architecture_analysis(
 ) -> AIResult<()> {
     println!("🏗️  Architecture Analysis");
     println!("=========================");
-    
+
     // Implementation similar to intelligent architect example
     println!("🔍 Analyzing architecture for: {}", path.display());
     println!("🏛️  Analysis complete! (Implementation details in previous examples)");
-    
+
     Ok(())
 }
 
@@ -461,6 +491,6 @@ fn detect_language(path: &PathBuf) -> &'static str {
         Some("java") => "java",
         Some("cpp") | Some("cc") | Some("cxx") => "cpp",
         Some("c") => "c",
-        _ => "unknown"
+        _ => "unknown",
     }
 }

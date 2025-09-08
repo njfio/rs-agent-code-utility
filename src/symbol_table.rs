@@ -4,8 +4,8 @@
 //! It builds symbol tables with proper scope resolution, variable binding, and cross-reference tracking.
 
 use crate::error::Result;
-use crate::tree::{SyntaxTree, Node};
 use crate::languages::Language;
+use crate::tree::{Node, SyntaxTree};
 use std::collections::{HashMap, HashSet};
 use tree_sitter::Point;
 
@@ -242,7 +242,10 @@ impl SymbolTableAnalyzer {
             name: None,
             symbols: HashMap::new(),
             start_location: Point { row: 0, column: 0 },
-            end_location: Point { row: usize::MAX, column: usize::MAX },
+            end_location: Point {
+                row: usize::MAX,
+                column: usize::MAX,
+            },
         };
         symbol_table.scopes.insert(0, root_scope);
 
@@ -298,7 +301,10 @@ impl SymbolTableAnalyzer {
             name: None,
             symbols: HashMap::new(),
             start_location: Point { row: 0, column: 0 },
-            end_location: Point { row: usize::MAX, column: usize::MAX },
+            end_location: Point {
+                row: usize::MAX,
+                column: usize::MAX,
+            },
         };
         self.symbol_table.scopes.insert(0, root_scope);
     }
@@ -338,30 +344,64 @@ impl SymbolTableAnalyzer {
     fn creates_scope(&self, node: Node) -> bool {
         let node_kind = node.kind();
         match self.language {
-            Language::Rust => matches!(node_kind,
-                "function_item" | "impl_item" | "block" | "closure_expression" |
-                "struct_item" | "enum_item" | "mod_item" | "if_expression" |
-                "while_expression" | "for_expression" | "match_expression"
+            Language::Rust => matches!(
+                node_kind,
+                "function_item"
+                    | "impl_item"
+                    | "block"
+                    | "closure_expression"
+                    | "struct_item"
+                    | "enum_item"
+                    | "mod_item"
+                    | "if_expression"
+                    | "while_expression"
+                    | "for_expression"
+                    | "match_expression"
             ),
-            Language::JavaScript | Language::TypeScript => matches!(node_kind,
-                "function_declaration" | "arrow_function" | "method_definition" |
-                "class_declaration" | "statement_block" | "if_statement" |
-                "while_statement" | "for_statement" | "try_statement"
+            Language::JavaScript | Language::TypeScript => matches!(
+                node_kind,
+                "function_declaration"
+                    | "arrow_function"
+                    | "method_definition"
+                    | "class_declaration"
+                    | "statement_block"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "try_statement"
             ),
-            Language::Python => matches!(node_kind,
-                "function_definition" | "class_definition" | "if_statement" |
-                "while_statement" | "for_statement" | "try_statement" |
-                "with_statement" | "lambda"
+            Language::Python => matches!(
+                node_kind,
+                "function_definition"
+                    | "class_definition"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "try_statement"
+                    | "with_statement"
+                    | "lambda"
             ),
-            Language::C | Language::Cpp => matches!(node_kind,
-                "function_definition" | "compound_statement" | "if_statement" |
-                "while_statement" | "for_statement" | "switch_statement" |
-                "struct_specifier" | "enum_specifier"
+            Language::C | Language::Cpp => matches!(
+                node_kind,
+                "function_definition"
+                    | "compound_statement"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "switch_statement"
+                    | "struct_specifier"
+                    | "enum_specifier"
             ),
-            Language::Go => matches!(node_kind,
-                "function_declaration" | "method_declaration" | "block" |
-                "if_statement" | "for_statement" | "switch_statement" |
-                "type_switch_statement" | "select_statement"
+            Language::Go => matches!(
+                node_kind,
+                "function_declaration"
+                    | "method_declaration"
+                    | "block"
+                    | "if_statement"
+                    | "for_statement"
+                    | "switch_statement"
+                    | "type_switch_statement"
+                    | "select_statement"
             ),
         }
     }
@@ -487,7 +527,7 @@ impl SymbolTableAnalyzer {
                         }));
                     }
                 }
-            },
+            }
             "let_declaration" => {
                 if let Some(pattern) = node.child_by_field_name("pattern") {
                     if pattern.kind() == "identifier" {
@@ -511,7 +551,7 @@ impl SymbolTableAnalyzer {
                         }
                     }
                 }
-            },
+            }
             "parameter" => {
                 if let Some(pattern) = node.child_by_field_name("pattern") {
                     if pattern.kind() == "identifier" {
@@ -533,7 +573,7 @@ impl SymbolTableAnalyzer {
                         }
                     }
                 }
-            },
+            }
             "struct_item" | "enum_item" => {
                 if let Some(name_node) = node.child_by_field_name("name") {
                     if let Ok(name) = name_node.text() {
@@ -552,7 +592,7 @@ impl SymbolTableAnalyzer {
                         }));
                     }
                 }
-            },
+            }
             _ => {}
         }
 
@@ -676,20 +716,24 @@ impl SymbolTableAnalyzer {
                     "assignment_expression" => {
                         // Check if this identifier is on the left side (write) or right side (read)
                         if let Some(left) = parent.child_by_field_name("left") {
-                            if left.start_position() == node.start_position() && left.end_position() == node.end_position() {
+                            if left.start_position() == node.start_position()
+                                && left.end_position() == node.end_position()
+                            {
                                 return ReferenceType::Write;
                             }
                         }
                         ReferenceType::Read
-                    },
+                    }
                     "call_expression" => {
                         if let Some(function) = parent.child_by_field_name("function") {
-                            if function.start_position() == node.start_position() && function.end_position() == node.end_position() {
+                            if function.start_position() == node.start_position()
+                                && function.end_position() == node.end_position()
+                            {
                                 return ReferenceType::Call;
                             }
                         }
                         ReferenceType::Read
-                    },
+                    }
                     "reference_expression" => ReferenceType::AddressOf,
                     _ => ReferenceType::Read,
                 },
@@ -839,7 +883,10 @@ impl SymbolTableAnalyzer {
         let mut unused = Vec::new();
         for (&symbol_id, symbol_def) in &self.symbol_table.symbols {
             // Skip parameters and public symbols (they might be used externally)
-            if !symbol_def.is_parameter && !symbol_def.is_public && !used_symbols.contains(&symbol_id) {
+            if !symbol_def.is_parameter
+                && !symbol_def.is_public
+                && !used_symbols.contains(&symbol_id)
+            {
                 unused.push(symbol_id);
             }
         }
@@ -854,7 +901,9 @@ impl SymbolTableAnalyzer {
 
         // Count symbols by type
         for symbol in self.symbol_table.symbols.values() {
-            *symbols_by_type.entry(symbol.symbol_type.clone()).or_insert(0) += 1;
+            *symbols_by_type
+                .entry(symbol.symbol_type.clone())
+                .or_insert(0) += 1;
         }
 
         // Count scopes by type
@@ -888,7 +937,9 @@ impl SymbolTable {
     /// Find all symbols in a scope
     pub fn get_symbols_in_scope(&self, scope_id: ScopeId) -> Vec<&SymbolDefinition> {
         if let Some(scope) = self.scopes.get(&scope_id) {
-            scope.symbols.values()
+            scope
+                .symbols
+                .values()
                 .filter_map(|&symbol_id| self.symbols.get(&symbol_id))
                 .collect()
         } else {
@@ -898,7 +949,8 @@ impl SymbolTable {
 
     /// Find all references to a symbol
     pub fn get_symbol_references(&self, symbol_id: SymbolId) -> Vec<&SymbolReference> {
-        self.references.iter()
+        self.references
+            .iter()
             .filter(|reference| reference.symbol_id == symbol_id)
             .collect()
     }
@@ -953,7 +1005,6 @@ impl SymbolTable {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_symbol_table_analyzer_creation() {
         let analyzer = SymbolTableAnalyzer::new(Language::Rust);
@@ -968,7 +1019,10 @@ mod tests {
         let analyzer = SymbolTableAnalyzer::new(Language::Rust);
 
         // Test scope types
-        assert_eq!(analyzer.symbol_table.scopes[&0].scope_type, ScopeType::Global);
+        assert_eq!(
+            analyzer.symbol_table.scopes[&0].scope_type,
+            ScopeType::Global
+        );
         assert_eq!(analyzer.symbol_table.scopes[&0].parent, None);
         assert!(analyzer.symbol_table.scopes[&0].children.is_empty());
     }
@@ -1082,12 +1136,18 @@ mod tests {
             name: None,
             symbols: HashMap::new(),
             start_location: Point { row: 0, column: 0 },
-            end_location: Point { row: usize::MAX, column: usize::MAX },
+            end_location: Point {
+                row: usize::MAX,
+                column: usize::MAX,
+            },
         };
         symbol_table.scopes.insert(0, root_scope);
 
         // Test basic operations
-        assert_eq!(symbol_table.get_scope(0).unwrap().scope_type, ScopeType::Global);
+        assert_eq!(
+            symbol_table.get_scope(0).unwrap().scope_type,
+            ScopeType::Global
+        );
         assert!(symbol_table.get_symbol(0).is_none());
         assert!(symbol_table.get_symbols_in_scope(0).is_empty());
         assert!(symbol_table.get_symbol_references(0).is_empty());
@@ -1112,7 +1172,10 @@ mod tests {
             name: None,
             symbols: HashMap::new(),
             start_location: Point { row: 0, column: 0 },
-            end_location: Point { row: usize::MAX, column: usize::MAX },
+            end_location: Point {
+                row: usize::MAX,
+                column: usize::MAX,
+            },
         };
 
         let function_scope = Scope {

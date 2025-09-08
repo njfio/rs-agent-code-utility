@@ -107,7 +107,7 @@ impl PythonSyntax {
         }
 
         let mut parameters = Vec::new();
-        
+
         if let Some(params_node) = node.child_by_field_name("parameters") {
             for child in params_node.children() {
                 match child.kind() {
@@ -152,7 +152,7 @@ impl PythonSyntax {
         }
 
         let mut bases = Vec::new();
-        
+
         if let Some(superclasses_node) = node.child_by_field_name("superclasses") {
             for child in superclasses_node.children() {
                 if child.kind() == "identifier" {
@@ -246,10 +246,11 @@ impl PythonSyntax {
         None
     }
 
-
-
     /// Get all function definitions in a syntax tree with start and end positions
-    pub fn find_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
@@ -264,7 +265,10 @@ impl PythonSyntax {
     }
 
     /// Get all class definitions in a syntax tree with start and end positions
-    pub fn find_classes(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_classes(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut classes = Vec::new();
         let class_nodes = tree.find_nodes_by_kind("class_definition");
 
@@ -281,7 +285,7 @@ impl PythonSyntax {
     /// Get all import statements in a syntax tree
     pub fn find_imports(tree: &SyntaxTree, _source: &str) -> Vec<String> {
         let mut imports = Vec::new();
-        
+
         let import_nodes = tree.find_nodes_by_kind("import_statement");
         for import_node in import_nodes {
             if let Ok(import_text) = import_node.text() {
@@ -300,7 +304,10 @@ impl PythonSyntax {
     }
 
     /// Get all global variables in a syntax tree
-    pub fn find_global_variables(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point)> {
+    pub fn find_global_variables(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point)> {
         let mut globals = Vec::new();
 
         // Find assignment statements at module level
@@ -400,7 +407,8 @@ impl PythonSyntax {
 
         // Check for async/await
         if !tree.find_nodes_by_kind("async").is_empty()
-            || !tree.find_nodes_by_kind("await").is_empty() {
+            || !tree.find_nodes_by_kind("await").is_empty()
+        {
             features.push("Async/Await".to_string());
         }
 
@@ -415,7 +423,10 @@ impl PythonSyntax {
         }
 
         // Check for dictionary comprehensions
-        if !tree.find_nodes_by_kind("dictionary_comprehension").is_empty() {
+        if !tree
+            .find_nodes_by_kind("dictionary_comprehension")
+            .is_empty()
+        {
             features.push("Dictionary Comprehensions".to_string());
         }
 
@@ -432,7 +443,9 @@ impl PythonSyntax {
         // Check for f-strings (try multiple possible node types)
         if !tree.find_nodes_by_kind("formatted_string").is_empty()
             || !tree.find_nodes_by_kind("f_string").is_empty()
-            || !tree.find_nodes_by_kind("string").is_empty() && tree.root_node().text().unwrap_or("").contains("f\"") {
+            || !tree.find_nodes_by_kind("string").is_empty()
+                && tree.root_node().text().unwrap_or("").contains("f\"")
+        {
             features.push("F-strings".to_string());
         }
 
@@ -501,7 +514,8 @@ impl PythonSyntax {
 
     /// Check if a string is in snake_case
     fn is_snake_case(s: &str) -> bool {
-        s.chars().all(|c| c.is_lowercase() || c.is_numeric() || c == '_')
+        s.chars()
+            .all(|c| c.is_lowercase() || c.is_numeric() || c == '_')
             && !s.starts_with('_')
             && !s.ends_with('_')
             && !s.contains("__")
@@ -521,7 +535,11 @@ impl PythonSyntax {
     }
 
     /// Get method resolution order for a class
-    pub fn get_method_resolution_order(class_node: &Node, source: &str, _tree: &SyntaxTree) -> Vec<String> {
+    pub fn get_method_resolution_order(
+        class_node: &Node,
+        source: &str,
+        _tree: &SyntaxTree,
+    ) -> Vec<String> {
         let mut mro = Vec::new();
 
         if let Some(class_name) = Self::class_name(class_node, source) {
@@ -579,7 +597,8 @@ impl PythonSyntax {
 
         // Find the line with the symbol definition
         for (i, line) in lines.iter().enumerate() {
-            if line.contains(&format!("def {}", name)) || line.contains(&format!("class {}", name)) {
+            if line.contains(&format!("def {}", name)) || line.contains(&format!("class {}", name))
+            {
                 // Look for docstring in the next few lines
                 let mut j = i + 1;
 
@@ -593,12 +612,18 @@ impl PythonSyntax {
 
                     // Check for docstring (triple quotes)
                     if next_line.starts_with("\"\"\"") || next_line.starts_with("'''") {
-                        let quote_type = if next_line.starts_with("\"\"\"") { "\"\"\"" } else { "'''" };
+                        let quote_type = if next_line.starts_with("\"\"\"") {
+                            "\"\"\""
+                        } else {
+                            "'''"
+                        };
                         let mut docstring = String::new();
 
                         // Single line docstring
                         if next_line.ends_with(quote_type) && next_line.len() > 6 {
-                            let content = next_line.trim_start_matches(quote_type).trim_end_matches(quote_type);
+                            let content = next_line
+                                .trim_start_matches(quote_type)
+                                .trim_end_matches(quote_type);
                             return Some(content.trim().to_string());
                         }
 
@@ -643,7 +668,10 @@ impl PythonSyntax {
     }
 
     /// Find methods within classes
-    pub fn find_methods(tree: &SyntaxTree, _content: &str) -> Vec<(String, String, tree_sitter::Point)> {
+    pub fn find_methods(
+        tree: &SyntaxTree,
+        _content: &str,
+    ) -> Vec<(String, String, tree_sitter::Point)> {
         let mut methods = Vec::new();
 
         // Find all class definitions
@@ -662,7 +690,7 @@ impl PythonSyntax {
                                         methods.push((
                                             class_name.to_string(),
                                             method_name.to_string(),
-                                            node.start_position()
+                                            node.start_position(),
                                         ));
                                     }
                                 }
@@ -681,7 +709,10 @@ impl PythonSyntax {
     }
 
     /// Find async functions in a syntax tree
-    pub fn find_async_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_async_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut async_functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
@@ -694,7 +725,11 @@ impl PythonSyntax {
                     if node.kind() == "async" {
                         if let Some(name) = Self::function_name(&func_node, source) {
                             let ts_node = func_node.inner();
-                            async_functions.push((name, ts_node.start_position(), ts_node.end_position()));
+                            async_functions.push((
+                                name,
+                                ts_node.start_position(),
+                                ts_node.end_position(),
+                            ));
                         }
                         break;
                     }
@@ -709,7 +744,10 @@ impl PythonSyntax {
     }
 
     /// Find context managers (with statements) in a syntax tree
-    pub fn find_context_managers(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_context_managers(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut context_managers = Vec::new();
         let with_nodes = tree.find_nodes_by_kind("with_statement");
 
@@ -717,7 +755,9 @@ impl PythonSyntax {
             let ts_node = with_node.inner();
             if let Ok(with_text) = with_node.text() {
                 // Extract the context manager expression
-                let context_expr = with_text.lines().next()
+                let context_expr = with_text
+                    .lines()
+                    .next()
                     .unwrap_or("")
                     .trim_start_matches("with ")
                     .trim_end_matches(":")
@@ -726,7 +766,7 @@ impl PythonSyntax {
                 context_managers.push((
                     format!("context_manager: {}", context_expr),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -735,7 +775,10 @@ impl PythonSyntax {
     }
 
     /// Find classes with metaclasses in a syntax tree
-    pub fn find_metaclasses(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_metaclasses(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut metaclasses = Vec::new();
         let class_nodes = tree.find_nodes_by_kind("class_definition");
 
@@ -759,7 +802,7 @@ impl PythonSyntax {
                                     class_name,
                                     metaclass_name.to_string(),
                                     ts_node.start_position(),
-                                    ts_node.end_position()
+                                    ts_node.end_position(),
                                 ));
                             }
                         }
@@ -772,21 +815,28 @@ impl PythonSyntax {
     }
 
     /// Find dataclasses in a syntax tree
-    pub fn find_dataclasses(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_dataclasses(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut dataclasses = Vec::new();
         let class_nodes = tree.find_nodes_by_kind("class_definition");
 
         for class_node in class_nodes {
             // Check if class has @dataclass decorator
             let decorators = Self::get_decorators(&class_node, source);
-            let has_dataclass = decorators.iter().any(|d|
-                d.contains("@dataclass") || d.contains("@dataclasses.dataclass")
-            );
+            let has_dataclass = decorators
+                .iter()
+                .any(|d| d.contains("@dataclass") || d.contains("@dataclasses.dataclass"));
 
             if has_dataclass {
                 if let Some(class_name) = Self::class_name(&class_node, source) {
                     let ts_node = class_node.inner();
-                    dataclasses.push((class_name, ts_node.start_position(), ts_node.end_position()));
+                    dataclasses.push((
+                        class_name,
+                        ts_node.start_position(),
+                        ts_node.end_position(),
+                    ));
                 }
             }
         }
@@ -795,7 +845,16 @@ impl PythonSyntax {
     }
 
     /// Find functions with comprehensive type hints
-    pub fn find_typed_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, Vec<String>, Option<String>, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_typed_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(
+        String,
+        Vec<String>,
+        Option<String>,
+        tree_sitter::Point,
+        tree_sitter::Point,
+    )> {
         let mut typed_functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
@@ -808,7 +867,9 @@ impl PythonSyntax {
                     // Extract parameter types
                     if let Some(params_node) = func_node.child_by_field_name("parameters") {
                         for child in params_node.children() {
-                            if child.kind() == "typed_parameter" || child.kind() == "typed_default_parameter" {
+                            if child.kind() == "typed_parameter"
+                                || child.kind() == "typed_default_parameter"
+                            {
                                 if let Some(type_node) = child.child_by_field_name("type") {
                                     if let Ok(type_text) = type_node.text() {
                                         param_types.push(type_text.to_string());
@@ -821,7 +882,8 @@ impl PythonSyntax {
                     // Extract return type
                     if let Some(return_node) = func_node.child_by_field_name("return_type") {
                         if let Ok(return_text) = return_node.text() {
-                            return_type = Some(return_text.trim_start_matches("->").trim().to_string());
+                            return_type =
+                                Some(return_text.trim_start_matches("->").trim().to_string());
                         }
                     }
 
@@ -831,7 +893,7 @@ impl PythonSyntax {
                         param_types,
                         return_type,
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -841,14 +903,22 @@ impl PythonSyntax {
     }
 
     /// Find property decorators (like @property, @staticmethod, @classmethod)
-    pub fn find_property_decorators(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_property_decorators(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut property_decorators = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
         for func_node in function_nodes {
             let decorators = Self::get_decorators(&func_node, source);
-            let property_decorators_list = decorators.iter()
-                .filter(|d| d.contains("@property") || d.contains("@staticmethod") || d.contains("@classmethod"))
+            let property_decorators_list = decorators
+                .iter()
+                .filter(|d| {
+                    d.contains("@property")
+                        || d.contains("@staticmethod")
+                        || d.contains("@classmethod")
+                })
                 .collect::<Vec<_>>();
 
             if !property_decorators_list.is_empty() {
@@ -859,7 +929,7 @@ impl PythonSyntax {
                             func_name.clone(),
                             decorator.clone(),
                             ts_node.start_position(),
-                            ts_node.end_position()
+                            ts_node.end_position(),
                         ));
                     }
                 }
@@ -870,7 +940,10 @@ impl PythonSyntax {
     }
 
     /// Find lambda functions in a syntax tree
-    pub fn find_lambda_functions(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_lambda_functions(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut lambdas = Vec::new();
         let lambda_nodes = tree.find_nodes_by_kind("lambda");
 
@@ -880,7 +953,7 @@ impl PythonSyntax {
                 lambdas.push((
                     format!("lambda_{}: {}", index, lambda_text.trim()),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -913,7 +986,8 @@ def function_with_params(a, b, c=None):
         let functions = PythonSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
 
-        let function_names: Vec<&str> = functions.iter().map(|(name, _, _)| name.as_str()).collect();
+        let function_names: Vec<&str> =
+            functions.iter().map(|(name, _, _)| name.as_str()).collect();
         assert!(function_names.contains(&"regular_function"));
         assert!(function_names.contains(&"async_function"));
         assert!(function_names.contains(&"function_with_params"));

@@ -1,8 +1,8 @@
 // Skeleton for Phase 1; functions will be moved incrementally.
 // Implementations will extend WikiGenerator with diagram helpers.
 
-use std::path::Path;
 use std::fmt::Write as _;
+use std::path::Path;
 
 impl super::WikiGenerator {
     pub(super) fn file_has_branching(file: &crate::analyzer::FileInfo) -> bool {
@@ -11,10 +11,18 @@ impl super::WikiGenerator {
             if let Ok(tree) = FileAnalyzer::parse_file_content(&content, &file.language) {
                 let t = &tree;
                 let kinds = [
-                    "if_expression", "match_expression", "while_expression", "while_let_expression",
-                    "for_expression", "loop_expression", // rust
-                    "if_statement", "switch_statement", "conditional_expression", // js/ts/c/cpp/go
-                    "for_statement", "while_statement", "do_statement",
+                    "if_expression",
+                    "match_expression",
+                    "while_expression",
+                    "while_let_expression",
+                    "for_expression",
+                    "loop_expression", // rust
+                    "if_statement",
+                    "switch_statement",
+                    "conditional_expression", // js/ts/c/cpp/go
+                    "for_statement",
+                    "while_statement",
+                    "do_statement",
                 ];
                 return kinds.iter().any(|k| !t.find_nodes_by_kind(k).is_empty());
             }
@@ -22,7 +30,10 @@ impl super::WikiGenerator {
         false
     }
 
-    pub(super) fn build_sequence_diagram(file: &crate::analyzer::FileInfo, root_path: &Path) -> String {
+    pub(super) fn build_sequence_diagram(
+        file: &crate::analyzer::FileInfo,
+        root_path: &Path,
+    ) -> String {
         // Participants from function symbols
         let funcs: Vec<_> = file
             .symbols
@@ -34,7 +45,11 @@ impl super::WikiGenerator {
 
         // Add participants
         for f in &funcs {
-            let _ = writeln!(&mut out, "  participant {}", super::util::safe_ident(&f.name));
+            let _ = writeln!(
+                &mut out,
+                "  participant {}",
+                super::util::safe_ident(&f.name)
+            );
         }
 
         // Try building call list via CFG
@@ -121,7 +136,12 @@ impl super::WikiGenerator {
         let _ = writeln!(&mut out, "  start([Start])\n  end([End])\n  start --> F0");
         for (i, s) in file.symbols.iter().enumerate() {
             let id = format!("F{}", i);
-            let _ = writeln!(&mut out, "  {}([{}])", id, super::util::html_escape(&s.name));
+            let _ = writeln!(
+                &mut out,
+                "  {}([{}])",
+                id,
+                super::util::html_escape(&s.name)
+            );
             if i + 1 < file.symbols.len() {
                 let next = format!("F{}", i + 1);
                 let _ = writeln!(&mut out, "  {} --> {}", id, next);
@@ -165,7 +185,11 @@ impl super::WikiGenerator {
                         _ => {}
                     }
                 }
-                if t.is_empty() { "node".to_string() } else { t }
+                if t.is_empty() {
+                    "node".to_string()
+                } else {
+                    t
+                }
             }
             fn short_branch(kind: &str) -> String {
                 let k = kind.to_lowercase();

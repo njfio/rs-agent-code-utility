@@ -15,7 +15,11 @@ pub(super) struct SearchEntry {
 
 impl super::WikiGenerator {
     pub(super) fn write_search_index(&self, path: &Path, entries: &[SearchEntry]) -> Result<()> {
-        let json = serde_json::to_string(entries).map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("serde error: {}", e), context: None })?;
+        let json = serde_json::to_string(entries).map_err(|e| crate::error::Error::Internal {
+            component: "wiki".to_string(),
+            message: format!("serde error: {}", e),
+            context: None,
+        })?;
         std::fs::write(path, &json)?;
         // Also emit a JS file to avoid file:// fetch/CORS issues
         let js_path = path.with_file_name("search_index.js");
@@ -23,4 +27,3 @@ impl super::WikiGenerator {
         std::fs::write(js_path, js_content).map_err(|e| e.into())
     }
 }
-

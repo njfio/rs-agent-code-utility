@@ -1,16 +1,10 @@
 //! Symbols command implementation with enhanced output formatting
 
 use crate::cli::error::{validate_path, CliError, CliResult};
-use crate::cli::output::{
-    print_enhanced_header, print_info, print_success, OutputFormat, OutputHandler, SymbolRow,
-};
+use crate::cli::output::{OutputFormat, OutputHandler};
 use crate::cli::utils::create_progress_bar;
 use crate::{CodebaseAnalyzer, Symbol};
-use colored::Colorize;
-use serde_json;
-use std::collections::BTreeMap;
 use std::path::PathBuf;
-use tabled::Table;
 
 pub fn execute(path: &PathBuf, format: &str) -> CliResult<()> {
     validate_path(path)?;

@@ -1,5 +1,9 @@
-use rust_tree_sitter::{AnalysisResult, AnalysisConfig, FileInfo};
-use rust_tree_sitter::advanced_security::{SecurityVulnerability, VulnerabilityLocation, SecuritySeverity, OwaspCategory, SecurityImpact, ImpactLevel, RemediationGuidance, CodeExample, RemediationEffort, ConfidenceLevel};
+use rust_tree_sitter::advanced_security::{
+    CodeExample, ConfidenceLevel, ImpactLevel, OwaspCategory, RemediationEffort,
+    RemediationGuidance, SecurityImpact, SecuritySeverity, SecurityVulnerability,
+    VulnerabilityLocation,
+};
+use rust_tree_sitter::{AnalysisConfig, AnalysisResult, FileInfo};
 
 fn sample_analysis_result() -> AnalysisResult {
     let mut res = AnalysisResult::new();
@@ -21,8 +25,24 @@ fn sample_analysis_result() -> AnalysisResult {
             column: 4,
         },
         code_snippet: "std::process::Command::new(user_input)".to_string(),
-        impact: SecurityImpact { confidentiality: ImpactLevel::High, integrity: ImpactLevel::High, availability: ImpactLevel::Medium, overall_score: 8.5 },
-        remediation: RemediationGuidance { summary: "Validate and sanitize input".to_string(), steps: vec!["Use allowlist".to_string()], code_examples: vec![CodeExample { description: "Use execve with fixed path".to_string(), vulnerable_code: "Command::new(user)".to_string(), secure_code: "Command::new(\"/usr/bin/ls\")".to_string(), language: "Rust".to_string() }], references: vec![], effort: RemediationEffort::Medium },
+        impact: SecurityImpact {
+            confidentiality: ImpactLevel::High,
+            integrity: ImpactLevel::High,
+            availability: ImpactLevel::Medium,
+            overall_score: 8.5,
+        },
+        remediation: RemediationGuidance {
+            summary: "Validate and sanitize input".to_string(),
+            steps: vec!["Use allowlist".to_string()],
+            code_examples: vec![CodeExample {
+                description: "Use execve with fixed path".to_string(),
+                vulnerable_code: "Command::new(user)".to_string(),
+                secure_code: "Command::new(\"/usr/bin/ls\")".to_string(),
+                language: "Rust".to_string(),
+            }],
+            references: vec![],
+            effort: RemediationEffort::Medium,
+        },
         confidence: ConfidenceLevel::High,
     };
 
@@ -59,9 +79,15 @@ fn test_to_sarif_basic_shape() {
     // One vulnerability -> one result
     assert_eq!(run.results.len(), 1);
     let r = &run.results[0];
-    assert!(r.rule_id.as_deref().unwrap().contains("CWE-78") || r.rule_id.as_deref().unwrap().contains("Injection"));
+    assert!(
+        r.rule_id.as_deref().unwrap().contains("CWE-78")
+            || r.rule_id.as_deref().unwrap().contains("Injection")
+    );
     assert_eq!(r.level.as_deref(), Some("error")); // High -> error
     assert!(r.message.text.contains("Untrusted input"));
-    assert!(r.locations[0].physical_location.artifact_location.uri.ends_with("src/main.rs"));
+    assert!(r.locations[0]
+        .physical_location
+        .artifact_location
+        .uri
+        .ends_with("src/main.rs"));
 }
-

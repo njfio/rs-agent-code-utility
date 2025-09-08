@@ -1,11 +1,10 @@
 //! Integration tests for the rust_tree_sitter library
 
 use rust_tree_sitter::{
-    Parser, Language, Query, QueryBuilder, 
-    detect_language_from_extension, detect_language_from_path,
-    supported_languages, create_edit
+    create_edit, detect_language_from_extension, detect_language_from_path, supported_languages,
+    Language, Parser, Query, QueryBuilder,
 };
-use tree_sitter::{Point, InputEdit};
+use tree_sitter::{InputEdit, Point};
 
 #[test]
 fn test_parser_creation_and_basic_parsing() {
@@ -14,7 +13,7 @@ fn test_parser_creation_and_basic_parsing() {
 
     let source = "fn main() { println!(\"Hello, world!\"); }";
     let tree = parser.parse(source, None).unwrap();
-    
+
     assert_eq!(tree.root_node().kind(), "source_file");
     assert!(!tree.has_error());
     assert_eq!(tree.source(), source);
@@ -24,8 +23,12 @@ fn test_parser_creation_and_basic_parsing() {
 fn test_multiple_languages() {
     for language in Language::all() {
         let parser = Parser::new(language);
-        assert!(parser.is_ok(), "Failed to create parser for {}", language.name());
-        
+        assert!(
+            parser.is_ok(),
+            "Failed to create parser for {}",
+            language.name()
+        );
+
         let parser = parser.unwrap();
         assert_eq!(parser.language(), language);
     }
@@ -50,18 +53,18 @@ fn test_rust_specific_parsing() {
             let p = Point::new(1, 2);
         }
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
     assert!(!tree.has_error());
-    
+
     // Find structs
     let structs = tree.find_nodes_by_kind("struct_item");
     assert_eq!(structs.len(), 1);
-    
+
     // Find impl blocks
     let impls = tree.find_nodes_by_kind("impl_item");
     assert_eq!(impls.len(), 1);
-    
+
     // Find functions
     let functions = tree.find_nodes_by_kind("function_item");
     assert_eq!(functions.len(), 2); // new and main
@@ -87,14 +90,14 @@ fn test_javascript_parsing() {
             calc.add(5);
         }
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
     assert!(!tree.has_error());
-    
+
     // Find classes
     let classes = tree.find_nodes_by_kind("class_declaration");
     assert_eq!(classes.len(), 1);
-    
+
     // Find functions
     let functions = tree.find_nodes_by_kind("function_declaration");
     assert_eq!(functions.len(), 1);
@@ -116,14 +119,14 @@ def main():
     calc = Calculator()
     calc.add(5)
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
     assert!(!tree.has_error());
-    
+
     // Find classes
     let classes = tree.find_nodes_by_kind("class_definition");
     assert_eq!(classes.len(), 1);
-    
+
     // Find functions
     let functions = tree.find_nodes_by_kind("function_definition");
     assert_eq!(functions.len(), 3); // __init__, add, main
@@ -137,30 +140,34 @@ fn test_query_system() {
         fn private_function() {}
         pub fn another_public() {}
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
-    
+
     // Test basic query
     let query = Query::new(Language::Rust, "(function_item) @function").unwrap();
     let matches = query.matches(&tree).unwrap();
     assert_eq!(matches.len(), 3);
-    
+
     // Test query with captures
-    let pub_query = Query::new(Language::Rust, r#"
+    let pub_query = Query::new(
+        Language::Rust,
+        r#"
         (function_item
             (visibility_modifier) @visibility
             name: (identifier) @name
         ) @function
-    "#).unwrap();
-    
+    "#,
+    )
+    .unwrap();
+
     let pub_matches = pub_query.matches(&tree).unwrap();
     assert_eq!(pub_matches.len(), 2); // Only public functions
-    
+
     // Test capture by name
     for query_match in pub_matches {
         let name_capture = query_match.capture_by_name(&pub_query, "name");
         assert!(name_capture.is_some());
-        
+
         let name = name_capture.unwrap().text().unwrap();
         assert!(name == "public_function" || name == "another_public");
     }
@@ -174,7 +181,7 @@ fn test_query_builder() {
         .add_pattern("(impl_item) @impl")
         .build()
         .unwrap();
-    
+
     let parser = Parser::new(Language::Rust).unwrap();
     let source = r#"
         struct Point { x: i32, y: i32 }
@@ -183,10 +190,10 @@ fn test_query_builder() {
         }
         fn main() {}
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
     let matches = query.matches(&tree).unwrap();
-    
+
     // Should find: 1 struct, 1 impl, 2 functions (new and main)
     assert_eq!(matches.len(), 4);
 }
@@ -201,14 +208,14 @@ fn test_predefined_queries() {
         }
         fn main() {}
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
-    
+
     // Test functions query
     let functions_query = Query::functions(Language::Rust).unwrap();
     let function_matches = functions_query.matches(&tree).unwrap();
     assert_eq!(function_matches.len(), 2); // new and main
-    
+
     // Test classes query (structs in Rust)
     let classes_query = Query::classes(Language::Rust).unwrap();
     let class_matches = classes_query.matches(&tree).unwrap();
@@ -219,11 +226,11 @@ fn test_predefined_queries() {
 fn test_incremental_parsing() {
     let parser = Parser::new(Language::Rust).unwrap();
     let mut source = "fn hello() {}".to_string();
-    
+
     // Initial parse
     let mut tree = parser.parse(&source, None).unwrap();
     assert!(!tree.has_error());
-    
+
     // Edit: change function name
     let edit = InputEdit {
         start_byte: 3,
@@ -233,10 +240,10 @@ fn test_incremental_parsing() {
         old_end_position: Point::new(0, 8),
         new_end_position: Point::new(0, 5), // 3 + "hi".len()
     };
-    
+
     source.replace_range(3..8, "hi");
     tree.edit(&edit);
-    
+
     let new_tree = parser.parse(&source, Some(&tree)).unwrap();
     assert!(!new_tree.has_error());
     assert_eq!(source, "fn hi() {}");
@@ -245,15 +252,27 @@ fn test_incremental_parsing() {
 #[test]
 fn test_language_detection() {
     assert_eq!(detect_language_from_extension("rs"), Some(Language::Rust));
-    assert_eq!(detect_language_from_extension("js"), Some(Language::JavaScript));
+    assert_eq!(
+        detect_language_from_extension("js"),
+        Some(Language::JavaScript)
+    );
     assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
     assert_eq!(detect_language_from_extension("c"), Some(Language::C));
     assert_eq!(detect_language_from_extension("cpp"), Some(Language::Cpp));
     assert_eq!(detect_language_from_extension("unknown"), None);
-    
-    assert_eq!(detect_language_from_path("src/main.rs"), Some(Language::Rust));
-    assert_eq!(detect_language_from_path("script.py"), Some(Language::Python));
-    assert_eq!(detect_language_from_path("app.js"), Some(Language::JavaScript));
+
+    assert_eq!(
+        detect_language_from_path("src/main.rs"),
+        Some(Language::Rust)
+    );
+    assert_eq!(
+        detect_language_from_path("script.py"),
+        Some(Language::Python)
+    );
+    assert_eq!(
+        detect_language_from_path("app.js"),
+        Some(Language::JavaScript)
+    );
     assert_eq!(detect_language_from_path("unknown.txt"), None);
 }
 
@@ -261,10 +280,10 @@ fn test_language_detection() {
 fn test_supported_languages() {
     let languages = supported_languages();
     assert!(!languages.is_empty());
-    
+
     let rust_info = languages.iter().find(|lang| lang.name == "Rust");
     assert!(rust_info.is_some());
-    
+
     let rust_info = rust_info.unwrap();
     assert_eq!(rust_info.file_extensions, &["rs"]);
 }
@@ -278,22 +297,22 @@ fn test_tree_navigation() {
             println!("{}", x);
         }
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
     let root = tree.root_node();
-    
+
     // Navigate to function
     let function = root.child(0).unwrap();
     assert_eq!(function.kind(), "function_item");
-    
+
     // Get function name
     let name = function.child_by_field_name("name").unwrap();
     assert_eq!(name.text().unwrap(), "main");
-    
+
     // Get function body
     let body = function.child_by_field_name("body").unwrap();
     assert_eq!(body.kind(), "block");
-    
+
     // Test node properties
     assert!(function.is_named());
     assert!(!function.is_error());
@@ -306,13 +325,13 @@ fn test_error_handling() {
     // Test invalid query
     let invalid_query = Query::new(Language::Rust, "(invalid_syntax");
     assert!(invalid_query.is_err());
-    
+
     // Test parsing invalid code (should still create a tree but with errors)
     let parser = Parser::new(Language::Rust).unwrap();
     let invalid_source = "fn main( { invalid syntax }";
     let tree = parser.parse(invalid_source, None).unwrap();
     assert!(tree.has_error());
-    
+
     let error_nodes = tree.error_nodes();
     assert!(!error_nodes.is_empty());
 }
@@ -325,14 +344,14 @@ fn test_node_search() {
         struct Line { start: Point, end: Point }
         fn distance(p1: Point, p2: Point) -> f64 { 0.0 }
     "#;
-    
+
     let tree = parser.parse(source, None).unwrap();
     let root = tree.root_node();
-    
+
     // Find all struct definitions
     let structs = root.find_descendants(|node| node.kind() == "struct_item");
     assert_eq!(structs.len(), 2);
-    
+
     // Find first function
     let function = root.find_descendant(|node| node.kind() == "function_item");
     assert!(function.is_some());
@@ -342,7 +361,7 @@ fn test_node_search() {
 #[test]
 fn test_create_edit_helper() {
     let edit = create_edit(0, 5, 3, 0, 0, 0, 5, 0, 3);
-    
+
     assert_eq!(edit.start_byte, 0);
     assert_eq!(edit.old_end_byte, 5);
     assert_eq!(edit.new_end_byte, 3);

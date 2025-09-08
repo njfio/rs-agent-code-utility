@@ -44,4 +44,3 @@ mod tests {
         assert_eq!(normalize_whitespace(s), "a b c");
     }
 }
-

@@ -1,18 +1,18 @@
 //! Real caching infrastructure with in-memory and disk-based storage
-//! 
+//!
 //! Provides multi-level caching for analysis results, API responses,
 //! and computed data with TTL support and automatic cleanup.
 
-use dashmap::DashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
-use serde::{Serialize, Deserialize};
-use std::time::Duration;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::fs;
-use tracing::{debug, error};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::fs;
+use tracing::{debug, error};
 
 /// Multi-level cache with memory and disk storage
 #[derive(Clone)]
@@ -100,7 +100,12 @@ impl Cache {
     }
 
     /// Store data in cache with custom TTL
-    pub async fn set_with_ttl<T: Serialize>(&self, key: &str, value: &T, ttl: Duration) -> Result<()> {
+    pub async fn set_with_ttl<T: Serialize>(
+        &self,
+        key: &str,
+        value: &T,
+        ttl: Duration,
+    ) -> Result<()> {
         let data = serde_json::to_vec(value)?;
         let now = Utc::now();
         let expires_at = now + chrono::Duration::from_std(ttl)?;
@@ -126,7 +131,12 @@ impl Cache {
         // Record a cache miss since the value had to be inserted
         self.total_misses.fetch_add(1, Ordering::Relaxed);
 
-        debug!("Cached entry: {} (size: {} bytes, TTL: {:?})", key, data.len(), ttl);
+        debug!(
+            "Cached entry: {} (size: {} bytes, TTL: {:?})",
+            key,
+            data.len(),
+            ttl
+        );
         Ok(())
     }
 
@@ -156,11 +166,14 @@ impl Cache {
 
     /// Check if key exists in cache
     pub async fn exists(&self, key: &str) -> bool {
-        self.memory_cache.contains_key(key) ||
-        self.disk_entry_exists(key).await.unwrap_or_else(|e| {
-            debug!("Failed to check disk cache existence for key '{}': {}", key, e);
-            false
-        })
+        self.memory_cache.contains_key(key)
+            || self.disk_entry_exists(key).await.unwrap_or_else(|e| {
+                debug!(
+                    "Failed to check disk cache existence for key '{}': {}",
+                    key, e
+                );
+                false
+            })
     }
 
     /// Remove entry from cache
@@ -177,7 +190,7 @@ impl Cache {
     /// Clear all cache entries
     pub async fn clear(&self) -> Result<()> {
         self.memory_cache.clear();
-        
+
         if let Some(disk_dir) = &self.disk_cache_dir {
             if disk_dir.exists() {
                 fs::remove_dir_all(disk_dir).await?;
@@ -192,7 +205,9 @@ impl Cache {
     /// Get cache statistics
     pub async fn stats(&self) -> Result<CacheStats> {
         let memory_entries = self.memory_cache.len();
-        let memory_size_bytes: usize = self.memory_cache.iter()
+        let memory_size_bytes: usize = self
+            .memory_cache
+            .iter()
             .map(|entry| entry.value().size_bytes)
             .sum();
 
@@ -233,7 +248,7 @@ impl Cache {
     async fn get_memory_entry(&self, key: &str) -> Result<Option<CacheEntry>> {
         if let Some(mut entry) = self.memory_cache.get_mut(key) {
             let now = Utc::now();
-            
+
             // Check if expired
             if now > entry.expires_at {
                 drop(entry);
@@ -244,7 +259,7 @@ impl Cache {
             // Update access statistics
             entry.access_count += 1;
             entry.last_accessed = now;
-            
+
             return Ok(Some(entry.clone()));
         }
 
@@ -266,11 +281,11 @@ impl Cache {
     async fn get_disk_entry(&self, key: &str) -> Result<Option<CacheEntry>> {
         if let Some(_) = &self.disk_cache_dir {
             let file_path = self.get_disk_file_path(key)?;
-            
+
             if file_path.exists() {
                 let data = fs::read(&file_path).await?;
                 let entry: CacheEntry = serde_json::from_slice(&data)?;
-                
+
                 // Check if expired
                 let now = Utc::now();
                 if now > entry.expires_at {
@@ -310,12 +325,13 @@ impl Cache {
 
     /// Get disk file path for cache key
     fn get_disk_file_path(&self, key: &str) -> Result<PathBuf> {
-        let disk_dir = self.disk_cache_dir.as_ref()
-            .ok_or_else(|| crate::error::Error::internal_error_with_context(
+        let disk_dir = self.disk_cache_dir.as_ref().ok_or_else(|| {
+            crate::error::Error::internal_error_with_context(
                 "cache",
                 "Disk cache directory not configured".to_string(),
-                "Call set_disk_cache_dir() to configure disk caching before use".to_string()
-            ))?;
+                "Call set_disk_cache_dir() to configure disk caching before use".to_string(),
+            )
+        })?;
         let safe_key = key.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_");
         Ok(disk_dir.join(format!("{}.cache", safe_key)))
     }
@@ -346,7 +362,9 @@ impl Cache {
 
     /// Evict least recently used entries from memory cache
     async fn evict_lru_entries(&self, count: usize) -> Result<()> {
-        let mut entries: Vec<_> = self.memory_cache.iter()
+        let mut entries: Vec<_> = self
+            .memory_cache
+            .iter()
             .map(|entry| (entry.key().clone(), entry.value().last_accessed))
             .collect();
 
@@ -363,10 +381,10 @@ impl Cache {
     /// Background cleanup task
     async fn cleanup_task(&self, interval: Duration) {
         let mut cleanup_interval = tokio::time::interval(interval);
-        
+
         loop {
             cleanup_interval.tick().await;
-            
+
             if let Err(e) = self.cleanup_expired_entries().await {
                 error!("Cache cleanup failed: {}", e);
             }

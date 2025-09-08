@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tabled::{
-    settings::{object::Columns, Alignment, Color, Style},
+    settings::{Alignment, Color, Style},
     Table, Tabled,
 };
 
@@ -198,11 +198,6 @@ impl FileRow {
         } else {
             "❌"
         };
-        let status_color = if file.parsed_successfully {
-            "green"
-        } else {
-            "red"
-        };
 
         Self {
             path: file.path.to_string_lossy().to_string(),
@@ -232,7 +227,7 @@ impl EnhancedTable for Vec<FileRow> {
             .with(Alignment::left());
 
         // Apply color to status column
-        for (i, row) in self.iter().enumerate() {
+        for (_i, row) in self.iter().enumerate() {
             if row.status.contains("❌") {
                 // This would apply red color to failed rows in a real implementation
             }

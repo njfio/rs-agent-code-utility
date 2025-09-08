@@ -1,11 +1,7 @@
 use rust_tree_sitter::error::Result;
 use rust_tree_sitter::languages::{
-    javascript::JavaScriptSyntax,
+    c::CSyntax, go::GoSyntax, javascript::JavaScriptSyntax, python::PythonSyntax, rust::RustSyntax,
     typescript::TypeScriptSyntax,
-    python::PythonSyntax,
-    c::CSyntax,
-    go::GoSyntax,
-    rust::RustSyntax,
 };
 use rust_tree_sitter::Parser;
 use std::fs;
@@ -16,7 +12,7 @@ use tempfile::TempDir;
 fn test_javascript_missing_features() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
     let js_file = temp_dir.path().join("test.js");
-    
+
     let js_code = r#"
 // Generator function
 function* fibonacci() {
@@ -54,37 +50,39 @@ class Counter {
     }
 }
 "#;
-    
+
     fs::write(&js_file, js_code).unwrap();
-    
+
     let parser = Parser::new(rust_tree_sitter::Language::JavaScript).unwrap();
     let tree = parser.parse(js_code, None).unwrap();
-    
+
     // Test generator functions
     let generators = JavaScriptSyntax::find_generators(&tree, js_code);
     assert!(generators.len() >= 1);
     assert!(generators.iter().any(|(name, _, _)| name == "fibonacci"));
-    
+
     // Test async functions
     let async_functions = JavaScriptSyntax::find_async_functions(&tree, js_code);
     assert!(async_functions.len() >= 1);
-    assert!(async_functions.iter().any(|(name, _, _)| name == "fetchData"));
-    
+    assert!(async_functions
+        .iter()
+        .any(|(name, _, _)| name == "fetchData"));
+
     // Test closures (arrow functions)
     let closures = JavaScriptSyntax::find_closures(&tree, js_code);
     assert!(closures.len() >= 1);
-    
+
     // Test destructuring patterns
     let destructuring = JavaScriptSyntax::find_destructuring_patterns(&tree, js_code);
     assert!(destructuring.len() >= 2); // Array and object destructuring
-    
+
     // Test classes with private fields
     let private_classes = JavaScriptSyntax::find_classes_with_private_fields(&tree, js_code);
     assert!(private_classes.len() >= 1);
     assert!(private_classes.iter().any(|(name, fields, _, _)| {
         name == "Counter" && fields.contains(&"#count".to_string())
     }));
-    
+
     Ok(())
 }
 
@@ -93,7 +91,7 @@ class Counter {
 fn test_typescript_missing_features() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
     let ts_file = temp_dir.path().join("test.ts");
-    
+
     let ts_code = r#"
 // Generic interface
 interface Repository<T> {
@@ -134,33 +132,33 @@ class UserComponent {
     @Output() userClick = new EventEmitter();
 }
 "#;
-    
+
     fs::write(&ts_file, ts_code).unwrap();
-    
+
     let parser = Parser::new(rust_tree_sitter::Language::TypeScript).unwrap();
     let tree = parser.parse(ts_code, None).unwrap();
-    
+
     // Test generic types
     let generic_types = TypeScriptSyntax::find_generic_types(&tree, ts_code);
     assert!(generic_types.len() >= 2); // Repository and ApiResponse
-    
+
     // Test namespaces
     let namespaces = TypeScriptSyntax::find_namespaces(&tree, ts_code);
     assert!(namespaces.len() >= 1);
     assert!(namespaces.iter().any(|(name, _, _)| name == "Utils"));
-    
+
     // Test mapped types
     let mapped_types = TypeScriptSyntax::find_mapped_types(&tree, ts_code);
     assert!(mapped_types.len() >= 1);
-    
+
     // Test conditional types
     let conditional_types = TypeScriptSyntax::find_conditional_types(&tree, ts_code);
     assert!(conditional_types.len() >= 1);
-    
+
     // Test decorators
     let decorators = TypeScriptSyntax::find_decorators(&tree, ts_code);
     assert!(decorators.len() >= 3); // @Component, @Input, @Output
-    
+
     Ok(())
 }
 
@@ -169,7 +167,7 @@ class UserComponent {
 fn test_python_missing_features() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
     let py_file = temp_dir.path().join("test.py");
-    
+
     let py_code = r#"
 import asyncio
 from dataclasses import dataclass
@@ -239,45 +237,47 @@ class Circle:
 square = lambda x: x ** 2
 filter_even = lambda lst: [x for x in lst if x % 2 == 0]
 "#;
-    
+
     fs::write(&py_file, py_code).unwrap();
-    
+
     let parser = Parser::new(rust_tree_sitter::Language::Python).unwrap();
     let tree = parser.parse(py_code, None).unwrap();
-    
+
     // Test async functions
     let async_functions = PythonSyntax::find_async_functions(&tree, py_code);
     assert!(async_functions.len() >= 1);
-    assert!(async_functions.iter().any(|(name, _, _)| name == "fetch_data"));
-    
+    assert!(async_functions
+        .iter()
+        .any(|(name, _, _)| name == "fetch_data"));
+
     // Test context managers
     let context_managers = PythonSyntax::find_context_managers(&tree, py_code);
     assert!(context_managers.len() >= 1);
-    
+
     // Test metaclasses
     let metaclasses = PythonSyntax::find_metaclasses(&tree, py_code);
     assert!(metaclasses.len() >= 1);
     assert!(metaclasses.iter().any(|(class_name, meta_name, _, _)| {
         class_name == "Singleton" && meta_name == "SingletonMeta"
     }));
-    
+
     // Test dataclasses
     let dataclasses = PythonSyntax::find_dataclasses(&tree, py_code);
     assert!(dataclasses.len() >= 1);
     assert!(dataclasses.iter().any(|(name, _, _)| name == "User"));
-    
+
     // Test typed functions
     let typed_functions = PythonSyntax::find_typed_functions(&tree, py_code);
     assert!(typed_functions.len() >= 2); // fetch_data and process_users
-    
+
     // Test property decorators
     let property_decorators = PythonSyntax::find_property_decorators(&tree, py_code);
     assert!(property_decorators.len() >= 3); // @property, @staticmethod, @classmethod
-    
+
     // Test lambda functions
     let lambdas = PythonSyntax::find_lambda_functions(&tree, py_code);
     assert!(lambdas.len() >= 2); // square and filter_even
-    
+
     Ok(())
 }
 
@@ -286,7 +286,7 @@ filter_even = lambda lst: [x for x in lst if x % 2 == 0]
 fn test_c_missing_features() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
     let c_file = temp_dir.path().join("test.c");
-    
+
     let c_code = r#"
 #include <stdio.h>
 
@@ -332,40 +332,46 @@ int calculate(int a, int b, operation_t op) {
 int add(int a, int b) { return a + b; }
 int multiply(int a, int b) { return a * b; }
 "#;
-    
+
     fs::write(&c_file, c_code).unwrap();
-    
+
     let parser = Parser::new(rust_tree_sitter::Language::C).unwrap();
     let tree = parser.parse(c_code, None).unwrap();
-    
+
     // Test function pointers
     let function_pointers = CSyntax::find_function_pointers(&tree, c_code);
     assert!(function_pointers.len() >= 1);
-    assert!(function_pointers.iter().any(|(name, _, _, _)| name == "operation_t"));
-    
+    assert!(function_pointers
+        .iter()
+        .any(|(name, _, _, _)| name == "operation_t"));
+
     // Test unions
     let unions = CSyntax::find_unions(&tree, c_code);
     assert!(unions.len() >= 1);
     assert!(unions.iter().any(|(name, _, _)| name == "Data"));
-    
+
     // Test bit fields
     let bit_fields = CSyntax::find_bit_fields(&tree, c_code);
     assert!(bit_fields.len() >= 4); // flag1, flag2, reserved, value
-    
+
     // Test preprocessor macros
     let macros = CSyntax::find_preprocessor_macros(&tree, c_code);
     assert!(macros.len() >= 3); // MAX_SIZE, SQUARE, DEBUG_PRINT
-    
+
     // Test static functions
     let static_functions = CSyntax::find_static_functions(&tree, c_code);
     assert!(static_functions.len() >= 1);
-    assert!(static_functions.iter().any(|(name, _, _)| name == "internal_helper"));
-    
+    assert!(static_functions
+        .iter()
+        .any(|(name, _, _)| name == "internal_helper"));
+
     // Test inline functions
     let inline_functions = CSyntax::find_inline_functions(&tree, c_code);
     assert!(inline_functions.len() >= 1);
-    assert!(inline_functions.iter().any(|(name, _, _)| name == "fast_add"));
-    
+    assert!(inline_functions
+        .iter()
+        .any(|(name, _, _)| name == "fast_add"));
+
     Ok(())
 }
 
@@ -581,7 +587,11 @@ where
         type_name == "Array" && trait_name.is_none() // inherent impl
     }));
     assert!(impl_blocks.iter().any(|(type_name, trait_name, _, _, _)| {
-        type_name == "Array" && trait_name.as_ref().map(|t| t.contains("Display")).unwrap_or(false)
+        type_name == "Array"
+            && trait_name
+                .as_ref()
+                .map(|t| t.contains("Display"))
+                .unwrap_or(false)
     }));
 
     // Test macros
@@ -592,23 +602,25 @@ where
     // Test lifetimes
     let lifetimes = RustSyntax::find_lifetimes(&tree, rust_code);
     assert!(lifetimes.len() >= 1);
-    assert!(lifetimes.iter().any(|(func_name, lifetime, _, _)| {
-        func_name == "longest" && lifetime.contains("'a")
-    }));
+    assert!(lifetimes
+        .iter()
+        .any(|(func_name, lifetime, _, _)| { func_name == "longest" && lifetime.contains("'a") }));
 
     // Test associated types
     let associated_types = RustSyntax::find_associated_types(&tree, rust_code);
     assert!(associated_types.len() >= 2); // Item and Borrowed
-    assert!(associated_types.iter().any(|(trait_name, type_name, _, _)| {
-        trait_name == "Iterator" && type_name == "Item"
-    }));
+    assert!(associated_types
+        .iter()
+        .any(|(trait_name, type_name, _, _)| { trait_name == "Iterator" && type_name == "Item" }));
 
     // Test const generics
     let const_generics = RustSyntax::find_const_generics(&tree, rust_code);
     assert!(const_generics.len() >= 1);
-    assert!(const_generics.iter().any(|(struct_name, const_param, _, _)| {
-        struct_name == "Array" && const_param.contains("N: usize")
-    }));
+    assert!(const_generics
+        .iter()
+        .any(|(struct_name, const_param, _, _)| {
+            struct_name == "Array" && const_param.contains("N: usize")
+        }));
 
     Ok(())
 }

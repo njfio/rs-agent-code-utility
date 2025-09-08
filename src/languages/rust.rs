@@ -100,7 +100,10 @@ impl RustSyntax {
     }
 
     /// Get all function definitions in a syntax tree with start and end positions
-    pub fn find_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_item");
 
@@ -115,14 +118,21 @@ impl RustSyntax {
     }
 
     /// Get all struct definitions in a syntax tree with start and end positions
-    pub fn find_structs(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_structs(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut structs = Vec::new();
         let struct_nodes = tree.find_nodes_by_kind("struct_item");
 
         for struct_node in struct_nodes {
             let ts_node = struct_node.inner();
             if let Some(name) = Self::struct_name(&ts_node, source) {
-                structs.push((name, struct_node.start_position(), struct_node.end_position()));
+                structs.push((
+                    name,
+                    struct_node.start_position(),
+                    struct_node.end_position(),
+                ));
             }
         }
 
@@ -160,8 +170,6 @@ impl RustSyntax {
         Query::new(crate::Language::Rust, query_str)
     }
 
-
-
     /// Check if a function is public
     pub fn is_public_function(name: &str, content: &str) -> bool {
         // Look for the function definition and check for pub keyword
@@ -190,7 +198,8 @@ impl RustSyntax {
 
         // Find the line with the symbol definition
         for (i, line) in lines.iter().enumerate() {
-            if line.contains(&format!("fn {}", name)) || line.contains(&format!("struct {}", name)) {
+            if line.contains(&format!("fn {}", name)) || line.contains(&format!("struct {}", name))
+            {
                 // Look backwards for doc comments
                 let mut doc_lines = Vec::new();
                 let mut j = i;
@@ -219,7 +228,10 @@ impl RustSyntax {
     }
 
     /// Find trait definitions in a syntax tree
-    pub fn find_traits(tree: &SyntaxTree, source: &str) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_traits(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
         let mut traits = Vec::new();
         let trait_nodes = tree.find_nodes_by_kind("trait_item");
 
@@ -237,7 +249,8 @@ impl RustSyntax {
                             if node.kind() == "function_signature_item" {
                                 // For function signatures, get the name directly
                                 if let Some(name_node) = node.child_by_field_name("name") {
-                                    if let Ok(method_name) = name_node.utf8_text(source.as_bytes()) {
+                                    if let Ok(method_name) = name_node.utf8_text(source.as_bytes())
+                                    {
                                         methods.push(method_name.to_string());
                                     }
                                 }
@@ -254,7 +267,12 @@ impl RustSyntax {
                     }
                 }
 
-                traits.push((name, methods, trait_node.start_position(), trait_node.end_position()));
+                traits.push((
+                    name,
+                    methods,
+                    trait_node.start_position(),
+                    trait_node.end_position(),
+                ));
             }
         }
 
@@ -262,7 +280,16 @@ impl RustSyntax {
     }
 
     /// Find impl blocks in a syntax tree
-    pub fn find_impl_blocks(tree: &SyntaxTree, source: &str) -> Vec<(String, Option<String>, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_impl_blocks(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(
+        String,
+        Option<String>,
+        Vec<String>,
+        tree_sitter::Point,
+        tree_sitter::Point,
+    )> {
         let mut impl_blocks = Vec::new();
         let impl_nodes = tree.find_nodes_by_kind("impl_item");
 
@@ -323,7 +350,7 @@ impl RustSyntax {
                     trait_name,
                     methods,
                     impl_node.start_position(),
-                    impl_node.end_position()
+                    impl_node.end_position(),
                 ));
             }
         }
@@ -332,7 +359,10 @@ impl RustSyntax {
     }
 
     /// Find macro definitions in a syntax tree
-    pub fn find_macros(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_macros(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut macros = Vec::new();
 
         // Find macro_rules! definitions
@@ -346,7 +376,7 @@ impl RustSyntax {
                             macro_name.to_string(),
                             macro_text.to_string(),
                             macro_node.start_position(),
-                            macro_node.end_position()
+                            macro_node.end_position(),
                         ));
                     }
                 }
@@ -367,7 +397,7 @@ impl RustSyntax {
                             macro_name.to_string(),
                             macro_text.to_string(),
                             macro_node.start_position(),
-                            macro_node.end_position()
+                            macro_node.end_position(),
                         ));
                     }
                 }
@@ -378,7 +408,10 @@ impl RustSyntax {
     }
 
     /// Find lifetime parameters in a syntax tree
-    pub fn find_lifetimes(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_lifetimes(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut lifetimes = Vec::new();
 
         // Find lifetime parameters in function signatures
@@ -398,7 +431,7 @@ impl RustSyntax {
                                         func_name.clone(),
                                         lifetime_text.to_string(),
                                         func_node.start_position(),
-                                        func_node.end_position()
+                                        func_node.end_position(),
                                     ));
                                 }
                             }
@@ -416,7 +449,10 @@ impl RustSyntax {
     }
 
     /// Find associated types in trait definitions
-    pub fn find_associated_types(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_associated_types(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut associated_types = Vec::new();
         let trait_nodes = tree.find_nodes_by_kind("trait_item");
 
@@ -431,12 +467,14 @@ impl RustSyntax {
                             let node = cursor.node();
                             if node.kind() == "associated_type" {
                                 if let Some(type_name_node) = node.child_by_field_name("name") {
-                                    if let Ok(type_name) = type_name_node.utf8_text(source.as_bytes()) {
+                                    if let Ok(type_name) =
+                                        type_name_node.utf8_text(source.as_bytes())
+                                    {
                                         associated_types.push((
                                             trait_name.clone(),
                                             type_name.to_string(),
                                             trait_node.start_position(),
-                                            trait_node.end_position()
+                                            trait_node.end_position(),
                                         ));
                                     }
                                 }
@@ -455,7 +493,10 @@ impl RustSyntax {
     }
 
     /// Find const generics in type definitions
-    pub fn find_const_generics(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_const_generics(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut const_generics = Vec::new();
 
         // Find const generics in struct definitions
@@ -475,7 +516,7 @@ impl RustSyntax {
                                         struct_name.clone(),
                                         const_param_text.to_string(),
                                         struct_node.start_position(),
-                                        struct_node.end_position()
+                                        struct_node.end_position(),
                                     ));
                                 }
                             }
@@ -532,15 +573,24 @@ mod tests {
                 let ts_node = node.inner();
                 if RustSyntax::is_function(&ts_node) {
                     found_function = true;
-                    assert_eq!(RustSyntax::function_name(&ts_node, source), Some("main".to_string()));
+                    assert_eq!(
+                        RustSyntax::function_name(&ts_node, source),
+                        Some("main".to_string())
+                    );
                 }
                 if RustSyntax::is_struct(&ts_node) {
                     found_struct = true;
-                    assert_eq!(RustSyntax::struct_name(&ts_node, source), Some("Point".to_string()));
+                    assert_eq!(
+                        RustSyntax::struct_name(&ts_node, source),
+                        Some("Point".to_string())
+                    );
                 }
                 if RustSyntax::is_enum(&ts_node) {
                     found_enum = true;
-                    assert_eq!(RustSyntax::enum_name(&ts_node, source), Some("Color".to_string()));
+                    assert_eq!(
+                        RustSyntax::enum_name(&ts_node, source),
+                        Some("Color".to_string())
+                    );
                 }
 
                 if !cursor.goto_next_sibling() {

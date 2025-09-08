@@ -2,7 +2,7 @@
 //!
 //! This module provides comprehensive semantic context tracking for static analysis
 //! to significantly reduce false positives in security vulnerability detection.
-//! 
+//!
 //! The semantic context system builds rich contextual information about code including:
 //! - Data flow analysis and taint tracking
 //! - Control flow context and reachability
@@ -12,9 +12,9 @@
 //! - Security-relevant context (sanitization, validation, etc.)
 
 use crate::error::Result;
-use crate::tree::{SyntaxTree, Node};
 use crate::languages::Language;
-use crate::symbol_table::{SymbolTable, SymbolTableAnalyzer, SymbolId};
+use crate::symbol_table::{SymbolId, SymbolTable, SymbolTableAnalyzer};
+use crate::tree::{Node, SyntaxTree};
 // Note: These modules will be implemented in future tasks
 // use crate::control_flow::{ControlFlowGraph, CfgBuilder};
 // use crate::taint_analysis::{TaintAnalyzer, TaintFlow, TaintSource, TaintSink};
@@ -691,7 +691,8 @@ impl SemanticContextAnalyzer {
         let call_graph = self.build_call_graph(tree, content, &symbol_table)?;
 
         // Phase 5: Analyze security context
-        let security_context = self.analyze_security_context(tree, content, &symbol_table, &data_flow)?;
+        let security_context =
+            self.analyze_security_context(tree, content, &symbol_table, &data_flow)?;
 
         // Phase 6: Perform type analysis
         let type_context = self.analyze_types(tree, &symbol_table)?;
@@ -724,10 +725,20 @@ impl SemanticContextAnalyzer {
         let mut constants = HashMap::new();
 
         // Build reaching definitions
-        self.compute_reaching_definitions(tree, symbol_table, control_flow, &mut reaching_definitions)?;
+        self.compute_reaching_definitions(
+            tree,
+            symbol_table,
+            control_flow,
+            &mut reaching_definitions,
+        )?;
 
         // Build use-def chains
-        self.compute_use_def_chains(tree, symbol_table, &reaching_definitions, &mut use_def_chains)?;
+        self.compute_use_def_chains(
+            tree,
+            symbol_table,
+            &reaching_definitions,
+            &mut use_def_chains,
+        )?;
 
         // Build def-use chains
         self.compute_def_use_chains(&use_def_chains, &mut def_use_chains)?;
@@ -783,16 +794,22 @@ impl SemanticContextAnalyzer {
                 if let Some(pattern) = node.child_by_field_name("pattern") {
                     if let Ok(_name) = pattern.text() {
                         // Find symbol in symbol table
-                        if let Some(symbol_id) = self.find_symbol_at_location(symbol_table, node.start_position()) {
+                        if let Some(symbol_id) =
+                            self.find_symbol_at_location(symbol_table, node.start_position())
+                        {
                             let def_site = DefinitionSite {
                                 symbol_id,
                                 location: node.start_position(),
                                 definition_type: DefinitionType::Declaration,
-                                value: node.child_by_field_name("value")
+                                value: node
+                                    .child_by_field_name("value")
                                     .and_then(|v| v.text().ok())
                                     .map(|s| s.to_string()),
                             };
-                            definitions.entry(symbol_id).or_insert_with(Vec::new).push(def_site);
+                            definitions
+                                .entry(symbol_id)
+                                .or_insert_with(Vec::new)
+                                .push(def_site);
                         }
                     }
                 }
@@ -800,16 +817,22 @@ impl SemanticContextAnalyzer {
             "assignment_expression" => {
                 if let Some(left) = node.child_by_field_name("left") {
                     if let Ok(_name) = left.text() {
-                        if let Some(symbol_id) = self.find_symbol_at_location(symbol_table, left.start_position()) {
+                        if let Some(symbol_id) =
+                            self.find_symbol_at_location(symbol_table, left.start_position())
+                        {
                             let def_site = DefinitionSite {
                                 symbol_id,
                                 location: node.start_position(),
                                 definition_type: DefinitionType::Assignment,
-                                value: node.child_by_field_name("right")
+                                value: node
+                                    .child_by_field_name("right")
                                     .and_then(|v| v.text().ok())
                                     .map(|s| s.to_string()),
                             };
-                            definitions.entry(symbol_id).or_insert_with(Vec::new).push(def_site);
+                            definitions
+                                .entry(symbol_id)
+                                .or_insert_with(Vec::new)
+                                .push(def_site);
                         }
                     }
                 }
@@ -817,14 +840,19 @@ impl SemanticContextAnalyzer {
             "parameter" => {
                 if let Some(pattern) = node.child_by_field_name("pattern") {
                     if let Ok(_name) = pattern.text() {
-                        if let Some(symbol_id) = self.find_symbol_at_location(symbol_table, node.start_position()) {
+                        if let Some(symbol_id) =
+                            self.find_symbol_at_location(symbol_table, node.start_position())
+                        {
                             let def_site = DefinitionSite {
                                 symbol_id,
                                 location: node.start_position(),
                                 definition_type: DefinitionType::Parameter,
                                 value: None,
                             };
-                            definitions.entry(symbol_id).or_insert_with(Vec::new).push(def_site);
+                            definitions
+                                .entry(symbol_id)
+                                .or_insert_with(Vec::new)
+                                .push(def_site);
                         }
                     }
                 }
@@ -841,7 +869,11 @@ impl SemanticContextAnalyzer {
     }
 
     /// Find symbol at a specific location
-    fn find_symbol_at_location(&self, symbol_table: &SymbolTable, location: Point) -> Option<SymbolId> {
+    fn find_symbol_at_location(
+        &self,
+        symbol_table: &SymbolTable,
+        location: Point,
+    ) -> Option<SymbolId> {
         // This is a simplified implementation - in practice, you'd need more sophisticated lookup
         for (&symbol_id, symbol_def) in &symbol_table.symbols {
             if symbol_def.definition_location == location {
@@ -909,7 +941,8 @@ impl SemanticContextAnalyzer {
                         // Find definitions for this variable
                         let mut relevant_defs = Vec::new();
                         for def_site in reaching_defs {
-                            if let Some(symbol_def) = symbol_table.symbols.get(&def_site.symbol_id) {
+                            if let Some(symbol_def) = symbol_table.symbols.get(&def_site.symbol_id)
+                            {
                                 if symbol_def.name == name {
                                     relevant_defs.push(def_site.clone());
                                 }
@@ -967,7 +1000,10 @@ impl SemanticContextAnalyzer {
     ) -> Result<()> {
         for (use_point, def_sites) in use_def_chains {
             for def_site in def_sites {
-                def_use_chains.entry(def_site.clone()).or_insert_with(Vec::new).push(*use_point);
+                def_use_chains
+                    .entry(def_site.clone())
+                    .or_insert_with(Vec::new)
+                    .push(*use_point);
             }
         }
         Ok(())
@@ -997,7 +1033,7 @@ impl SemanticContextAnalyzer {
                 // Check for pointer assignments like a = &b or a = b
                 if let (Some(left), Some(right)) = (
                     node.child_by_field_name("left"),
-                    node.child_by_field_name("right")
+                    node.child_by_field_name("right"),
                 ) {
                     if let (Ok(left_name), Ok(right_text)) = (left.text(), right.text()) {
                         // Simple alias detection for reference assignments
@@ -1005,9 +1041,12 @@ impl SemanticContextAnalyzer {
                             let right_name = &right_text[1..]; // Remove &
                             if let (Some(left_id), Some(right_id)) = (
                                 self.find_symbol_by_name(symbol_table, &left_name),
-                                self.find_symbol_by_name(symbol_table, right_name)
+                                self.find_symbol_by_name(symbol_table, right_name),
                             ) {
-                                aliases.entry(left_id).or_insert_with(HashSet::new).insert(right_id);
+                                aliases
+                                    .entry(left_id)
+                                    .or_insert_with(HashSet::new)
+                                    .insert(right_id);
                             }
                         }
                     }
@@ -1059,7 +1098,10 @@ impl SemanticContextAnalyzer {
                 if let Ok(text) = node.text() {
                     // Remove quotes
                     let value = text.trim_matches('"').trim_matches('\'');
-                    constants.insert(node.start_position(), ConstantValue::String(value.to_string()));
+                    constants.insert(
+                        node.start_position(),
+                        ConstantValue::String(value.to_string()),
+                    );
                 }
             }
             "integer_literal" | "number" => {
@@ -1149,7 +1191,8 @@ impl SemanticContextAnalyzer {
                         }
 
                         // Extract return type
-                        let return_type = node.child_by_field_name("return_type")
+                        let return_type = node
+                            .child_by_field_name("return_type")
                             .and_then(|rt| rt.text().ok())
                             .map(|s| s.to_string());
 
@@ -1189,11 +1232,13 @@ impl SemanticContextAnalyzer {
             if child.kind() == "parameter" {
                 if let Some(pattern) = child.child_by_field_name("pattern") {
                     if let Ok(name) = pattern.text() {
-                        let param_type = child.child_by_field_name("type")
+                        let param_type = child
+                            .child_by_field_name("type")
                             .and_then(|t| t.text().ok())
                             .map(|s| s.to_string());
 
-                        let default_value = child.child_by_field_name("default_value")
+                        let default_value = child
+                            .child_by_field_name("default_value")
                             .and_then(|dv| dv.text().ok())
                             .map(|s| s.to_string());
 
@@ -1233,9 +1278,14 @@ impl SemanticContextAnalyzer {
 
         // Analyze function body for side effects
         if let Some(body) = function_node.child_by_field_name("body") {
-            self.analyze_function_body(&body, &mut is_pure, &mut performs_io,
-                                     &mut is_security_sensitive, &mut sanitizes_input,
-                                     &mut validates_input)?;
+            self.analyze_function_body(
+                &body,
+                &mut is_pure,
+                &mut performs_io,
+                &mut is_security_sensitive,
+                &mut sanitizes_input,
+                &mut validates_input,
+            )?;
         }
 
         Ok(FunctionAttributes {
@@ -1295,9 +1345,14 @@ impl SemanticContextAnalyzer {
             }
 
             // Recursively analyze children
-            self.analyze_function_body(&child, is_pure, performs_io,
-                                     is_security_sensitive, sanitizes_input,
-                                     validates_input)?;
+            self.analyze_function_body(
+                &child,
+                is_pure,
+                performs_io,
+                is_security_sensitive,
+                sanitizes_input,
+                validates_input,
+            )?;
         }
 
         Ok(())
@@ -1306,35 +1361,49 @@ impl SemanticContextAnalyzer {
     /// Check if function performs I/O
     fn is_io_function(&self, func_name: &str) -> bool {
         let io_functions = [
-            "print", "println", "printf", "read", "write", "open", "close",
-            "file", "socket", "connect", "send", "recv", "fetch", "request"
+            "print", "println", "printf", "read", "write", "open", "close", "file", "socket",
+            "connect", "send", "recv", "fetch", "request",
         ];
-        io_functions.iter().any(|&io_func| func_name.contains(io_func))
+        io_functions
+            .iter()
+            .any(|&io_func| func_name.contains(io_func))
     }
 
     /// Check if function is security-sensitive
     fn is_security_sensitive_function(&self, func_name: &str) -> bool {
         let security_functions = [
-            "auth", "login", "password", "token", "encrypt", "decrypt",
-            "hash", "sign", "verify", "permission", "access", "admin"
+            "auth",
+            "login",
+            "password",
+            "token",
+            "encrypt",
+            "decrypt",
+            "hash",
+            "sign",
+            "verify",
+            "permission",
+            "access",
+            "admin",
         ];
-        security_functions.iter().any(|&sec_func| func_name.contains(sec_func))
+        security_functions
+            .iter()
+            .any(|&sec_func| func_name.contains(sec_func))
     }
 
     /// Check if function performs sanitization
     fn is_sanitization_function(&self, func_name: &str) -> bool {
-        let sanitization_functions = [
-            "escape", "sanitize", "clean", "filter", "encode", "strip"
-        ];
-        sanitization_functions.iter().any(|&san_func| func_name.contains(san_func))
+        let sanitization_functions = ["escape", "sanitize", "clean", "filter", "encode", "strip"];
+        sanitization_functions
+            .iter()
+            .any(|&san_func| func_name.contains(san_func))
     }
 
     /// Check if function performs validation
     fn is_validation_function(&self, func_name: &str) -> bool {
-        let validation_functions = [
-            "validate", "check", "verify", "assert", "ensure", "require"
-        ];
-        validation_functions.iter().any(|&val_func| func_name.contains(val_func))
+        let validation_functions = ["validate", "check", "verify", "assert", "ensure", "require"];
+        validation_functions
+            .iter()
+            .any(|&val_func| func_name.contains(val_func))
     }
 
     /// Collect function calls
@@ -1362,7 +1431,10 @@ impl SemanticContextAnalyzer {
                         return_usage: ReturnUsage::Used, // Simplified
                     };
 
-                    calls.entry(node.start_position()).or_insert_with(Vec::new).push(function_call);
+                    calls
+                        .entry(node.start_position())
+                        .or_insert_with(Vec::new)
+                        .push(function_call);
                 }
             }
         }
@@ -1422,9 +1494,16 @@ impl SemanticContextAnalyzer {
         let mut trust_levels = HashMap::new();
 
         let root = tree.root_node();
-        self.analyze_security_patterns(&root, &mut validation_points, &mut sanitization_points,
-                                     &mut auth_checks, &mut authz_checks, &mut error_handling,
-                                     &mut security_boundaries, &mut trust_levels)?;
+        self.analyze_security_patterns(
+            &root,
+            &mut validation_points,
+            &mut sanitization_points,
+            &mut auth_checks,
+            &mut authz_checks,
+            &mut error_handling,
+            &mut security_boundaries,
+            &mut trust_levels,
+        )?;
 
         Ok(SecuritySemanticContext {
             validation_points,
@@ -1485,7 +1564,9 @@ impl SemanticContextAnalyzer {
                         }
 
                         // Set trust levels
-                        if func_name_lower.contains("user_input") || func_name_lower.contains("request") {
+                        if func_name_lower.contains("user_input")
+                            || func_name_lower.contains("request")
+                        {
                             trust_levels.insert(node.start_position(), TrustLevel::Untrusted);
                         }
                     }
@@ -1503,9 +1584,16 @@ impl SemanticContextAnalyzer {
 
         // Recursively process children
         for child in node.children() {
-            self.analyze_security_patterns(&child, validation_points, sanitization_points,
-                                         auth_checks, authz_checks, error_handling,
-                                         security_boundaries, trust_levels)?;
+            self.analyze_security_patterns(
+                &child,
+                validation_points,
+                sanitization_points,
+                auth_checks,
+                authz_checks,
+                error_handling,
+                security_boundaries,
+                trust_levels,
+            )?;
         }
 
         Ok(())
@@ -1518,7 +1606,12 @@ impl SemanticContextAnalyzer {
         let mut generic_instantiations = HashMap::new();
 
         let root = tree.root_node();
-        self.infer_types(&root, &mut expression_types, &mut type_constraints, &mut generic_instantiations)?;
+        self.infer_types(
+            &root,
+            &mut expression_types,
+            &mut type_constraints,
+            &mut generic_instantiations,
+        )?;
 
         Ok(TypeContext {
             expression_types,
@@ -1537,35 +1630,49 @@ impl SemanticContextAnalyzer {
     ) -> Result<()> {
         match node.kind() {
             "string_literal" | "string" => {
-                expression_types.insert(node.start_position(), TypeInfo {
-                    type_name: "String".to_string(),
-                    is_nullable: false,
-                    is_mutable: false,
-                    generic_params: Vec::new(),
-                });
+                expression_types.insert(
+                    node.start_position(),
+                    TypeInfo {
+                        type_name: "String".to_string(),
+                        is_nullable: false,
+                        is_mutable: false,
+                        generic_params: Vec::new(),
+                    },
+                );
             }
             "integer_literal" | "number" => {
-                expression_types.insert(node.start_position(), TypeInfo {
-                    type_name: "i32".to_string(), // Simplified
-                    is_nullable: false,
-                    is_mutable: false,
-                    generic_params: Vec::new(),
-                });
+                expression_types.insert(
+                    node.start_position(),
+                    TypeInfo {
+                        type_name: "i32".to_string(), // Simplified
+                        is_nullable: false,
+                        is_mutable: false,
+                        generic_params: Vec::new(),
+                    },
+                );
             }
             "true" | "false" => {
-                expression_types.insert(node.start_position(), TypeInfo {
-                    type_name: "bool".to_string(),
-                    is_nullable: false,
-                    is_mutable: false,
-                    generic_params: Vec::new(),
-                });
+                expression_types.insert(
+                    node.start_position(),
+                    TypeInfo {
+                        type_name: "bool".to_string(),
+                        is_nullable: false,
+                        is_mutable: false,
+                        generic_params: Vec::new(),
+                    },
+                );
             }
             _ => {}
         }
 
         // Recursively process children
         for child in node.children() {
-            self.infer_types(&child, expression_types, _type_constraints, _generic_instantiations)?;
+            self.infer_types(
+                &child,
+                expression_types,
+                _type_constraints,
+                _generic_instantiations,
+            )?;
         }
 
         Ok(())
@@ -1605,7 +1712,8 @@ impl SemanticContextAnalyzer {
                 // Check for security patterns
                 if let Some(condition) = node.child_by_field_name("condition") {
                     if let Ok(condition_text) = condition.text() {
-                        if condition_text.contains("auth") || condition_text.contains("permission") {
+                        if condition_text.contains("auth") || condition_text.contains("permission")
+                        {
                             patterns.push(CodePattern {
                                 name: "Security Check Pattern".to_string(),
                                 location: node.start_position(),
@@ -1640,7 +1748,6 @@ impl SemanticContextAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_semantic_context_analyzer_creation() -> Result<()> {
@@ -1693,12 +1800,12 @@ mod tests {
         }
 
         match null_val {
-            ConstantValue::Null => {},
+            ConstantValue::Null => {}
             _ => panic!("Expected null value"),
         }
 
         match unknown_val {
-            ConstantValue::Unknown => {},
+            ConstantValue::Unknown => {}
             _ => panic!("Expected unknown value"),
         }
     }
@@ -1708,14 +1815,12 @@ mod tests {
         let function_call = FunctionCall {
             function_name: "test_function".to_string(),
             call_site: Point { row: 5, column: 10 },
-            arguments: vec![
-                ArgumentInfo {
-                    position: 0,
-                    expression: "arg1".to_string(),
-                    is_tainted: false,
-                    constant_value: Some(ConstantValue::String("test".to_string())),
-                }
-            ],
+            arguments: vec![ArgumentInfo {
+                position: 0,
+                expression: "arg1".to_string(),
+                is_tainted: false,
+                constant_value: Some(ConstantValue::String("test".to_string())),
+            }],
             return_usage: ReturnUsage::Used,
         };
 
@@ -1748,8 +1853,14 @@ mod tests {
             effectiveness: SanitizationEffectiveness::Comprehensive,
         };
 
-        assert_eq!(sanitization_point.sanitization_type, SanitizationType::HtmlEscape);
-        assert_eq!(sanitization_point.effectiveness, SanitizationEffectiveness::Comprehensive);
+        assert_eq!(
+            sanitization_point.sanitization_type,
+            SanitizationType::HtmlEscape
+        );
+        assert_eq!(
+            sanitization_point.effectiveness,
+            SanitizationEffectiveness::Comprehensive
+        );
         assert_eq!(sanitization_point.sanitized_variables.len(), 2);
     }
 
@@ -1802,14 +1913,12 @@ mod tests {
             type_name: "Vec<String>".to_string(),
             is_nullable: false,
             is_mutable: true,
-            generic_params: vec![
-                TypeInfo {
-                    type_name: "String".to_string(),
-                    is_nullable: false,
-                    is_mutable: false,
-                    generic_params: Vec::new(),
-                }
-            ],
+            generic_params: vec![TypeInfo {
+                type_name: "String".to_string(),
+                is_nullable: false,
+                is_mutable: false,
+                generic_params: Vec::new(),
+            }],
         };
 
         assert_eq!(type_info.type_name, "Vec<String>");
@@ -1837,7 +1946,10 @@ mod tests {
     fn test_anti_pattern_creation() {
         let anti_pattern = AntiPattern {
             name: "Unwrap Anti-pattern".to_string(),
-            location: Point { row: 25, column: 12 },
+            location: Point {
+                row: 25,
+                column: 12,
+            },
             severity: AntiPatternSeverity::High,
             suggested_fix: "Use proper error handling".to_string(),
         };

@@ -151,17 +151,33 @@ nav{width:270px}
             for entry in std::fs::read_dir(dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.is_dir() { process_dir(&path)?; continue; }
-                if let Some(ext) = path.extension() { if ext == "html" {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        let mut replaced = content.replace("https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js", "assets/mermaid.js");
-                        replaced = replaced.replace("https://cdn.jsdelivr.net/npm/mermaid", "assets/mermaid.js");
-                        replaced = replaced.replace("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js", "assets/hljs.js");
-                        replaced = replaced.replace("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css", "assets/hljs.css");
-                        replaced = replaced.replace("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/", "assets/");
-                        if replaced != content { let _ = std::fs::write(&path, replaced); }
+                if path.is_dir() {
+                    process_dir(&path)?;
+                    continue;
+                }
+                if let Some(ext) = path.extension() {
+                    if ext == "html" {
+                        if let Ok(content) = std::fs::read_to_string(&path) {
+                            let mut replaced = content.replace(
+                                "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js",
+                                "assets/mermaid.js",
+                            );
+                            replaced = replaced.replace(
+                                "https://cdn.jsdelivr.net/npm/mermaid",
+                                "assets/mermaid.js",
+                            );
+                            replaced = replaced.replace("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js", "assets/hljs.js");
+                            replaced = replaced.replace("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css", "assets/hljs.css");
+                            replaced = replaced.replace(
+                                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/",
+                                "assets/",
+                            );
+                            if replaced != content {
+                                let _ = std::fs::write(&path, replaced);
+                            }
+                        }
                     }
-                }}
+                }
             }
             Ok(())
         }
@@ -170,7 +186,8 @@ nav{width:270px}
 
     pub(super) fn write_search_js_impl(&self, path: &Path) -> Result<()> {
         let max_results = self.config.search_max_results;
-        let js = format!(r#"function runSearch(){{
+        let js = format!(
+            r#"function runSearch(){{
   let idx = (typeof window !== 'undefined' && window.SEARCH_INDEX) ? window.SEARCH_INDEX : [];
   const isFile = (typeof location !== 'undefined' && location.protocol === 'file:');
   const base = (typeof location !== 'undefined' && location.pathname && location.pathname.indexOf('/pages/') !== -1) ? '../assets' : 'assets';
@@ -273,7 +290,9 @@ nav{width:270px}
   }});
   update();
 }}
-window.addEventListener('DOMContentLoaded', runSearch);"#, max_results=max_results);
+window.addEventListener('DOMContentLoaded', runSearch);"#,
+            max_results = max_results
+        );
         fs::write(path, js).map_err(|e| e.into())
     }
 
@@ -284,22 +303,42 @@ window.addEventListener('DOMContentLoaded', runSearch);"#, max_results=max_resul
         // Always ensure we have at least a minimal stub to avoid 404s
         let js_stub = "window.hljs = window.hljs || { highlightAll: function(){ try { document.querySelectorAll('pre code').forEach(function(el){ el.classList.add('hljs'); }); } catch(e){} } };";
         let css_stub = ".hljs{background:#0a1220;color:#e6e9ef}.hljs-keyword,.hljs-literal,.hljs-built_in{color:#7aa2f7}.hljs-string{color:#a6e3a1}.hljs-comment{color:#9aa4b2}.hljs-number{color:#f78c6c}";
-        if !js_path.exists() { let _ = fs::write(&js_path, js_stub); }
-        if !css_path.exists() { let _ = fs::write(&css_path, css_stub); }
+        if !js_path.exists() {
+            let _ = fs::write(&js_path, js_stub);
+        }
+        if !css_path.exists() {
+            let _ = fs::write(&css_path, css_stub);
+        }
 
         // Try to download real assets; ignore failures (offline environments)
         let js_url = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js";
-        let css_url = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css";
+        let css_url =
+            "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css";
 
         // Use tokio + reqwest if available (default features include net)
         if let Ok(rt) = tokio::runtime::Runtime::new() {
             let fetch = async move {
                 use std::time::Duration;
-                let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build().unwrap_or_else(|_| reqwest::Client::new());
+                let client = reqwest::Client::builder()
+                    .timeout(Duration::from_secs(2))
+                    .build()
+                    .unwrap_or_else(|_| reqwest::Client::new());
                 let js_resp = client.get(js_url).send().await;
-                if let Ok(resp) = js_resp { if resp.status().is_success() { if let Ok(text) = resp.text().await { let _ = fs::write(&js_path, text); } } }
+                if let Ok(resp) = js_resp {
+                    if resp.status().is_success() {
+                        if let Ok(text) = resp.text().await {
+                            let _ = fs::write(&js_path, text);
+                        }
+                    }
+                }
                 let css_resp = client.get(css_url).send().await;
-                if let Ok(resp) = css_resp { if resp.status().is_success() { if let Ok(text) = resp.text().await { let _ = fs::write(&css_path, text); } } }
+                if let Ok(resp) = css_resp {
+                    if resp.status().is_success() {
+                        if let Ok(text) = resp.text().await {
+                            let _ = fs::write(&css_path, text);
+                        }
+                    }
+                }
             };
             let _ = rt.block_on(fetch);
         }
@@ -325,17 +364,24 @@ window.addEventListener('DOMContentLoaded', runSearch);"#, max_results=max_resul
   window.mermaid = window.mermaid || { initialize:function(){}, init:function(){}, parse:function(){}, render:function(){} };
   ensureRealMermaid();
 })();"#;
-        if !path.exists() { let _ = fs::write(&path, stub); }
+        if !path.exists() {
+            let _ = fs::write(&path, stub);
+        }
 
         // Try to download the real library; ignore failures
         let url = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
         if let Ok(rt) = tokio::runtime::Runtime::new() {
             let fetch = async move {
                 use std::time::Duration;
-                let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build().unwrap_or_else(|_| reqwest::Client::new());
+                let client = reqwest::Client::builder()
+                    .timeout(Duration::from_secs(2))
+                    .build()
+                    .unwrap_or_else(|_| reqwest::Client::new());
                 if let Ok(resp) = client.get(url).send().await {
                     if resp.status().is_success() {
-                        if let Ok(text) = resp.text().await { let _ = fs::write(&path, text); }
+                        if let Ok(text) = resp.text().await {
+                            let _ = fs::write(&path, text);
+                        }
                     }
                 }
             };

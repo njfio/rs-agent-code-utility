@@ -1,5 +1,5 @@
 //! Smart refactoring engine with automated code improvements
-//! 
+//!
 //! This module provides comprehensive automated refactoring including:
 //! - Code smell detection with automated fixes
 //! - Design pattern recommendations and implementation guidance
@@ -7,17 +7,15 @@
 //! - Modernization recommendations (language version upgrades, deprecated API usage)
 //! - Architectural improvements with refactoring roadmaps
 
-use crate::{AnalysisResult, Result};
-use crate::constants::common::RiskLevel;
-use crate::analysis_utils::{
-    AnalysisThresholds, SymbolFilter
-};
 use crate::analysis_common::{FileAnalyzer, PatternAnalyzer};
+use crate::analysis_utils::{AnalysisThresholds, SymbolFilter};
+use crate::constants::common::RiskLevel;
+use crate::{AnalysisResult, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Smart refactoring engine for automated code improvements
 #[derive(Debug, Clone)]
@@ -616,16 +614,16 @@ impl SmartRefactoringEngine {
             config: SmartRefactoringConfig::default(),
         }
     }
-    
+
     /// Create a new smart refactoring engine with custom configuration
     pub fn with_config(config: SmartRefactoringConfig) -> Self {
         Self { config }
     }
-    
+
     /// Perform comprehensive refactoring analysis
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<SmartRefactoringResult> {
         let mut opportunities_by_category = HashMap::new();
-        
+
         // Detect and fix code smells
         let code_smell_fixes = if self.config.code_smell_fixes {
             let fixes = self.detect_code_smell_fixes(analysis_result)?;
@@ -634,16 +632,17 @@ impl SmartRefactoringEngine {
         } else {
             Vec::new()
         };
-        
+
         // Generate design pattern recommendations
         let pattern_recommendations = if self.config.pattern_recommendations {
             let recommendations = self.generate_pattern_recommendations(analysis_result)?;
-            opportunities_by_category.insert(RefactoringCategory::DesignPatterns, recommendations.len());
+            opportunities_by_category
+                .insert(RefactoringCategory::DesignPatterns, recommendations.len());
             recommendations
         } else {
             Vec::new()
         };
-        
+
         // Generate performance optimizations
         let performance_optimizations = if self.config.performance_optimizations {
             let optimizations = self.generate_performance_optimizations(analysis_result)?;
@@ -652,7 +651,7 @@ impl SmartRefactoringEngine {
         } else {
             Vec::new()
         };
-        
+
         // Generate modernization suggestions
         let modernization_suggestions = if self.config.modernization {
             let suggestions = self.generate_modernization_suggestions(analysis_result)?;
@@ -661,7 +660,7 @@ impl SmartRefactoringEngine {
         } else {
             Vec::new()
         };
-        
+
         // Generate architectural improvements
         let architectural_improvements = if self.config.architectural_improvements {
             let improvements = self.generate_architectural_improvements(analysis_result)?;
@@ -670,7 +669,7 @@ impl SmartRefactoringEngine {
         } else {
             Vec::new()
         };
-        
+
         // Create refactoring roadmap
         let refactoring_roadmap = self.create_refactoring_roadmap(
             &code_smell_fixes,
@@ -679,20 +678,23 @@ impl SmartRefactoringEngine {
             &modernization_suggestions,
             &architectural_improvements,
         )?;
-        
+
         // Perform impact analysis
         let impact_analysis = self.analyze_impact(
             &code_smell_fixes,
             &performance_optimizations,
             &architectural_improvements,
         )?;
-        
-        let total_opportunities = code_smell_fixes.len() + pattern_recommendations.len() + 
-                                 performance_optimizations.len() + modernization_suggestions.len() + 
-                                 architectural_improvements.len();
-        
-        let refactoring_score = self.calculate_refactoring_score(&impact_analysis, total_opportunities);
-        
+
+        let total_opportunities = code_smell_fixes.len()
+            + pattern_recommendations.len()
+            + performance_optimizations.len()
+            + modernization_suggestions.len()
+            + architectural_improvements.len();
+
+        let refactoring_score =
+            self.calculate_refactoring_score(&impact_analysis, total_opportunities);
+
         Ok(SmartRefactoringResult {
             refactoring_score,
             total_opportunities,
@@ -708,7 +710,10 @@ impl SmartRefactoringEngine {
     }
 
     /// Detect code smells and generate automated fixes using AST analysis
-    fn detect_code_smell_fixes(&self, analysis_result: &AnalysisResult) -> Result<Vec<CodeSmellFix>> {
+    fn detect_code_smell_fixes(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<CodeSmellFix>> {
         let mut fixes = Vec::new();
 
         for file in &analysis_result.files {
@@ -745,18 +750,25 @@ impl SmartRefactoringEngine {
         let mut fixes = Vec::new();
 
         // Group struct/class symbols with their impl blocks
-        let struct_symbols: Vec<_> = file.symbols.iter()
+        let struct_symbols: Vec<_> = file
+            .symbols
+            .iter()
             .filter(|s| s.kind == "struct" || s.kind == "class")
             .collect();
 
         for struct_symbol in struct_symbols {
             // Find all impl blocks for this struct
-            let impl_symbols: Vec<_> = file.symbols.iter()
+            let impl_symbols: Vec<_> = file
+                .symbols
+                .iter()
                 .filter(|s| s.kind == "impl" && s.name == struct_symbol.name)
                 .collect();
 
             // Calculate total lines including struct definition and all impl blocks
-            let mut total_lines = struct_symbol.end_line.saturating_sub(struct_symbol.start_line) + 1;
+            let mut total_lines = struct_symbol
+                .end_line
+                .saturating_sub(struct_symbol.start_line)
+                + 1;
             let mut start_line = struct_symbol.start_line;
             let mut end_line = struct_symbol.end_line;
 
@@ -767,14 +779,19 @@ impl SmartRefactoringEngine {
             }
 
             // Count methods in impl blocks to assess complexity
-            let method_count = file.symbols.iter()
-                .filter(|s| (s.kind == "function" || s.kind == "method") &&
-                           s.start_line >= start_line && s.end_line <= end_line)
+            let method_count = file
+                .symbols
+                .iter()
+                .filter(|s| {
+                    (s.kind == "function" || s.kind == "method")
+                        && s.start_line >= start_line
+                        && s.end_line <= end_line
+                })
                 .count();
 
             // Large class threshold based on language (more sensitive for testing)
             let line_threshold = match file.language.as_str() {
-                "rust" => 30,  // Lowered for better detection
+                "rust" => 30, // Lowered for better detection
                 "javascript" | "typescript" => 25,
                 "python" => 40,
                 "c" | "cpp" => 50,
@@ -783,7 +800,7 @@ impl SmartRefactoringEngine {
             };
 
             let method_threshold = match file.language.as_str() {
-                "rust" => 8,   // Lowered for better detection
+                "rust" => 8, // Lowered for better detection
                 "javascript" | "typescript" => 6,
                 "python" => 10,
                 "c" | "cpp" => 12,
@@ -832,7 +849,11 @@ impl SmartRefactoringEngine {
     }
 
     /// Detect duplicate code patterns using AST analysis
-    fn detect_duplicate_code(&self, file: &crate::FileInfo, _all_files: &[crate::FileInfo]) -> Result<Vec<CodeSmellFix>> {
+    fn detect_duplicate_code(
+        &self,
+        file: &crate::FileInfo,
+        _all_files: &[crate::FileInfo],
+    ) -> Result<Vec<CodeSmellFix>> {
         let mut fixes = Vec::new();
 
         // Use shared utility to get function symbols
@@ -842,7 +863,8 @@ impl SmartRefactoringEngine {
             for symbol2 in function_symbols.iter().skip(i + 1) {
                 let similarity = PatternAnalyzer::calculate_function_similarity(symbol1, symbol2);
 
-                if similarity > 0.5 {  // Lowered threshold for better detection
+                if similarity > 0.5 {
+                    // Lowered threshold for better detection
                     fixes.push(CodeSmellFix {
                         id: format!("DUPLICATE_CODE_{}_{}_{}", file.path.display(), symbol1.name, symbol2.name),
                         smell_name: "Duplicate Code".to_string(),
@@ -904,7 +926,11 @@ impl SmartRefactoringEngine {
     }
 
     /// Create a parameter list fix if needed
-    fn create_parameter_list_fix(&self, file: &crate::FileInfo, symbol: &crate::Symbol) -> Result<Option<CodeSmellFix>> {
+    fn create_parameter_list_fix(
+        &self,
+        file: &crate::FileInfo,
+        symbol: &crate::Symbol,
+    ) -> Result<Option<CodeSmellFix>> {
         let estimated_params = self.estimate_parameter_count(&symbol.name);
 
         if estimated_params <= 5 {
@@ -922,7 +948,9 @@ impl SmartRefactoringEngine {
             location: self.create_refactoring_location(file, symbol),
             current_code: format!("fn {}(/* many parameters */) {{ }}", symbol.name),
             refactored_code: self.generate_parameter_object_refactoring(&symbol.name),
-            explanation: "Replace long parameter list with a parameter object or configuration struct".to_string(),
+            explanation:
+                "Replace long parameter list with a parameter object or configuration struct"
+                    .to_string(),
             benefits: self.get_parameter_list_benefits(),
             risks: self.get_parameter_list_risks(),
             confidence: 0.6,
@@ -932,7 +960,11 @@ impl SmartRefactoringEngine {
     }
 
     /// Create refactoring location for a symbol
-    fn create_refactoring_location(&self, file: &crate::FileInfo, symbol: &crate::Symbol) -> RefactoringLocation {
+    fn create_refactoring_location(
+        &self,
+        file: &crate::FileInfo,
+        symbol: &crate::Symbol,
+    ) -> RefactoringLocation {
         RefactoringLocation {
             file: file.path.clone(),
             function: Some(symbol.name.clone()),
@@ -956,10 +988,7 @@ impl SmartRefactoringEngine {
 
     /// Get risks for parameter list refactoring
     fn get_parameter_list_risks(&self) -> Vec<String> {
-        const RISKS: &[&str] = &[
-            "May require API changes",
-            "Need to update all call sites",
-        ];
+        const RISKS: &[&str] = &["May require API changes", "Need to update all call sites"];
         RISKS.iter().map(|s| s.to_string()).collect()
     }
 
@@ -971,8 +1000,10 @@ impl SmartRefactoringEngine {
         // For now, we'll use a simplified approach based on function complexity
         for symbol in &file.symbols {
             if symbol.kind == "function" || symbol.kind == "method" {
-                let complexity_score = self.calculate_method_complexity_score(symbol,
-                    symbol.end_line.saturating_sub(symbol.start_line) + 1);
+                let complexity_score = self.calculate_method_complexity_score(
+                    symbol,
+                    symbol.end_line.saturating_sub(symbol.start_line) + 1,
+                );
 
                 if complexity_score > 0.8 {
                     fixes.push(CodeSmellFix {
@@ -1062,8 +1093,16 @@ impl SmartRefactoringEngine {
             fn {}_prepare_data() -> Data {{ /* preparation logic */ }}\n\
             fn {}_process_data(data: Data) {{ /* processing logic */ }}\n\
             fn {}_finalize_result() {{ /* finalization logic */ }}",
-            method_name, method_name, method_name, method_name, method_name, method_name,
-            method_name, method_name, method_name, method_name
+            method_name,
+            method_name,
+            method_name,
+            method_name,
+            method_name,
+            method_name,
+            method_name,
+            method_name,
+            method_name,
+            method_name
         )
     }
 
@@ -1089,8 +1128,6 @@ impl SmartRefactoringEngine {
     fn calculate_function_similarity(&self, func1: &crate::Symbol, func2: &crate::Symbol) -> f64 {
         PatternAnalyzer::calculate_function_similarity(func1, func2)
     }
-
-
 
     /// Generate duplicate code refactoring suggestion
     fn generate_duplicate_code_refactoring(&self, func1: &str, func2: &str) -> String {
@@ -1184,7 +1221,11 @@ impl SmartRefactoringEngine {
         let mut filtered_fixes = Vec::new();
 
         // Sort by confidence (highest first)
-        fixes.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+        fixes.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         for fix in fixes {
             let category_key = format!("{:?}", fix.category);
@@ -1208,17 +1249,19 @@ impl SmartRefactoringEngine {
 
         for symbol in function_symbols {
             let line_count = SymbolFilter::calculate_line_count(symbol);
-            let threshold = thresholds.long_method_lines
+            let threshold = thresholds
+                .long_method_lines
                 .get(&file.language)
                 .copied()
                 .unwrap_or(20);
 
-                if line_count > threshold {
-                    // Calculate complexity score based on multiple factors
-                    let complexity_score = self.calculate_method_complexity_score(symbol, line_count);
+            if line_count > threshold {
+                // Calculate complexity score based on multiple factors
+                let complexity_score = self.calculate_method_complexity_score(symbol, line_count);
 
-                    if complexity_score > 0.5 {  // Lowered threshold for better detection
-                        fixes.push(CodeSmellFix {
+                if complexity_score > 0.5 {
+                    // Lowered threshold for better detection
+                    fixes.push(CodeSmellFix {
                             id: format!("LONG_METHOD_{}_{}", file.path.display(), symbol.name),
                             smell_name: "Long Method".to_string(),
                             description: format!(
@@ -1251,25 +1294,29 @@ impl SmartRefactoringEngine {
                             effort: 2.0,
                             automated_fix: false,
                         });
-                    }
                 }
+            }
         }
 
         Ok(fixes)
     }
 
-
-
     /// Generate design pattern recommendations
-    fn generate_pattern_recommendations(&self, analysis_result: &AnalysisResult) -> Result<Vec<PatternRecommendation>> {
+    fn generate_pattern_recommendations(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<PatternRecommendation>> {
         let mut recommendations = Vec::new();
 
         // Analyze for Factory pattern opportunities
         let mut creation_methods = 0;
         for file in &analysis_result.files {
             for symbol in &file.symbols {
-                if symbol.kind == "function" &&
-                   (symbol.name.starts_with("create") || symbol.name.starts_with("new") || symbol.name.contains("build")) {
+                if symbol.kind == "function"
+                    && (symbol.name.starts_with("create")
+                        || symbol.name.starts_with("new")
+                        || symbol.name.contains("build"))
+                {
                     creation_methods += 1;
                 }
             }
@@ -1337,9 +1384,10 @@ impl SmartRefactoringEngine {
                 std::fs::read_to_string(&root_relative_path).unwrap_or_default()
             };
 
-            if file_content.to_lowercase().contains("event") ||
-               file_content.to_lowercase().contains("notify") ||
-               file_content.to_lowercase().contains("listener") {
+            if file_content.to_lowercase().contains("event")
+                || file_content.to_lowercase().contains("notify")
+                || file_content.to_lowercase().contains("listener")
+            {
                 event_related_code += 1;
             }
         }
@@ -1399,10 +1447,16 @@ impl SmartRefactoringEngine {
     }
 
     /// Generate performance optimizations
-    fn generate_performance_optimizations(&self, analysis_result: &AnalysisResult) -> Result<Vec<PerformanceOptimization>> {
+    fn generate_performance_optimizations(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<PerformanceOptimization>> {
         let mut optimizations = Vec::new();
 
-        println!("Generating performance optimizations for {} files", analysis_result.files.len());
+        println!(
+            "Generating performance optimizations for {} files",
+            analysis_result.files.len()
+        );
 
         for file in &analysis_result.files {
             if !file.parsed_successfully {
@@ -1439,7 +1493,11 @@ impl SmartRefactoringEngine {
     }
 
     /// Detect string concatenation performance issues
-    fn detect_string_concatenation_issues(&self, content: &str, file: &crate::FileInfo) -> Result<Vec<PerformanceOptimization>> {
+    fn detect_string_concatenation_issues(
+        &self,
+        content: &str,
+        file: &crate::FileInfo,
+    ) -> Result<Vec<PerformanceOptimization>> {
         let mut optimizations = Vec::new();
 
         // Use shared utility to detect string concatenation in loops
@@ -1472,7 +1530,11 @@ impl SmartRefactoringEngine {
     }
 
     /// Detect vector reallocation performance issues
-    fn detect_vector_reallocation_issues(&self, content: &str, file: &crate::FileInfo) -> Result<Vec<PerformanceOptimization>> {
+    fn detect_vector_reallocation_issues(
+        &self,
+        content: &str,
+        file: &crate::FileInfo,
+    ) -> Result<Vec<PerformanceOptimization>> {
         let mut optimizations = Vec::new();
 
         // Look for Vec::new() followed by push operations in loops
@@ -1486,8 +1548,10 @@ impl SmartRefactoringEngine {
                 if trimmed.contains("Vec::new()") {
                     found_vec_new = true;
                 }
-                if found_vec_new && trimmed.contains("push") &&
-                   (content.contains("for ") || content.contains("while ")) {
+                if found_vec_new
+                    && trimmed.contains("push")
+                    && (content.contains("for ") || content.contains("while "))
+                {
                     found_push_in_loop = true;
                     break;
                 }
@@ -1523,7 +1587,11 @@ impl SmartRefactoringEngine {
     }
 
     /// Detect nested loop complexity issues
-    fn detect_nested_loop_issues(&self, content: &str, file: &crate::FileInfo) -> Result<Vec<PerformanceOptimization>> {
+    fn detect_nested_loop_issues(
+        &self,
+        content: &str,
+        file: &crate::FileInfo,
+    ) -> Result<Vec<PerformanceOptimization>> {
         let mut optimizations = Vec::new();
 
         // Use shared utility to count nested loops
@@ -1559,7 +1627,10 @@ impl SmartRefactoringEngine {
     }
 
     /// Generate modernization suggestions
-    fn generate_modernization_suggestions(&self, analysis_result: &AnalysisResult) -> Result<Vec<ModernizationSuggestion>> {
+    fn generate_modernization_suggestions(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<ModernizationSuggestion>> {
         let mut suggestions = Vec::new();
 
         for file in &analysis_result.files {
@@ -1579,13 +1650,14 @@ impl SmartRefactoringEngine {
                     if content.contains("unwrap()") {
                         // Count unwrap() calls vs expect() calls (excluding comments)
                         let unwrap_count = content.matches("unwrap()").count();
-                        let expect_count = content.lines()
+                        let expect_count = content
+                            .lines()
                             .filter(|line| !line.trim_start().starts_with("//"))
                             .map(|line| line.matches("expect(").count())
                             .sum::<usize>();
 
                         if unwrap_count > expect_count {
-                        suggestions.push(ModernizationSuggestion {
+                            suggestions.push(ModernizationSuggestion {
                             id: format!("MODERN_ERROR_HANDLING_{}", file.path.display()),
                             modernization_type: ModernizationType::BestPractices,
                             description: "Replace unwrap() with more descriptive error handling".to_string(),
@@ -1611,7 +1683,10 @@ impl SmartRefactoringEngine {
                     }
 
                     // Check for old-style string formatting
-                    if content.contains("format!") && content.contains("{}") && !content.contains("println!") {
+                    if content.contains("format!")
+                        && content.contains("{}")
+                        && !content.contains("println!")
+                    {
                         suggestions.push(ModernizationSuggestion {
                             id: format!("MODERN_STRING_FORMAT_{}", file.path.display()),
                             modernization_type: ModernizationType::ModernSyntax,
@@ -1638,13 +1713,18 @@ impl SmartRefactoringEngine {
                 }
 
                 // Check for JavaScript/TypeScript modernization opportunities
-                if file.path.extension().map_or(false, |ext| ext == "js" || ext == "ts") {
+                if file
+                    .path
+                    .extension()
+                    .map_or(false, |ext| ext == "js" || ext == "ts")
+                {
                     // Check for var usage
                     if content.contains("var ") {
                         suggestions.push(ModernizationSuggestion {
                             id: format!("MODERN_JS_VAR_{}", file.path.display()),
                             modernization_type: ModernizationType::ModernSyntax,
-                            description: "Replace 'var' with 'let' or 'const' for better scoping".to_string(),
+                            description: "Replace 'var' with 'let' or 'const' for better scoping"
+                                .to_string(),
                             current_code: "var name = 'John';\nvar age = 30;".to_string(),
                             modern_code: "const name = 'John';\nlet age = 30;".to_string(),
                             benefits: vec![
@@ -1653,7 +1733,8 @@ impl SmartRefactoringEngine {
                                 "Better error detection".to_string(),
                             ],
                             migration_steps: vec![
-                                "Replace 'var' with 'const' for values that don't change".to_string(),
+                                "Replace 'var' with 'const' for values that don't change"
+                                    .to_string(),
                                 "Replace 'var' with 'let' for values that do change".to_string(),
                                 "Test for any scoping issues".to_string(),
                             ],
@@ -1670,8 +1751,11 @@ impl SmartRefactoringEngine {
                         suggestions.push(ModernizationSuggestion {
                             id: format!("MODERN_JS_ARROW_{}", file.path.display()),
                             modernization_type: ModernizationType::ModernSyntax,
-                            description: "Consider using arrow functions for callbacks and short functions".to_string(),
-                            current_code: "array.map(function(item) { return item * 2; })".to_string(),
+                            description:
+                                "Consider using arrow functions for callbacks and short functions"
+                                    .to_string(),
+                            current_code: "array.map(function(item) { return item * 2; })"
+                                .to_string(),
                             modern_code: "array.map(item => item * 2)".to_string(),
                             benefits: vec![
                                 "Shorter syntax".to_string(),
@@ -1699,7 +1783,10 @@ impl SmartRefactoringEngine {
     }
 
     /// Generate architectural improvements
-    fn generate_architectural_improvements(&self, analysis_result: &AnalysisResult) -> Result<Vec<ArchitecturalImprovement>> {
+    fn generate_architectural_improvements(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<ArchitecturalImprovement>> {
         let mut improvements = Vec::new();
 
         // Analyze project structure for modularization opportunities
@@ -1708,7 +1795,11 @@ impl SmartRefactoringEngine {
             let mut module_dirs = 0;
 
             for file in &analysis_result.files {
-                if file.path.parent().map_or(false, |p| p.file_name().is_some()) {
+                if file
+                    .path
+                    .parent()
+                    .map_or(false, |p| p.file_name().is_some())
+                {
                     module_dirs += 1;
                 }
             }
@@ -1718,18 +1809,23 @@ impl SmartRefactoringEngine {
                     id: "MODULARIZATION_OPPORTUNITY".to_string(),
                     name: "Improve Modularization".to_string(),
                     improvement_type: ArchitecturalImprovementType::Modularization,
-                    description: "Large codebase with limited modular organization detected".to_string(),
+                    description: "Large codebase with limited modular organization detected"
+                        .to_string(),
                     current_issues: vec![
                         "Files not organized into logical modules".to_string(),
                         "Potential for tight coupling".to_string(),
                         "Difficult navigation and maintenance".to_string(),
                     ],
-                    proposed_solution: "Reorganize code into domain-specific modules with clear boundaries".to_string(),
+                    proposed_solution:
+                        "Reorganize code into domain-specific modules with clear boundaries"
+                            .to_string(),
                     implementation_plan: vec![
                         ImplementationPhase {
                             phase: 1,
                             name: "Analysis and Planning".to_string(),
-                            description: "Analyze current dependencies and identify module boundaries".to_string(),
+                            description:
+                                "Analyze current dependencies and identify module boundaries"
+                                    .to_string(),
                             deliverables: vec![
                                 "Dependency analysis report".to_string(),
                                 "Proposed module structure".to_string(),
@@ -1741,7 +1837,8 @@ impl SmartRefactoringEngine {
                         ImplementationPhase {
                             phase: 2,
                             name: "Core Module Creation".to_string(),
-                            description: "Create core modules and move related functionality".to_string(),
+                            description: "Create core modules and move related functionality"
+                                .to_string(),
                             deliverables: vec![
                                 "Core module structure".to_string(),
                                 "Moved core functionality".to_string(),
@@ -1785,16 +1882,27 @@ impl SmartRefactoringEngine {
         let mut data_files = 0;
 
         for file in &analysis_result.files {
-            let file_name = file.path.file_stem()
+            let file_name = file
+                .path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
                 .to_lowercase();
 
-            if file_name.contains("service") || file_name.contains("business") || file_name.contains("logic") {
+            if file_name.contains("service")
+                || file_name.contains("business")
+                || file_name.contains("logic")
+            {
                 business_logic_files += 1;
-            } else if file_name.contains("ui") || file_name.contains("view") || file_name.contains("component") {
+            } else if file_name.contains("ui")
+                || file_name.contains("view")
+                || file_name.contains("component")
+            {
                 ui_files += 1;
-            } else if file_name.contains("data") || file_name.contains("repository") || file_name.contains("db") {
+            } else if file_name.contains("data")
+                || file_name.contains("repository")
+                || file_name.contains("db")
+            {
                 data_files += 1;
             }
         }
@@ -1804,18 +1912,22 @@ impl SmartRefactoringEngine {
                 id: "SEPARATION_OF_CONCERNS".to_string(),
                 name: "Improve Separation of Concerns".to_string(),
                 improvement_type: ArchitecturalImprovementType::SeparationOfConcerns,
-                description: "Code appears to mix different concerns (business logic, UI, data access)".to_string(),
+                description:
+                    "Code appears to mix different concerns (business logic, UI, data access)"
+                        .to_string(),
                 current_issues: vec![
                     "Mixed responsibilities in files".to_string(),
                     "Tight coupling between layers".to_string(),
                     "Difficult to test individual components".to_string(),
                 ],
-                proposed_solution: "Implement layered architecture with clear separation of concerns".to_string(),
+                proposed_solution:
+                    "Implement layered architecture with clear separation of concerns".to_string(),
                 implementation_plan: vec![
                     ImplementationPhase {
                         phase: 1,
                         name: "Layer Identification".to_string(),
-                        description: "Identify and separate different layers of the application".to_string(),
+                        description: "Identify and separate different layers of the application"
+                            .to_string(),
                         deliverables: vec![
                             "Layer definitions".to_string(),
                             "Responsibility mapping".to_string(),
@@ -1885,13 +1997,19 @@ impl SmartRefactoringEngine {
                 id: fix.id.clone(),
                 name: fix.smell_name.clone(),
                 item_type: RefactoringCategory::CodeSmells,
-                priority: if fix.confidence > 0.8 { Priority::High } else { Priority::Medium },
+                priority: if fix.confidence > 0.8 {
+                    Priority::High
+                } else {
+                    Priority::Medium
+                },
                 effort: fix.effort,
             });
         }
 
         for recommendation in pattern_recommendations {
-            let effort = recommendation.implementation_steps.iter()
+            let effort = recommendation
+                .implementation_steps
+                .iter()
                 .map(|step| step.estimated_time)
                 .sum();
             refactoring_items.push(RefactoringItem {
@@ -1908,7 +2026,11 @@ impl SmartRefactoringEngine {
                 id: optimization.id.clone(),
                 name: optimization.name.clone(),
                 item_type: RefactoringCategory::Performance,
-                priority: if optimization.expected_gain.time_reduction > 50.0 { Priority::High } else { Priority::Medium },
+                priority: if optimization.expected_gain.time_reduction > 50.0 {
+                    Priority::High
+                } else {
+                    Priority::Medium
+                },
                 effort: match optimization.difficulty {
                     ImplementationComplexity::Trivial => 0.5,
                     ImplementationComplexity::Simple => 1.0,
@@ -1940,16 +2062,23 @@ impl SmartRefactoringEngine {
         }
 
         // Sort by priority and effort
-        refactoring_items.sort_by(|a, b| {
-            match (&a.priority, &b.priority) {
-                (Priority::Critical, Priority::Critical) => a.effort.partial_cmp(&b.effort).unwrap_or(std::cmp::Ordering::Equal),
-                (Priority::Critical, _) => std::cmp::Ordering::Less,
-                (_, Priority::Critical) => std::cmp::Ordering::Greater,
-                (Priority::High, Priority::High) => a.effort.partial_cmp(&b.effort).unwrap_or(std::cmp::Ordering::Equal),
-                (Priority::High, _) => std::cmp::Ordering::Less,
-                (_, Priority::High) => std::cmp::Ordering::Greater,
-                _ => a.effort.partial_cmp(&b.effort).unwrap_or(std::cmp::Ordering::Equal),
-            }
+        refactoring_items.sort_by(|a, b| match (&a.priority, &b.priority) {
+            (Priority::Critical, Priority::Critical) => a
+                .effort
+                .partial_cmp(&b.effort)
+                .unwrap_or(std::cmp::Ordering::Equal),
+            (Priority::Critical, _) => std::cmp::Ordering::Less,
+            (_, Priority::Critical) => std::cmp::Ordering::Greater,
+            (Priority::High, Priority::High) => a
+                .effort
+                .partial_cmp(&b.effort)
+                .unwrap_or(std::cmp::Ordering::Equal),
+            (Priority::High, _) => std::cmp::Ordering::Less,
+            (_, Priority::High) => std::cmp::Ordering::Greater,
+            _ => a
+                .effort
+                .partial_cmp(&b.effort)
+                .unwrap_or(std::cmp::Ordering::Equal),
         });
 
         // Create phases
@@ -1959,7 +2088,9 @@ impl SmartRefactoringEngine {
         let max_phase_effort = 40.0; // 40 hours per phase (1 week)
 
         for item in refactoring_items {
-            if current_phase_effort + item.effort > max_phase_effort && !current_phase_items.is_empty() {
+            if current_phase_effort + item.effort > max_phase_effort
+                && !current_phase_items.is_empty()
+            {
                 phases.push(RefactoringPhase {
                     phase: phases.len() + 1,
                     name: format!("Phase {}", phases.len() + 1),
@@ -1992,14 +2123,17 @@ impl SmartRefactoringEngine {
 
         // Create priority matrix
         let priority_matrix = PriorityMatrix {
-            quick_wins: code_smell_fixes.iter()
+            quick_wins: code_smell_fixes
+                .iter()
                 .filter(|f| f.effort < 2.0 && f.confidence > 0.8)
                 .map(|f| f.smell_name.clone())
                 .collect(),
-            major_projects: architectural_improvements.iter()
+            major_projects: architectural_improvements
+                .iter()
                 .map(|i| i.name.clone())
                 .collect(),
-            fill_ins: modernization_suggestions.iter()
+            fill_ins: modernization_suggestions
+                .iter()
                 .map(|s| format!("{:?}", s.modernization_type))
                 .collect(),
             questionable: Vec::new(),
@@ -2040,7 +2174,11 @@ impl SmartRefactoringEngine {
     ) -> Result<ImpactAnalysis> {
         // Calculate quality impact
         let readability_improvement = if code_smell_fixes.is_empty() { 0 } else { 75 };
-        let testability_improvement = if architectural_improvements.is_empty() { 0 } else { 80 };
+        let testability_improvement = if architectural_improvements.is_empty() {
+            0
+        } else {
+            80
+        };
         let reusability_improvement = if code_smell_fixes.len() > 2 { 70 } else { 40 };
 
         let quality_impact = QualityImpact {
@@ -2053,21 +2191,31 @@ impl SmartRefactoringEngine {
         let avg_performance_gain = if performance_optimizations.is_empty() {
             0.0
         } else {
-            performance_optimizations.iter()
+            performance_optimizations
+                .iter()
                 .map(|opt| opt.expected_gain.time_reduction)
-                .sum::<f64>() / performance_optimizations.len() as f64
+                .sum::<f64>()
+                / performance_optimizations.len() as f64
         };
 
         let performance_impact = PerformanceImpact {
             performance_improvement: avg_performance_gain as u8,
             memory_improvement: (avg_performance_gain * 0.6) as u8,
-            scalability_improvement: if architectural_improvements.is_empty() { 0 } else { 85 },
+            scalability_improvement: if architectural_improvements.is_empty() {
+                0
+            } else {
+                85
+            },
         };
 
         // Calculate maintainability impact
         let complexity_reduction = if code_smell_fixes.is_empty() { 0 } else { 60 };
         let documentation_improvement = 50; // Moderate improvement expected
-        let modularity_improvement = if architectural_improvements.is_empty() { 0 } else { 90 };
+        let modularity_improvement = if architectural_improvements.is_empty() {
+            0
+        } else {
+            90
+        };
 
         let maintainability_impact = MaintainabilityImpact {
             complexity_reduction,
@@ -2081,7 +2229,8 @@ impl SmartRefactoringEngine {
         if !architectural_improvements.is_empty() {
             risks.push(RefactoringRisk {
                 name: "Architectural Changes".to_string(),
-                description: "Large-scale architectural changes may introduce instability".to_string(),
+                description: "Large-scale architectural changes may introduce instability"
+                    .to_string(),
                 level: RiskLevel::Medium,
                 probability: 0.3,
                 impact: 7.0,
@@ -2096,7 +2245,8 @@ impl SmartRefactoringEngine {
         if performance_optimizations.len() > 3 {
             risks.push(RefactoringRisk {
                 name: "Performance Optimization Complexity".to_string(),
-                description: "Multiple performance optimizations may interact unexpectedly".to_string(),
+                description: "Multiple performance optimizations may interact unexpectedly"
+                    .to_string(),
                 level: RiskLevel::Low,
                 probability: 0.2,
                 impact: 4.0,
@@ -2107,7 +2257,10 @@ impl SmartRefactoringEngine {
             });
         }
 
-        let overall_risk = if risks.iter().any(|r| matches!(r.level, RiskLevel::High | RiskLevel::Critical)) {
+        let overall_risk = if risks
+            .iter()
+            .any(|r| matches!(r.level, RiskLevel::High | RiskLevel::Critical))
+        {
             RiskLevel::High
         } else if risks.iter().any(|r| matches!(r.level, RiskLevel::Medium)) {
             RiskLevel::Medium
@@ -2127,7 +2280,9 @@ impl SmartRefactoringEngine {
         };
 
         // Calculate overall impact
-        let overall_impact = ((readability_improvement + testability_improvement + reusability_improvement) as f64 / 3.0) as u8;
+        let overall_impact =
+            ((readability_improvement + testability_improvement + reusability_improvement) as f64
+                / 3.0) as u8;
 
         Ok(ImpactAnalysis {
             overall_impact,
@@ -2139,7 +2294,11 @@ impl SmartRefactoringEngine {
     }
 
     /// Calculate refactoring score
-    fn calculate_refactoring_score(&self, impact_analysis: &ImpactAnalysis, total_opportunities: usize) -> u8 {
+    fn calculate_refactoring_score(
+        &self,
+        impact_analysis: &ImpactAnalysis,
+        total_opportunities: usize,
+    ) -> u8 {
         let impact_score = impact_analysis.overall_impact as f64 * 0.6;
         let opportunity_score = (total_opportunities.min(20) as f64 / 20.0) * 40.0;
 

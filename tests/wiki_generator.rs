@@ -1,8 +1,8 @@
 use rust_tree_sitter::wiki::{WikiConfig, WikiConfigBuilder, WikiGenerator};
 use rust_tree_sitter::Result;
-use tempfile::TempDir;
 use std::fs;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 fn create_sample_project() -> Result<(TempDir, PathBuf)> {
     let tmp = TempDir::new()?;
@@ -37,7 +37,10 @@ fn generates_basic_site_structure() -> Result<()> {
     let generator = WikiGenerator::new(cfg);
     let result = generator.generate_from_path(&project_root)?;
 
-    assert!(result.pages >= 2, "expected at least index + one module page");
+    assert!(
+        result.pages >= 2,
+        "expected at least index + one module page"
+    );
 
     // Files exist
     let index = out_dir.path().join("index.html");
@@ -84,7 +87,10 @@ fn includes_mermaid_diagrams() -> Result<()> {
             }
         }
     }
-    assert!(found_mermaid, "generated pages should include mermaid diagrams");
+    assert!(
+        found_mermaid,
+        "generated pages should include mermaid diagrams"
+    );
 
     Ok(())
 }
@@ -106,13 +112,17 @@ fn embeds_ai_generated_content_and_crossrefs() -> Result<()> {
 
     // Ensure AI-like documentation insights are present
     let index = fs::read_to_string(out_dir.path().join("index.html"))?;
-    assert!(index.contains("Documentation Insights") || index.contains("AI"),
-        "index should reference documentation insights section");
+    assert!(
+        index.contains("Documentation Insights") || index.contains("AI"),
+        "index should reference documentation insights section"
+    );
 
     // Ensure search index contains symbol names and cross-refs
     let search_idx = fs::read_to_string(out_dir.path().join("assets").join("search_index.json"))?;
-    assert!(search_idx.contains("public_add"), "search index should include symbol names");
+    assert!(
+        search_idx.contains("public_add"),
+        "search index should include symbol names"
+    );
 
     Ok(())
 }
-

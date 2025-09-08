@@ -7,7 +7,6 @@ use crate::error::Result;
 use crate::query::Query;
 use crate::tree::{Node, SyntaxTree};
 
-
 /// JavaScript-specific syntax utilities
 pub struct JavaScriptSyntax;
 
@@ -89,7 +88,10 @@ impl JavaScriptSyntax {
 
     /// Check if a node represents an export statement
     pub fn is_export_statement(node: &Node) -> bool {
-        matches!(node.kind(), "export_statement" | "export_default_declaration")
+        matches!(
+            node.kind(),
+            "export_statement" | "export_default_declaration"
+        )
     }
 
     /// Check if a node represents an object expression
@@ -165,8 +167,6 @@ impl JavaScriptSyntax {
         names
     }
 
-
-
     /// Check if a function is a generator
     pub fn is_generator_function(node: &Node) -> bool {
         if !Self::is_function(node) {
@@ -188,7 +188,7 @@ impl JavaScriptSyntax {
         }
 
         let mut parameters = Vec::new();
-        
+
         if let Some(params_node) = node.child_by_field_name("parameters") {
             for child in params_node.children() {
                 if child.kind() == "identifier" {
@@ -212,7 +212,10 @@ impl JavaScriptSyntax {
     }
 
     /// Get all function definitions in a syntax tree with start and end positions
-    pub fn find_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
 
         // Find function declarations
@@ -246,7 +249,10 @@ impl JavaScriptSyntax {
     }
 
     /// Get all class definitions in a syntax tree with start and end positions
-    pub fn find_classes(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_classes(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut classes = Vec::new();
 
         // Find class declarations
@@ -274,7 +280,7 @@ impl JavaScriptSyntax {
     pub fn find_imports(tree: &SyntaxTree, _source: &str) -> Vec<String> {
         let mut imports = Vec::new();
         let import_nodes = tree.find_nodes_by_kind("import_statement");
-        
+
         for import_node in import_nodes {
             if let Ok(import_text) = import_node.text() {
                 imports.push(import_text.to_string());
@@ -306,7 +312,10 @@ impl JavaScriptSyntax {
     }
 
     /// Find generator functions in a syntax tree
-    pub fn find_generators(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_generators(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut generators = Vec::new();
 
         // Find generator function declarations
@@ -331,7 +340,10 @@ impl JavaScriptSyntax {
     }
 
     /// Find async functions in a syntax tree
-    pub fn find_async_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_async_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut async_functions = Vec::new();
 
         // Find async function declarations
@@ -371,14 +383,17 @@ impl JavaScriptSyntax {
     }
 
     /// Find closures (arrow functions and function expressions) in a syntax tree
-    pub fn find_closures(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_closures(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut closures = Vec::new();
 
         // Find arrow functions
         let arrow_nodes = tree.find_nodes_by_kind("arrow_function");
         for arrow_node in arrow_nodes {
-            let name = Self::function_name(&arrow_node, source)
-                .unwrap_or_else(|| "anonymous".to_string());
+            let name =
+                Self::function_name(&arrow_node, source).unwrap_or_else(|| "anonymous".to_string());
             let ts_node = arrow_node.inner();
             closures.push((name, ts_node.start_position(), ts_node.end_position()));
         }
@@ -386,8 +401,8 @@ impl JavaScriptSyntax {
         // Find function expressions (anonymous functions)
         let expr_nodes = tree.find_nodes_by_kind("function_expression");
         for expr_node in expr_nodes {
-            let name = Self::function_name(&expr_node, source)
-                .unwrap_or_else(|| "anonymous".to_string());
+            let name =
+                Self::function_name(&expr_node, source).unwrap_or_else(|| "anonymous".to_string());
             let ts_node = expr_node.inner();
             closures.push((name, ts_node.start_position(), ts_node.end_position()));
         }
@@ -396,7 +411,10 @@ impl JavaScriptSyntax {
     }
 
     /// Find destructuring patterns in a syntax tree
-    pub fn find_destructuring_patterns(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_destructuring_patterns(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut patterns = Vec::new();
 
         // Find array destructuring patterns
@@ -407,7 +425,7 @@ impl JavaScriptSyntax {
                 patterns.push((
                     format!("array_destructuring: {}", pattern_text.trim()),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -420,7 +438,7 @@ impl JavaScriptSyntax {
                 patterns.push((
                     format!("object_destructuring: {}", pattern_text.trim()),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -429,7 +447,10 @@ impl JavaScriptSyntax {
     }
 
     /// Find classes with private fields in a syntax tree
-    pub fn find_classes_with_private_fields(tree: &SyntaxTree, source: &str) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_classes_with_private_fields(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
         let mut classes_with_private = Vec::new();
 
         let class_nodes = tree.find_nodes_by_kind("class_declaration");
@@ -464,7 +485,7 @@ impl JavaScriptSyntax {
                         class_name,
                         private_fields,
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -614,7 +635,8 @@ impl JavaScriptSyntax {
 
         // Check for modules
         if !tree.find_nodes_by_kind("import_statement").is_empty()
-            || !tree.find_nodes_by_kind("export_statement").is_empty() {
+            || !tree.find_nodes_by_kind("export_statement").is_empty()
+        {
             features.push("ES6 Modules".to_string());
         }
 
@@ -666,7 +688,8 @@ mod tests {
         let functions = JavaScriptSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
 
-        let function_names: Vec<&str> = functions.iter().map(|(name, _, _)| name.as_str()).collect();
+        let function_names: Vec<&str> =
+            functions.iter().map(|(name, _, _)| name.as_str()).collect();
         assert!(function_names.contains(&"regularFunction"));
         assert!(function_names.contains(&"arrowFunction"));
         assert!(function_names.contains(&"asyncFunction"));

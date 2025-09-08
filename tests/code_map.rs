@@ -1,4 +1,3 @@
-
 use assert_cmd::Command;
 use serde_json::Value;
 
@@ -11,7 +10,16 @@ fn parse_json_from_output(output: &[u8]) -> Value {
 #[test]
 fn cli_generates_tree_map_json() -> Result<(), Box<dyn std::error::Error>> {
     let output = Command::cargo_bin("tree-sitter-cli")?
-        .args(["map", "test_files", "--map-type", "tree", "--format", "json", "--max-depth", "2"])
+        .args([
+            "map",
+            "test_files",
+            "--map-type",
+            "tree",
+            "--format",
+            "json",
+            "--max-depth",
+            "2",
+        ])
         .output()?;
     assert!(output.status.success());
     let json = parse_json_from_output(&output.stdout);
@@ -19,14 +27,17 @@ fn cli_generates_tree_map_json() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-use rust_tree_sitter::{CodebaseAnalyzer, build_call_graph, build_module_graph};
+use rust_tree_sitter::{build_call_graph, build_module_graph, CodebaseAnalyzer};
 use std::fs;
 
 #[test]
 fn call_graph_simple() -> Result<(), Box<dyn std::error::Error>> {
     let temp = tempfile::tempdir()?;
     fs::write(temp.path().join("util.rs"), "pub fn helper() {}")?;
-    fs::write(temp.path().join("main.rs"), "mod util; fn main() { util::helper(); }")?;
+    fs::write(
+        temp.path().join("main.rs"),
+        "mod util; fn main() { util::helper(); }",
+    )?;
 
     let mut analyzer = CodebaseAnalyzer::new()?;
     let result = analyzer.analyze_directory(temp.path())?;
@@ -43,7 +54,14 @@ fn call_graph_simple() -> Result<(), Box<dyn std::error::Error>> {
 
 fn cli_generates_symbol_map_json() -> Result<(), Box<dyn std::error::Error>> {
     let output = Command::cargo_bin("tree-sitter-cli")?
-        .args(["map", "test_files", "--map-type", "symbols", "--format", "json"])
+        .args([
+            "map",
+            "test_files",
+            "--map-type",
+            "symbols",
+            "--format",
+            "json",
+        ])
         .output()?;
     assert!(output.status.success());
     let json = parse_json_from_output(&output.stdout);
@@ -55,7 +73,10 @@ fn cli_generates_symbol_map_json() -> Result<(), Box<dyn std::error::Error>> {
 fn module_graph_simple() -> Result<(), Box<dyn std::error::Error>> {
     let temp = tempfile::tempdir()?;
     fs::write(temp.path().join("moda.rs"), "pub fn a() {}")?;
-    fs::write(temp.path().join("modb.rs"), "use crate::moda; fn b() { moda::a(); }")?;
+    fs::write(
+        temp.path().join("modb.rs"),
+        "use crate::moda; fn b() { moda::a(); }",
+    )?;
 
     let mut analyzer = CodebaseAnalyzer::new()?;
     let result = analyzer.analyze_directory(temp.path())?;

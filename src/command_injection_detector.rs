@@ -1,4 +1,4 @@
-use crate::{SyntaxTree, Result, TaintAnalyzer, TaintFlow, VulnerabilityType};
+use crate::{Result, SyntaxTree, TaintAnalyzer, TaintFlow, VulnerabilityType};
 use std::collections::{HashMap, HashSet};
 use tree_sitter::Node;
 
@@ -132,10 +132,10 @@ pub struct CommandExecutionInfo {
 /// Risk levels for command execution functions
 #[derive(Debug, Clone, PartialEq)]
 pub enum CommandRiskLevel {
-    Critical,  // Direct shell execution
-    High,      // Command execution with some protection
-    Medium,    // Restricted command execution
-    Low,       // Safe command execution patterns
+    Critical, // Direct shell execution
+    High,     // Command execution with some protection
+    Medium,   // Restricted command execution
+    Low,      // Safe command execution patterns
 }
 
 impl CommandInjectionDetector {
@@ -158,8 +158,8 @@ impl CommandInjectionDetector {
     fn initialize_command_patterns(&mut self) {
         // Common shell metacharacters
         let metacharacters = [
-            ";", "&", "|", "||", "&&", "`", "$", "(", ")", "{", "}",
-            "[", "]", "<", ">", ">>", "<<", "*", "?", "~", "!", "#"
+            ";", "&", "|", "||", "&&", "`", "$", "(", ")", "{", "}", "[", "]", "<", ">", ">>",
+            "<<", "*", "?", "~", "!", "#",
         ];
 
         for metachar in &metacharacters {
@@ -186,106 +186,144 @@ impl CommandInjectionDetector {
     /// Initialize Rust-specific command patterns
     fn initialize_rust_command_patterns(&mut self) {
         // High-risk command execution functions
-        self.command_functions.insert("std::process::Command::new".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "std::process::Command::new".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("std::process::Command::output".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "std::process::Command::output".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
         // Critical risk - shell execution
-        self.command_functions.insert("std::process::Command::arg".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "std::process::Command::arg".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
         // Safe patterns
-        self.safe_patterns.insert("std::process::Command::args".to_string());
+        self.safe_patterns
+            .insert("std::process::Command::args".to_string());
         self.safe_patterns.insert("std::process::Stdio".to_string());
     }
 
     /// Initialize JavaScript/TypeScript-specific command patterns
     fn initialize_javascript_command_patterns(&mut self) {
         // Critical risk - direct shell execution
-        self.command_functions.insert("child_process.exec".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "child_process.exec".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("child_process.execSync".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "child_process.execSync".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("child_process.spawn".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "child_process.spawn".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("child_process.execFile".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "child_process.execFile".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
         // Safe patterns
         self.safe_patterns.insert("child_process.spawn".to_string()); // When used with argument arrays
-        self.safe_patterns.insert("child_process.execFile".to_string()); // When used properly
+        self.safe_patterns
+            .insert("child_process.execFile".to_string()); // When used properly
     }
 
     /// Initialize Python-specific command patterns
     fn initialize_python_command_patterns(&mut self) {
         // Critical risk - shell execution
-        self.command_functions.insert("os.system".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "os.system".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("subprocess.call".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::High,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "subprocess.call".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::High,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("subprocess.run".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "subprocess.run".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("subprocess.Popen".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "subprocess.Popen".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("os.popen".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "os.popen".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
         // Safe patterns
         self.safe_patterns.insert("subprocess.run".to_string()); // When shell=False
@@ -295,57 +333,78 @@ impl CommandInjectionDetector {
     /// Initialize C/C++-specific command patterns
     fn initialize_c_command_patterns(&mut self) {
         // Critical risk - shell execution
-        self.command_functions.insert("system".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "system".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("popen".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "popen".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("exec".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::High,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "exec".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::High,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("execv".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "execv".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("execve".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "execve".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
     }
 
     /// Initialize Go-specific command patterns
     fn initialize_go_command_patterns(&mut self) {
-        self.command_functions.insert("exec.Command".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 0,
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "exec.Command".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 0,
+                supports_argument_arrays: true,
+            },
+        );
 
-        self.command_functions.insert("exec.CommandContext".to_string(), CommandExecutionInfo {
-            uses_shell: false,
-            risk_level: CommandRiskLevel::Medium,
-            command_parameter_index: 1, // First parameter is context
-            supports_argument_arrays: true,
-        });
+        self.command_functions.insert(
+            "exec.CommandContext".to_string(),
+            CommandExecutionInfo {
+                uses_shell: false,
+                risk_level: CommandRiskLevel::Medium,
+                command_parameter_index: 1, // First parameter is context
+                supports_argument_arrays: true,
+            },
+        );
 
         // Safe patterns
         self.safe_patterns.insert("exec.Command".to_string()); // When used with separate arguments
@@ -354,47 +413,65 @@ impl CommandInjectionDetector {
     /// Initialize PHP-specific command patterns
     fn initialize_php_command_patterns(&mut self) {
         // Critical risk - shell execution
-        self.command_functions.insert("exec".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "exec".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("shell_exec".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "shell_exec".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("system".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "system".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("passthru".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "passthru".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("proc_open".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::High,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "proc_open".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::High,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("popen".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "popen".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
         // Safe patterns
         self.safe_patterns.insert("escapeshellarg".to_string());
@@ -403,19 +480,25 @@ impl CommandInjectionDetector {
 
     /// Initialize generic command patterns
     fn initialize_generic_command_patterns(&mut self) {
-        self.command_functions.insert("exec".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "exec".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
 
-        self.command_functions.insert("system".to_string(), CommandExecutionInfo {
-            uses_shell: true,
-            risk_level: CommandRiskLevel::Critical,
-            command_parameter_index: 0,
-            supports_argument_arrays: false,
-        });
+        self.command_functions.insert(
+            "system".to_string(),
+            CommandExecutionInfo {
+                uses_shell: true,
+                risk_level: CommandRiskLevel::Critical,
+                command_parameter_index: 0,
+                supports_argument_arrays: false,
+            },
+        );
     }
 
     /// Detect command injection vulnerabilities in a syntax tree
@@ -439,14 +522,22 @@ impl CommandInjectionDetector {
         vulnerabilities.extend(direct_vulnerabilities);
 
         // Deduplicate and rank by confidence
-        vulnerabilities.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+        vulnerabilities.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         vulnerabilities.dedup_by(|a, b| a.id == b.id);
 
         Ok(vulnerabilities)
     }
 
     /// Analyze a taint flow to determine if it represents a command injection vulnerability
-    fn analyze_command_injection_flow(&self, tree: &SyntaxTree, flow: &TaintFlow) -> Result<Option<CommandInjectionVulnerability>> {
+    fn analyze_command_injection_flow(
+        &self,
+        tree: &SyntaxTree,
+        flow: &TaintFlow,
+    ) -> Result<Option<CommandInjectionVulnerability>> {
         // Analyze the command execution pattern at the sink
         let command_pattern = self.analyze_command_execution_pattern(tree, &flow.sink.location)?;
 
@@ -468,7 +559,10 @@ impl CommandInjectionDetector {
         let remediation = self.generate_remediation(&injection_type, &command_pattern);
 
         Ok(Some(CommandInjectionVulnerability {
-            id: format!("cmdi_{}_{}", flow.sink.location.line, flow.sink.location.column),
+            id: format!(
+                "cmdi_{}_{}",
+                flow.sink.location.line, flow.sink.location.column
+            ),
             taint_flow: flow.clone(),
             command_pattern,
             confidence,
@@ -479,14 +573,21 @@ impl CommandInjectionDetector {
     }
 
     /// Detect command injection patterns directly from AST without taint analysis
-    fn detect_direct_command_patterns(&self, tree: &SyntaxTree) -> Result<Vec<CommandInjectionVulnerability>> {
+    fn detect_direct_command_patterns(
+        &self,
+        tree: &SyntaxTree,
+    ) -> Result<Vec<CommandInjectionVulnerability>> {
         let mut vulnerabilities = Vec::new();
         self.traverse_for_command_patterns(tree.inner().root_node(), &mut vulnerabilities)?;
         Ok(vulnerabilities)
     }
 
     /// Recursively traverse AST looking for command injection patterns
-    fn traverse_for_command_patterns(&self, node: Node, vulnerabilities: &mut Vec<CommandInjectionVulnerability>) -> Result<()> {
+    fn traverse_for_command_patterns(
+        &self,
+        node: Node,
+        vulnerabilities: &mut Vec<CommandInjectionVulnerability>,
+    ) -> Result<()> {
         // Check if this node contains a potential command injection
         if let Some(vulnerability) = self.check_node_for_command_injection(node)? {
             vulnerabilities.push(vulnerability);
@@ -507,15 +608,25 @@ impl CommandInjectionDetector {
     }
 
     /// Check a specific node for command injection patterns
-    fn check_node_for_command_injection(&self, node: Node) -> Result<Option<CommandInjectionVulnerability>> {
+    fn check_node_for_command_injection(
+        &self,
+        node: Node,
+    ) -> Result<Option<CommandInjectionVulnerability>> {
         // Look for function calls that execute commands
         if self.is_function_call(node.kind()) {
             if let Some(function_name) = self.extract_function_call_name(node) {
                 if let Some(command_info) = self.command_functions.get(&function_name) {
                     // Check if the command contains user input or dangerous patterns
-                    if let Some(command_arg) = self.extract_command_argument(node, command_info.command_parameter_index) {
-                        if self.contains_dangerous_patterns(&command_arg) || self.has_string_concatenation(node) {
-                            return Ok(Some(self.create_direct_vulnerability(node, CommandInjectionType::DirectExecution)?));
+                    if let Some(command_arg) =
+                        self.extract_command_argument(node, command_info.command_parameter_index)
+                    {
+                        if self.contains_dangerous_patterns(&command_arg)
+                            || self.has_string_concatenation(node)
+                        {
+                            return Ok(Some(self.create_direct_vulnerability(
+                                node,
+                                CommandInjectionType::DirectExecution,
+                            )?));
                         }
                     }
                 }
@@ -526,7 +637,10 @@ impl CommandInjectionDetector {
         if self.is_string_concatenation(node) {
             if let Some(concatenated_content) = self.extract_concatenation_content(node) {
                 if self.contains_shell_metacharacters(&concatenated_content) {
-                    return Ok(Some(self.create_direct_vulnerability(node, CommandInjectionType::ShellMetacharacters)?));
+                    return Ok(Some(self.create_direct_vulnerability(
+                        node,
+                        CommandInjectionType::ShellMetacharacters,
+                    )?));
                 }
             }
         }
@@ -535,7 +649,10 @@ impl CommandInjectionDetector {
         if self.is_template_literal(node) {
             if let Some(template_content) = self.extract_template_content(node) {
                 if self.contains_command_patterns(&template_content) {
-                    return Ok(Some(self.create_direct_vulnerability(node, CommandInjectionType::DirectExecution)?));
+                    return Ok(Some(self.create_direct_vulnerability(
+                        node,
+                        CommandInjectionType::DirectExecution,
+                    )?));
                 }
             }
         }
@@ -544,7 +661,11 @@ impl CommandInjectionDetector {
     }
 
     /// Analyze command execution pattern at a specific location
-    fn analyze_command_execution_pattern(&self, _tree: &SyntaxTree, _location: &crate::taint_analysis::TaintLocation) -> Result<CommandExecutionPattern> {
+    fn analyze_command_execution_pattern(
+        &self,
+        _tree: &SyntaxTree,
+        _location: &crate::taint_analysis::TaintLocation,
+    ) -> Result<CommandExecutionPattern> {
         // This is a simplified implementation
         // In practice, would need to analyze the actual command execution structure
         Ok(CommandExecutionPattern {
@@ -558,7 +679,11 @@ impl CommandInjectionDetector {
     }
 
     /// Determine the type of command injection based on pattern and flow
-    fn determine_injection_type(&self, pattern: &CommandExecutionPattern, _flow: &TaintFlow) -> CommandInjectionType {
+    fn determine_injection_type(
+        &self,
+        pattern: &CommandExecutionPattern,
+        _flow: &TaintFlow,
+    ) -> CommandInjectionType {
         if pattern.has_direct_concatenation {
             CommandInjectionType::DirectExecution
         } else if !pattern.shell_metacharacters.is_empty() {
@@ -601,7 +726,11 @@ impl CommandInjectionDetector {
     }
 
     /// Determine severity based on pattern and injection type
-    fn determine_severity(&self, pattern: &CommandExecutionPattern, injection_type: &CommandInjectionType) -> CommandInjectionSeverity {
+    fn determine_severity(
+        &self,
+        pattern: &CommandExecutionPattern,
+        injection_type: &CommandInjectionType,
+    ) -> CommandInjectionSeverity {
         match injection_type {
             CommandInjectionType::DirectExecution | CommandInjectionType::ShellMetacharacters => {
                 if pattern.uses_shell {
@@ -613,15 +742,22 @@ impl CommandInjectionDetector {
             CommandInjectionType::ArgumentInjection => CommandInjectionSeverity::High,
             CommandInjectionType::EnvironmentInjection => CommandInjectionSeverity::Medium,
             CommandInjectionType::PathManipulation => CommandInjectionSeverity::Medium,
-            CommandInjectionType::BlindInjection | CommandInjectionType::TimeBased => CommandInjectionSeverity::Medium,
+            CommandInjectionType::BlindInjection | CommandInjectionType::TimeBased => {
+                CommandInjectionSeverity::Medium
+            }
         }
     }
 
     /// Generate remediation guidance
-    fn generate_remediation(&self, injection_type: &CommandInjectionType, _pattern: &CommandExecutionPattern) -> CommandInjectionRemediation {
+    fn generate_remediation(
+        &self,
+        injection_type: &CommandInjectionType,
+        _pattern: &CommandExecutionPattern,
+    ) -> CommandInjectionRemediation {
         match injection_type {
             CommandInjectionType::DirectExecution => CommandInjectionRemediation {
-                primary_fix: "Use parameterized command execution instead of string concatenation".to_string(),
+                primary_fix: "Use parameterized command execution instead of string concatenation"
+                    .to_string(),
                 steps: vec![
                     "Identify all user inputs in the command".to_string(),
                     "Replace string concatenation with argument arrays".to_string(),
@@ -629,14 +765,12 @@ impl CommandInjectionDetector {
                     "Validate and sanitize all inputs".to_string(),
                     "Avoid shell interpretation when possible".to_string(),
                 ],
-                secure_examples: vec![
-                    SecureCommandExample {
-                        description: "Use argument arrays instead of string concatenation".to_string(),
-                        vulnerable_code: "exec(\"ls \" + user_input)".to_string(),
-                        secure_code: "exec([\"ls\", user_input])".to_string(),
-                        language: self.language.clone(),
-                    }
-                ],
+                secure_examples: vec![SecureCommandExample {
+                    description: "Use argument arrays instead of string concatenation".to_string(),
+                    vulnerable_code: "exec(\"ls \" + user_input)".to_string(),
+                    secure_code: "exec([\"ls\", user_input])".to_string(),
+                    language: self.language.clone(),
+                }],
                 effort_level: RemediationEffort::Medium,
             },
             CommandInjectionType::ShellMetacharacters => CommandInjectionRemediation {
@@ -646,14 +780,12 @@ impl CommandInjectionDetector {
                     "Consider using non-shell command execution".to_string(),
                     "Implement input validation for dangerous characters".to_string(),
                 ],
-                secure_examples: vec![
-                    SecureCommandExample {
-                        description: "Escape shell metacharacters".to_string(),
-                        vulnerable_code: "system(\"command \" + user_input)".to_string(),
-                        secure_code: "system(\"command \" + shell_escape(user_input))".to_string(),
-                        language: self.language.clone(),
-                    }
-                ],
+                secure_examples: vec![SecureCommandExample {
+                    description: "Escape shell metacharacters".to_string(),
+                    vulnerable_code: "system(\"command \" + user_input)".to_string(),
+                    secure_code: "system(\"command \" + shell_escape(user_input))".to_string(),
+                    language: self.language.clone(),
+                }],
                 effort_level: RemediationEffort::Medium,
             },
             _ => CommandInjectionRemediation {
@@ -787,17 +919,34 @@ impl CommandInjectionDetector {
 
     /// Check if text contains shell metacharacters
     fn contains_shell_metacharacters(&self, text: &str) -> bool {
-        self.shell_metacharacters.iter().any(|metachar| text.contains(metachar))
+        self.shell_metacharacters
+            .iter()
+            .any(|metachar| text.contains(metachar))
     }
 
     /// Check if text contains command execution patterns
     fn contains_command_patterns(&self, text: &str) -> bool {
-        let command_keywords = ["exec", "system", "cmd", "shell", "bash", "sh", "powershell", "cmd.exe"];
-        command_keywords.iter().any(|&keyword| text.to_lowercase().contains(keyword))
+        let command_keywords = [
+            "exec",
+            "system",
+            "cmd",
+            "shell",
+            "bash",
+            "sh",
+            "powershell",
+            "cmd.exe",
+        ];
+        command_keywords
+            .iter()
+            .any(|&keyword| text.to_lowercase().contains(keyword))
     }
 
     /// Create a vulnerability from direct AST analysis
-    fn create_direct_vulnerability(&self, node: Node, injection_type: CommandInjectionType) -> Result<CommandInjectionVulnerability> {
+    fn create_direct_vulnerability(
+        &self,
+        node: Node,
+        injection_type: CommandInjectionType,
+    ) -> Result<CommandInjectionVulnerability> {
         // This is a simplified implementation
         let command_pattern = CommandExecutionPattern {
             execution_function: "exec".to_string(),
@@ -812,7 +961,11 @@ impl CommandInjectionDetector {
         let severity = self.determine_severity(&command_pattern, &injection_type);
 
         Ok(CommandInjectionVulnerability {
-            id: format!("direct_cmdi_{}_{}", node.start_position().row, node.start_position().column),
+            id: format!(
+                "direct_cmdi_{}_{}",
+                node.start_position().row,
+                node.start_position().column
+            ),
             taint_flow: TaintFlow {
                 source: crate::taint_analysis::TaintSource {
                     id: "direct".to_string(),

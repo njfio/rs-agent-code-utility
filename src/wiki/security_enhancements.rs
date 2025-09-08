@@ -3,15 +3,17 @@
 //! Provides advanced security analysis integration, trace visualization,
 //! and security-focused documentation generation.
 
-use crate::advanced_security::{AdvancedSecurityAnalyzer, AdvancedSecurityConfig, SecuritySeverity, OwaspCategory};
+use crate::advanced_security::{
+    AdvancedSecurityAnalyzer, AdvancedSecurityConfig, OwaspCategory, SecuritySeverity,
+};
 use crate::analyzer::{AnalysisResult, FileInfo};
 
-use crate::Result;
 use crate::semantic_graph::SemanticGraphQuery;
+use crate::Result;
 use std::collections::HashMap;
+use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::path::PathBuf;
-use std::fmt::Write as FmtWrite;
 
 /// Security trace information for vulnerability propagation
 #[derive(Debug, Clone)]
@@ -56,7 +58,7 @@ pub struct SecurityCallSite {
 pub struct SecurityImpact {
     /// Confidentiality impact
     pub confidentiality: ImpactLevel,
-    /// Integrity impact  
+    /// Integrity impact
     pub integrity: ImpactLevel,
     /// Availability impact
     pub availability: ImpactLevel,
@@ -218,7 +220,8 @@ impl SecurityWikiGenerator {
         let semantic_graph = self.build_semantic_graph_for_security(analysis)?;
 
         // Identify security traces
-        let security_traces = self.identify_security_traces(&security_result, &semantic_graph, analysis)?;
+        let security_traces =
+            self.identify_security_traces(&security_result, &semantic_graph, analysis)?;
 
         // Identify security hotspots
         let security_hotspots = self.identify_security_hotspots(&security_result, analysis)?;
@@ -232,7 +235,10 @@ impl SecurityWikiGenerator {
     }
 
     /// Build semantic graph with security annotations
-    fn build_semantic_graph_for_security(&self, analysis: &AnalysisResult) -> Result<SemanticGraphQuery> {
+    fn build_semantic_graph_for_security(
+        &self,
+        analysis: &AnalysisResult,
+    ) -> Result<SemanticGraphQuery> {
         let mut graph = SemanticGraphQuery::new();
 
         // Build from analysis
@@ -241,34 +247,13 @@ impl SecurityWikiGenerator {
         Ok(graph)
     }
 
-    /// Classify symbol type for security analysis
-    fn classify_symbol_type(&self, kind: &str) -> String {
-        if kind.contains("fn") {
-            "function".to_string()
-        } else if kind.contains("struct") || kind.contains("class") {
-            "type".to_string()
-        } else if kind.contains("trait") {
-            "interface".to_string()
-        } else {
-            kind.to_string()
-        }
-    }
-
-
-
-    /// Check for potential relationships between symbols
-    fn has_potential_relationship(&self, caller: &str, callee: &str) -> bool {
-        // Simple heuristic: if callee is mentioned in caller name
-        caller.to_lowercase().contains(&callee.to_lowercase()) ||
-        callee.to_lowercase().contains(&caller.to_lowercase()) ||
-        // Common patterns
-        (caller.starts_with("get_") && callee.contains("fetch")) ||
-        (caller.starts_with("set_") && callee.contains("update"))
-    }
-
     /// Identify security traces from vulnerabilities through the call graph
-    fn identify_security_traces(&self, security_result: &crate::advanced_security::AdvancedSecurityResult,
-                              semantic_graph: &SemanticGraphQuery, analysis: &AnalysisResult) -> Result<Vec<SecurityTrace>> {
+    fn identify_security_traces(
+        &self,
+        security_result: &crate::advanced_security::AdvancedSecurityResult,
+        semantic_graph: &SemanticGraphQuery,
+        analysis: &AnalysisResult,
+    ) -> Result<Vec<SecurityTrace>> {
         let mut traces = Vec::new();
 
         for vuln in &security_result.vulnerabilities {
@@ -285,7 +270,11 @@ impl SecurityWikiGenerator {
                 let trace = SecurityTrace {
                     id: format!("trace_{}", vuln.id),
                     source: source_info,
-                    propagation_path: self.trace_propagation_path(&vuln.location, semantic_graph, analysis),
+                    propagation_path: self.trace_propagation_path(
+                        &vuln.location,
+                        semantic_graph,
+                        analysis,
+                    ),
                     impact_chain: self.calculate_impact_chain(vuln),
                     confidence: ConfidenceLevel::Medium,
                     mitigations: self.generate_mitigations(vuln),
@@ -299,8 +288,12 @@ impl SecurityWikiGenerator {
     }
 
     /// Trace propagation path from a vulnerability
-    fn trace_propagation_path(&self, location: &crate::advanced_security::VulnerabilityLocation,
-                            _semantic_graph: &SemanticGraphQuery, _analysis: &AnalysisResult) -> Vec<SecurityCallSite> {
+    fn trace_propagation_path(
+        &self,
+        location: &crate::advanced_security::VulnerabilityLocation,
+        _semantic_graph: &SemanticGraphQuery,
+        _analysis: &AnalysisResult,
+    ) -> Vec<SecurityCallSite> {
         let mut path = Vec::new();
 
         // Simplified tracing - add the vulnerable function itself as the main call site
@@ -316,8 +309,10 @@ impl SecurityWikiGenerator {
                 },
                 context: SecurityContext {
                     has_user_input: true,
-                    requires_auth: function_name.to_lowercase().contains("admin") || function_name.to_lowercase().contains("auth"),
-                    is_sanitized: function_name.to_lowercase().contains("sanitize") || function_name.to_lowercase().contains("escape"),
+                    requires_auth: function_name.to_lowercase().contains("admin")
+                        || function_name.to_lowercase().contains("auth"),
+                    is_sanitized: function_name.to_lowercase().contains("sanitize")
+                        || function_name.to_lowercase().contains("escape"),
                     trust_boundary: TrustBoundary::External,
                 },
             };
@@ -347,10 +342,11 @@ impl SecurityWikiGenerator {
         path
     }
 
-
-
     /// Calculate impact chain for a vulnerability
-    fn calculate_impact_chain(&self, vuln: &crate::advanced_security::SecurityVulnerability) -> Vec<SecurityImpact> {
+    fn calculate_impact_chain(
+        &self,
+        vuln: &crate::advanced_security::SecurityVulnerability,
+    ) -> Vec<SecurityImpact> {
         // Simplified impact propagation
         let mut impacts = Vec::new();
 
@@ -395,7 +391,10 @@ impl SecurityWikiGenerator {
     }
 
     /// Generate mitigation recommendations for a vulnerability
-    fn generate_mitigations(&self, vuln: &crate::advanced_security::SecurityVulnerability) -> Vec<String> {
+    fn generate_mitigations(
+        &self,
+        vuln: &crate::advanced_security::SecurityVulnerability,
+    ) -> Vec<String> {
         let mut mitigations = Vec::new();
 
         // OWASP-specific mitigations
@@ -403,7 +402,8 @@ impl SecurityWikiGenerator {
             OwaspCategory::Injection => {
                 mitigations.push("Use parameterized queries or stored procedures".to_string());
                 mitigations.push("Validate and sanitize all user inputs".to_string());
-                mitigations.push("Use an ORM or query builder with built-in protection".to_string());
+                mitigations
+                    .push("Use an ORM or query builder with built-in protection".to_string());
             }
             OwaspCategory::BrokenAccessControl => {
                 mitigations.push("Implement proper authorization checks".to_string());
@@ -431,8 +431,11 @@ impl SecurityWikiGenerator {
     }
 
     /// Identify security hotspots
-    fn identify_security_hotspots(&self, security_result: &crate::advanced_security::AdvancedSecurityResult,
-                               _analysis: &AnalysisResult) -> Result<Vec<SecurityHotspot>> {
+    fn identify_security_hotspots(
+        &self,
+        security_result: &crate::advanced_security::AdvancedSecurityResult,
+        _analysis: &AnalysisResult,
+    ) -> Result<Vec<SecurityHotspot>> {
         let mut hotspots = HashMap::new();
 
         // Group vulnerabilities by file
@@ -459,9 +462,7 @@ impl SecurityWikiGenerator {
         }
 
         // Convert to sorted vector
-        let mut hotspot_vec: Vec<_> = hotspots.into_iter()
-            .map(|(_, hotspot)| hotspot)
-            .collect();
+        let mut hotspot_vec: Vec<_> = hotspots.into_iter().map(|(_, hotspot)| hotspot).collect();
 
         hotspot_vec.sort_by(|a, b| b.risk_score.partial_cmp(&a.risk_score).unwrap());
 
@@ -480,7 +481,9 @@ impl SecurityWikiGenerator {
     }
 
     /// Convert advanced security location to our simplified location
-    fn convert_vulnerability_location(location: &crate::advanced_security::VulnerabilityLocation) -> VulnerabilityLocation {
+    fn convert_vulnerability_location(
+        location: &crate::advanced_security::VulnerabilityLocation,
+    ) -> VulnerabilityLocation {
         VulnerabilityLocation {
             file: location.file.clone(),
             function: location.function.clone(),
@@ -498,14 +501,20 @@ impl SecurityWikiGenerator {
         let categories = self.analyze_file_owasp_categories(file);
 
         if !categories.is_empty() {
-            let _ = writeln!(&mut html, "<div class=\"card\"><h3>OWASP Security Recommendations</h3>");
+            let _ = writeln!(
+                &mut html,
+                "<div class=\"card\"><h3>OWASP Security Recommendations</h3>"
+            );
             let _ = writeln!(&mut html, "<ul>");
 
             for category in categories {
                 let recommendations = self.get_category_recommendations(&category);
                 let cat_label = html_escape(&category);
                 let cat_html = if let Some(url) = self.owasp_category_url(&category) {
-                    format!("<a href=\"{}\" target=\"_blank\" rel=\"noopener\">{}</a>", url, cat_label)
+                    format!(
+                        "<a href=\"{}\" target=\"_blank\" rel=\"noopener\">{}</a>",
+                        url, cat_label
+                    )
                 } else {
                     cat_label
                 };
@@ -532,33 +541,47 @@ impl SecurityWikiGenerator {
         let content_lower = content.to_lowercase();
 
         // OWASP A01: Broken Access Control
-        if content_lower.contains("admin") || content_lower.contains("access") ||
-           content_lower.contains("auth") || content_lower.contains("authorize") {
+        if content_lower.contains("admin")
+            || content_lower.contains("access")
+            || content_lower.contains("auth")
+            || content_lower.contains("authorize")
+        {
             categories.push("A01:2021 – Broken Access Control".to_string());
         }
 
         // OWASP A02: Cryptographic Failures
-        if content_lower.contains("encrypt") || content_lower.contains("decrypt") ||
-           content_lower.contains("password") || content_lower.contains("secret") {
+        if content_lower.contains("encrypt")
+            || content_lower.contains("decrypt")
+            || content_lower.contains("password")
+            || content_lower.contains("secret")
+        {
             categories.push("A02:2021 – Cryptographic Failures".to_string());
         }
 
         // OWASP A03: Injection
-        if content_lower.contains("select") || content_lower.contains("insert") ||
-           content_lower.contains("update") || content_lower.contains("delete") ||
-           content_lower.contains("exec") || content_lower.contains("system") {
+        if content_lower.contains("select")
+            || content_lower.contains("insert")
+            || content_lower.contains("update")
+            || content_lower.contains("delete")
+            || content_lower.contains("exec")
+            || content_lower.contains("system")
+        {
             categories.push("A03:2021 – Injection".to_string());
         }
 
         // OWASP A04: Insecure Design
-        if content_lower.contains("random") || content_lower.contains("token") ||
-           content_lower.contains("session") {
+        if content_lower.contains("random")
+            || content_lower.contains("token")
+            || content_lower.contains("session")
+        {
             categories.push("A04:2021 – Insecure Design".to_string());
         }
 
         // OWASP A05: Security Misconfiguration
-        if content_lower.contains("debug") || content_lower.contains("config") ||
-           content_lower.contains("environment") {
+        if content_lower.contains("debug")
+            || content_lower.contains("config")
+            || content_lower.contains("environment")
+        {
             categories.push("A05:2021 – Security Misconfiguration".to_string());
         }
 
@@ -608,7 +631,11 @@ impl SecurityWikiGenerator {
 
         let _ = writeln!(&mut diagram, "graph TD");
         let _ = writeln!(&mut diagram, "  A[{}]", trace.source.title);
-        let _ = writeln!(&mut diagram, "  A --> B[Impact: {:.1}]", trace.impact_chain[0].score);
+        let _ = writeln!(
+            &mut diagram,
+            "  A --> B[Impact: {:.1}]",
+            trace.impact_chain[0].score
+        );
 
         for (i, call_site) in trace.propagation_path.iter().enumerate() {
             let node_id = format!("C{}", i);
@@ -623,7 +650,12 @@ impl SecurityWikiGenerator {
 
             if i < trace.impact_chain.len() - 1 {
                 let next_impact = format!("D{}", i);
-                let _ = writeln!(&mut diagram, "  {}[Impact: {:.1}]", next_impact, trace.impact_chain[i + 1].score);
+                let _ = writeln!(
+                    &mut diagram,
+                    "  {}[Impact: {:.1}]",
+                    next_impact,
+                    trace.impact_chain[i + 1].score
+                );
                 let _ = writeln!(&mut diagram, "  {} --> {}", node_id, next_impact);
             }
         }
@@ -644,8 +676,14 @@ impl SecurityWikiGenerator {
                 _ => "green",
             };
 
-            let _ = writeln!(&mut diagram, "  H{}[{}\\nRisk: {:.1}\\nVulnerabilities: {}]", 
-                           i, hotspot.location.file.display(), hotspot.risk_score, hotspot.vulnerability_count);
+            let _ = writeln!(
+                &mut diagram,
+                "  H{}[{}\\nRisk: {:.1}\\nVulnerabilities: {}]",
+                i,
+                hotspot.location.file.display(),
+                hotspot.risk_score,
+                hotspot.vulnerability_count
+            );
             let _ = writeln!(&mut diagram, "  style H{} fill:{};", i, severity_color);
         }
 

@@ -1,12 +1,11 @@
-use rust_tree_sitter::{
-    AstTransformationEngine, TransformationConfig, Transformation, TransformationType,
-    SemanticValidator, ValidationConfig, Language, Parser
-};
 use rust_tree_sitter::ast_transformation::{
-    TransformationLocation, Position, TransformationMetadata, TransformationImpact,
-    ImpactScope
+    ImpactScope, Position, TransformationImpact, TransformationLocation, TransformationMetadata,
 };
 use rust_tree_sitter::RiskLevel;
+use rust_tree_sitter::{
+    AstTransformationEngine, Language, Parser, SemanticValidator, Transformation,
+    TransformationConfig, TransformationType, ValidationConfig,
+};
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,15 +19,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 1: Simple string replacement
     println!("\n📝 Example 1: Simple String Replacement");
     println!("----------------------------------------");
-    
+
     let source1 = r#"fn main() {
     println!("Hello, world!");
     let x = 42;
 }"#;
-    
+
     println!("Original code:");
     println!("{}", source1);
-    
+
     let transformation1 = Transformation {
         id: "replace_greeting".to_string(),
         transformation_type: TransformationType::Replace,
@@ -63,14 +62,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         validation_result: None,
     };
-    
+
     let result1 = engine.apply_transformation(source1, Language::Rust, &transformation1)?;
-    
+
     if result1.success {
         println!("\n✅ Transformation successful!");
         println!("Updated code:");
         println!("{}", result1.updated_source);
-        println!("Confidence: {:.1}%", result1.validation_summary.overall_confidence * 100.0);
+        println!(
+            "Confidence: {:.1}%",
+            result1.validation_summary.overall_confidence * 100.0
+        );
     } else {
         println!("❌ Transformation failed");
         for failure in &result1.failed_transformations {
@@ -81,16 +83,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 2: Multiple transformations
     println!("\n📝 Example 2: Multiple Transformations");
     println!("--------------------------------------");
-    
+
     let source2 = r#"fn calculate() {
     let a = 5;
     let b = 10;
     println!("Result: {}", a + b);
 }"#;
-    
+
     println!("Original code:");
     println!("{}", source2);
-    
+
     let transformations = vec![
         Transformation {
             id: "change_value_a".to_string(),
@@ -161,25 +163,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             validation_result: None,
         },
     ];
-    
+
     let result2 = engine.apply_transformations(source2, Language::Rust, &transformations)?;
-    
+
     if result2.success {
         println!("\n✅ All transformations successful!");
         println!("Updated code:");
         println!("{}", result2.updated_source);
-        println!("Applied {} transformations", result2.applied_transformations.len());
-        println!("Overall confidence: {:.1}%", result2.validation_summary.overall_confidence * 100.0);
+        println!(
+            "Applied {} transformations",
+            result2.applied_transformations.len()
+        );
+        println!(
+            "Overall confidence: {:.1}%",
+            result2.validation_summary.overall_confidence * 100.0
+        );
     } else {
         println!("❌ Some transformations failed");
-        println!("Applied {} transformations", result2.applied_transformations.len());
-        println!("Failed {} transformations", result2.failed_transformations.len());
+        println!(
+            "Applied {} transformations",
+            result2.applied_transformations.len()
+        );
+        println!(
+            "Failed {} transformations",
+            result2.failed_transformations.len()
+        );
     }
 
     // Example 3: Semantic validation
     println!("\n📝 Example 3: Semantic Validation");
     println!("----------------------------------");
-    
+
     let config = ValidationConfig {
         enable_scope_analysis: true,
         enable_type_checking: true,
@@ -187,14 +201,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         enable_data_flow_analysis: true,
         strict_mode: false,
     };
-    
+
     let validator = SemanticValidator::with_config(config);
     let parser = Parser::new(Language::Rust)?;
     let source3 = "fn test() { let x = 42; println!(\"{}\", x); }";
     let tree = parser.parse(source3, None)?;
-    
+
     println!("Source code: {}", source3);
-    
+
     let transformation3 = Transformation {
         id: "rename_variable".to_string(),
         transformation_type: TransformationType::Rename,
@@ -229,22 +243,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         validation_result: None,
     };
-    
-    let validation_result = validator.validate_transformation(&tree, &transformation3, Language::Rust)?;
-    
+
+    let validation_result =
+        validator.validate_transformation(&tree, &transformation3, Language::Rust)?;
+
     println!("\n🔍 Validation Results:");
     println!("  Valid: {}", validation_result.is_valid);
     println!("  Confidence: {:.1}%", validation_result.confidence * 100.0);
     println!("  Errors: {}", validation_result.errors.len());
     println!("  Warnings: {}", validation_result.warnings.len());
-    
+
     if !validation_result.errors.is_empty() {
         println!("  Validation Errors:");
         for error in &validation_result.errors {
             println!("    - {}: {}", error.code, error.message);
         }
     }
-    
+
     if !validation_result.warnings.is_empty() {
         println!("  Validation Warnings:");
         for warning in &validation_result.warnings {
@@ -255,7 +270,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 4: Configuration options
     println!("\n📝 Example 4: Custom Configuration");
     println!("-----------------------------------");
-    
+
     let custom_config = TransformationConfig {
         enable_semantic_validation: true,
         enable_rollback: true,
@@ -264,9 +279,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         preserve_formatting: true,
         enable_incremental: false,
     };
-    
+
     let _custom_engine = AstTransformationEngine::with_config(custom_config);
-    
+
     println!("✅ Created custom transformation engine with:");
     println!("  - Semantic validation: enabled");
     println!("  - Rollback support: enabled");

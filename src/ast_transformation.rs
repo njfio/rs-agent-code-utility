@@ -8,14 +8,14 @@
 //! - Transformation rollback capabilities
 //! - Language-specific transformation rules
 
-use crate::{Result, Error, SyntaxTree, Node, Parser, Language};
 use crate::constants::common::RiskLevel;
+use crate::{Error, Language, Node, Parser, Result, SyntaxTree};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tree_sitter::InputEdit;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Core AST transformation engine
 #[derive(Debug, Clone)]
@@ -669,11 +669,9 @@ impl AstTransformationEngine {
 
         // Validate the transformation if enabled
         if self.config.enable_semantic_validation {
-            let validation_result = self.validator.validate_transformation(
-                &tree,
-                transformation,
-                language,
-            )?;
+            let validation_result =
+                self.validator
+                    .validate_transformation(&tree, transformation, language)?;
 
             if !validation_result.is_valid && self.validator.config.strict_mode {
                 return Ok(TransformationResult {
@@ -838,113 +836,153 @@ impl AstTransformationEngine {
         let mut rules = HashMap::new();
 
         // Rust transformation rules
-        rules.insert(Language::Rust, LanguageTransformationRules {
-            language: Language::Rust,
-            safe_node_types: vec![
-                "function_item".to_string(),
-                "impl_item".to_string(),
-                "struct_item".to_string(),
-                "enum_item".to_string(),
-                "block".to_string(),
-                "expression_statement".to_string(),
-                "let_declaration".to_string(),
-            ],
-            special_handling_types: vec![
-                "unsafe_block".to_string(),
-                "macro_invocation".to_string(),
-                "attribute_item".to_string(),
-            ],
-            forbidden_transformations: vec![
-                // Don't allow unsafe transformations by default
-            ],
-            validation_rules: vec![
-                ValidationRule {
-                    id: "rust_borrow_checker".to_string(),
-                    description: "Ensure transformations don't violate borrow checker rules".to_string(),
-                    applicable_node_types: vec!["reference_expression".to_string(), "let_declaration".to_string()],
-                    applicable_transformations: vec![TransformationType::Rename, TransformationType::Move],
-                    severity: ValidationSeverity::Error,
-                },
-                ValidationRule {
-                    id: "rust_lifetime_safety".to_string(),
-                    description: "Ensure lifetime annotations remain valid".to_string(),
-                    applicable_node_types: vec!["lifetime".to_string(), "reference_type".to_string()],
-                    applicable_transformations: vec![TransformationType::ExtractMethod, TransformationType::Move],
-                    severity: ValidationSeverity::Error,
-                },
-            ],
-        });
+        rules.insert(
+            Language::Rust,
+            LanguageTransformationRules {
+                language: Language::Rust,
+                safe_node_types: vec![
+                    "function_item".to_string(),
+                    "impl_item".to_string(),
+                    "struct_item".to_string(),
+                    "enum_item".to_string(),
+                    "block".to_string(),
+                    "expression_statement".to_string(),
+                    "let_declaration".to_string(),
+                ],
+                special_handling_types: vec![
+                    "unsafe_block".to_string(),
+                    "macro_invocation".to_string(),
+                    "attribute_item".to_string(),
+                ],
+                forbidden_transformations: vec![
+                    // Don't allow unsafe transformations by default
+                ],
+                validation_rules: vec![
+                    ValidationRule {
+                        id: "rust_borrow_checker".to_string(),
+                        description: "Ensure transformations don't violate borrow checker rules"
+                            .to_string(),
+                        applicable_node_types: vec![
+                            "reference_expression".to_string(),
+                            "let_declaration".to_string(),
+                        ],
+                        applicable_transformations: vec![
+                            TransformationType::Rename,
+                            TransformationType::Move,
+                        ],
+                        severity: ValidationSeverity::Error,
+                    },
+                    ValidationRule {
+                        id: "rust_lifetime_safety".to_string(),
+                        description: "Ensure lifetime annotations remain valid".to_string(),
+                        applicable_node_types: vec![
+                            "lifetime".to_string(),
+                            "reference_type".to_string(),
+                        ],
+                        applicable_transformations: vec![
+                            TransformationType::ExtractMethod,
+                            TransformationType::Move,
+                        ],
+                        severity: ValidationSeverity::Error,
+                    },
+                ],
+            },
+        );
 
         // Python transformation rules
-        rules.insert(Language::Python, LanguageTransformationRules {
-            language: Language::Python,
-            safe_node_types: vec![
-                "function_definition".to_string(),
-                "class_definition".to_string(),
-                "block".to_string(),
-                "expression_statement".to_string(),
-                "assignment".to_string(),
-            ],
-            special_handling_types: vec![
-                "global_statement".to_string(),
-                "nonlocal_statement".to_string(),
-                "import_statement".to_string(),
-                "import_from_statement".to_string(),
-            ],
-            forbidden_transformations: vec![],
-            validation_rules: vec![
-                ValidationRule {
-                    id: "python_indentation".to_string(),
-                    description: "Ensure proper Python indentation is maintained".to_string(),
-                    applicable_node_types: vec!["block".to_string()],
-                    applicable_transformations: vec![TransformationType::ExtractMethod, TransformationType::Move],
-                    severity: ValidationSeverity::Error,
-                },
-                ValidationRule {
-                    id: "python_scope_rules".to_string(),
-                    description: "Ensure Python scope rules are followed".to_string(),
-                    applicable_node_types: vec!["identifier".to_string()],
-                    applicable_transformations: vec![TransformationType::Rename, TransformationType::Move],
-                    severity: ValidationSeverity::Warning,
-                },
-            ],
-        });
+        rules.insert(
+            Language::Python,
+            LanguageTransformationRules {
+                language: Language::Python,
+                safe_node_types: vec![
+                    "function_definition".to_string(),
+                    "class_definition".to_string(),
+                    "block".to_string(),
+                    "expression_statement".to_string(),
+                    "assignment".to_string(),
+                ],
+                special_handling_types: vec![
+                    "global_statement".to_string(),
+                    "nonlocal_statement".to_string(),
+                    "import_statement".to_string(),
+                    "import_from_statement".to_string(),
+                ],
+                forbidden_transformations: vec![],
+                validation_rules: vec![
+                    ValidationRule {
+                        id: "python_indentation".to_string(),
+                        description: "Ensure proper Python indentation is maintained".to_string(),
+                        applicable_node_types: vec!["block".to_string()],
+                        applicable_transformations: vec![
+                            TransformationType::ExtractMethod,
+                            TransformationType::Move,
+                        ],
+                        severity: ValidationSeverity::Error,
+                    },
+                    ValidationRule {
+                        id: "python_scope_rules".to_string(),
+                        description: "Ensure Python scope rules are followed".to_string(),
+                        applicable_node_types: vec!["identifier".to_string()],
+                        applicable_transformations: vec![
+                            TransformationType::Rename,
+                            TransformationType::Move,
+                        ],
+                        severity: ValidationSeverity::Warning,
+                    },
+                ],
+            },
+        );
 
         // JavaScript transformation rules
-        rules.insert(Language::JavaScript, LanguageTransformationRules {
-            language: Language::JavaScript,
-            safe_node_types: vec![
-                "function_declaration".to_string(),
-                "arrow_function".to_string(),
-                "class_declaration".to_string(),
-                "statement_block".to_string(),
-                "expression_statement".to_string(),
-                "variable_declaration".to_string(),
-            ],
-            special_handling_types: vec![
-                "this_expression".to_string(),
-                "super".to_string(),
-                "import_statement".to_string(),
-                "export_statement".to_string(),
-            ],
-            forbidden_transformations: vec![],
-            validation_rules: vec![
-                ValidationRule {
-                    id: "js_hoisting_rules".to_string(),
-                    description: "Ensure JavaScript hoisting rules are respected".to_string(),
-                    applicable_node_types: vec!["function_declaration".to_string(), "variable_declaration".to_string()],
-                    applicable_transformations: vec![TransformationType::Move, TransformationType::Reorder],
-                    severity: ValidationSeverity::Warning,
-                },
-                ValidationRule {
-                    id: "js_closure_safety".to_string(),
-                    description: "Ensure closure variable capture remains valid".to_string(),
-                    applicable_node_types: vec!["arrow_function".to_string(), "function_expression".to_string()],
-                    applicable_transformations: vec![TransformationType::ExtractMethod, TransformationType::Move],
-                    severity: ValidationSeverity::Error,
-                },
-            ],
-        });
+        rules.insert(
+            Language::JavaScript,
+            LanguageTransformationRules {
+                language: Language::JavaScript,
+                safe_node_types: vec![
+                    "function_declaration".to_string(),
+                    "arrow_function".to_string(),
+                    "class_declaration".to_string(),
+                    "statement_block".to_string(),
+                    "expression_statement".to_string(),
+                    "variable_declaration".to_string(),
+                ],
+                special_handling_types: vec![
+                    "this_expression".to_string(),
+                    "super".to_string(),
+                    "import_statement".to_string(),
+                    "export_statement".to_string(),
+                ],
+                forbidden_transformations: vec![],
+                validation_rules: vec![
+                    ValidationRule {
+                        id: "js_hoisting_rules".to_string(),
+                        description: "Ensure JavaScript hoisting rules are respected".to_string(),
+                        applicable_node_types: vec![
+                            "function_declaration".to_string(),
+                            "variable_declaration".to_string(),
+                        ],
+                        applicable_transformations: vec![
+                            TransformationType::Move,
+                            TransformationType::Reorder,
+                        ],
+                        severity: ValidationSeverity::Warning,
+                    },
+                    ValidationRule {
+                        id: "js_closure_safety".to_string(),
+                        description: "Ensure closure variable capture remains valid".to_string(),
+                        applicable_node_types: vec![
+                            "arrow_function".to_string(),
+                            "function_expression".to_string(),
+                        ],
+                        applicable_transformations: vec![
+                            TransformationType::ExtractMethod,
+                            TransformationType::Move,
+                        ],
+                        severity: ValidationSeverity::Error,
+                    },
+                ],
+            },
+        );
 
         rules
     }
@@ -1076,9 +1114,14 @@ impl AstTransformationEngine {
     }
 
     /// Extract method name from transformation metadata with validation
-    fn extract_method_name_from_metadata(&self, metadata: &TransformationMetadata) -> Result<String> {
+    fn extract_method_name_from_metadata(
+        &self,
+        metadata: &TransformationMetadata,
+    ) -> Result<String> {
         // Look for method name in the description
-        if metadata.description.contains("extract method") || metadata.description.contains("Extract method") {
+        if metadata.description.contains("extract method")
+            || metadata.description.contains("Extract method")
+        {
             // Try to extract method name from description like "Extract method: calculate_sum"
             if let Some(colon_pos) = metadata.description.find(':') {
                 let method_name = metadata.description[colon_pos + 1..].trim();
@@ -1093,20 +1136,16 @@ impl AstTransformationEngine {
         }
 
         // Look for method name in other patterns
-        let patterns = [
-            "method:",
-            "function:",
-            "name:",
-            "extract:",
-            "refactor:",
-        ];
+        let patterns = ["method:", "function:", "name:", "extract:", "refactor:"];
 
         for pattern in &patterns {
             if let Some(pos) = metadata.description.to_lowercase().find(pattern) {
                 let start = pos + pattern.len();
                 if start < metadata.description.len() {
                     let remaining = &metadata.description[start..];
-                    if let Some(end) = remaining.find(|c: char| c.is_whitespace() || c == ',' || c == ';') {
+                    if let Some(end) =
+                        remaining.find(|c: char| c.is_whitespace() || c == ',' || c == ';')
+                    {
                         let method_name = remaining[..end].trim();
                         if !method_name.is_empty() {
                             let cleaned_name = self.sanitize_method_name(method_name);
@@ -1238,21 +1277,39 @@ impl AstTransformationEngine {
             Language::Rust => {
                 let mut params = Vec::new();
                 for var in &analysis.input_variables {
-                    params.push(format!("{}: {}", var.name, var.var_type.as_deref().unwrap_or("&str")));
+                    params.push(format!(
+                        "{}: {}",
+                        var.name,
+                        var.var_type.as_deref().unwrap_or("&str")
+                    ));
                 }
 
                 let return_type = if analysis.output_variables.is_empty() {
                     "()".to_string()
                 } else if analysis.output_variables.len() == 1 {
-                    analysis.output_variables[0].var_type.as_deref().unwrap_or("String").to_string()
+                    analysis.output_variables[0]
+                        .var_type
+                        .as_deref()
+                        .unwrap_or("String")
+                        .to_string()
                 } else {
-                    format!("({})", analysis.output_variables.iter()
-                        .map(|v| v.var_type.as_deref().unwrap_or("String"))
-                        .collect::<Vec<_>>()
-                        .join(", "))
+                    format!(
+                        "({})",
+                        analysis
+                            .output_variables
+                            .iter()
+                            .map(|v| v.var_type.as_deref().unwrap_or("String"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
                 };
 
-                Ok(format!("fn {}({}) -> {}", method_name, params.join(", "), return_type))
+                Ok(format!(
+                    "fn {}({}) -> {}",
+                    method_name,
+                    params.join(", "),
+                    return_type
+                ))
             }
             Language::Python => {
                 let mut params = vec!["self".to_string()];
@@ -1262,14 +1319,18 @@ impl AstTransformationEngine {
                 Ok(format!("def {}({}):", method_name, params.join(", ")))
             }
             Language::JavaScript => {
-                let params: Vec<String> = analysis.input_variables.iter()
+                let params: Vec<String> = analysis
+                    .input_variables
+                    .iter()
                     .map(|v| v.name.clone())
                     .collect();
                 Ok(format!("function {}({})", method_name, params.join(", ")))
             }
             _ => {
                 // Generic signature for other languages
-                let params: Vec<String> = analysis.input_variables.iter()
+                let params: Vec<String> = analysis
+                    .input_variables
+                    .iter()
                     .map(|v| v.name.clone())
                     .collect();
                 Ok(format!("{}({})", method_name, params.join(", ")))
@@ -1282,7 +1343,9 @@ impl AstTransformationEngine {
         analysis: &ExtractedVariableAnalysis,
         language: Language,
     ) -> Result<String> {
-        let args: Vec<String> = analysis.input_variables.iter()
+        let args: Vec<String> = analysis
+            .input_variables
+            .iter()
             .map(|v| v.name.clone())
             .collect();
 
@@ -1291,49 +1354,61 @@ impl AstTransformationEngine {
                 if analysis.output_variables.is_empty() {
                     Ok(format!("{}({});", method_name, args.join(", ")))
                 } else if analysis.output_variables.len() == 1 {
-                    Ok(format!("let {} = {}({});",
+                    Ok(format!(
+                        "let {} = {}({});",
                         analysis.output_variables[0].name,
                         method_name,
-                        args.join(", ")))
+                        args.join(", ")
+                    ))
                 } else {
-                    let output_names: Vec<String> = analysis.output_variables.iter()
+                    let output_names: Vec<String> = analysis
+                        .output_variables
+                        .iter()
                         .map(|v| v.name.clone())
                         .collect();
-                    Ok(format!("let ({}) = {}({});",
+                    Ok(format!(
+                        "let ({}) = {}({});",
                         output_names.join(", "),
                         method_name,
-                        args.join(", ")))
+                        args.join(", ")
+                    ))
                 }
             }
             Language::Python => {
                 if analysis.output_variables.is_empty() {
                     Ok(format!("self.{}({})", method_name, args.join(", ")))
                 } else {
-                    let output_names: Vec<String> = analysis.output_variables.iter()
+                    let output_names: Vec<String> = analysis
+                        .output_variables
+                        .iter()
                         .map(|v| v.name.clone())
                         .collect();
-                    Ok(format!("{} = self.{}({})",
+                    Ok(format!(
+                        "{} = self.{}({})",
                         output_names.join(", "),
                         method_name,
-                        args.join(", ")))
+                        args.join(", ")
+                    ))
                 }
             }
             Language::JavaScript => {
                 if analysis.output_variables.is_empty() {
                     Ok(format!("{}({});", method_name, args.join(", ")))
                 } else {
-                    let output_names: Vec<String> = analysis.output_variables.iter()
+                    let output_names: Vec<String> = analysis
+                        .output_variables
+                        .iter()
                         .map(|v| v.name.clone())
                         .collect();
-                    Ok(format!("const {} = {}({});",
+                    Ok(format!(
+                        "const {} = {}({});",
                         output_names.join(", "),
                         method_name,
-                        args.join(", ")))
+                        args.join(", ")
+                    ))
                 }
             }
-            _ => {
-                Ok(format!("{}({});", method_name, args.join(", ")))
-            }
+            _ => Ok(format!("{}({});", method_name, args.join(", "))),
         }
     }
 
@@ -1358,13 +1433,17 @@ impl AstTransformationEngine {
 
         // Find all occurrences of the variable in the appropriate scope
         let target_location = &transformation.target_location;
-        let occurrences = self.find_variable_occurrences(tree, old_name, target_location, language)?;
+        let occurrences =
+            self.find_variable_occurrences(tree, old_name, target_location, language)?;
 
         // Check for naming conflicts
         if self.has_naming_conflict(tree, new_name, &occurrences, language)? {
             return Err(Error::internal_error(
                 "ast_transformation",
-                &format!("Naming conflict: identifier '{}' already exists in scope", new_name),
+                &format!(
+                    "Naming conflict: identifier '{}' already exists in scope",
+                    new_name
+                ),
             ));
         }
 
@@ -1398,21 +1477,15 @@ impl AstTransformationEngine {
         let extracted_code = &source[start_byte..end_byte];
 
         // Analyze variables used in the extracted code
-        let variable_analysis = self.analyze_extracted_code_variables(tree, extract_range, source, language)?;
+        let variable_analysis =
+            self.analyze_extracted_code_variables(tree, extract_range, source, language)?;
 
         // Generate method signature based on variable analysis
-        let method_signature = self.generate_method_signature(
-            &method_name,
-            &variable_analysis,
-            language,
-        )?;
+        let method_signature =
+            self.generate_method_signature(&method_name, &variable_analysis, language)?;
 
         // Generate method call to replace the extracted code
-        let method_call = self.generate_method_call(
-            &method_name,
-            &variable_analysis,
-            language,
-        )?;
+        let method_call = self.generate_method_call(&method_name, &variable_analysis, language)?;
 
         // Find the appropriate location to insert the new method
         let insertion_point = self.find_method_insertion_point(tree, source, language)?;
@@ -1592,35 +1665,134 @@ impl AstTransformationEngine {
 
     /// Check if a name is a Rust keyword
     fn is_rust_keyword(&self, name: &str) -> bool {
-        matches!(name,
-            "as" | "break" | "const" | "continue" | "crate" | "else" | "enum" | "extern" |
-            "false" | "fn" | "for" | "if" | "impl" | "in" | "let" | "loop" | "match" |
-            "mod" | "move" | "mut" | "pub" | "ref" | "return" | "self" | "Self" |
-            "static" | "struct" | "super" | "trait" | "true" | "type" | "unsafe" |
-            "use" | "where" | "while" | "async" | "await" | "dyn"
+        matches!(
+            name,
+            "as" | "break"
+                | "const"
+                | "continue"
+                | "crate"
+                | "else"
+                | "enum"
+                | "extern"
+                | "false"
+                | "fn"
+                | "for"
+                | "if"
+                | "impl"
+                | "in"
+                | "let"
+                | "loop"
+                | "match"
+                | "mod"
+                | "move"
+                | "mut"
+                | "pub"
+                | "ref"
+                | "return"
+                | "self"
+                | "Self"
+                | "static"
+                | "struct"
+                | "super"
+                | "trait"
+                | "true"
+                | "type"
+                | "unsafe"
+                | "use"
+                | "where"
+                | "while"
+                | "async"
+                | "await"
+                | "dyn"
         )
     }
 
     /// Check if a name is a Python keyword
     fn is_python_keyword(&self, name: &str) -> bool {
-        matches!(name,
-            "False" | "None" | "True" | "and" | "as" | "assert" | "break" | "class" |
-            "continue" | "def" | "del" | "elif" | "else" | "except" | "finally" |
-            "for" | "from" | "global" | "if" | "import" | "in" | "is" | "lambda" |
-            "nonlocal" | "not" | "or" | "pass" | "raise" | "return" | "try" |
-            "while" | "with" | "yield"
+        matches!(
+            name,
+            "False"
+                | "None"
+                | "True"
+                | "and"
+                | "as"
+                | "assert"
+                | "break"
+                | "class"
+                | "continue"
+                | "def"
+                | "del"
+                | "elif"
+                | "else"
+                | "except"
+                | "finally"
+                | "for"
+                | "from"
+                | "global"
+                | "if"
+                | "import"
+                | "in"
+                | "is"
+                | "lambda"
+                | "nonlocal"
+                | "not"
+                | "or"
+                | "pass"
+                | "raise"
+                | "return"
+                | "try"
+                | "while"
+                | "with"
+                | "yield"
         )
     }
 
     /// Check if a name is a JavaScript keyword
     fn is_javascript_keyword(&self, name: &str) -> bool {
-        matches!(name,
-            "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger" |
-            "default" | "delete" | "do" | "else" | "export" | "extends" | "finally" |
-            "for" | "function" | "if" | "import" | "in" | "instanceof" | "new" |
-            "return" | "super" | "switch" | "this" | "throw" | "try" | "typeof" |
-            "var" | "void" | "while" | "with" | "yield" | "let" | "static" | "enum" |
-            "implements" | "package" | "protected" | "interface" | "private" | "public"
+        matches!(
+            name,
+            "break"
+                | "case"
+                | "catch"
+                | "class"
+                | "const"
+                | "continue"
+                | "debugger"
+                | "default"
+                | "delete"
+                | "do"
+                | "else"
+                | "export"
+                | "extends"
+                | "finally"
+                | "for"
+                | "function"
+                | "if"
+                | "import"
+                | "in"
+                | "instanceof"
+                | "new"
+                | "return"
+                | "super"
+                | "switch"
+                | "this"
+                | "throw"
+                | "try"
+                | "typeof"
+                | "var"
+                | "void"
+                | "while"
+                | "with"
+                | "yield"
+                | "let"
+                | "static"
+                | "enum"
+                | "implements"
+                | "package"
+                | "protected"
+                | "interface"
+                | "private"
+                | "public"
         )
     }
 
@@ -1645,7 +1817,11 @@ impl AstTransformationEngine {
     }
 
     /// Find the scope (function, block, etc.) containing the target location
-    fn find_containing_scope<'a>(&self, node: &Node<'a>, target_location: &TransformationLocation) -> Option<Node<'a>> {
+    fn find_containing_scope<'a>(
+        &self,
+        node: &Node<'a>,
+        target_location: &TransformationLocation,
+    ) -> Option<Node<'a>> {
         let target_start = target_location.start_position.byte_offset;
         let target_end = target_location.end_position.byte_offset;
 
@@ -1672,10 +1848,18 @@ impl AstTransformationEngine {
 
     /// Check if a node defines a scope
     fn is_scope_defining_node(&self, node: &Node) -> bool {
-        matches!(node.kind(),
-            "function_item" | "function_declaration" | "function_definition" |
-            "block" | "compound_statement" | "class_definition" | "impl_item" |
-            "for_statement" | "while_statement" | "if_statement"
+        matches!(
+            node.kind(),
+            "function_item"
+                | "function_declaration"
+                | "function_definition"
+                | "block"
+                | "compound_statement"
+                | "class_definition"
+                | "impl_item"
+                | "for_statement"
+                | "while_statement"
+                | "if_statement"
         )
     }
 
@@ -1772,7 +1956,10 @@ impl AstTransformationEngine {
             let adjusted_start = (start as i32 + offset) as usize;
             let adjusted_end = (end as i32 + offset) as usize;
 
-            if adjusted_start <= result.len() && adjusted_end <= result.len() && adjusted_start <= adjusted_end {
+            if adjusted_start <= result.len()
+                && adjusted_end <= result.len()
+                && adjusted_start <= adjusted_end
+            {
                 // Replace the old name with the new name
                 result.replace_range(adjusted_start..adjusted_end, new_name);
 
@@ -1810,11 +1997,19 @@ impl AstTransformationEngine {
         _language: Language,
     ) -> Result<InlineType> {
         let root = tree.root_node();
-        if let Some(target_node) = self.validator.find_node_at_position(&root, &transformation.target_location) {
+        if let Some(target_node) = self
+            .validator
+            .find_node_at_position(&root, &transformation.target_location)
+        {
             // Check if the target is a variable declaration or a method/function
             match target_node.kind() {
-                "let_declaration" | "variable_declaration" | "assignment" => Ok(InlineType::Variable),
-                "function_item" | "function_declaration" | "function_definition" | "method_definition" => Ok(InlineType::Method),
+                "let_declaration" | "variable_declaration" | "assignment" => {
+                    Ok(InlineType::Variable)
+                }
+                "function_item"
+                | "function_declaration"
+                | "function_definition"
+                | "method_definition" => Ok(InlineType::Method),
                 _ => {
                     // Try to determine from parent context
                     if let Some(parent) = target_node.parent() {
@@ -1843,13 +2038,20 @@ impl AstTransformationEngine {
     ) -> Result<String> {
         // Find the variable declaration
         let variable_name = &transformation.original_code;
-        let variable_declaration = self.find_variable_declaration(tree, variable_name, &transformation.target_location)?;
+        let variable_declaration =
+            self.find_variable_declaration(tree, variable_name, &transformation.target_location)?;
 
         // Extract the variable's value/expression
-        let variable_value = self.extract_variable_value(source, &variable_declaration, language)?;
+        let variable_value =
+            self.extract_variable_value(source, &variable_declaration, language)?;
 
         // Find all usages of the variable
-        let usages = self.find_variable_usages(tree, variable_name, &transformation.target_location, language)?;
+        let usages = self.find_variable_usages(
+            tree,
+            variable_name,
+            &transformation.target_location,
+            language,
+        )?;
 
         // Validate that inlining is safe
         if !self.is_safe_to_inline_variable(&variable_value, &usages, language)? {
@@ -1902,7 +2104,8 @@ impl AstTransformationEngine {
     ) -> Result<String> {
         // Find the method definition
         let method_name = &transformation.original_code;
-        let method_definition = self.find_method_definition(tree, method_name, &transformation.target_location)?;
+        let method_definition =
+            self.find_method_definition(tree, method_name, &transformation.target_location)?;
 
         // Extract the method body
         let method_body = self.extract_method_body(source, &method_definition, language)?;
@@ -1942,7 +2145,8 @@ impl AstTransformationEngine {
                     offset -= (end - start) as i32;
                 } else {
                     // Replace method call with the method body
-                    let inlined_body = self.adapt_method_body_for_call(&method_body, source, location, language)?;
+                    let inlined_body =
+                        self.adapt_method_body_for_call(&method_body, source, location, language)?;
                     result.replace_range(adjusted_start..adjusted_end, &inlined_body);
                     offset += inlined_body.len() as i32 - (end - start) as i32;
                 }
@@ -1973,7 +2177,11 @@ impl AstTransformationEngine {
     }
 
     /// Find variable declaration node
-    fn find_variable_declaration_node<'a>(&self, node: &Node<'a>, variable_name: &str) -> Option<Node<'a>> {
+    fn find_variable_declaration_node<'a>(
+        &self,
+        node: &Node<'a>,
+        variable_name: &str,
+    ) -> Option<Node<'a>> {
         // Check if this node is a variable declaration
         if matches!(node.kind(), "let_declaration" | "variable_declaration") {
             // Look for the variable name in this declaration
@@ -2112,8 +2320,15 @@ impl AstTransformationEngine {
     }
 
     /// Find method definition node
-    fn find_method_definition_node<'a>(&self, node: &Node<'a>, method_name: &str) -> Option<Node<'a>> {
-        if matches!(node.kind(), "function_item" | "function_declaration" | "function_definition") {
+    fn find_method_definition_node<'a>(
+        &self,
+        node: &Node<'a>,
+        method_name: &str,
+    ) -> Option<Node<'a>> {
+        if matches!(
+            node.kind(),
+            "function_item" | "function_declaration" | "function_definition"
+        ) {
             // Look for the method name
             for child in node.children() {
                 if child.kind() == "identifier" {
@@ -2353,9 +2568,15 @@ impl AstTransformationEngine {
 
     /// Check if a node represents a variable declaration
     fn is_variable_declaration_node(&self, node: &Node) -> bool {
-        matches!(node.kind(),
-            "let_declaration" | "variable_declaration" | "assignment_expression" |
-            "const_declaration" | "var_declaration" | "parameter" | "pattern"
+        matches!(
+            node.kind(),
+            "let_declaration"
+                | "variable_declaration"
+                | "assignment_expression"
+                | "const_declaration"
+                | "var_declaration"
+                | "parameter"
+                | "pattern"
         )
     }
 
@@ -2389,38 +2610,179 @@ impl AstTransformationEngine {
     /// Check if a string is a language keyword
     fn is_language_keyword(&self, name: &str) -> bool {
         // Common keywords across languages (duplicates removed)
-        matches!(name,
-            "if" | "else" | "for" | "while" | "do" | "switch" | "case" | "default" |
-            "break" | "continue" | "return" | "function" | "var" | "let" | "const" |
-            "true" | "false" | "null" | "undefined" | "this" | "super" | "new" |
-            "try" | "catch" | "finally" | "throw" | "class" | "extends" | "import" |
-            "export" | "from" | "as" | "async" | "await" | "yield" | "static" |
-            "public" | "private" | "protected" | "abstract" | "interface" | "enum" |
-            "type" | "namespace" | "module" | "package" | "use" | "mod" | "crate" |
-            "fn" | "impl" | "trait" | "struct" | "match" | "loop" | "move" | "mut" |
-            "ref" | "self" | "Self" | "unsafe" | "where" | "dyn" | "extern" |
-            "def" | "lambda" | "pass" | "with" | "assert" | "global" |
-            "nonlocal" | "del" | "and" | "or" | "not" | "in" | "is" | "None" |
-            "True" | "False" | "except" | "raise" | "elif"
+        matches!(
+            name,
+            "if" | "else"
+                | "for"
+                | "while"
+                | "do"
+                | "switch"
+                | "case"
+                | "default"
+                | "break"
+                | "continue"
+                | "return"
+                | "function"
+                | "var"
+                | "let"
+                | "const"
+                | "true"
+                | "false"
+                | "null"
+                | "undefined"
+                | "this"
+                | "super"
+                | "new"
+                | "try"
+                | "catch"
+                | "finally"
+                | "throw"
+                | "class"
+                | "extends"
+                | "import"
+                | "export"
+                | "from"
+                | "as"
+                | "async"
+                | "await"
+                | "yield"
+                | "static"
+                | "public"
+                | "private"
+                | "protected"
+                | "abstract"
+                | "interface"
+                | "enum"
+                | "type"
+                | "namespace"
+                | "module"
+                | "package"
+                | "use"
+                | "mod"
+                | "crate"
+                | "fn"
+                | "impl"
+                | "trait"
+                | "struct"
+                | "match"
+                | "loop"
+                | "move"
+                | "mut"
+                | "ref"
+                | "self"
+                | "Self"
+                | "unsafe"
+                | "where"
+                | "dyn"
+                | "extern"
+                | "def"
+                | "lambda"
+                | "pass"
+                | "with"
+                | "assert"
+                | "global"
+                | "nonlocal"
+                | "del"
+                | "and"
+                | "or"
+                | "not"
+                | "in"
+                | "is"
+                | "None"
+                | "True"
+                | "False"
+                | "except"
+                | "raise"
+                | "elif"
         )
     }
 
     /// Check if a string is a built-in function
     fn is_builtin_function(&self, name: &str) -> bool {
         // Common built-in functions across languages
-        matches!(name,
-            "print" | "println" | "console" | "log" | "len" | "length" | "size" |
-            "push" | "pop" | "shift" | "unshift" | "slice" | "splice" | "join" |
-            "split" | "replace" | "substring" | "indexOf" | "charAt" | "toString" |
-            "parseInt" | "parseFloat" | "isNaN" | "isFinite" | "Math" | "Date" |
-            "Array" | "Object" | "String" | "Number" | "Boolean" | "RegExp" |
-            "Error" | "TypeError" | "ReferenceError" | "SyntaxError" | "RangeError" |
-            "vec" | "Vec" | "HashMap" | "BTreeMap" | "HashSet" | "BTreeSet" |
-            "Option" | "Some" | "None" | "Result" | "Ok" | "Err" | "Box" | "Rc" |
-            "Arc" | "Mutex" | "RwLock" | "Cell" | "RefCell" | "Cow" | "Clone" |
-            "list" | "dict" | "set" | "tuple" | "str" | "int" | "float" | "bool" |
-            "range" | "enumerate" | "zip" | "map" | "filter" | "reduce" | "sum" |
-            "min" | "max" | "abs" | "round" | "sorted" | "reversed" | "any" | "all"
+        matches!(
+            name,
+            "print"
+                | "println"
+                | "console"
+                | "log"
+                | "len"
+                | "length"
+                | "size"
+                | "push"
+                | "pop"
+                | "shift"
+                | "unshift"
+                | "slice"
+                | "splice"
+                | "join"
+                | "split"
+                | "replace"
+                | "substring"
+                | "indexOf"
+                | "charAt"
+                | "toString"
+                | "parseInt"
+                | "parseFloat"
+                | "isNaN"
+                | "isFinite"
+                | "Math"
+                | "Date"
+                | "Array"
+                | "Object"
+                | "String"
+                | "Number"
+                | "Boolean"
+                | "RegExp"
+                | "Error"
+                | "TypeError"
+                | "ReferenceError"
+                | "SyntaxError"
+                | "RangeError"
+                | "vec"
+                | "Vec"
+                | "HashMap"
+                | "BTreeMap"
+                | "HashSet"
+                | "BTreeSet"
+                | "Option"
+                | "Some"
+                | "None"
+                | "Result"
+                | "Ok"
+                | "Err"
+                | "Box"
+                | "Rc"
+                | "Arc"
+                | "Mutex"
+                | "RwLock"
+                | "Cell"
+                | "RefCell"
+                | "Cow"
+                | "Clone"
+                | "list"
+                | "dict"
+                | "set"
+                | "tuple"
+                | "str"
+                | "int"
+                | "float"
+                | "bool"
+                | "range"
+                | "enumerate"
+                | "zip"
+                | "map"
+                | "filter"
+                | "reduce"
+                | "sum"
+                | "min"
+                | "max"
+                | "abs"
+                | "round"
+                | "sorted"
+                | "reversed"
+                | "any"
+                | "all"
         )
     }
 
@@ -2574,9 +2936,10 @@ impl AstTransformationEngine {
     /// Check if a node contains a specific identifier node
     fn node_contains_identifier(&self, container: &Node, target: &Node) -> bool {
         // Compare nodes by their byte positions and content
-        if container.start_byte() == target.start_byte() &&
-           container.end_byte() == target.end_byte() &&
-           container.kind() == target.kind() {
+        if container.start_byte() == target.start_byte()
+            && container.end_byte() == target.end_byte()
+            && container.kind() == target.kind()
+        {
             return true;
         }
 
@@ -2601,7 +2964,8 @@ impl AstTransformationEngine {
         // Strategy 1: Find the containing class/impl block and insert within it
         if let Some(container_end) = self.find_containing_class_or_impl(&root, language) {
             // Insert before the closing brace of the container
-            let insertion_point = self.find_insertion_point_before_closing_brace(source, container_end)?;
+            let insertion_point =
+                self.find_insertion_point_before_closing_brace(source, container_end)?;
             if insertion_point > 0 {
                 return Ok(insertion_point);
             }
@@ -2615,7 +2979,8 @@ impl AstTransformationEngine {
         for child in root.children() {
             if self.is_function_like_node(&child, language) {
                 last_function_end = child.end_byte();
-                best_insertion_point = self.find_good_insertion_point_after_function(source, last_function_end)?;
+                best_insertion_point =
+                    self.find_good_insertion_point_after_function(source, last_function_end)?;
             }
         }
 
@@ -2658,7 +3023,11 @@ impl AstTransformationEngine {
     }
 
     /// Find insertion point before the closing brace of a container
-    fn find_insertion_point_before_closing_brace(&self, source: &str, container_end: usize) -> Result<usize> {
+    fn find_insertion_point_before_closing_brace(
+        &self,
+        source: &str,
+        container_end: usize,
+    ) -> Result<usize> {
         if container_end == 0 || container_end > source.len() {
             return Ok(0);
         }
@@ -2686,7 +3055,11 @@ impl AstTransformationEngine {
     }
 
     /// Find a good insertion point after a function
-    fn find_good_insertion_point_after_function(&self, source: &str, function_end: usize) -> Result<usize> {
+    fn find_good_insertion_point_after_function(
+        &self,
+        source: &str,
+        function_end: usize,
+    ) -> Result<usize> {
         if function_end >= source.len() {
             return Ok(source.len());
         }
@@ -2741,7 +3114,12 @@ impl AstTransformationEngine {
     }
 
     /// Find default insertion point based on language conventions
-    fn find_default_insertion_point(&self, source: &str, root: &Node, language: Language) -> Result<usize> {
+    fn find_default_insertion_point(
+        &self,
+        source: &str,
+        root: &Node,
+        language: Language,
+    ) -> Result<usize> {
         match language {
             Language::Rust => {
                 // In Rust, try to insert after imports and before main function
@@ -2787,7 +3165,9 @@ impl AstTransformationEngine {
         match language {
             Language::Rust => matches!(node.kind(), "function_item" | "impl_item"),
             Language::Python => matches!(node.kind(), "function_definition" | "class_definition"),
-            Language::JavaScript => matches!(node.kind(), "function_declaration" | "method_definition"),
+            Language::JavaScript => {
+                matches!(node.kind(), "function_declaration" | "method_definition")
+            }
             _ => matches!(node.kind(), "function" | "method" | "function_declaration"),
         }
     }
@@ -2827,7 +3207,9 @@ impl AstTransformationEngine {
                         let var = &analysis.output_variables[0];
                         method.push_str(&format!("    {}\n", var.name));
                     } else {
-                        let output_names: Vec<String> = analysis.output_variables.iter()
+                        let output_names: Vec<String> = analysis
+                            .output_variables
+                            .iter()
                             .map(|v| v.name.clone())
                             .collect();
                         method.push_str(&format!("    ({})\n", output_names.join(", ")));
@@ -2853,7 +3235,10 @@ impl AstTransformationEngine {
                         method.push_str("        Args:\n");
                         for var in &analysis.input_variables {
                             let var_type = var.var_type.as_deref().unwrap_or("Any");
-                            method.push_str(&format!("            {} ({}): Input parameter\n", var.name, var_type));
+                            method.push_str(&format!(
+                                "            {} ({}): Input parameter\n",
+                                var.name, var_type
+                            ));
                         }
                     }
                     if !analysis.output_variables.is_empty() {
@@ -2882,7 +3267,9 @@ impl AstTransformationEngine {
                 // Add return statement if needed
                 if !analysis.output_variables.is_empty() {
                     method.push('\n');
-                    let output_names: Vec<String> = analysis.output_variables.iter()
+                    let output_names: Vec<String> = analysis
+                        .output_variables
+                        .iter()
                         .map(|v| v.name.clone())
                         .collect();
                     method.push_str(&format!("        return {}\n", output_names.join(", ")));
@@ -2914,9 +3301,14 @@ impl AstTransformationEngine {
                 if !analysis.output_variables.is_empty() {
                     method.push('\n');
                     if analysis.output_variables.len() == 1 {
-                        method.push_str(&format!("    return {};\n", analysis.output_variables[0].name));
+                        method.push_str(&format!(
+                            "    return {};\n",
+                            analysis.output_variables[0].name
+                        ));
                     } else {
-                        let output_names: Vec<String> = analysis.output_variables.iter()
+                        let output_names: Vec<String> = analysis
+                            .output_variables
+                            .iter()
                             .map(|v| v.name.clone())
                             .collect();
                         method.push_str(&format!("    return [{}];\n", output_names.join(", ")));
@@ -2984,13 +3376,22 @@ impl AstTransformationEngine {
                 if !analysis.input_variables.is_empty() {
                     for var in &analysis.input_variables {
                         let var_type = var.var_type.as_deref().unwrap_or("any");
-                        doc.push_str(&format!(" * @param {{{}}} {} - Input parameter\n", var_type, var.name));
+                        doc.push_str(&format!(
+                            " * @param {{{}}} {} - Input parameter\n",
+                            var_type, var.name
+                        ));
                     }
                 }
                 if !analysis.output_variables.is_empty() {
                     if analysis.output_variables.len() == 1 {
-                        let var_type = analysis.output_variables[0].var_type.as_deref().unwrap_or("any");
-                        doc.push_str(&format!(" * @returns {{{}}} The computed result\n", var_type));
+                        let var_type = analysis.output_variables[0]
+                            .var_type
+                            .as_deref()
+                            .unwrap_or("any");
+                        doc.push_str(&format!(
+                            " * @returns {{{}}} The computed result\n",
+                            var_type
+                        ));
                     } else {
                         doc.push_str(" * @returns {Array} Array containing multiple results\n");
                     }
@@ -3193,7 +3594,9 @@ impl SemanticValidator {
 
         // Find the target node
         let root = tree.root_node();
-        if let Some(target_node) = self.find_node_at_position(&root, &transformation.target_location) {
+        if let Some(target_node) =
+            self.find_node_at_position(&root, &transformation.target_location)
+        {
             // Analyze variables in scope
             variables_in_scope = self.extract_variables_in_scope(&target_node, tree.source());
 
@@ -3201,7 +3604,11 @@ impl SemanticValidator {
             functions_in_scope = self.extract_functions_in_scope(&target_node, tree.source());
 
             // Check for scope conflicts
-            scope_conflicts = self.detect_scope_conflicts(&variables_in_scope, &functions_in_scope, transformation);
+            scope_conflicts = self.detect_scope_conflicts(
+                &variables_in_scope,
+                &functions_in_scope,
+                transformation,
+            );
         }
 
         Ok(ScopeAnalysisResult {
@@ -3258,7 +3665,11 @@ impl SemanticValidator {
     }
 
     /// Find a node at the specified position
-    fn find_node_at_position<'a>(&self, node: &Node<'a>, location: &TransformationLocation) -> Option<Node<'a>> {
+    fn find_node_at_position<'a>(
+        &self,
+        node: &Node<'a>,
+        location: &TransformationLocation,
+    ) -> Option<Node<'a>> {
         let start_byte = location.start_position.byte_offset;
         let end_byte = location.end_position.byte_offset;
 
@@ -3331,12 +3742,18 @@ impl SemanticValidator {
 
     /// Check if a node is a variable declaration
     fn is_variable_declaration(&self, node: &Node) -> bool {
-        matches!(node.kind(), "let_declaration" | "variable_declaration" | "assignment")
+        matches!(
+            node.kind(),
+            "let_declaration" | "variable_declaration" | "assignment"
+        )
     }
 
     /// Check if a node is a function declaration
     fn is_function_declaration(&self, node: &Node) -> bool {
-        matches!(node.kind(), "function_item" | "function_declaration" | "method_definition")
+        matches!(
+            node.kind(),
+            "function_item" | "function_declaration" | "method_definition"
+        )
     }
 
     /// Extract variable information from a declaration node

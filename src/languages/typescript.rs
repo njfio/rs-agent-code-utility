@@ -28,8 +28,8 @@ impl TypeScriptSyntax {
 
     /// Check if a node represents any kind of function
     pub fn is_function(node: &Node) -> bool {
-        Self::is_function_declaration(node) 
-            || Self::is_function_expression(node) 
+        Self::is_function_declaration(node)
+            || Self::is_function_expression(node)
             || Self::is_arrow_function(node)
     }
 
@@ -55,7 +55,9 @@ impl TypeScriptSyntax {
 
     /// Check if a node represents a namespace declaration
     pub fn is_namespace_declaration(node: &Node) -> bool {
-        node.kind() == "namespace_declaration" || node.kind() == "module_declaration" || node.kind() == "internal_module"
+        node.kind() == "namespace_declaration"
+            || node.kind() == "module_declaration"
+            || node.kind() == "internal_module"
     }
 
     /// Check if a node represents a method signature
@@ -210,7 +212,10 @@ impl TypeScriptSyntax {
     }
 
     /// Get function parameters with types
-    pub fn function_parameters_with_types(node: &Node, _source: &str) -> Vec<(String, Option<String>)> {
+    pub fn function_parameters_with_types(
+        node: &Node,
+        _source: &str,
+    ) -> Vec<(String, Option<String>)> {
         if !Self::is_function(node) {
             return Vec::new();
         }
@@ -220,11 +225,13 @@ impl TypeScriptSyntax {
         if let Some(params_node) = node.child_by_field_name("parameters") {
             for child in params_node.children() {
                 if child.kind() == "required_parameter" || child.kind() == "optional_parameter" {
-                    let name = child.child_by_field_name("pattern")
+                    let name = child
+                        .child_by_field_name("pattern")
                         .and_then(|n| n.text().ok())
                         .map(|s| s.to_string());
 
-                    let type_annotation = child.child_by_field_name("type")
+                    let type_annotation = child
+                        .child_by_field_name("type")
                         .and_then(|n| n.text().ok())
                         .map(|s| s.trim_start_matches(':').trim().to_string());
 
@@ -241,7 +248,7 @@ impl TypeScriptSyntax {
     /// Get generic type parameters
     pub fn generic_type_parameters(node: &Node, _source: &str) -> Vec<String> {
         let mut type_params = Vec::new();
-        
+
         if let Some(type_params_node) = node.child_by_field_name("type_parameters") {
             for child in type_params_node.children() {
                 if child.kind() == "type_parameter" {
@@ -329,7 +336,10 @@ impl TypeScriptSyntax {
     }
 
     /// Get all function definitions in a syntax tree with start and end positions
-    pub fn find_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
 
         // Find function declarations
@@ -363,7 +373,10 @@ impl TypeScriptSyntax {
     }
 
     /// Get all class definitions in a syntax tree with start and end positions
-    pub fn find_classes(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_classes(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut classes = Vec::new();
         let class_nodes = tree.find_nodes_by_kind("class_declaration");
 
@@ -378,7 +391,10 @@ impl TypeScriptSyntax {
     }
 
     /// Get all interface definitions in a syntax tree with start and end positions
-    pub fn find_interfaces(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_interfaces(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut interfaces = Vec::new();
         let interface_nodes = tree.find_nodes_by_kind("interface_declaration");
 
@@ -393,7 +409,10 @@ impl TypeScriptSyntax {
     }
 
     /// Get all type alias definitions in a syntax tree with start and end positions
-    pub fn find_type_aliases(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_type_aliases(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut type_aliases = Vec::new();
         let type_nodes = tree.find_nodes_by_kind("type_alias_declaration");
 
@@ -408,7 +427,10 @@ impl TypeScriptSyntax {
     }
 
     /// Get all enum definitions in a syntax tree with start and end positions
-    pub fn find_enums(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_enums(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut enums = Vec::new();
         let enum_nodes = tree.find_nodes_by_kind("enum_declaration");
 
@@ -423,7 +445,10 @@ impl TypeScriptSyntax {
     }
 
     /// Get all namespace definitions in a syntax tree with start and end positions
-    pub fn find_namespaces(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_namespaces(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut namespaces = Vec::new();
 
         // Find namespace declarations
@@ -457,7 +482,10 @@ impl TypeScriptSyntax {
     }
 
     /// Find generic type definitions and their constraints
-    pub fn find_generic_types(tree: &SyntaxTree, source: &str) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_generic_types(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
         let mut generic_types = Vec::new();
 
         // Find type alias declarations with generics
@@ -467,7 +495,12 @@ impl TypeScriptSyntax {
                 let type_params = Self::generic_type_parameters(&type_node, source);
                 if !type_params.is_empty() {
                     let ts_node = type_node.inner();
-                    generic_types.push((name, type_params, ts_node.start_position(), ts_node.end_position()));
+                    generic_types.push((
+                        name,
+                        type_params,
+                        ts_node.start_position(),
+                        ts_node.end_position(),
+                    ));
                 }
             }
         }
@@ -479,7 +512,12 @@ impl TypeScriptSyntax {
                 let type_params = Self::generic_type_parameters(&interface_node, source);
                 if !type_params.is_empty() {
                     let ts_node = interface_node.inner();
-                    generic_types.push((name, type_params, ts_node.start_position(), ts_node.end_position()));
+                    generic_types.push((
+                        name,
+                        type_params,
+                        ts_node.start_position(),
+                        ts_node.end_position(),
+                    ));
                 }
             }
         }
@@ -491,7 +529,12 @@ impl TypeScriptSyntax {
                 let type_params = Self::generic_type_parameters(&class_node, source);
                 if !type_params.is_empty() {
                     let ts_node = class_node.inner();
-                    generic_types.push((name, type_params, ts_node.start_position(), ts_node.end_position()));
+                    generic_types.push((
+                        name,
+                        type_params,
+                        ts_node.start_position(),
+                        ts_node.end_position(),
+                    ));
                 }
             }
         }
@@ -500,7 +543,10 @@ impl TypeScriptSyntax {
     }
 
     /// Find mapped types in a syntax tree
-    pub fn find_mapped_types(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_mapped_types(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut mapped_types = Vec::new();
 
         // Find mapped type declarations
@@ -511,7 +557,7 @@ impl TypeScriptSyntax {
                 mapped_types.push((
                     format!("mapped_type: {}", mapped_text.trim()),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -520,7 +566,10 @@ impl TypeScriptSyntax {
     }
 
     /// Find decorator usage in classes and methods
-    pub fn find_decorators(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_decorators(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut decorators = Vec::new();
 
         // Find decorated classes
@@ -534,7 +583,7 @@ impl TypeScriptSyntax {
                         class_name.clone(),
                         decorator,
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -551,7 +600,7 @@ impl TypeScriptSyntax {
                         method_name.clone(),
                         decorator,
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -560,9 +609,11 @@ impl TypeScriptSyntax {
         // Find decorated properties/fields
         let property_nodes = tree.find_nodes_by_kind("property_declaration");
         for property_node in property_nodes {
-            if let Some(property_name) = property_node.child_by_field_name("name")
+            if let Some(property_name) = property_node
+                .child_by_field_name("name")
                 .and_then(|n| n.text().ok())
-                .map(|s| s.to_string()) {
+                .map(|s| s.to_string())
+            {
                 let property_decorators = Self::get_decorators(&property_node, source);
                 for decorator in property_decorators {
                     let ts_node = property_node.inner();
@@ -570,7 +621,7 @@ impl TypeScriptSyntax {
                         property_name.clone(),
                         decorator,
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -579,9 +630,11 @@ impl TypeScriptSyntax {
         // Find decorated public field definitions (another way properties can be defined)
         let public_field_nodes = tree.find_nodes_by_kind("public_field_definition");
         for field_node in public_field_nodes {
-            if let Some(field_name) = field_node.child_by_field_name("name")
+            if let Some(field_name) = field_node
+                .child_by_field_name("name")
                 .and_then(|n| n.text().ok())
-                .map(|s| s.to_string()) {
+                .map(|s| s.to_string())
+            {
                 let field_decorators = Self::get_decorators(&field_node, source);
                 for decorator in field_decorators {
                     let ts_node = field_node.inner();
@@ -589,7 +642,7 @@ impl TypeScriptSyntax {
                         field_name.clone(),
                         decorator,
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -599,7 +652,10 @@ impl TypeScriptSyntax {
     }
 
     /// Find conditional types in a syntax tree
-    pub fn find_conditional_types(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_conditional_types(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut conditional_types = Vec::new();
 
         // Find conditional type expressions
@@ -610,7 +666,7 @@ impl TypeScriptSyntax {
                 conditional_types.push((
                     format!("conditional_type: {}", conditional_text.trim()),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -733,7 +789,8 @@ impl TypeScriptSyntax {
 
         // Check for namespaces
         if !tree.find_nodes_by_kind("namespace_declaration").is_empty()
-            || !tree.find_nodes_by_kind("module_declaration").is_empty() {
+            || !tree.find_nodes_by_kind("module_declaration").is_empty()
+        {
             features.push("Namespaces/Modules".to_string());
         }
 
@@ -799,7 +856,8 @@ mod tests {
         let functions = TypeScriptSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
 
-        let function_names: Vec<&str> = functions.iter().map(|(name, _, _)| name.as_str()).collect();
+        let function_names: Vec<&str> =
+            functions.iter().map(|(name, _, _)| name.as_str()).collect();
         assert!(function_names.contains(&"regularFunction"));
         assert!(function_names.contains(&"arrowFunction"));
         assert!(function_names.contains(&"asyncFunction"));
@@ -849,7 +907,10 @@ mod tests {
         let interfaces = TypeScriptSyntax::find_interfaces(&tree, source);
         assert_eq!(interfaces.len(), 2);
 
-        let interface_names: Vec<&str> = interfaces.iter().map(|(name, _, _)| name.as_str()).collect();
+        let interface_names: Vec<&str> = interfaces
+            .iter()
+            .map(|(name, _, _)| name.as_str())
+            .collect();
         assert!(interface_names.contains(&"User"));
         assert!(interface_names.contains(&"Admin"));
     }
@@ -867,7 +928,10 @@ mod tests {
         let type_aliases = TypeScriptSyntax::find_type_aliases(&tree, source);
         assert_eq!(type_aliases.len(), 2);
 
-        let type_names: Vec<&str> = type_aliases.iter().map(|(name, _, _)| name.as_str()).collect();
+        let type_names: Vec<&str> = type_aliases
+            .iter()
+            .map(|(name, _, _)| name.as_str())
+            .collect();
         assert!(type_names.contains(&"StringOrNumber"));
         assert!(type_names.contains(&"UserCallback"));
     }

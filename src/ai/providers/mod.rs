@@ -1,44 +1,44 @@
 //! AI provider implementations
 
-use crate::ai::types::{AIProvider, AIRequest, AIResponse, AICapability};
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::{AIError, AIResult};
+use crate::ai::types::{AICapability, AIProvider, AIRequest, AIResponse};
 use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
-pub mod openai;
 pub mod anthropic;
-pub mod google;
 pub mod azure;
+pub mod google;
+pub mod groq;
 pub mod local;
 pub mod ollama;
-pub mod groq;
+pub mod openai;
 
 /// Provider implementation trait
 #[async_trait]
 pub trait AIProviderImpl: Send + Sync {
     /// Get the provider type
     fn provider(&self) -> AIProvider;
-    
+
     /// Get provider capabilities
     fn capabilities(&self) -> Vec<AICapability>;
-    
+
     /// Validate connection and authentication
     async fn validate_connection(&self) -> AIResult<()>;
-    
+
     /// Process an AI request
     async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse>;
-    
+
     /// Check if a feature is supported
     fn supports_feature(&self, feature: crate::ai::types::AIFeature) -> bool {
         self.capabilities()
             .iter()
             .any(|cap| cap.feature == feature && cap.supported)
     }
-    
+
     /// Get the best model for a specific feature
     fn best_model_for_feature(&self, feature: crate::ai::types::AIFeature) -> Option<String>;
-    
+
     /// Get rate limit information
     fn rate_limit_info(&self) -> Option<RateLimitInfo>;
 }
@@ -59,11 +59,12 @@ pub async fn create_provider(
     config: ProviderConfig,
 ) -> AIResult<Box<dyn AIProviderImpl>> {
     if !config.enabled {
-        return Err(AIError::configuration(
-            format!("Provider {:?} is disabled", provider)
-        ));
+        return Err(AIError::configuration(format!(
+            "Provider {:?} is disabled",
+            provider
+        )));
     }
-    
+
     match provider {
         AIProvider::OpenAI => {
             let provider = openai::OpenAIProvider::new(config).await?;
@@ -113,7 +114,7 @@ impl AIProviderImpl for MockProvider {
     fn provider(&self) -> AIProvider {
         self.provider
     }
-    
+
     fn capabilities(&self) -> Vec<AICapability> {
         use crate::ai::types::AIFeature;
 
@@ -144,32 +145,41 @@ impl AIProviderImpl for MockProvider {
             },
         ]
     }
-    
+
     async fn validate_connection(&self) -> AIResult<()> {
         // Mock validation always succeeds
         Ok(())
     }
-    
+
     async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
-        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use crate::ai::types::{ResponseMetadata, TokenUsage};
         use std::time::{Duration, SystemTime};
-        
+
         // Simulate processing delay
         tokio::time::sleep(Duration::from_millis(100)).await;
-        
+
         let content = match request.feature {
             crate::ai::types::AIFeature::CodeExplanation => {
-                format!("Mock explanation for: {}", request.content.chars().take(50).collect::<String>())
+                format!(
+                    "Mock explanation for: {}",
+                    request.content.chars().take(50).collect::<String>()
+                )
             }
             crate::ai::types::AIFeature::SecurityAnalysis => {
-                format!("Mock security analysis for: {}", request.content.chars().take(50).collect::<String>())
+                format!(
+                    "Mock security analysis for: {}",
+                    request.content.chars().take(50).collect::<String>()
+                )
             }
             crate::ai::types::AIFeature::RefactoringSuggestions => {
-                format!("Mock refactoring suggestions for: {}", request.content.chars().take(50).collect::<String>())
+                format!(
+                    "Mock refactoring suggestions for: {}",
+                    request.content.chars().take(50).collect::<String>()
+                )
             }
             _ => format!("Mock response for {:?}", request.feature),
         };
-        
+
         Ok(AIResponse {
             feature: request.feature,
             content,
@@ -187,11 +197,11 @@ impl AIProviderImpl for MockProvider {
             },
         })
     }
-    
+
     fn best_model_for_feature(&self, _feature: crate::ai::types::AIFeature) -> Option<String> {
         Some(self.config.default_model.clone())
     }
-    
+
     fn rate_limit_info(&self) -> Option<RateLimitInfo> {
         Some(RateLimitInfo {
             requests_per_minute: self.config.rate_limit.requests_per_minute,

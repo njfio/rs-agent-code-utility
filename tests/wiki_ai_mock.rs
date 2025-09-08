@@ -1,12 +1,14 @@
 use rust_tree_sitter::wiki::{WikiConfig, WikiConfigBuilder, WikiGenerator};
 use rust_tree_sitter::Result;
-use tempfile::TempDir;
 use std::fs;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 fn write_rs(dir: &PathBuf, rel: &str, content: &str) -> Result<()> {
     let p = dir.join(rel);
-    if let Some(parent) = p.parent() { fs::create_dir_all(parent)?; }
+    if let Some(parent) = p.parent() {
+        fs::create_dir_all(parent)?;
+    }
     fs::write(p, content)?;
     Ok(())
 }
@@ -35,7 +37,10 @@ fn index_and_file_pages_include_ai_mock_sections() -> Result<()> {
 
     // index.html contains an AI block
     let index = fs::read_to_string(out.path().join("index.html"))?;
-    assert!(index.contains("AI Commentary"), "Index should include AI commentary header");
+    assert!(
+        index.contains("AI Commentary"),
+        "Index should include AI commentary header"
+    );
 
     // a file page contains specific AI subsections
     let pages = out.path().join("pages");
@@ -43,11 +48,19 @@ fn index_and_file_pages_include_ai_mock_sections() -> Result<()> {
     for e in fs::read_dir(&pages)? {
         let e = e?;
         let c = fs::read_to_string(e.path())?;
-        if c.contains("AI Commentary") && c.contains("Module Overview") && c.contains("Function Docs") && c.contains("Refactoring Suggestions") && c.contains("Security Insights") {
+        if c.contains("AI Commentary")
+            && c.contains("Module Overview")
+            && c.contains("Function Docs")
+            && c.contains("Refactoring Suggestions")
+            && c.contains("Security Insights")
+        {
             found = Some(c);
             break;
         }
     }
-    assert!(found.is_some(), "File page should include all AI insight sections");
+    assert!(
+        found.is_some(),
+        "File page should include all AI insight sections"
+    );
     Ok(())
 }

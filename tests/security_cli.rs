@@ -66,4 +66,3 @@ fn cli_filters_by_severity() -> Result<(), Box<dyn std::error::Error>> {
     assert!(high_total <= low_total);
     Ok(())
 }
-

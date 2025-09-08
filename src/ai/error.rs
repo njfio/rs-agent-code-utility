@@ -1,7 +1,7 @@
 //! AI service error types and handling
 
-use thiserror::Error;
 use std::time::Duration;
+use thiserror::Error;
 
 /// AI service result type
 pub type AIResult<T> = Result<T, AIError>;
@@ -23,7 +23,10 @@ pub enum AIError {
 
     /// Rate limiting errors
     #[error("Rate limit exceeded for provider {provider}. Retry after {retry_after:?}")]
-    RateLimit { provider: String, retry_after: Option<Duration> },
+    RateLimit {
+        provider: String,
+        retry_after: Option<Duration>,
+    },
 
     /// Network/HTTP errors
     #[error("Network error: {message}")]
@@ -78,14 +81,16 @@ pub enum AIError {
 impl AIError {
     /// Create a configuration error
     pub fn configuration<S: Into<String>>(message: S) -> Self {
-        Self::Configuration { message: message.into() }
+        Self::Configuration {
+            message: message.into(),
+        }
     }
 
     /// Create a provider error
     pub fn provider<S1: Into<String>, S2: Into<String>>(provider: S1, message: S2) -> Self {
         Self::Provider {
             provider: provider.into(),
-            message: message.into()
+            message: message.into(),
         }
     }
 
@@ -93,46 +98,55 @@ impl AIError {
     pub fn authentication<S1: Into<String>, S2: Into<String>>(provider: S1, message: S2) -> Self {
         Self::Authentication {
             provider: provider.into(),
-            message: message.into()
+            message: message.into(),
         }
     }
 
     /// Create a rate limit error
     pub fn rate_limit<S: Into<String>>(provider: S, retry_after: Option<Duration>) -> Self {
-        Self::RateLimit { 
-            provider: provider.into(), 
-            retry_after 
+        Self::RateLimit {
+            provider: provider.into(),
+            retry_after,
         }
     }
 
     /// Create a network error
     pub fn network<S: Into<String>>(message: S) -> Self {
-        Self::Network { message: message.into() }
+        Self::Network {
+            message: message.into(),
+        }
     }
 
     /// Create an invalid request error
     pub fn invalid_request<S: Into<String>>(message: S) -> Self {
-        Self::InvalidRequest { message: message.into() }
+        Self::InvalidRequest {
+            message: message.into(),
+        }
     }
 
     /// Create a response parsing error
     pub fn response_parsing<S: Into<String>>(message: S) -> Self {
-        Self::ResponseParsing { message: message.into() }
+        Self::ResponseParsing {
+            message: message.into(),
+        }
     }
 
     /// Create a model unavailable error
     pub fn model_unavailable<S1: Into<String>, S2: Into<String>>(model: S1, provider: S2) -> Self {
         Self::ModelUnavailable {
             model: model.into(),
-            provider: provider.into()
+            provider: provider.into(),
         }
     }
 
     /// Create a feature not supported error
-    pub fn feature_not_supported<S1: Into<String>, S2: Into<String>>(feature: S1, provider: S2) -> Self {
+    pub fn feature_not_supported<S1: Into<String>, S2: Into<String>>(
+        feature: S1,
+        provider: S2,
+    ) -> Self {
         Self::FeatureNotSupported {
             feature: feature.into(),
-            provider: provider.into()
+            provider: provider.into(),
         }
     }
 
@@ -143,7 +157,9 @@ impl AIError {
 
     /// Create a cache error
     pub fn cache<S: Into<String>>(message: S) -> Self {
-        Self::Cache { message: message.into() }
+        Self::Cache {
+            message: message.into(),
+        }
     }
 
     /// Create a timeout error
@@ -153,16 +169,19 @@ impl AIError {
 
     /// Create an internal error
     pub fn internal<S: Into<String>>(message: S) -> Self {
-        Self::Internal { message: message.into() }
+        Self::Internal {
+            message: message.into(),
+        }
     }
 
     /// Check if the error is retryable
     pub fn is_retryable(&self) -> bool {
-        matches!(self, 
-            AIError::Network { .. } |
-            AIError::RateLimit { .. } |
-            AIError::Timeout { .. } |
-            AIError::Internal { .. }
+        matches!(
+            self,
+            AIError::Network { .. }
+                | AIError::RateLimit { .. }
+                | AIError::Timeout { .. }
+                | AIError::Internal { .. }
         )
     }
 

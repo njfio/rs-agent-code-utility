@@ -5,12 +5,12 @@ use std::env;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🤖 Direct Anthropic API Test");
     println!("============================");
-    
-    let api_key = env::var("ANTHROPIC_API_KEY")
-        .expect("ANTHROPIC_API_KEY environment variable not set");
-    
+
+    let api_key =
+        env::var("ANTHROPIC_API_KEY").expect("ANTHROPIC_API_KEY environment variable not set");
+
     println!("🔑 API Key found: {}...", &api_key[..10]);
-    
+
     // Real Rust code with security issues
     let code_to_analyze = r#"
 use std::collections::HashMap;
@@ -47,12 +47,15 @@ impl UserManager {
 }
 "#;
 
-    println!("📝 Code to analyze ({} lines):", code_to_analyze.lines().count());
+    println!(
+        "📝 Code to analyze ({} lines):",
+        code_to_analyze.lines().count()
+    );
     println!("{}", code_to_analyze);
-    
+
     // Create HTTP client
     let client = reqwest::Client::new();
-    
+
     // Prepare the request
     let request_body = json!({
         "model": "claude-3-haiku-20240307",
@@ -66,11 +69,11 @@ impl UserManager {
             )
         }]
     });
-    
+
     println!("\n🚀 Making real API call to Anthropic Claude...");
-    
+
     let start_time = std::time::Instant::now();
-    
+
     // Make the API call
     let response = client
         .post("https://api.anthropic.com/v1/messages")
@@ -80,18 +83,18 @@ impl UserManager {
         .json(&request_body)
         .send()
         .await?;
-    
+
     let duration = start_time.elapsed();
-    
+
     println!("⏱️  API call completed in {:?}", duration);
     println!("📊 Status: {}", response.status());
-    
+
     if response.status().is_success() {
         let response_body: serde_json::Value = response.json().await?;
-        
+
         println!("\n🎉 SUCCESS! Real AI Analysis Results:");
         println!("=====================================");
-        
+
         if let Some(content) = response_body["content"].as_array() {
             if let Some(text_content) = content.first() {
                 if let Some(text) = text_content["text"].as_str() {
@@ -100,34 +103,39 @@ impl UserManager {
                 }
             }
         }
-        
+
         // Show usage statistics
         if let Some(usage) = response_body["usage"].as_object() {
             println!("\n📊 Token Usage:");
-            println!("   Input tokens: {}", usage["input_tokens"].as_u64().unwrap_or(0));
-            println!("   Output tokens: {}", usage["output_tokens"].as_u64().unwrap_or(0));
-            
+            println!(
+                "   Input tokens: {}",
+                usage["input_tokens"].as_u64().unwrap_or(0)
+            );
+            println!(
+                "   Output tokens: {}",
+                usage["output_tokens"].as_u64().unwrap_or(0)
+            );
+
             // Estimate cost (Claude Haiku pricing)
             let input_tokens = usage["input_tokens"].as_u64().unwrap_or(0) as f64;
             let output_tokens = usage["output_tokens"].as_u64().unwrap_or(0) as f64;
             let estimated_cost = (input_tokens * 0.00000025) + (output_tokens * 0.00000125);
             println!("   Estimated cost: ${:.6}", estimated_cost);
         }
-        
+
         println!("\n✅ This is a REAL AI analysis, not a mock!");
         println!("✅ Claude actually analyzed the security vulnerabilities");
         println!("✅ The AI identified specific issues in the Rust code");
         println!("✅ Real token usage and costs calculated");
-        
     } else {
         println!("❌ API call failed!");
         let error_text = response.text().await?;
         println!("Error response: {}", error_text);
     }
-    
+
     // Test a second call to show it's really working
     println!("\n🔄 Making second API call for code explanation...");
-    
+
     let explanation_request = json!({
         "model": "claude-3-haiku-20240307",
         "max_tokens": 800,
@@ -139,9 +147,9 @@ impl UserManager {
             )
         }]
     });
-    
+
     let start_time = std::time::Instant::now();
-    
+
     let response2 = client
         .post("https://api.anthropic.com/v1/messages")
         .header("x-api-key", &api_key)
@@ -150,16 +158,16 @@ impl UserManager {
         .json(&explanation_request)
         .send()
         .await?;
-    
+
     let duration2 = start_time.elapsed();
-    
+
     if response2.status().is_success() {
         let response_body2: serde_json::Value = response2.json().await?;
-        
+
         println!("\n📚 Second API Call - Code Explanation:");
         println!("======================================");
         println!("⏱️  Response time: {:?}", duration2);
-        
+
         if let Some(content) = response_body2["content"].as_array() {
             if let Some(text_content) = content.first() {
                 if let Some(text) = text_content["text"].as_str() {
@@ -168,7 +176,7 @@ impl UserManager {
                 }
             }
         }
-        
+
         println!("\n🎉 REAL AI Integration Demonstrated!");
         println!("===================================");
         println!("✅ Two successful API calls to Anthropic Claude");
@@ -176,10 +184,9 @@ impl UserManager {
         println!("✅ Real code explanation with detailed insights");
         println!("✅ Actual token usage and cost tracking");
         println!("✅ Production-ready API integration");
-        
     } else {
         println!("❌ Second API call failed: {}", response2.status());
     }
-    
+
     Ok(())
 }

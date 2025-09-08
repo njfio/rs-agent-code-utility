@@ -1,14 +1,14 @@
 //! CLI module for the rust-tree-sitter library
-//! 
+//!
 //! This module provides a clean separation of CLI concerns with modular command handling.
 
 pub mod commands;
 pub mod error;
 pub mod output;
-pub mod utils;
-pub mod schemas;
 pub mod sarif;
 pub mod sbom;
+pub mod schemas;
+pub mod utils;
 // pub mod watch; // TODO: Implement watch module
 
 use clap::{Parser, Subcommand};
@@ -33,15 +33,15 @@ pub enum Commands {
         /// Directory to analyze
         #[arg(value_name = "PATH")]
         path: PathBuf,
-        
+
         /// Output format (table, json, summary)
         #[arg(short, long, default_value = "table")]
         format: String,
-        
+
         /// Maximum file size to process (in KB)
         #[arg(long, default_value = "1024")]
         max_size: usize,
-        
+
         /// Maximum depth to traverse
         #[arg(long, default_value = "20")]
         max_depth: usize,
@@ -49,23 +49,23 @@ pub enum Commands {
         /// Analysis depth: basic, deep, full
         #[arg(long, default_value = "full")]
         depth: String,
-        
+
         /// Include hidden files and directories
         #[arg(long)]
         include_hidden: bool,
-        
+
         /// Exclude directories (comma-separated)
         #[arg(long)]
         exclude_dirs: Option<String>,
-        
+
         /// Include only specific file extensions (comma-separated)
         #[arg(long)]
         include_exts: Option<String>,
-        
+
         /// Save results to file
         #[arg(short, long)]
         output: Option<PathBuf>,
-        
+
         /// Show detailed symbol information
         #[arg(long)]
         detailed: bool,
@@ -86,17 +86,17 @@ pub enum Commands {
         #[arg(long, default_value = "1")]
         schema_version: String,
     },
-    
+
     /// Query code patterns across the codebase
     Query {
         /// Directory to search
         #[arg(value_name = "PATH")]
         path: PathBuf,
-        
+
         /// Tree-sitter query pattern
         #[arg(short, long)]
         pattern: String,
-        
+
         /// Language to query (rust, javascript, python, c, cpp)
         #[arg(short, long)]
         language: String,
@@ -104,45 +104,45 @@ pub enum Commands {
         /// Prefilter files by substring before parsing
         #[arg(long)]
         prefilter: Option<String>,
-        
+
         /// Show context lines around matches
         #[arg(short, long, default_value = "3")]
         context: usize,
-        
+
         /// Output format (table, json)
         #[arg(short, long, default_value = "table")]
         format: String,
     },
-    
+
     /// Show statistics about a codebase
     Stats {
         /// Directory to analyze
         #[arg(value_name = "PATH")]
         path: PathBuf,
-        
+
         /// Show top N files by various metrics
         #[arg(long, default_value = "10")]
         top: usize,
     },
-    
+
     /// Find specific symbols (functions, classes, etc.)
     Find {
         /// Directory to search
         #[arg(value_name = "PATH")]
         path: PathBuf,
-        
+
         /// Symbol name to find (supports wildcards)
         #[arg(short, long)]
         name: Option<String>,
-        
+
         /// Symbol type (function, class, struct, enum)
         #[arg(short, long)]
         symbol_type: Option<String>,
-        
+
         /// Language to search in
         #[arg(short, long)]
         language: Option<String>,
-        
+
         /// Show only public symbols
         #[arg(long)]
         public_only: bool,
@@ -166,10 +166,10 @@ pub enum Commands {
         #[arg(long, default_value = "1")]
         schema_version: String,
     },
-    
+
     /// Show supported languages and their capabilities
     Languages,
-    
+
     /// Interactive mode for exploring codebases
     Interactive {
         /// Directory to explore
@@ -295,7 +295,7 @@ pub enum Commands {
         /// Schema version to print
         #[arg(long, default_value = "1")]
         schema_version: String,
-        
+
         /// Enable heavy security scanning during initial analysis (rarely needed)
         #[arg(long, default_value_t = false)]
         enable_security: bool,
@@ -458,6 +458,6 @@ pub enum Commands {
 /// Execute trait for command handling
 pub trait Execute {
     type Error;
-    
+
     fn execute(&self) -> Result<(), Self::Error>;
 }

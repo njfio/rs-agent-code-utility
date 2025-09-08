@@ -1,15 +1,15 @@
 //! Real database infrastructure for caching and persistence
-//! 
+//!
 //! Provides SQLite-based storage for vulnerability data, analysis results,
 //! and caching with proper schema management and migrations.
 
-use sqlx::{SqlitePool, migrate::MigrateDatabase, Sqlite};
-use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
-use std::path::Path;
-use tracing::{info, debug};
 use crate::infrastructure::config::DatabaseConfig;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::{migrate::MigrateDatabase, Sqlite, SqlitePool};
+use std::path::Path;
+use tracing::{debug, info};
+use uuid::Uuid;
 
 /// Database manager for handling all database operations
 #[derive(Clone)]
@@ -69,7 +69,7 @@ impl DatabaseManager {
                 std::fs::create_dir_all(parent).map_err(|e| {
                     sqlx::Error::Io(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        format!("Failed to create database directory: {}", e)
+                        format!("Failed to create database directory: {}", e),
                     ))
                 })?;
             }
@@ -97,7 +97,8 @@ impl DatabaseManager {
         info!("Running database migrations");
 
         // Create vulnerabilities table
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             CREATE TABLE IF NOT EXISTS vulnerabilities (
                 id TEXT PRIMARY KEY,
                 cve_id TEXT NOT NULL UNIQUE,
@@ -113,12 +114,14 @@ impl DatabaseManager {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
-        "#)
+        "#,
+        )
         .execute(&self.pool)
         .await?;
 
         // Create analysis cache table
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             CREATE TABLE IF NOT EXISTS analysis_cache (
                 id TEXT PRIMARY KEY,
                 file_path TEXT NOT NULL,
@@ -128,12 +131,14 @@ impl DatabaseManager {
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL
             )
-        "#)
+        "#,
+        )
         .execute(&self.pool)
         .await?;
 
         // Create secret patterns table
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             CREATE TABLE IF NOT EXISTS secret_patterns (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL UNIQUE,
@@ -144,7 +149,8 @@ impl DatabaseManager {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
-        "#)
+        "#,
+        )
         .execute(&self.pool)
         .await?;
 
@@ -153,9 +159,11 @@ impl DatabaseManager {
             .execute(&self.pool)
             .await?;
 
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_vulnerabilities_cve ON vulnerabilities(cve_id)")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_vulnerabilities_cve ON vulnerabilities(cve_id)",
+        )
+        .execute(&self.pool)
+        .await?;
 
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_cache_file_hash ON analysis_cache(file_hash)")
             .execute(&self.pool)
@@ -178,21 +186,43 @@ impl DatabaseManager {
             ("AWS Access Key", r"AKIA[0-9A-Z]{16}", None, 0.9),
             ("AWS Secret Key", r"[0-9a-zA-Z/+]{40}", Some(4.5), 0.8),
             ("GitHub Token", r"ghp_[0-9a-zA-Z]{36}", None, 0.95),
-            ("API Key Generic", r#"[aA][pP][iI][_]?[kK][eE][yY].*['"][0-9a-zA-Z]{32,45}['"]"#, Some(4.0), 0.7),
-            ("JWT Token", r"eyJ[0-9a-zA-Z_-]*\.[0-9a-zA-Z_-]*\.[0-9a-zA-Z_-]*", None, 0.85),
-            ("Private Key", r"-----BEGIN [A-Z ]+PRIVATE KEY-----", None, 0.95),
-            ("Database URL", r"(mysql|postgres|mongodb)://[^\s]+", None, 0.8),
+            (
+                "API Key Generic",
+                r#"[aA][pP][iI][_]?[kK][eE][yY].*['"][0-9a-zA-Z]{32,45}['"]"#,
+                Some(4.0),
+                0.7,
+            ),
+            (
+                "JWT Token",
+                r"eyJ[0-9a-zA-Z_-]*\.[0-9a-zA-Z_-]*\.[0-9a-zA-Z_-]*",
+                None,
+                0.85,
+            ),
+            (
+                "Private Key",
+                r"-----BEGIN [A-Z ]+PRIVATE KEY-----",
+                None,
+                0.95,
+            ),
+            (
+                "Database URL",
+                r"(mysql|postgres|mongodb)://[^\s]+",
+                None,
+                0.8,
+            ),
         ];
 
         for (name, pattern, entropy_threshold, confidence) in patterns {
             let id = Uuid::new_v4().to_string();
             let now = Utc::now();
 
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 INSERT OR IGNORE INTO secret_patterns 
                 (id, name, pattern, entropy_threshold, confidence, enabled, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 1, ?, ?)
-            "#)
+            "#,
+            )
             .bind(&id)
             .bind(name)
             .bind(pattern)
@@ -209,12 +239,14 @@ impl DatabaseManager {
 
     /// Store vulnerability data
     pub async fn store_vulnerability(&self, vuln: &VulnerabilityRecord) -> Result<(), sqlx::Error> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT OR REPLACE INTO vulnerabilities 
             (id, cve_id, package_name, affected_versions, severity, cvss_score, description,
              published_date, last_modified, "references", cwe_ids, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#)
+        "#,
+        )
         .bind(&vuln.id)
         .bind(&vuln.cve_id)
         .bind(&vuln.package_name)
@@ -236,9 +268,12 @@ impl DatabaseManager {
     }
 
     /// Get vulnerabilities for a package
-    pub async fn get_vulnerabilities_for_package(&self, package_name: &str) -> Result<Vec<VulnerabilityRecord>, sqlx::Error> {
+    pub async fn get_vulnerabilities_for_package(
+        &self,
+        package_name: &str,
+    ) -> Result<Vec<VulnerabilityRecord>, sqlx::Error> {
         let rows = sqlx::query_as::<_, VulnerabilityRecord>(
-            "SELECT * FROM vulnerabilities WHERE package_name = ? ORDER BY published_date DESC"
+            "SELECT * FROM vulnerabilities WHERE package_name = ? ORDER BY published_date DESC",
         )
         .bind(package_name)
         .fetch_all(&self.pool)
@@ -248,12 +283,17 @@ impl DatabaseManager {
     }
 
     /// Store analysis result in cache
-    pub async fn store_analysis_cache(&self, entry: &AnalysisCacheEntry) -> Result<(), sqlx::Error> {
-        sqlx::query(r#"
+    pub async fn store_analysis_cache(
+        &self,
+        entry: &AnalysisCacheEntry,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
             INSERT OR REPLACE INTO analysis_cache 
             (id, file_path, file_hash, analysis_type, result_data, created_at, expires_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        "#)
+        "#,
+        )
         .bind(&entry.id)
         .bind(&entry.file_path)
         .bind(&entry.file_hash)
@@ -268,9 +308,13 @@ impl DatabaseManager {
     }
 
     /// Get cached analysis result
-    pub async fn get_analysis_cache(&self, file_hash: &str, analysis_type: &str) -> Result<Option<AnalysisCacheEntry>, sqlx::Error> {
+    pub async fn get_analysis_cache(
+        &self,
+        file_hash: &str,
+        analysis_type: &str,
+    ) -> Result<Option<AnalysisCacheEntry>, sqlx::Error> {
         let now = Utc::now();
-        
+
         let row = sqlx::query_as::<_, AnalysisCacheEntry>(
             "SELECT * FROM analysis_cache WHERE file_hash = ? AND analysis_type = ? AND expires_at > ?"
         )
@@ -286,7 +330,7 @@ impl DatabaseManager {
     /// Get all secret patterns
     pub async fn get_secret_patterns(&self) -> Result<Vec<SecretPattern>, sqlx::Error> {
         let rows = sqlx::query_as::<_, SecretPattern>(
-            "SELECT * FROM secret_patterns WHERE enabled = 1 ORDER BY confidence DESC"
+            "SELECT * FROM secret_patterns WHERE enabled = 1 ORDER BY confidence DESC",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -297,7 +341,7 @@ impl DatabaseManager {
     /// Clean expired cache entries
     pub async fn clean_expired_cache(&self) -> Result<u64, sqlx::Error> {
         let now = Utc::now();
-        
+
         let result = sqlx::query("DELETE FROM analysis_cache WHERE expires_at < ?")
             .bind(now.to_rfc3339())
             .execute(&self.pool)
@@ -321,9 +365,10 @@ impl DatabaseManager {
             .fetch_one(&self.pool)
             .await?;
 
-        let pattern_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM secret_patterns WHERE enabled = 1")
-            .fetch_one(&self.pool)
-            .await?;
+        let pattern_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM secret_patterns WHERE enabled = 1")
+                .fetch_one(&self.pool)
+                .await?;
 
         Ok(DatabaseStats {
             vulnerability_count: vuln_count as u64,

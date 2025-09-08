@@ -1,9 +1,11 @@
 //! OpenAI provider implementation
 
-use crate::ai::types::{AIProvider, AIRequest, AIResponse, AICapability, AIFeature, TokenUsage, ResponseMetadata};
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::{AIError, AIResult};
 use crate::ai::providers::{AIProviderImpl, RateLimitInfo};
+use crate::ai::types::{
+    AICapability, AIFeature, AIProvider, AIRequest, AIResponse, ResponseMetadata, TokenUsage,
+};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
@@ -27,13 +29,14 @@ struct OpenAIRequest {
 }
 
 /// OpenAI message structure
-#[derive(Debug, Serialize, Deserialize)]
-struct OpenAIMessage {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OpenAIMessage {
     role: String,
     content: String,
 }
 
 /// OpenAI API response structure
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct OpenAIResponse {
     id: String,
@@ -45,43 +48,49 @@ struct OpenAIResponse {
 }
 
 /// OpenAI choice structure
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
-struct OpenAIChoice {
-    index: usize,
-    message: OpenAIMessage,
-    finish_reason: Option<String>,
+pub struct OpenAIChoice {
+    pub index: usize,
+    pub message: OpenAIMessage,
+    pub finish_reason: Option<String>,
 }
 
 /// OpenAI usage structure
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
-struct OpenAIUsage {
-    prompt_tokens: usize,
-    completion_tokens: usize,
-    total_tokens: usize,
+pub struct OpenAIUsage {
+    pub prompt_tokens: usize,
+    pub completion_tokens: usize,
+    pub total_tokens: usize,
 }
 
 impl OpenAIProvider {
     pub async fn new(config: ProviderConfig) -> AIResult<Self> {
-        let api_key = config.api_key
+        let api_key = config
+            .api_key
             .as_ref()
             .ok_or_else(|| AIError::configuration("OpenAI API key is required"))?
             .clone();
-        
-        let base_url = config.base_url
+
+        let base_url = config
+            .base_url
             .clone()
             .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
-        
+
         #[cfg(feature = "net")]
         let client = Some(
             reqwest::Client::builder()
                 .timeout(config.timeout)
                 .build()
-                .map_err(|e| AIError::configuration(format!("Failed to create HTTP client: {}", e)))?
+                .map_err(|e| {
+                    AIError::configuration(format!("Failed to create HTTP client: {}", e))
+                })?,
         );
-        
+
         #[cfg(not(feature = "net"))]
         let client = None;
-        
+
         Ok(Self {
             config,
             client,
@@ -89,7 +98,7 @@ impl OpenAIProvider {
             api_key,
         })
     }
-    
+
     fn create_system_prompt(&self, feature: AIFeature) -> String {
         match feature {
             AIFeature::CodeExplanation => {
@@ -136,12 +145,14 @@ impl OpenAIProvider {
             }
         }
     }
-    
+
     #[cfg(feature = "net")]
     async fn make_request(&self, openai_request: OpenAIRequest) -> AIResult<OpenAIResponse> {
-        let client = self.client.as_ref()
+        let client = self
+            .client
+            .as_ref()
             .ok_or_else(|| AIError::configuration("HTTP client not available"))?;
-        
+
         let response = client
             .post(&format!("{}/chat/completions", self.base_url))
             .header("Authorization", format!("Bearer {}", self.api_key))
@@ -150,26 +161,34 @@ impl OpenAIProvider {
             .send()
             .await
             .map_err(|e| AIError::network(format!("Request failed: {}", e)))?;
-        
+
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await
+            let error_text = response
+                .text()
+                .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            
+
             return match status.as_u16() {
                 401 => Err(AIError::authentication("OpenAI", "Invalid API key")),
                 429 => Err(AIError::rate_limit("OpenAI", Some(Duration::from_secs(60)))),
-                _ => Err(AIError::provider("OpenAI", format!("HTTP {}: {}", status, error_text))),
+                _ => Err(AIError::provider(
+                    "OpenAI",
+                    format!("HTTP {}: {}", status, error_text),
+                )),
             };
         }
-        
-        response.json::<OpenAIResponse>().await
-            .map_err(|e| AIError::response_parsing(format!("Failed to parse OpenAI response: {}", e)))
+
+        response.json::<OpenAIResponse>().await.map_err(|e| {
+            AIError::response_parsing(format!("Failed to parse OpenAI response: {}", e))
+        })
     }
-    
+
     #[cfg(not(feature = "net"))]
     async fn make_request(&self, _openai_request: OpenAIRequest) -> AIResult<OpenAIResponse> {
-        Err(AIError::configuration("Network features not enabled. Enable 'net' feature to use OpenAI provider."))
+        Err(AIError::configuration(
+            "Network features not enabled. Enable 'net' feature to use OpenAI provider.",
+        ))
     }
 }
 
@@ -178,7 +197,7 @@ impl AIProviderImpl for OpenAIProvider {
     fn provider(&self) -> AIProvider {
         AIProvider::OpenAI
     }
-    
+
     fn capabilities(&self) -> Vec<AICapability> {
         vec![
             AICapability {
@@ -231,7 +250,7 @@ impl AIProviderImpl for OpenAIProvider {
             },
         ]
     }
-    
+
     async fn validate_connection(&self) -> AIResult<()> {
         // Create a simple test request
         let test_request = OpenAIRequest {
@@ -244,16 +263,17 @@ impl AIProviderImpl for OpenAIProvider {
             temperature: Some(0.0),
             stream: false,
         };
-        
+
         self.make_request(test_request).await?;
         Ok(())
     }
-    
+
     async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
         let system_prompt = self.create_system_prompt(request.feature);
-        
+
         let openai_request = OpenAIRequest {
-            model: request.model_preferences
+            model: request
+                .model_preferences
                 .as_ref()
                 .and_then(|models| models.first())
                 .cloned()
@@ -272,15 +292,19 @@ impl AIProviderImpl for OpenAIProvider {
             temperature: request.temperature,
             stream: request.stream,
         };
-        
+
         let start_time = SystemTime::now();
         let openai_response = self.make_request(openai_request).await?;
-        let processing_time = start_time.elapsed()
+        let processing_time = start_time
+            .elapsed()
             .unwrap_or_else(|_| Duration::from_millis(0));
-        
-        let choice = openai_response.choices.into_iter().next()
+
+        let choice = openai_response
+            .choices
+            .into_iter()
+            .next()
             .ok_or_else(|| AIError::response_parsing("No choices in OpenAI response"))?;
-        
+
         Ok(AIResponse {
             feature: request.feature,
             content: choice.message.content,
@@ -301,23 +325,21 @@ impl AIProviderImpl for OpenAIProvider {
             },
         })
     }
-    
+
     fn best_model_for_feature(&self, feature: AIFeature) -> Option<String> {
         // Return the best OpenAI model for each feature
         match feature {
             AIFeature::CodeExplanation | AIFeature::RefactoringSuggestions => {
                 Some("gpt-4".to_string())
             }
-            AIFeature::SecurityAnalysis | AIFeature::QualityAssessment => {
-                Some("gpt-4".to_string())
-            }
+            AIFeature::SecurityAnalysis | AIFeature::QualityAssessment => Some("gpt-4".to_string()),
             AIFeature::DocumentationGeneration | AIFeature::TestGeneration => {
                 Some("gpt-3.5-turbo".to_string())
             }
             _ => Some(self.config.default_model.clone()),
         }
     }
-    
+
     fn rate_limit_info(&self) -> Option<RateLimitInfo> {
         Some(RateLimitInfo {
             requests_per_minute: self.config.rate_limit.requests_per_minute,

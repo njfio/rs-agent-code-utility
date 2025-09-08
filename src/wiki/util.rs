@@ -16,7 +16,7 @@ pub(super) fn sanitize_filename(p: &Path) -> String {
             // Path separators and forbidden characters across platforms
             '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => tmp.push('_'),
             // Control characters are removed
-            c if c.is_control() => {},
+            c if c.is_control() => {}
             // Normalize whitespace to underscore
             c if c.is_whitespace() => tmp.push('_'),
             // Allow common safe characters
@@ -32,7 +32,10 @@ pub(super) fn sanitize_filename(p: &Path) -> String {
     let mut prev_us = false;
     for ch in tmp.chars() {
         if ch == '_' {
-            if !prev_us { collapsed.push('_'); prev_us = true; }
+            if !prev_us {
+                collapsed.push('_');
+                prev_us = true;
+            }
         } else {
             collapsed.push(ch);
             prev_us = false;
@@ -40,8 +43,13 @@ pub(super) fn sanitize_filename(p: &Path) -> String {
     }
 
     // 3) Trim leading/trailing underscores and trailing dots/spaces (Windows invalid)
-    let mut collapsed = collapsed.trim_matches('_').trim_end_matches(['.', ' ']).to_string();
-    if collapsed.is_empty() { collapsed = "file".to_string(); }
+    let mut collapsed = collapsed
+        .trim_matches('_')
+        .trim_end_matches(['.', ' '])
+        .to_string();
+    if collapsed.is_empty() {
+        collapsed = "file".to_string();
+    }
 
     // 4) Avoid reserved Windows device names for the base portion
     let (base, ext) = match collapsed.rsplit_once('.') {
@@ -51,21 +59,34 @@ pub(super) fn sanitize_filename(p: &Path) -> String {
     let mut base = base;
     let upper = base.to_ascii_uppercase();
     let reserved = [
-        "CON", "PRN", "AUX", "NUL",
-        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     ];
-    if reserved.contains(&upper.as_str()) { base.push_str("_file"); }
+    if reserved.contains(&upper.as_str()) {
+        base.push_str("_file");
+    }
 
     // 5) Enforce maximum length with a stable hash suffix if truncated
-    let mut out = if ext.is_empty() { base.clone() } else { format!("{}{}", base, ext) };
+    let mut out = if ext.is_empty() {
+        base.clone()
+    } else {
+        format!("{}{}", base, ext)
+    };
     if out.len() > MAX_SAFE_NAME_LEN {
         let hash = format!("{:08x}", crc32fast::hash(raw.as_bytes()));
         let keep = MAX_SAFE_NAME_LEN.saturating_sub(hash.len() + 1 + ext.len());
-        let mut truncated = if base.len() > keep { base[..keep].to_string() } else { base.clone() };
+        let mut truncated = if base.len() > keep {
+            base[..keep].to_string()
+        } else {
+            base.clone()
+        };
         truncated.push('_');
         truncated.push_str(&hash);
-        out = if ext.is_empty() { truncated } else { format!("{}{}", truncated, ext) };
+        out = if ext.is_empty() {
+            truncated
+        } else {
+            format!("{}{}", truncated, ext)
+        };
     }
     out
 }
@@ -77,9 +98,14 @@ pub(super) fn url_encode_path(p: &Path) -> String {
     let mut out = String::with_capacity(s.len() + 8);
     for b in s.bytes() {
         let c = b as char;
-        let is_unreserved = c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~' | '/' | ':' );
-        if is_unreserved { out.push(c); }
-        else { out.push('%'); out.push_str(&format!("{:02X}", b)); }
+        let is_unreserved =
+            c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~' | '/' | ':');
+        if is_unreserved {
+            out.push(c);
+        } else {
+            out.push('%');
+            out.push_str(&format!("{:02X}", b));
+        }
     }
     out
 }
@@ -95,31 +121,6 @@ pub(super) fn html_escape(s: &str) -> String {
             '\'' => out.push_str("&#39;"),
             _ => out.push(ch),
         }
-    }
-    out
-}
-
-pub(super) fn sanitize_display_code(s: &str) -> String {
-    let mut out = s.to_string();
-    // Replace common CDN references with local asset placeholders for display only
-    out = out.replace(
-        "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js",
-        "assets/mermaid.js",
-    );
-    out = out.replace(
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js",
-        "assets/hljs.js",
-    );
-    out = out.replace(
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css",
-        "assets/hljs.css",
-    );
-    // Broad fallbacks for jsDelivr and cdnjs if versions change
-    if out.contains("https://cdn.jsdelivr.net/npm/mermaid") {
-        out = out.replace("https://cdn.jsdelivr.net/npm/mermaid", "assets/mermaid.js");
-    }
-    if out.contains("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/") {
-        out = out.replace("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/", "assets/");
     }
     out
 }
@@ -143,25 +144,15 @@ pub(super) fn build_simple_dependency_graph(analysis: &AnalysisResult) -> String
     let mut out = String::new();
     let mut prev: Option<String> = None;
     for f in &analysis.files {
-        let id = format!("N{}", crc32fast::hash(f.path.display().to_string().as_bytes()));
+        let id = format!(
+            "N{}",
+            crc32fast::hash(f.path.display().to_string().as_bytes())
+        );
         let _ = writeln!(&mut out, "  {}[{}]", id, f.path.display());
         if let Some(p) = prev {
             let _ = writeln!(&mut out, "  {} --> {}", p, id);
         }
         prev = Some(id);
-    }
-    out
-}
-
-pub(super) fn build_simple_flow(file: &crate::analyzer::FileInfo) -> String {
-    // Flow from file to symbols to end
-    let mut out = String::new();
-    let file_id = "File";
-    let _ = writeln!(&mut out, "  {}([{}])", file_id, file.path.display());
-    for (i, s) in file.symbols.iter().enumerate() {
-        let node = format!("S{}", i);
-        let _ = writeln!(&mut out, "  {}([{} {}])", node, s.kind, s.name);
-        let _ = writeln!(&mut out, "  {} --> {}", file_id, node);
     }
     out
 }
@@ -187,7 +178,9 @@ pub(super) fn anchorize(s: &str) -> String {
     collapsed
 }
 
-pub(super) fn safe_ident(s: &str) -> String { anchorize(s).replace('-', "_") }
+pub(super) fn safe_ident(s: &str) -> String {
+    anchorize(s).replace('-', "_")
+}
 
 /// Simple AST traversal to find function calls and their contexts
 /// Much simpler implementation that works around tree-sitter API issues
@@ -229,7 +222,10 @@ pub(super) fn walk_tree_for_calls(
     }
 
     // Extract content from the entire file to find calls
-    fn traverse_tree_for_text<'a>(node: tree_sitter::Node<'a>, tree: &crate::tree::SyntaxTree) -> Option<String> {
+    fn traverse_tree_for_text<'a>(
+        node: tree_sitter::Node<'a>,
+        tree: &crate::tree::SyntaxTree,
+    ) -> Option<String> {
         // Try to get text for this node
         let range = tree_sitter::Range {
             start_byte: node.start_byte(),
@@ -288,7 +284,11 @@ mod tests {
     fn test_sanitize_windows_style_path() {
         let p = PathBuf::from("C\\path\\file:name?.rs");
         let s = sanitize_filename(&p);
-        assert!(s.ends_with("file_name_.rs") || s.ends_with("file_name__.rs") || s.ends_with("file_name.rs"));
+        assert!(
+            s.ends_with("file_name_.rs")
+                || s.ends_with("file_name__.rs")
+                || s.ends_with("file_name.rs")
+        );
         assert!(!s.contains('\\'));
         assert!(!s.contains(':'));
         assert!(!s.contains('?'));
@@ -304,7 +304,7 @@ mod tests {
         assert!(s1.len() <= MAX_SAFE_NAME_LEN);
         assert_eq!(s1, s2, "sanitization must be stable");
         // Should contain an 8-hex hash separated by underscore
-        assert!(s1[..s1.len()-3].contains('_'));
+        assert!(s1[..s1.len() - 3].contains('_'));
     }
 
     #[test]

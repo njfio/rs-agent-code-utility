@@ -3,8 +3,8 @@
 
 use serde::Serialize;
 
-use crate::{AnalysisResult};
-use crate::advanced_security::{SecuritySeverity, OwaspCategory};
+use crate::advanced_security::{OwaspCategory, SecuritySeverity};
+use crate::AnalysisResult;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SarifLog {
@@ -109,29 +109,54 @@ pub fn to_sarif(result: &AnalysisResult) -> SarifLog {
 
     for file in &result.files {
         for vuln in &file.security_vulnerabilities {
-            let rule_id = vuln.cwe_id.clone().or_else(|| Some(owasp_to_str(&vuln.owasp_category).to_string()));
+            let rule_id = vuln
+                .cwe_id
+                .clone()
+                .or_else(|| Some(owasp_to_str(&vuln.owasp_category).to_string()));
             let level = Some(map_severity(&vuln.severity));
-            let message = Message { text: format!("{}: {}", vuln.title, vuln.description) };
+            let message = Message {
+                text: format!("{}: {}", vuln.title, vuln.description),
+            };
             let uri = file.path.to_string_lossy().to_string();
             let region = Region {
                 start_line: vuln.location.start_line as u64,
                 end_line: Some(vuln.location.end_line as u64),
                 start_column: Some(vuln.location.column as u64),
             };
-            let loc = Location { physical_location: PhysicalLocation { artifact_location: ArtifactLocation { uri }, region: Some(region) } };
+            let loc = Location {
+                physical_location: PhysicalLocation {
+                    artifact_location: ArtifactLocation { uri },
+                    region: Some(region),
+                },
+            };
 
-            sarif_results.push(ResultItem { rule_id, level, message, locations: vec![loc] });
+            sarif_results.push(ResultItem {
+                rule_id,
+                level,
+                message,
+                locations: vec![loc],
+            });
         }
     }
 
-    SarifLog { version: "2.1.0".to_string(), runs: vec![Run { tool, results: sarif_results }] }
+    SarifLog {
+        version: "2.1.0".to_string(),
+        runs: vec![Run {
+            tool,
+            results: sarif_results,
+        }],
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{AnalysisResult, AnalysisConfig, FileInfo};
-    use crate::advanced_security::{SecurityVulnerability, VulnerabilityLocation, SecuritySeverity, OwaspCategory, SecurityImpact, ImpactLevel, RemediationGuidance, CodeExample, RemediationEffort, ConfidenceLevel};
+    use crate::advanced_security::{
+        CodeExample, ConfidenceLevel, ImpactLevel, OwaspCategory, RemediationEffort,
+        RemediationGuidance, SecurityImpact, SecuritySeverity, SecurityVulnerability,
+        VulnerabilityLocation,
+    };
+    use crate::{AnalysisConfig, AnalysisResult, FileInfo};
 
     #[test]
     fn sarif_conversion_includes_one_result_per_vulnerability() {
@@ -145,13 +170,44 @@ mod tests {
             severity: SecuritySeverity::Medium,
             owasp_category: OwaspCategory::Injection,
             cwe_id: None,
-            location: VulnerabilityLocation { file: std::path::PathBuf::from("a.rs"), function: None, start_line: 1, end_line: 2, column: 0 },
+            location: VulnerabilityLocation {
+                file: std::path::PathBuf::from("a.rs"),
+                function: None,
+                start_line: 1,
+                end_line: 2,
+                column: 0,
+            },
             code_snippet: "".to_string(),
-            impact: SecurityImpact { confidentiality: ImpactLevel::Low, integrity: ImpactLevel::Low, availability: ImpactLevel::Low, overall_score: 1.0 },
-            remediation: RemediationGuidance { summary: "".to_string(), steps: vec![], code_examples: vec![CodeExample { description: "".to_string(), vulnerable_code: "".to_string(), secure_code: "".to_string(), language: "Rust".to_string() }], references: vec![], effort: RemediationEffort::Low },
+            impact: SecurityImpact {
+                confidentiality: ImpactLevel::Low,
+                integrity: ImpactLevel::Low,
+                availability: ImpactLevel::Low,
+                overall_score: 1.0,
+            },
+            remediation: RemediationGuidance {
+                summary: "".to_string(),
+                steps: vec![],
+                code_examples: vec![CodeExample {
+                    description: "".to_string(),
+                    vulnerable_code: "".to_string(),
+                    secure_code: "".to_string(),
+                    language: "Rust".to_string(),
+                }],
+                references: vec![],
+                effort: RemediationEffort::Low,
+            },
             confidence: ConfidenceLevel::Medium,
         };
-        let file = FileInfo { path: std::path::PathBuf::from("a.rs"), language: "Rust".to_string(), size: 1, lines: 1, parsed_successfully: true, parse_errors: vec![], symbols: vec![], security_vulnerabilities: vec![vuln] };
+        let file = FileInfo {
+            path: std::path::PathBuf::from("a.rs"),
+            language: "Rust".to_string(),
+            size: 1,
+            lines: 1,
+            parsed_successfully: true,
+            parse_errors: vec![],
+            symbols: vec![],
+            security_vulnerabilities: vec![vuln],
+        };
         res.files.push(file);
 
         let sarif = to_sarif(&res);
@@ -161,4 +217,3 @@ mod tests {
         assert_eq!(sarif.runs[0].results[0].level, Some("warning"));
     }
 }
-

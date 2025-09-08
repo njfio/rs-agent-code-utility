@@ -3,10 +3,12 @@
 //! Provides fast AI inference using Groq's API.
 //! Based on Groq's OpenAI-compatible API endpoint.
 
-use crate::ai::types::{AIProvider, AIRequest, AIResponse, AICapability, TokenUsage, ResponseMetadata};
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::{AIError, AIResult};
 use crate::ai::providers::AIProviderImpl;
+use crate::ai::types::{
+    AICapability, AIProvider, AIRequest, AIResponse, ResponseMetadata, TokenUsage,
+};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -46,7 +48,8 @@ struct ResponseFormat {
     format_type: String,
 }
 
-/// Groq response structure
+/// Groq API response structure
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct GroqResponse {
     id: String,
@@ -58,6 +61,8 @@ struct GroqResponse {
 }
 
 /// Choice from Groq response
+/// Groq choice structure
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct GroqChoice {
     index: usize,
@@ -95,12 +100,10 @@ impl GroqProvider {
     fn build_groq_request(&self, request: &AIRequest) -> GroqRequest {
         let content = self.enhance_content_with_context(&request.content, &request.context);
 
-        let messages = vec![
-            GroqMessage {
-                role: "user".to_string(),
-                content,
-            }
-        ];
+        let messages = vec![GroqMessage {
+            role: "user".to_string(),
+            content,
+        }];
 
         // Allow callers to request structured JSON via context key
         let want_json = request
@@ -111,7 +114,8 @@ impl GroqProvider {
 
         GroqRequest {
             messages,
-            model: request.model_preferences
+            model: request
+                .model_preferences
                 .as_ref()
                 .and_then(|prefs| prefs.first().cloned())
                 .unwrap_or_else(|| {
@@ -126,23 +130,35 @@ impl GroqProvider {
             max_completion_tokens: request.max_tokens,
             top_p: Some(1.0),
             stream: request.stream,
-            reasoning_effort: if request.feature == crate::ai::types::AIFeature::DocumentationGeneration {
+            reasoning_effort: if request.feature
+                == crate::ai::types::AIFeature::DocumentationGeneration
+            {
                 Some("medium".to_string())
             } else {
                 None
             },
             response_format: if want_json {
-                Some(ResponseFormat { format_type: "json_object".to_string() })
+                Some(ResponseFormat {
+                    format_type: "json_object".to_string(),
+                })
             } else if request.feature == crate::ai::types::AIFeature::DocumentationGeneration {
                 // Default to text unless explicitly requested JSON
-                Some(ResponseFormat { format_type: "text".to_string() })
-            } else { None },
+                Some(ResponseFormat {
+                    format_type: "text".to_string(),
+                })
+            } else {
+                None
+            },
             stop: None,
         }
     }
 
     /// Enhance content with context for better documentation generation
-    fn enhance_content_with_context(&self, content: &str, context: &std::collections::HashMap<String, String>) -> String {
+    fn enhance_content_with_context(
+        &self,
+        content: &str,
+        context: &std::collections::HashMap<String, String>,
+    ) -> String {
         if context.is_empty() {
             return content.to_string();
         }
@@ -168,7 +184,8 @@ impl GroqProvider {
 
     /// Parse Groq response into AI response
     fn parse_response(&self, groq_response: GroqResponse, request: &AIRequest) -> AIResponse {
-        let content = groq_response.choices
+        let content = groq_response
+            .choices
             .first()
             .map(|choice| choice.message.content.clone())
             .unwrap_or_else(|| "No response generated".to_string());
@@ -257,7 +274,8 @@ impl AIProviderImpl for GroqProvider {
             stop: None,
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post("https://api.groq.com/openai/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
@@ -269,7 +287,10 @@ impl AIProviderImpl for GroqProvider {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            return Err(AIError::network(format!("Groq API error {}: {}", status, error_text)));
+            return Err(AIError::network(format!(
+                "Groq API error {}: {}",
+                status, error_text
+            )));
         }
 
         Ok(())
@@ -279,7 +300,8 @@ impl AIProviderImpl for GroqProvider {
         let api_key = self.get_api_key()?;
         let groq_request = self.build_groq_request(&request);
 
-        let response = self.client
+        let response = self
+            .client
             .post("https://api.groq.com/openai/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
@@ -291,11 +313,15 @@ impl AIProviderImpl for GroqProvider {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            return Err(AIError::network(format!("API error {}: {}", status, error_text)));
+            return Err(AIError::network(format!(
+                "API error {}: {}",
+                status, error_text
+            )));
         }
 
-        let groq_response: GroqResponse = response.json().await
-            .map_err(|e| AIError::response_parsing(format!("Failed to parse Groq response: {}", e)))?;
+        let groq_response: GroqResponse = response.json().await.map_err(|e| {
+            AIError::response_parsing(format!("Failed to parse Groq response: {}", e))
+        })?;
 
         Ok(self.parse_response(groq_response, &request))
     }
@@ -305,13 +331,9 @@ impl AIProviderImpl for GroqProvider {
             crate::ai::types::AIFeature::DocumentationGeneration => {
                 // Prefer the large open-source model for rich wiki generation
                 Some("openai/gpt-oss-120b".to_string())
-            },
-            crate::ai::types::AIFeature::CodeExplanation => {
-                Some("openai/gpt-4o-mini".to_string())
-            },
-            crate::ai::types::AIFeature::SecurityAnalysis => {
-                Some("openai/gpt-4o-mini".to_string())
-            },
+            }
+            crate::ai::types::AIFeature::CodeExplanation => Some("openai/gpt-4o-mini".to_string()),
+            crate::ai::types::AIFeature::SecurityAnalysis => Some("openai/gpt-4o-mini".to_string()),
             _ => Some(self.config.default_model.clone()),
         }
     }

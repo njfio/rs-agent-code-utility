@@ -4,8 +4,8 @@
 //! when the ML feature is disabled. It provides the same API as the full
 //! ML-powered version but with simplified, rule-based implementations.
 
-use crate::{Result, Error};
-use serde::{Serialize, Deserialize};
+use crate::{Error, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Intent mapping system without ML dependencies
@@ -161,13 +161,15 @@ impl IntentMappingSystem {
 
     /// Add a requirement to the system
     pub fn add_requirement(&mut self, requirement: Requirement) -> Result<()> {
-        self.requirements.insert(requirement.id.clone(), requirement);
+        self.requirements
+            .insert(requirement.id.clone(), requirement);
         Ok(())
     }
 
     /// Add an implementation to the system
     pub fn add_implementation(&mut self, implementation: Implementation) -> Result<()> {
-        self.implementations.insert(implementation.id.clone(), implementation);
+        self.implementations
+            .insert(implementation.id.clone(), implementation);
         Ok(())
     }
 
@@ -292,9 +294,15 @@ impl IntentMappingSystem {
     }
 
     /// Validate a specific mapping
-    pub fn validate_mapping(&mut self, requirement_id: &str, implementation_id: &str) -> Result<bool> {
+    pub fn validate_mapping(
+        &mut self,
+        requirement_id: &str,
+        implementation_id: &str,
+    ) -> Result<bool> {
         for mapping in &mut self.mappings {
-            if mapping.requirement_id == requirement_id && mapping.implementation_id == implementation_id {
+            if mapping.requirement_id == requirement_id
+                && mapping.implementation_id == implementation_id
+            {
                 mapping.validation_status = ValidationStatus::Valid;
                 return Ok(true);
             }
@@ -314,17 +322,28 @@ impl IntentMappingSystem {
         for (req_id, requirement) in &self.requirements {
             for (impl_id, implementation) in &self.implementations {
                 // Skip if mapping already exists
-                if self.mappings.iter().any(|m| {
-                    m.requirement_id == *req_id && m.implementation_id == *impl_id
-                }) {
+                if self
+                    .mappings
+                    .iter()
+                    .any(|m| m.requirement_id == *req_id && m.implementation_id == *impl_id)
+                {
                     continue;
                 }
 
                 // Simple keyword matching
-                let req_words: Vec<&str> = requirement.description.to_lowercase().split_whitespace().collect();
-                let impl_words: Vec<&str> = implementation.description.to_lowercase().split_whitespace().collect();
+                let req_words: Vec<&str> = requirement
+                    .description
+                    .to_lowercase()
+                    .split_whitespace()
+                    .collect();
+                let impl_words: Vec<&str> = implementation
+                    .description
+                    .to_lowercase()
+                    .split_whitespace()
+                    .collect();
 
-                let common_words = req_words.iter()
+                let common_words = req_words
+                    .iter()
                     .filter(|word| impl_words.contains(word))
                     .count();
 
@@ -354,4 +373,3 @@ impl Default for IntentMappingSystem {
         Self::new()
     }
 }
-

@@ -85,11 +85,16 @@ impl Embedding {
     /// Calculate cosine similarity with another embedding
     pub fn cosine_similarity(&self, other: &Embedding) -> Result<f64> {
         if self.vector.len() != other.vector.len() {
-            return Err(anyhow!("Embedding dimensions don't match: {} vs {}", 
-                self.vector.len(), other.vector.len()));
+            return Err(anyhow!(
+                "Embedding dimensions don't match: {} vs {}",
+                self.vector.len(),
+                other.vector.len()
+            ));
         }
 
-        let dot_product: f32 = self.vector.iter()
+        let dot_product: f32 = self
+            .vector
+            .iter()
             .zip(other.vector.iter())
             .map(|(a, b)| a * b)
             .sum();
@@ -152,8 +157,10 @@ impl EmbeddingEngine {
 
         // Download tokenizer
         let tokenizer_filename = repo.get("tokenizer.json").await?;
-        self.tokenizer = Some(Tokenizer::from_file(tokenizer_filename)
-            .map_err(|e| anyhow!("Failed to load tokenizer: {}", e))?);
+        self.tokenizer = Some(
+            Tokenizer::from_file(tokenizer_filename)
+                .map_err(|e| anyhow!("Failed to load tokenizer: {}", e))?,
+        );
 
         // Download model config
         let config_filename = repo.get("config.json").await?;
@@ -167,7 +174,9 @@ impl EmbeddingEngine {
         };
 
         // Load model
-        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[weights_filename], DTYPE, &self.device)? };
+        let vb = unsafe {
+            VarBuilder::from_mmaped_safetensors(&[weights_filename], DTYPE, &self.device)?
+        };
         self.model = Some(BertModel::load(vb, self.bert_config.as_ref().unwrap())?);
 
         Ok(())
@@ -175,9 +184,13 @@ impl EmbeddingEngine {
 
     /// Generate embeddings for a batch of texts
     pub fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
-        let model = self.model.as_ref()
+        let model = self
+            .model
+            .as_ref()
             .ok_or_else(|| anyhow!("Model not initialized. Call initialize() first."))?;
-        let tokenizer = self.tokenizer.as_ref()
+        let tokenizer = self
+            .tokenizer
+            .as_ref()
             .ok_or_else(|| anyhow!("Tokenizer not initialized. Call initialize() first."))?;
 
         let mut embeddings = Vec::new();
@@ -194,7 +207,9 @@ impl EmbeddingEngine {
     /// Generate embedding for a single text
     pub fn embed(&self, text: &str) -> Result<Embedding> {
         let embeddings = self.embed_batch(&[text.to_string()])?;
-        embeddings.into_iter().next()
+        embeddings
+            .into_iter()
+            .next()
             .ok_or_else(|| anyhow!("Failed to generate embedding"))
     }
 
@@ -206,7 +221,8 @@ impl EmbeddingEngine {
         texts: &[String],
     ) -> Result<Vec<Embedding>> {
         // Tokenize texts
-        let encodings = tokenizer.encode_batch(texts.to_vec(), true)
+        let encodings = tokenizer
+            .encode_batch(texts.to_vec(), true)
             .map_err(|e| anyhow!("Tokenization failed: {}", e))?;
 
         let mut input_ids = Vec::new();
@@ -234,10 +250,10 @@ impl EmbeddingEngine {
 
         // Run model
         let outputs = model.forward(&input_ids_tensor, &attention_mask_tensor, None)?;
-        
+
         // Extract embeddings (use [CLS] token or mean pooling)
         let embeddings_tensor = self.mean_pooling(&outputs, &attention_mask_tensor)?;
-        
+
         // Convert to Vec<f32>
         let embeddings_data = embeddings_tensor.to_vec2::<f32>()?;
 
@@ -254,7 +270,8 @@ impl EmbeddingEngine {
     /// Mean pooling of token embeddings
     fn mean_pooling(&self, token_embeddings: &Tensor, attention_mask: &Tensor) -> Result<Tensor> {
         // Expand attention mask to match token embeddings dimensions
-        let expanded_mask = attention_mask.unsqueeze(2)?
+        let expanded_mask = attention_mask
+            .unsqueeze(2)?
             .expand(token_embeddings.shape())?;
 
         // Apply mask to embeddings
@@ -350,7 +367,10 @@ mod tests {
             .with_metadata("type".to_string(), "requirement".to_string())
             .with_metadata("id".to_string(), "REQ-001".to_string());
 
-        assert_eq!(embedding.metadata.get("type"), Some(&"requirement".to_string()));
+        assert_eq!(
+            embedding.metadata.get("type"),
+            Some(&"requirement".to_string())
+        );
         assert_eq!(embedding.metadata.get("id"), Some(&"REQ-001".to_string()));
     }
 
@@ -393,16 +413,22 @@ mod tests {
         for (text1, text2) in similar_texts {
             let embedding1 = Embedding::new(
                 vec![0.8, 0.6, 0.2, 0.1], // Mock similar embeddings
-                text1.to_string()
+                text1.to_string(),
             );
             let embedding2 = Embedding::new(
                 vec![0.7, 0.7, 0.3, 0.1], // Mock similar embeddings
-                text2.to_string()
+                text2.to_string(),
             );
 
             let similarity = embedding1.cosine_similarity(&embedding2).unwrap();
             // These should be reasonably similar (mock test)
-            assert!(similarity > 0.5, "Expected similarity > 0.5 for '{}' and '{}', got {}", text1, text2, similarity);
+            assert!(
+                similarity > 0.5,
+                "Expected similarity > 0.5 for '{}' and '{}', got {}",
+                text1,
+                text2,
+                similarity
+            );
         }
     }
 
@@ -411,14 +437,17 @@ mod tests {
         // Test dissimilar texts should have low similarity
         let embedding1 = Embedding::new(
             vec![1.0, 0.0, 0.0, 0.0], // Mock dissimilar embeddings
-            "user authentication".to_string()
+            "user authentication".to_string(),
         );
         let embedding2 = Embedding::new(
             vec![0.0, 1.0, 0.0, 0.0], // Mock dissimilar embeddings
-            "graphics rendering".to_string()
+            "graphics rendering".to_string(),
         );
 
         let similarity = embedding1.cosine_similarity(&embedding2).unwrap();
-        assert_eq!(similarity, 0.0, "Expected 0 similarity for dissimilar texts");
+        assert_eq!(
+            similarity, 0.0,
+            "Expected 0 similarity for dissimilar texts"
+        );
     }
 }

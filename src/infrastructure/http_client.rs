@@ -2,12 +2,12 @@
 //! authentication, rate limiting, and retry mechanisms.
 
 use reqwest::{Client, StatusCode};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tracing::{debug, warn, error};
+use tracing::{debug, error, warn};
 // Replaced external Backoff usage with a small local exponential backoff
+use anyhow::{anyhow, Result};
 use rand::{thread_rng, Rng};
-use anyhow::{Result, anyhow};
 
 /// HTTP client with built-in retry, timeout, and rate limiting
 #[derive(Clone)]
@@ -89,12 +89,23 @@ impl HttpClient {
     }
 
     /// Perform a POST request with retry logic
-    pub async fn post<T: Serialize>(&self, url: &str, body: Option<&T>, config: Option<RequestConfig>) -> Result<HttpResponse> {
+    pub async fn post<T: Serialize>(
+        &self,
+        url: &str,
+        body: Option<&T>,
+        config: Option<RequestConfig>,
+    ) -> Result<HttpResponse> {
         self.request("POST", url, body, config).await
     }
 
     /// Perform a generic HTTP request with retry logic
-    async fn request<T: Serialize>(&self, method: &str, url: &str, body: Option<&T>, config: Option<RequestConfig>) -> Result<HttpResponse> {
+    async fn request<T: Serialize>(
+        &self,
+        method: &str,
+        url: &str,
+        body: Option<&T>,
+        config: Option<RequestConfig>,
+    ) -> Result<HttpResponse> {
         let config = config.unwrap_or_default();
         let timeout = config.timeout.unwrap_or(self.default_timeout);
         let max_retries = config.retries.unwrap_or(self.max_retries);
@@ -105,11 +116,20 @@ impl HttpClient {
 
         for attempt in 0..=max_retries {
             let start_time = std::time::Instant::now();
-            
-            match self.execute_request(method, url, body, &config, timeout).await {
+
+            match self
+                .execute_request(method, url, body, &config, timeout)
+                .await
+            {
                 Ok(response) => {
                     let duration = start_time.elapsed();
-                    debug!("HTTP {} {} completed in {:?} (attempt {})", method, url, duration, attempt + 1);
+                    debug!(
+                        "HTTP {} {} completed in {:?} (attempt {})",
+                        method,
+                        url,
+                        duration,
+                        attempt + 1
+                    );
                     return Ok(response);
                 }
                 Err(e) if attempt < max_retries && self.should_retry(&e) => {
@@ -119,18 +139,37 @@ impl HttpClient {
                     let min_nanos = backoff_min.as_nanos();
                     let mut delay_nanos = min_nanos.saturating_mul(factor as u128);
                     let max_nanos = backoff_max.as_nanos();
-                    if delay_nanos > max_nanos { delay_nanos = max_nanos; }
+                    if delay_nanos > max_nanos {
+                        delay_nanos = max_nanos;
+                    }
                     // jitter in [0.5, 1.5)
                     let mut rng = thread_rng();
                     let jitter_factor: f64 = rng.gen_range(0.5..1.5);
                     let jittered = (delay_nanos as f64 * jitter_factor) as u128;
-                    let jittered = if jittered > max_nanos { max_nanos } else { jittered };
+                    let jittered = if jittered > max_nanos {
+                        max_nanos
+                    } else {
+                        jittered
+                    };
                     let delay = Duration::from_nanos(jittered as u64);
-                    warn!("HTTP {} {} failed (attempt {}), retrying in {:?}: {}", method, url, attempt + 1, delay, e);
+                    warn!(
+                        "HTTP {} {} failed (attempt {}), retrying in {:?}: {}",
+                        method,
+                        url,
+                        attempt + 1,
+                        delay,
+                        e
+                    );
                     tokio::time::sleep(delay).await;
                 }
                 Err(e) => {
-                    error!("HTTP {} {} failed permanently (attempt {}): {}", method, url, attempt + 1, e);
+                    error!(
+                        "HTTP {} {} failed permanently (attempt {}): {}",
+                        method,
+                        url,
+                        attempt + 1,
+                        e
+                    );
                     return Err(e);
                 }
             }
@@ -138,7 +177,9 @@ impl HttpClient {
 
         Err(anyhow!(
             "Max retries ({}) exceeded for {} {}: All retry attempts failed",
-            self.max_retries, method, url
+            self.max_retries,
+            method,
+            url
         ))
     }
 
@@ -156,10 +197,12 @@ impl HttpClient {
             "POST" => self.client.post(url),
             "PUT" => self.client.put(url),
             "DELETE" => self.client.delete(url),
-            _ => return Err(anyhow!(
-                "Unsupported HTTP method '{}': expected GET, POST, PUT, or DELETE",
-                method
-            )),
+            _ => {
+                return Err(anyhow!(
+                    "Unsupported HTTP method '{}': expected GET, POST, PUT, or DELETE",
+                    method
+                ))
+            }
         };
 
         // Add timeout
@@ -175,7 +218,9 @@ impl HttpClient {
             request_builder = match auth {
                 AuthConfig::Bearer(token) => request_builder.bearer_auth(token),
                 AuthConfig::ApiKey { key, header } => request_builder.header(header, key),
-                AuthConfig::Basic { username, password } => request_builder.basic_auth(username, Some(password)),
+                AuthConfig::Basic { username, password } => {
+                    request_builder.basic_auth(username, Some(password))
+                }
             };
         }
 
@@ -193,10 +238,7 @@ impl HttpClient {
         // Check for HTTP errors
         if !status.is_success() {
             let error_body = response.text().await.unwrap_or_default();
-            return Err(anyhow!(
-                "HTTP {} error for {}: {}",
-                status, url, error_body
-            ));
+            return Err(anyhow!("HTTP {} error for {}: {}", status, url, error_body));
         }
 
         let body = response.text().await?;
@@ -214,9 +256,9 @@ impl HttpClient {
     fn should_retry(&self, error: &anyhow::Error) -> bool {
         // Retry on network errors, timeouts, and certain HTTP status codes
         if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
-            return reqwest_error.is_timeout() || 
-                   reqwest_error.is_connect() ||
-                   reqwest_error.is_request();
+            return reqwest_error.is_timeout()
+                || reqwest_error.is_connect()
+                || reqwest_error.is_request();
         }
 
         // Check for specific HTTP status codes that should be retried
@@ -225,7 +267,7 @@ impl HttpClient {
         error_str.contains("502") || // Bad Gateway
         error_str.contains("503") || // Service Unavailable
         error_str.contains("504") || // Gateway Timeout
-        error_str.contains("429")    // Too Many Requests
+        error_str.contains("429") // Too Many Requests
     }
 }
 
@@ -335,11 +377,12 @@ pub mod utils {
     /// # Returns
     /// * `Result<T>` - The parsed object or an error if parsing fails
     pub fn parse_json<T: for<'de> Deserialize<'de>>(response: &HttpResponse) -> Result<T> {
-        serde_json::from_str(&response.body)
-            .map_err(|e| anyhow!(
+        serde_json::from_str(&response.body).map_err(|e| {
+            anyhow!(
                 "Failed to parse JSON response: {}. Ensure the response contains valid JSON data",
                 e
-            ))
+            )
+        })
     }
 
     /// Check if response indicates rate limiting
@@ -352,12 +395,14 @@ pub mod utils {
     /// # Returns
     /// * `bool` - True if the response indicates rate limiting
     pub fn is_rate_limited(response: &HttpResponse) -> bool {
-        response.status == StatusCode::TOO_MANY_REQUESTS ||
-        response.headers.get("x-ratelimit-remaining")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse::<u32>().ok())
-            .map(|remaining| remaining == 0)
-            .unwrap_or(false)
+        response.status == StatusCode::TOO_MANY_REQUESTS
+            || response
+                .headers
+                .get("x-ratelimit-remaining")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.parse::<u32>().ok())
+                .map(|remaining| remaining == 0)
+                .unwrap_or(false)
     }
 
     /// Extract rate limit information from response headers
@@ -370,13 +415,21 @@ pub mod utils {
     /// # Returns
     /// * `Option<RateLimitInfo>` - Rate limit info if headers are present and valid
     pub fn extract_rate_limit_info(response: &HttpResponse) -> Option<RateLimitInfo> {
-        let remaining = response.headers.get("x-ratelimit-remaining")?
-            .to_str().ok()?
-            .parse().ok()?;
-        
-        let reset = response.headers.get("x-ratelimit-reset")?
-            .to_str().ok()?
-            .parse().ok()?;
+        let remaining = response
+            .headers
+            .get("x-ratelimit-remaining")?
+            .to_str()
+            .ok()?
+            .parse()
+            .ok()?;
+
+        let reset = response
+            .headers
+            .get("x-ratelimit-reset")?
+            .to_str()
+            .ok()?
+            .parse()
+            .ok()?;
 
         Some(RateLimitInfo { remaining, reset })
     }

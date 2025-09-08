@@ -6,36 +6,34 @@
 //! 3. Comprehensive documentation and usage examples
 
 use rust_tree_sitter::{
-    analyzer::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth},
-    Error, Result,
+    analyzer::{AnalysisConfig, AnalysisDepth, CodebaseAnalyzer},
     intent_mapping::{
-        IntentMappingSystem, Requirement, Implementation, RequirementType,
-        ImplementationType, Priority, RequirementStatus, ImplementationStatus,
-        MappingType, IntentMapping, QualityMetrics
+        Implementation, ImplementationStatus, ImplementationType, IntentMapping,
+        IntentMappingSystem, MappingType, Priority, QualityMetrics, Requirement, RequirementStatus,
+        RequirementType,
     },
+    Error, Result,
 };
-
-
 
 use std::path::PathBuf;
 
 fn main() -> Result<()> {
     println!("🚀 Comprehensive Rust Tree-sitter Library Demo");
     println!("===============================================");
-    
+
     // Demonstrate enhanced error handling
     demonstrate_error_handling()?;
-    
+
     // Demonstrate completed intent mapping system
     demonstrate_intent_mapping()?;
-    
+
     // Demonstrate enhanced security (if features enabled)
     #[cfg(any(feature = "net", feature = "db"))]
     demonstrate_enhanced_security()?;
-    
+
     // Demonstrate comprehensive code analysis
     demonstrate_code_analysis()?;
-    
+
     println!("\n✅ All demonstrations completed successfully!");
     Ok(())
 }
@@ -44,65 +42,59 @@ fn main() -> Result<()> {
 fn demonstrate_error_handling() -> Result<()> {
     println!("\n📋 1. Enhanced Error Handling Demonstration");
     println!("==========================================");
-    
+
     // Demonstrate different error types with context
     let errors = vec![
         Error::config_error_with_context(
             "Invalid configuration value",
             Some(PathBuf::from("config.yaml")),
-            Some("ai.max_tokens".to_string())
+            Some("ai.max_tokens".to_string()),
         ),
         Error::network_error_with_details(
             "Connection timeout",
             Some("https://api.openai.com".to_string()),
-            Some(408)
+            Some(408),
         ),
-        Error::auth_error_with_provider(
-            "Invalid API key",
-            "OpenAI"
-        ),
-        Error::rate_limit_error_with_retry(
-            "API rate limit exceeded",
-            60
-        ),
+        Error::auth_error_with_provider("Invalid API key", "OpenAI"),
+        Error::rate_limit_error_with_retry("API rate limit exceeded", 60),
         Error::timeout_error("AI analysis", 30000),
         Error::resource_exhausted_with_details(
             "memory",
             "Analysis requires too much memory",
             Some("2.5GB".to_string()),
-            Some("2GB".to_string())
+            Some("2GB".to_string()),
         ),
         Error::validation_error_with_context(
             "Invalid file extension",
             Some("file_type".to_string()),
             Some(".rs, .py, .js".to_string()),
-            Some(".txt".to_string())
+            Some(".txt".to_string()),
         ),
         Error::dependency_error_with_versions(
             "tree-sitter",
             "Version mismatch",
             Some(">=0.20.0".to_string()),
-            Some("0.19.5".to_string())
+            Some("0.19.5".to_string()),
         ),
         Error::security_error_with_details(
             "Potential SQL injection vulnerability",
             Some("SQL_INJECTION".to_string()),
             Some("HIGH".to_string()),
             Some(PathBuf::from("src/database.rs")),
-            Some(42)
+            Some(42),
         ),
         Error::analysis_error_with_context(
             "parser",
             "Failed to parse syntax tree",
             Some(PathBuf::from("src/malformed.rs")),
-            Some("Unexpected token at position 156".to_string())
+            Some("Unexpected token at position 156".to_string()),
         ),
     ];
-    
+
     for (i, error) in errors.iter().enumerate() {
         println!("  {}. {}", i + 1, error);
     }
-    
+
     println!("✅ Error handling demonstration complete");
     Ok(())
 }
@@ -111,9 +103,9 @@ fn demonstrate_error_handling() -> Result<()> {
 fn demonstrate_intent_mapping() -> Result<()> {
     println!("\n🎯 2. Intent Mapping System Demonstration");
     println!("========================================");
-    
+
     let mut mapping_system = IntentMappingSystem::new();
-    
+
     // Add sample requirements
     let requirements = vec![
         Requirement {
@@ -147,7 +139,7 @@ fn demonstrate_intent_mapping() -> Result<()> {
             status: RequirementStatus::Draft,
         },
     ];
-    
+
     for req in requirements {
         mapping_system.add_requirement(req);
     }
@@ -160,7 +152,13 @@ fn demonstrate_intent_mapping() -> Result<()> {
             file_path: "src/auth.rs".into(),
             code_elements: vec![],
             status: ImplementationStatus::Complete,
-            quality_metrics: QualityMetrics { coverage: 0.0, complexity: 0.0, maintainability: 0.0, performance: 0.0, security: 0.0 },
+            quality_metrics: QualityMetrics {
+                coverage: 0.0,
+                complexity: 0.0,
+                maintainability: 0.0,
+                performance: 0.0,
+                security: 0.0,
+            },
             documentation: None,
         },
         Implementation {
@@ -169,7 +167,13 @@ fn demonstrate_intent_mapping() -> Result<()> {
             file_path: "src/validation.rs".into(),
             code_elements: vec![],
             status: ImplementationStatus::Complete,
-            quality_metrics: QualityMetrics { coverage: 0.0, complexity: 0.0, maintainability: 0.0, performance: 0.0, security: 0.0 },
+            quality_metrics: QualityMetrics {
+                coverage: 0.0,
+                complexity: 0.0,
+                maintainability: 0.0,
+                performance: 0.0,
+                security: 0.0,
+            },
             documentation: None,
         },
         Implementation {
@@ -178,11 +182,17 @@ fn demonstrate_intent_mapping() -> Result<()> {
             file_path: "src/metrics.rs".into(),
             code_elements: vec![],
             status: ImplementationStatus::InProgress,
-            quality_metrics: QualityMetrics { coverage: 0.0, complexity: 0.0, maintainability: 0.0, performance: 0.0, security: 0.0 },
+            quality_metrics: QualityMetrics {
+                coverage: 0.0,
+                complexity: 0.0,
+                maintainability: 0.0,
+                performance: 0.0,
+                security: 0.0,
+            },
             documentation: None,
         },
     ];
-    
+
     for impl_item in implementations {
         mapping_system.add_implementation(impl_item);
     }
@@ -225,12 +235,12 @@ fn demonstrate_intent_mapping() -> Result<()> {
     // NOTE: analyze_mappings() is async; to keep this example sync-only and avoid
     // adding a runtime dependency, we skip executing it here.
     println!("  📈 Mapping analysis skipped in this build (requires async runtime)");
-    
+
     // Validate a mapping
     // Use public testing helper or skip validation in this demo
     // mapping_system.validate_mapping_public(&IntentMapping { .. })?;
     println!("  ✅ Validated mapping REQ-001 -> IMPL-001");
-    
+
     println!("✅ Intent mapping demonstration complete");
     Ok(())
 }
@@ -240,11 +250,11 @@ fn demonstrate_intent_mapping() -> Result<()> {
 fn demonstrate_enhanced_security() -> Result<()> {
     println!("\n🛡️  3. Enhanced Security Demonstration");
     println!("=====================================");
-    
+
     // Create enhanced security scanner - unavailable in this demo without infra
     // Skipping initialization and scan to ensure this example compiles without features
     println!("  (Enhanced security demonstration skipped in this build)");
-    
+
     println!("✅ Enhanced security demonstration complete");
     Ok(())
 }
@@ -253,7 +263,7 @@ fn demonstrate_enhanced_security() -> Result<()> {
 fn demonstrate_code_analysis() -> Result<()> {
     println!("\n📊 4. Comprehensive Code Analysis Demonstration");
     println!("==============================================");
-    
+
     // Create analyzer with comprehensive configuration
     let config = AnalysisConfig {
         depth: AnalysisDepth::Full,
@@ -281,7 +291,7 @@ fn demonstrate_code_analysis() -> Result<()> {
             println!("     This might be expected if the file doesn't exist yet");
         }
     }
-    
+
     println!("✅ Code analysis demonstration complete");
     Ok(())
 }

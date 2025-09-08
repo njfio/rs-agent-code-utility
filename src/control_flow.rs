@@ -1,7 +1,6 @@
-use crate::{SyntaxTree, Result};
+use crate::{Result, SyntaxTree};
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;
-
 
 /// Represents a node in the control flow graph
 #[derive(Debug, Clone, PartialEq)]
@@ -76,11 +75,25 @@ impl CfgBuilder {
 
         if functions.is_empty() {
             // If no functions found, build CFG for the entire file
-            self.build_cfg_for_node(tree, &mut graph, &mut byte_to_node, tree.inner().root_node(), entry, exit)?;
+            self.build_cfg_for_node(
+                tree,
+                &mut graph,
+                &mut byte_to_node,
+                tree.inner().root_node(),
+                entry,
+                exit,
+            )?;
         } else {
             // Build CFG for the first function (can be extended for multiple functions)
             if let Some(function_node) = functions.first() {
-                self.build_cfg_for_function(tree, &mut graph, &mut byte_to_node, *function_node, entry, exit)?;
+                self.build_cfg_for_function(
+                    tree,
+                    &mut graph,
+                    &mut byte_to_node,
+                    *function_node,
+                    entry,
+                    exit,
+                )?;
             }
         }
 
@@ -96,7 +109,12 @@ impl CfgBuilder {
     fn find_functions<'a>(&self, tree: &'a SyntaxTree) -> Result<Vec<tree_sitter::Node<'a>>> {
         let function_kinds = match self.language.as_str() {
             "rust" => vec!["function_item", "impl_item"],
-            "javascript" | "typescript" => vec!["function_declaration", "function_expression", "arrow_function", "method_definition"],
+            "javascript" | "typescript" => vec![
+                "function_declaration",
+                "function_expression",
+                "arrow_function",
+                "method_definition",
+            ],
             "python" => vec!["function_definition", "async_function_definition"],
             "c" | "cpp" | "c++" => vec!["function_definition"],
             "go" => vec!["function_declaration", "method_declaration"],
@@ -112,7 +130,12 @@ impl CfgBuilder {
     }
 
     /// Traverse the AST to find function nodes
-    fn traverse_for_functions<'a>(&self, cursor: &mut tree_sitter::TreeCursor<'a>, function_kinds: &[&str], functions: &mut Vec<tree_sitter::Node<'a>>) {
+    fn traverse_for_functions<'a>(
+        &self,
+        cursor: &mut tree_sitter::TreeCursor<'a>,
+        function_kinds: &[&str],
+        functions: &mut Vec<tree_sitter::Node<'a>>,
+    ) {
         let node = cursor.node();
 
         if function_kinds.contains(&node.kind()) {
@@ -151,7 +174,10 @@ impl CfgBuilder {
     }
 
     /// Find the body of a function
-    fn find_function_body<'a>(&self, function_node: tree_sitter::Node<'a>) -> Result<Option<tree_sitter::Node<'a>>> {
+    fn find_function_body<'a>(
+        &self,
+        function_node: tree_sitter::Node<'a>,
+    ) -> Result<Option<tree_sitter::Node<'a>>> {
         let body_kinds = match self.language.as_str() {
             "rust" => vec!["block"],
             "javascript" | "typescript" => vec!["statement_block"],
@@ -226,7 +252,11 @@ impl CfgBuilder {
                 let child = cursor.node();
 
                 // Check if this child is a control flow statement or call
-                if self.is_conditional(child.kind()) || self.is_loop(child.kind()) || self.is_return(child.kind()) || self.is_call(child.kind()) {
+                if self.is_conditional(child.kind())
+                    || self.is_loop(child.kind())
+                    || self.is_return(child.kind())
+                    || self.is_call(child.kind())
+                {
                     // Create intermediate node if needed
                     let intermediate_exit = if cursor.goto_next_sibling() {
                         cursor.goto_previous_sibling(); // Go back to current child
@@ -242,17 +272,35 @@ impl CfgBuilder {
                     // Build CFG for this control flow node, and add call node if needed
                     if self.is_call(child.kind()) {
                         let (func, args) = self.extract_call_details_with_tree(tree, child);
-                        let call_node = graph.add_node(CfgNodeType::Call { function_name: func, arguments: args, start_byte: child.start_byte() });
+                        let call_node = graph.add_node(CfgNodeType::Call {
+                            function_name: func,
+                            arguments: args,
+                            start_byte: child.start_byte(),
+                        });
                         byte_to_node.insert(child.start_byte(), call_node);
                         graph.add_edge(current_entry, call_node, ());
                         graph.add_edge(call_node, intermediate_exit, ());
                     } else {
-                        self.build_cfg_for_node(tree, graph, byte_to_node, child, current_entry, intermediate_exit)?;
+                        self.build_cfg_for_node(
+                            tree,
+                            graph,
+                            byte_to_node,
+                            child,
+                            current_entry,
+                            intermediate_exit,
+                        )?;
                     }
                     current_entry = intermediate_exit;
                 } else {
                     // Recursively traverse non-control-flow nodes
-                    self.traverse_and_build_cfg(tree, graph, byte_to_node, child, current_entry, exit)?;
+                    self.traverse_and_build_cfg(
+                        tree,
+                        graph,
+                        byte_to_node,
+                        child,
+                        current_entry,
+                        exit,
+                    )?;
                 }
 
                 if !cursor.goto_next_sibling() {
@@ -268,15 +316,24 @@ impl CfgBuilder {
     fn is_conditional(&self, kind: &str) -> bool {
         match self.language.as_str() {
             "rust" => matches!(kind, "if_expression" | "match_expression"),
-            "javascript" | "typescript" => matches!(kind, "if_statement" | "switch_statement" | "conditional_expression"),
+            "javascript" | "typescript" => matches!(
+                kind,
+                "if_statement" | "switch_statement" | "conditional_expression"
+            ),
             "python" => matches!(kind, "if_statement" | "conditional_expression"),
-            "c" | "cpp" | "c++" => matches!(kind, "if_statement" | "switch_statement" | "conditional_expression"),
+            "c" | "cpp" | "c++" => matches!(
+                kind,
+                "if_statement" | "switch_statement" | "conditional_expression"
+            ),
             "go" => matches!(kind, "if_statement" | "switch_statement"),
             // Be conservative in fallback to avoid matching identifiers (e.g., "identifier" contains "if")
             _ => matches!(
                 kind,
-                "if" | "if_statement" | "if_expression"
-                    | "switch" | "switch_statement" | "switch_expression"
+                "if" | "if_statement"
+                    | "if_expression"
+                    | "switch"
+                    | "switch_statement"
+                    | "switch_expression"
                     | "conditional_expression"
             ),
         }
@@ -285,17 +342,35 @@ impl CfgBuilder {
     /// Check if a node kind represents a loop statement
     fn is_loop(&self, kind: &str) -> bool {
         match self.language.as_str() {
-            "rust" => matches!(kind, "for_expression" | "while_expression" | "loop_expression" | "while_let_expression"),
-            "javascript" | "typescript" => matches!(kind, "for_statement" | "for_in_statement" | "for_of_statement" | "while_statement" | "do_statement"),
+            "rust" => matches!(
+                kind,
+                "for_expression" | "while_expression" | "loop_expression" | "while_let_expression"
+            ),
+            "javascript" | "typescript" => matches!(
+                kind,
+                "for_statement"
+                    | "for_in_statement"
+                    | "for_of_statement"
+                    | "while_statement"
+                    | "do_statement"
+            ),
             "python" => matches!(kind, "for_statement" | "while_statement"),
-            "c" | "cpp" | "c++" => matches!(kind, "for_statement" | "while_statement" | "do_statement"),
+            "c" | "cpp" | "c++" => {
+                matches!(kind, "for_statement" | "while_statement" | "do_statement")
+            }
             "go" => matches!(kind, "for_statement"),
             _ => matches!(
                 kind,
-                "for" | "for_statement" | "for_expression"
-                    | "while" | "while_statement" | "while_expression"
-                    | "do" | "do_statement"
-                    | "loop" | "loop_expression"
+                "for"
+                    | "for_statement"
+                    | "for_expression"
+                    | "while"
+                    | "while_statement"
+                    | "while_expression"
+                    | "do"
+                    | "do_statement"
+                    | "loop"
+                    | "loop_expression"
             ),
         }
     }
@@ -312,7 +387,11 @@ impl CfgBuilder {
     }
 
     /// Extract simple call details (best-effort) using SyntaxTree for text
-    fn extract_call_details_with_tree(&self, tree: &SyntaxTree, node: tree_sitter::Node<'_>) -> (String, Vec<String>) {
+    fn extract_call_details_with_tree(
+        &self,
+        tree: &SyntaxTree,
+        node: tree_sitter::Node<'_>,
+    ) -> (String, Vec<String>) {
         // Heuristic per language to get callee identifier text
         let _kind = node.kind();
         let mut cursor = node.walk();
@@ -323,33 +402,46 @@ impl CfgBuilder {
                 loop {
                     let child = c2.node();
                     if child.kind() == "name" {
-                        let range = tree_sitter::Range { start_byte: child.start_byte(), end_byte: child.end_byte(), start_point: child.start_position(), end_point: child.end_position() };
+                        let range = tree_sitter::Range {
+                            start_byte: child.start_byte(),
+                            end_byte: child.end_byte(),
+                            start_point: child.start_position(),
+                            end_point: child.end_position(),
+                        };
                         if let Ok(text) = tree.text_for_range(range) {
                             return (text.trim().to_string(), Vec::new());
                         }
                     }
-                    if !c2.goto_next_sibling() { break; }
+                    if !c2.goto_next_sibling() {
+                        break;
+                    }
                 }
             }
         }
         if cursor.goto_first_child() {
             let callee = cursor.node();
             // Use byte range to extract text safely
-            let range = tree_sitter::Range { start_byte: callee.start_byte(), end_byte: callee.end_byte(), start_point: callee.start_position(), end_point: callee.end_position() };
+            let range = tree_sitter::Range {
+                start_byte: callee.start_byte(),
+                end_byte: callee.end_byte(),
+                start_point: callee.start_position(),
+                end_point: callee.end_position(),
+            };
             if let Ok(text) = tree.text_for_range(range) {
                 // Extract the last identifier segment to handle member/module calls like obj.m() or util::helper()
                 let t = text.trim();
                 let mut best = "";
                 // Prefer split by Rust/TS separators; take last non-empty
-                for seg in t.split(|c: char| !(c.is_alphanumeric() || c == '_' )) {
-                    if !seg.is_empty() { best = seg; }
+                for seg in t.split(|c: char| !(c.is_alphanumeric() || c == '_')) {
+                    if !seg.is_empty() {
+                        best = seg;
+                    }
                 }
                 return (best.to_string(), Vec::new());
             }
         }
         (String::new(), Vec::new())
     }
-
 
     /// Check if a node kind represents a return statement
     fn is_return(&self, kind: &str) -> bool {
@@ -452,7 +544,11 @@ impl CfgBuilder {
     ) -> Result<()> {
         let return_value = format!("{:?}", node.kind());
         let return_node = graph.add_node(CfgNodeType::Return {
-            value: if return_value.is_empty() { None } else { Some(return_value) },
+            value: if return_value.is_empty() {
+                None
+            } else {
+                Some(return_value)
+            },
             start_byte: node.start_byte(),
         });
 
@@ -495,8 +591,6 @@ impl CfgBuilder {
     }
 }
 
-
-
 impl ControlFlowGraph {
     /// Calculate the cyclomatic complexity of the CFG
     pub fn cyclomatic_complexity(&self) -> usize {
@@ -520,12 +614,7 @@ impl ControlFlowGraph {
     pub fn decision_points(&self) -> Vec<NodeIndex> {
         self.graph
             .node_indices()
-            .filter(|&idx| {
-                matches!(
-                    self.graph[idx],
-                    CfgNodeType::Branch { .. }
-                )
-            })
+            .filter(|&idx| matches!(self.graph[idx], CfgNodeType::Branch { .. }))
             .collect()
     }
 

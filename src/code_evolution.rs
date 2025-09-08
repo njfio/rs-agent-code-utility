@@ -1,17 +1,17 @@
 //! Code Evolution Tracking System
-//! 
+//!
 //! This module provides comprehensive tracking of code changes, patterns,
 //! and evolution metrics for software development analysis.
 
-use crate::Result;
 use crate::constants::common::RiskLevel;
+use crate::Result;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Code evolution tracking system
 #[derive(Debug, Clone)]
@@ -168,7 +168,8 @@ impl Default for EvolutionConfig {
         Self {
             max_commits: 1000,
             time_window_days: 90,
-            pattern_confidence_threshold: crate::constants::code_evolution::DEFAULT_PATTERN_CONFIDENCE_THRESHOLD,
+            pattern_confidence_threshold:
+                crate::constants::code_evolution::DEFAULT_PATTERN_CONFIDENCE_THRESHOLD,
             hotspot_threshold: 10,
             coupling_threshold: 0.3,
         }
@@ -253,13 +254,13 @@ impl CodeEvolutionTracker {
     /// Create a new code evolution tracker
     pub fn new<P: AsRef<Path>>(repo_path: P) -> Result<Self> {
         let repo_path = repo_path.as_ref().to_path_buf();
-        
+
         // Verify this is a git repository
         if !repo_path.join(".git").exists() {
             return Err(crate::Error::invalid_input_error(
                 "path",
                 "git repository",
-                "non-git directory"
+                "non-git directory",
             ));
         }
 
@@ -306,16 +307,16 @@ impl CodeEvolutionTracker {
     pub fn analyze_evolution(&mut self) -> Result<EvolutionAnalysisResult> {
         // Extract git history
         self.extract_git_history()?;
-        
+
         // Detect patterns
         self.detect_patterns()?;
-        
+
         // Calculate metrics
         self.calculate_metrics()?;
-        
+
         // Generate insights
         let file_insights = self.generate_file_insights()?;
-        
+
         // Generate recommendations
         let recommendations = self.generate_recommendations(&file_insights)?;
 
@@ -374,12 +375,14 @@ impl CodeEvolutionTracker {
             ])
             .current_dir(&self.repo_path)
             .output()
-            .map_err(|e| crate::Error::internal_error("git", format!("Failed to run git log: {}", e)))?;
+            .map_err(|e| {
+                crate::Error::internal_error("git", format!("Failed to run git log: {}", e))
+            })?;
 
         if !output.status.success() {
             return Err(crate::Error::internal_error(
                 "git",
-                "Git log command failed"
+                "Git log command failed",
             ));
         }
 
@@ -404,7 +407,9 @@ impl CodeEvolutionTracker {
                 ])
                 .current_dir(&self.repo_path)
                 .output()
-                .map_err(|e| crate::Error::internal_error("git", format!("Failed to run git log: {}", e)))?;
+                .map_err(|e| {
+                    crate::Error::internal_error("git", format!("Failed to run git log: {}", e))
+                })?;
 
             if output.status.success() {
                 let log_output = String::from_utf8_lossy(&output.stdout);
@@ -541,9 +546,8 @@ impl CodeEvolutionTracker {
     /// Detect file patterns for specific files
     fn detect_file_patterns(&mut self, files: &[PathBuf]) -> Result<()> {
         // Filter patterns to only include specified files
-        self.patterns.retain(|pattern| {
-            pattern.files.iter().any(|f| files.contains(f))
-        });
+        self.patterns
+            .retain(|pattern| pattern.files.iter().any(|f| files.contains(f)));
 
         // Detect new patterns for these files
         self.detect_hotspots_for_files(files)?;
@@ -590,7 +594,11 @@ impl CodeEvolutionTracker {
                 if count >= self.config.hotspot_threshold {
                     let pattern = ChangePattern {
                         pattern_type: PatternType::Hotspot,
-                        description: format!("File {} changed {} times", file_path.display(), count),
+                        description: format!(
+                            "File {} changed {} times",
+                            file_path.display(),
+                            count
+                        ),
                         confidence: (count as f64 / self.config.max_commits as f64).min(1.0),
                         files: vec![file_path.clone()],
                         time_range: self.get_time_range_for_file(file_path)?,
@@ -615,15 +623,23 @@ impl CodeEvolutionTracker {
         // Count co-changes
         for changes in self.file_changes.values() {
             for change in changes {
-                file_change_counts.insert(change.related_files[0].clone(),
-                    file_change_counts.get(&change.related_files[0]).unwrap_or(&0) + 1);
+                file_change_counts.insert(
+                    change.related_files[0].clone(),
+                    file_change_counts
+                        .get(&change.related_files[0])
+                        .unwrap_or(&0)
+                        + 1,
+                );
 
                 for i in 0..change.related_files.len() {
                     for j in (i + 1)..change.related_files.len() {
                         let file1 = &change.related_files[i];
                         let file2 = &change.related_files[j];
-                        let key = if file1 < file2 { (file1.clone(), file2.clone()) }
-                                 else { (file2.clone(), file1.clone()) };
+                        let key = if file1 < file2 {
+                            (file1.clone(), file2.clone())
+                        } else {
+                            (file2.clone(), file1.clone())
+                        };
 
                         *coupling_matrix.entry(key).or_insert(0) += 1;
                     }
@@ -638,11 +654,15 @@ impl CodeEvolutionTracker {
             let coupling_strength = co_changes as f64 / (*file1_changes.min(file2_changes) as f64);
 
             if coupling_strength >= self.config.coupling_threshold {
-                let time_range = self.calculate_time_range_for_files(&[file1.clone(), file2.clone()])?;
+                let time_range =
+                    self.calculate_time_range_for_files(&[file1.clone(), file2.clone()])?;
                 let pattern = ChangePattern {
                     pattern_type: PatternType::CoupledChanges,
-                    description: format!("Files {} and {} frequently change together",
-                                       file1.display(), file2.display()),
+                    description: format!(
+                        "Files {} and {} frequently change together",
+                        file1.display(),
+                        file2.display()
+                    ),
                     confidence: coupling_strength,
                     files: vec![file1, file2],
                     time_range,
@@ -667,8 +687,10 @@ impl CodeEvolutionTracker {
         for file_path in files {
             if let Some(changes) = self.file_changes.get(file_path) {
                 for change in changes {
-                    file_change_counts.insert(file_path.clone(),
-                        file_change_counts.get(file_path).unwrap_or(&0) + 1);
+                    file_change_counts.insert(
+                        file_path.clone(),
+                        file_change_counts.get(file_path).unwrap_or(&0) + 1,
+                    );
 
                     for related_file in &change.related_files {
                         if files.contains(related_file) && related_file != file_path {
@@ -692,11 +714,15 @@ impl CodeEvolutionTracker {
             let coupling_strength = co_changes as f64 / (*file1_changes.min(file2_changes) as f64);
 
             if coupling_strength >= self.config.coupling_threshold {
-                let time_range = self.calculate_time_range_for_files(&[file1.clone(), file2.clone()])?;
+                let time_range =
+                    self.calculate_time_range_for_files(&[file1.clone(), file2.clone()])?;
                 let pattern = ChangePattern {
                     pattern_type: PatternType::CoupledChanges,
-                    description: format!("Files {} and {} frequently change together",
-                                       file1.display(), file2.display()),
+                    description: format!(
+                        "Files {} and {} frequently change together",
+                        file1.display(),
+                        file2.display()
+                    ),
                     confidence: coupling_strength,
                     files: vec![file1, file2],
                     time_range,
@@ -723,7 +749,10 @@ impl CodeEvolutionTracker {
             if authors.len() == 1 && changes.len() >= 3 {
                 let pattern = ChangePattern {
                     pattern_type: PatternType::KnowledgeSilo,
-                    description: format!("File {} only modified by single author", file_path.display()),
+                    description: format!(
+                        "File {} only modified by single author",
+                        file_path.display()
+                    ),
                     confidence: 0.8,
                     files: vec![file_path.clone()],
                     time_range: self.get_time_range_for_file(file_path)?,
@@ -751,7 +780,10 @@ impl CodeEvolutionTracker {
                 if authors.len() == 1 && changes.len() >= 3 {
                     let pattern = ChangePattern {
                         pattern_type: PatternType::KnowledgeSilo,
-                        description: format!("File {} only modified by single author", file_path.display()),
+                        description: format!(
+                            "File {} only modified by single author",
+                            file_path.display()
+                        ),
                         confidence: 0.8,
                         files: vec![file_path.clone()],
                         time_range: self.get_time_range_for_file(file_path)?,
@@ -789,8 +821,11 @@ impl CodeEvolutionTracker {
                 if debt_ratio > 0.6 {
                     let pattern = ChangePattern {
                         pattern_type: PatternType::TechnicalDebt,
-                        description: format!("File {} shows high technical debt ({}% maintenance changes)",
-                                           file_path.display(), (debt_ratio * 100.0) as u32),
+                        description: format!(
+                            "File {} shows high technical debt ({}% maintenance changes)",
+                            file_path.display(),
+                            (debt_ratio * 100.0) as u32
+                        ),
                         confidence: debt_ratio,
                         files: vec![file_path.clone()],
                         time_range: self.get_time_range_for_file(file_path)?,
@@ -847,7 +882,10 @@ impl CodeEvolutionTracker {
     }
 
     /// Generate insights for specific files
-    fn generate_specific_file_insights(&self, files: &[PathBuf]) -> Result<HashMap<PathBuf, FileInsight>> {
+    fn generate_specific_file_insights(
+        &self,
+        files: &[PathBuf],
+    ) -> Result<HashMap<PathBuf, FileInsight>> {
         let mut insights = HashMap::new();
 
         for file_path in files {
@@ -861,7 +899,11 @@ impl CodeEvolutionTracker {
     }
 
     /// Generate insight for a single file
-    fn generate_file_insight(&self, file_path: &PathBuf, changes: &[FileChange]) -> Result<FileInsight> {
+    fn generate_file_insight(
+        &self,
+        file_path: &PathBuf,
+        changes: &[FileChange],
+    ) -> Result<FileInsight> {
         let change_frequency = changes.len() as f64 / self.config.time_window_days as f64;
 
         let mut contributors: HashMap<String, usize> = HashMap::new();
@@ -893,7 +935,10 @@ impl CodeEvolutionTracker {
     }
 
     /// Generate recommendations
-    fn generate_recommendations(&self, _file_insights: &HashMap<PathBuf, FileInsight>) -> Result<Vec<EvolutionRecommendation>> {
+    fn generate_recommendations(
+        &self,
+        _file_insights: &HashMap<PathBuf, FileInsight>,
+    ) -> Result<Vec<EvolutionRecommendation>> {
         let mut recommendations = Vec::new();
 
         // Generate recommendations based on patterns and insights
@@ -902,27 +947,35 @@ impl CodeEvolutionTracker {
                 PatternType::Hotspot => {
                     recommendations.push(EvolutionRecommendation {
                         recommendation_type: RecommendationType::Refactor,
-                        description: format!("Consider refactoring hotspot files to reduce change frequency"),
+                        description: format!(
+                            "Consider refactoring hotspot files to reduce change frequency"
+                        ),
                         priority: Priority::High,
                         affected_files: pattern.files.clone(),
                         effort_estimate: EffortLevel::Hard,
-                        expected_impact: "Reduced maintenance burden and improved code stability".to_string(),
+                        expected_impact: "Reduced maintenance burden and improved code stability"
+                            .to_string(),
                     });
                 }
                 PatternType::KnowledgeSilo => {
                     recommendations.push(EvolutionRecommendation {
                         recommendation_type: RecommendationType::KnowledgeSharing,
-                        description: format!("Share knowledge about files with single contributors"),
+                        description: format!(
+                            "Share knowledge about files with single contributors"
+                        ),
                         priority: Priority::Medium,
                         affected_files: pattern.files.clone(),
                         effort_estimate: EffortLevel::Medium,
-                        expected_impact: "Reduced bus factor risk and improved team collaboration".to_string(),
+                        expected_impact: "Reduced bus factor risk and improved team collaboration"
+                            .to_string(),
                     });
                 }
                 PatternType::TechnicalDebt => {
                     recommendations.push(EvolutionRecommendation {
                         recommendation_type: RecommendationType::Refactor,
-                        description: format!("Address technical debt in frequently maintained files"),
+                        description: format!(
+                            "Address technical debt in frequently maintained files"
+                        ),
                         priority: Priority::High,
                         affected_files: pattern.files.clone(),
                         effort_estimate: EffortLevel::VeryHard,
@@ -937,7 +990,11 @@ impl CodeEvolutionTracker {
     }
 
     /// Generate targeted recommendations for specific files
-    fn generate_targeted_recommendations(&self, files: &[PathBuf], file_insights: &HashMap<PathBuf, FileInsight>) -> Result<Vec<EvolutionRecommendation>> {
+    fn generate_targeted_recommendations(
+        &self,
+        files: &[PathBuf],
+        file_insights: &HashMap<PathBuf, FileInsight>,
+    ) -> Result<Vec<EvolutionRecommendation>> {
         let mut recommendations = Vec::new();
 
         for file_path in files {
@@ -946,11 +1003,15 @@ impl CodeEvolutionTracker {
                     RiskLevel::High | RiskLevel::Critical => {
                         recommendations.push(EvolutionRecommendation {
                             recommendation_type: RecommendationType::Refactor,
-                            description: format!("High-risk file {} needs attention", file_path.display()),
+                            description: format!(
+                                "High-risk file {} needs attention",
+                                file_path.display()
+                            ),
                             priority: Priority::High,
                             affected_files: vec![file_path.clone()],
                             effort_estimate: EffortLevel::Hard,
-                            expected_impact: "Reduced risk and improved maintainability".to_string(),
+                            expected_impact: "Reduced risk and improved maintainability"
+                                .to_string(),
                         });
                     }
                     _ => {}
@@ -1046,7 +1107,9 @@ impl CodeEvolutionTracker {
     }
 
     fn calculate_average_coupling_strength(&self) -> f64 {
-        let coupling_patterns: Vec<_> = self.patterns.iter()
+        let coupling_patterns: Vec<_> = self
+            .patterns
+            .iter()
             .filter(|p| p.pattern_type == PatternType::CoupledChanges)
             .collect();
 
@@ -1060,7 +1123,9 @@ impl CodeEvolutionTracker {
 
     fn calculate_debt_trend(&self) -> TrendDirection {
         // Simplified trend calculation
-        let debt_patterns = self.patterns.iter()
+        let debt_patterns = self
+            .patterns
+            .iter()
             .filter(|p| p.pattern_type == PatternType::TechnicalDebt)
             .count();
 
@@ -1075,12 +1140,16 @@ impl CodeEvolutionTracker {
 
     fn calculate_coverage_trend(&self) -> TrendDirection {
         // Simplified coverage trend
-        let test_changes: usize = self.file_changes.values()
+        let test_changes: usize = self
+            .file_changes
+            .values()
             .flat_map(|changes| changes.iter())
             .filter(|change| change.change_type == ChangeType::Test)
             .count();
 
-        let total_changes: usize = self.file_changes.values()
+        let total_changes: usize = self
+            .file_changes
+            .values()
             .map(|changes| changes.len())
             .sum();
 
@@ -1099,15 +1168,22 @@ impl CodeEvolutionTracker {
     }
 
     fn find_coupled_files(&self, file_path: &PathBuf) -> Vec<(PathBuf, f64)> {
-        self.patterns.iter()
-            .filter(|p| p.pattern_type == PatternType::CoupledChanges && p.files.contains(file_path))
+        self.patterns
+            .iter()
+            .filter(|p| {
+                p.pattern_type == PatternType::CoupledChanges && p.files.contains(file_path)
+            })
             .flat_map(|p| p.files.iter())
             .filter(|f| *f != file_path)
             .map(|f| (f.clone(), 0.5)) // Simplified coupling strength
             .collect()
     }
 
-    fn assess_risk_level(&self, changes: &[FileChange], coupled_files: &[(PathBuf, f64)]) -> RiskLevel {
+    fn assess_risk_level(
+        &self,
+        changes: &[FileChange],
+        coupled_files: &[(PathBuf, f64)],
+    ) -> RiskLevel {
         let change_count = changes.len();
         let coupling_count = coupled_files.len();
 

@@ -1,18 +1,16 @@
 //! Smart refactoring suggestions and automated improvements
-//! 
+//!
 //! This module provides intelligent refactoring analysis and suggestions
 //! to improve code quality, maintainability, and performance.
 
-use crate::{FileInfo, Symbol, AnalysisResult};
-use crate::analysis_utils::{
-    AnalysisThresholds, SymbolFilter
-};
-use crate::analysis_common::{FileAnalyzer};
+use crate::analysis_common::FileAnalyzer;
+use crate::analysis_utils::{AnalysisThresholds, SymbolFilter};
+use crate::{AnalysisResult, FileInfo, Symbol};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Smart refactoring analyzer
 #[derive(Debug, Clone)]
@@ -193,45 +191,59 @@ impl RefactoringAnalyzer {
             config: RefactoringConfig::default(),
         }
     }
-    
+
     /// Create a new refactoring analyzer with custom configuration
     pub fn with_config(config: RefactoringConfig) -> Self {
         Self { config }
     }
-    
+
     /// Analyze a codebase for refactoring opportunities
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> RefactoringResult {
         let mut suggestions = Vec::new();
-        
+
         // Analyze each file for refactoring opportunities
         for file in &analysis_result.files {
             suggestions.extend(self.analyze_file(file, analysis_result));
         }
-        
+
         // Analyze cross-file opportunities
         suggestions.extend(self.analyze_cross_file_opportunities(analysis_result));
-        
+
         // Categorize suggestions
         let mut suggestions_by_category = HashMap::new();
         for suggestion in &suggestions {
-            *suggestions_by_category.entry(suggestion.category).or_insert(0) += 1;
+            *suggestions_by_category
+                .entry(suggestion.category)
+                .or_insert(0) += 1;
         }
-        
+
         // Separate quick wins and major improvements
-        let quick_wins: Vec<_> = suggestions.iter()
-            .filter(|s| matches!(s.effort, ImplementationEffort::Trivial | ImplementationEffort::Easy))
+        let quick_wins: Vec<_> = suggestions
+            .iter()
+            .filter(|s| {
+                matches!(
+                    s.effort,
+                    ImplementationEffort::Trivial | ImplementationEffort::Easy
+                )
+            })
             .cloned()
             .collect();
-        
-        let major_improvements: Vec<_> = suggestions.iter()
-            .filter(|s| matches!(s.priority, RefactoringPriority::Critical | RefactoringPriority::High))
+
+        let major_improvements: Vec<_> = suggestions
+            .iter()
+            .filter(|s| {
+                matches!(
+                    s.priority,
+                    RefactoringPriority::Critical | RefactoringPriority::High
+                )
+            })
             .cloned()
             .collect();
-        
+
         let total_opportunities = suggestions.len();
         let quality_score = self.calculate_quality_score(&suggestions, analysis_result);
         let impact_summary = self.calculate_impact_summary(&suggestions);
-        
+
         RefactoringResult {
             quality_score,
             total_opportunities,
@@ -242,20 +254,24 @@ impl RefactoringAnalyzer {
             impact_summary,
         }
     }
-    
+
     /// Analyze a single file for refactoring opportunities
-    fn analyze_file(&self, file: &FileInfo, _analysis_result: &AnalysisResult) -> Vec<RefactoringSuggestion> {
+    fn analyze_file(
+        &self,
+        file: &FileInfo,
+        _analysis_result: &AnalysisResult,
+    ) -> Vec<RefactoringSuggestion> {
         let mut suggestions = Vec::new();
-        
+
         // Analyze file-level issues
         if self.config.complexity_analysis {
             suggestions.extend(self.analyze_file_complexity(file));
         }
-        
+
         if self.config.naming_analysis {
             suggestions.extend(self.analyze_file_naming(file));
         }
-        
+
         // Analyze symbol-level issues
         let function_symbols = SymbolFilter::filter_functions(&file.symbols);
         for symbol in function_symbols {
@@ -268,25 +284,28 @@ impl RefactoringAnalyzer {
                 suggestions.extend(self.analyze_symbol(symbol, file));
             }
         }
-        
+
         suggestions
     }
-    
+
     /// Analyze cross-file refactoring opportunities
-    fn analyze_cross_file_opportunities(&self, analysis_result: &AnalysisResult) -> Vec<RefactoringSuggestion> {
+    fn analyze_cross_file_opportunities(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Vec<RefactoringSuggestion> {
         let mut suggestions = Vec::new();
-        
+
         if self.config.duplication_detection {
             suggestions.extend(self.detect_code_duplication(analysis_result));
         }
-        
+
         if self.config.architectural_analysis {
             suggestions.extend(self.analyze_architecture(analysis_result));
         }
-        
+
         suggestions
     }
-    
+
     /// Analyze file complexity and suggest improvements
     fn analyze_file_complexity(&self, file: &FileInfo) -> Vec<RefactoringSuggestion> {
         let mut suggestions = Vec::new();
@@ -312,8 +331,11 @@ impl RefactoringAnalyzer {
         Some(RefactoringSuggestion {
             id: format!("LARGE_FILE_{}", file.path.display()),
             title: "Large file detected".to_string(),
-            description: format!("File {} has {} lines, which may be too large for easy maintenance",
-                file.path.display(), file.lines),
+            description: format!(
+                "File {} has {} lines, which may be too large for easy maintenance",
+                file.path.display(),
+                file.lines
+            ),
             category: RefactoringCategory::ComplexityReduction,
             priority: RefactoringPriority::Medium,
             effort: ImplementationEffort::Medium,
@@ -337,7 +359,9 @@ impl RefactoringAnalyzer {
         Some(RefactoringSuggestion {
             id: format!("HIGH_SYMBOL_DENSITY_{}", file.path.display()),
             title: "High symbol density detected".to_string(),
-            description: "File has many symbols relative to its size, suggesting it might be doing too much".to_string(),
+            description:
+                "File has many symbols relative to its size, suggesting it might be doing too much"
+                    .to_string(),
             category: RefactoringCategory::ComplexityReduction,
             priority: RefactoringPriority::Low,
             effort: ImplementationEffort::Medium,
@@ -428,14 +452,16 @@ impl RefactoringAnalyzer {
 
     /// Get risks for symbol density refactoring
     fn get_density_risks(&self) -> Vec<String> {
-        vec![
-            "May require restructuring imports".to_string(),
-        ]
+        vec!["May require restructuring imports".to_string()]
     }
 
     // Helper methods for refactoring analysis
 
-    fn calculate_quality_score(&self, suggestions: &[RefactoringSuggestion], _result: &AnalysisResult) -> u8 {
+    fn calculate_quality_score(
+        &self,
+        suggestions: &[RefactoringSuggestion],
+        _result: &AnalysisResult,
+    ) -> u8 {
         if suggestions.is_empty() {
             return 95; // High score if no issues found
         }
@@ -466,20 +492,38 @@ impl RefactoringAnalyzer {
         }
 
         let total_suggestions = suggestions.len() as f32;
-        let maintainability = suggestions.iter().map(|s| s.impact.maintainability as f32).sum::<f32>() / total_suggestions;
-        let performance = suggestions.iter().map(|s| s.impact.performance as f32).sum::<f32>() / total_suggestions;
-        let readability = suggestions.iter().map(|s| s.impact.readability as f32).sum::<f32>() / total_suggestions;
-        let bug_risk = suggestions.iter().map(|s| s.impact.bug_risk_reduction as f32).sum::<f32>() / total_suggestions;
+        let maintainability = suggestions
+            .iter()
+            .map(|s| s.impact.maintainability as f32)
+            .sum::<f32>()
+            / total_suggestions;
+        let performance = suggestions
+            .iter()
+            .map(|s| s.impact.performance as f32)
+            .sum::<f32>()
+            / total_suggestions;
+        let readability = suggestions
+            .iter()
+            .map(|s| s.impact.readability as f32)
+            .sum::<f32>()
+            / total_suggestions;
+        let bug_risk = suggestions
+            .iter()
+            .map(|s| s.impact.bug_risk_reduction as f32)
+            .sum::<f32>()
+            / total_suggestions;
 
-        let time_saved = suggestions.iter().map(|s| {
-            match s.effort {
+        let time_saved = suggestions
+            .iter()
+            .map(|s| match s.effort {
                 ImplementationEffort::Trivial => 0.5,
                 ImplementationEffort::Easy => 2.0,
                 ImplementationEffort::Medium => 8.0,
                 ImplementationEffort::Hard => 40.0,
                 ImplementationEffort::VeryHard => 80.0,
-            }
-        }).sum::<f32>() * 0.1; // Assume 10% time savings from refactoring
+            })
+            .sum::<f32>()
+            * 0.1; // Assume 10% time savings from refactoring
 
         ImpactSummary {
             maintainability_improvement: maintainability as u8,
@@ -509,7 +553,9 @@ impl RefactoringAnalyzer {
     fn analyze_file_naming(&self, file: &FileInfo) -> Vec<RefactoringSuggestion> {
         let mut suggestions = Vec::new();
 
-        let file_name = file.path.file_name()
+        let file_name = file
+            .path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
 
@@ -546,16 +592,18 @@ impl RefactoringAnalyzer {
                     "Improved code navigation".to_string(),
                     "Better project organization".to_string(),
                 ],
-                risks: vec![
-                    "May require updating import statements".to_string(),
-                ],
+                risks: vec!["May require updating import statements".to_string()],
             });
         }
 
         suggestions
     }
 
-    fn analyze_symbol_naming(&self, symbol: &Symbol, file: &FileInfo) -> Vec<RefactoringSuggestion> {
+    fn analyze_symbol_naming(
+        &self,
+        symbol: &Symbol,
+        file: &FileInfo,
+    ) -> Vec<RefactoringSuggestion> {
         let mut suggestions = Vec::new();
 
         // Check for very short names
@@ -563,7 +611,10 @@ impl RefactoringAnalyzer {
             suggestions.push(RefactoringSuggestion {
                 id: format!("SHORT_NAME_{}_{}", file.path.display(), symbol.name),
                 title: "Very short symbol name".to_string(),
-                description: format!("Symbol '{}' has a very short name that may not be descriptive", symbol.name),
+                description: format!(
+                    "Symbol '{}' has a very short name that may not be descriptive",
+                    symbol.name
+                ),
                 category: RefactoringCategory::NamingImprovement,
                 priority: RefactoringPriority::Low,
                 effort: ImplementationEffort::Trivial,
@@ -591,16 +642,18 @@ impl RefactoringAnalyzer {
                     "Improved code readability".to_string(),
                     "Better self-documenting code".to_string(),
                 ],
-                risks: vec![
-                    "May require updating references".to_string(),
-                ],
+                risks: vec!["May require updating references".to_string()],
             });
         }
 
         suggestions
     }
 
-    fn analyze_symbol_complexity(&self, symbol: &Symbol, file: &FileInfo) -> Vec<RefactoringSuggestion> {
+    fn analyze_symbol_complexity(
+        &self,
+        symbol: &Symbol,
+        file: &FileInfo,
+    ) -> Vec<RefactoringSuggestion> {
         let mut suggestions = Vec::new();
 
         // This is a simplified complexity check
@@ -651,46 +704,44 @@ impl RefactoringAnalyzer {
 
     fn detect_code_duplication(&self, _result: &AnalysisResult) -> Vec<RefactoringSuggestion> {
         // Simplified duplication detection
-        vec![
-            RefactoringSuggestion {
-                id: "POTENTIAL_DUPLICATION".to_string(),
-                title: "Potential code duplication detected".to_string(),
-                description: "Similar patterns found across multiple files".to_string(),
-                category: RefactoringCategory::DuplicationElimination,
-                priority: RefactoringPriority::Medium,
-                effort: ImplementationEffort::Medium,
-                impact: ExpectedImpact {
-                    maintainability: 80,
-                    performance: 5,
-                    readability: 40,
-                    bug_risk_reduction: 60,
-                },
-                location: RefactoringLocation {
-                    file: PathBuf::from("multiple files"),
-                    function: None,
-                    class: None,
-                    start_line: 1,
-                    end_line: 1,
-                    scope: "project".to_string(),
-                },
-                current_code: "Duplicated patterns".to_string(),
-                suggested_code: Some("Extract common functionality".to_string()),
-                instructions: vec![
-                    "Identify common patterns".to_string(),
-                    "Extract shared functionality into utilities".to_string(),
-                    "Create reusable components".to_string(),
-                ],
-                benefits: vec![
-                    "Reduced code duplication".to_string(),
-                    "Easier maintenance".to_string(),
-                    "Consistent behavior".to_string(),
-                ],
-                risks: vec![
-                    "May introduce coupling".to_string(),
-                    "Requires careful abstraction design".to_string(),
-                ],
-            }
-        ]
+        vec![RefactoringSuggestion {
+            id: "POTENTIAL_DUPLICATION".to_string(),
+            title: "Potential code duplication detected".to_string(),
+            description: "Similar patterns found across multiple files".to_string(),
+            category: RefactoringCategory::DuplicationElimination,
+            priority: RefactoringPriority::Medium,
+            effort: ImplementationEffort::Medium,
+            impact: ExpectedImpact {
+                maintainability: 80,
+                performance: 5,
+                readability: 40,
+                bug_risk_reduction: 60,
+            },
+            location: RefactoringLocation {
+                file: PathBuf::from("multiple files"),
+                function: None,
+                class: None,
+                start_line: 1,
+                end_line: 1,
+                scope: "project".to_string(),
+            },
+            current_code: "Duplicated patterns".to_string(),
+            suggested_code: Some("Extract common functionality".to_string()),
+            instructions: vec![
+                "Identify common patterns".to_string(),
+                "Extract shared functionality into utilities".to_string(),
+                "Create reusable components".to_string(),
+            ],
+            benefits: vec![
+                "Reduced code duplication".to_string(),
+                "Easier maintenance".to_string(),
+                "Consistent behavior".to_string(),
+            ],
+            risks: vec![
+                "May introduce coupling".to_string(),
+                "Requires careful abstraction design".to_string(),
+            ],
+        }]
     }
 
     fn analyze_architecture(&self, result: &AnalysisResult) -> Vec<RefactoringSuggestion> {
@@ -701,7 +752,9 @@ impl RefactoringAnalyzer {
             suggestions.push(RefactoringSuggestion {
                 id: "LARGE_PROJECT_ARCHITECTURE".to_string(),
                 title: "Large project architecture review".to_string(),
-                description: "Project has grown large enough to benefit from architectural improvements".to_string(),
+                description:
+                    "Project has grown large enough to benefit from architectural improvements"
+                        .to_string(),
                 category: RefactoringCategory::ArchitecturalImprovement,
                 priority: RefactoringPriority::Medium,
                 effort: ImplementationEffort::Hard,
@@ -762,5 +815,3 @@ impl std::fmt::Display for RefactoringCategory {
 // Display implementation is provided by the common Priority type
 
 // Display implementation is provided by the common EffortLevel type
-
-

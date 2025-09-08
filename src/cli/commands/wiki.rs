@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use crate::cli::error::{CliError, CliResult};
 use crate::wiki::{WikiConfig, WikiGenerator};
+use std::path::PathBuf;
 
 pub fn execute(
     path: &PathBuf,
@@ -22,7 +22,9 @@ pub fn execute(
     wiki_max_index_symbols: Option<usize>,
     wiki_templates: Option<&PathBuf>,
 ) -> CliResult<()> {
-    let out_dir = output.cloned().unwrap_or_else(|| PathBuf::from("./wiki_site"));
+    let out_dir = output
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("./wiki_site"));
 
     let mut builder = WikiConfig::builder()
         .with_site_title("Project Wiki")
@@ -37,12 +39,22 @@ pub fn execute(
         .with_refactoring_hints(refactoring_hints)
         .with_ai_json(ai_json);
 
-    if let Some(cfg) = ai_config { builder = builder.with_ai_config_path(cfg); }
-    if let Some(provider) = ai_provider { builder = builder.with_ai_provider(provider); }
+    if let Some(cfg) = ai_config {
+        builder = builder.with_ai_config_path(cfg);
+    }
+    if let Some(provider) = ai_provider {
+        builder = builder.with_ai_provider(provider);
+    }
 
-    if let Some(n) = wiki_max_results { builder = builder.with_search_max_results(n); }
-    if let Some(n) = wiki_max_index_symbols { builder = builder.with_max_index_symbols(n); }
-    if let Some(tpl) = wiki_templates { builder = builder.with_templates_dir(tpl); }
+    if let Some(n) = wiki_max_results {
+        builder = builder.with_search_max_results(n);
+    }
+    if let Some(n) = wiki_max_index_symbols {
+        builder = builder.with_max_index_symbols(n);
+    }
+    if let Some(tpl) = wiki_templates {
+        builder = builder.with_templates_dir(tpl);
+    }
 
     let cfg = builder
         .build()
@@ -53,14 +65,26 @@ pub fn execute(
         .generate_from_path(path)
         .map_err(|e| CliError::Analysis(format!("wiki: {}", e)))?;
 
-    println!("Generated wiki at {} (pages: {})", out_dir.display(), res.pages);
+    println!(
+        "Generated wiki at {} (pages: {})",
+        out_dir.display(),
+        res.pages
+    );
 
     if enhanced_ai {
         println!("Enhanced AI features enabled:");
-        if function_enhancement { println!("  ✓ Function documentation enhancement"); }
-        if security_insights { println!("  ✓ Security vulnerability explanations"); }
-        if refactoring_hints { println!("  ✓ Refactoring suggestions"); }
-        if diagram_annotations { println!("  ✓ Diagram annotations"); }
+        if function_enhancement {
+            println!("  ✓ Function documentation enhancement");
+        }
+        if security_insights {
+            println!("  ✓ Security vulnerability explanations");
+        }
+        if refactoring_hints {
+            println!("  ✓ Refactoring suggestions");
+        }
+        if diagram_annotations {
+            println!("  ✓ Diagram annotations");
+        }
     }
 
     Ok(())

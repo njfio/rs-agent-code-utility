@@ -21,16 +21,15 @@
 //! security audits. Claims of "enterprise-grade" and "comprehensive" analysis are
 //! not supported by the current implementation quality.
 
-use crate::{AnalysisResult, FileInfo, Result, Error};
-use crate::parser::Parser;
-use crate::tree::{SyntaxTree, Node};
 use crate::languages::detect_language_from_path;
+use crate::parser::Parser;
+use crate::tree::{Node, SyntaxTree};
+use crate::{AnalysisResult, Error, FileInfo, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Advanced security analyzer for source code vulnerability detection
 #[derive(Debug, Clone)]
@@ -472,16 +471,12 @@ impl AdvancedSecurityAnalyzer {
     pub fn new() -> Result<Self> {
         let config = AdvancedSecurityConfig::default();
 
-        Ok(Self {
-            config,
-        })
+        Ok(Self { config })
     }
 
     /// Create a new advanced security analyzer with custom configuration
     pub fn with_config(config: AdvancedSecurityConfig) -> Result<Self> {
-        Ok(Self {
-            config,
-        })
+        Ok(Self { config })
     }
 
     /// Helper function to create vulnerability location without cloning file path repeatedly
@@ -500,7 +495,7 @@ impl AdvancedSecurityAnalyzer {
             column,
         }
     }
-    
+
     /// Perform comprehensive security analysis on a codebase
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<AdvancedSecurityResult> {
         let mut vulnerabilities = Vec::new();
@@ -525,7 +520,8 @@ impl AdvancedSecurityAnalyzer {
             };
 
             if self.config.owasp_analysis {
-                let mut file_vulnerabilities = self.detect_owasp_vulnerabilities(&file_with_absolute_path)?;
+                let mut file_vulnerabilities =
+                    self.detect_owasp_vulnerabilities(&file_with_absolute_path)?;
                 // Update paths to use relative paths for consistency
                 for vuln in &mut file_vulnerabilities {
                     vuln.location.file = file.path.clone();
@@ -543,7 +539,8 @@ impl AdvancedSecurityAnalyzer {
             }
 
             if self.config.input_validation {
-                let mut file_input_issues = self.detect_input_validation_issues(&file_with_absolute_path)?;
+                let mut file_input_issues =
+                    self.detect_input_validation_issues(&file_with_absolute_path)?;
                 // Update paths to use relative paths for consistency
                 for issue in &mut file_input_issues {
                     issue.location.file = file.path.clone();
@@ -552,7 +549,8 @@ impl AdvancedSecurityAnalyzer {
             }
 
             if self.config.injection_analysis {
-                let mut file_injection_vulns = self.detect_injection_vulnerabilities(&file_with_absolute_path)?;
+                let mut file_injection_vulns =
+                    self.detect_injection_vulnerabilities(&file_with_absolute_path)?;
                 // Update paths to use relative paths for consistency
                 for vuln in &mut file_injection_vulns {
                     vuln.location.file = file.path.clone();
@@ -561,7 +559,8 @@ impl AdvancedSecurityAnalyzer {
             }
 
             if self.config.best_practices {
-                let mut file_best_practices = self.detect_best_practice_violations(&file_with_absolute_path)?;
+                let mut file_best_practices =
+                    self.detect_best_practice_violations(&file_with_absolute_path)?;
                 // Update paths to use relative paths for consistency
                 for violation in &mut file_best_practices {
                     violation.location.file = file.path.clone();
@@ -569,18 +568,20 @@ impl AdvancedSecurityAnalyzer {
                 best_practice_violations.extend(file_best_practices);
             }
         }
-        
+
         // Filter by minimum severity
         vulnerabilities.retain(|v| self.meets_severity_threshold(&v.severity));
-        
+
         // Calculate metrics
-        let total_vulnerabilities = vulnerabilities.len() + secrets.len() + 
-                                   input_validation_issues.len() + injection_vulnerabilities.len() + 
-                                   best_practice_violations.len();
-        
+        let total_vulnerabilities = vulnerabilities.len()
+            + secrets.len()
+            + input_validation_issues.len()
+            + injection_vulnerabilities.len()
+            + best_practice_violations.len();
+
         let vulnerabilities_by_severity = self.categorize_by_severity(&vulnerabilities);
         let owasp_categories = self.categorize_by_owasp(&vulnerabilities);
-        
+
         // Generate recommendations
         let recommendations = self.generate_security_recommendations(
             &vulnerabilities,
@@ -589,17 +590,17 @@ impl AdvancedSecurityAnalyzer {
             &injection_vulnerabilities,
             &best_practice_violations,
         )?;
-        
+
         // Assess compliance
         let compliance = self.assess_compliance(&vulnerabilities, &owasp_categories)?;
-        
+
         // Calculate security score
         let security_score = self.calculate_security_score(
             total_vulnerabilities,
             &vulnerabilities_by_severity,
             &compliance,
         );
-        
+
         Ok(AdvancedSecurityResult {
             security_score,
             total_vulnerabilities,
@@ -620,7 +621,10 @@ impl AdvancedSecurityAnalyzer {
         match (&self.config.min_severity, severity) {
             (SecuritySeverity::Critical, SecuritySeverity::Critical) => true,
             (SecuritySeverity::High, SecuritySeverity::Critical | SecuritySeverity::High) => true,
-            (SecuritySeverity::Medium, SecuritySeverity::Critical | SecuritySeverity::High | SecuritySeverity::Medium) => true,
+            (
+                SecuritySeverity::Medium,
+                SecuritySeverity::Critical | SecuritySeverity::High | SecuritySeverity::Medium,
+            ) => true,
             (SecuritySeverity::Low, _) => true,
             (SecuritySeverity::Info, _) => true,
             _ => false,
@@ -628,7 +632,10 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect OWASP Top 10 vulnerabilities using AST-based analysis
-    pub fn detect_owasp_vulnerabilities(&self, file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    pub fn detect_owasp_vulnerabilities(
+        &self,
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Try AST-based analysis first
@@ -637,7 +644,11 @@ impl AdvancedSecurityAnalyzer {
                 vulnerabilities.extend(ast_vulnerabilities);
             }
             Err(e) => {
-                eprintln!("Warning: AST-based security analysis failed for {}: {}", file.path.display(), e);
+                eprintln!(
+                    "Warning: AST-based security analysis failed for {}: {}",
+                    file.path.display(),
+                    e
+                );
                 // Will rely on string-based analysis
             }
         }
@@ -648,8 +659,8 @@ impl AdvancedSecurityAnalyzer {
                 // Deduplicate vulnerabilities by checking if similar ones already exist
                 for vuln in string_vulnerabilities {
                     let is_duplicate = vulnerabilities.iter().any(|existing| {
-                        existing.location.start_line == vuln.location.start_line &&
-                        existing.owasp_category == vuln.owasp_category
+                        existing.location.start_line == vuln.location.start_line
+                            && existing.owasp_category == vuln.owasp_category
                     });
 
                     if !is_duplicate {
@@ -658,7 +669,11 @@ impl AdvancedSecurityAnalyzer {
                 }
             }
             Err(e) => {
-                eprintln!("Warning: String-based security analysis failed for {}: {}", file.path.display(), e);
+                eprintln!(
+                    "Warning: String-based security analysis failed for {}: {}",
+                    file.path.display(),
+                    e
+                );
                 // Continue with AST results only
             }
         }
@@ -671,8 +686,9 @@ impl AdvancedSecurityAnalyzer {
         let mut vulnerabilities = Vec::new();
 
         // Detect language and create parser
-        let language = detect_language_from_path(&file.path)
-            .ok_or_else(|| Error::language_error("unknown", "Unable to detect language for AST analysis"))?;
+        let language = detect_language_from_path(&file.path).ok_or_else(|| {
+            Error::language_error("unknown", "Unable to detect language for AST analysis")
+        })?;
 
         let parser = Parser::new(language)?;
         let content = std::fs::read_to_string(&file.path)?;
@@ -688,7 +704,8 @@ impl AdvancedSecurityAnalyzer {
         vulnerabilities.extend(self.detect_weak_crypto_ast(&tree, &content, file, &context)?);
 
         // Add enhanced detection methods
-        vulnerabilities.extend(self.detect_enhanced_injection_ast(&tree, &content, file, &context)?);
+        vulnerabilities
+            .extend(self.detect_enhanced_injection_ast(&tree, &content, file, &context)?);
         vulnerabilities.extend(self.detect_access_control_ast(&tree, &content, file, &context)?);
 
         Ok(vulnerabilities)
@@ -727,12 +744,21 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Heuristic command injection detection via string search (e.g., Rust std::process::Command)
-    fn detect_command_injection_strings(&self, content: &str, file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_command_injection_strings(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulns = Vec::new();
         if content.contains("Command::new(\"sh\")") || content.contains("Command::new(\"bash\")") {
             if content.contains(".arg(\"-c\")") {
                 // Look for an .arg( that likely references a variable or expression
-                if content.contains(".arg(") && (content.contains("user_") || content.contains("input") || content.contains("arg") || content.contains("cmd")) {
+                if content.contains(".arg(")
+                    && (content.contains("user_")
+                        || content.contains("input")
+                        || content.contains("arg")
+                        || content.contains("cmd"))
+                {
                     vulns.push(SecurityVulnerability {
                         id: "STR_CMD_001".to_string(),
                         title: "Potential command injection (shell -c)".to_string(),
@@ -753,7 +779,11 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Heuristic path traversal detection (e.g., read_to_string with variable input)
-    fn detect_path_traversal_strings(&self, content: &str, file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_path_traversal_strings(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulns = Vec::new();
         // Simple pattern: read_to_string(ident) without quotes
         for (idx, line) in content.lines().enumerate() {
@@ -764,14 +794,36 @@ impl AdvancedSecurityAnalyzer {
                     vulns.push(SecurityVulnerability {
                         id: format!("STR_PATH_{}", idx + 1),
                         title: "Potential path traversal / unvalidated file read".to_string(),
-                        description: "Reading from a path derived from user input without validation".to_string(),
+                        description:
+                            "Reading from a path derived from user input without validation"
+                                .to_string(),
                         severity: SecuritySeverity::High,
                         owasp_category: OwaspCategory::SecurityMisconfiguration,
                         cwe_id: Some("CWE-22".to_string()),
-                        location: VulnerabilityLocation { file: file.path.clone(), function: None, start_line: idx + 1, end_line: idx + 1, column: 0 },
+                        location: VulnerabilityLocation {
+                            file: file.path.clone(),
+                            function: None,
+                            start_line: idx + 1,
+                            end_line: idx + 1,
+                            column: 0,
+                        },
                         code_snippet: line.to_string(),
-                        impact: SecurityImpact { confidentiality: ImpactLevel::High, integrity: ImpactLevel::Medium, availability: ImpactLevel::Low, overall_score: 7.0 },
-                        remediation: RemediationGuidance { summary: "Validate and sanitize file paths".to_string(), steps: vec!["Normalize and restrict paths".to_string(), "Use allowlists or sandboxed dirs".to_string()], code_examples: vec![], references: vec![], effort: RemediationEffort::Medium },
+                        impact: SecurityImpact {
+                            confidentiality: ImpactLevel::High,
+                            integrity: ImpactLevel::Medium,
+                            availability: ImpactLevel::Low,
+                            overall_score: 7.0,
+                        },
+                        remediation: RemediationGuidance {
+                            summary: "Validate and sanitize file paths".to_string(),
+                            steps: vec![
+                                "Normalize and restrict paths".to_string(),
+                                "Use allowlists or sandboxed dirs".to_string(),
+                            ],
+                            code_examples: vec![],
+                            references: vec![],
+                            effort: RemediationEffort::Medium,
+                        },
                         confidence: ConfidenceLevel::Medium,
                     });
                 }
@@ -781,20 +833,43 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Heuristic insecure random detection
-    fn detect_insecure_random_strings(&self, content: &str, file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_insecure_random_strings(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulns = Vec::new();
         if content.contains("RandomState::new") || content.contains("DefaultHasher::new") {
             vulns.push(SecurityVulnerability {
                 id: "STR_RAND_001".to_string(),
                 title: "Potential insecure randomness".to_string(),
-                description: "Use of predictable hashing or default states may lead to insecure tokens".to_string(),
+                description:
+                    "Use of predictable hashing or default states may lead to insecure tokens"
+                        .to_string(),
                 severity: SecuritySeverity::Medium,
                 owasp_category: OwaspCategory::InsecureDesign,
                 cwe_id: Some("CWE-330".to_string()),
-                location: VulnerabilityLocation { file: file.path.clone(), function: None, start_line: 1, end_line: 1, column: 0 },
+                location: VulnerabilityLocation {
+                    file: file.path.clone(),
+                    function: None,
+                    start_line: 1,
+                    end_line: 1,
+                    column: 0,
+                },
                 code_snippet: "RandomState::new / DefaultHasher::new".to_string(),
-                impact: SecurityImpact { confidentiality: ImpactLevel::Medium, integrity: ImpactLevel::Medium, availability: ImpactLevel::Low, overall_score: 5.0 },
-                remediation: RemediationGuidance { summary: "Use cryptographically secure RNGs".to_string(), steps: vec!["Use rand::rngs::OsRng or ring".to_string()], code_examples: vec![], references: vec![], effort: RemediationEffort::Low },
+                impact: SecurityImpact {
+                    confidentiality: ImpactLevel::Medium,
+                    integrity: ImpactLevel::Medium,
+                    availability: ImpactLevel::Low,
+                    overall_score: 5.0,
+                },
+                remediation: RemediationGuidance {
+                    summary: "Use cryptographically secure RNGs".to_string(),
+                    steps: vec!["Use rand::rngs::OsRng or ring".to_string()],
+                    code_examples: vec![],
+                    references: vec![],
+                    effort: RemediationEffort::Low,
+                },
                 confidence: ConfidenceLevel::Medium,
             });
         }
@@ -802,21 +877,43 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Heuristic XSS detection (JS innerHTML sinks)
-    fn detect_xss_strings(&self, content: &str, file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_xss_strings(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulns = Vec::new();
         for (idx, line) in content.lines().enumerate() {
             if line.contains("innerHTML") && (line.contains("=") || line.contains("+=")) {
                 vulns.push(SecurityVulnerability {
                     id: format!("STR_XSS_{}", idx + 1),
                     title: "Potential XSS via innerHTML".to_string(),
-                    description: "Assigning user-controlled data to innerHTML can lead to XSS".to_string(),
+                    description: "Assigning user-controlled data to innerHTML can lead to XSS"
+                        .to_string(),
                     severity: SecuritySeverity::High,
                     owasp_category: OwaspCategory::Injection,
                     cwe_id: Some("CWE-79".to_string()),
-                    location: VulnerabilityLocation { file: file.path.clone(), function: None, start_line: idx + 1, end_line: idx + 1, column: 0 },
+                    location: VulnerabilityLocation {
+                        file: file.path.clone(),
+                        function: None,
+                        start_line: idx + 1,
+                        end_line: idx + 1,
+                        column: 0,
+                    },
                     code_snippet: line.to_string(),
-                    impact: SecurityImpact { confidentiality: ImpactLevel::High, integrity: ImpactLevel::High, availability: ImpactLevel::Low, overall_score: 8.0 },
-                    remediation: RemediationGuidance { summary: "Avoid innerHTML or sanitize data".to_string(), steps: vec!["Use textContent or safe templating".to_string()], code_examples: vec![], references: vec![], effort: RemediationEffort::Medium },
+                    impact: SecurityImpact {
+                        confidentiality: ImpactLevel::High,
+                        integrity: ImpactLevel::High,
+                        availability: ImpactLevel::Low,
+                        overall_score: 8.0,
+                    },
+                    remediation: RemediationGuidance {
+                        summary: "Avoid innerHTML or sanitize data".to_string(),
+                        steps: vec!["Use textContent or safe templating".to_string()],
+                        code_examples: vec![],
+                        references: vec![],
+                        effort: RemediationEffort::Medium,
+                    },
                     confidence: ConfidenceLevel::Medium,
                 });
             }
@@ -825,7 +922,12 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect access control issues
-    fn detect_access_control_issues(&self, _content: &str, lines: &[&str], file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_access_control_issues(
+        &self,
+        _content: &str,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Check for missing authorization checks
@@ -834,7 +936,9 @@ impl AdvancedSecurityAnalyzer {
                 vulnerabilities.push(SecurityVulnerability {
                     id: format!("AC001_{}", line_num),
                     title: "Potential missing authorization check".to_string(),
-                    description: "Admin functionality detected without apparent authorization check".to_string(),
+                    description:
+                        "Admin functionality detected without apparent authorization check"
+                            .to_string(),
                     severity: SecuritySeverity::High,
                     owasp_category: OwaspCategory::BrokenAccessControl,
                     cwe_id: Some("CWE-862".to_string()),
@@ -853,22 +957,22 @@ impl AdvancedSecurityAnalyzer {
                         overall_score: 8.5,
                     },
                     remediation: RemediationGuidance {
-                        summary: "Implement proper authorization checks before admin operations".to_string(),
+                        summary: "Implement proper authorization checks before admin operations"
+                            .to_string(),
                         steps: vec![
                             "Add authentication verification".to_string(),
                             "Implement role-based access control".to_string(),
                             "Validate user permissions".to_string(),
                         ],
-                        code_examples: vec![
-                            CodeExample {
-                                description: "Add authorization check".to_string(),
-                                vulnerable_code: "admin_operation()".to_string(),
-                                secure_code: "if (user.hasRole('admin')) { admin_operation() }".to_string(),
-                                language: "generic".to_string(),
-                            }
-                        ],
+                        code_examples: vec![CodeExample {
+                            description: "Add authorization check".to_string(),
+                            vulnerable_code: "admin_operation()".to_string(),
+                            secure_code: "if (user.hasRole('admin')) { admin_operation() }"
+                                .to_string(),
+                            language: "generic".to_string(),
+                        }],
                         references: vec![
-                            "https://owasp.org/Top10/A01_2021-Broken_Access_Control/".to_string(),
+                            "https://owasp.org/Top10/A01_2021-Broken_Access_Control/".to_string()
                         ],
                         effort: RemediationEffort::Medium,
                     },
@@ -881,7 +985,12 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect cryptographic failures
-    fn detect_cryptographic_failures(&self, _content: &str, lines: &[&str], file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_cryptographic_failures(
+        &self,
+        _content: &str,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Check for weak cryptographic algorithms
@@ -917,14 +1026,13 @@ impl AdvancedSecurityAnalyzer {
                             "Use bcrypt for password hashing".to_string(),
                             "Consider using authenticated encryption".to_string(),
                         ],
-                        code_examples: vec![
-                            CodeExample {
-                                description: "Replace weak hash with strong one".to_string(),
-                                vulnerable_code: "hash = md5(password)".to_string(),
-                                secure_code: "hash = bcrypt.hashpw(password, bcrypt.gensalt())".to_string(),
-                                language: "python".to_string(),
-                            }
-                        ],
+                        code_examples: vec![CodeExample {
+                            description: "Replace weak hash with strong one".to_string(),
+                            vulnerable_code: "hash = md5(password)".to_string(),
+                            secure_code: "hash = bcrypt.hashpw(password, bcrypt.gensalt())"
+                                .to_string(),
+                            language: "python".to_string(),
+                        }],
                         references: vec![
                             "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/".to_string(),
                         ],
@@ -935,12 +1043,14 @@ impl AdvancedSecurityAnalyzer {
             }
 
             // Check for hardcoded encryption keys
-            if line_lower.contains("key") && (line_lower.contains("=") || line_lower.contains(":")) {
+            if line_lower.contains("key") && (line_lower.contains("=") || line_lower.contains(":"))
+            {
                 if line.len() > 20 && line.chars().filter(|c| c.is_alphanumeric()).count() > 16 {
                     vulnerabilities.push(SecurityVulnerability {
                         id: format!("CF002_{}", line_num),
                         title: "Potential hardcoded encryption key".to_string(),
-                        description: "Encryption key appears to be hardcoded in source code".to_string(),
+                        description: "Encryption key appears to be hardcoded in source code"
+                            .to_string(),
                         severity: SecuritySeverity::Critical,
                         owasp_category: OwaspCategory::CryptographicFailures,
                         cwe_id: Some("CWE-798".to_string()),
@@ -965,16 +1075,15 @@ impl AdvancedSecurityAnalyzer {
                                 "Use environment variables or secure key management".to_string(),
                                 "Implement key rotation policies".to_string(),
                             ],
-                            code_examples: vec![
-                                CodeExample {
-                                    description: "Use environment variable for key".to_string(),
-                                    vulnerable_code: "key = 'hardcoded_key_123'".to_string(),
-                                    secure_code: "key = os.getenv('ENCRYPTION_KEY')".to_string(),
-                                    language: "python".to_string(),
-                                }
-                            ],
+                            code_examples: vec![CodeExample {
+                                description: "Use environment variable for key".to_string(),
+                                vulnerable_code: "key = 'hardcoded_key_123'".to_string(),
+                                secure_code: "key = os.getenv('ENCRYPTION_KEY')".to_string(),
+                                language: "python".to_string(),
+                            }],
                             references: vec![
-                                "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/".to_string(),
+                                "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+                                    .to_string(),
                             ],
                             effort: RemediationEffort::Medium,
                         },
@@ -988,7 +1097,12 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect injection issues
-    fn detect_injection_issues(&self, _content: &str, lines: &[&str], file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_injection_issues(
+        &self,
+        _content: &str,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Check for SQL injection patterns
@@ -996,10 +1110,12 @@ impl AdvancedSecurityAnalyzer {
             let line_lower = line.to_lowercase();
 
             // SQL injection patterns
-            if (line_lower.contains("select") || line_lower.contains("insert") ||
-                line_lower.contains("update") || line_lower.contains("delete")) &&
-               (line.contains("+") || line.contains("format") || line.contains("{}")) {
-
+            if (line_lower.contains("select")
+                || line_lower.contains("insert")
+                || line_lower.contains("update")
+                || line_lower.contains("delete"))
+                && (line.contains("+") || line.contains("format") || line.contains("{}"))
+            {
                 vulnerabilities.push(SecurityVulnerability {
                     id: format!("INJ001_{}", line_num),
                     title: "Potential SQL injection vulnerability".to_string(),
@@ -1046,14 +1162,17 @@ impl AdvancedSecurityAnalyzer {
             }
 
             // Command injection patterns
-            if (line_lower.contains("exec") || line_lower.contains("system") ||
-                line_lower.contains("shell") || line_lower.contains("cmd")) &&
-               (line.contains("+") || line.contains("format") || line.contains("{}")) {
-
+            if (line_lower.contains("exec")
+                || line_lower.contains("system")
+                || line_lower.contains("shell")
+                || line_lower.contains("cmd"))
+                && (line.contains("+") || line.contains("format") || line.contains("{}"))
+            {
                 vulnerabilities.push(SecurityVulnerability {
                     id: format!("INJ002_{}", line_num),
                     title: "Potential command injection vulnerability".to_string(),
-                    description: "Command execution with user input may allow command injection".to_string(),
+                    description: "Command execution with user input may allow command injection"
+                        .to_string(),
                     severity: SecuritySeverity::Critical,
                     owasp_category: OwaspCategory::Injection,
                     cwe_id: Some("CWE-78".to_string()),
@@ -1078,17 +1197,14 @@ impl AdvancedSecurityAnalyzer {
                             "Validate and whitelist allowed commands".to_string(),
                             "Escape shell metacharacters".to_string(),
                         ],
-                        code_examples: vec![
-                            CodeExample {
-                                description: "Use safe API instead of shell".to_string(),
-                                vulnerable_code: "os.system('ls ' + user_input)".to_string(),
-                                secure_code: "subprocess.run(['ls', user_input], check=True)".to_string(),
-                                language: "python".to_string(),
-                            }
-                        ],
-                        references: vec![
-                            "https://owasp.org/Top10/A03_2021-Injection/".to_string(),
-                        ],
+                        code_examples: vec![CodeExample {
+                            description: "Use safe API instead of shell".to_string(),
+                            vulnerable_code: "os.system('ls ' + user_input)".to_string(),
+                            secure_code: "subprocess.run(['ls', user_input], check=True)"
+                                .to_string(),
+                            language: "python".to_string(),
+                        }],
+                        references: vec!["https://owasp.org/Top10/A03_2021-Injection/".to_string()],
                         effort: RemediationEffort::High,
                     },
                     confidence: ConfidenceLevel::High,
@@ -1100,7 +1216,12 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect insecure design patterns
-    fn detect_insecure_design(&self, _content: &str, lines: &[&str], file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_insecure_design(
+        &self,
+        _content: &str,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Check for insecure random number generation
@@ -1111,7 +1232,8 @@ impl AdvancedSecurityAnalyzer {
                 vulnerabilities.push(SecurityVulnerability {
                     id: format!("ID001_{}", line_num),
                     title: "Insecure random number generation".to_string(),
-                    description: "Use of weak random number generator for security purposes".to_string(),
+                    description: "Use of weak random number generator for security purposes"
+                        .to_string(),
                     severity: SecuritySeverity::Medium,
                     owasp_category: OwaspCategory::InsecureDesign,
                     cwe_id: Some("CWE-338".to_string()),
@@ -1135,16 +1257,15 @@ impl AdvancedSecurityAnalyzer {
                             "Replace with cryptographically secure PRNG".to_string(),
                             "Use appropriate entropy sources".to_string(),
                         ],
-                        code_examples: vec![
-                            CodeExample {
-                                description: "Use secure random generator".to_string(),
-                                vulnerable_code: "token = Math.random()".to_string(),
-                                secure_code: "token = crypto.getRandomValues(new Uint8Array(32))".to_string(),
-                                language: "javascript".to_string(),
-                            }
-                        ],
+                        code_examples: vec![CodeExample {
+                            description: "Use secure random generator".to_string(),
+                            vulnerable_code: "token = Math.random()".to_string(),
+                            secure_code: "token = crypto.getRandomValues(new Uint8Array(32))"
+                                .to_string(),
+                            language: "javascript".to_string(),
+                        }],
                         references: vec![
-                            "https://owasp.org/Top10/A04_2021-Insecure_Design/".to_string(),
+                            "https://owasp.org/Top10/A04_2021-Insecure_Design/".to_string()
                         ],
                         effort: RemediationEffort::Low,
                     },
@@ -1157,15 +1278,21 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect security misconfiguration
-    fn detect_security_misconfiguration(&self, _content: &str, lines: &[&str], file: &FileInfo) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_security_misconfiguration(
+        &self,
+        _content: &str,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Check for debug mode in production
         for (line_num, line) in lines.iter().enumerate() {
             let line_lower = line.to_lowercase();
 
-            if (line_lower.contains("debug") && line_lower.contains("true")) ||
-               (line_lower.contains("development") && line_lower.contains("true")) {
+            if (line_lower.contains("debug") && line_lower.contains("true"))
+                || (line_lower.contains("development") && line_lower.contains("true"))
+            {
                 vulnerabilities.push(SecurityVulnerability {
                     id: format!("SM001_{}", line_num),
                     title: "Debug mode enabled".to_string(),
@@ -1194,16 +1321,16 @@ impl AdvancedSecurityAnalyzer {
                             "Use environment-specific configuration".to_string(),
                             "Remove debug information from error messages".to_string(),
                         ],
-                        code_examples: vec![
-                            CodeExample {
-                                description: "Environment-based debug setting".to_string(),
-                                vulnerable_code: "debug = true".to_string(),
-                                secure_code: "debug = process.env.NODE_ENV !== 'production'".to_string(),
-                                language: "javascript".to_string(),
-                            }
-                        ],
+                        code_examples: vec![CodeExample {
+                            description: "Environment-based debug setting".to_string(),
+                            vulnerable_code: "debug = true".to_string(),
+                            secure_code: "debug = process.env.NODE_ENV !== 'production'"
+                                .to_string(),
+                            language: "javascript".to_string(),
+                        }],
                         references: vec![
-                            "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/".to_string(),
+                            "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
+                                .to_string(),
                         ],
                         effort: RemediationEffort::Trivial,
                     },
@@ -1242,17 +1369,26 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect API keys
-    fn detect_api_key(&self, line: &str, line_num: usize, file: &FileInfo) -> Option<DetectedSecret> {
+    fn detect_api_key(
+        &self,
+        line: &str,
+        line_num: usize,
+        file: &FileInfo,
+    ) -> Option<DetectedSecret> {
         let line_lower = line.to_lowercase();
 
-        if (line_lower.contains("api_key") || line_lower.contains("apikey")) &&
-           (line.contains("=") || line.contains(":")) {
-
+        if (line_lower.contains("api_key") || line_lower.contains("apikey"))
+            && (line.contains("=") || line.contains(":"))
+        {
             // Extract potential key value
             let parts: Vec<&str> = line.split(&['=', ':'][..]).collect();
             if parts.len() >= 2 {
                 let value = parts[1].trim().trim_matches(&['"', '\'', ' '][..]);
-                if value.len() > 10 && value.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+                if value.len() > 10
+                    && value
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+                {
                     return Some(DetectedSecret {
                         secret_type: SecretType::ApiKey,
                         location: VulnerabilityLocation {
@@ -1265,7 +1401,9 @@ impl AdvancedSecurityAnalyzer {
                         masked_value: format!("{}***", &value[..value.len().min(4)]),
                         entropy: self.calculate_entropy(value),
                         confidence: ConfidenceLevel::Medium,
-                        remediation: "Move API key to environment variables or secure configuration".to_string(),
+                        remediation:
+                            "Move API key to environment variables or secure configuration"
+                                .to_string(),
                     });
                 }
             }
@@ -1275,13 +1413,19 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect passwords
-    fn detect_password(&self, line: &str, line_num: usize, file: &FileInfo) -> Option<DetectedSecret> {
+    fn detect_password(
+        &self,
+        line: &str,
+        line_num: usize,
+        file: &FileInfo,
+    ) -> Option<DetectedSecret> {
         let line_lower = line.to_lowercase();
 
-        if (line_lower.contains("password") || line_lower.contains("passwd")) &&
-           (line.contains("=") || line.contains(":")) &&
-           !line_lower.contains("input") && !line_lower.contains("field") {
-
+        if (line_lower.contains("password") || line_lower.contains("passwd"))
+            && (line.contains("=") || line.contains(":"))
+            && !line_lower.contains("input")
+            && !line_lower.contains("field")
+        {
             let parts: Vec<&str> = line.split(&['=', ':'][..]).collect();
             if parts.len() >= 2 {
                 let value = parts[1].trim().trim_matches(&['"', '\'', ' '][..]);
@@ -1298,7 +1442,8 @@ impl AdvancedSecurityAnalyzer {
                         masked_value: "***".to_string(),
                         entropy: self.calculate_entropy(value),
                         confidence: ConfidenceLevel::Medium,
-                        remediation: "Remove hardcoded password and use secure authentication".to_string(),
+                        remediation: "Remove hardcoded password and use secure authentication"
+                            .to_string(),
                     });
                 }
             }
@@ -1311,9 +1456,9 @@ impl AdvancedSecurityAnalyzer {
     fn detect_token(&self, line: &str, line_num: usize, file: &FileInfo) -> Option<DetectedSecret> {
         let line_lower = line.to_lowercase();
 
-        if (line_lower.contains("token") || line_lower.contains("jwt")) &&
-           (line.contains("=") || line.contains(":")) {
-
+        if (line_lower.contains("token") || line_lower.contains("jwt"))
+            && (line.contains("=") || line.contains(":"))
+        {
             let parts: Vec<&str> = line.split(&['=', ':'][..]).collect();
             if parts.len() >= 2 {
                 let value = parts[1].trim().trim_matches(&['"', '\'', ' '][..]);
@@ -1330,7 +1475,8 @@ impl AdvancedSecurityAnalyzer {
                         masked_value: format!("{}***", &value[..value.len().min(6)]),
                         entropy: self.calculate_entropy(value),
                         confidence: ConfidenceLevel::Medium,
-                        remediation: "Move token to secure storage and use proper token management".to_string(),
+                        remediation: "Move token to secure storage and use proper token management"
+                            .to_string(),
                     });
                 }
             }
@@ -1365,9 +1511,11 @@ impl AdvancedSecurityAnalyzer {
 
         for (line_num, line) in lines.iter().enumerate() {
             // Check for direct user input usage without validation
-            if (line.contains("request.") || line.contains("input") || line.contains("params")) &&
-               !line.contains("validate") && !line.contains("sanitize") && !line.contains("escape") {
-
+            if (line.contains("request.") || line.contains("input") || line.contains("params"))
+                && !line.contains("validate")
+                && !line.contains("sanitize")
+                && !line.contains("escape")
+            {
                 issues.push(InputValidationIssue {
                     issue_type: InputValidationType::MissingValidation,
                     location: VulnerabilityLocation {
@@ -1388,7 +1536,10 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect injection vulnerabilities
-    fn detect_injection_vulnerabilities(&self, file: &FileInfo) -> Result<Vec<InjectionVulnerability>> {
+    fn detect_injection_vulnerabilities(
+        &self,
+        file: &FileInfo,
+    ) -> Result<Vec<InjectionVulnerability>> {
         let mut vulnerabilities = Vec::new();
         let content = std::fs::read_to_string(&file.path)?;
         let lines: Vec<&str> = content.lines().collect();
@@ -1435,7 +1586,10 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect best practice violations
-    fn detect_best_practice_violations(&self, file: &FileInfo) -> Result<Vec<BestPracticeViolation>> {
+    fn detect_best_practice_violations(
+        &self,
+        file: &FileInfo,
+    ) -> Result<Vec<BestPracticeViolation>> {
         let mut violations = Vec::new();
         let content = std::fs::read_to_string(&file.path)?;
         let lines: Vec<&str> = content.lines().collect();
@@ -1454,7 +1608,8 @@ impl AdvancedSecurityAnalyzer {
                         column: 0,
                     },
                     severity: SecuritySeverity::Low,
-                    recommendation: "Remove debug statements or use proper logging framework".to_string(),
+                    recommendation: "Remove debug statements or use proper logging framework"
+                        .to_string(),
                 });
             }
 
@@ -1471,7 +1626,8 @@ impl AdvancedSecurityAnalyzer {
                         column: 0,
                     },
                     severity: SecuritySeverity::Info,
-                    recommendation: "Resolve pending issues before production deployment".to_string(),
+                    recommendation: "Resolve pending issues before production deployment"
+                        .to_string(),
                 });
             }
         }
@@ -1480,7 +1636,10 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Categorize vulnerabilities by severity
-    fn categorize_by_severity(&self, vulnerabilities: &[SecurityVulnerability]) -> HashMap<SecuritySeverity, usize> {
+    fn categorize_by_severity(
+        &self,
+        vulnerabilities: &[SecurityVulnerability],
+    ) -> HashMap<SecuritySeverity, usize> {
         let mut counts = HashMap::new();
         for vuln in vulnerabilities {
             *counts.entry(vuln.severity.clone()).or_insert(0) += 1;
@@ -1489,7 +1648,10 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Categorize vulnerabilities by OWASP category
-    fn categorize_by_owasp(&self, vulnerabilities: &[SecurityVulnerability]) -> HashMap<OwaspCategory, usize> {
+    fn categorize_by_owasp(
+        &self,
+        vulnerabilities: &[SecurityVulnerability],
+    ) -> HashMap<OwaspCategory, usize> {
         let mut counts = HashMap::new();
         for vuln in vulnerabilities {
             *counts.entry(vuln.owasp_category.clone()).or_insert(0) += 1;
@@ -1509,16 +1671,21 @@ impl AdvancedSecurityAnalyzer {
         let mut recommendations = Vec::new();
 
         // Critical vulnerabilities
-        let critical_count = vulnerabilities.iter()
+        let critical_count = vulnerabilities
+            .iter()
             .filter(|v| v.severity == SecuritySeverity::Critical)
             .count();
 
         if critical_count > 0 {
             recommendations.push(SecurityRecommendation {
                 category: "Critical Security Issues".to_string(),
-                recommendation: format!("Address {} critical security vulnerabilities immediately", critical_count),
+                recommendation: format!(
+                    "Address {} critical security vulnerabilities immediately",
+                    critical_count
+                ),
                 priority: RecommendationPriority::Critical,
-                affected_files: vulnerabilities.iter()
+                affected_files: vulnerabilities
+                    .iter()
                     .filter(|v| v.severity == SecuritySeverity::Critical)
                     .map(|v| v.location.file.clone())
                     .collect(),
@@ -1535,7 +1702,10 @@ impl AdvancedSecurityAnalyzer {
         if !secrets.is_empty() {
             recommendations.push(SecurityRecommendation {
                 category: "Secrets Management".to_string(),
-                recommendation: format!("Remove {} hardcoded secrets from source code", secrets.len()),
+                recommendation: format!(
+                    "Remove {} hardcoded secrets from source code",
+                    secrets.len()
+                ),
                 priority: RecommendationPriority::High,
                 affected_files: secrets.iter().map(|s| s.location.file.clone()).collect(),
                 implementation: vec![
@@ -1588,10 +1758,15 @@ impl AdvancedSecurityAnalyzer {
 
         // Standards compliance
         let mut standards_compliance = HashMap::new();
-        standards_compliance.insert("OWASP Top 10".to_string(),
-            if owasp_score >= 80 { ComplianceStatus::Compliant }
-            else if owasp_score >= 60 { ComplianceStatus::PartiallyCompliant }
-            else { ComplianceStatus::NonCompliant }
+        standards_compliance.insert(
+            "OWASP Top 10".to_string(),
+            if owasp_score >= 80 {
+                ComplianceStatus::Compliant
+            } else if owasp_score >= 60 {
+                ComplianceStatus::PartiallyCompliant
+            } else {
+                ComplianceStatus::NonCompliant
+            },
         );
 
         let overall_status = if owasp_score >= 80 {
@@ -1648,9 +1823,9 @@ impl AdvancedSecurityAnalyzer {
             variable_assignments: HashMap::new(),
             function_calls: Vec::new(),
             has_user_input: false, // Will be set during AST traversal
-            is_web_context: file.path.to_string_lossy().contains("web") ||
-                           file.path.to_string_lossy().contains("http") ||
-                           file.path.to_string_lossy().contains("api"),
+            is_web_context: file.path.to_string_lossy().contains("web")
+                || file.path.to_string_lossy().contains("http")
+                || file.path.to_string_lossy().contains("api"),
         };
 
         // Walk the tree to build context
@@ -1675,7 +1850,9 @@ impl AdvancedSecurityAnalyzer {
                     if let Ok(value_text) = value_node.text() {
                         if let Some(var_node) = node.child_by_field_name("left") {
                             if let Ok(var_name) = var_node.text() {
-                                context.variable_assignments.insert(var_name.to_string(), value_text.to_string());
+                                context
+                                    .variable_assignments
+                                    .insert(var_name.to_string(), value_text.to_string());
                             }
                         }
                     }
@@ -1710,41 +1887,105 @@ impl AdvancedSecurityAnalyzer {
     fn is_user_input_function(&self, function_name: &str) -> bool {
         let user_input_functions = [
             // Web/HTTP input
-            "request", "req", "input", "param", "query", "body", "form", "post", "get",
-            "header", "cookie", "session", "url", "uri", "path",
+            "request",
+            "req",
+            "input",
+            "param",
+            "query",
+            "body",
+            "form",
+            "post",
+            "get",
+            "header",
+            "cookie",
+            "session",
+            "url",
+            "uri",
+            "path",
             // Console/CLI input
-            "stdin", "readline", "read_line", "input", "prompt", "getline", "scanf", "cin",
-            "gets", "fgets", "getchar", "getch",
+            "stdin",
+            "readline",
+            "read_line",
+            "input",
+            "prompt",
+            "getline",
+            "scanf",
+            "cin",
+            "gets",
+            "fgets",
+            "getchar",
+            "getch",
             // File input
-            "read", "readfile", "load", "open", "file", "upload",
+            "read",
+            "readfile",
+            "load",
+            "open",
+            "file",
+            "upload",
             // Network input
-            "recv", "receive", "socket", "connect", "accept", "listen",
+            "recv",
+            "receive",
+            "socket",
+            "connect",
+            "accept",
+            "listen",
             // Environment input
-            "env", "getenv", "environ", "argv", "args", "cmdline",
+            "env",
+            "getenv",
+            "environ",
+            "argv",
+            "args",
+            "cmdline",
             // Database input (from external sources)
-            "fetch", "select", "find", "search", "lookup",
+            "fetch",
+            "select",
+            "find",
+            "search",
+            "lookup",
             // API/External service input
-            "api", "service", "external", "remote", "http", "https", "curl", "wget",
+            "api",
+            "service",
+            "external",
+            "remote",
+            "http",
+            "https",
+            "curl",
+            "wget",
         ];
 
-        user_input_functions.iter().any(|&input_func| function_name.contains(input_func))
+        user_input_functions
+            .iter()
+            .any(|&input_func| function_name.contains(input_func))
     }
 
     /// Detect SQL injection using AST analysis
-    fn detect_sql_injection_ast(&self, tree: &SyntaxTree, content: &str, file: &FileInfo, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_sql_injection_ast(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
         let root = tree.root_node();
 
         self.analyze_node_for_sql_injection(&root, content, file, context, &mut vulnerabilities)?;
 
         // Filter out false positives using AST context
-        vulnerabilities = self.filter_sql_injection_false_positives(vulnerabilities, tree, content, context)?;
+        vulnerabilities =
+            self.filter_sql_injection_false_positives(vulnerabilities, tree, content, context)?;
 
         Ok(vulnerabilities)
     }
 
     /// Filter SQL injection false positives using AST context
-    fn filter_sql_injection_false_positives(&self, vulnerabilities: Vec<SecurityVulnerability>, _tree: &SyntaxTree, _content: &str, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn filter_sql_injection_false_positives(
+        &self,
+        vulnerabilities: Vec<SecurityVulnerability>,
+        _tree: &SyntaxTree,
+        _content: &str,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut filtered = Vec::new();
 
         for vuln in vulnerabilities {
@@ -1807,18 +2048,33 @@ impl AdvancedSecurityAnalyzer {
     /// Check if code is using ORM or query builder
     fn is_using_orm_or_query_builder(&self, code: &str) -> bool {
         let orm_patterns = [
-            "sqlx::", "diesel::", "sea_orm::", // Rust ORMs
-            "ActiveRecord", "Eloquent", // Ruby/PHP ORMs
-            "SQLAlchemy", "Django.orm", // Python ORMs
-            "Sequelize", "TypeORM", "Prisma", // JavaScript ORMs
-            "Hibernate", "JPA", "MyBatis", // Java ORMs
+            "sqlx::",
+            "diesel::",
+            "sea_orm::", // Rust ORMs
+            "ActiveRecord",
+            "Eloquent", // Ruby/PHP ORMs
+            "SQLAlchemy",
+            "Django.orm", // Python ORMs
+            "Sequelize",
+            "TypeORM",
+            "Prisma", // JavaScript ORMs
+            "Hibernate",
+            "JPA",
+            "MyBatis", // Java ORMs
         ];
 
         orm_patterns.iter().any(|pattern| code.contains(pattern))
     }
 
     /// Analyze node for SQL injection patterns
-    fn analyze_node_for_sql_injection(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_sql_injection(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         // Look for call expressions that might be database operations
         if node.kind() == "call_expression" {
             if let Some(function_node) = node.child_by_field_name("function") {
@@ -1831,7 +2087,8 @@ impl AdvancedSecurityAnalyzer {
                         if let Some(args_node) = node.child_by_field_name("arguments") {
                             if self.has_string_concatenation_in_args(&args_node, content) {
                                 // Only flag if we're confident this is a real SQL operation
-                                let confidence = self.calculate_sql_injection_confidence(node, content, context);
+                                let confidence =
+                                    self.calculate_sql_injection_confidence(node, content, context);
 
                                 if confidence >= ConfidenceLevel::Medium {
                                     vulnerabilities.push(SecurityVulnerability {
@@ -1896,12 +2153,31 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function name indicates database operation
     fn is_database_function(&self, function_name: &str) -> bool {
         let db_functions = [
-            "query", "execute", "exec", "prepare", "select", "insert", "update", "delete",
-            "find", "findone", "findall", "save", "create", "destroy", "remove",
-            "sql", "raw", "rawquery", "executesql", "runsql"
+            "query",
+            "execute",
+            "exec",
+            "prepare",
+            "select",
+            "insert",
+            "update",
+            "delete",
+            "find",
+            "findone",
+            "findall",
+            "save",
+            "create",
+            "destroy",
+            "remove",
+            "sql",
+            "raw",
+            "rawquery",
+            "executesql",
+            "runsql",
         ];
 
-        db_functions.iter().any(|&db_func| function_name.contains(db_func))
+        db_functions
+            .iter()
+            .any(|&db_func| function_name.contains(db_func))
     }
 
     /// Check if arguments contain string concatenation
@@ -1926,7 +2202,12 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Calculate confidence level for SQL injection detection
-    fn calculate_sql_injection_confidence(&self, node: &Node, _content: &str, context: &SecurityContext) -> ConfidenceLevel {
+    fn calculate_sql_injection_confidence(
+        &self,
+        node: &Node,
+        _content: &str,
+        context: &SecurityContext,
+    ) -> ConfidenceLevel {
         let mut confidence_score = 0;
 
         // Higher confidence if in a non-test file
@@ -1957,20 +2238,39 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect command injection using AST analysis
-    fn detect_command_injection_ast(&self, tree: &SyntaxTree, content: &str, file: &FileInfo, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_command_injection_ast(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
         let root = tree.root_node();
 
-        self.analyze_node_for_command_injection(&root, content, file, context, &mut vulnerabilities)?;
+        self.analyze_node_for_command_injection(
+            &root,
+            content,
+            file,
+            context,
+            &mut vulnerabilities,
+        )?;
 
         // Filter out false positives using AST context
-        vulnerabilities = self.filter_command_injection_false_positives(vulnerabilities, tree, content, context)?;
+        vulnerabilities =
+            self.filter_command_injection_false_positives(vulnerabilities, tree, content, context)?;
 
         Ok(vulnerabilities)
     }
 
     /// Filter command injection false positives using AST context
-    fn filter_command_injection_false_positives(&self, vulnerabilities: Vec<SecurityVulnerability>, _tree: &SyntaxTree, _content: &str, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn filter_command_injection_false_positives(
+        &self,
+        vulnerabilities: Vec<SecurityVulnerability>,
+        _tree: &SyntaxTree,
+        _content: &str,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut filtered = Vec::new();
 
         for vuln in vulnerabilities {
@@ -2013,7 +2313,8 @@ impl AdvancedSecurityAnalyzer {
     fn is_hardcoded_command(&self, code: &str) -> bool {
         // Look for static command strings
         let has_quotes = code.contains("\"") || code.contains("'");
-        let has_concatenation = code.contains("+") || code.contains("format!") || code.contains("&");
+        let has_concatenation =
+            code.contains("+") || code.contains("format!") || code.contains("&");
 
         has_quotes && !has_concatenation
     }
@@ -2030,19 +2331,34 @@ impl AdvancedSecurityAnalyzer {
     /// Check if file is a build script or development tool
     fn is_build_or_dev_script(&self, file_path: &str) -> bool {
         let build_patterns = [
-            "build.rs", "Makefile", "CMakeLists.txt",
-            "package.json", "Cargo.toml", "setup.py",
-            "gulpfile", "webpack.config", "rollup.config"
+            "build.rs",
+            "Makefile",
+            "CMakeLists.txt",
+            "package.json",
+            "Cargo.toml",
+            "setup.py",
+            "gulpfile",
+            "webpack.config",
+            "rollup.config",
         ];
 
-        build_patterns.iter().any(|pattern| file_path.contains(pattern)) ||
-        file_path.contains("/scripts/") ||
-        file_path.contains("/build/") ||
-        file_path.contains("/tools/")
+        build_patterns
+            .iter()
+            .any(|pattern| file_path.contains(pattern))
+            || file_path.contains("/scripts/")
+            || file_path.contains("/build/")
+            || file_path.contains("/tools/")
     }
 
     /// Analyze node for command injection patterns
-    fn analyze_node_for_command_injection(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_command_injection(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         if node.kind() == "call_expression" {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
@@ -2052,7 +2368,8 @@ impl AdvancedSecurityAnalyzer {
                     if self.is_command_execution_function(&function_name_lower) {
                         if let Some(args_node) = node.child_by_field_name("arguments") {
                             if self.has_string_concatenation_in_args(&args_node, content) {
-                                let confidence = self.calculate_command_injection_confidence(node, content, context);
+                                let confidence = self
+                                    .calculate_command_injection_confidence(node, content, context);
 
                                 if confidence >= ConfidenceLevel::Medium {
                                     vulnerabilities.push(SecurityVulnerability {
@@ -2108,7 +2425,13 @@ impl AdvancedSecurityAnalyzer {
 
         // Recursively analyze children
         for child in node.children() {
-            self.analyze_node_for_command_injection(&child, content, file, context, vulnerabilities)?;
+            self.analyze_node_for_command_injection(
+                &child,
+                content,
+                file,
+                context,
+                vulnerabilities,
+            )?;
         }
 
         Ok(())
@@ -2117,15 +2440,33 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function name indicates command execution
     fn is_command_execution_function(&self, function_name: &str) -> bool {
         let cmd_functions = [
-            "exec", "system", "shell", "cmd", "spawn", "popen", "run", "call",
-            "execute", "eval", "subprocess", "process", "command"
+            "exec",
+            "system",
+            "shell",
+            "cmd",
+            "spawn",
+            "popen",
+            "run",
+            "call",
+            "execute",
+            "eval",
+            "subprocess",
+            "process",
+            "command",
         ];
 
-        cmd_functions.iter().any(|&cmd_func| function_name.contains(cmd_func))
+        cmd_functions
+            .iter()
+            .any(|&cmd_func| function_name.contains(cmd_func))
     }
 
     /// Calculate confidence level for command injection detection
-    fn calculate_command_injection_confidence(&self, node: &Node, _content: &str, context: &SecurityContext) -> ConfidenceLevel {
+    fn calculate_command_injection_confidence(
+        &self,
+        node: &Node,
+        _content: &str,
+        context: &SecurityContext,
+    ) -> ConfidenceLevel {
         let mut confidence_score = 0;
 
         // Higher confidence if in a non-test file
@@ -2156,20 +2497,39 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect hardcoded secrets using AST analysis
-    fn detect_hardcoded_secrets_ast(&self, tree: &SyntaxTree, content: &str, file: &FileInfo, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_hardcoded_secrets_ast(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
         let root = tree.root_node();
 
-        self.analyze_node_for_hardcoded_secrets(&root, content, file, context, &mut vulnerabilities)?;
+        self.analyze_node_for_hardcoded_secrets(
+            &root,
+            content,
+            file,
+            context,
+            &mut vulnerabilities,
+        )?;
 
         // Filter out false positives using AST context
-        vulnerabilities = self.filter_secrets_false_positives(vulnerabilities, tree, content, context)?;
+        vulnerabilities =
+            self.filter_secrets_false_positives(vulnerabilities, tree, content, context)?;
 
         Ok(vulnerabilities)
     }
 
     /// Filter secrets false positives using AST context
-    fn filter_secrets_false_positives(&self, vulnerabilities: Vec<SecurityVulnerability>, _tree: &SyntaxTree, _content: &str, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn filter_secrets_false_positives(
+        &self,
+        vulnerabilities: Vec<SecurityVulnerability>,
+        _tree: &SyntaxTree,
+        _content: &str,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut filtered = Vec::new();
 
         for vuln in vulnerabilities {
@@ -2216,14 +2576,31 @@ impl AdvancedSecurityAnalyzer {
     /// Check if secret is a placeholder or example
     fn is_placeholder_secret(&self, secret: &str) -> bool {
         let placeholder_patterns = [
-            "example", "placeholder", "dummy", "test", "fake",
-            "your_", "my_", "insert_", "replace_", "change_",
-            "xxx", "yyy", "zzz", "123", "abc",
-            "password", "secret", "key", "token"
+            "example",
+            "placeholder",
+            "dummy",
+            "test",
+            "fake",
+            "your_",
+            "my_",
+            "insert_",
+            "replace_",
+            "change_",
+            "xxx",
+            "yyy",
+            "zzz",
+            "123",
+            "abc",
+            "password",
+            "secret",
+            "key",
+            "token",
         ];
 
         let secret_lower = secret.to_lowercase();
-        placeholder_patterns.iter().any(|pattern| secret_lower.contains(pattern))
+        placeholder_patterns
+            .iter()
+            .any(|pattern| secret_lower.contains(pattern))
     }
 
     /// Check if it's a configuration template
@@ -2236,17 +2613,22 @@ impl AdvancedSecurityAnalyzer {
 
     /// Check if it's a public key or certificate
     fn is_public_key_or_cert(&self, secret: &str) -> bool {
-        secret.contains("-----BEGIN PUBLIC KEY-----") ||
-        secret.contains("-----BEGIN CERTIFICATE-----") ||
-        secret.contains("-----BEGIN RSA PUBLIC KEY-----") ||
-        secret.contains("ssh-rsa") ||
-        secret.contains("ssh-ed25519")
+        secret.contains("-----BEGIN PUBLIC KEY-----")
+            || secret.contains("-----BEGIN CERTIFICATE-----")
+            || secret.contains("-----BEGIN RSA PUBLIC KEY-----")
+            || secret.contains("ssh-rsa")
+            || secret.contains("ssh-ed25519")
     }
 
-
-
     /// Analyze node for hardcoded secrets
-    fn analyze_node_for_hardcoded_secrets(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_hardcoded_secrets(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         // Look for string literals that might contain secrets
         if node.kind() == "string_literal" || node.kind() == "string" {
             if let Ok(string_value) = node.text() {
@@ -2257,7 +2639,8 @@ impl AdvancedSecurityAnalyzer {
                         vulnerabilities.push(SecurityVulnerability {
                             id: format!("AST_SECRET_{}", node.start_position().row),
                             title: "Hardcoded secret detected".to_string(),
-                            description: "Potential secret or credential hardcoded in source code".to_string(),
+                            description: "Potential secret or credential hardcoded in source code"
+                                .to_string(),
                             severity: SecuritySeverity::Critical,
                             owasp_category: OwaspCategory::CryptographicFailures,
                             cwe_id: Some("CWE-798".to_string()),
@@ -2279,19 +2662,19 @@ impl AdvancedSecurityAnalyzer {
                                 summary: "Move secrets to secure configuration".to_string(),
                                 steps: vec![
                                     "Remove hardcoded secrets from source code".to_string(),
-                                    "Use environment variables or secure key management".to_string(),
+                                    "Use environment variables or secure key management"
+                                        .to_string(),
                                     "Implement secret rotation policies".to_string(),
                                 ],
-                                code_examples: vec![
-                                    CodeExample {
-                                        description: "Use environment variable for secret".to_string(),
-                                        vulnerable_code: "api_key = 'hardcoded_key_123'".to_string(),
-                                        secure_code: "api_key = os.getenv('API_KEY')".to_string(),
-                                        language: "python".to_string(),
-                                    }
-                                ],
+                                code_examples: vec![CodeExample {
+                                    description: "Use environment variable for secret".to_string(),
+                                    vulnerable_code: "api_key = 'hardcoded_key_123'".to_string(),
+                                    secure_code: "api_key = os.getenv('API_KEY')".to_string(),
+                                    language: "python".to_string(),
+                                }],
                                 references: vec![
-                                    "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/".to_string(),
+                                    "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+                                        .to_string(),
                                 ],
                                 effort: RemediationEffort::Medium,
                             },
@@ -2304,7 +2687,13 @@ impl AdvancedSecurityAnalyzer {
 
         // Recursively analyze children
         for child in node.children() {
-            self.analyze_node_for_hardcoded_secrets(&child, content, file, context, vulnerabilities)?;
+            self.analyze_node_for_hardcoded_secrets(
+                &child,
+                content,
+                file,
+                context,
+                vulnerabilities,
+            )?;
         }
 
         Ok(())
@@ -2328,16 +2717,20 @@ impl AdvancedSecurityAnalyzer {
 
         // Check for common secret patterns
         let secret_patterns = [
-            "key", "secret", "token", "password", "pass", "pwd", "api", "auth"
+            "key", "secret", "token", "password", "pass", "pwd", "api", "auth",
         ];
 
-        secret_patterns.iter().any(|&pattern| clean_value.to_lowercase().contains(pattern))
+        secret_patterns
+            .iter()
+            .any(|&pattern| clean_value.to_lowercase().contains(pattern))
     }
 
-
-
     /// Calculate confidence level for secret detection
-    fn calculate_secret_confidence(&self, value: &str, context: &SecurityContext) -> ConfidenceLevel {
+    fn calculate_secret_confidence(
+        &self,
+        value: &str,
+        context: &SecurityContext,
+    ) -> ConfidenceLevel {
         let mut confidence_score = 0;
 
         // Higher confidence for high entropy strings
@@ -2355,7 +2748,10 @@ impl AdvancedSecurityAnalyzer {
 
         // Lower confidence for common test values
         let test_values = ["test", "example", "demo", "sample", "placeholder"];
-        if test_values.iter().any(|&test_val| value.to_lowercase().contains(test_val)) {
+        if test_values
+            .iter()
+            .any(|&test_val| value.to_lowercase().contains(test_val))
+        {
             confidence_score -= 3;
         }
 
@@ -2367,7 +2763,13 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect weak cryptography using AST analysis
-    fn detect_weak_crypto_ast(&self, tree: &SyntaxTree, content: &str, file: &FileInfo, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_weak_crypto_ast(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
         let root = tree.root_node();
 
@@ -2376,7 +2778,14 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Analyze node for weak cryptography
-    fn analyze_node_for_weak_crypto(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_weak_crypto(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         if node.kind() == "call_expression" {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
@@ -2387,7 +2796,8 @@ impl AdvancedSecurityAnalyzer {
                         vulnerabilities.push(SecurityVulnerability {
                             id: format!("AST_CRYPTO_{}", node.start_position().row),
                             title: "Weak cryptographic algorithm detected".to_string(),
-                            description: "Use of MD5 or SHA1 which are cryptographically weak".to_string(),
+                            description: "Use of MD5 or SHA1 which are cryptographically weak"
+                                .to_string(),
                             severity: SecuritySeverity::Medium,
                             owasp_category: OwaspCategory::CryptographicFailures,
                             cwe_id: Some("CWE-327".to_string()),
@@ -2406,22 +2816,23 @@ impl AdvancedSecurityAnalyzer {
                                 overall_score: 6.0,
                             },
                             remediation: RemediationGuidance {
-                                summary: "Replace with stronger cryptographic algorithms".to_string(),
+                                summary: "Replace with stronger cryptographic algorithms"
+                                    .to_string(),
                                 steps: vec![
                                     "Replace MD5/SHA1 with SHA-256 or better".to_string(),
                                     "Use bcrypt for password hashing".to_string(),
                                     "Consider using authenticated encryption".to_string(),
                                 ],
-                                code_examples: vec![
-                                    CodeExample {
-                                        description: "Replace weak hash with strong one".to_string(),
-                                        vulnerable_code: "hash = md5(password)".to_string(),
-                                        secure_code: "hash = bcrypt.hashpw(password, bcrypt.gensalt())".to_string(),
-                                        language: "python".to_string(),
-                                    }
-                                ],
+                                code_examples: vec![CodeExample {
+                                    description: "Replace weak hash with strong one".to_string(),
+                                    vulnerable_code: "hash = md5(password)".to_string(),
+                                    secure_code: "hash = bcrypt.hashpw(password, bcrypt.gensalt())"
+                                        .to_string(),
+                                    language: "python".to_string(),
+                                }],
                                 references: vec![
-                                    "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/".to_string(),
+                                    "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+                                        .to_string(),
                                 ],
                                 effort: RemediationEffort::Low,
                             },
@@ -2441,7 +2852,13 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Detect access control issues using AST analysis
-    fn detect_access_control_ast(&self, tree: &SyntaxTree, content: &str, file: &FileInfo, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_access_control_ast(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
         let root = tree.root_node();
 
@@ -2450,9 +2867,19 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Analyze node for access control issues
-    fn analyze_node_for_access_control(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_access_control(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         // Look for function definitions that might be admin functions
-        if node.kind() == "function_definition" || node.kind() == "function_declaration" || node.kind() == "method_definition" {
+        if node.kind() == "function_definition"
+            || node.kind() == "function_declaration"
+            || node.kind() == "method_definition"
+        {
             if let Some(name_node) = node.child_by_field_name("name") {
                 if let Ok(function_name) = name_node.text() {
                     let function_name_lower = function_name.to_lowercase();
@@ -2523,12 +2950,26 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function name suggests admin functionality
     fn is_admin_function(&self, function_name: &str) -> bool {
         let admin_patterns = [
-            "admin", "administrator", "delete_user", "create_user", "modify_user",
-            "delete_all", "drop_table", "reset_password", "change_role", "grant_permission",
-            "revoke_permission", "system_config", "backup", "restore", "migrate"
+            "admin",
+            "administrator",
+            "delete_user",
+            "create_user",
+            "modify_user",
+            "delete_all",
+            "drop_table",
+            "reset_password",
+            "change_role",
+            "grant_permission",
+            "revoke_permission",
+            "system_config",
+            "backup",
+            "restore",
+            "migrate",
         ];
 
-        admin_patterns.iter().any(|&pattern| function_name.contains(pattern))
+        admin_patterns
+            .iter()
+            .any(|&pattern| function_name.contains(pattern))
     }
 
     /// Check if function body contains authorization checks
@@ -2574,36 +3015,73 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function name is related to authorization
     fn is_authorization_function(&self, function_name: &str) -> bool {
         let auth_patterns = [
-            "check_auth", "verify_auth", "authenticate", "authorize", "has_role",
-            "has_permission", "check_permission", "verify_role", "is_admin",
-            "require_auth", "ensure_auth", "validate_token", "check_access"
+            "check_auth",
+            "verify_auth",
+            "authenticate",
+            "authorize",
+            "has_role",
+            "has_permission",
+            "check_permission",
+            "verify_role",
+            "is_admin",
+            "require_auth",
+            "ensure_auth",
+            "validate_token",
+            "check_access",
         ];
 
-        auth_patterns.iter().any(|&pattern| function_name.contains(pattern))
+        auth_patterns
+            .iter()
+            .any(|&pattern| function_name.contains(pattern))
     }
 
     /// Check if text contains authorization keywords
     fn contains_authorization_keywords(&self, text: &str) -> bool {
         let auth_keywords = [
-            "auth", "permission", "role", "access", "token", "session",
-            "login", "user", "admin", "unauthorized", "forbidden"
+            "auth",
+            "permission",
+            "role",
+            "access",
+            "token",
+            "session",
+            "login",
+            "user",
+            "admin",
+            "unauthorized",
+            "forbidden",
         ];
 
         auth_keywords.iter().any(|&keyword| text.contains(keyword))
     }
 
-
-
     /// Enhanced injection detection with better AST analysis
-    fn detect_enhanced_injection_ast(&self, tree: &SyntaxTree, content: &str, file: &FileInfo, context: &SecurityContext) -> Result<Vec<SecurityVulnerability>> {
+    fn detect_enhanced_injection_ast(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+    ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
         let root = tree.root_node();
 
         // Detect SQL injection with better context awareness
-        self.analyze_node_for_enhanced_sql_injection(&root, content, file, context, &mut vulnerabilities)?;
+        self.analyze_node_for_enhanced_sql_injection(
+            &root,
+            content,
+            file,
+            context,
+            &mut vulnerabilities,
+        )?;
 
         // Detect command injection with better context awareness
-        self.analyze_node_for_enhanced_command_injection(&root, content, file, context, &mut vulnerabilities)?;
+        self.analyze_node_for_enhanced_command_injection(
+            &root,
+            content,
+            file,
+            context,
+            &mut vulnerabilities,
+        )?;
 
         // Detect XSS vulnerabilities
         self.analyze_node_for_xss(&root, content, file, context, &mut vulnerabilities)?;
@@ -2612,7 +3090,14 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Enhanced SQL injection detection
-    fn analyze_node_for_enhanced_sql_injection(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_enhanced_sql_injection(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         if node.kind() == "call_expression" {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
@@ -2623,7 +3108,9 @@ impl AdvancedSecurityAnalyzer {
                         if let Some(args_node) = node.child_by_field_name("arguments") {
                             // Check if any argument contains string concatenation or interpolation
                             if self.has_dynamic_sql_construction(&args_node, content) {
-                                let confidence = self.calculate_enhanced_sql_injection_confidence(node, content, context);
+                                let confidence = self.calculate_enhanced_sql_injection_confidence(
+                                    node, content, context,
+                                );
 
                                 vulnerabilities.push(SecurityVulnerability {
                                     id: format!("AST_SQL_{}", node.start_position().row),
@@ -2679,7 +3166,13 @@ impl AdvancedSecurityAnalyzer {
 
         // Recursively analyze children
         for child in node.children() {
-            self.analyze_node_for_enhanced_sql_injection(&child, content, file, context, vulnerabilities)?;
+            self.analyze_node_for_enhanced_sql_injection(
+                &child,
+                content,
+                file,
+                context,
+                vulnerabilities,
+            )?;
         }
 
         Ok(())
@@ -2688,12 +3181,30 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function is database-related (enhanced version)
     fn is_database_function_enhanced(&self, function_name: &str) -> bool {
         let db_functions = [
-            "execute", "query", "exec", "prepare", "cursor", "select", "insert",
-            "update", "delete", "create", "drop", "alter", "sql", "db", "database",
-            "find", "findone", "aggregate", "collection"
+            "execute",
+            "query",
+            "exec",
+            "prepare",
+            "cursor",
+            "select",
+            "insert",
+            "update",
+            "delete",
+            "create",
+            "drop",
+            "alter",
+            "sql",
+            "db",
+            "database",
+            "find",
+            "findone",
+            "aggregate",
+            "collection",
         ];
 
-        db_functions.iter().any(|&func| function_name.contains(func))
+        db_functions
+            .iter()
+            .any(|&func| function_name.contains(func))
     }
 
     /// Check for dynamic SQL construction patterns
@@ -2746,15 +3257,20 @@ impl AdvancedSecurityAnalyzer {
     /// Check if text contains SQL keywords
     fn contains_sql_keywords(&self, text: &str) -> bool {
         let sql_keywords = [
-            "select", "insert", "update", "delete", "create", "drop", "alter",
-            "from", "where", "join", "union", "order by", "group by", "having"
+            "select", "insert", "update", "delete", "create", "drop", "alter", "from", "where",
+            "join", "union", "order by", "group by", "having",
         ];
 
         sql_keywords.iter().any(|&keyword| text.contains(keyword))
     }
 
     /// Calculate enhanced confidence for SQL injection
-    fn calculate_enhanced_sql_injection_confidence(&self, node: &Node, content: &str, context: &SecurityContext) -> ConfidenceLevel {
+    fn calculate_enhanced_sql_injection_confidence(
+        &self,
+        node: &Node,
+        content: &str,
+        context: &SecurityContext,
+    ) -> ConfidenceLevel {
         let mut confidence_score = 0;
 
         // Higher confidence if SQL keywords are present
@@ -2795,19 +3311,24 @@ impl AdvancedSecurityAnalyzer {
     fn has_nearby_parameterized_patterns(&self, node: &Node, _content: &str) -> bool {
         // Look for patterns like ?, $1, :param, etc. in the vicinity
         if let Ok(node_text) = node.text() {
-            node_text.contains('?') ||
-            node_text.contains("$1") ||
-            node_text.contains(":") ||
-            node_text.contains("prepare")
+            node_text.contains('?')
+                || node_text.contains("$1")
+                || node_text.contains(":")
+                || node_text.contains("prepare")
         } else {
             false
         }
     }
 
-
-
     /// Enhanced command injection detection
-    fn analyze_node_for_enhanced_command_injection(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_enhanced_command_injection(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         if node.kind() == "call_expression" {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
@@ -2818,7 +3339,8 @@ impl AdvancedSecurityAnalyzer {
                         if let Some(args_node) = node.child_by_field_name("arguments") {
                             // Check if command is constructed dynamically
                             if self.has_dynamic_command_construction(&args_node, content) {
-                                let confidence = self.calculate_command_injection_confidence(node, content, context);
+                                let confidence = self
+                                    .calculate_command_injection_confidence(node, content, context);
 
                                 vulnerabilities.push(SecurityVulnerability {
                                     id: format!("AST_CMD_{}", node.start_position().row),
@@ -2874,7 +3396,13 @@ impl AdvancedSecurityAnalyzer {
 
         // Recursively analyze children
         for child in node.children() {
-            self.analyze_node_for_enhanced_command_injection(&child, content, file, context, vulnerabilities)?;
+            self.analyze_node_for_enhanced_command_injection(
+                &child,
+                content,
+                file,
+                context,
+                vulnerabilities,
+            )?;
         }
 
         Ok(())
@@ -2883,12 +3411,28 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function executes commands (enhanced version)
     fn is_command_execution_function_enhanced(&self, function_name: &str) -> bool {
         let cmd_functions = [
-            "system", "exec", "shell", "cmd", "popen", "subprocess", "spawn",
-            "execve", "execl", "execlp", "execv", "execvp", "run", "call",
-            "check_output", "getoutput", "getstatusoutput"
+            "system",
+            "exec",
+            "shell",
+            "cmd",
+            "popen",
+            "subprocess",
+            "spawn",
+            "execve",
+            "execl",
+            "execlp",
+            "execv",
+            "execvp",
+            "run",
+            "call",
+            "check_output",
+            "getoutput",
+            "getstatusoutput",
         ];
 
-        cmd_functions.iter().any(|&func| function_name.contains(func))
+        cmd_functions
+            .iter()
+            .any(|&func| function_name.contains(func))
     }
 
     /// Check for dynamic command construction
@@ -2926,7 +3470,14 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// XSS vulnerability detection
-    fn analyze_node_for_xss(&self, node: &Node, content: &str, file: &FileInfo, context: &SecurityContext, vulnerabilities: &mut Vec<SecurityVulnerability>) -> Result<()> {
+    fn analyze_node_for_xss(
+        &self,
+        node: &Node,
+        content: &str,
+        file: &FileInfo,
+        context: &SecurityContext,
+        vulnerabilities: &mut Vec<SecurityVulnerability>,
+    ) -> Result<()> {
         // Look for output functions that might render user input
         if node.kind() == "call_expression" {
             if let Some(function_node) = node.child_by_field_name("function") {
@@ -3001,24 +3552,45 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function outputs content
     fn is_output_function(&self, function_name: &str) -> bool {
         let output_functions = [
-            "print", "write", "render", "send", "response", "output", "echo",
-            "innerHTML", "outerHTML", "document.write", "append", "html",
-            "text", "val", "attr", "prop"
+            "print",
+            "write",
+            "render",
+            "send",
+            "response",
+            "output",
+            "echo",
+            "innerHTML",
+            "outerHTML",
+            "document.write",
+            "append",
+            "html",
+            "text",
+            "val",
+            "attr",
+            "prop",
         ];
 
-        output_functions.iter().any(|&func| function_name.contains(func))
+        output_functions
+            .iter()
+            .any(|&func| function_name.contains(func))
     }
 
     /// Check for unescaped user input
-    fn has_unescaped_user_input(&self, args_node: &Node, _content: &str, _context: &SecurityContext) -> bool {
+    fn has_unescaped_user_input(
+        &self,
+        args_node: &Node,
+        _content: &str,
+        _context: &SecurityContext,
+    ) -> bool {
         // This is a simplified check - in a real implementation, you'd track data flow
         for child in args_node.children() {
             if let Ok(arg_text) = child.text() {
                 let arg_text_lower = arg_text.to_lowercase();
 
                 // Look for variables that might contain user input
-                if self.looks_like_user_input(&arg_text_lower) &&
-                   !self.has_escaping_function(&arg_text_lower) {
+                if self.looks_like_user_input(&arg_text_lower)
+                    && !self.has_escaping_function(&arg_text_lower)
+                {
                     return true;
                 }
             }
@@ -3030,25 +3602,22 @@ impl AdvancedSecurityAnalyzer {
     /// Check if variable name suggests user input
     fn looks_like_user_input(&self, var_name: &str) -> bool {
         let user_input_patterns = [
-            "user", "input", "request", "param", "query", "form", "post",
-            "get", "body", "data", "payload", "content"
+            "user", "input", "request", "param", "query", "form", "post", "get", "body", "data",
+            "payload", "content",
         ];
 
-        user_input_patterns.iter().any(|&pattern| var_name.contains(pattern))
+        user_input_patterns
+            .iter()
+            .any(|&pattern| var_name.contains(pattern))
     }
 
     /// Check if escaping function is used
     fn has_escaping_function(&self, text: &str) -> bool {
-        let escape_functions = [
-            "escape", "encode", "sanitize", "clean", "filter", "safe"
-        ];
+        let escape_functions = ["escape", "encode", "sanitize", "clean", "filter", "safe"];
 
         escape_functions.iter().any(|&func| text.contains(func))
     }
-
 }
-
-
 
 // Display implementations
 impl std::fmt::Display for SecuritySeverity {
@@ -3083,9 +3652,9 @@ impl std::fmt::Display for OwaspCategory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FileInfo, Symbol, AnalysisResult};
-    use std::path::PathBuf;
+    use crate::{AnalysisResult, FileInfo, Symbol};
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     fn create_test_analysis_result() -> AnalysisResult {
         use std::io::Write;
@@ -3100,26 +3669,27 @@ mod tests {
             .expect("Failed to create temporary file for testing");
 
         let (mut file, temp_path) = temp_file.keep().expect("Failed to persist temporary file");
-        writeln!(file, "fn vulnerable_function() {{").expect("Failed to write function declaration to test file");
-        writeln!(file, "    let password = \"hardcoded_password\";").expect("Failed to write password line to test file");
-        writeln!(file, "    println!(\"Password: {{}}\", password);").expect("Failed to write println line to test file");
+        writeln!(file, "fn vulnerable_function() {{")
+            .expect("Failed to write function declaration to test file");
+        writeln!(file, "    let password = \"hardcoded_password\";")
+            .expect("Failed to write password line to test file");
+        writeln!(file, "    println!(\"Password: {{}}\", password);")
+            .expect("Failed to write println line to test file");
         writeln!(file, "}}").expect("Failed to write function closing brace to test file");
 
         // Ensure the file is flushed and closed
         drop(file);
 
-        let symbols = vec![
-            Symbol {
-                name: "vulnerable_function".to_string(),
-                kind: "function".to_string(),
-                start_line: 1,
-                end_line: 4,
-                start_column: 0,
-                end_column: 1,
-                visibility: "public".to_string(),
-                documentation: Some("A potentially vulnerable function".to_string()),
-            }
-        ];
+        let symbols = vec![Symbol {
+            name: "vulnerable_function".to_string(),
+            kind: "function".to_string(),
+            start_line: 1,
+            end_line: 4,
+            start_column: 0,
+            end_column: 1,
+            visibility: "public".to_string(),
+            documentation: Some("A potentially vulnerable function".to_string()),
+        }];
 
         let file_info = FileInfo {
             path: temp_path,
@@ -3147,7 +3717,8 @@ mod tests {
     #[test]
     fn test_advanced_security_scanner_creation() {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new().expect("Failed to create AdvancedSecurityAnalyzer with default config");
+        let scanner = AdvancedSecurityAnalyzer::new()
+            .expect("Failed to create AdvancedSecurityAnalyzer with default config");
 
         assert!(scanner.config.owasp_analysis);
         assert!(scanner.config.secrets_detection);
@@ -3157,7 +3728,8 @@ mod tests {
     #[test]
     fn test_scan_analysis_result() {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new().expect("Failed to create AdvancedSecurityAnalyzer for scan test");
+        let scanner = AdvancedSecurityAnalyzer::new()
+            .expect("Failed to create AdvancedSecurityAnalyzer for scan test");
         let analysis = create_test_analysis_result();
 
         let result = scanner.analyze(&analysis);
@@ -3174,7 +3746,8 @@ mod tests {
     #[test]
     fn test_user_input_function_detection() {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new().expect("Failed to create AdvancedSecurityAnalyzer for user input test");
+        let scanner = AdvancedSecurityAnalyzer::new()
+            .expect("Failed to create AdvancedSecurityAnalyzer for user input test");
 
         // Test user input function detection
         assert!(scanner.is_user_input_function("request"));
@@ -3201,7 +3774,8 @@ mod tests {
     #[test]
     fn test_entropy_calculation() {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new().expect("Failed to create AdvancedSecurityAnalyzer for entropy test");
+        let scanner = AdvancedSecurityAnalyzer::new()
+            .expect("Failed to create AdvancedSecurityAnalyzer for entropy test");
 
         // High entropy string (likely secret)
         let high_entropy = "sk-1234567890abcdef1234567890abcdef";

@@ -1,11 +1,11 @@
 //! CLI utility functions
-//! 
+//!
 //! Shared utilities for CLI operations including progress bars, configuration, and validation.
 
-use indicatif::{ProgressBar, ProgressStyle};
-use colored::*;
-use crate::{AnalysisConfig, AnalysisDepth};
 use super::error::{CliError, CliResult};
+use crate::{AnalysisConfig, AnalysisDepth};
+use colored::*;
+use indicatif::{ProgressBar, ProgressStyle};
 use std::path::PathBuf;
 
 /// Create a progress bar with spinner for long operations
@@ -14,7 +14,7 @@ pub fn create_progress_bar(message: &str) -> ProgressBar {
     pb.set_style(
         ProgressStyle::default_spinner()
             .template("{spinner:.green} {msg}")
-            .unwrap()
+            .unwrap(),
     );
     pb.set_message(message.to_string());
     pb
@@ -32,11 +32,11 @@ pub fn create_analysis_config(
     enable_security: bool,
 ) -> CliResult<AnalysisConfig> {
     let mut config = AnalysisConfig::default();
-    
+
     config.max_file_size = Some(max_size * 1024);
     config.max_depth = Some(max_depth);
     config.include_hidden = include_hidden;
-    
+
     // Parse analysis depth
     config.depth = match depth.to_lowercase().as_str() {
         "basic" => AnalysisDepth::Basic,
@@ -44,29 +44,22 @@ pub fn create_analysis_config(
         "full" => AnalysisDepth::Full,
         _ => return Err(CliError::InvalidArgs(format!("Invalid depth: {}", depth))),
     };
-    
+
     // Parse exclude directories
     if let Some(dirs) = exclude_dirs {
-        config.exclude_dirs = dirs
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .collect();
+        config.exclude_dirs = dirs.split(',').map(|s| s.trim().to_string()).collect();
     }
-    
+
     // Parse include extensions
     if let Some(exts) = include_exts {
-        config.include_extensions = Some(
-            exts.split(',')
-                .map(|s| s.trim().to_string())
-                .collect()
-        );
+        config.include_extensions = Some(exts.split(',').map(|s| s.trim().to_string()).collect());
     }
 
     // Apply thread count if provided
     config.thread_count = threads;
     // Enable or disable heavy security scanning
     config.enable_security = enable_security;
-    
+
     Ok(config)
 }
 
@@ -78,7 +71,10 @@ pub fn parse_severity(severity: &str) -> CliResult<crate::SecuritySeverity> {
         "medium" => Ok(crate::SecuritySeverity::Medium),
         "low" => Ok(crate::SecuritySeverity::Low),
         "info" => Ok(crate::SecuritySeverity::Info),
-        _ => Err(CliError::InvalidArgs(format!("Invalid severity level: {}", severity))),
+        _ => Err(CliError::InvalidArgs(format!(
+            "Invalid severity level: {}",
+            severity
+        ))),
     }
 }
 
@@ -100,7 +96,8 @@ pub fn severity_meets_threshold(
 
 /// Validate and normalize file path
 pub fn normalize_path(path: &PathBuf) -> CliResult<PathBuf> {
-    let canonical = path.canonicalize()
+    let canonical = path
+        .canonicalize()
         .map_err(|_| CliError::InvalidPath(path.clone()))?;
     Ok(canonical)
 }
@@ -118,8 +115,7 @@ pub fn parse_comma_separated(input: &str) -> Vec<String> {
 pub fn validate_output_path(path: &PathBuf) -> CliResult<()> {
     if let Some(parent) = path.parent() {
         if !parent.exists() {
-            std::fs::create_dir_all(parent)
-                .map_err(CliError::Io)?;
+            std::fs::create_dir_all(parent).map_err(CliError::Io)?;
         }
     }
     Ok(())
@@ -136,7 +132,9 @@ pub fn get_file_extension(path: &PathBuf) -> Option<String> {
 pub fn should_include_file(path: &PathBuf, include_exts: &Option<Vec<String>>) -> bool {
     if let Some(exts) = include_exts {
         if let Some(file_ext) = get_file_extension(path) {
-            return exts.iter().any(|ext| ext.trim_start_matches('.') == file_ext);
+            return exts
+                .iter()
+                .any(|ext| ext.trim_start_matches('.') == file_ext);
         }
         return false;
     }

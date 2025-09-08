@@ -1,5 +1,5 @@
 //! Real configuration management system
-//! 
+//!
 //! Provides environment-based configuration, API key management,
 //! and secure configuration handling for production use.
 
@@ -7,7 +7,6 @@ use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::{info, warn};
-
 
 /// Main application configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,7 +154,7 @@ impl Default for DatabaseConfig {
         let data_dir = dirs::data_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("rust_tree_sitter");
-        
+
         Self {
             url: format!("sqlite://{}/database.db", data_dir.display()),
             max_connections: 10,
@@ -272,14 +271,14 @@ impl ConfigManager {
         config_builder = config_builder.add_source(
             Environment::with_prefix("RUST_TREE_SITTER")
                 .separator("__")
-                .try_parsing(true)
+                .try_parsing(true),
         );
 
         let config: AppConfig = config_builder.build()?.try_deserialize()?;
-        
+
         // Validate configuration
         Self::validate_config(&config)?;
-        
+
         Ok(Self { config })
     }
 
@@ -314,16 +313,22 @@ impl ConfigManager {
     fn validate_config(config: &AppConfig) -> Result<(), ConfigError> {
         // Validate database configuration
         if config.database.max_connections == 0 {
-            return Err(ConfigError::Message("Database max_connections must be > 0".to_string()));
+            return Err(ConfigError::Message(
+                "Database max_connections must be > 0".to_string(),
+            ));
         }
 
         // Validate analysis configuration
         if config.analysis.max_file_size == 0 {
-            return Err(ConfigError::Message("Analysis max_file_size must be > 0".to_string()));
+            return Err(ConfigError::Message(
+                "Analysis max_file_size must be > 0".to_string(),
+            ));
         }
 
         if config.analysis.worker_threads == 0 {
-            return Err(ConfigError::Message("Analysis worker_threads must be > 0".to_string()));
+            return Err(ConfigError::Message(
+                "Analysis worker_threads must be > 0".to_string(),
+            ));
         }
 
         // Validate API rate limits
@@ -338,10 +343,10 @@ impl ConfigManager {
     pub fn create_sample_config() -> Result<(), Box<dyn std::error::Error>> {
         let config = AppConfig::default();
         let toml_content = serde_json::to_string_pretty(&config)?;
-        
+
         let config_path = Self::get_config_file_path();
         std::fs::write(&config_path, toml_content)?;
-        
+
         info!("Sample configuration created at: {}", config_path.display());
         Ok(())
     }

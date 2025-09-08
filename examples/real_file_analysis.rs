@@ -7,35 +7,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 GPT-5 Real File Analysis");
     println!("===========================");
     println!("Analyzing ACTUAL files from your rust-treesitter codebase");
-    
-    let api_key = env::var("OPENAI_API_KEY")
-        .expect("OPENAI_API_KEY environment variable not set");
-    
+
+    let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable not set");
+
     // Read the actual lib.rs file
-    let lib_content = fs::read_to_string("src/lib.rs")
-        .expect("Failed to read src/lib.rs");
-    
+    let lib_content = fs::read_to_string("src/lib.rs").expect("Failed to read src/lib.rs");
+
     println!("📁 Analyzing: src/lib.rs");
     println!("📊 File size: {} bytes", lib_content.len());
     println!("📝 Lines: {}", lib_content.lines().count());
-    
+
     // Read another real file - analyzer.rs
-    let analyzer_content = fs::read_to_string("src/analyzer.rs")
-        .expect("Failed to read src/analyzer.rs");
-    
+    let analyzer_content =
+        fs::read_to_string("src/analyzer.rs").expect("Failed to read src/analyzer.rs");
+
     println!("📁 Also analyzing: src/analyzer.rs");
     println!("📊 File size: {} bytes", analyzer_content.len());
     println!("📝 Lines: {}", analyzer_content.lines().count());
-    
+
     let combined_content = format!(
         "FILE 1: src/lib.rs\n{}\n\n===================\n\nFILE 2: src/analyzer.rs\n{}",
         lib_content, analyzer_content
     );
-    
+
     println!("\n🧠 Sending REAL codebase files to GPT-5...");
-    
+
     let client = reqwest::Client::new();
-    
+
     let request = json!({
         "model": "gpt-5",
         "messages": [{
@@ -81,9 +79,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }],
         "max_completion_tokens": 3000
     });
-    
+
     let start_time = std::time::Instant::now();
-    
+
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
         .header("Authorization", format!("Bearer {}", api_key))
@@ -91,15 +89,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .json(&request)
         .send()
         .await?;
-    
+
     let duration = start_time.elapsed();
-    
+
     println!("⏱️  GPT-5 analysis completed in {:?}", duration);
     println!("📊 Status: {}", response.status());
-    
+
     if response.status().is_success() {
         let response_body: serde_json::Value = response.json().await?;
-        
+
         if let Some(choices) = response_body["choices"].as_array() {
             if let Some(first_choice) = choices.first() {
                 if let Some(message) = first_choice["message"].as_object() {
@@ -111,26 +109,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        
+
         // Show usage statistics
         if let Some(usage) = response_body["usage"].as_object() {
             println!("\n📊 GPT-5 Analysis Statistics:");
-            println!("   Prompt tokens: {}", usage["prompt_tokens"].as_u64().unwrap_or(0));
-            println!("   Completion tokens: {}", usage["completion_tokens"].as_u64().unwrap_or(0));
-            println!("   Total tokens: {}", usage["total_tokens"].as_u64().unwrap_or(0));
-            
+            println!(
+                "   Prompt tokens: {}",
+                usage["prompt_tokens"].as_u64().unwrap_or(0)
+            );
+            println!(
+                "   Completion tokens: {}",
+                usage["completion_tokens"].as_u64().unwrap_or(0)
+            );
+            println!(
+                "   Total tokens: {}",
+                usage["total_tokens"].as_u64().unwrap_or(0)
+            );
+
             let total_tokens = usage["total_tokens"].as_u64().unwrap_or(0) as f64;
             let estimated_cost = total_tokens * 1.25 / 1000000.0;
             println!("   Estimated cost: ${:.6}", estimated_cost);
         }
-        
+
         println!("\n✅ REAL Codebase Analysis Complete!");
         println!("===================================");
         println!("✅ Analyzed actual files from your rust-treesitter project");
         println!("✅ GPT-5 provided genuine insights about your code");
         println!("✅ Actionable recommendations for improvement");
         println!("✅ Real security and performance analysis");
-        
     } else {
         let status = response.status();
         println!("❌ API call failed!");
@@ -138,6 +144,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Error response: {}", error_text);
         return Err(format!("API call failed with status: {}", status).into());
     }
-    
+
     Ok(())
 }

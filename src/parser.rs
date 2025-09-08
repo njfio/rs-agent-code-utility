@@ -3,8 +3,8 @@
 use crate::error::{Error, Result};
 use crate::languages::Language;
 use crate::tree::SyntaxTree;
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 // Removed unused imports
 use tree_sitter::{InputEdit, Point};
 
@@ -45,9 +45,14 @@ impl Parser {
     pub fn new(language: Language) -> Result<Self> {
         let mut parser = tree_sitter::Parser::new();
         let ts_language = language.tree_sitter_language()?;
-        
-        parser.set_language(&ts_language)
-            .map_err(|e| Error::language_error_with_cause(language.name(), "parser initialization", format!("{:?}", e)))?;
+
+        parser.set_language(&ts_language).map_err(|e| {
+            Error::language_error_with_cause(
+                language.name(),
+                "parser initialization",
+                format!("{:?}", e),
+            )
+        })?;
 
         Ok(Self {
             inner: Arc::new(Mutex::new(parser)),
@@ -88,16 +93,18 @@ impl Parser {
 
             // Try to get from cache
             {
-                let cache = self.cache.lock()
-                    .map_err(|e| Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e)))?;
+                let cache = self.cache.lock().map_err(|e| {
+                    Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e))
+                })?;
                 if let Some(cached_tree) = cache.get(&cache_key) {
                     return Ok(cached_tree.clone());
                 }
             }
         }
 
-        let mut parser = self.inner.lock()
-            .map_err(|e| Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e)))?;
+        let mut parser = self.inner.lock().map_err(|e| {
+            Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e))
+        })?;
 
         // Apply parsing options
         if let Some(timeout) = self.options.timeout_millis {
@@ -108,7 +115,8 @@ impl Parser {
         let old_ts_tree = old_tree.map(|t| t.inner());
 
         // Parse the source
-        let tree = parser.parse(source, old_ts_tree)
+        let tree = parser
+            .parse(source, old_ts_tree)
             .ok_or_else(|| Error::parse_error("Failed to parse source code"))?;
 
         // Note: We allow trees with errors to be returned, as they can still be useful
@@ -138,8 +146,9 @@ impl Parser {
 
     /// Cache a parsed tree
     fn cache_tree(&self, key: u64, tree: SyntaxTree) -> Result<()> {
-        let mut cache = self.cache.lock()
-            .map_err(|e| Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e)))?;
+        let mut cache = self.cache.lock().map_err(|e| {
+            Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e))
+        })?;
 
         // Evict oldest entries if cache is full
         if cache.len() >= self.max_cache_size {
@@ -183,9 +192,10 @@ impl Parser {
 
     /// Reset the parser state
     pub fn reset(&self) -> Result<()> {
-        let mut parser = self.inner.lock()
-            .map_err(|e| Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e)))?;
-        
+        let mut parser = self.inner.lock().map_err(|e| {
+            Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e))
+        })?;
+
         parser.reset();
         Ok(())
     }
@@ -193,13 +203,15 @@ impl Parser {
     /// Set a new language for this parser
     pub fn set_language(&mut self, language: Language) -> Result<()> {
         let ts_language = language.tree_sitter_language()?;
-        
-        let mut parser = self.inner.lock()
-            .map_err(|e| Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e)))?;
-        
-        parser.set_language(&ts_language)
-            .map_err(|e| Error::language_error_with_cause(language.name(), "language change", format!("{:?}", e)))?;
-        
+
+        let mut parser = self.inner.lock().map_err(|e| {
+            Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e))
+        })?;
+
+        parser.set_language(&ts_language).map_err(|e| {
+            Error::language_error_with_cause(language.name(), "language change", format!("{:?}", e))
+        })?;
+
         self.language = language;
         Ok(())
     }
@@ -211,16 +223,18 @@ impl Parser {
 
     /// Clear the parser cache
     pub fn clear_cache(&self) -> Result<()> {
-        let mut cache = self.cache.lock()
-            .map_err(|e| Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e)))?;
+        let mut cache = self.cache.lock().map_err(|e| {
+            Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e))
+        })?;
         cache.clear();
         Ok(())
     }
 
     /// Get cache statistics
     pub fn cache_stats(&self) -> Result<(usize, usize)> {
-        let cache = self.cache.lock()
-            .map_err(|e| Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e)))?;
+        let cache = self.cache.lock().map_err(|e| {
+            Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e))
+        })?;
         Ok((cache.len(), self.max_cache_size))
     }
 
@@ -273,7 +287,7 @@ mod tests {
     fn test_parser_creation() {
         let parser = Parser::new(Language::Rust);
         assert!(parser.is_ok());
-        
+
         let parser = parser.unwrap();
         assert_eq!(parser.language(), Language::Rust);
     }
@@ -282,10 +296,10 @@ mod tests {
     fn test_basic_parsing() {
         let parser = Parser::new(Language::Rust).unwrap();
         let source = "fn main() { println!(\"Hello, world!\"); }";
-        
+
         let tree = parser.parse(source, None);
         assert!(tree.is_ok());
-        
+
         let tree = tree.unwrap();
         assert_eq!(tree.root_node().kind(), "source_file");
     }
@@ -297,10 +311,10 @@ mod tests {
             timeout_millis: Some(1000),
             include_extras: false,
         };
-        
+
         let parser = Parser::with_options(Language::Rust, options);
         assert!(parser.is_ok());
-        
+
         let parser = parser.unwrap();
         assert_eq!(parser.options().max_bytes, Some(1000));
         assert_eq!(parser.options().timeout_millis, Some(1000));
@@ -311,7 +325,7 @@ mod tests {
     fn test_parser_clone() {
         let parser1 = Parser::new(Language::Rust).unwrap();
         let parser2 = parser1.clone();
-        
+
         assert_eq!(parser1.language(), parser2.language());
     }
 }

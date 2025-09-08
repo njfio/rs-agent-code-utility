@@ -1,12 +1,12 @@
 //! AI-powered code analysis and explanations
-//! 
+//!
 //! This module provides intelligent code analysis capabilities including
 //! natural language explanations, pattern recognition, and insights.
 
-use crate::{FileInfo, Symbol, AnalysisResult};
+use crate::{AnalysisResult, FileInfo, Symbol};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// AI-powered code explanation and analysis
 #[derive(Debug, Clone)]
@@ -213,12 +213,12 @@ impl AIAnalyzer {
             config: AIConfig::default(),
         }
     }
-    
+
     /// Create a new AI analyzer with custom configuration
     pub fn with_config(config: AIConfig) -> Self {
         Self { config }
     }
-    
+
     /// Analyze a codebase and generate AI explanations
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> AIAnalysisResult {
         let codebase_explanation = self.generate_codebase_explanation(analysis_result);
@@ -227,7 +227,7 @@ impl AIAnalyzer {
         let architectural_insights = self.generate_architectural_insights(analysis_result);
         let patterns = self.detect_patterns(analysis_result);
         let learning_recommendations = self.generate_learning_recommendations(analysis_result);
-        
+
         AIAnalysisResult {
             codebase_explanation,
             file_explanations,
@@ -237,16 +237,20 @@ impl AIAnalyzer {
             learning_recommendations,
         }
     }
-    
+
     /// Generate high-level codebase explanation
     fn generate_codebase_explanation(&self, result: &AnalysisResult) -> CodebaseExplanation {
-        let primary_language = result.languages.iter()
+        let primary_language = result
+            .languages
+            .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(lang, _)| lang.clone())
             .unwrap_or_else(|| "Unknown".to_string());
-        
+
         let total_symbols: usize = result.files.iter().map(|f| f.symbols.len()).sum();
-        let _public_symbols: usize = result.files.iter()
+        let _public_symbols: usize = result
+            .files
+            .iter()
             .flat_map(|f| &f.symbols)
             .filter(|s| s.visibility == "public")
             .count();
@@ -268,27 +272,29 @@ impl AIAnalyzer {
             entry_points,
         }
     }
-    
+
     /// Generate explanations for individual files
     fn generate_file_explanations(&self, result: &AnalysisResult) -> Vec<FileExplanation> {
-        result.files.iter().map(|file| {
-            self.explain_file(file, result)
-        }).collect()
+        result
+            .files
+            .iter()
+            .map(|file| self.explain_file(file, result))
+            .collect()
     }
-    
+
     /// Generate explanations for individual symbols
     fn generate_symbol_explanations(&self, result: &AnalysisResult) -> Vec<SymbolExplanation> {
         let mut explanations = Vec::new();
-        
+
         for file in &result.files {
             for symbol in &file.symbols {
                 explanations.push(self.explain_symbol(symbol, file, result));
             }
         }
-        
+
         explanations
     }
-    
+
     /// Generate architectural insights
     fn generate_architectural_insights(&self, result: &AnalysisResult) -> ArchitecturalInsights {
         let style = self.determine_architectural_style(result);
@@ -298,7 +304,7 @@ impl AIAnalyzer {
         let scalability = self.assess_scalability(result);
         let maintainability = self.assess_maintainability(result);
         let improvements = self.suggest_architectural_improvements(result);
-        
+
         ArchitecturalInsights {
             style,
             design_patterns,
@@ -309,43 +315,50 @@ impl AIAnalyzer {
             improvements,
         }
     }
-    
+
     /// Detect patterns in the codebase
     fn detect_patterns(&self, result: &AnalysisResult) -> Vec<DetectedPattern> {
         let mut patterns = Vec::new();
-        
+
         // Detect various patterns
         patterns.extend(self.detect_design_patterns(result));
         patterns.extend(self.detect_anti_patterns(result));
         patterns.extend(self.detect_code_smells(result));
         patterns.extend(self.detect_best_practices(result));
-        
+
         patterns
     }
-    
+
     /// Generate learning recommendations
     fn generate_learning_recommendations(&self, result: &AnalysisResult) -> Vec<String> {
         let mut recommendations = Vec::new();
-        
-        let primary_language = result.languages.iter()
+
+        let primary_language = result
+            .languages
+            .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(lang, _)| lang.clone())
             .unwrap_or_else(|| "Unknown".to_string());
-        
+
         // Language-specific recommendations
         match primary_language.to_lowercase().as_str() {
             "rust" => {
-                recommendations.push("Learn about Rust's ownership system and borrowing".to_string());
+                recommendations
+                    .push("Learn about Rust's ownership system and borrowing".to_string());
                 recommendations.push("Explore Rust's trait system for code reuse".to_string());
-                recommendations.push("Study error handling with Result and Option types".to_string());
+                recommendations
+                    .push("Study error handling with Result and Option types".to_string());
             }
             "javascript" => {
-                recommendations.push("Learn about JavaScript's event loop and async programming".to_string());
+                recommendations
+                    .push("Learn about JavaScript's event loop and async programming".to_string());
                 recommendations.push("Explore modern ES6+ features and best practices".to_string());
-                recommendations.push("Study functional programming concepts in JavaScript".to_string());
+                recommendations
+                    .push("Study functional programming concepts in JavaScript".to_string());
             }
             "python" => {
-                recommendations.push("Learn about Python's data model and magic methods".to_string());
+                recommendations
+                    .push("Learn about Python's data model and magic methods".to_string());
                 recommendations.push("Explore decorators and context managers".to_string());
                 recommendations.push("Study Python's type hints and static analysis".to_string());
             }
@@ -354,24 +367,27 @@ impl AIAnalyzer {
                 recommendations.push("Learn about the language's standard library".to_string());
             }
         }
-        
+
         // Architecture recommendations
         let total_files = result.total_files;
         if total_files > 20 {
-            recommendations.push("Learn about software architecture patterns for large codebases".to_string());
+            recommendations
+                .push("Learn about software architecture patterns for large codebases".to_string());
             recommendations.push("Study dependency injection and inversion of control".to_string());
         }
-        
+
         // Complexity recommendations
         let complexity = self.assess_codebase_complexity(result);
         match complexity {
             ComplexityLevel::High | ComplexityLevel::VeryHigh => {
-                recommendations.push("Learn refactoring techniques to reduce complexity".to_string());
-                recommendations.push("Study design patterns for better code organization".to_string());
+                recommendations
+                    .push("Learn refactoring techniques to reduce complexity".to_string());
+                recommendations
+                    .push("Study design patterns for better code organization".to_string());
             }
             _ => {}
         }
-        
+
         recommendations
     }
 
@@ -393,9 +409,13 @@ impl AIAnalyzer {
 
         if avg_symbols_per_file > 20.0 || avg_lines_per_file > 300.0 || result.total_files > 50 {
             ComplexityLevel::VeryHigh
-        } else if avg_symbols_per_file > 15.0 || avg_lines_per_file > 200.0 || result.total_files > 20 {
+        } else if avg_symbols_per_file > 15.0
+            || avg_lines_per_file > 200.0
+            || result.total_files > 20
+        {
             ComplexityLevel::High
-        } else if avg_symbols_per_file > 8.0 || avg_lines_per_file > 100.0 || result.total_files > 5 {
+        } else if avg_symbols_per_file > 8.0 || avg_lines_per_file > 100.0 || result.total_files > 5
+        {
             ComplexityLevel::Medium
         } else {
             ComplexityLevel::Low
@@ -404,24 +424,28 @@ impl AIAnalyzer {
 
     fn infer_codebase_purpose(&self, result: &AnalysisResult, primary_language: &str) -> String {
         let has_main = result.files.iter().any(|f| {
-            f.symbols.iter().any(|s| s.name == "main" && s.kind == "function")
+            f.symbols
+                .iter()
+                .any(|s| s.name == "main" && s.kind == "function")
         });
 
         let has_lib = result.files.iter().any(|f| {
-            f.path.file_name().and_then(|n| n.to_str()) == Some("lib.rs") ||
-            f.path.file_name().and_then(|n| n.to_str()) == Some("index.js") ||
-            f.path.file_name().and_then(|n| n.to_str()) == Some("__init__.py")
+            f.path.file_name().and_then(|n| n.to_str()) == Some("lib.rs")
+                || f.path.file_name().and_then(|n| n.to_str()) == Some("index.js")
+                || f.path.file_name().and_then(|n| n.to_str()) == Some("__init__.py")
         });
 
         let has_tests = result.files.iter().any(|f| {
-            f.path.to_string_lossy().contains("test") ||
-            f.symbols.iter().any(|s| s.name.starts_with("test_"))
+            f.path.to_string_lossy().contains("test")
+                || f.symbols.iter().any(|s| s.name.starts_with("test_"))
         });
 
         let has_cli = result.files.iter().any(|f| {
-            f.path.to_string_lossy().contains("cli") ||
-            f.path.to_string_lossy().contains("bin") ||
-            f.symbols.iter().any(|s| s.name.contains("cli") || s.name.contains("command"))
+            f.path.to_string_lossy().contains("cli")
+                || f.path.to_string_lossy().contains("bin")
+                || f.symbols
+                    .iter()
+                    .any(|s| s.name.contains("cli") || s.name.contains("command"))
         });
 
         match (has_main, has_lib, has_tests, has_cli, primary_language) {
@@ -439,13 +463,21 @@ impl AIAnalyzer {
         let has_nested_dirs = result.files.iter().any(|f| f.path.components().count() > 2);
         let has_separation = result.files.iter().any(|f| {
             let path_str = f.path.to_string_lossy().to_lowercase();
-            path_str.contains("model") || path_str.contains("view") || path_str.contains("controller") ||
-            path_str.contains("service") || path_str.contains("handler") || path_str.contains("util")
+            path_str.contains("model")
+                || path_str.contains("view")
+                || path_str.contains("controller")
+                || path_str.contains("service")
+                || path_str.contains("handler")
+                || path_str.contains("util")
         });
 
         match (has_modules, has_nested_dirs, has_separation) {
-            (true, true, true) => "Well-structured modular architecture with clear separation of concerns".to_string(),
-            (true, true, false) => "Modular architecture with hierarchical organization".to_string(),
+            (true, true, true) => {
+                "Well-structured modular architecture with clear separation of concerns".to_string()
+            }
+            (true, true, false) => {
+                "Modular architecture with hierarchical organization".to_string()
+            }
             (true, false, true) => "Flat modular structure with functional separation".to_string(),
             (true, false, false) => "Simple modular structure".to_string(),
             (false, _, _) => "Monolithic single-file or minimal structure".to_string(),
@@ -461,35 +493,56 @@ impl AIAnalyzer {
         }
 
         // Infer technologies from file patterns and symbols
-        let all_symbols: Vec<&Symbol> = result.files.iter()
-            .flat_map(|f| &f.symbols)
-            .collect();
+        let all_symbols: Vec<&Symbol> = result.files.iter().flat_map(|f| &f.symbols).collect();
 
         // Look for common patterns
-        if all_symbols.iter().any(|s| s.name.contains("async") || s.name.contains("await")) {
+        if all_symbols
+            .iter()
+            .any(|s| s.name.contains("async") || s.name.contains("await"))
+        {
             technologies.push("Asynchronous Programming".to_string());
         }
 
-        if all_symbols.iter().any(|s| s.name.contains("test") || s.kind == "test") {
+        if all_symbols
+            .iter()
+            .any(|s| s.name.contains("test") || s.kind == "test")
+        {
             technologies.push("Unit Testing".to_string());
         }
 
-        if result.files.iter().any(|f| f.path.to_string_lossy().contains("cli")) {
+        if result
+            .files
+            .iter()
+            .any(|f| f.path.to_string_lossy().contains("cli"))
+        {
             technologies.push("Command Line Interface".to_string());
         }
 
-        if all_symbols.iter().any(|s| s.name.contains("parse") || s.name.contains("tree")) {
+        if all_symbols
+            .iter()
+            .any(|s| s.name.contains("parse") || s.name.contains("tree"))
+        {
             technologies.push("Parsing and AST".to_string());
         }
 
         technologies
     }
 
-    fn determine_target_audience(&self, complexity: ComplexityLevel, symbol_count: usize) -> String {
+    fn determine_target_audience(
+        &self,
+        complexity: ComplexityLevel,
+        symbol_count: usize,
+    ) -> String {
         match (complexity, symbol_count) {
-            (ComplexityLevel::Low, _) if symbol_count < 20 => "Beginners - Simple and easy to understand".to_string(),
-            (ComplexityLevel::Medium, _) if symbol_count < 100 => "Intermediate developers - Moderate complexity".to_string(),
-            (ComplexityLevel::High, _) | (_, _) if symbol_count > 200 => "Advanced developers - Complex architecture".to_string(),
+            (ComplexityLevel::Low, _) if symbol_count < 20 => {
+                "Beginners - Simple and easy to understand".to_string()
+            }
+            (ComplexityLevel::Medium, _) if symbol_count < 100 => {
+                "Intermediate developers - Moderate complexity".to_string()
+            }
+            (ComplexityLevel::High, _) | (_, _) if symbol_count > 200 => {
+                "Advanced developers - Complex architecture".to_string()
+            }
             (ComplexityLevel::VeryHigh, _) => "Expert developers - Very complex system".to_string(),
             _ => "Intermediate developers - Standard complexity".to_string(),
         }
@@ -503,8 +556,15 @@ impl AIAnalyzer {
                 if symbol.name == "main" && symbol.kind == "function" {
                     entry_points.push(format!("{}::{}", file.path.display(), symbol.name));
                 }
-                if symbol.visibility == "public" && (symbol.kind == "function" || symbol.kind == "struct" || symbol.kind == "class") {
-                    if symbol.name.contains("new") || symbol.name.contains("create") || symbol.name.contains("init") {
+                if symbol.visibility == "public"
+                    && (symbol.kind == "function"
+                        || symbol.kind == "struct"
+                        || symbol.kind == "class")
+                {
+                    if symbol.name.contains("new")
+                        || symbol.name.contains("create")
+                        || symbol.name.contains("init")
+                    {
                         entry_points.push(format!("{}::{}", file.path.display(), symbol.name));
                     }
                 }
@@ -514,8 +574,8 @@ impl AIAnalyzer {
         // If no clear entry points, suggest the main library file
         if entry_points.is_empty() {
             if let Some(lib_file) = result.files.iter().find(|f| {
-                f.path.file_name().and_then(|n| n.to_str()) == Some("lib.rs") ||
-                f.path.file_name().and_then(|n| n.to_str()) == Some("main.rs")
+                f.path.file_name().and_then(|n| n.to_str()) == Some("lib.rs")
+                    || f.path.file_name().and_then(|n| n.to_str()) == Some("main.rs")
             }) {
                 entry_points.push(format!("{}", lib_file.path.display()));
             }
@@ -525,7 +585,9 @@ impl AIAnalyzer {
     }
 
     fn explain_file(&self, file: &FileInfo, _result: &AnalysisResult) -> FileExplanation {
-        let file_name = file.path.file_name()
+        let file_name = file
+            .path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
 
@@ -547,7 +609,12 @@ impl AIAnalyzer {
         }
     }
 
-    fn explain_symbol(&self, symbol: &Symbol, file: &FileInfo, _result: &AnalysisResult) -> SymbolExplanation {
+    fn explain_symbol(
+        &self,
+        symbol: &Symbol,
+        file: &FileInfo,
+        _result: &AnalysisResult,
+    ) -> SymbolExplanation {
         let purpose = self.infer_symbol_purpose(symbol);
         let usage = self.generate_symbol_usage(symbol);
         let signature_explanation = self.explain_symbol_signature(symbol);
@@ -587,7 +654,8 @@ impl AIAnalyzer {
 
     fn assess_modularity(&self, result: &AnalysisResult) -> String {
         let avg_symbols_per_file = if result.total_files > 0 {
-            result.files.iter().map(|f| f.symbols.len()).sum::<usize>() as f64 / result.total_files as f64
+            result.files.iter().map(|f| f.symbols.len()).sum::<usize>() as f64
+                / result.total_files as f64
         } else {
             0.0
         };
@@ -620,7 +688,9 @@ impl AIAnalyzer {
         let mut improvements = Vec::new();
 
         if result.total_files > 50 {
-            improvements.push("Consider implementing a plugin architecture for better extensibility".to_string());
+            improvements.push(
+                "Consider implementing a plugin architecture for better extensibility".to_string(),
+            );
         }
 
         let avg_file_size = result.total_lines as f64 / result.total_files as f64;
@@ -635,16 +705,16 @@ impl AIAnalyzer {
     }
 
     fn detect_design_patterns(&self, _result: &AnalysisResult) -> Vec<DetectedPattern> {
-        vec![
-            DetectedPattern {
-                name: "Builder Pattern".to_string(),
-                pattern_type: PatternType::DesignPattern,
-                locations: vec![],
-                description: "Builder pattern detected for complex object construction".to_string(),
-                assessment: "Good use of builder pattern for configuration objects".to_string(),
-                recommendations: vec!["Continue using builder pattern for complex configurations".to_string()],
-            }
-        ]
+        vec![DetectedPattern {
+            name: "Builder Pattern".to_string(),
+            pattern_type: PatternType::DesignPattern,
+            locations: vec![],
+            description: "Builder pattern detected for complex object construction".to_string(),
+            assessment: "Good use of builder pattern for configuration objects".to_string(),
+            recommendations: vec![
+                "Continue using builder pattern for complex configurations".to_string()
+            ],
+        }]
     }
 
     fn detect_anti_patterns(&self, _result: &AnalysisResult) -> Vec<DetectedPattern> {
@@ -656,16 +726,14 @@ impl AIAnalyzer {
     }
 
     fn detect_best_practices(&self, _result: &AnalysisResult) -> Vec<DetectedPattern> {
-        vec![
-            DetectedPattern {
-                name: "Error Handling".to_string(),
-                pattern_type: PatternType::BestPractice,
-                locations: vec![],
-                description: "Consistent error handling with Result types".to_string(),
-                assessment: "Good use of Rust's error handling patterns".to_string(),
-                recommendations: vec!["Continue using Result types for error handling".to_string()],
-            }
-        ]
+        vec![DetectedPattern {
+            name: "Error Handling".to_string(),
+            pattern_type: PatternType::BestPractice,
+            locations: vec![],
+            description: "Consistent error handling with Result types".to_string(),
+            assessment: "Good use of Rust's error handling patterns".to_string(),
+            recommendations: vec!["Continue using Result types for error handling".to_string()],
+        }]
     }
 
     fn infer_file_purpose(&self, file: &FileInfo, file_name: &str) -> String {
@@ -674,13 +742,22 @@ impl AIAnalyzer {
             "lib.rs" => "Library root module and public API exports".to_string(),
             name if name.contains("test") => "Test module for validating functionality".to_string(),
             name if name.contains("mod") => "Module definition and organization".to_string(),
-            _ => format!("Implementation module for {} functionality",
-                file.path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"))
+            _ => format!(
+                "Implementation module for {} functionality",
+                file.path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+            ),
         }
     }
 
     fn determine_file_role(&self, file: &FileInfo, _file_name: &str) -> String {
-        let public_symbols = file.symbols.iter().filter(|s| s.visibility == "public").count();
+        let public_symbols = file
+            .symbols
+            .iter()
+            .filter(|s| s.visibility == "public")
+            .count();
         let total_symbols = file.symbols.len();
 
         if public_symbols > total_symbols / 2 {
@@ -695,7 +772,8 @@ impl AIAnalyzer {
     fn identify_file_responsibilities(&self, file: &FileInfo) -> Vec<String> {
         let mut responsibilities = Vec::new();
 
-        let mut symbol_types: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut symbol_types: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
         for symbol in &file.symbols {
             *symbol_types.entry(symbol.kind.clone()).or_insert(0) += 1;
         }
@@ -736,10 +814,17 @@ impl AIAnalyzer {
         }
 
         if file.symbols.len() > 15 {
-            suggestions.push("High symbol count - consider grouping related functionality".to_string());
+            suggestions
+                .push("High symbol count - consider grouping related functionality".to_string());
         }
 
-        if file.symbols.iter().filter(|s| s.visibility == "public").count() > 10 {
+        if file
+            .symbols
+            .iter()
+            .filter(|s| s.visibility == "public")
+            .count()
+            > 10
+        {
             suggestions.push("Large public API - consider reducing surface area".to_string());
         }
 
@@ -756,11 +841,20 @@ impl AIAnalyzer {
                 } else if symbol.name.starts_with("new") {
                     "Constructor function for creating new instances".to_string()
                 } else {
-                    format!("Function that performs {} operations", symbol.name.replace('_', " "))
+                    format!(
+                        "Function that performs {} operations",
+                        symbol.name.replace('_', " ")
+                    )
                 }
             }
-            "struct" => format!("Data structure representing a {}", symbol.name.replace('_', " ")),
-            "enum" => format!("Enumeration defining {} variants", symbol.name.replace('_', " ")),
+            "struct" => format!(
+                "Data structure representing a {}",
+                symbol.name.replace('_', " ")
+            ),
+            "enum" => format!(
+                "Enumeration defining {} variants",
+                symbol.name.replace('_', " ")
+            ),
             "impl" => format!("Implementation block providing methods for {}", symbol.name),
             _ => format!("{} definition", symbol.kind),
         }
@@ -768,17 +862,29 @@ impl AIAnalyzer {
 
     fn generate_symbol_usage(&self, symbol: &Symbol) -> String {
         match symbol.kind.as_str() {
-            "function" if symbol.visibility == "public" => format!("Call {}() to use this functionality", symbol.name),
-            "struct" if symbol.visibility == "public" => format!("Create instances using {}::new() or similar", symbol.name),
-            "enum" if symbol.visibility == "public" => format!("Use {}::VariantName to access enum values", symbol.name),
+            "function" if symbol.visibility == "public" => {
+                format!("Call {}() to use this functionality", symbol.name)
+            }
+            "struct" if symbol.visibility == "public" => {
+                format!("Create instances using {}::new() or similar", symbol.name)
+            }
+            "enum" if symbol.visibility == "public" => {
+                format!("Use {}::VariantName to access enum values", symbol.name)
+            }
             _ => "Internal implementation detail".to_string(),
         }
     }
 
     fn explain_symbol_signature(&self, symbol: &Symbol) -> Option<String> {
         match symbol.kind.as_str() {
-            "function" => Some(format!("Function {} at line {}", symbol.name, symbol.start_line)),
-            "struct" => Some(format!("Struct {} defined at line {}", symbol.name, symbol.start_line)),
+            "function" => Some(format!(
+                "Function {} at line {}",
+                symbol.name, symbol.start_line
+            )),
+            "struct" => Some(format!(
+                "Struct {} defined at line {}",
+                symbol.name, symbol.start_line
+            )),
             _ => None,
         }
     }

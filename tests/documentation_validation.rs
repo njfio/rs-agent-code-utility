@@ -16,7 +16,7 @@ fn test_readme_examples_compile() -> std::result::Result<(), Box<dyn std::error:
     let tree = parser.parse(source, None)?;
     let root = tree.root_node();
     assert_eq!(root.kind(), "source_file");
-    
+
     Ok(())
 }
 
@@ -30,11 +30,11 @@ fn test_language_detection_examples() -> std::result::Result<(), Box<dyn std::er
     assert_eq!(detect_language_from_extension("go"), Some(Language::Go));
     assert_eq!(detect_language_from_extension("c"), Some(Language::C));
     assert_eq!(detect_language_from_extension("cpp"), Some(Language::Cpp));
-    
+
     // Test path-based detection
     assert_eq!(detect_language_from_path("main.rs"), Some(Language::Rust));
     assert_eq!(detect_language_from_path("app.py"), Some(Language::Python));
-    
+
     Ok(())
 }
 
@@ -42,7 +42,7 @@ fn test_language_detection_examples() -> std::result::Result<(), Box<dyn std::er
 fn test_supported_languages_documentation() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // Verify all documented languages are actually supported
     let languages = supported_languages();
-    
+
     // Check that all documented languages are present
     let expected_languages = vec![
         Language::Rust,
@@ -58,19 +58,19 @@ fn test_supported_languages_documentation() -> std::result::Result<(), Box<dyn s
         assert!(languages.iter().any(|lang| lang.name == expected_lang.name()),
                 "Language {:?} is documented but not in supported_languages()", expected_lang);
     }
-    
+
     Ok(())
 }
 
 #[test]
 fn test_codebase_analysis_example() -> std::result::Result<(), Box<dyn std::error::Error>> {
     use tempfile::TempDir;
-    
+
     // Create a temporary directory with some Rust code
     let temp_dir = TempDir::new()?;
     let src_dir = temp_dir.path().join("src");
     fs::create_dir_all(&src_dir)?;
-    
+
     fs::write(src_dir.join("main.rs"), r#"
 fn main() {
     println!("Hello, world!");
@@ -80,14 +80,14 @@ fn helper_function() -> i32 {
     42
 }
 "#)?;
-    
+
     // Test the codebase analysis example from README
     let mut analyzer = CodebaseAnalyzer::new()?;
     let result = analyzer.analyze_directory(&src_dir)?;
-    
+
     assert!(!result.files.is_empty());
     assert!(result.files.iter().any(|f| f.symbols.len() > 0));
-    
+
     Ok(())
 }
 
@@ -96,7 +96,7 @@ fn test_complexity_analysis_example() -> std::result::Result<(), Box<dyn std::er
     // Test the complexity analysis example from README
     let parser = Parser::new(Language::Rust)?;
     let analyzer = ComplexityAnalyzer::new("rust");
-    
+
     let source = r#"
     fn complex_function(x: i32, y: i32) -> i32 {
         if x > 0 {
@@ -113,10 +113,10 @@ fn test_complexity_analysis_example() -> std::result::Result<(), Box<dyn std::er
         }
     }
 "#;
-    
+
     let tree = parser.parse(source, None)?;
     let metrics = analyzer.analyze_complexity(&tree)?;
-    
+
     // Verify all documented metrics are available
     assert!(metrics.cyclomatic_complexity > 0);
     assert!(metrics.cognitive_complexity >= 0);
@@ -126,65 +126,65 @@ fn test_complexity_analysis_example() -> std::result::Result<(), Box<dyn std::er
     assert!(metrics.halstead_effort >= 0.0);
     assert!(metrics.max_nesting_depth >= 0);
     assert!(metrics.lines_of_code > 0);
-    
+
     Ok(())
 }
 
 #[test]
 fn test_security_analysis_example() -> std::result::Result<(), Box<dyn std::error::Error>> {
     use tempfile::TempDir;
-    
+
     // Create a temporary directory with some code
     let temp_dir = TempDir::new()?;
     let src_dir = temp_dir.path().join("src");
     fs::create_dir_all(&src_dir)?;
-    
+
     fs::write(src_dir.join("main.rs"), r#"
 fn main() {
     println!("Hello, world!");
 }
 "#)?;
-    
+
     // Test the security analysis example from README
     let mut analyzer = CodebaseAnalyzer::new()?;
     let analysis = analyzer.analyze_directory(&src_dir)?;
 
     let security_analyzer = AdvancedSecurityAnalyzer::new()?;
     let security_result = security_analyzer.analyze(&analysis)?;
-    
+
     // Verify the security result structure matches documentation
     assert!(security_result.security_score <= 100);
     assert!(security_result.total_vulnerabilities >= 0);
-    
+
     Ok(())
 }
 
 #[test]
 fn test_performance_analysis_example() -> std::result::Result<(), Box<dyn std::error::Error>> {
     use tempfile::TempDir;
-    
+
     // Create a temporary directory with some code
     let temp_dir = TempDir::new()?;
     let src_dir = temp_dir.path().join("src");
     fs::create_dir_all(&src_dir)?;
-    
+
     fs::write(src_dir.join("main.rs"), r#"
 fn main() {
     println!("Hello, world!");
 }
 "#)?;
-    
+
     // Test the performance analysis example from README
     let mut analyzer = CodebaseAnalyzer::new()?;
     let analysis = analyzer.analyze_directory(&src_dir)?;
-    
+
     let perf_analyzer = PerformanceAnalyzer::new();
     let perf_result = perf_analyzer.analyze(&analysis)?;
-    
+
     // Verify the performance result structure matches documentation
     assert!(perf_result.performance_score <= 100);
     assert!(perf_result.hotspots.len() >= 0);
-    
+
     Ok(())
 }
 
@@ -193,17 +193,17 @@ fn test_semantic_context_analysis_example() -> std::result::Result<(), Box<dyn s
     // Test the semantic context analysis example from README
     let mut semantic_analyzer = SemanticContextAnalyzer::new(Language::Rust)?;
     let parser = Parser::new(Language::Rust)?;
-    
+
     let source = r#"
 fn main() {
     let x = 42;
     println!("Value: {}", x);
 }
 "#;
-    
+
     let tree = parser.parse(source, None)?;
     let semantic_context = semantic_analyzer.analyze(&tree, source)?;
-    
+
     // Verify all documented components are available
     assert!(semantic_context.symbol_table.scopes.len() >= 0);
     assert!(semantic_context.symbol_table.symbols.len() >= 0);
@@ -217,19 +217,19 @@ fn main() {
     assert!(semantic_context.call_graph.functions.len() >= 0);
     assert!(semantic_context.pattern_context.patterns.len() >= 0);
     assert!(semantic_context.pattern_context.anti_patterns.len() >= 0);
-    
+
     Ok(())
 }
 
 #[test]
 fn test_intent_mapping_example() -> std::result::Result<(), Box<dyn std::error::Error>> {
     use tempfile::TempDir;
-    
+
     // Create a temporary directory with some code
     let temp_dir = TempDir::new()?;
     let src_dir = temp_dir.path().join("src");
     fs::create_dir_all(&src_dir)?;
-    
+
     fs::write(src_dir.join("main.rs"), r#"
 fn authenticate_user(username: &str, password: &str) -> bool {
     // Simple authentication logic
@@ -241,13 +241,13 @@ fn main() {
     println!("Authentication result: {}", result);
 }
 "#)?;
-    
+
     // Test the intent mapping example from README
     let mut analyzer = CodebaseAnalyzer::new()?;
     let _analysis = analyzer.analyze_directory(&src_dir)?;
-    
+
     let mut mapping_system = IntentMappingSystem::new();
-    
+
     let requirement = Requirement {
         id: "REQ-001".to_string(),
         requirement_type: RequirementType::UserStory,
@@ -266,10 +266,10 @@ fn main() {
 
     // Since generate_mappings doesn't exist, let's test what's available
     let mappings = mapping_system.validate_mappings()?;
-    
+
     // Verify mappings were generated
     assert!(mappings.len() >= 0);
-    
+
     Ok(())
 }
 
@@ -279,15 +279,15 @@ fn test_documentation_files_exist() {
     let docs_to_check = vec![
         "README.md",
         "docs/API.md",
-        "docs/CLI.md", 
+        "docs/CLI.md",
         "docs/FEATURES.md",
         "CONTRIBUTING.md",
         "LICENSE-MIT",
         "LICENSE-APACHE",
     ];
-    
+
     for doc_path in docs_to_check {
-        assert!(Path::new(doc_path).exists(), 
+        assert!(Path::new(doc_path).exists(),
                 "Documentation file {} does not exist", doc_path);
     }
 }
@@ -305,9 +305,9 @@ fn test_examples_exist_and_compile() {
         "examples/code_map.rs",
         "examples/incremental_parsing.rs",
     ];
-    
+
     for example_path in examples_to_check {
-        assert!(Path::new(example_path).exists(), 
+        assert!(Path::new(example_path).exists(),
                 "Example file {} does not exist", example_path);
     }
 }
@@ -317,7 +317,7 @@ fn test_version_consistency() -> std::result::Result<(), Box<dyn std::error::Err
     // Test that VERSION constant is accessible as documented
     let version = VERSION;
     assert!(!version.is_empty(), "VERSION constant should not be empty");
-    
+
     Ok(())
 }
 */

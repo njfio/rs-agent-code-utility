@@ -1,9 +1,9 @@
 //! Comprehensive unit tests for complexity analysis functionality
-//! 
+//!
 //! These tests verify the accuracy and reliability of complexity metrics
 //! calculation across different programming languages and code patterns.
 
-use rust_tree_sitter::{ComplexityAnalyzer, Parser, Language, Result};
+use rust_tree_sitter::{ComplexityAnalyzer, Language, Parser, Result};
 
 #[test]
 fn test_complexity_analyzer_creation() {
@@ -16,21 +16,21 @@ fn test_complexity_analyzer_creation() {
 fn test_basic_cyclomatic_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Simple function with no control flow - complexity should be 1
     let simple_code = r#"
         fn simple_function() {
             println!("Hello, world!");
         }
     "#;
-    
+
     let tree = parser.parse(simple_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     assert_eq!(result.cyclomatic_complexity, 1);
     assert!(result.lines_of_code > 0);
     assert!(result.halstead_volume > 0.0);
-    
+
     Ok(())
 }
 
@@ -38,7 +38,7 @@ fn test_basic_cyclomatic_complexity() -> Result<()> {
 fn test_if_statement_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Function with if statement - complexity should be 2
     let if_code = r#"
         fn function_with_if(x: i32) -> i32 {
@@ -49,13 +49,13 @@ fn test_if_statement_complexity() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(if_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     assert_eq!(result.cyclomatic_complexity, 2);
     assert!(result.cognitive_complexity >= 1);
-    
+
     Ok(())
 }
 
@@ -63,7 +63,7 @@ fn test_if_statement_complexity() -> Result<()> {
 fn test_nested_control_flow_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Function with nested control flow
     let nested_code = r#"
         fn complex_function(x: i32, y: i32) -> i32 {
@@ -83,15 +83,15 @@ fn test_nested_control_flow_complexity() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(nested_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Should have high complexity due to nested structures
     assert!(result.cyclomatic_complexity >= 2);
     assert!(result.cognitive_complexity >= 3);
     assert!(result.npath_complexity >= 2);
-    
+
     Ok(())
 }
 
@@ -99,7 +99,7 @@ fn test_nested_control_flow_complexity() -> Result<()> {
 fn test_match_expression_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Function with match expression
     let match_code = r#"
         fn function_with_match(value: Option<i32>) -> i32 {
@@ -110,13 +110,13 @@ fn test_match_expression_complexity() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(match_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Match with 3 arms should increase complexity
     assert!(result.cyclomatic_complexity >= 2);
-    
+
     Ok(())
 }
 
@@ -124,7 +124,7 @@ fn test_match_expression_complexity() -> Result<()> {
 fn test_loop_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Function with different types of loops
     let loop_code = r#"
         fn function_with_loops() {
@@ -142,14 +142,14 @@ fn test_loop_complexity() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(loop_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Should account for all three loop types
     assert!(result.cyclomatic_complexity >= 3);
     assert!(result.npath_complexity >= 2);
-    
+
     Ok(())
 }
 
@@ -157,7 +157,7 @@ fn test_loop_complexity() -> Result<()> {
 fn test_halstead_metrics() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Function with various operators and operands
     let code = r#"
         fn calculate(a: i32, b: i32, c: i32) -> i32 {
@@ -169,15 +169,15 @@ fn test_halstead_metrics() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Verify Halstead metrics are calculated
     assert!(result.halstead_volume > 0.0);
     assert!(result.halstead_difficulty > 0.0);
     assert!(result.halstead_effort > 0.0);
-    
+
     Ok(())
 }
 
@@ -185,21 +185,21 @@ fn test_halstead_metrics() -> Result<()> {
 fn test_empty_function_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Empty function
     let empty_code = r#"
         fn empty_function() {
         }
     "#;
-    
+
     let tree = parser.parse(empty_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Even empty functions have base complexity of 1
     assert_eq!(result.cyclomatic_complexity, 1);
     assert_eq!(result.cognitive_complexity, 0);
     assert_eq!(result.npath_complexity, 1);
-    
+
     Ok(())
 }
 
@@ -207,7 +207,7 @@ fn test_empty_function_complexity() -> Result<()> {
 fn test_multiple_functions_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Multiple functions in one file
     let multi_code = r#"
         fn simple() {
@@ -228,14 +228,14 @@ fn test_multiple_functions_complexity() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(multi_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Should aggregate complexity from all functions
     assert!(result.cyclomatic_complexity >= 1); // Base complexity
     assert!(result.lines_of_code > 10);
-    
+
     Ok(())
 }
 
@@ -243,7 +243,7 @@ fn test_multiple_functions_complexity() -> Result<()> {
 fn test_error_handling_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     // Function with error handling patterns
     let error_code = r#"
         fn handle_errors() -> Result<i32, String> {
@@ -263,13 +263,13 @@ fn test_error_handling_complexity() -> Result<()> {
             Ok(42)
         }
     "#;
-    
+
     let tree = parser.parse(error_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Error handling patterns should contribute to complexity
     assert!(result.cyclomatic_complexity >= 3);
-    
+
     Ok(())
 }
 
@@ -277,7 +277,7 @@ fn test_error_handling_complexity() -> Result<()> {
 fn test_javascript_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("javascript");
     let parser = Parser::new(Language::JavaScript)?;
-    
+
     // JavaScript function with control flow
     let js_code = r#"
         function complexFunction(x, y) {
@@ -295,14 +295,14 @@ fn test_javascript_complexity() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(js_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Should handle JavaScript syntax correctly
     assert!(result.cyclomatic_complexity >= 4);
     assert!(result.lines_of_code > 0);
-    
+
     Ok(())
 }
 
@@ -310,7 +310,7 @@ fn test_javascript_complexity() -> Result<()> {
 fn test_python_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("python");
     let parser = Parser::new(Language::Python)?;
-    
+
     // Python function with control flow
     let python_code = r#"
 def complex_function(x, y):
@@ -324,14 +324,14 @@ def complex_function(x, y):
     else:
         return y
     "#;
-    
+
     let tree = parser.parse(python_code, None)?;
     let result = analyzer.analyze_complexity(&tree)?;
-    
+
     // Should handle Python syntax correctly
     assert!(result.cyclomatic_complexity >= 4);
     assert!(result.lines_of_code > 0);
-    
+
     Ok(())
 }
 
@@ -339,7 +339,7 @@ def complex_function(x, y):
 fn test_complexity_metrics_consistency() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;
-    
+
     let code = r#"
         fn test_function(x: i32) -> i32 {
             if x > 0 {
@@ -349,17 +349,17 @@ fn test_complexity_metrics_consistency() -> Result<()> {
             }
         }
     "#;
-    
+
     let tree = parser.parse(code, None)?;
     let result1 = analyzer.analyze_complexity(&tree)?;
     let result2 = analyzer.analyze_complexity(&tree)?;
-    
+
     // Results should be consistent across multiple runs
     assert_eq!(result1.cyclomatic_complexity, result2.cyclomatic_complexity);
     assert_eq!(result1.cognitive_complexity, result2.cognitive_complexity);
     assert_eq!(result1.npath_complexity, result2.npath_complexity);
     assert_eq!(result1.lines_of_code, result2.lines_of_code);
-    
+
     Ok(())
 }
 
@@ -383,9 +383,11 @@ fn test_npath_complexity_logical_operators() -> Result<()> {
     let result = analyzer.analyze_complexity(&tree)?;
 
     // Should account for logical operators in condition
-    assert!(result.npath_complexity >= 3,
-            "Complex logical expression should increase NPATH complexity, got {}",
-            result.npath_complexity);
+    assert!(
+        result.npath_complexity >= 3,
+        "Complex logical expression should increase NPATH complexity, got {}",
+        result.npath_complexity
+    );
 
     Ok(())
 }
@@ -440,9 +442,11 @@ fn test_npath_complexity_try_catch() -> Result<()> {
     let result = analyzer.analyze_complexity(&tree)?;
 
     // Should account for error handling paths
-    assert!(result.npath_complexity >= 3,
-            "Error handling should increase NPATH complexity, got {}",
-            result.npath_complexity);
+    assert!(
+        result.npath_complexity >= 3,
+        "Error handling should increase NPATH complexity, got {}",
+        result.npath_complexity
+    );
 
     Ok(())
 }
@@ -469,9 +473,11 @@ fn test_npath_complexity_complex_match() -> Result<()> {
     let result = analyzer.analyze_complexity(&tree)?;
 
     // Should account for all match arms and guards
-    assert!(result.npath_complexity >= 5,
-            "Complex match with guards should have high NPATH complexity, got {}",
-            result.npath_complexity);
+    assert!(
+        result.npath_complexity >= 5,
+        "Complex match with guards should have high NPATH complexity, got {}",
+        result.npath_complexity
+    );
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-use rust_tree_sitter::ai::{AIServiceBuilder, AIFeature, AIRequest, AIResult};
+use rust_tree_sitter::ai::{AIFeature, AIRequest, AIResult, AIServiceBuilder};
 
 #[tokio::main]
 async fn main() -> AIResult<()> {
@@ -9,13 +9,13 @@ async fn main() -> AIResult<()> {
     println!("• Superior reasoning and code understanding");
     println!("• Better at complex architectural analysis");
     println!("• More accurate security vulnerability detection");
-    
+
     // Initialize AI service with GPT-4o
     let ai_service = AIServiceBuilder::new()
         .with_config_file("ai_config.yaml")?
         .build()
         .await?;
-    
+
     // Complex, realistic Rust code with subtle issues
     let complex_code = r#"
 use std::collections::{HashMap, VecDeque};
@@ -252,11 +252,11 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
     println!("=====================================================");
     println!("Lines of code: {}", complex_code.lines().count());
     println!("Features: Async/await, Arc/Mutex, generics, error handling, background tasks");
-    
+
     // 1. ADVANCED SECURITY ANALYSIS WITH GPT-4o
     println!("\n🔒 GPT-4o Advanced Security Analysis");
     println!("====================================");
-    
+
     let security_request = AIRequest::new(
         AIFeature::SecurityAnalysis,
         format!(
@@ -282,10 +282,10 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     println!("🧠 Making REAL API call to GPT-4o (latest model)...");
     let start_time = std::time::Instant::now();
-    
+
     match ai_service.process_request(security_request).await {
         Ok(response) => {
             let duration = start_time.elapsed();
@@ -293,25 +293,27 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             println!("=====================================");
             println!("🤖 Model: {} (Latest OpenAI)", response.metadata.model_used);
             println!("⏱️  Processing time: {:?}", duration);
-            println!("🎯 Tokens: {} total ({} prompt + {} completion)", 
+            println!(
+                "🎯 Tokens: {} total ({} prompt + {} completion)",
                 response.token_usage.total_tokens,
                 response.token_usage.prompt_tokens,
-                response.token_usage.completion_tokens);
-            
+                response.token_usage.completion_tokens
+            );
+
             if let Some(cost) = response.token_usage.estimated_cost {
                 println!("💰 Cost: ${:.6} (GPT-4o pricing)", cost);
             }
-            
+
             println!("📦 Cached: {}", response.metadata.cached);
-            
+
             println!("\n🛡️  GPT-4o Security Analysis Results:");
             println!("=====================================");
             println!("{}", response.content);
-            
+
             // Analyze the quality of GPT-4o's response
             let content_lower = response.content.to_lowercase();
             let mut advanced_findings = Vec::new();
-            
+
             if content_lower.contains("deadlock") {
                 advanced_findings.push("Deadlock Detection");
             }
@@ -327,23 +329,22 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             if content_lower.contains("async") || content_lower.contains("await") {
                 advanced_findings.push("Async Safety Analysis");
             }
-            
+
             println!("\n🎯 GPT-4o Advanced Capabilities Demonstrated:");
             for finding in advanced_findings {
                 println!("   ✅ {}", finding);
             }
-            
         }
         Err(e) => {
             println!("❌ Security analysis failed: {}", e);
             return Err(e);
         }
     }
-    
+
     // 2. ARCHITECTURAL INSIGHTS WITH GPT-4o
     println!("\n🏗️  GPT-4o Architectural Analysis");
     println!("=================================");
-    
+
     let arch_request = AIRequest::new(
         AIFeature::ArchitecturalInsights,
         format!(
@@ -364,10 +365,10 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     println!("🧠 Making second GPT-4o API call for architectural analysis...");
     let start_time = std::time::Instant::now();
-    
+
     match ai_service.process_request(arch_request).await {
         Ok(response) => {
             let duration = start_time.elapsed();
@@ -377,7 +378,7 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             println!("⏱️  Processing time: {:?}", duration);
             println!("🎯 Tokens: {}", response.token_usage.total_tokens);
             println!("📦 Cached: {}", response.metadata.cached);
-            
+
             println!("\n🏛️  GPT-4o Architectural Insights:");
             println!("==================================");
             println!("{}", response.content);
@@ -386,11 +387,11 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Architectural analysis failed: {}", e);
         }
     }
-    
+
     // 3. ADVANCED REFACTORING WITH GPT-4o
     println!("\n🔧 GPT-4o Advanced Refactoring Suggestions");
     println!("==========================================");
-    
+
     let refactor_request = AIRequest::new(
         AIFeature::RefactoringSuggestions,
         format!(
@@ -411,10 +412,10 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     println!("🧠 Making third GPT-4o API call for refactoring suggestions...");
     let start_time = std::time::Instant::now();
-    
+
     match ai_service.process_request(refactor_request).await {
         Ok(response) => {
             let duration = start_time.elapsed();
@@ -424,7 +425,7 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             println!("⏱️  Processing time: {:?}", duration);
             println!("🎯 Tokens: {}", response.token_usage.total_tokens);
             println!("📦 Cached: {}", response.metadata.cached);
-            
+
             println!("\n🔄 GPT-4o Refactoring Recommendations:");
             println!("======================================");
             println!("{}", response.content);
@@ -433,7 +434,7 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Refactoring analysis failed: {}", e);
         }
     }
-    
+
     println!("\n🎉 GPT-4o Advanced Demo Complete!");
     println!("=================================");
     println!("✅ Used OpenAI's most advanced model: GPT-4o");
@@ -443,7 +444,7 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Production-ready refactoring suggestions");
     println!("✅ 128K context window utilized for complex code");
     println!("✅ Real API calls with actual cost tracking");
-    
+
     println!("\n🚀 GPT-4o vs GPT-3.5 Advantages:");
     println!("=================================");
     println!("• 8x larger context window (128K vs 16K tokens)");
@@ -452,6 +453,6 @@ pub async fn stress_test_cache() -> Result<(), Box<dyn std::error::Error>> {
     println!("• More accurate architectural pattern recognition");
     println!("• Improved security vulnerability analysis");
     println!("• Better cost efficiency for complex analysis");
-    
+
     Ok(())
 }

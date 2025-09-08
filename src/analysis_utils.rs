@@ -1,9 +1,9 @@
 //! Shared utilities for code analysis across different modules
-//! 
+//!
 //! This module provides common functionality used by smart_refactoring.rs,
 //! performance_analysis.rs, and refactoring.rs to eliminate code duplication.
 
-use crate::{AnalysisResult, FileInfo, Symbol, Language, Parser, SyntaxTree, Node, Result};
+use crate::{AnalysisResult, FileInfo, Language, Node, Parser, Result, Symbol, SyntaxTree};
 use std::collections::HashMap;
 
 /// Common thresholds and constants used across analysis modules
@@ -25,7 +25,7 @@ impl Default for AnalysisThresholds {
         long_method_lines.insert("c".to_string(), 25);
         long_method_lines.insert("cpp".to_string(), 25);
         long_method_lines.insert("go".to_string(), 15);
-        
+
         Self {
             long_method_lines,
             high_complexity_threshold: 10.0,
@@ -65,24 +65,40 @@ impl LanguageParser {
     pub fn get_control_flow_patterns(language: &str) -> Vec<&'static str> {
         match language.to_lowercase().as_str() {
             "rust" => vec![
-                "if_expression", "match_expression", "while_expression", 
-                "for_expression", "loop_expression", "while_let_expression"
+                "if_expression",
+                "match_expression",
+                "while_expression",
+                "for_expression",
+                "loop_expression",
+                "while_let_expression",
             ],
             "python" => vec![
-                "if_statement", "for_statement", "while_statement", 
-                "try_statement", "with_statement"
+                "if_statement",
+                "for_statement",
+                "while_statement",
+                "try_statement",
+                "with_statement",
             ],
             "javascript" | "typescript" => vec![
-                "if_statement", "for_statement", "while_statement", 
-                "switch_statement", "try_statement"
+                "if_statement",
+                "for_statement",
+                "while_statement",
+                "switch_statement",
+                "try_statement",
             ],
             "c" | "cpp" => vec![
-                "if_statement", "for_statement", "while_statement", 
-                "switch_statement", "do_statement"
+                "if_statement",
+                "for_statement",
+                "while_statement",
+                "switch_statement",
+                "do_statement",
             ],
             "go" => vec![
-                "if_statement", "for_statement", "switch_statement", 
-                "type_switch_statement", "select_statement"
+                "if_statement",
+                "for_statement",
+                "switch_statement",
+                "type_switch_statement",
+                "select_statement",
             ],
             _ => vec![],
         }
@@ -94,7 +110,9 @@ impl LanguageParser {
             "rust" => vec!["function_item", "impl_item"],
             "python" => vec!["function_definition", "async_function_definition"],
             "javascript" | "typescript" => vec![
-                "function_declaration", "method_definition", "arrow_function"
+                "function_declaration",
+                "method_definition",
+                "arrow_function",
             ],
             "c" | "cpp" => vec!["function_definition"],
             "go" => vec!["function_declaration", "method_declaration"],
@@ -105,9 +123,19 @@ impl LanguageParser {
     /// Get loop patterns for a language
     pub fn get_loop_patterns(language: &str) -> Vec<&'static str> {
         match language.to_lowercase().as_str() {
-            "rust" => vec!["for_expression", "while_expression", "while_let_expression", "loop_expression"],
+            "rust" => vec![
+                "for_expression",
+                "while_expression",
+                "while_let_expression",
+                "loop_expression",
+            ],
             "python" => vec!["for_statement", "while_statement"],
-            "javascript" | "typescript" => vec!["for_statement", "while_statement", "for_in_statement", "for_of_statement"],
+            "javascript" | "typescript" => vec![
+                "for_statement",
+                "while_statement",
+                "for_in_statement",
+                "for_of_statement",
+            ],
             "c" | "cpp" => vec!["for_statement", "while_statement", "do_statement"],
             "go" => vec!["for_statement", "range_clause"],
             _ => vec![],
@@ -121,14 +149,16 @@ pub struct SymbolFilter;
 impl SymbolFilter {
     /// Filter symbols by kind (function, method, etc.)
     pub fn filter_functions(symbols: &[Symbol]) -> Vec<&Symbol> {
-        symbols.iter()
+        symbols
+            .iter()
             .filter(|s| s.kind == "function" || s.kind == "method")
             .collect()
     }
 
     /// Filter symbols by kind (struct, class, etc.)
     pub fn filter_types(symbols: &[Symbol]) -> Vec<&Symbol> {
-        symbols.iter()
+        symbols
+            .iter()
             .filter(|s| s.kind == "struct" || s.kind == "class" || s.kind == "interface")
             .collect()
     }
@@ -152,13 +182,13 @@ impl ComplexityCalculator {
     pub fn calculate_cyclomatic_complexity(tree: &SyntaxTree, language: &str) -> f64 {
         let mut complexity = 1.0; // Base complexity
         let control_patterns = LanguageParser::get_control_flow_patterns(language);
-        
+
         // Count control flow nodes
         for pattern in &control_patterns {
             let nodes = tree.find_nodes_by_kind(pattern);
             complexity += nodes.len() as f64;
         }
-        
+
         complexity
     }
 
@@ -210,14 +240,14 @@ impl FileAnalyzer {
         F: FnMut(&FileInfo) -> Result<Vec<T>>,
     {
         let mut results = Vec::new();
-        
+
         for file in &analysis_result.files {
             // Only analyze successfully parsed files
             if file.parsed_successfully {
                 results.extend(analyzer(file)?);
             }
         }
-        
+
         Ok(results)
     }
 
@@ -252,7 +282,7 @@ impl PatternDetector {
 
         for line in &lines {
             let trimmed = line.trim();
-            
+
             // Check for loop start patterns
             for pattern in &loop_patterns {
                 if trimmed.contains(pattern.replace("_", " ").as_str()) {
@@ -278,16 +308,18 @@ impl PatternDetector {
 
         for line in &lines {
             let trimmed = line.trim();
-            
+
             if trimmed.contains("for ") || trimmed.contains("while ") {
                 in_loop = true;
             }
-            
-            if in_loop && (trimmed.contains(" + ") || trimmed.contains("+=")) 
-                && (trimmed.contains("String") || trimmed.contains("&str")) {
+
+            if in_loop
+                && (trimmed.contains(" + ") || trimmed.contains("+="))
+                && (trimmed.contains("String") || trimmed.contains("&str"))
+            {
                 return true;
             }
-            
+
             if trimmed == "}" {
                 in_loop = false;
             }
@@ -301,7 +333,7 @@ impl PatternDetector {
         // Simple similarity based on name patterns and line counts
         let name_similarity = Self::calculate_name_similarity(&symbol1.name, &symbol2.name);
         let size_similarity = Self::calculate_size_similarity(symbol1, symbol2);
-        
+
         (name_similarity + size_similarity) / 2.0
     }
 
@@ -309,25 +341,23 @@ impl PatternDetector {
         // Simple Levenshtein-like similarity
         let len1 = name1.len();
         let len2 = name2.len();
-        
+
         if len1 == 0 || len2 == 0 {
             return 0.0;
         }
-        
-        let common_chars = name1.chars()
-            .filter(|c| name2.contains(*c))
-            .count();
-            
+
+        let common_chars = name1.chars().filter(|c| name2.contains(*c)).count();
+
         common_chars as f64 / len1.max(len2) as f64
     }
 
     fn calculate_size_similarity(symbol1: &Symbol, symbol2: &Symbol) -> f64 {
         let size1 = SymbolFilter::calculate_line_count(symbol1) as f64;
         let size2 = SymbolFilter::calculate_line_count(symbol2) as f64;
-        
+
         let diff = (size1 - size2).abs();
         let max_size = size1.max(size2);
-        
+
         if max_size == 0.0 {
             1.0
         } else {
@@ -339,7 +369,7 @@ impl PatternDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Symbol, FileInfo};
+    use crate::{FileInfo, Symbol};
     use std::path::PathBuf;
 
     #[test]
@@ -441,7 +471,8 @@ mod tests {
         "#;
 
         // The string concatenation detector may not work perfectly, so just check it doesn't crash
-        let _has_concat = PatternDetector::detect_string_concatenation_in_loops(string_concat_content);
+        let _has_concat =
+            PatternDetector::detect_string_concatenation_in_loops(string_concat_content);
     }
 
     #[test]

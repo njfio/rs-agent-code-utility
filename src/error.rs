@@ -1,7 +1,7 @@
 //! Error types for the rust_tree_sitter library
 
-use thiserror::Error;
 use std::path::PathBuf;
+use thiserror::Error;
 
 /// Result type alias for this library
 pub type Result<T> = std::result::Result<T, Error>;
@@ -69,34 +69,26 @@ pub enum Error {
             operation = details.operation,
             language_name = details.language_name,
             underlying_error = details.underlying_error.as_ref().unwrap_or(&"Unknown error".to_string()))]
-    LanguageError {
-        details: LanguageErrorDetails,
-    },
+    LanguageError { details: LanguageErrorDetails },
 
     /// Error during parsing with location information
     #[error("Parse error{location}: {error_kind}",
             location = details.file_path.as_ref().map(|p| format!(" in {}", p.display())).unwrap_or_default(),
             error_kind = details.error_kind)]
-    ParseError {
-        details: ParseErrorDetails,
-    },
+    ParseError { details: ParseErrorDetails },
 
     /// Error with query compilation or execution
     #[error("Query error in {language}: {error_type:?} in pattern '{pattern}'",
             language = details.language,
             error_type = details.error_type,
             pattern = details.pattern)]
-    QueryError {
-        details: QueryErrorDetails,
-    },
+    QueryError { details: QueryErrorDetails },
 
     /// Error with tree navigation or manipulation
     #[error("Tree error during {operation}: {context}",
             operation = details.operation,
             context = details.context.as_ref().unwrap_or(&"No additional context".to_string()))]
-    TreeError {
-        details: TreeErrorDetails,
-    },
+    TreeError { details: TreeErrorDetails },
 
     /// IO error when reading files
     #[error("IO error: {0}")]
@@ -111,9 +103,7 @@ pub enum Error {
             input_type = details.input_type,
             expected = details.expected,
             actual = details.actual)]
-    InvalidInput {
-        details: InvalidInputDetails,
-    },
+    InvalidInput { details: InvalidInputDetails },
 
     /// Feature not supported
     #[error("Feature not supported: {feature} (reason: {reason})")]
@@ -171,10 +161,7 @@ pub enum Error {
 
     /// Timeout error
     #[error("Operation timed out: {operation} after {duration_ms}ms")]
-    TimeoutError {
-        operation: String,
-        duration_ms: u64,
-    },
+    TimeoutError { operation: String, duration_ms: u64 },
 
     /// Resource exhaustion error
     #[error("Resource exhausted: {resource} - {message}")]
@@ -243,7 +230,7 @@ impl Error {
     pub fn language_error_with_cause(
         language_name: impl Into<String>,
         operation: impl Into<String>,
-        cause: impl Into<String>
+        cause: impl Into<String>,
     ) -> Self {
         Self::LanguageError {
             details: LanguageErrorDetails {
@@ -382,10 +369,7 @@ impl Error {
     }
 
     /// Create a new not supported error
-    pub fn not_supported_error(
-        feature: impl Into<String>,
-        reason: impl Into<String>,
-    ) -> Self {
+    pub fn not_supported_error(feature: impl Into<String>, reason: impl Into<String>) -> Self {
         Self::NotSupported {
             feature: feature.into(),
             reason: reason.into(),
@@ -407,10 +391,7 @@ impl Error {
     }
 
     /// Create a new internal error
-    pub fn internal_error(
-        component: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn internal_error(component: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Internal {
             component: component.into(),
             message: message.into(),
@@ -714,7 +695,7 @@ impl From<tree_sitter::LanguageError> for Error {
         Self::language_error_with_cause(
             "tree-sitter",
             "language initialization",
-            format!("{:?}", err)
+            format!("{:?}", err),
         )
     }
 }
@@ -735,11 +716,7 @@ impl From<tree_sitter::QueryError> for Error {
             QueryErrorType::UnsupportedFeature
         };
 
-        Self::query_error(
-            "unknown pattern",
-            "tree-sitter",
-            error_type
-        )
+        Self::query_error("unknown pattern", "tree-sitter", error_type)
     }
 }
 

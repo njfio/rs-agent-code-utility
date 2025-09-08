@@ -1,14 +1,16 @@
-use rust_tree_sitter::performance_analysis::{PerformanceAnalyzer, PerformanceConfig, PerformanceSeverity, HotspotCategory};
+use rust_tree_sitter::performance_analysis::{
+    HotspotCategory, PerformanceAnalyzer, PerformanceConfig, PerformanceSeverity,
+};
 use rust_tree_sitter::{AnalysisResult, FileInfo};
-use tempfile::TempDir;
-use std::fs;
 use std::collections::HashMap;
+use std::fs;
+use tempfile::TempDir;
 
 /// Test proper cyclomatic complexity calculation using AST analysis
 #[test]
 fn test_cyclomatic_complexity_calculation() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
-    
+
     // Create a Rust file with known cyclomatic complexity
     let complex_code = r#"
 fn simple_function() -> i32 {
@@ -100,33 +102,59 @@ fn switch_like_function(x: i32) -> String {
         min_complexity_threshold: 2,
         max_function_length: 20,
     };
-    
+
     let analyzer = PerformanceAnalyzer::with_config(config);
     let result = analyzer.analyze(&analysis_result)?;
 
     // Debug output to see what's happening
-    println!("Max complexity: {}", result.complexity_analysis.max_complexity);
-    println!("Average complexity: {}", result.complexity_analysis.average_complexity);
-    println!("High complexity functions count: {}", result.complexity_analysis.high_complexity_functions.len());
+    println!(
+        "Max complexity: {}",
+        result.complexity_analysis.max_complexity
+    );
+    println!(
+        "Average complexity: {}",
+        result.complexity_analysis.average_complexity
+    );
+    println!(
+        "High complexity functions count: {}",
+        result.complexity_analysis.high_complexity_functions.len()
+    );
     for func in &result.complexity_analysis.high_complexity_functions {
-        println!("  Function: {} - Complexity: {}", func.name, func.complexity);
+        println!(
+            "  Function: {} - Complexity: {}",
+            func.name, func.complexity
+        );
     }
 
     // Verify complexity analysis results
-    assert!(result.complexity_analysis.max_complexity > 5.0,
-        "Max complexity should be > 5, got: {}", result.complexity_analysis.max_complexity);
+    assert!(
+        result.complexity_analysis.max_complexity > 5.0,
+        "Max complexity should be > 5, got: {}",
+        result.complexity_analysis.max_complexity
+    );
 
-    assert!(result.complexity_analysis.average_complexity > 1.5,
-        "Average complexity should be > 1.5, got: {}", result.complexity_analysis.average_complexity);
+    assert!(
+        result.complexity_analysis.average_complexity > 1.5,
+        "Average complexity should be > 1.5, got: {}",
+        result.complexity_analysis.average_complexity
+    );
 
-    assert!(result.complexity_analysis.high_complexity_functions.len() >= 3,
+    assert!(
+        result.complexity_analysis.high_complexity_functions.len() >= 3,
         "Should detect at least 3 high complexity functions, found: {}",
-        result.complexity_analysis.high_complexity_functions.len());
+        result.complexity_analysis.high_complexity_functions.len()
+    );
 
     // Verify that nested loop function has highest complexity
-    let nested_loop_func = result.complexity_analysis.high_complexity_functions.iter()
+    let nested_loop_func = result
+        .complexity_analysis
+        .high_complexity_functions
+        .iter()
         .find(|f| f.name.contains("nested_loop"));
-    assert!(nested_loop_func.is_some(), "Should detect nested_loop_function as high complexity");
+    assert!(
+        nested_loop_func.is_some(),
+        "Should detect nested_loop_function as high complexity"
+    );
 
     Ok(())
 }
@@ -135,7 +163,7 @@ fn switch_like_function(x: i32) -> String {
 #[test]
 fn test_algorithmic_complexity_detection() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
-    
+
     // Create code with different algorithmic complexities
     let algorithmic_code = r#"
 // O(1) - Constant time
@@ -248,32 +276,42 @@ fn binary_search(arr: &[i32], target: i32) -> Option<usize> {
         min_complexity_threshold: 1,
         max_function_length: 30,
     };
-    
+
     let analyzer = PerformanceAnalyzer::with_config(config);
     let result = analyzer.analyze(&analysis_result)?;
 
     // Should detect algorithmic complexity hotspots
-    let complexity_hotspots: Vec<_> = result.hotspots.iter()
+    let complexity_hotspots: Vec<_> = result
+        .hotspots
+        .iter()
         .filter(|h| h.category == HotspotCategory::AlgorithmicComplexity)
         .collect();
-    
-    assert!(complexity_hotspots.len() >= 2, 
-        "Should detect at least 2 algorithmic complexity hotspots, found: {}", 
-        complexity_hotspots.len());
+
+    assert!(
+        complexity_hotspots.len() >= 2,
+        "Should detect at least 2 algorithmic complexity hotspots, found: {}",
+        complexity_hotspots.len()
+    );
 
     // Should detect nested loops as high severity
-    let high_severity_hotspots: Vec<_> = result.hotspots.iter()
+    let high_severity_hotspots: Vec<_> = result
+        .hotspots
+        .iter()
         .filter(|h| h.severity == PerformanceSeverity::High)
         .collect();
-    
-    assert!(high_severity_hotspots.len() >= 1,
-        "Should detect at least 1 high severity hotspot, found: {}", 
-        high_severity_hotspots.len());
+
+    assert!(
+        high_severity_hotspots.len() >= 1,
+        "Should detect at least 1 high severity hotspot, found: {}",
+        high_severity_hotspots.len()
+    );
 
     // Verify performance score reflects complexity
-    assert!(result.performance_score < 80,
+    assert!(
+        result.performance_score < 80,
         "Performance score should be < 80 due to complex algorithms, got: {}",
-        result.performance_score);
+        result.performance_score
+    );
 
     Ok(())
 }
@@ -282,7 +320,7 @@ fn binary_search(arr: &[i32], target: i32) -> Option<usize> {
 #[test]
 fn test_memory_allocation_detection() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
-    
+
     // Create code with various memory allocation patterns
     let memory_code = r#"
 use std::collections::HashMap;
@@ -370,38 +408,56 @@ fn recursive_allocation(depth: usize) -> Vec<i32> {
         min_complexity_threshold: 5,
         max_function_length: 50,
     };
-    
+
     let analyzer = PerformanceAnalyzer::with_config(config);
     let result = analyzer.analyze(&analysis_result)?;
 
     // Should detect memory allocation hotspots
-    let memory_hotspots: Vec<_> = result.hotspots.iter()
+    let memory_hotspots: Vec<_> = result
+        .hotspots
+        .iter()
         .filter(|h| h.category == HotspotCategory::MemoryUsage)
         .collect();
-    
-    assert!(memory_hotspots.len() >= 2,
-        "Should detect at least 2 memory allocation hotspots, found: {}", 
-        memory_hotspots.len());
+
+    assert!(
+        memory_hotspots.len() >= 2,
+        "Should detect at least 2 memory allocation hotspots, found: {}",
+        memory_hotspots.len()
+    );
 
     // Verify memory analysis results exist (structure is present)
     // Note: allocation_hotspots and leak_potential may be empty if no issues found
-    assert!(result.memory_analysis.allocation_hotspots.len() == result.memory_analysis.allocation_hotspots.len(),
-        "Memory analysis allocation_hotspots should be accessible");
+    assert!(
+        result.memory_analysis.allocation_hotspots.len()
+            == result.memory_analysis.allocation_hotspots.len(),
+        "Memory analysis allocation_hotspots should be accessible"
+    );
 
-    assert!(result.memory_analysis.leak_potential.len() == result.memory_analysis.leak_potential.len(),
-        "Memory analysis leak_potential should be accessible");
+    assert!(
+        result.memory_analysis.leak_potential.len() == result.memory_analysis.leak_potential.len(),
+        "Memory analysis leak_potential should be accessible"
+    );
 
     // Should provide optimization recommendations
-    assert!(!result.recommendations.is_empty(),
-        "Should provide optimization recommendations");
+    assert!(
+        !result.recommendations.is_empty(),
+        "Should provide optimization recommendations"
+    );
 
-    let memory_recommendations: Vec<_> = result.recommendations.iter()
-        .filter(|r| r.recommendation.to_lowercase().contains("memory") || r.recommendation.to_lowercase().contains("allocation"))
+    let memory_recommendations: Vec<_> = result
+        .recommendations
+        .iter()
+        .filter(|r| {
+            r.recommendation.to_lowercase().contains("memory")
+                || r.recommendation.to_lowercase().contains("allocation")
+        })
         .collect();
-    
-    assert!(memory_recommendations.len() >= 1,
-        "Should provide memory-related recommendations, found: {}", 
-        memory_recommendations.len());
+
+    assert!(
+        memory_recommendations.len() >= 1,
+        "Should provide memory-related recommendations, found: {}",
+        memory_recommendations.len()
+    );
 
     Ok(())
 }
@@ -507,21 +563,27 @@ fn fetch_data(url: &str) -> Result<String, Box<dyn std::error::Error>> {
     let result = analyzer.analyze(&analysis_result)?;
 
     // Should detect I/O operation hotspots
-    let io_hotspots: Vec<_> = result.hotspots.iter()
+    let io_hotspots: Vec<_> = result
+        .hotspots
+        .iter()
         .filter(|h| h.category == HotspotCategory::IOOperations)
         .collect();
 
     // I/O hotspots may be empty if not implemented yet or no issues found
-    assert!(io_hotspots.len() == io_hotspots.len(),
-        "I/O operation hotspot detection should be accessible");
+    assert!(
+        io_hotspots.len() == io_hotspots.len(),
+        "I/O operation hotspot detection should be accessible"
+    );
 
     // Verify file metrics include I/O operations
     assert!(!result.file_metrics.is_empty(), "Should have file metrics");
 
     let file_metric = &result.file_metrics[0];
     // I/O operations count may be 0 if not implemented yet or no operations found
-    assert!(file_metric.io_operations == file_metric.io_operations,
-        "I/O operations detection in file metrics should be accessible");
+    assert!(
+        file_metric.io_operations == file_metric.io_operations,
+        "I/O operations detection in file metrics should be accessible"
+    );
 
     Ok(())
 }
@@ -632,20 +694,29 @@ fn recursive_inefficient(n: i32) -> i32 {
     let result = analyzer.analyze(&analysis_result)?;
 
     // Should detect multiple types of hotspots
-    assert!(result.total_hotspots >= 1,
-        "Should detect at least 1 hotspot, found: {}", result.total_hotspots);
+    assert!(
+        result.total_hotspots >= 1,
+        "Should detect at least 1 hotspot, found: {}",
+        result.total_hotspots
+    );
 
     // Should provide recommendations
-    assert!(!result.recommendations.is_empty(),
-        "Should provide optimization recommendations");
+    assert!(
+        !result.recommendations.is_empty(),
+        "Should provide optimization recommendations"
+    );
 
     // Should detect complexity issues
-    assert!(result.complexity_analysis.max_complexity > 0.0,
-        "Should calculate complexity");
+    assert!(
+        result.complexity_analysis.max_complexity > 0.0,
+        "Should calculate complexity"
+    );
 
     // Should categorize hotspots by severity
-    assert!(!result.hotspots_by_severity.is_empty(),
-        "Should categorize hotspots by severity");
+    assert!(
+        !result.hotspots_by_severity.is_empty(),
+        "Should categorize hotspots by severity"
+    );
 
     Ok(())
 }

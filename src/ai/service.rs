@@ -1,10 +1,10 @@
 //! Main AI service implementation
 
-use crate::ai::types::{AIProvider, AIRequest, AIResponse, AIFeature};
+use crate::ai::cache::{AICache, CacheConfig, MemoryCache};
 use crate::ai::config::{AIConfig, ProviderConfig};
 use crate::ai::error::{AIError, AIResult};
-use crate::ai::cache::{AICache, MemoryCache, CacheConfig};
-use crate::ai::providers::{AIProviderImpl, create_provider};
+use crate::ai::providers::{create_provider, AIProviderImpl};
+use crate::ai::types::{AIFeature, AIProvider, AIRequest, AIResponse};
 use std::collections::HashMap;
 // use std::sync::Arc; // Not currently used
 use std::time::Duration;
@@ -30,37 +30,37 @@ impl AIServiceBuilder {
             use_mock_providers: false,
         }
     }
-    
+
     /// Set the configuration
     pub fn with_config(mut self, config: AIConfig) -> Self {
         self.config = config;
         self
     }
-    
+
     /// Load configuration from file
     pub fn with_config_file<P: AsRef<std::path::Path>>(mut self, path: P) -> AIResult<Self> {
         self.config = AIConfig::from_file(path)?;
         Ok(self)
     }
-    
+
     /// Use mock providers for testing
     pub fn with_mock_providers(mut self, use_mock: bool) -> Self {
         self.use_mock_providers = use_mock;
         self
     }
-    
+
     /// Add a provider configuration
     pub fn with_provider(mut self, provider: AIProvider, config: ProviderConfig) -> Self {
         self.config.providers.insert(provider, config);
         self
     }
-    
+
     /// Set the default provider
     pub fn with_default_provider(mut self, provider: AIProvider) -> Self {
         self.config.default_provider = provider;
         self
     }
-    
+
     /// Build the AI service
     pub async fn build(self) -> AIResult<AIService> {
         AIService::new(self.config, self.use_mock_providers).await
@@ -80,10 +80,10 @@ impl AIService {
         if !use_mock_providers {
             config.validate()?;
         }
-        
+
         // Apply environment variable overrides
         let config = config.with_env_overrides();
-        
+
         // Initialize providers
         let mut providers = HashMap::new();
 
@@ -91,14 +91,18 @@ impl AIService {
             // For mock providers, create a default mock provider if none are configured
             if config.providers.is_empty() {
                 let mock_config = ProviderConfig::default();
-                let provider = Box::new(crate::ai::providers::MockProvider::new(config.default_provider, mock_config))
-                    as Box<dyn AIProviderImpl>;
+                let provider = Box::new(crate::ai::providers::MockProvider::new(
+                    config.default_provider,
+                    mock_config,
+                )) as Box<dyn AIProviderImpl>;
                 providers.insert(config.default_provider, provider);
             } else {
                 for (provider_type, provider_config) in &config.providers {
                     if provider_config.enabled {
-                        let provider = Box::new(crate::ai::providers::MockProvider::new(*provider_type, provider_config.clone()))
-                            as Box<dyn AIProviderImpl>;
+                        let provider = Box::new(crate::ai::providers::MockProvider::new(
+                            *provider_type,
+                            provider_config.clone(),
+                        )) as Box<dyn AIProviderImpl>;
                         providers.insert(*provider_type, provider);
                     }
                 }
@@ -111,7 +115,7 @@ impl AIService {
                 }
             }
         }
-        
+
         // Initialize cache if enabled
         let cache: Option<Box<dyn AICache>> = if config.global.enable_cache {
             let cache_config = CacheConfig {
@@ -123,14 +127,14 @@ impl AIService {
         } else {
             None
         };
-        
+
         Ok(Self {
             config,
             providers,
             cache,
         })
     }
-    
+
     /// Process an AI request
     pub async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
         // Check cache first if enabled
@@ -140,12 +144,13 @@ impl AIService {
                 return Ok(cached_response);
             }
         }
-        
+
         // Determine which provider to use
         let provider_type = self.select_provider(&request)?;
-        let provider = self.providers.get(&provider_type)
-            .ok_or_else(|| AIError::configuration(format!("Provider {:?} not available", provider_type)))?;
-        
+        let provider = self.providers.get(&provider_type).ok_or_else(|| {
+            AIError::configuration(format!("Provider {:?} not available", provider_type))
+        })?;
+
         // Check if the provider supports the requested feature
         if !provider.supports_feature(request.feature) {
             return Err(AIError::feature_not_supported(
@@ -153,10 +158,10 @@ impl AIService {
                 format!("{:?}", provider_type),
             ));
         }
-        
+
         // Process the request
         let mut response = provider.process_request(request.clone()).await?;
-        
+
         // Cache the response if caching is enabled
         if let Some(cache) = &self.cache {
             let cache_key = cache.generate_key(&request);
@@ -166,41 +171,43 @@ impl AIService {
             } else {
                 None
             };
-            
+
             if let Some(ttl) = ttl {
                 let _ = cache.put(&cache_key, response.clone(), Some(ttl));
             }
         }
-        
+
         // Mark as not cached since we just processed it
         response.metadata.cached = false;
-        
+
         Ok(response)
     }
-    
+
     /// Select the best provider for a request
     fn select_provider(&self, request: &AIRequest) -> AIResult<AIProvider> {
         let feature_config = self.get_feature_config(request.feature);
-        
+
         // Check if there's a preferred provider for this feature
         if let Some(preferred) = feature_config.preferred_provider {
             if self.providers.contains_key(&preferred) {
                 return Ok(preferred);
             }
         }
-        
+
         // Check model preferences in the request
         if let Some(model_prefs) = &request.model_preferences {
             for model in model_prefs {
                 for (provider_type, provider) in &self.providers {
-                    if provider.best_model_for_feature(request.feature)
-                        .map_or(false, |best_model| best_model == *model) {
+                    if provider
+                        .best_model_for_feature(request.feature)
+                        .map_or(false, |best_model| best_model == *model)
+                    {
                         return Ok(*provider_type);
                     }
                 }
             }
         }
-        
+
         // Fall back to default provider
         if self.providers.contains_key(&self.config.default_provider) {
             Ok(self.config.default_provider)
@@ -211,13 +218,14 @@ impl AIService {
                     return Ok(*provider_type);
                 }
             }
-            
-            Err(AIError::configuration(
-                format!("No available provider supports feature {:?}", request.feature)
-            ))
+
+            Err(AIError::configuration(format!(
+                "No available provider supports feature {:?}",
+                request.feature
+            )))
         }
     }
-    
+
     /// Get feature configuration
     fn get_feature_config(&self, feature: AIFeature) -> &crate::ai::config::FeatureSettings {
         match feature {
@@ -231,35 +239,36 @@ impl AIService {
             AIFeature::TestGeneration => &self.config.features.test_generation,
         }
     }
-    
+
     /// Validate all provider connections
     pub async fn validate_connections(&self) -> HashMap<AIProvider, AIResult<()>> {
         let mut results = HashMap::new();
-        
+
         for (provider_type, provider) in &self.providers {
             let result = provider.validate_connection().await;
             results.insert(*provider_type, result);
         }
-        
+
         results
     }
-    
+
     /// Get available providers
     pub fn available_providers(&self) -> Vec<AIProvider> {
         self.providers.keys().copied().collect()
     }
-    
+
     /// Check if a feature is supported by any provider
     pub fn is_feature_supported(&self, feature: AIFeature) -> bool {
-        self.providers.values()
+        self.providers
+            .values()
             .any(|provider| provider.supports_feature(feature))
     }
-    
+
     /// Get cache statistics
     pub fn cache_stats(&self) -> Option<crate::ai::cache::CacheStats> {
         self.cache.as_ref().map(|cache| cache.stats())
     }
-    
+
     /// Clear cache
     pub fn clear_cache(&self) -> AIResult<()> {
         if let Some(cache) = &self.cache {
@@ -267,7 +276,7 @@ impl AIService {
         }
         Ok(())
     }
-    
+
     /// Get configuration
     pub fn config(&self) -> &AIConfig {
         &self.config

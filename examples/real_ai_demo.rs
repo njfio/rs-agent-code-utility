@@ -1,17 +1,17 @@
-use rust_tree_sitter::ai::{AIServiceBuilder, AIFeature, AIRequest, AIResult};
+use rust_tree_sitter::ai::{AIFeature, AIRequest, AIResult, AIServiceBuilder};
 
 #[tokio::main]
 async fn main() -> AIResult<()> {
     println!("🤖 REAL AI Integration Demo");
     println!("===========================");
     println!("Using Anthropic Claude API with real analysis");
-    
+
     // Initialize AI service with real Anthropic provider
     let ai_service = AIServiceBuilder::new()
         .with_config_file("ai_config.yaml")?
         .build()
         .await?;
-    
+
     // Real Rust code with actual issues to analyze
     let problematic_code = r#"
 use std::collections::HashMap;
@@ -95,11 +95,11 @@ pub fn concurrent_access_example() {
     println!("============================");
     println!("Code length: {} lines", problematic_code.lines().count());
     println!("Contains multiple security vulnerabilities and code quality issues");
-    
+
     // 1. REAL SECURITY ANALYSIS
     println!("\n🔒 REAL Security Analysis with Claude");
     println!("=====================================");
-    
+
     let security_request = AIRequest::new(
         AIFeature::SecurityAnalysis,
         format!(
@@ -116,14 +116,16 @@ pub fn concurrent_access_example() {
             problematic_code
         ),
     );
-    
+
     match ai_service.process_request(security_request).await {
         Ok(response) => {
             println!("🛡️  Claude's Security Analysis:");
             println!("Model: {}", response.metadata.model_used);
-            println!("Tokens: {} (${:.4} estimated cost)", 
+            println!(
+                "Tokens: {} (${:.4} estimated cost)",
                 response.token_usage.total_tokens,
-                response.token_usage.estimated_cost.unwrap_or(0.0));
+                response.token_usage.estimated_cost.unwrap_or(0.0)
+            );
             println!("Processing time: {:?}", response.metadata.processing_time);
             println!("Cached: {}", response.metadata.cached);
             println!("\n📋 Security Findings:");
@@ -134,11 +136,11 @@ pub fn concurrent_access_example() {
             return Err(e);
         }
     }
-    
+
     // 2. REAL CODE EXPLANATION
     println!("\n📚 REAL Code Explanation with Claude");
     println!("====================================");
-    
+
     let explanation_request = AIRequest::new(
         AIFeature::CodeExplanation,
         format!(
@@ -153,14 +155,16 @@ pub fn concurrent_access_example() {
             problematic_code
         ),
     );
-    
+
     match ai_service.process_request(explanation_request).await {
         Ok(response) => {
             println!("📖 Claude's Code Explanation:");
             println!("Model: {}", response.metadata.model_used);
-            println!("Tokens: {} (${:.4} estimated cost)", 
+            println!(
+                "Tokens: {} (${:.4} estimated cost)",
                 response.token_usage.total_tokens,
-                response.token_usage.estimated_cost.unwrap_or(0.0));
+                response.token_usage.estimated_cost.unwrap_or(0.0)
+            );
             println!("Processing time: {:?}", response.metadata.processing_time);
             println!("Cached: {}", response.metadata.cached);
             println!("\n📝 Explanation:");
@@ -170,11 +174,11 @@ pub fn concurrent_access_example() {
             println!("❌ Code explanation failed: {}", e);
         }
     }
-    
+
     // 3. REAL REFACTORING SUGGESTIONS
     println!("\n🔧 REAL Refactoring Suggestions with Claude");
     println!("===========================================");
-    
+
     let refactor_request = AIRequest::new(
         AIFeature::RefactoringSuggestions,
         format!(
@@ -190,14 +194,16 @@ pub fn concurrent_access_example() {
             problematic_code
         ),
     );
-    
+
     match ai_service.process_request(refactor_request).await {
         Ok(response) => {
             println!("🔄 Claude's Refactoring Suggestions:");
             println!("Model: {}", response.metadata.model_used);
-            println!("Tokens: {} (${:.4} estimated cost)", 
+            println!(
+                "Tokens: {} (${:.4} estimated cost)",
                 response.token_usage.total_tokens,
-                response.token_usage.estimated_cost.unwrap_or(0.0));
+                response.token_usage.estimated_cost.unwrap_or(0.0)
+            );
             println!("Processing time: {:?}", response.metadata.processing_time);
             println!("Cached: {}", response.metadata.cached);
             println!("\n💡 Refactoring Recommendations:");
@@ -207,11 +213,11 @@ pub fn concurrent_access_example() {
             println!("❌ Refactoring analysis failed: {}", e);
         }
     }
-    
+
     // 4. CACHE PERFORMANCE TEST
     println!("\n⚡ Testing Cache Performance");
     println!("============================");
-    
+
     // Same request again - should hit cache
     let cache_test_request = AIRequest::new(
         AIFeature::SecurityAnalysis,
@@ -220,7 +226,7 @@ pub fn concurrent_access_example() {
             problematic_code
         ),
     );
-    
+
     let start = std::time::Instant::now();
     match ai_service.process_request(cache_test_request).await {
         Ok(response) => {
@@ -229,7 +235,7 @@ pub fn concurrent_access_example() {
             println!("Response time: {:?}", duration);
             println!("Cached: {}", response.metadata.cached);
             println!("Tokens: {}", response.token_usage.total_tokens);
-            
+
             if response.metadata.cached {
                 println!("✅ Cache is working! Lightning-fast response from cache.");
             } else {
@@ -240,7 +246,7 @@ pub fn concurrent_access_example() {
             println!("❌ Cache test failed: {}", e);
         }
     }
-    
+
     println!("\n🎉 REAL AI Integration Demo Complete!");
     println!("====================================");
     println!("✅ Real Anthropic Claude API calls made");
@@ -249,6 +255,6 @@ pub fn concurrent_access_example() {
     println!("✅ Concrete refactoring suggestions given");
     println!("✅ Cache performance validated");
     println!("✅ Token usage and costs tracked");
-    
+
     Ok(())
 }

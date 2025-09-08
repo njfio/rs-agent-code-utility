@@ -1,16 +1,16 @@
-use rust_tree_sitter::ai::{AIServiceBuilder, AIFeature, AIRequest, AIResult};
+use rust_tree_sitter::ai::{AIFeature, AIRequest, AIResult, AIServiceBuilder};
 
 #[tokio::main]
 async fn main() -> AIResult<()> {
     println!("🔄 Multi-Language Code Migration Assistant");
     println!("==========================================");
-    
+
     // Initialize AI service
     let ai_service = AIServiceBuilder::new()
         .with_mock_providers(true)
         .build()
         .await?;
-    
+
     // Example: Python to Rust migration
     let python_code = r#"
 import json
@@ -107,11 +107,11 @@ class UserRepository:
     println!("========================");
     println!("Lines: {}", python_code.lines().count());
     println!("Features: SQLite integration, user management, authentication");
-    
+
     // 1. ANALYZE SOURCE CODE
     println!("\n🔍 PHASE 1: Source Code Analysis");
     println!("=================================");
-    
+
     let analysis_context = format!(
         "SOURCE CODE ANALYSIS\n\
         \n\
@@ -129,9 +129,9 @@ class UserRepository:
         7. Security implications",
         python_code
     );
-    
+
     let analysis_request = AIRequest::new(AIFeature::CodeExplanation, analysis_context);
-    
+
     match ai_service.process_request(analysis_request).await {
         Ok(response) => {
             println!("📊 Source Code Analysis:");
@@ -139,11 +139,11 @@ class UserRepository:
         }
         Err(e) => println!("❌ Analysis failed: {}", e),
     }
-    
+
     // 2. MIGRATION STRATEGY
     println!("\n🗺️  PHASE 2: Migration Strategy");
     println!("===============================");
-    
+
     let strategy_context = format!(
         "MIGRATION STRATEGY PLANNING\n\
         \n\
@@ -162,9 +162,9 @@ class UserRepository:
         7. Testing strategy for migration validation",
         python_code
     );
-    
+
     let strategy_request = AIRequest::new(AIFeature::ArchitecturalInsights, strategy_context);
-    
+
     match ai_service.process_request(strategy_request).await {
         Ok(response) => {
             println!("🎯 Migration Strategy:");
@@ -172,11 +172,11 @@ class UserRepository:
         }
         Err(e) => println!("❌ Strategy planning failed: {}", e),
     }
-    
+
     // 3. RUST CODE GENERATION
     println!("\n🦀 PHASE 3: Rust Code Generation");
     println!("=================================");
-    
+
     let generation_context = format!(
         "RUST CODE GENERATION\n\
         \n\
@@ -195,9 +195,9 @@ class UserRepository:
         8. Add comprehensive error types",
         python_code
     );
-    
+
     let generation_request = AIRequest::new(AIFeature::RefactoringSuggestions, generation_context);
-    
+
     match ai_service.process_request(generation_request).await {
         Ok(response) => {
             println!("🔧 Generated Rust Code:");
@@ -205,11 +205,11 @@ class UserRepository:
         }
         Err(e) => println!("❌ Code generation failed: {}", e),
     }
-    
+
     // 4. SECURITY COMPARISON
     println!("\n🔒 PHASE 4: Security Analysis");
     println!("==============================");
-    
+
     let security_context = format!(
         "SECURITY MIGRATION ANALYSIS\n\
         \n\
@@ -225,9 +225,9 @@ class UserRepository:
         7. Concurrency safety in Rust vs Python",
         python_code
     );
-    
+
     let security_request = AIRequest::new(AIFeature::SecurityAnalysis, security_context);
-    
+
     match ai_service.process_request(security_request).await {
         Ok(response) => {
             println!("🛡️  Security Improvements:");
@@ -235,11 +235,11 @@ class UserRepository:
         }
         Err(e) => println!("❌ Security analysis failed: {}", e),
     }
-    
+
     // 5. TESTING STRATEGY
     println!("\n🧪 PHASE 5: Testing Strategy");
     println!("=============================");
-    
+
     let testing_context = format!(
         "MIGRATION TESTING STRATEGY\n\
         \n\
@@ -255,9 +255,9 @@ class UserRepository:
         7. Concurrency testing strategies",
         python_code
     );
-    
+
     let testing_request = AIRequest::new(AIFeature::TestGeneration, testing_context);
-    
+
     match ai_service.process_request(testing_request).await {
         Ok(response) => {
             println!("🧪 Testing Strategy:");
@@ -265,11 +265,11 @@ class UserRepository:
         }
         Err(e) => println!("❌ Testing strategy failed: {}", e),
     }
-    
+
     // 6. PERFORMANCE ANALYSIS
     println!("\n⚡ PHASE 6: Performance Optimization");
     println!("====================================");
-    
+
     let performance_context = format!(
         "PERFORMANCE OPTIMIZATION ANALYSIS\n\
         \n\
@@ -285,9 +285,9 @@ class UserRepository:
         7. Benchmarking recommendations",
         python_code
     );
-    
+
     let performance_request = AIRequest::new(AIFeature::QualityAssessment, performance_context);
-    
+
     match ai_service.process_request(performance_request).await {
         Ok(response) => {
             println!("⚡ Performance Analysis:");
@@ -295,7 +295,7 @@ class UserRepository:
         }
         Err(e) => println!("❌ Performance analysis failed: {}", e),
     }
-    
+
     println!("\n🎉 Code Migration Analysis Complete!");
     println!("====================================");
     println!("✅ Source code analyzed");
@@ -304,6 +304,6 @@ class UserRepository:
     println!("✅ Security improvements identified");
     println!("✅ Testing strategy created");
     println!("✅ Performance optimizations planned");
-    
+
     Ok(())
 }

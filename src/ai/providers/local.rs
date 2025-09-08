@@ -1,9 +1,9 @@
 //! Local AI provider implementation
 
-use crate::ai::types::{AIProvider, AIRequest, AIResponse, AICapability, AIFeature};
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::AIResult;
 use crate::ai::providers::{AIProviderImpl, RateLimitInfo};
+use crate::ai::types::{AICapability, AIFeature, AIProvider, AIRequest, AIResponse};
 use async_trait::async_trait;
 
 /// Local AI provider implementation
@@ -22,32 +22,33 @@ impl AIProviderImpl for LocalProvider {
     fn provider(&self) -> AIProvider {
         AIProvider::Local
     }
-    
+
     fn capabilities(&self) -> Vec<AICapability> {
-        vec![
-            AICapability {
-                feature: AIFeature::CodeExplanation,
-                supported: true,
-                quality_score: 0.70,
-                description: "Local model code explanations".to_string(),
-            },
-        ]
+        vec![AICapability {
+            feature: AIFeature::CodeExplanation,
+            supported: true,
+            quality_score: 0.70,
+            description: "Local model code explanations".to_string(),
+        }]
     }
-    
+
     async fn validate_connection(&self) -> AIResult<()> {
         Ok(())
     }
-    
+
     async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
-        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use crate::ai::types::{ResponseMetadata, TokenUsage};
         use std::time::{Duration, SystemTime};
-        
+
         // Placeholder implementation
         tokio::time::sleep(Duration::from_millis(500)).await;
-        
+
         Ok(AIResponse {
             feature: request.feature,
-            content: format!("Local AI analysis: {}", request.content.chars().take(100).collect::<String>()),
+            content: format!(
+                "Local AI analysis: {}",
+                request.content.chars().take(100).collect::<String>()
+            ),
             structured_data: None,
             confidence: Some(0.70),
             token_usage: TokenUsage::new(40, 80),
@@ -62,11 +63,11 @@ impl AIProviderImpl for LocalProvider {
             },
         })
     }
-    
+
     fn best_model_for_feature(&self, _feature: AIFeature) -> Option<String> {
         Some("local-model".to_string())
     }
-    
+
     fn rate_limit_info(&self) -> Option<RateLimitInfo> {
         Some(RateLimitInfo {
             requests_per_minute: self.config.rate_limit.requests_per_minute,

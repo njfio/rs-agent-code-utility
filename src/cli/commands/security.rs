@@ -1,13 +1,16 @@
 //! Security command implementation
-//! 
+//!
 //! Provides comprehensive security vulnerability scanning with configurable output formats.
 
-use std::path::PathBuf;
-use colored::*;
-use crate::{CodebaseAnalyzer, SecurityScanner};
-use crate::cli::error::{CliError, CliResult, validate_path, validate_format};
-use crate::cli::utils::{create_progress_bar, create_analysis_config, parse_severity, severity_meets_threshold, validate_output_path, print_success};
+use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
+use crate::cli::utils::{
+    create_analysis_config, create_progress_bar, parse_severity, print_success,
+    severity_meets_threshold, validate_output_path,
+};
+use crate::{CodebaseAnalyzer, SecurityScanner};
+use colored::*;
+use std::path::PathBuf;
 
 /// Execute the security command
 pub fn execute(
@@ -25,71 +28,97 @@ pub fn execute(
     validate_path(path)?;
     validate_format(format, &["table", "json", "markdown"])?;
     let severity_threshold = parse_severity(min_severity)?;
-    
+
     if let Some(output_path) = output {
         validate_output_path(output_path)?;
     }
-    
+
     // Create progress bar
     let pb = create_progress_bar("Running security scan...");
-    
+
     // Configure analyzer
     let config = create_analysis_config(1024, 20, depth, false, None, None, None, enable_security)?;
-    let mut analyzer = CodebaseAnalyzer::with_config(config)
-        .map_err(|e| CliError::Security(e.to_string()))?;
-    
+    let mut analyzer =
+        CodebaseAnalyzer::with_config(config).map_err(|e| CliError::Security(e.to_string()))?;
+
     // Run analysis first to get file content
     pb.set_message("Analyzing codebase...");
-    let analysis_result = analyzer.analyze_directory(path)
+    let analysis_result = analyzer
+        .analyze_directory(path)
         .map_err(|e| CliError::Security(e.to_string()))?;
-    
+
     // Run security analysis
     pb.set_message("Scanning for vulnerabilities...");
-    let security_scanner = SecurityScanner::new()
+    let security_scanner = SecurityScanner::new().map_err(|e| CliError::Security(e.to_string()))?;
+    let security_result = security_scanner
+        .analyze(&analysis_result)
         .map_err(|e| CliError::Security(e.to_string()))?;
-    let security_result = security_scanner.analyze(&analysis_result)
-        .map_err(|e| CliError::Security(e.to_string()))?;
-    
+
     pb.finish_with_message("Security scan complete!");
-    
+
     // Filter vulnerabilities by severity
-    let filtered_vulnerabilities: Vec<_> = security_result.vulnerabilities
+    let filtered_vulnerabilities: Vec<_> = security_result
+        .vulnerabilities
         .iter()
         .filter(|vuln| severity_meets_threshold(&severity_threshold, &vuln.severity))
         .collect();
-    
+
     // Display results based on format
-    let output_format = OutputFormat::from_str(format)
-        .map_err(|e| CliError::UnsupportedFormat(e))?;
-    
+    let output_format =
+        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+
     match output_format {
         OutputFormat::Json => {
             let json = serde_json::to_string_pretty(&security_result)?;
             if let Some(output_path) = output {
                 std::fs::write(output_path, &json)?;
-                print_success(&format!("Security report saved to {}", output_path.display()));
+                print_success(&format!(
+                    "Security report saved to {}",
+                    output_path.display()
+                ));
             } else {
                 println!("{}", json);
             }
         }
         OutputFormat::Markdown => {
-            print_security_markdown(&security_result, summary_only, compliance, &filtered_vulnerabilities);
+            print_security_markdown(
+                &security_result,
+                summary_only,
+                compliance,
+                &filtered_vulnerabilities,
+            );
             if let Some(output_path) = output {
-                let markdown = render_security_markdown(&security_result, summary_only, compliance, &filtered_vulnerabilities);
+                let markdown = render_security_markdown(
+                    &security_result,
+                    summary_only,
+                    compliance,
+                    &filtered_vulnerabilities,
+                );
                 std::fs::write(output_path, markdown)?;
-                print_success(&format!("Security report saved to {}", output_path.display()));
+                print_success(&format!(
+                    "Security report saved to {}",
+                    output_path.display()
+                ));
             }
         }
         OutputFormat::Table | _ => {
-            print_security_table(&security_result, summary_only, compliance, &filtered_vulnerabilities);
+            print_security_table(
+                &security_result,
+                summary_only,
+                compliance,
+                &filtered_vulnerabilities,
+            );
             if let Some(output_path) = output {
                 let json = serde_json::to_string_pretty(&security_result)?;
                 std::fs::write(output_path, json)?;
-                print_success(&format!("Security report saved to {}", output_path.display()));
+                print_success(&format!(
+                    "Security report saved to {}",
+                    output_path.display()
+                ));
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -103,7 +132,8 @@ fn print_security_table(
     println!("{}", "=".repeat(60).bright_red());
 
     println!("\n{}", "📊 SUMMARY".bright_yellow().bold());
-    println!("Security Score: {}/100",
+    println!(
+        "Security Score: {}/100",
         if security_result.security_score >= 80 {
             security_result.security_score.to_string().bright_green()
         } else if security_result.security_score >= 60 {
@@ -112,7 +142,8 @@ fn print_security_table(
             security_result.security_score.to_string().bright_red()
         }
     );
-    println!("Total Vulnerabilities: {}",
+    println!(
+        "Total Vulnerabilities: {}",
         if filtered_vulnerabilities.is_empty() {
             filtered_vulnerabilities.len().to_string().bright_green()
         } else {
@@ -136,15 +167,18 @@ fn print_security_table(
     if !summary_only && !filtered_vulnerabilities.is_empty() {
         println!("\n{}", "🔍 VULNERABILITIES FOUND".bright_yellow().bold());
         for (i, vuln) in filtered_vulnerabilities.iter().enumerate() {
-            println!("\n{} {}",
+            println!(
+                "\n{} {}",
                 format!("{}.", i + 1).bright_cyan(),
                 vuln.title.bright_white().bold()
             );
-            println!("   Severity: {:?} | Confidence: {:?}",
+            println!(
+                "   Severity: {:?} | Confidence: {:?}",
                 format!("{:?}", vuln.severity).bright_red(),
                 format!("{:?}", vuln.confidence).bright_yellow()
             );
-            println!("   Location: {}:{}",
+            println!(
+                "   Location: {}:{}",
                 vuln.location.file.display().to_string().bright_blue(),
                 vuln.location.start_line.to_string().bright_green()
             );
@@ -155,14 +189,21 @@ fn print_security_table(
 
     if compliance {
         println!("\n{}", "📋 COMPLIANCE STATUS".bright_yellow().bold());
-        println!("OWASP Score: {}/100", security_result.compliance.owasp_score);
-        println!("Overall Status: {:?}", security_result.compliance.overall_status);
+        println!(
+            "OWASP Score: {}/100",
+            security_result.compliance.owasp_score
+        );
+        println!(
+            "Overall Status: {:?}",
+            security_result.compliance.overall_status
+        );
     }
 
     if !security_result.recommendations.is_empty() {
         println!("\n{}", "💡 RECOMMENDATIONS".bright_yellow().bold());
         for (i, rec) in security_result.recommendations.iter().enumerate() {
-            println!("{}. {} (Priority: {:?})",
+            println!(
+                "{}. {} (Priority: {:?})",
                 format!("{}", i + 1).bright_cyan(),
                 rec.recommendation.bright_white(),
                 format!("{:?}", rec.priority).bright_yellow()
@@ -180,8 +221,14 @@ fn print_security_markdown(
     println!("# 🔍 Security Scan Report\n");
 
     println!("## 📊 Executive Summary\n");
-    println!("- **Security Score**: {}/100", security_result.security_score);
-    println!("- **Total Vulnerabilities**: {}", filtered_vulnerabilities.len());
+    println!(
+        "- **Security Score**: {}/100",
+        security_result.security_score
+    );
+    println!(
+        "- **Total Vulnerabilities**: {}",
+        filtered_vulnerabilities.len()
+    );
 
     println!("\n### Vulnerabilities by Severity\n");
     for (severity, count) in &security_result.vulnerabilities_by_severity {
@@ -193,7 +240,11 @@ fn print_security_markdown(
         for (i, vuln) in filtered_vulnerabilities.iter().enumerate() {
             println!("### {}. {}\n", i + 1, vuln.title);
             println!("- **Severity**: {:?}", vuln.severity);
-            println!("- **Location**: `{}:{}`", vuln.location.file.display(), vuln.location.start_line);
+            println!(
+                "- **Location**: `{}:{}`",
+                vuln.location.file.display(),
+                vuln.location.start_line
+            );
             println!("- **Description**: {}", vuln.description);
             println!("- **Fix**: {}\n", vuln.remediation.summary);
         }
@@ -201,8 +252,14 @@ fn print_security_markdown(
 
     if compliance {
         println!("## 📋 Compliance Status\n");
-        println!("- **OWASP Score**: {}/100", security_result.compliance.owasp_score);
-        println!("- **Overall Status**: {:?}\n", security_result.compliance.overall_status);
+        println!(
+            "- **OWASP Score**: {}/100",
+            security_result.compliance.owasp_score
+        );
+        println!(
+            "- **Overall Status**: {:?}\n",
+            security_result.compliance.overall_status
+        );
     }
 }
 
@@ -217,8 +274,18 @@ fn render_security_markdown(
     writeln!(out, "# 🔍 Security Scan Report\n").unwrap();
 
     writeln!(out, "## 📊 Executive Summary\n").unwrap();
-    writeln!(out, "- **Security Score**: {}/100", security_result.security_score).unwrap();
-    writeln!(out, "- **Total Vulnerabilities**: {}", filtered_vulnerabilities.len()).unwrap();
+    writeln!(
+        out,
+        "- **Security Score**: {}/100",
+        security_result.security_score
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "- **Total Vulnerabilities**: {}",
+        filtered_vulnerabilities.len()
+    )
+    .unwrap();
 
     writeln!(out, "\n### Vulnerabilities by Severity\n").unwrap();
     for (severity, count) in &security_result.vulnerabilities_by_severity {
@@ -230,7 +297,13 @@ fn render_security_markdown(
         for (i, vuln) in filtered_vulnerabilities.iter().enumerate() {
             writeln!(out, "### {}. {}\n", i + 1, vuln.title).unwrap();
             writeln!(out, "- **Severity**: {:?}", vuln.severity).unwrap();
-            writeln!(out, "- **Location**: `{}:{}`", vuln.location.file.display(), vuln.location.start_line).unwrap();
+            writeln!(
+                out,
+                "- **Location**: `{}:{}`",
+                vuln.location.file.display(),
+                vuln.location.start_line
+            )
+            .unwrap();
             writeln!(out, "- **Description**: {}", vuln.description).unwrap();
             writeln!(out, "- **Fix**: {}\n", vuln.remediation.summary).unwrap();
         }
@@ -238,8 +311,18 @@ fn render_security_markdown(
 
     if compliance {
         writeln!(out, "## 📋 Compliance Status\n").unwrap();
-        writeln!(out, "- **OWASP Score**: {}/100", security_result.compliance.owasp_score).unwrap();
-        writeln!(out, "- **Overall Status**: {:?}\n", security_result.compliance.overall_status).unwrap();
+        writeln!(
+            out,
+            "- **OWASP Score**: {}/100",
+            security_result.compliance.owasp_score
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "- **Overall Status**: {:?}\n",
+            security_result.compliance.overall_status
+        )
+        .unwrap();
     }
 
     out
@@ -249,30 +332,23 @@ fn render_security_markdown(
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    
+
     #[test]
     fn test_security_command_validation() {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
-        
+
         let result = execute(
-            &path,
-            "table",
-            "low",
-            None,
-            false,
-            false,
-            "full",
-            false, // enable_security
+            &path, "table", "low", None, false, false, "full", false, // enable_security
         );
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_security_command_invalid_severity() {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
-        
+
         let result = execute(
             &path,
             "table",

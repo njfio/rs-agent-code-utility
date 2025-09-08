@@ -1,14 +1,16 @@
-use rust_tree_sitter::smart_refactoring::{SmartRefactoringEngine, SmartRefactoringConfig, SmellCategory, PatternType, ModernizationType};
+use rust_tree_sitter::smart_refactoring::{
+    ModernizationType, PatternType, SmartRefactoringConfig, SmartRefactoringEngine, SmellCategory,
+};
 use rust_tree_sitter::CodebaseAnalyzer;
-use tempfile::TempDir;
 use std::fs;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 /// Test comprehensive code smell detection using AST analysis
 #[test]
 fn test_ast_based_code_smell_detection() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
-    
+
     // Create a Rust file with various code smells
     let rust_code = r#"
 // Long method with high cyclomatic complexity
@@ -153,69 +155,109 @@ fn find_duplicates(data: &[i32]) -> Vec<i32> {
         min_confidence: 0.6,
         max_suggestions_per_category: 20,
     };
-    
+
     let refactoring_engine = SmartRefactoringEngine::with_config(refactoring_config);
     let result = refactoring_engine.analyze(&analysis_result)?;
 
-
-
     // Verify code smell detection
-    assert!(!result.code_smell_fixes.is_empty(), "Should detect code smells");
+    assert!(
+        !result.code_smell_fixes.is_empty(),
+        "Should detect code smells"
+    );
 
     // Check for long method detection
-    let long_method_fixes: Vec<_> = result.code_smell_fixes.iter()
+    let long_method_fixes: Vec<_> = result
+        .code_smell_fixes
+        .iter()
         .filter(|fix| matches!(fix.category, SmellCategory::LongMethod))
         .collect();
     assert!(!long_method_fixes.is_empty(), "Should detect long methods");
 
     // Check for large class detection
-    let large_class_fixes: Vec<_> = result.code_smell_fixes.iter()
+    let large_class_fixes: Vec<_> = result
+        .code_smell_fixes
+        .iter()
         .filter(|fix| matches!(fix.category, SmellCategory::LargeClass))
         .collect();
     assert!(!large_class_fixes.is_empty(), "Should detect large classes");
 
     // Check for duplicate code detection
-    let duplicate_code_fixes: Vec<_> = result.code_smell_fixes.iter()
+    let duplicate_code_fixes: Vec<_> = result
+        .code_smell_fixes
+        .iter()
         .filter(|fix| matches!(fix.category, SmellCategory::DuplicateCode))
         .collect();
-    assert!(!duplicate_code_fixes.is_empty(), "Should detect duplicate code");
+    assert!(
+        !duplicate_code_fixes.is_empty(),
+        "Should detect duplicate code"
+    );
 
     // Debug performance optimizations
-    println!("Performance optimizations found: {}", result.performance_optimizations.len());
+    println!(
+        "Performance optimizations found: {}",
+        result.performance_optimizations.len()
+    );
     for opt in &result.performance_optimizations {
         println!("  - {}: {}", opt.name, opt.description);
     }
 
     // Verify performance optimizations
-    assert!(!result.performance_optimizations.is_empty(), "Should detect performance issues");
-    
+    assert!(
+        !result.performance_optimizations.is_empty(),
+        "Should detect performance issues"
+    );
+
     // Check for string concatenation optimization
-    let string_optimizations: Vec<_> = result.performance_optimizations.iter()
+    let string_optimizations: Vec<_> = result
+        .performance_optimizations
+        .iter()
         .filter(|opt| opt.name.contains("String"))
         .collect();
-    assert!(!string_optimizations.is_empty(), "Should detect string concatenation issues");
+    assert!(
+        !string_optimizations.is_empty(),
+        "Should detect string concatenation issues"
+    );
 
     // Check for vector optimization
-    let vector_optimizations: Vec<_> = result.performance_optimizations.iter()
+    let vector_optimizations: Vec<_> = result
+        .performance_optimizations
+        .iter()
         .filter(|opt| opt.name.contains("Vector"))
         .collect();
-    assert!(!vector_optimizations.is_empty(), "Should detect vector reallocation issues");
+    assert!(
+        !vector_optimizations.is_empty(),
+        "Should detect vector reallocation issues"
+    );
 
     // Check for nested loop optimization
-    let loop_optimizations: Vec<_> = result.performance_optimizations.iter()
+    let loop_optimizations: Vec<_> = result
+        .performance_optimizations
+        .iter()
         .filter(|opt| opt.name.contains("Loop"))
         .collect();
-    assert!(!loop_optimizations.is_empty(), "Should detect nested loop issues");
+    assert!(
+        !loop_optimizations.is_empty(),
+        "Should detect nested loop issues"
+    );
 
     // Verify overall metrics
-    assert!(result.total_opportunities > 0, "Should find refactoring opportunities");
-    assert!(result.refactoring_score > 0, "Should calculate refactoring score");
+    assert!(
+        result.total_opportunities > 0,
+        "Should find refactoring opportunities"
+    );
+    assert!(
+        result.refactoring_score > 0,
+        "Should calculate refactoring score"
+    );
 
     println!("Smart refactoring analysis completed successfully!");
     println!("Total opportunities: {}", result.total_opportunities);
     println!("Refactoring score: {}", result.refactoring_score);
     println!("Code smell fixes: {}", result.code_smell_fixes.len());
-    println!("Performance optimizations: {}", result.performance_optimizations.len());
+    println!(
+        "Performance optimizations: {}",
+        result.performance_optimizations.len()
+    );
 
     Ok(())
 }
@@ -224,7 +266,7 @@ fn find_duplicates(data: &[i32]) -> Vec<i32> {
 #[test]
 fn test_design_pattern_recommendations() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
-    
+
     // Create code that could benefit from design patterns
     let pattern_code = r#"
 // Multiple creation methods - Factory pattern opportunity
@@ -263,19 +305,32 @@ struct Manager { name: String, team: String }
     let result = refactoring_engine.analyze(&analysis_result)?;
 
     // Verify pattern recommendations
-    assert!(!result.pattern_recommendations.is_empty(), "Should recommend design patterns");
-    
+    assert!(
+        !result.pattern_recommendations.is_empty(),
+        "Should recommend design patterns"
+    );
+
     // Check for Factory pattern recommendation
-    let factory_patterns: Vec<_> = result.pattern_recommendations.iter()
+    let factory_patterns: Vec<_> = result
+        .pattern_recommendations
+        .iter()
         .filter(|rec| matches!(rec.pattern_type, PatternType::Creational))
         .collect();
-    assert!(!factory_patterns.is_empty(), "Should recommend Factory pattern");
+    assert!(
+        !factory_patterns.is_empty(),
+        "Should recommend Factory pattern"
+    );
 
     // Check for Observer pattern recommendation
-    let observer_patterns: Vec<_> = result.pattern_recommendations.iter()
+    let observer_patterns: Vec<_> = result
+        .pattern_recommendations
+        .iter()
         .filter(|rec| matches!(rec.pattern_type, PatternType::Behavioral))
         .collect();
-    assert!(!observer_patterns.is_empty(), "Should recommend Observer pattern");
+    assert!(
+        !observer_patterns.is_empty(),
+        "Should recommend Observer pattern"
+    );
 
     Ok(())
 }
@@ -283,8 +338,8 @@ struct Manager { name: String, team: String }
 /// Test modernization suggestions
 #[test]
 fn test_modernization_suggestions() -> Result<(), Box<dyn std::error::Error>> {
+    use rust_tree_sitter::{AnalysisConfig, AnalysisResult, FileInfo};
     use std::collections::HashMap;
-    use rust_tree_sitter::{AnalysisResult, FileInfo, AnalysisConfig};
 
     let temp_dir = TempDir::new()?;
 
@@ -340,16 +395,26 @@ fn another_operation() -> Result<i32, &'static str> { Ok(24) }
     let result = refactoring_engine.analyze(&analysis_result)?;
 
     // Verify modernization suggestions
-    assert!(!result.modernization_suggestions.is_empty(), "Should suggest modernizations");
+    assert!(
+        !result.modernization_suggestions.is_empty(),
+        "Should suggest modernizations"
+    );
 
     // Check for error handling modernization
-    let error_handling: Vec<_> = result.modernization_suggestions.iter()
+    let error_handling: Vec<_> = result
+        .modernization_suggestions
+        .iter()
         .filter(|sug| matches!(sug.modernization_type, ModernizationType::BestPractices))
         .collect();
-    assert!(!error_handling.is_empty(), "Should suggest better error handling");
+    assert!(
+        !error_handling.is_empty(),
+        "Should suggest better error handling"
+    );
 
     // Check for syntax modernization
-    let syntax_modern: Vec<_> = result.modernization_suggestions.iter()
+    let syntax_modern: Vec<_> = result
+        .modernization_suggestions
+        .iter()
         .filter(|sug| matches!(sug.modernization_type, ModernizationType::ModernSyntax))
         .collect();
     assert!(!syntax_modern.is_empty(), "Should suggest modern syntax");
@@ -359,8 +424,8 @@ fn another_operation() -> Result<i32, &'static str> { Ok(24) }
 
 #[test]
 fn test_modernization_suggestions_simple() -> Result<(), Box<dyn std::error::Error>> {
+    use rust_tree_sitter::{AnalysisConfig, AnalysisResult, FileInfo};
     use std::collections::HashMap;
-    use rust_tree_sitter::{AnalysisResult, FileInfo, AnalysisConfig};
 
     let temp_dir = TempDir::new()?;
 
@@ -412,13 +477,21 @@ fn some_operation() -> Result<i32, &'static str> { Ok(42) }
     let result = refactoring_engine.analyze(&analysis_result)?;
 
     // Verify modernization suggestions
-    assert!(!result.modernization_suggestions.is_empty(), "Should suggest modernizations");
+    assert!(
+        !result.modernization_suggestions.is_empty(),
+        "Should suggest modernizations"
+    );
 
     // Check for error handling modernization
-    let error_handling: Vec<_> = result.modernization_suggestions.iter()
+    let error_handling: Vec<_> = result
+        .modernization_suggestions
+        .iter()
         .filter(|sug| matches!(sug.modernization_type, ModernizationType::BestPractices))
         .collect();
-    assert!(!error_handling.is_empty(), "Should suggest better error handling");
+    assert!(
+        !error_handling.is_empty(),
+        "Should suggest better error handling"
+    );
 
     Ok(())
 }

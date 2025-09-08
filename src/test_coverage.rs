@@ -1,5 +1,5 @@
 //! Test coverage analysis and testing quality assessment
-//! 
+//!
 //! This module provides comprehensive test analysis including:
 //! - Test coverage estimation
 //! - Test quality assessment
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Test coverage analyzer for assessing testing quality and coverage
 #[derive(Debug, Clone)]
@@ -396,51 +396,51 @@ impl TestCoverageAnalyzer {
             config: TestCoverageConfig::default(),
         }
     }
-    
+
     /// Create a new test coverage analyzer with custom configuration
     pub fn with_config(config: TestCoverageConfig) -> Self {
         Self { config }
     }
-    
+
     /// Analyze test coverage in a codebase
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<TestCoverageResult> {
         // Identify test files
         let test_files = self.identify_test_files(analysis_result);
-        
+
         // Analyze each test file
         let mut test_file_analyses = Vec::new();
         let mut total_tests = 0;
-        
+
         for test_file in &test_files {
             let analysis = self.analyze_test_file(test_file)?;
             total_tests += analysis.test_count;
             test_file_analyses.push(analysis);
         }
-        
+
         // Analyze coverage for source files
         let file_coverage = self.analyze_file_coverage(analysis_result, &test_files)?;
-        
+
         // Detect missing tests
         let missing_tests = if self.config.missing_test_detection {
             self.detect_missing_tests(analysis_result, &test_files)?
         } else {
             Vec::new()
         };
-        
+
         // Calculate quality metrics
         let quality_metrics = if self.config.quality_analysis {
             self.calculate_quality_metrics(&test_file_analyses)?
         } else {
             TestQualityMetrics::default()
         };
-        
+
         // Analyze test organization
         let organization_analysis = if self.config.organization_analysis {
             self.analyze_test_organization(&test_file_analyses)?
         } else {
             TestOrganizationAnalysis::default()
         };
-        
+
         // Generate recommendations
         let recommendations = self.generate_recommendations(
             &file_coverage,
@@ -448,12 +448,12 @@ impl TestCoverageAnalyzer {
             &quality_metrics,
             &organization_analysis,
         )?;
-        
+
         // Calculate overall scores
         let total_testable_functions = self.count_testable_functions(analysis_result);
         let estimated_coverage = self.calculate_estimated_coverage(&file_coverage);
         let coverage_score = self.calculate_coverage_score(estimated_coverage, &quality_metrics);
-        
+
         Ok(TestCoverageResult {
             coverage_score,
             estimated_coverage,
@@ -470,16 +470,16 @@ impl TestCoverageAnalyzer {
 
     /// Identify test files in the codebase
     fn identify_test_files<'a>(&self, analysis_result: &'a AnalysisResult) -> Vec<&'a FileInfo> {
-        analysis_result.files.iter()
+        analysis_result
+            .files
+            .iter()
             .filter(|file| self.is_test_file(file))
             .collect()
     }
 
     /// Check if a file is a test file
     fn is_test_file(&self, file: &FileInfo) -> bool {
-        let file_name = file.path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let file_name = file.path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
         // Check if file name matches test patterns
         self.config.test_file_patterns.iter().any(|pattern| {
@@ -513,7 +513,9 @@ impl TestCoverageAnalyzer {
 
     /// Analyze a test file
     fn analyze_test_file(&self, file: &FileInfo) -> Result<TestFileAnalysis> {
-        let test_functions: Vec<_> = file.symbols.iter()
+        let test_functions: Vec<_> = file
+            .symbols
+            .iter()
             .filter(|symbol| self.is_test_function(symbol))
             .collect();
 
@@ -583,7 +585,10 @@ impl TestCoverageAnalyzer {
 
         // Simplified pattern detection based on function names
         for func in test_functions {
-            if func.name.contains("given") || func.name.contains("when") || func.name.contains("then") {
+            if func.name.contains("given")
+                || func.name.contains("when")
+                || func.name.contains("then")
+            {
                 if !patterns.contains(&TestPattern::GivenWhenThen) {
                     patterns.push(TestPattern::GivenWhenThen);
                 }
@@ -609,7 +614,11 @@ impl TestCoverageAnalyzer {
     }
 
     /// Identify issues in test code
-    fn identify_test_issues(&self, file: &FileInfo, test_functions: &[&crate::Symbol]) -> Result<Vec<TestIssue>> {
+    fn identify_test_issues(
+        &self,
+        file: &FileInfo,
+        test_functions: &[&crate::Symbol],
+    ) -> Result<Vec<TestIssue>> {
         let mut issues = Vec::new();
 
         for func in test_functions {
@@ -624,7 +633,8 @@ impl TestCoverageAnalyzer {
                         line: func.start_line,
                     },
                     severity: TestIssueSeverity::Medium,
-                    recommendation: "Use descriptive test names that explain what is being tested".to_string(),
+                    recommendation: "Use descriptive test names that explain what is being tested"
+                        .to_string(),
                 });
             }
 
@@ -639,22 +649,30 @@ impl TestCoverageAnalyzer {
                         line: func.start_line,
                     },
                     severity: TestIssueSeverity::Low,
-                    recommendation: "Add documentation explaining what the test validates".to_string(),
+                    recommendation: "Add documentation explaining what the test validates"
+                        .to_string(),
                 });
             }
 
             // Check for potentially flaky tests
-            if func.name.contains("random") || func.name.contains("time") || func.name.contains("sleep") {
+            if func.name.contains("random")
+                || func.name.contains("time")
+                || func.name.contains("sleep")
+            {
                 issues.push(TestIssue {
                     issue_type: TestIssueType::FlakyTest,
-                    description: format!("Test function '{}' may be flaky due to timing or randomness", func.name),
+                    description: format!(
+                        "Test function '{}' may be flaky due to timing or randomness",
+                        func.name
+                    ),
                     location: TestLocation {
                         file: file.path.display().to_string(),
                         test_function: func.name.clone(),
                         line: func.start_line,
                     },
                     severity: TestIssueSeverity::High,
-                    recommendation: "Avoid timing dependencies and random elements in tests".to_string(),
+                    recommendation: "Avoid timing dependencies and random elements in tests"
+                        .to_string(),
                 });
             }
         }
@@ -663,7 +681,12 @@ impl TestCoverageAnalyzer {
     }
 
     /// Calculate quality score for a test file
-    fn calculate_test_file_quality_score(&self, _file: &FileInfo, test_functions: &[&crate::Symbol], issues: &[TestIssue]) -> u8 {
+    fn calculate_test_file_quality_score(
+        &self,
+        _file: &FileInfo,
+        test_functions: &[&crate::Symbol],
+        issues: &[TestIssue],
+    ) -> u8 {
         let mut score = crate::constants::test_coverage::MAX_COVERAGE_SCORE;
 
         // Deduct points for issues
@@ -677,16 +700,23 @@ impl TestCoverageAnalyzer {
         }
 
         // Deduct points for poor test naming
-        let poorly_named_tests = test_functions.iter()
+        let poorly_named_tests = test_functions
+            .iter()
             .filter(|f| f.name.len() < 10 || !f.name.contains('_'))
             .count();
         score -= (poorly_named_tests as f64 * 5.0).min(25.0);
 
-        score.max(crate::constants::scoring::MIN_SCORE).min(crate::constants::test_coverage::MAX_COVERAGE_SCORE) as u8
+        score
+            .max(crate::constants::scoring::MIN_SCORE)
+            .min(crate::constants::test_coverage::MAX_COVERAGE_SCORE) as u8
     }
 
     /// Analyze coverage for source files
-    fn analyze_file_coverage(&self, analysis_result: &AnalysisResult, test_files: &[&FileInfo]) -> Result<Vec<FileCoverage>> {
+    fn analyze_file_coverage(
+        &self,
+        analysis_result: &AnalysisResult,
+        test_files: &[&FileInfo],
+    ) -> Result<Vec<FileCoverage>> {
         let mut coverage_results = Vec::new();
 
         for file in &analysis_result.files {
@@ -700,31 +730,40 @@ impl TestCoverageAnalyzer {
     }
 
     /// Estimate coverage for a single file
-    fn estimate_file_coverage(&self, file: &FileInfo, test_files: &[&FileInfo]) -> Result<FileCoverage> {
-        let total_functions = file.symbols.iter()
+    fn estimate_file_coverage(
+        &self,
+        file: &FileInfo,
+        test_files: &[&FileInfo],
+    ) -> Result<FileCoverage> {
+        let total_functions = file
+            .symbols
+            .iter()
             .filter(|s| s.kind == "function" && s.visibility == "public")
             .count();
 
         // Simple heuristic: look for test functions that might test this file
-        let file_stem = file.path.file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
+        let file_stem = file.path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
         let mut tested_functions = 0;
         let mut related_test_files = Vec::new();
 
         for test_file in test_files {
-            let test_file_name = test_file.path.file_name()
+            let test_file_name = test_file
+                .path
+                .file_name()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
 
             // Check if test file might be testing this source file
-            if test_file_name.contains(file_stem) ||
-               test_file.symbols.iter().any(|s| s.name.contains(file_stem)) {
+            if test_file_name.contains(file_stem)
+                || test_file.symbols.iter().any(|s| s.name.contains(file_stem))
+            {
                 related_test_files.push(test_file.path.clone());
 
                 // Count test functions that might test functions in this file
-                let relevant_tests = test_file.symbols.iter()
+                let relevant_tests = test_file
+                    .symbols
+                    .iter()
                     .filter(|s| self.is_test_function(s) && s.name.contains(file_stem))
                     .count();
 
@@ -733,7 +772,8 @@ impl TestCoverageAnalyzer {
         }
 
         let coverage_percentage = if total_functions > 0 {
-            (tested_functions as f64 / total_functions as f64) * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER
+            (tested_functions as f64 / total_functions as f64)
+                * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER
         } else {
             crate::constants::test_coverage::PERFECT_COVERAGE_SCORE // No functions to test
         };
@@ -757,7 +797,11 @@ impl TestCoverageAnalyzer {
     }
 
     /// Detect missing tests
-    fn detect_missing_tests(&self, analysis_result: &AnalysisResult, test_files: &[&FileInfo]) -> Result<Vec<MissingTest>> {
+    fn detect_missing_tests(
+        &self,
+        analysis_result: &AnalysisResult,
+        test_files: &[&FileInfo],
+    ) -> Result<Vec<MissingTest>> {
         let mut missing_tests = Vec::new();
 
         for file in &analysis_result.files {
@@ -774,11 +818,18 @@ impl TestCoverageAnalyzer {
                             missing_tests.push(MissingTest {
                                 function_name: symbol.name.clone(),
                                 file: file.path.clone(),
-                                visibility: if symbol.visibility == "public" { FunctionVisibility::Public } else { FunctionVisibility::Private },
+                                visibility: if symbol.visibility == "public" {
+                                    FunctionVisibility::Public
+                                } else {
+                                    FunctionVisibility::Private
+                                },
                                 complexity,
                                 priority,
                                 suggested_tests: vec![TestType::Unit],
-                                reason: format!("Public function '{}' lacks test coverage", symbol.name),
+                                reason: format!(
+                                    "Public function '{}' lacks test coverage",
+                                    symbol.name
+                                ),
                             });
                         }
                     }
@@ -790,11 +841,20 @@ impl TestCoverageAnalyzer {
     }
 
     /// Check if a function has tests
-    fn function_has_test(&self, symbol: &crate::Symbol, _file: &FileInfo, test_files: &[&FileInfo]) -> bool {
+    fn function_has_test(
+        &self,
+        symbol: &crate::Symbol,
+        _file: &FileInfo,
+        test_files: &[&FileInfo],
+    ) -> bool {
         for test_file in test_files {
             for test_symbol in &test_file.symbols {
-                if self.is_test_function(test_symbol) &&
-                   test_symbol.name.to_lowercase().contains(&symbol.name.to_lowercase()) {
+                if self.is_test_function(test_symbol)
+                    && test_symbol
+                        .name
+                        .to_lowercase()
+                        .contains(&symbol.name.to_lowercase())
+                {
                     return true;
                 }
             }
@@ -809,7 +869,11 @@ impl TestCoverageAnalyzer {
     }
 
     /// Determine test priority for a function
-    fn determine_test_priority(&self, symbol: &crate::Symbol, complexity: &FunctionComplexity) -> TestPriority {
+    fn determine_test_priority(
+        &self,
+        symbol: &crate::Symbol,
+        complexity: &FunctionComplexity,
+    ) -> TestPriority {
         if symbol.visibility == "public" {
             match complexity {
                 FunctionComplexity::VeryHigh => TestPriority::Critical,
@@ -823,7 +887,10 @@ impl TestCoverageAnalyzer {
     }
 
     /// Calculate quality metrics
-    fn calculate_quality_metrics(&self, test_file_analyses: &[TestFileAnalysis]) -> Result<TestQualityMetrics> {
+    fn calculate_quality_metrics(
+        &self,
+        test_file_analyses: &[TestFileAnalysis],
+    ) -> Result<TestQualityMetrics> {
         let total_tests: usize = test_file_analyses.iter().map(|a| a.test_count).sum();
 
         if total_tests == 0 {
@@ -842,29 +909,37 @@ impl TestCoverageAnalyzer {
         };
 
         // Calculate naming quality
-        let well_named_tests = test_file_analyses.iter()
+        let well_named_tests = test_file_analyses
+            .iter()
             .flat_map(|a| &a.issues)
             .filter(|issue| !matches!(issue.issue_type, TestIssueType::UnclearTestName))
             .count();
-        let naming_quality = ((well_named_tests as f64 / total_tests as f64) * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER) as u8;
+        let naming_quality = ((well_named_tests as f64 / total_tests as f64)
+            * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER)
+            as u8;
 
         // Calculate assertion density (simplified)
         let assertion_density = 2.5; // Average assertions per test
 
         // Calculate documentation coverage
-        let documented_tests = test_file_analyses.iter()
+        let documented_tests = test_file_analyses
+            .iter()
             .flat_map(|a| &a.issues)
             .filter(|issue| !matches!(issue.issue_type, TestIssueType::MissingDocumentation))
             .count();
-        let documentation_coverage = (documented_tests as f64 / total_tests as f64) * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER;
+        let documentation_coverage = (documented_tests as f64 / total_tests as f64)
+            * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER;
 
         // Calculate maintainability score
-        let avg_quality_score = test_file_analyses.iter()
+        let avg_quality_score = test_file_analyses
+            .iter()
             .map(|a| a.quality_score as f64)
-            .sum::<f64>() / test_file_analyses.len() as f64;
+            .sum::<f64>()
+            / test_file_analyses.len() as f64;
 
         // Calculate reliability indicators
-        let flaky_tests = test_file_analyses.iter()
+        let flaky_tests = test_file_analyses
+            .iter()
             .flat_map(|a| &a.issues)
             .filter(|issue| matches!(issue.issue_type, TestIssueType::FlakyTest))
             .count();
@@ -887,31 +962,43 @@ impl TestCoverageAnalyzer {
     }
 
     /// Analyze test organization
-    fn analyze_test_organization(&self, test_file_analyses: &[TestFileAnalysis]) -> Result<TestOrganizationAnalysis> {
+    fn analyze_test_organization(
+        &self,
+        test_file_analyses: &[TestFileAnalysis],
+    ) -> Result<TestOrganizationAnalysis> {
         // Evaluate how many test files are placed in dedicated test directories
         let organized_files = test_file_analyses
             .iter()
             .filter(|a| {
-                a.file
-                    .components()
-                    .any(|c| {
-                        let name = c.as_os_str().to_str().unwrap_or("").to_lowercase();
-                        name == "tests" || name == "test"
-                    })
+                a.file.components().any(|c| {
+                    let name = c.as_os_str().to_str().unwrap_or("").to_lowercase();
+                    name == "tests" || name == "test"
+                })
             })
             .count();
         let structure_quality = if test_file_analyses.is_empty() {
             0
         } else {
-            ((organized_files as f64 / test_file_analyses.len() as f64) * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER)
+            ((organized_files as f64 / test_file_analyses.len() as f64)
+                * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER)
                 .round() as u8
         };
 
         // Calculate naming consistency
-        let consistent_naming = test_file_analyses.iter()
-            .filter(|a| a.file.file_name().unwrap_or_default().to_str().unwrap_or("").contains("test"))
+        let consistent_naming = test_file_analyses
+            .iter()
+            .filter(|a| {
+                a.file
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_str()
+                    .unwrap_or("")
+                    .contains("test")
+            })
             .count();
-        let naming_consistency = ((consistent_naming as f64 / test_file_analyses.len() as f64) * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER) as u8;
+        let naming_consistency = ((consistent_naming as f64 / test_file_analyses.len() as f64)
+            * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER)
+            as u8;
 
         // Categorize tests
         let mut tests_by_type = HashMap::new();
@@ -922,7 +1009,9 @@ impl TestCoverageAnalyzer {
                 *tests_by_type.entry(test_type.clone()).or_insert(0) += analysis.test_count;
             }
 
-            let module_name = analysis.file.file_stem()
+            let module_name = analysis
+                .file
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("unknown")
                 .to_string();
@@ -938,15 +1027,13 @@ impl TestCoverageAnalyzer {
         };
 
         // Create test suites
-        let test_suites = vec![
-            TestSuite {
-                name: "Unit Tests".to_string(),
-                suite_type: TestType::Unit,
-                test_count: test_file_analyses.iter().map(|a| a.test_count).sum(),
-                files: test_file_analyses.iter().map(|a| a.file.clone()).collect(),
-                quality_score: 75,
-            }
-        ];
+        let test_suites = vec![TestSuite {
+            name: "Unit Tests".to_string(),
+            suite_type: TestType::Unit,
+            test_count: test_file_analyses.iter().map(|a| a.test_count).sum(),
+            files: test_file_analyses.iter().map(|a| a.file.clone()).collect(),
+            quality_score: 75,
+        }];
 
         let suite_organization = TestSuiteOrganization {
             test_suites,
@@ -976,16 +1063,23 @@ impl TestCoverageAnalyzer {
         let mut recommendations = Vec::new();
 
         // Coverage recommendations
-        let low_coverage_files: Vec<_> = file_coverage.iter()
+        let low_coverage_files: Vec<_> = file_coverage
+            .iter()
             .filter(|fc| fc.coverage_percentage < self.config.min_coverage_threshold)
             .collect();
 
         if !low_coverage_files.is_empty() {
             recommendations.push(TestingRecommendation {
                 category: "Coverage Improvement".to_string(),
-                recommendation: format!("Improve test coverage for {} files with low coverage", low_coverage_files.len()),
+                recommendation: format!(
+                    "Improve test coverage for {} files with low coverage",
+                    low_coverage_files.len()
+                ),
                 priority: TestPriority::High,
-                affected_files: low_coverage_files.iter().map(|fc| fc.file.clone()).collect(),
+                affected_files: low_coverage_files
+                    .iter()
+                    .map(|fc| fc.file.clone())
+                    .collect(),
                 difficulty: ImplementationDifficulty::Medium,
                 benefits: vec![
                     "Increased confidence in code changes".to_string(),
@@ -996,16 +1090,21 @@ impl TestCoverageAnalyzer {
         }
 
         // Missing tests recommendations
-        let critical_missing_tests = missing_tests.iter()
+        let critical_missing_tests = missing_tests
+            .iter()
             .filter(|mt| matches!(mt.priority, TestPriority::Critical | TestPriority::High))
             .count();
 
         if critical_missing_tests > 0 {
             recommendations.push(TestingRecommendation {
                 category: "Missing Tests".to_string(),
-                recommendation: format!("Add tests for {} critical functions without coverage", critical_missing_tests),
+                recommendation: format!(
+                    "Add tests for {} critical functions without coverage",
+                    critical_missing_tests
+                ),
                 priority: TestPriority::Critical,
-                affected_files: missing_tests.iter()
+                affected_files: missing_tests
+                    .iter()
                     .filter(|mt| matches!(mt.priority, TestPriority::Critical | TestPriority::High))
                     .map(|mt| mt.file.clone())
                     .collect(),
@@ -1021,7 +1120,8 @@ impl TestCoverageAnalyzer {
         if quality_metrics.naming_quality < 70 {
             recommendations.push(TestingRecommendation {
                 category: "Test Quality".to_string(),
-                recommendation: "Improve test naming conventions for better readability".to_string(),
+                recommendation: "Improve test naming conventions for better readability"
+                    .to_string(),
                 priority: TestPriority::Medium,
                 affected_files: Vec::new(),
                 difficulty: ImplementationDifficulty::Easy,
@@ -1036,7 +1136,8 @@ impl TestCoverageAnalyzer {
         if quality_metrics.reliability_indicators.potential_flaky_tests > 0 {
             recommendations.push(TestingRecommendation {
                 category: "Test Reliability".to_string(),
-                recommendation: "Address potential flaky tests to improve test suite reliability".to_string(),
+                recommendation: "Address potential flaky tests to improve test suite reliability"
+                    .to_string(),
                 priority: TestPriority::High,
                 affected_files: Vec::new(),
                 difficulty: ImplementationDifficulty::Hard,
@@ -1052,7 +1153,9 @@ impl TestCoverageAnalyzer {
 
     /// Count testable functions in the codebase
     fn count_testable_functions(&self, analysis_result: &AnalysisResult) -> usize {
-        analysis_result.files.iter()
+        analysis_result
+            .files
+            .iter()
             .filter(|file| !self.is_test_file(file))
             .flat_map(|file| &file.symbols)
             .filter(|symbol| symbol.kind == "function" && symbol.visibility == "public")
@@ -1069,18 +1172,24 @@ impl TestCoverageAnalyzer {
         let tested_functions: usize = file_coverage.iter().map(|fc| fc.tested_functions).sum();
 
         if total_functions > 0 {
-            (tested_functions as f64 / total_functions as f64) * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER
+            (tested_functions as f64 / total_functions as f64)
+                * crate::constants::test_coverage::PERCENTAGE_MULTIPLIER
         } else {
             crate::constants::test_coverage::PERFECT_COVERAGE_SCORE
         }
     }
 
     /// Calculate overall coverage score
-    fn calculate_coverage_score(&self, estimated_coverage: f64, quality_metrics: &TestQualityMetrics) -> u8 {
+    fn calculate_coverage_score(
+        &self,
+        estimated_coverage: f64,
+        quality_metrics: &TestQualityMetrics,
+    ) -> u8 {
         let coverage_score = estimated_coverage * 0.6; // 60% weight on coverage
         let quality_score = quality_metrics.maintainability_score as f64 * 0.4; // 40% weight on quality
 
-        (coverage_score + quality_score).min(crate::constants::test_coverage::MAX_COVERAGE_SCORE) as u8
+        (coverage_score + quality_score).min(crate::constants::test_coverage::MAX_COVERAGE_SCORE)
+            as u8
     }
 }
 

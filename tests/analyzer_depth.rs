@@ -1,4 +1,4 @@
-use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig};
+use rust_tree_sitter::{AnalysisConfig, CodebaseAnalyzer};
 use std::fs;
 use tempfile::TempDir;
 
@@ -13,7 +13,10 @@ fn respects_max_depth_setting() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir(&nested)?;
     fs::write(nested.join("deep.rs"), "fn deep() {}")?;
 
-    let config = AnalysisConfig { max_depth: Some(1), ..AnalysisConfig::default() };
+    let config = AnalysisConfig {
+        max_depth: Some(1),
+        ..AnalysisConfig::default()
+    };
     let mut analyzer = CodebaseAnalyzer::with_config(config)?;
     let result = analyzer.analyze_directory(tmp.path())?;
     assert_eq!(result.total_files, 2);

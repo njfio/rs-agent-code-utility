@@ -94,7 +94,9 @@ impl GoSyntax {
                             if let Some(type_node) = param.child_by_field_name("type") {
                                 // Handle pointer receivers
                                 if type_node.kind() == "pointer_type" {
-                                    if let Some(elem_node) = type_node.child_by_field_name("element") {
+                                    if let Some(elem_node) =
+                                        type_node.child_by_field_name("element")
+                                    {
                                         return elem_node.text().ok().map(|s| s.to_string());
                                     }
                                 } else {
@@ -222,7 +224,8 @@ impl GoSyntax {
                                     field_names.push(name.to_string());
                                 }
                             }
-                            "type_identifier" | "qualified_type" | "pointer_type" | "slice_type" | "array_type" => {
+                            "type_identifier" | "qualified_type" | "pointer_type"
+                            | "slice_type" | "array_type" => {
                                 if let Ok(type_text) = field_part.text() {
                                     field_type = type_text.to_string();
                                 }
@@ -320,7 +323,10 @@ impl GoSyntax {
     }
 
     /// Get all function declarations in a syntax tree with start and end positions
-    pub fn find_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_declaration");
 
@@ -335,7 +341,10 @@ impl GoSyntax {
     }
 
     /// Get all method declarations in a syntax tree with start and end positions
-    pub fn find_methods(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_methods(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut methods = Vec::new();
         let method_nodes = tree.find_nodes_by_kind("method_declaration");
 
@@ -344,7 +353,12 @@ impl GoSyntax {
                 let receiver_type = Self::method_receiver_type(&method_node, source)
                     .unwrap_or_else(|| "unknown".to_string());
                 let ts_node = method_node.inner();
-                methods.push((name, receiver_type, ts_node.start_position(), ts_node.end_position()));
+                methods.push((
+                    name,
+                    receiver_type,
+                    ts_node.start_position(),
+                    ts_node.end_position(),
+                ));
             }
         }
 
@@ -352,7 +366,10 @@ impl GoSyntax {
     }
 
     /// Get all type declarations in a syntax tree with start and end positions
-    pub fn find_types(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_types(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut types = Vec::new();
         let type_nodes = tree.find_nodes_by_kind("type_declaration");
 
@@ -388,8 +405,6 @@ impl GoSyntax {
 
         structs
     }
-
-
 
     /// Create a query to find all function declarations
     pub fn functions_query() -> Result<Query> {
@@ -489,7 +504,10 @@ impl GoSyntax {
         }
 
         // Check for type assertions
-        if !tree.find_nodes_by_kind("type_assertion_expression").is_empty() {
+        if !tree
+            .find_nodes_by_kind("type_assertion_expression")
+            .is_empty()
+        {
             features.push("Type Assertions".to_string());
         }
 
@@ -551,11 +569,13 @@ impl GoSyntax {
         let methods = Self::find_methods(tree, source);
         let types = Self::find_types(tree, source);
 
-        let exported_functions = functions.iter()
+        let exported_functions = functions
+            .iter()
             .filter(|(name, _, _)| Self::is_exported(name))
             .count();
 
-        let exported_types = types.iter()
+        let exported_types = types
+            .iter()
             .filter(|(name, _, _)| Self::is_exported(name))
             .count();
 
@@ -571,7 +591,10 @@ impl GoSyntax {
     }
 
     /// Find all constant declarations in a syntax tree with start and end positions
-    pub fn find_constants(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_constants(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut constants = Vec::new();
         let const_nodes = tree.find_nodes_by_kind("const_declaration");
 
@@ -584,7 +607,11 @@ impl GoSyntax {
                     if node.kind() == "const_spec" {
                         if let Some(name_node) = node.child_by_field_name("name") {
                             if let Ok(name) = name_node.text() {
-                                constants.push((name.to_string(), node.start_position(), node.end_position()));
+                                constants.push((
+                                    name.to_string(),
+                                    node.start_position(),
+                                    node.end_position(),
+                                ));
                             }
                         }
                     }
@@ -600,7 +627,10 @@ impl GoSyntax {
     }
 
     /// Find all variable declarations in a syntax tree with start and end positions
-    pub fn find_variables(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_variables(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut variables = Vec::new();
         let var_nodes = tree.find_nodes_by_kind("var_declaration");
 
@@ -613,7 +643,11 @@ impl GoSyntax {
                     if node.kind() == "var_spec" {
                         if let Some(name_node) = node.child_by_field_name("name") {
                             if let Ok(name) = name_node.text() {
-                                variables.push((name.to_string(), node.start_position(), node.end_position()));
+                                variables.push((
+                                    name.to_string(),
+                                    node.start_position(),
+                                    node.end_position(),
+                                ));
                             }
                         }
                     }
@@ -629,7 +663,10 @@ impl GoSyntax {
     }
 
     /// Find interface declarations in a syntax tree
-    pub fn find_interfaces(tree: &SyntaxTree, _source: &str) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_interfaces(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
         let mut interfaces = Vec::new();
         let interface_nodes = tree.find_nodes_by_kind("interface_type");
 
@@ -648,7 +685,9 @@ impl GoSyntax {
                                     let node = cursor.node();
                                     if node.kind() == "method_elem" {
                                         // Look for field_identifier child which contains the method name
-                                        if let Some(method_name_node) = node.child_by_field_name("name") {
+                                        if let Some(method_name_node) =
+                                            node.child_by_field_name("name")
+                                        {
                                             if let Ok(method_name) = method_name_node.text() {
                                                 methods.push(method_name.to_string());
                                             }
@@ -683,7 +722,7 @@ impl GoSyntax {
                                 interface_name.to_string(),
                                 methods,
                                 ts_node.start_position(),
-                                ts_node.end_position()
+                                ts_node.end_position(),
                             ));
                         }
                     }
@@ -695,7 +734,10 @@ impl GoSyntax {
     }
 
     /// Find channel declarations and operations in a syntax tree
-    pub fn find_channels(tree: &SyntaxTree, _source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_channels(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut channels = Vec::new();
 
         // Find channel type declarations
@@ -707,7 +749,7 @@ impl GoSyntax {
                     "channel_type".to_string(),
                     channel_text.trim().to_string(),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -725,7 +767,7 @@ impl GoSyntax {
                                     "make_channel".to_string(),
                                     call_text.trim().to_string(),
                                     ts_node.start_position(),
-                                    ts_node.end_position()
+                                    ts_node.end_position(),
                                 ));
                             }
                         }
@@ -738,7 +780,10 @@ impl GoSyntax {
     }
 
     /// Find goroutine launches (go statements) in a syntax tree
-    pub fn find_goroutines(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_goroutines(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut goroutines = Vec::new();
         let go_nodes = tree.find_nodes_by_kind("go_statement");
 
@@ -748,7 +793,7 @@ impl GoSyntax {
                 goroutines.push((
                     go_text.trim().to_string(),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -757,7 +802,10 @@ impl GoSyntax {
     }
 
     /// Find embedded types in struct declarations
-    pub fn find_embedded_types(tree: &SyntaxTree, _source: &str) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_embedded_types(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, Vec<String>, tree_sitter::Point, tree_sitter::Point)> {
         let mut embedded_structs = Vec::new();
         let struct_nodes = tree.find_nodes_by_kind("struct_type");
 
@@ -783,10 +831,16 @@ impl GoSyntax {
                                                 let field_node = field_cursor.node();
                                                 if field_node.kind() == "field_declaration" {
                                                     // Check if it's an embedded field (no field name, just type)
-                                                    let children: Vec<_> = field_node.children().into_iter().collect();
-                                                    if children.len() == 1 && children[0].kind() == "type_identifier" {
-                                                        if let Ok(embedded_type) = children[0].text() {
-                                                            embedded_types.push(embedded_type.to_string());
+                                                    let children: Vec<_> =
+                                                        field_node.children().into_iter().collect();
+                                                    if children.len() == 1
+                                                        && children[0].kind() == "type_identifier"
+                                                    {
+                                                        if let Ok(embedded_type) =
+                                                            children[0].text()
+                                                        {
+                                                            embedded_types
+                                                                .push(embedded_type.to_string());
                                                         }
                                                     }
                                                 }
@@ -811,7 +865,7 @@ impl GoSyntax {
                                     struct_name.to_string(),
                                     embedded_types,
                                     ts_node.start_position(),
-                                    ts_node.end_position()
+                                    ts_node.end_position(),
                                 ));
                             }
                         }
@@ -824,7 +878,10 @@ impl GoSyntax {
     }
 
     /// Find type assertions in a syntax tree
-    pub fn find_type_assertions(tree: &SyntaxTree, _source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_type_assertions(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut type_assertions = Vec::new();
         let assertion_nodes = tree.find_nodes_by_kind("type_assertion_expression");
 
@@ -834,7 +891,7 @@ impl GoSyntax {
                 type_assertions.push((
                     assertion_text.trim().to_string(),
                     ts_node.start_position(),
-                    ts_node.end_position()
+                    ts_node.end_position(),
                 ));
             }
         }
@@ -886,7 +943,8 @@ func init() {
         let functions = GoSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
 
-        let function_names: Vec<&str> = functions.iter().map(|(name, _, _)| name.as_str()).collect();
+        let function_names: Vec<&str> =
+            functions.iter().map(|(name, _, _)| name.as_str()).collect();
         assert!(function_names.contains(&"main"));
         assert!(function_names.contains(&"add"));
         assert!(function_names.contains(&"init"));
@@ -973,7 +1031,10 @@ type ReadWriter interface {
         let interfaces = GoSyntax::find_interfaces(&tree, source);
         assert_eq!(interfaces.len(), 3);
 
-        let interface_names: Vec<&str> = interfaces.iter().map(|(name, _, _, _)| name.as_str()).collect();
+        let interface_names: Vec<&str> = interfaces
+            .iter()
+            .map(|(name, _, _, _)| name.as_str())
+            .collect();
         assert!(interface_names.contains(&"Writer"));
         assert!(interface_names.contains(&"Reader"));
         assert!(interface_names.contains(&"ReadWriter"));

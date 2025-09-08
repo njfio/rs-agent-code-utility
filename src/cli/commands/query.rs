@@ -1,8 +1,8 @@
 //! Query command implementation
 
-use std::path::PathBuf;
-use crate::cli::error::{CliResult, validate_path, validate_language};
+use crate::cli::error::{validate_language, validate_path, CliResult};
 use crate::cli::utils::create_progress_bar;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 struct QueryResult {
@@ -23,12 +23,12 @@ pub fn execute(
 ) -> CliResult<()> {
     validate_path(path)?;
     validate_language(language)?;
-    
+
     let pb = create_progress_bar("Running query...");
 
     use crate::analyzer::CodebaseAnalyzer;
-    use crate::parser::Parser;
     use crate::languages::Language;
+    use crate::parser::Parser;
 
     // Initialize analyzer
     let mut analyzer = CodebaseAnalyzer::new()?;
@@ -41,7 +41,8 @@ pub fn execute(
     };
 
     // Parse the query language
-    let query_language: Language = language.parse()
+    let query_language: Language = language
+        .parse()
         .map_err(|_| crate::cli::error::CliError::InvalidLanguage(language.to_string()))?;
 
     let parser = Parser::new(query_language)?;
@@ -89,7 +90,10 @@ pub fn execute(
                     start_line,
                     end_line,
                     match_text: node_text.to_string(),
-                    context_lines: lines[context_start..context_end].iter().map(|s| s.to_string()).collect(),
+                    context_lines: lines[context_start..context_end]
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect(),
                 });
             }
             total_matches += matches.len();
@@ -110,25 +114,31 @@ pub fn execute(
     println!("   Language: {}", language);
     println!("   Files searched: {}", analysis_result.files.len());
     println!("   Total matches: {}", total_matches);
-    
+
     Ok(())
 }
 
 fn output_json(results: &[QueryResult]) -> CliResult<()> {
     use serde_json::json;
 
-    let json_results: Vec<_> = results.iter().map(|r| {
-        json!({
-            "file": r.file_path.display().to_string(),
-            "start_line": r.start_line,
-            "end_line": r.end_line,
-            "match": r.match_text,
-            "context": r.context_lines
+    let json_results: Vec<_> = results
+        .iter()
+        .map(|r| {
+            json!({
+                "file": r.file_path.display().to_string(),
+                "start_line": r.start_line,
+                "end_line": r.end_line,
+                "match": r.match_text,
+                "context": r.context_lines
+            })
         })
-    }).collect();
+        .collect();
 
-    println!("{}", serde_json::to_string_pretty(&json_results)
-        .map_err(|e| crate::cli::error::CliError::SerializationError(e.to_string()))?);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json_results)
+            .map_err(|e| crate::cli::error::CliError::SerializationError(e.to_string()))?
+    );
 
     Ok(())
 }
@@ -146,13 +156,14 @@ fn output_table(results: &[QueryResult]) {
         match_text: String,
     }
 
-    let rows: Vec<TableRow> = results.iter().map(|r| {
-        TableRow {
+    let rows: Vec<TableRow> = results
+        .iter()
+        .map(|r| TableRow {
             file: r.file_path.display().to_string(),
             lines: format!("{}-{}", r.start_line, r.end_line),
             match_text: r.match_text.lines().next().unwrap_or("").trim().to_string(),
-        }
-    }).collect();
+        })
+        .collect();
 
     if !rows.is_empty() {
         println!("{}", Table::new(rows));
@@ -176,7 +187,10 @@ fn output_default(results: &[QueryResult], context: usize) {
                 println!("   {} {:4}: {}", marker, line_num, line);
             }
         } else {
-            println!("   Match: {}", result.match_text.lines().next().unwrap_or("").trim());
+            println!(
+                "   Match: {}",
+                result.match_text.lines().next().unwrap_or("").trim()
+            );
         }
     }
 }

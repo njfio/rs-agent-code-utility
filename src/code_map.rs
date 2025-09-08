@@ -4,7 +4,7 @@
 //! graphs that can be exported in GraphViz DOT or Mermaid formats.
 
 use crate::{AnalysisResult, FileInfo, Symbol};
-use std::collections::{HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 
@@ -30,7 +30,11 @@ impl CallGraph {
     pub fn to_mermaid(&self) -> String {
         let mut m = String::from("graph TD\n");
         for (from, to) in &self.edges {
-            m.push_str(&format!("    {} --> {}\n", sanitize_mermaid(from), sanitize_mermaid(to)));
+            m.push_str(&format!(
+                "    {} --> {}\n",
+                sanitize_mermaid(from),
+                sanitize_mermaid(to)
+            ));
         }
         m
     }
@@ -58,7 +62,11 @@ impl ModuleGraph {
     pub fn to_mermaid(&self) -> String {
         let mut m = String::from("graph TD\n");
         for (from, to) in &self.edges {
-            m.push_str(&format!("    {} --> {}\n", sanitize_mermaid(from), sanitize_mermaid(to)));
+            m.push_str(&format!(
+                "    {} --> {}\n",
+                sanitize_mermaid(from),
+                sanitize_mermaid(to)
+            ));
         }
         m
     }
@@ -96,7 +104,8 @@ pub fn build_call_graph(result: &AnalysisResult) -> CallGraph {
                     for call in &calls {
                         for (other_file, other_sym) in &functions {
                             if other_sym.name == *call {
-                                let target_name = format!("{}::{}", other_file.path.display(), other_sym.name);
+                                let target_name =
+                                    format!("{}::{}", other_file.path.display(), other_sym.name);
                                 edges.insert((from.clone(), target_name));
                             }
                         }
@@ -133,12 +142,14 @@ pub fn build_module_graph(result: &AnalysisResult) -> ModuleGraph {
 }
 
 /// Resolve a dependency name to an actual file in the project
-fn resolve_dependency_to_file(result: &AnalysisResult, dep_name: &str, _current_file: &PathBuf) -> String {
+fn resolve_dependency_to_file(
+    result: &AnalysisResult,
+    dep_name: &str,
+    _current_file: &PathBuf,
+) -> String {
     // Try to find a file that matches the dependency name
     for file in &result.files {
-        let file_stem = file.path.file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
+        let file_stem = file.path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
         // Check if file name matches dependency
         if file_stem == dep_name {
@@ -158,8 +169,6 @@ fn resolve_dependency_to_file(result: &AnalysisResult, dep_name: &str, _current_
     // If no file found, return the dependency name as-is
     dep_name.to_string()
 }
-
-
 
 /// Extract function calls using simple string-based pattern matching
 fn extract_function_calls_simple(content: &str) -> Vec<String> {
@@ -204,8 +213,6 @@ fn extract_function_calls_simple(content: &str) -> Vec<String> {
     calls
 }
 
-
-
 fn extract_dependencies(content: &str) -> Vec<String> {
     // Try AST-based extraction first, fall back to string-based for unsupported languages
     if let Ok(deps) = extract_dependencies_ast(content) {
@@ -220,8 +227,8 @@ fn extract_dependencies(content: &str) -> Vec<String> {
 
 /// Extract dependencies using AST analysis
 fn extract_dependencies_ast(content: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    use crate::parser::Parser;
     use crate::languages::Language;
+    use crate::parser::Parser;
 
     // Detect language from content patterns
     let language_str = detect_language_from_content(content);
@@ -324,7 +331,9 @@ fn extract_imports_from_node(node: &tree_sitter::Node, content: &str, deps: &mut
 fn detect_language_from_content(content: &str) -> String {
     if content.contains("use ") && content.contains("::") {
         "rust".to_string()
-    } else if content.contains("import ") && (content.contains("from '") || content.contains("from \"")) {
+    } else if content.contains("import ")
+        && (content.contains("from '") || content.contains("from \""))
+    {
         "javascript".to_string()
     } else if content.contains("import ") && content.contains("from ") {
         "python".to_string()
@@ -400,7 +409,7 @@ fn sanitize_mermaid(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FileInfo, AnalysisResult};
+    use crate::{AnalysisResult, FileInfo};
     use std::path::PathBuf;
 
     #[test]
@@ -445,9 +454,18 @@ import React from 'react';
 
     #[test]
     fn test_detect_language_from_content() {
-        assert_eq!(detect_language_from_content("use std::collections::HashMap;"), "rust");
-        assert_eq!(detect_language_from_content("import os\nfrom collections import defaultdict"), "python");
-        assert_eq!(detect_language_from_content("import React from 'react';"), "javascript");
+        assert_eq!(
+            detect_language_from_content("use std::collections::HashMap;"),
+            "rust"
+        );
+        assert_eq!(
+            detect_language_from_content("import os\nfrom collections import defaultdict"),
+            "python"
+        );
+        assert_eq!(
+            detect_language_from_content("import React from 'react';"),
+            "javascript"
+        );
         assert_eq!(detect_language_from_content("#include <stdio.h>"), "c");
     }
 
@@ -489,11 +507,12 @@ import React from 'react';
         let resolved = resolve_dependency_to_file(&result, "utils", &PathBuf::from("src/main.rs"));
         assert_eq!(resolved, "src/utils.rs");
 
-        let resolved = resolve_dependency_to_file(&result, "analyzer", &PathBuf::from("src/main.rs"));
+        let resolved =
+            resolve_dependency_to_file(&result, "analyzer", &PathBuf::from("src/main.rs"));
         assert_eq!(resolved, "src/analyzer.rs");
 
-        let resolved = resolve_dependency_to_file(&result, "nonexistent", &PathBuf::from("src/main.rs"));
+        let resolved =
+            resolve_dependency_to_file(&result, "nonexistent", &PathBuf::from("src/main.rs"));
         assert_eq!(resolved, "nonexistent");
     }
 }
-

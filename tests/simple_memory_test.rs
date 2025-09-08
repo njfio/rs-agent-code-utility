@@ -4,7 +4,7 @@ use rust_tree_sitter::{MemoryTracker, MemoryTrackingConfig};
 fn test_memory_tracker_basic() {
     let tracker = MemoryTracker::new();
     let stats = tracker.get_statistics();
-    
+
     assert_eq!(stats.total_allocations, 0);
     assert_eq!(stats.total_deallocations, 0);
     assert_eq!(stats.current_bytes_in_use, 0);
@@ -22,7 +22,7 @@ fn test_memory_tracker_with_config() {
         max_call_stack_depth: 15,
         real_time_tracking: true,
     };
-    
+
     let tracker = MemoryTracker::with_config(config.clone());
     assert_eq!(tracker.get_config().min_allocation_size, 64);
     assert_eq!(tracker.get_config().max_call_stack_depth, 15);

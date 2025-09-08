@@ -1,16 +1,14 @@
 //! Comprehensive integration tests for complex analysis workflows
-//! 
+//!
 //! These tests cover end-to-end scenarios that users would typically perform,
 //! ensuring all components work together correctly.
 
 use rust_tree_sitter::{
-    CodebaseAnalyzer, AnalysisConfig, Parser, Language,
-    SecurityScanner, ComplexityAnalyzer, DependencyAnalyzer,
-    PerformanceAnalyzer, RefactoringAnalyzer, TestCoverageAnalyzer,
-    Result
+    AnalysisConfig, CodebaseAnalyzer, ComplexityAnalyzer, DependencyAnalyzer, Language, Parser,
+    PerformanceAnalyzer, RefactoringAnalyzer, Result, SecurityScanner, TestCoverageAnalyzer,
 };
-use tempfile::TempDir;
 use std::fs;
+use tempfile::TempDir;
 
 /// Create a temporary test project with realistic code structure
 fn create_test_project() -> Result<TempDir> {
@@ -23,7 +21,9 @@ fn create_test_project() -> Result<TempDir> {
     fs::create_dir_all(project_root.join("examples"))?;
 
     // Create Cargo.toml
-    fs::write(project_root.join("Cargo.toml"), r#"
+    fs::write(
+        project_root.join("Cargo.toml"),
+        r#"
 [package]
 name = "test-project"
 version = "0.1.0"
@@ -36,10 +36,13 @@ anyhow = "1.0"
 
 [dev-dependencies]
 tempfile = "3.0"
-"#)?;
+"#,
+    )?;
 
     // Create main.rs
-    fs::write(project_root.join("src/main.rs"), r#"
+    fs::write(
+        project_root.join("src/main.rs"),
+        r#"
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 
@@ -186,10 +189,13 @@ async fn main() -> anyhow::Result<()> {
     
     Ok(())
 }
-"#)?;
+"#,
+    )?;
 
     // Create lib.rs
-    fs::write(project_root.join("src/lib.rs"), r#"
+    fs::write(
+        project_root.join("src/lib.rs"),
+        r#"
 pub mod utils;
 pub mod models;
 
@@ -209,10 +215,13 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
-"#)?;
+"#,
+    )?;
 
     // Create utils.rs
-    fs::write(project_root.join("src/utils.rs"), r#"
+    fs::write(
+        project_root.join("src/utils.rs"),
+        r#"
 use std::collections::HashMap;
 
 pub fn validate_email(email: &str) -> bool {
@@ -248,10 +257,13 @@ pub fn execute_command(cmd: &str) -> Result<String, std::io::Error> {
     
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
-"#)?;
+"#,
+    )?;
 
     // Create models.rs
-    fs::write(project_root.join("src/models.rs"), r#"
+    fs::write(
+        project_root.join("src/models.rs"),
+        r#"
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -282,10 +294,13 @@ impl Product {
         }
     }
 }
-"#)?;
+"#,
+    )?;
 
     // Create test file
-    fs::write(project_root.join("tests/integration_test.rs"), r#"
+    fs::write(
+        project_root.join("tests/integration_test.rs"),
+        r#"
 use test_project::*;
 
 #[test]
@@ -302,7 +317,8 @@ fn test_discount_application() {
     product.apply_discount(10.0);
     assert_eq!(product.price, 900.0);
 }
-"#)?;
+"#,
+    )?;
 
     Ok(temp_dir)
 }
@@ -321,27 +337,28 @@ fn test_complete_codebase_analysis_workflow() -> Result<()> {
     };
 
     let mut analyzer = CodebaseAnalyzer::with_config(config)?;
-    
+
     // Perform complete analysis
     let analysis_result = analyzer.analyze_directory(project_path)?;
-    
+
     // Verify basic analysis results
     assert!(!analysis_result.files.is_empty());
     assert!(analysis_result.total_files > 0);
     assert!(analysis_result.total_lines > 0);
-    
+
     // Verify language detection - should have at least one language
     assert!(!analysis_result.languages.is_empty());
 
     // If we have Rust files, verify symbol extraction
-    let rust_files: Vec<_> = analysis_result.files.iter()
+    let rust_files: Vec<_> = analysis_result
+        .files
+        .iter()
         .filter(|f| f.language == "rust")
         .collect();
 
     if !rust_files.is_empty() {
         // Look for any Rust file with symbols
-        let file_with_symbols = rust_files.iter()
-            .find(|f| !f.symbols.is_empty());
+        let file_with_symbols = rust_files.iter().find(|f| !f.symbols.is_empty());
 
         if let Some(main_file) = file_with_symbols {
             // Verify symbols were extracted
@@ -369,12 +386,16 @@ fn test_security_analysis_integration() -> Result<()> {
     let security_result = security_analyzer.analyze(&analysis_result)?;
 
     // Verify security analysis results
-    println!("Total vulnerabilities found: {}", security_result.total_vulnerabilities);
+    println!(
+        "Total vulnerabilities found: {}",
+        security_result.total_vulnerabilities
+    );
 
     // Should detect the command injection vulnerability in utils.rs
-    let command_injection_found = security_result.vulnerabilities.iter()
-        .any(|v| v.title.to_lowercase().contains("injection")
-                || v.description.to_lowercase().contains("command"));
+    let command_injection_found = security_result.vulnerabilities.iter().any(|v| {
+        v.title.to_lowercase().contains("injection")
+            || v.description.to_lowercase().contains("command")
+    });
 
     if command_injection_found {
         println!("✅ Command injection vulnerability detected as expected");
@@ -392,7 +413,9 @@ fn test_complexity_analysis_integration() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
     let test_file = temp_dir.path().join("test.rs");
 
-    fs::write(&test_file, r#"
+    fs::write(
+        &test_file,
+        r#"
 fn simple_function() {
     println!("Hello, world!");
 }
@@ -408,7 +431,8 @@ fn complex_function(x: i32) -> i32 {
         0
     }
 }
-"#)?;
+"#,
+    )?;
 
     // Parse the file for complexity analysis
     let parser = Parser::new(Language::Rust)?;
@@ -426,8 +450,14 @@ fn complex_function(x: i32) -> i32 {
     assert!(complexity_result.lines_of_code > 0);
 
     // The complex_validation function should have high complexity
-    println!("McCabe Complexity: {}", complexity_result.cyclomatic_complexity);
-    println!("Cognitive Complexity: {}", complexity_result.cognitive_complexity);
+    println!(
+        "McCabe Complexity: {}",
+        complexity_result.cyclomatic_complexity
+    );
+    println!(
+        "Cognitive Complexity: {}",
+        complexity_result.cognitive_complexity
+    );
     println!("NPATH Complexity: {}", complexity_result.npath_complexity);
 
     Ok(())
@@ -450,9 +480,13 @@ fn test_dependency_analysis_integration() -> Result<()> {
     assert!(!dependency_result.dependencies.is_empty());
 
     // Should detect Cargo.toml dependencies
-    let serde_found = dependency_result.dependencies.iter()
+    let serde_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "serde");
-    let tokio_found = dependency_result.dependencies.iter()
+    let tokio_found = dependency_result
+        .dependencies
+        .iter()
         .any(|d| d.name == "tokio");
 
     assert!(serde_found, "serde dependency should be detected");
@@ -482,10 +516,13 @@ fn test_performance_analysis_integration() -> Result<()> {
     // Performance hotspots should be analyzed
 
     // Should detect the complex_validation function as a hotspot
-    let complex_function_found = performance_result.hotspots.iter()
-        .any(|h| h.location.function.as_ref()
+    let complex_function_found = performance_result.hotspots.iter().any(|h| {
+        h.location
+            .function
+            .as_ref()
             .map(|f| f.contains("complex_validation"))
-            .unwrap_or(false));
+            .unwrap_or(false)
+    });
 
     if complex_function_found {
         println!("✅ Complex function detected as performance hotspot");
@@ -512,7 +549,9 @@ fn test_refactoring_analysis_integration() -> Result<()> {
     assert!(refactoring_result.quality_score <= 100);
 
     // Should suggest refactoring for the complex function
-    let complex_function_suggestion = refactoring_result.suggestions.iter()
+    let complex_function_suggestion = refactoring_result
+        .suggestions
+        .iter()
         .any(|s| s.description.to_lowercase().contains("complex"));
 
     if complex_function_suggestion {
@@ -550,7 +589,9 @@ fn test_test_coverage_analysis_integration() -> Result<()> {
     println!("Missing tests: {}", missing_tests);
 
     // The complex_validation function should be flagged as needing tests
-    let complex_function_missing = coverage_result.missing_tests.iter()
+    let complex_function_missing = coverage_result
+        .missing_tests
+        .iter()
         .any(|t| t.function_name.contains("complex_validation"));
 
     if complex_function_missing {
@@ -571,7 +612,9 @@ fn test_multi_language_analysis_workflow() -> Result<()> {
     fs::create_dir_all(project_root.join("web"))?;
 
     // Create Python file
-    fs::write(project_root.join("scripts/data_processor.py"), r#"
+    fs::write(
+        project_root.join("scripts/data_processor.py"),
+        r#"
 import json
 import sys
 from typing import Dict, List, Optional
@@ -631,10 +674,13 @@ if __name__ == "__main__":
     ]
     results = processor.process_data(sample_data)
     print(f"Processed {len(results)} items")
-"#)?;
+"#,
+    )?;
 
     // Create JavaScript file
-    fs::write(project_root.join("web/app.js"), r#"
+    fs::write(
+        project_root.join("web/app.js"),
+        r#"
 class UserManager {
     constructor() {
         this.users = new Map();
@@ -739,7 +785,8 @@ class UserManager {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UserManager;
 }
-"#)?;
+"#,
+    )?;
 
     // Analyze the multi-language project
     let mut analyzer = CodebaseAnalyzer::new()?;
@@ -749,10 +796,14 @@ if (typeof module !== 'undefined' && module.exports) {
     assert!(!analysis_result.languages.is_empty());
 
     // Check if we have the expected languages (but don't require them)
-    let python_files: Vec<_> = analysis_result.files.iter()
+    let python_files: Vec<_> = analysis_result
+        .files
+        .iter()
         .filter(|f| f.language == "python")
         .collect();
-    let js_files: Vec<_> = analysis_result.files.iter()
+    let js_files: Vec<_> = analysis_result
+        .files
+        .iter()
         .filter(|f| f.language == "javascript")
         .collect();
 
@@ -769,7 +820,10 @@ if (typeof module !== 'undefined' && module.exports) {
     }
 
     println!("✅ Multi-language analysis completed successfully");
-    println!("Total languages detected: {}", analysis_result.languages.len());
+    println!(
+        "Total languages detected: {}",
+        analysis_result.languages.len()
+    );
 
     Ok(())
 }

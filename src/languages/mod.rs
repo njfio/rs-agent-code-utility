@@ -1,12 +1,12 @@
 //! Language support for tree-sitter parsers
 
-pub mod rust;
-pub mod javascript;
-pub mod typescript;
-pub mod python;
 pub mod c;
 pub mod cpp;
 pub mod go;
+pub mod javascript;
+pub mod python;
+pub mod rust;
+pub mod typescript;
 
 use crate::error::{Error, Result};
 
@@ -114,10 +114,10 @@ impl Language {
             Language::Rust => tree_sitter_rust::INJECTIONS_QUERY.into(),
             Language::JavaScript => tree_sitter_javascript::INJECTIONS_QUERY.into(),
             Language::TypeScript => None, // TypeScript injections query not available
-            Language::Python => None, // Python doesn't have injections query
-            Language::C => None,      // C doesn't have injections query
-            Language::Cpp => None,    // C++ doesn't have injections query
-            Language::Go => None,     // Go doesn't have injections query
+            Language::Python => None,     // Python doesn't have injections query
+            Language::C => None,          // C doesn't have injections query
+            Language::Cpp => None,        // C++ doesn't have injections query
+            Language::Go => None,         // Go doesn't have injections query
         }
     }
 
@@ -127,10 +127,10 @@ impl Language {
             Language::Rust => None, // Rust doesn't have locals query in this version
             Language::JavaScript => tree_sitter_javascript::LOCALS_QUERY.into(),
             Language::TypeScript => None, // TypeScript locals query not available
-            Language::Python => None, // Python doesn't have locals query
-            Language::C => None,      // C doesn't have locals query
-            Language::Cpp => None,    // C++ doesn't have locals query
-            Language::Go => None,     // Go doesn't have locals query
+            Language::Python => None,     // Python doesn't have locals query
+            Language::C => None,          // C doesn't have locals query
+            Language::Cpp => None,        // C++ doesn't have locals query
+            Language::Go => None,         // Go doesn't have locals query
         }
     }
 
@@ -180,7 +180,11 @@ impl std::str::FromStr for Language {
             "c" => Ok(Language::C),
             "cpp" | "c++" | "cxx" => Ok(Language::Cpp),
             "go" => Ok(Language::Go),
-            _ => Err(Error::invalid_input_error("language", s, "supported language (rust, javascript, typescript, python, c, cpp, go)")),
+            _ => Err(Error::invalid_input_error(
+                "language",
+                s,
+                "supported language (rust, javascript, typescript, python, c, cpp, go)",
+            )),
         }
     }
 }
@@ -201,7 +205,10 @@ mod tests {
     #[test]
     fn test_language_parsing() {
         assert_eq!("rust".parse::<Language>().unwrap(), Language::Rust);
-        assert_eq!("javascript".parse::<Language>().unwrap(), Language::JavaScript);
+        assert_eq!(
+            "javascript".parse::<Language>().unwrap(),
+            Language::JavaScript
+        );
         assert_eq!("python".parse::<Language>().unwrap(), Language::Python);
         assert!("unknown".parse::<Language>().is_err());
     }

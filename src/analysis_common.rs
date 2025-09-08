@@ -1,8 +1,8 @@
 //! Common analysis utilities shared across refactoring, performance, and smart refactoring modules
-//! 
+//!
 //! This module provides shared functionality to eliminate code duplication and improve maintainability.
 
-use crate::{FileInfo, Symbol, Result, Language, Parser, SyntaxTree};
+use crate::{FileInfo, Language, Parser, Result, Symbol, SyntaxTree};
 use std::collections::HashMap;
 
 /// Common file analysis patterns shared across modules
@@ -18,7 +18,11 @@ impl FileAnalyzer {
         match std::fs::read_to_string(&file.path) {
             Ok(content) => analyzer(&content, &file.language),
             Err(e) => {
-                eprintln!("Warning: Failed to read file {}: {}", file.path.display(), e);
+                eprintln!(
+                    "Warning: Failed to read file {}: {}",
+                    file.path.display(),
+                    e
+                );
                 Ok(T::default())
             }
         }
@@ -41,13 +45,20 @@ impl FileAnalyzer {
             "c" => Ok(Language::C),
             "cpp" | "c++" => Ok(Language::Cpp),
             "go" => Ok(Language::Go),
-            _ => Err(crate::error::Error::language_error(language, "language parsing")),
+            _ => Err(crate::error::Error::language_error(
+                language,
+                "language parsing",
+            )),
         }
     }
 
     /// Filter symbols by type with common patterns
-    pub fn filter_symbols_by_type<'a>(symbols: &'a [Symbol], symbol_types: &[&str]) -> Vec<&'a Symbol> {
-        symbols.iter()
+    pub fn filter_symbols_by_type<'a>(
+        symbols: &'a [Symbol],
+        symbol_types: &[&str],
+    ) -> Vec<&'a Symbol> {
+        symbols
+            .iter()
             .filter(|s| symbol_types.contains(&s.kind.as_str()))
             .collect()
     }
@@ -68,18 +79,22 @@ pub struct ComplexityAnalyzer;
 
 impl ComplexityAnalyzer {
     /// Calculate function complexity using shared patterns
-    pub fn calculate_function_complexity(content: &str, language: &str, _function_name: &str) -> f64 {
+    pub fn calculate_function_complexity(
+        content: &str,
+        language: &str,
+        _function_name: &str,
+    ) -> f64 {
         let mut complexity = 1.0;
-        
+
         // Count control flow statements
         complexity += Self::count_control_flow_statements(content, language);
-        
+
         // Count nested structures
         complexity += Self::count_nesting_depth(content, language) as f64 * 0.5;
-        
+
         // Language-specific complexity factors
         complexity += Self::get_language_specific_complexity(content, language);
-        
+
         complexity
     }
 
@@ -88,7 +103,9 @@ impl ComplexityAnalyzer {
         let control_keywords = match language.to_lowercase().as_str() {
             "rust" => vec!["if", "else", "match", "while", "for", "loop"],
             "python" => vec!["if", "elif", "else", "while", "for", "try", "except"],
-            "javascript" | "typescript" => vec!["if", "else", "switch", "while", "for", "try", "catch"],
+            "javascript" | "typescript" => {
+                vec!["if", "else", "switch", "while", "for", "try", "catch"]
+            }
             "c" | "cpp" | "c++" => vec!["if", "else", "switch", "while", "for", "do"],
             "go" => vec!["if", "else", "switch", "for", "select"],
             _ => vec!["if", "else", "while", "for"],
@@ -100,7 +117,7 @@ impl ComplexityAnalyzer {
             count += content.matches(&format!("\t{} ", keyword)).count() as f64;
             count += content.matches(&format!("\n{} ", keyword)).count() as f64;
         }
-        
+
         count
     }
 
@@ -114,10 +131,10 @@ impl ComplexityAnalyzer {
                 '{' => {
                     current_depth += 1;
                     max_depth = max_depth.max(current_depth);
-                },
+                }
                 '}' => {
                     current_depth = current_depth.saturating_sub(1);
-                },
+                }
                 _ => {}
             }
         }
@@ -135,14 +152,14 @@ impl ComplexityAnalyzer {
                 complexity += content.matches("unwrap()").count() as f64 * 0.5;
                 complexity += content.matches("expect(").count() as f64 * 0.3;
                 complexity
-            },
+            }
             "python" => {
                 // Python-specific patterns
                 let mut complexity = 0.0;
                 complexity += content.matches("lambda").count() as f64 * 0.5;
                 complexity += content.matches("list comprehension").count() as f64 * 0.3;
                 complexity
-            },
+            }
             "javascript" | "typescript" => {
                 // JavaScript-specific patterns
                 let mut complexity = 0.0;
@@ -150,7 +167,7 @@ impl ComplexityAnalyzer {
                 complexity += content.matches("await").count() as f64 * 0.3;
                 complexity += content.matches("Promise").count() as f64 * 0.3;
                 complexity
-            },
+            }
             _ => 0.0,
         }
     }
@@ -165,7 +182,7 @@ impl PatternAnalyzer {
         // Simple similarity based on name patterns and length
         let name_similarity = Self::calculate_name_similarity(&func1.name, &func2.name);
         let length_similarity = Self::calculate_length_similarity(func1, func2);
-        
+
         (name_similarity + length_similarity) / 2.0
     }
 
@@ -174,14 +191,14 @@ impl PatternAnalyzer {
         if name1 == name2 {
             return 1.0;
         }
-        
+
         // Check for common prefixes/suffixes
         let common_prefix = Self::longest_common_prefix(name1, name2);
         let common_suffix = Self::longest_common_suffix(name1, name2);
-        
+
         let total_common = common_prefix + common_suffix;
         let max_length = name1.len().max(name2.len());
-        
+
         if max_length == 0 {
             0.0
         } else {
@@ -193,14 +210,14 @@ impl PatternAnalyzer {
     fn calculate_length_similarity(func1: &Symbol, func2: &Symbol) -> f64 {
         let len1 = func1.end_line - func1.start_line;
         let len2 = func2.end_line - func2.start_line;
-        
+
         if len1 == 0 && len2 == 0 {
             return 1.0;
         }
-        
+
         let min_len = len1.min(len2) as f64;
         let max_len = len1.max(len2) as f64;
-        
+
         if max_len == 0.0 {
             1.0
         } else {
@@ -230,28 +247,28 @@ impl PatternAnalyzer {
         // Look for patterns like: for ... { ... += ... }
         let lines: Vec<&str> = content.lines().collect();
         let mut in_loop = false;
-        
+
         for line in lines {
             let trimmed = line.trim();
-            
+
             // Check for loop start
             if trimmed.starts_with("for ") || trimmed.starts_with("while ") {
                 in_loop = true;
                 continue;
             }
-            
+
             // Check for loop end
             if trimmed == "}" && in_loop {
                 in_loop = false;
                 continue;
             }
-            
+
             // Check for string concatenation in loop
             if in_loop && (trimmed.contains("+=") || trimmed.contains("+ ")) {
                 return true;
             }
         }
-        
+
         false
     }
 
@@ -269,10 +286,10 @@ impl PatternAnalyzer {
         let mut max_depth: usize = 0;
         let mut current_depth: usize = 0;
         let lines: Vec<&str> = content.lines().collect();
-        
+
         for line in lines {
             let trimmed = line.trim();
-            
+
             // Check for loop start
             for keyword in &loop_keywords {
                 if trimmed.starts_with(keyword) {
@@ -281,13 +298,13 @@ impl PatternAnalyzer {
                     break;
                 }
             }
-            
+
             // Check for block end
             if trimmed == "}" {
                 current_depth = current_depth.saturating_sub(1);
             }
         }
-        
+
         max_depth
     }
 }
@@ -298,16 +315,16 @@ pub struct ResultAggregator;
 impl ResultAggregator {
     /// Aggregate results by category with limits
     pub fn limit_results_by_category<T>(
-        mut results: Vec<T>, 
+        mut results: Vec<T>,
         max_per_category: usize,
-        get_category: impl Fn(&T) -> String
+        get_category: impl Fn(&T) -> String,
     ) -> Vec<T> {
         let mut category_counts: HashMap<String, usize> = HashMap::new();
-        
+
         results.retain(|item| {
             let category = get_category(item);
             let count = category_counts.entry(category).or_insert(0);
-            
+
             if *count < max_per_category {
                 *count += 1;
                 true
@@ -315,14 +332,19 @@ impl ResultAggregator {
                 false
             }
         });
-        
+
         results
     }
 
     /// Sort results by confidence/priority
-    pub fn sort_by_confidence<T>(mut results: Vec<T>, get_confidence: impl Fn(&T) -> f64) -> Vec<T> {
+    pub fn sort_by_confidence<T>(
+        mut results: Vec<T>,
+        get_confidence: impl Fn(&T) -> f64,
+    ) -> Vec<T> {
         results.sort_by(|a, b| {
-            get_confidence(b).partial_cmp(&get_confidence(a)).unwrap_or(std::cmp::Ordering::Equal)
+            get_confidence(b)
+                .partial_cmp(&get_confidence(a))
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
         results
     }

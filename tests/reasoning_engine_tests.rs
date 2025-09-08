@@ -1,13 +1,13 @@
+use rust_tree_sitter::reasoning_engine::{
+    Axiom, AxiomCategory, Conclusion, Condition, Constraint, ConstraintExpression, ConstraintType,
+    ConstraintVariable, Domain, FactSource, LiteralValue, LogicalFormula, RuleType, Term,
+    VariableType,
+};
 use rust_tree_sitter::{
-    AutomatedReasoningEngine, ReasoningConfig, Fact, Rule, InsightType,
-    AnalysisResult, FileInfo, Symbol
+    AnalysisResult, AutomatedReasoningEngine, Fact, FileInfo, InsightType, ReasoningConfig, Rule,
+    Symbol,
 };
 use std::path::PathBuf;
-use rust_tree_sitter::reasoning_engine::{
-    Term, LiteralValue, FactSource, RuleType, Condition, Conclusion,
-    ConstraintVariable, VariableType, Domain, Constraint, ConstraintType,
-    ConstraintExpression, Axiom, AxiomCategory, LogicalFormula
-};
 
 fn create_sample_analysis_result() -> AnalysisResult {
     let file_info = FileInfo {
@@ -77,16 +77,14 @@ fn create_sample_rule() -> Rule {
     Rule {
         id: "rule_001".to_string(),
         name: "High Complexity Detection".to_string(),
-        premises: vec![
-            Condition {
-                predicate: "function_complexity".to_string(),
-                arguments: vec![
-                    Term::Variable("F".to_string()),
-                    Term::Variable("C".to_string()),
-                ],
-                negated: false,
-            },
-        ],
+        premises: vec![Condition {
+            predicate: "function_complexity".to_string(),
+            arguments: vec![
+                Term::Variable("F".to_string()),
+                Term::Variable("C".to_string()),
+            ],
+            negated: false,
+        }],
         conclusion: Conclusion {
             predicate: "high_complexity_function".to_string(),
             arguments: vec![Term::Variable("F".to_string())],
@@ -100,7 +98,7 @@ fn create_sample_rule() -> Rule {
 #[test]
 fn test_reasoning_engine_creation() {
     let engine = AutomatedReasoningEngine::new();
-    
+
     // Should start with empty knowledge base
     assert_eq!(engine.knowledge_base().facts().len(), 0);
     assert_eq!(engine.knowledge_base().rules().len(), 0);
@@ -117,9 +115,9 @@ fn test_reasoning_engine_with_config() {
         max_reasoning_time_ms: 60000,
         confidence_threshold: 0.8,
     };
-    
+
     let engine = AutomatedReasoningEngine::with_config(config.clone());
-    
+
     assert_eq!(engine.config().enable_deductive, true);
     assert_eq!(engine.config().enable_inductive, false);
     assert_eq!(engine.config().enable_abductive, true);
@@ -130,9 +128,9 @@ fn test_reasoning_engine_with_config() {
 fn test_add_fact() {
     let mut engine = AutomatedReasoningEngine::new();
     let fact = create_sample_fact();
-    
+
     engine.add_fact(fact.clone());
-    
+
     assert_eq!(engine.knowledge_base().facts().len(), 1);
     assert_eq!(engine.knowledge_base().facts()[0].id, "fact_001");
     assert_eq!(engine.knowledge_base().facts()[0].predicate, "function");
@@ -142,27 +140,30 @@ fn test_add_fact() {
 fn test_add_rule() {
     let mut engine = AutomatedReasoningEngine::new();
     let rule = create_sample_rule();
-    
+
     engine.add_rule(rule.clone());
-    
+
     assert_eq!(engine.knowledge_base().rules().len(), 1);
     assert_eq!(engine.knowledge_base().rules()[0].id, "rule_001");
-    assert_eq!(engine.knowledge_base().rules()[0].rule_type, RuleType::Deductive);
+    assert_eq!(
+        engine.knowledge_base().rules()[0].rule_type,
+        RuleType::Deductive
+    );
 }
 
 #[test]
 fn test_add_constraint_variable() {
     let mut engine = AutomatedReasoningEngine::new();
-    
+
     let variable = ConstraintVariable {
         name: "x".to_string(),
         var_type: VariableType::Integer,
         domain: Domain::IntegerRange(0, 100),
         value: None,
     };
-    
+
     engine.add_variable(variable);
-    
+
     assert_eq!(engine.constraint_solver().variables().len(), 1);
     assert!(engine.constraint_solver().variables().contains_key("x"));
 }
@@ -170,7 +171,7 @@ fn test_add_constraint_variable() {
 #[test]
 fn test_add_constraint() {
     let mut engine = AutomatedReasoningEngine::new();
-    
+
     let constraint = Constraint {
         id: "c1".to_string(),
         constraint_type: ConstraintType::Equality,
@@ -182,9 +183,9 @@ fn test_add_constraint() {
         ),
         priority: 1,
     };
-    
+
     engine.add_constraint(constraint);
-    
+
     assert_eq!(engine.constraint_solver().constraints().len(), 1);
     assert_eq!(engine.constraint_solver().constraints()[0].id, "c1");
 }
@@ -192,15 +193,15 @@ fn test_add_constraint() {
 #[test]
 fn test_add_axiom() {
     let mut engine = AutomatedReasoningEngine::new();
-    
+
     let axiom = Axiom {
         id: "axiom_001".to_string(),
         statement: LogicalFormula::Atom("always_true".to_string(), vec![]),
         category: AxiomCategory::Mathematical,
     };
-    
+
     engine.add_axiom(axiom);
-    
+
     assert_eq!(engine.theorem_prover().axioms().len(), 1);
     assert_eq!(engine.theorem_prover().axioms()[0].id, "axiom_001");
 }
@@ -209,32 +210,44 @@ fn test_add_axiom() {
 fn test_fact_extraction_from_analysis() {
     let mut engine = AutomatedReasoningEngine::new();
     let analysis = create_sample_analysis_result();
-    
+
     let _result = engine.analyze_code(&analysis).unwrap();
-    
+
     // Should have extracted facts from the analysis
     assert!(engine.knowledge_base().facts().len() > 0);
 
     // Should have function facts
-    let function_facts: Vec<_> = engine.knowledge_base().facts().iter()
+    let function_facts: Vec<_> = engine
+        .knowledge_base()
+        .facts()
+        .iter()
         .filter(|f| f.predicate == "function")
         .collect();
     assert_eq!(function_facts.len(), 2);
 
     // Should have file size fact
-    let size_facts: Vec<_> = engine.knowledge_base().facts().iter()
+    let size_facts: Vec<_> = engine
+        .knowledge_base()
+        .facts()
+        .iter()
         .filter(|f| f.predicate == "file_size")
         .collect();
     assert_eq!(size_facts.len(), 1);
 
     // Should have line count fact
-    let line_facts: Vec<_> = engine.knowledge_base().facts().iter()
+    let line_facts: Vec<_> = engine
+        .knowledge_base()
+        .facts()
+        .iter()
         .filter(|f| f.predicate == "line_count")
         .collect();
     assert_eq!(line_facts.len(), 1);
 
     // Should have parse status fact
-    let parse_facts: Vec<_> = engine.knowledge_base().facts().iter()
+    let parse_facts: Vec<_> = engine
+        .knowledge_base()
+        .facts()
+        .iter()
         .filter(|f| f.predicate == "parsed_successfully")
         .collect();
     assert_eq!(parse_facts.len(), 1);
@@ -244,14 +257,17 @@ fn test_fact_extraction_from_analysis() {
 fn test_reasoning_result_structure() {
     let mut engine = AutomatedReasoningEngine::new();
     let analysis = create_sample_analysis_result();
-    
+
     let result = engine.analyze_code(&analysis).unwrap();
-    
+
     // Should have proper result structure
     assert!(result.timestamp > 0);
     // Metrics should be properly initialized
-    assert_eq!(result.metrics.facts_processed, engine.knowledge_base().facts().len());
-    
+    assert_eq!(
+        result.metrics.facts_processed,
+        engine.knowledge_base().facts().len()
+    );
+
     // Should have derived facts (may be empty for simple case)
     // Derived facts and insights are properly initialized
 }
@@ -259,7 +275,7 @@ fn test_reasoning_result_structure() {
 #[test]
 fn test_inductive_reasoning() {
     let mut engine = AutomatedReasoningEngine::new();
-    
+
     // Add facts about function complexities
     engine.add_fact(Fact {
         id: "func_complexity_1".to_string(),
@@ -271,7 +287,7 @@ fn test_inductive_reasoning() {
         confidence: 1.0,
         source: FactSource::CodeAnalysis,
     });
-    
+
     engine.add_fact(Fact {
         id: "func_complexity_2".to_string(),
         predicate: "function_complexity".to_string(),
@@ -282,7 +298,7 @@ fn test_inductive_reasoning() {
         confidence: 1.0,
         source: FactSource::CodeAnalysis,
     });
-    
+
     engine.add_fact(Fact {
         id: "func_complexity_3".to_string(),
         predicate: "function_complexity".to_string(),
@@ -293,15 +309,17 @@ fn test_inductive_reasoning() {
         confidence: 1.0,
         source: FactSource::CodeAnalysis,
     });
-    
+
     let analysis = create_sample_analysis_result();
     let result = engine.analyze_code(&analysis).unwrap();
-    
+
     // Should have performed inductive reasoning
-    let _high_complexity_facts: Vec<_> = result.derived_facts.iter()
+    let _high_complexity_facts: Vec<_> = result
+        .derived_facts
+        .iter()
         .filter(|f| f.predicate == "high_complexity_file")
         .collect();
-    
+
     // May or may not have derived high complexity fact depending on implementation
     // High complexity facts may or may not be derived
 }
@@ -309,7 +327,7 @@ fn test_inductive_reasoning() {
 #[test]
 fn test_insight_generation() {
     let mut engine = AutomatedReasoningEngine::new();
-    
+
     // Add a fact that should generate an insight
     engine.add_fact(Fact {
         id: "high_complexity_fact".to_string(),
@@ -321,12 +339,14 @@ fn test_insight_generation() {
         confidence: 0.9,
         source: FactSource::Inference,
     });
-    
+
     let analysis = create_sample_analysis_result();
     let result = engine.analyze_code(&analysis).unwrap();
-    
+
     // Should generate insights from derived facts
-    let _code_smell_insights: Vec<_> = result.insights.iter()
+    let _code_smell_insights: Vec<_> = result
+        .insights
+        .iter()
         .filter(|i| i.insight_type == InsightType::CodeSmell)
         .collect();
 
@@ -342,12 +362,12 @@ fn test_insight_generation() {
 #[test]
 fn test_term_matching() {
     let engine = AutomatedReasoningEngine::new();
-    
+
     // Test constant matching
     let term1 = Term::Constant("test".to_string());
     let term2 = Term::Constant("test".to_string());
     let term3 = Term::Constant("other".to_string());
-    
+
     assert!(engine.term_matches_public(&term1, &term2));
     assert!(!engine.term_matches_public(&term1, &term3));
 
@@ -368,12 +388,12 @@ fn test_term_matching() {
 #[test]
 fn test_literal_matching() {
     let engine = AutomatedReasoningEngine::new();
-    
+
     // Test integer literals
     let int1 = LiteralValue::Integer(42);
     let int2 = LiteralValue::Integer(42);
     let int3 = LiteralValue::Integer(24);
-    
+
     assert!(engine.literals_match_public(&int1, &int2));
     assert!(!engine.literals_match_public(&int1, &int3));
 
@@ -406,12 +426,15 @@ fn test_literal_matching() {
 fn test_reasoning_metrics() {
     let mut engine = AutomatedReasoningEngine::new();
     let analysis = create_sample_analysis_result();
-    
+
     let result = engine.analyze_code(&analysis).unwrap();
-    
+
     // Should have meaningful metrics
     assert!(result.metrics.facts_processed > 0);
-    assert_eq!(result.metrics.facts_processed, engine.knowledge_base().facts().len());
+    assert_eq!(
+        result.metrics.facts_processed,
+        engine.knowledge_base().facts().len()
+    );
     // Metrics should be properly initialized
 }
 
@@ -422,12 +445,12 @@ fn test_configuration_effects() {
     config.enable_abductive = false;
     config.enable_constraints = false;
     config.enable_theorem_proving = false;
-    
+
     let mut engine = AutomatedReasoningEngine::with_config(config);
     let analysis = create_sample_analysis_result();
-    
+
     let result = engine.analyze_code(&analysis).unwrap();
-    
+
     // With most reasoning disabled, should have minimal derived facts
     // (only deductive reasoning enabled)
     assert!(result.constraint_solutions.is_empty());

@@ -1,9 +1,12 @@
 //! Map command implementation
 
-use std::path::PathBuf;
-use crate::cli::error::{CliResult, validate_path};
-use crate::{CodebaseAnalyzer, code_map::{build_call_graph, build_module_graph}};
+use crate::cli::error::{validate_path, CliResult};
+use crate::{
+    code_map::{build_call_graph, build_module_graph},
+    CodebaseAnalyzer,
+};
 use serde_json;
+use std::path::PathBuf;
 
 pub fn execute(
     path: &PathBuf,
@@ -19,9 +22,10 @@ pub fn execute(
     validate_path(path)?;
 
     // Analyze the codebase
-    let mut analyzer = CodebaseAnalyzer::new()
-        .map_err(|e| format!("Failed to create analyzer: {}", e))?;
-    let result = analyzer.analyze_directory(path)
+    let mut analyzer =
+        CodebaseAnalyzer::new().map_err(|e| format!("Failed to create analyzer: {}", e))?;
+    let result = analyzer
+        .analyze_directory(path)
         .map_err(|e| crate::cli::error::CliError::Analysis(e.to_string()))?;
 
     match (map_type, format) {
@@ -50,9 +54,10 @@ pub fn execute(
             println!("{}", module_graph.to_dot());
         }
         _ => {
-            return Err(crate::cli::error::CliError::InvalidArgs(
-                format!("Unsupported map type '{}' with format '{}'", map_type, format)
-            ));
+            return Err(crate::cli::error::CliError::InvalidArgs(format!(
+                "Unsupported map type '{}' with format '{}'",
+                map_type, format
+            )));
         }
     }
 
@@ -63,7 +68,10 @@ fn generate_tree_map(result: &crate::AnalysisResult) -> serde_json::Value {
     use serde_json::{json, Map, Value};
 
     let mut tree = Map::new();
-    tree.insert("root".to_string(), json!(result.root_path.display().to_string()));
+    tree.insert(
+        "root".to_string(),
+        json!(result.root_path.display().to_string()),
+    );
     tree.insert("total_files".to_string(), json!(result.total_files));
     tree.insert("parsed_files".to_string(), json!(result.parsed_files));
     tree.insert("error_files".to_string(), json!(result.error_files));
@@ -89,7 +97,10 @@ fn generate_symbol_map(result: &crate::AnalysisResult) -> serde_json::Value {
     use serde_json::{json, Map, Value};
 
     let mut symbol_map = Map::new();
-    symbol_map.insert("root".to_string(), json!(result.root_path.display().to_string()));
+    symbol_map.insert(
+        "root".to_string(),
+        json!(result.root_path.display().to_string()),
+    );
 
     let mut files = Vec::new();
     for file in &result.files {

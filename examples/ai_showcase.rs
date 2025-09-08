@@ -1,16 +1,16 @@
-use rust_tree_sitter::ai::{AIServiceBuilder, AIFeature, AIRequest, AIResult};
+use rust_tree_sitter::ai::{AIFeature, AIRequest, AIResult, AIServiceBuilder};
 
 #[tokio::main]
 async fn main() -> AIResult<()> {
     println!("🤖 AI Integration Showcase");
     println!("===========================");
-    
+
     // Initialize AI service
     let ai_service = AIServiceBuilder::new()
         .with_mock_providers(true)
         .build()
         .await?;
-    
+
     // Complex Rust code example for analysis
     let complex_code = r#"
 use std::collections::HashMap;
@@ -197,11 +197,11 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
     println!("📊 Analyzing Complex Distributed Cache Implementation");
     println!("====================================================");
     println!("Lines of code: {}", complex_code.lines().count());
-    
+
     // 1. ARCHITECTURAL ANALYSIS
     println!("\n🏗️  ARCHITECTURAL INSIGHTS");
     println!("==========================");
-    
+
     let arch_request = AIRequest::new(
         AIFeature::ArchitecturalInsights,
         format!(
@@ -216,7 +216,7 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     match ai_service.process_request(arch_request).await {
         Ok(response) => {
             println!("🎯 Architectural Analysis:");
@@ -224,11 +224,11 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => println!("❌ Architectural analysis failed: {}", e),
     }
-    
+
     // 2. SECURITY DEEP DIVE
     println!("\n🔒 SECURITY ANALYSIS");
     println!("====================");
-    
+
     let security_request = AIRequest::new(
         AIFeature::SecurityAnalysis,
         format!(
@@ -244,7 +244,7 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     match ai_service.process_request(security_request).await {
         Ok(response) => {
             println!("🛡️  Security Vulnerabilities:");
@@ -252,11 +252,11 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => println!("❌ Security analysis failed: {}", e),
     }
-    
+
     // 3. PERFORMANCE OPTIMIZATION
     println!("\n⚡ PERFORMANCE ANALYSIS");
     println!("=======================");
-    
+
     let perf_request = AIRequest::new(
         AIFeature::QualityAssessment,
         format!(
@@ -272,7 +272,7 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     match ai_service.process_request(perf_request).await {
         Ok(response) => {
             println!("🚀 Performance Insights:");
@@ -280,11 +280,11 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => println!("❌ Performance analysis failed: {}", e),
     }
-    
+
     // 4. REFACTORING SUGGESTIONS
     println!("\n🔧 REFACTORING RECOMMENDATIONS");
     println!("===============================");
-    
+
     let refactor_request = AIRequest::new(
         AIFeature::RefactoringSuggestions,
         format!(
@@ -300,7 +300,7 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     match ai_service.process_request(refactor_request).await {
         Ok(response) => {
             println!("🔄 Refactoring Suggestions:");
@@ -308,11 +308,11 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => println!("❌ Refactoring analysis failed: {}", e),
     }
-    
+
     // 5. PATTERN DETECTION
     println!("\n🎨 DESIGN PATTERN ANALYSIS");
     println!("===========================");
-    
+
     let pattern_request = AIRequest::new(
         AIFeature::PatternDetection,
         format!(
@@ -327,7 +327,7 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     match ai_service.process_request(pattern_request).await {
         Ok(response) => {
             println!("🎨 Pattern Analysis:");
@@ -335,11 +335,11 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => println!("❌ Pattern analysis failed: {}", e),
     }
-    
+
     // 6. TEST GENERATION
     println!("\n🧪 TEST STRATEGY");
     println!("=================");
-    
+
     let test_request = AIRequest::new(
         AIFeature::TestGeneration,
         format!(
@@ -355,7 +355,7 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
             complex_code
         ),
     );
-    
+
     match ai_service.process_request(test_request).await {
         Ok(response) => {
             println!("🧪 Testing Strategy:");
@@ -363,7 +363,7 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => println!("❌ Test generation failed: {}", e),
     }
-    
+
     println!("\n🎉 AI Analysis Complete!");
     println!("=========================");
     println!("✅ Architectural insights provided");
@@ -372,6 +372,6 @@ pub async fn example_usage() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Refactoring recommendations given");
     println!("✅ Design patterns analyzed");
     println!("✅ Comprehensive test strategy created");
-    
+
     Ok(())
 }

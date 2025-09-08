@@ -120,14 +120,14 @@ pub struct ThreadPoolStats {
 /// Internal task wrapper with metadata
 struct TaskWrapper {
     task: Box<dyn Task>,
-    submitted_at: Instant,
-    priority: TaskPriority,
-    id: String,
+    _submitted_at: Instant,
+    _priority: TaskPriority,
+    _id: String,
 }
 
 /// Worker thread for executing tasks
 struct Worker {
-    id: usize,
+    _id: usize,
     handle: Option<JoinHandle<()>>,
     task_sender: Sender<TaskWrapper>,
     is_idle: Arc<AtomicBool>,
@@ -166,7 +166,7 @@ impl Worker {
         });
 
         Self {
-            id,
+            _id: id,
             handle: Some(handle),
             task_sender,
             is_idle,
@@ -175,7 +175,7 @@ impl Worker {
     }
 
     fn run_worker_loop(
-        worker_id: usize,
+        _worker_id: usize,
         global_receiver: Receiver<TaskWrapper>,
         local_receiver: Receiver<TaskWrapper>,
         is_idle: Arc<AtomicBool>,
@@ -250,7 +250,7 @@ impl Worker {
             let total_tasks = stats_guard.completed_tasks + stats_guard.failed_tasks;
             if total_tasks > 0 {
                 let current_avg = stats_guard.average_task_duration;
-                let total_tasks_u32 = total_tasks as u32;
+                let _total_tasks_u32 = total_tasks as u32;
                 let duration_u32 = duration.as_millis() as u32;
                 stats_guard.average_task_duration = Duration::from_millis(
                     ((current_avg.as_millis() as u64 * (total_tasks - 1) + duration_u32 as u64)
@@ -366,7 +366,7 @@ impl AdvancedThreadPool {
                 // Adaptive scaling logic
                 if config.enable_adaptive_scaling {
                     let queue_len = stats_guard.queued_tasks;
-                    let active_threads = stats_guard.active_threads;
+                    let _active_threads = stats_guard.active_threads;
                     let total_threads = workers_guard.len();
 
                     // Scale up if queue is growing and we have capacity
@@ -394,9 +394,9 @@ impl AdvancedThreadPool {
     pub fn submit<T: Task + 'static>(&self, task: T) -> Result<()> {
         let task_wrapper = TaskWrapper {
             task: Box::new(task),
-            submitted_at: Instant::now(),
-            priority: TaskPriority::Normal,
-            id: format!(
+            _submitted_at: Instant::now(),
+            _priority: TaskPriority::Normal,
+            _id: format!(
                 "task_{}",
                 self.next_worker_id.fetch_add(1, Ordering::Relaxed)
             ),
@@ -426,9 +426,9 @@ impl AdvancedThreadPool {
     ) -> Result<()> {
         let task_wrapper = TaskWrapper {
             task: Box::new(task),
-            submitted_at: Instant::now(),
-            priority,
-            id: format!(
+            _submitted_at: Instant::now(),
+            _priority: priority,
+            _id: format!(
                 "task_{}",
                 self.next_worker_id.fetch_add(1, Ordering::Relaxed)
             ),
@@ -474,11 +474,10 @@ impl AdvancedThreadPool {
         // Shutdown workers
         let workers = self.workers.read();
         for worker in workers.values() {
-            if let Some(handle) = &worker.handle {
+            if let Some(_handle) = &worker.handle {
                 // We can't join here because we only have a reference
                 // In a real implementation, we'd need to store JoinHandles separately
                 // or use a different shutdown mechanism
-                drop(handle);
             }
         }
 

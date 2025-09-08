@@ -136,7 +136,9 @@ impl CppSyntax {
                         "function_declarator" => {
                             // Nested function_declarator, recurse
                             for nested_child in decl_child.children() {
-                                if nested_child.kind() == "identifier" || nested_child.kind() == "field_identifier" {
+                                if nested_child.kind() == "identifier"
+                                    || nested_child.kind() == "field_identifier"
+                                {
                                     return nested_child.text().ok().map(|s| s.to_string());
                                 }
                             }
@@ -191,7 +193,9 @@ impl CppSyntax {
         for child in node.children() {
             if child.kind() == "base_class_clause" {
                 for base_child in child.children() {
-                    if base_child.kind() == "type_identifier" || base_child.kind() == "qualified_identifier" {
+                    if base_child.kind() == "type_identifier"
+                        || base_child.kind() == "qualified_identifier"
+                    {
                         if let Ok(base_name) = base_child.text() {
                             bases.push(base_name.to_string());
                         }
@@ -344,7 +348,10 @@ impl CppSyntax {
     }
 
     /// Get all function definitions in a syntax tree with start and end positions
-    pub fn find_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
@@ -359,7 +366,10 @@ impl CppSyntax {
     }
 
     /// Get all class definitions in a syntax tree with start and end positions
-    pub fn find_classes(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_classes(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut classes = Vec::new();
         let class_nodes = tree.find_nodes_by_kind("class_specifier");
 
@@ -379,7 +389,8 @@ impl CppSyntax {
         let struct_nodes = tree.find_nodes_by_kind("struct_specifier");
 
         for struct_node in struct_nodes {
-            if let Some(name) = Self::class_name(&struct_node, source) { // structs use same naming as classes
+            if let Some(name) = Self::class_name(&struct_node, source) {
+                // structs use same naming as classes
                 structs.push((name, struct_node.start_position()));
             }
         }
@@ -388,7 +399,10 @@ impl CppSyntax {
     }
 
     /// Get all namespace definitions in a syntax tree with start and end positions
-    pub fn find_namespaces(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_namespaces(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut namespaces = Vec::new();
         let namespace_nodes = tree.find_nodes_by_kind("namespace_definition");
 
@@ -413,12 +427,18 @@ impl CppSyntax {
                 match child.kind() {
                     "function_definition" => {
                         if let Some(name) = Self::function_name(&child, source) {
-                            templates.push((format!("template {}", name), template_node.start_position()));
+                            templates.push((
+                                format!("template {}", name),
+                                template_node.start_position(),
+                            ));
                         }
                     }
                     "class_specifier" => {
                         if let Some(name) = Self::class_name(&child, source) {
-                            templates.push((format!("template class {}", name), template_node.start_position()));
+                            templates.push((
+                                format!("template class {}", name),
+                                template_node.start_position(),
+                            ));
                         }
                     }
                     _ => {}
@@ -526,7 +546,10 @@ impl CppSyntax {
         }
 
         // Check for range-based for loops
-        if !tree.find_nodes_by_kind("range_based_for_statement").is_empty() {
+        if !tree
+            .find_nodes_by_kind("range_based_for_statement")
+            .is_empty()
+        {
             features.push("Range-based For Loops".to_string());
         }
 
@@ -599,7 +622,8 @@ namespace MyNamespace {
 
         assert!(functions.len() >= 4); // main + class methods + namespaced function
 
-        let function_names: Vec<&str> = functions.iter().map(|(name, _, _)| name.as_str()).collect();
+        let function_names: Vec<&str> =
+            functions.iter().map(|(name, _, _)| name.as_str()).collect();
         assert!(function_names.contains(&"main"));
         assert!(function_names.contains(&"method"));
         assert!(function_names.contains(&"virtual_method"));
@@ -658,17 +682,23 @@ namespace MyProject {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).expect("Failed to create C++ parser: Language::Cpp should be valid");
-        let tree = parser.parse(source, None).expect("Failed to parse C++ source: test source code should be syntactically valid");
+        let parser = Parser::new(crate::Language::Cpp)
+            .expect("Failed to create C++ parser: Language::Cpp should be valid");
+        let tree = parser
+            .parse(source, None)
+            .expect("Failed to parse C++ source: test source code should be syntactically valid");
 
         let namespaces = CppSyntax::find_namespaces(&tree, source);
         // Relaxed assertion - parser may not detect namespaces correctly
         println!("Found {} namespaces", namespaces.len()); // Debug output
-        // Some namespaces might be found
+                                                           // Some namespaces might be found
 
         // Relaxed assertion - parser may not detect specific namespaces correctly
         if !namespaces.is_empty() {
-            let namespace_names: Vec<&str> = namespaces.iter().map(|(name, _, _)| name.as_str()).collect();
+            let namespace_names: Vec<&str> = namespaces
+                .iter()
+                .map(|(name, _, _)| name.as_str())
+                .collect();
             println!("Found namespaces: {:?}", namespace_names); // Debug output
         }
     }
@@ -700,7 +730,9 @@ T max(T a, T b) {
 
         let template_names: Vec<&str> = templates.iter().map(|(name, _)| name.as_str()).collect();
         assert!(template_names.iter().any(|name| name.contains("Vector")));
-        assert!(template_names.iter().any(|name| name.contains("array_function")));
+        assert!(template_names
+            .iter()
+            .any(|name| name.contains("array_function")));
         assert!(template_names.iter().any(|name| name.contains("max")));
     }
 

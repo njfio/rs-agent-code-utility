@@ -93,11 +93,11 @@ impl SyntaxTree {
     pub fn text_for_range(&self, range: Range) -> Result<&str> {
         let start = range.start_byte;
         let end = range.end_byte;
-        
+
         if end > self.source.len() {
             return Err(Error::tree_error("Range extends beyond source text"));
         }
-        
+
         Ok(&self.source[start..end])
     }
 
@@ -135,7 +135,8 @@ impl<'a> Node<'a> {
 
     /// Get the text content of this node
     pub fn text(&self) -> Result<&'a str> {
-        self.inner.utf8_text(self.source.as_bytes())
+        self.inner
+            .utf8_text(self.source.as_bytes())
             .map_err(|e| Error::tree_error(&format!("Failed to get node text: {}", e)))
     }
 
@@ -206,7 +207,9 @@ impl<'a> Node<'a> {
 
     /// Get a child by field name
     pub fn child_by_field_name(&self, field_name: &str) -> Option<Node<'a>> {
-        self.inner.child_by_field_name(field_name).map(|c| Node::new(c, self.source))
+        self.inner
+            .child_by_field_name(field_name)
+            .map(|c| Node::new(c, self.source))
     }
 
     /// Get all children
@@ -218,7 +221,10 @@ impl<'a> Node<'a> {
 
     /// Get all named children
     pub fn named_children(&self) -> Vec<Node<'a>> {
-        self.children().into_iter().filter(|c| c.is_named()).collect()
+        self.children()
+            .into_iter()
+            .filter(|c| c.is_named())
+            .collect()
     }
 
     /// Get the next sibling
@@ -342,7 +348,7 @@ pub type TreeEdit = InputEdit;
 
 #[cfg(test)]
 mod tests {
-    use crate::{Parser, Language};
+    use crate::{Language, Parser};
 
     #[test]
     fn test_syntax_tree_basic() {

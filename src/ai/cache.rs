@@ -1,11 +1,11 @@
 //! AI response caching system
 
-use crate::ai::types::{AIRequest, AIResponse};
 use crate::ai::error::{AIError, AIResult};
+use crate::ai::types::{AIRequest, AIResponse};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::{Duration, SystemTime};
 use std::sync::{Arc, RwLock};
+use std::time::{Duration, SystemTime};
 
 /// Cache statistics
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -39,19 +39,19 @@ struct CacheEntry {
 pub trait AICache: Send + Sync {
     /// Get a cached response
     fn get(&self, key: &str) -> AIResult<Option<AIResponse>>;
-    
+
     /// Store a response in cache
     fn put(&self, key: &str, response: AIResponse, ttl: Option<Duration>) -> AIResult<()>;
-    
+
     /// Remove a cached response
     fn remove(&self, key: &str) -> AIResult<bool>;
-    
+
     /// Clear all cached responses
     fn clear(&self) -> AIResult<()>;
-    
+
     /// Get cache statistics
     fn stats(&self) -> CacheStats;
-    
+
     /// Generate cache key for a request
     fn generate_key(&self, request: &AIRequest) -> String;
 }
@@ -71,49 +71,58 @@ impl MemoryCache {
             stats: Arc::new(RwLock::new(CacheStats::default())),
         }
     }
-    
+
     /// Clean up expired entries
     pub fn cleanup_expired(&self) -> AIResult<()> {
         let now = SystemTime::now();
-        let mut entries = self.entries.write()
+        let mut entries = self
+            .entries
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire write lock"))?;
-        
-        let mut stats = self.stats.write()
+
+        let mut stats = self
+            .stats
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
-        
+
         let initial_size = entries.len();
         entries.retain(|_, entry| entry.expires_at > now);
         let evicted = initial_size - entries.len();
-        
+
         stats.evictions += evicted as u64;
         stats.size = entries.len();
-        
+
         Ok(())
     }
-    
+
     /// Evict least recently used entries if cache is full
     fn evict_lru(&self) -> AIResult<()> {
-        let mut entries = self.entries.write()
+        let mut entries = self
+            .entries
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire write lock"))?;
-        
+
         if entries.len() < self.config.max_size {
             return Ok(());
         }
-        
+
         // Find the least recently used entry
-        let lru_key = entries.iter()
+        let lru_key = entries
+            .iter()
             .min_by_key(|(_, entry)| entry.last_accessed)
             .map(|(key, _)| key.clone());
-        
+
         if let Some(key) = lru_key {
             entries.remove(&key);
-            
-            let mut stats = self.stats.write()
+
+            let mut stats = self
+                .stats
+                .write()
                 .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
             stats.evictions += 1;
             stats.size = entries.len();
         }
-        
+
         Ok(())
     }
 }
@@ -121,59 +130,69 @@ impl MemoryCache {
 impl AICache for MemoryCache {
     fn get(&self, key: &str) -> AIResult<Option<AIResponse>> {
         let now = SystemTime::now();
-        
+
         // First check if entry exists and is not expired
         {
-            let entries = self.entries.read()
+            let entries = self
+                .entries
+                .read()
                 .map_err(|_| AIError::cache("Failed to acquire read lock"))?;
-            
+
             if let Some(entry) = entries.get(key) {
                 if entry.expires_at <= now {
                     // Entry is expired, will be cleaned up later
-                    let mut stats = self.stats.write()
+                    let mut stats = self
+                        .stats
+                        .write()
                         .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
                     stats.misses += 1;
                     return Ok(None);
                 }
-                
+
                 // Entry is valid, update stats and return
-                let mut stats = self.stats.write()
+                let mut stats = self
+                    .stats
+                    .write()
                     .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
                 stats.hits += 1;
                 stats.hit_rate = stats.hits as f64 / (stats.hits + stats.misses) as f64;
-                
+
                 let response = entry.response.clone();
                 drop(entries); // Release read lock before acquiring write lock
-                
+
                 // Update access information
-                let mut entries = self.entries.write()
+                let mut entries = self
+                    .entries
+                    .write()
                     .map_err(|_| AIError::cache("Failed to acquire write lock"))?;
                 if let Some(entry) = entries.get_mut(key) {
                     entry.last_accessed = now;
                     entry.access_count += 1;
                 }
-                
+
                 return Ok(Some(response));
             }
         }
-        
+
         // Entry not found
-        let mut stats = self.stats.write()
+        let mut stats = self
+            .stats
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
         stats.misses += 1;
         stats.hit_rate = stats.hits as f64 / (stats.hits + stats.misses) as f64;
-        
+
         Ok(None)
     }
-    
+
     fn put(&self, key: &str, response: AIResponse, ttl: Option<Duration>) -> AIResult<()> {
         let now = SystemTime::now();
         let ttl = ttl.unwrap_or(self.config.default_ttl);
         let expires_at = now + ttl;
-        
+
         // Evict LRU entries if necessary
         self.evict_lru()?;
-        
+
         let entry = CacheEntry {
             response,
             expires_at,
@@ -181,48 +200,61 @@ impl AICache for MemoryCache {
             access_count: 0,
             last_accessed: now,
         };
-        
-        let mut entries = self.entries.write()
+
+        let mut entries = self
+            .entries
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire write lock"))?;
         entries.insert(key.to_string(), entry);
-        
-        let mut stats = self.stats.write()
+
+        let mut stats = self
+            .stats
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
         stats.size = entries.len();
-        
+
         Ok(())
     }
-    
+
     fn remove(&self, key: &str) -> AIResult<bool> {
-        let mut entries = self.entries.write()
+        let mut entries = self
+            .entries
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire write lock"))?;
         let removed = entries.remove(key).is_some();
-        
-        let mut stats = self.stats.write()
+
+        let mut stats = self
+            .stats
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
         stats.size = entries.len();
-        
+
         Ok(removed)
     }
-    
+
     fn clear(&self) -> AIResult<()> {
-        let mut entries = self.entries.write()
+        let mut entries = self
+            .entries
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire write lock"))?;
         entries.clear();
-        
-        let mut stats = self.stats.write()
+
+        let mut stats = self
+            .stats
+            .write()
             .map_err(|_| AIError::cache("Failed to acquire stats write lock"))?;
         *stats = CacheStats::default();
-        
+
         Ok(())
     }
-    
+
     fn stats(&self) -> CacheStats {
-        self.stats.read()
+        self.stats
+            .read()
             .map(|stats| stats.clone())
             .unwrap_or_default()
     }
-    
+
     fn generate_key(&self, request: &AIRequest) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};

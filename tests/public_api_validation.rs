@@ -10,17 +10,17 @@ fn test_core_api_accessibility() -> std::result::Result<(), Box<dyn std::error::
     let parser = Parser::new(Language::Rust)?;
     let source = "fn main() { println!(\"Hello, world!\"); }";
     let tree = parser.parse(source, None)?;
-    
+
     assert_eq!(tree.root_node().kind(), "source_file");
-    
+
     // Test language detection
     assert_eq!(detect_language_from_extension("rs"), Some(Language::Rust));
     assert_eq!(detect_language_from_path("main.rs"), Some(Language::Rust));
-    
+
     // Test supported languages
     let languages = supported_languages();
     assert!(!languages.is_empty());
-    
+
     Ok(())
 }
 
@@ -32,7 +32,7 @@ fn test_analysis_api_accessibility() -> std::result::Result<(), Box<dyn std::err
     let _performance_analyzer = PerformanceAnalyzer::new();
     let _refactoring_analyzer = RefactoringAnalyzer::new();
     let _test_coverage_analyzer = TestCoverageAnalyzer::new();
-    
+
     Ok(())
 }
 
@@ -83,7 +83,7 @@ fn test_transformation_api_accessibility() -> std::result::Result<(), Box<dyn st
     // Test AST transformation types
     let _transformation_engine = AstTransformationEngine::new();
     let _semantic_validator = SemanticValidator::new();
-    
+
     Ok(())
 }
 
@@ -105,11 +105,11 @@ fn test_utility_api_accessibility() -> std::result::Result<(), Box<dyn std::erro
 fn test_error_handling_api() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // Test error types are accessible
     let _error = Error::parse_error("test error");
-    
+
     // Test that Result type works
     let result: Result<i32> = Ok(42);
     assert!(result.is_ok());
-    
+
     Ok(())
 }
 
@@ -118,7 +118,7 @@ fn test_constants_api_accessibility() {
     // Test that constants are accessible
     let _risk_level = RiskLevel::High;
     let _version = VERSION;
-    
+
     // Test that all risk levels are available
     let _low = RiskLevel::Low;
     let _medium = RiskLevel::Medium;
@@ -136,7 +136,7 @@ fn test_tree_sitter_types_accessibility() -> std::result::Result<(), Box<dyn std
         start_point: Point { row: 0, column: 0 },
         end_point: Point { row: 0, column: 10 },
     };
-    
+
     Ok(())
 }
 
@@ -159,7 +159,7 @@ fn test_documentation_examples_compile() -> std::result::Result<(), Box<dyn std:
     let tree = parser.parse(source, None)?;
 
     println!("Root node: {}", tree.root_node().kind());
-    
+
     Ok(())
 }
 */

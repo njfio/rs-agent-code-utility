@@ -1,15 +1,19 @@
 //! Enhanced security analysis with real implementations
-//! 
+//!
 //! This module provides production-grade security analysis by integrating
 //! real vulnerability databases, secrets detection, and OWASP scanning.
 
-use crate::{AnalysisResult, Parser, Language, Result};
 use crate::constants::security::*;
-use crate::security::{VulnerabilityDatabase, SecretsDetector, OwaspDetector, SecretFinding, OwaspFinding};
-use crate::infrastructure::{DatabaseManager, Cache, MultiServiceRateLimiter, AppConfig, VulnerabilityRecord};
-use serde::{Serialize, Deserialize};
+use crate::infrastructure::{
+    AppConfig, Cache, DatabaseManager, MultiServiceRateLimiter, VulnerabilityRecord,
+};
+use crate::security::{
+    OwaspDetector, OwaspFinding, SecretFinding, SecretsDetector, VulnerabilityDatabase,
+};
+use crate::{AnalysisResult, Language, Parser, Result};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tracing::{info, debug, warn};
+use tracing::{debug, info, warn};
 
 /// Enhanced security scanner with real implementations
 pub struct EnhancedSecurityScanner {
@@ -166,7 +170,8 @@ impl EnhancedSecurityScanner {
                 token: app_config.apis.github.token.clone(),
                 enabled: true,
             },
-        ).await?;
+        )
+        .await?;
 
         // Initialize secrets detector
         let secrets_detector = SecretsDetector::new(&database).await?;
@@ -196,7 +201,10 @@ impl EnhancedSecurityScanner {
     }
 
     /// Perform comprehensive security analysis
-    pub async fn analyze(&self, analysis_result: &AnalysisResult) -> Result<EnhancedSecurityResult> {
+    pub async fn analyze(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<EnhancedSecurityResult> {
         info!("Starting enhanced security analysis");
 
         let mut vulnerability_findings = Vec::new();
@@ -205,8 +213,7 @@ impl EnhancedSecurityScanner {
 
         // Dependency vulnerability scanning
         if self.config.enable_dependency_scanning && self.config.enable_vulnerability_db {
-            vulnerability_findings
-                .extend(self.scan_dependencies(analysis_result).await?);
+            vulnerability_findings.extend(self.scan_dependencies(analysis_result).await?);
         }
 
         // File-by-file analysis
@@ -228,24 +235,37 @@ impl EnhancedSecurityScanner {
 
             // Secrets detection
             if self.config.enable_secrets_detection {
-                match self.secrets_detector.detect_secrets(&content, &file.path.display().to_string()) {
+                match self
+                    .secrets_detector
+                    .detect_secrets(&content, &file.path.display().to_string())
+                {
                     Ok(findings) => {
-                        let filtered_findings: Vec<_> = findings.into_iter()
+                        let filtered_findings: Vec<_> = findings
+                            .into_iter()
                             .filter(|f| f.confidence >= self.config.min_confidence)
                             .take(self.config.max_findings_per_category)
                             .collect();
                         secret_findings.extend(filtered_findings);
                     }
-                    Err(e) => warn!("Secrets detection failed for {}: {}", file.path.display(), e),
+                    Err(e) => warn!(
+                        "Secrets detection failed for {}: {}",
+                        file.path.display(),
+                        e
+                    ),
                 }
             }
 
             // OWASP Top 10 scanning
             if self.config.enable_owasp_scanning {
                 if let Some(language) = self.detect_language(&file.path) {
-                    match self.parse_and_analyze_owasp(&content, &file.path.display().to_string(), language) {
+                    match self.parse_and_analyze_owasp(
+                        &content,
+                        &file.path.display().to_string(),
+                        language,
+                    ) {
                         Ok(findings) => {
-                            let filtered_findings: Vec<_> = findings.into_iter()
+                            let filtered_findings: Vec<_> = findings
+                                .into_iter()
                                 .filter(|f| f.confidence >= self.config.min_confidence)
                                 .take(self.config.max_findings_per_category)
                                 .collect();
@@ -258,20 +278,30 @@ impl EnhancedSecurityScanner {
         }
 
         // Calculate metrics
-        let metrics = self.calculate_metrics(&vulnerability_findings, &secret_findings, &owasp_findings);
+        let metrics =
+            self.calculate_metrics(&vulnerability_findings, &secret_findings, &owasp_findings);
 
         // Assess compliance
-        let compliance = self.assess_compliance(&vulnerability_findings, &secret_findings, &owasp_findings);
+        let compliance =
+            self.assess_compliance(&vulnerability_findings, &secret_findings, &owasp_findings);
 
         // Generate remediation roadmap
-        let remediation_roadmap = self.generate_remediation_roadmap(&vulnerability_findings, &secret_findings, &owasp_findings);
+        let remediation_roadmap = self.generate_remediation_roadmap(
+            &vulnerability_findings,
+            &secret_findings,
+            &owasp_findings,
+        );
 
         // Calculate overall security score
         let security_score = self.calculate_security_score(&metrics, &compliance);
 
-        let total_findings = vulnerability_findings.len() + secret_findings.len() + owasp_findings.len();
+        let total_findings =
+            vulnerability_findings.len() + secret_findings.len() + owasp_findings.len();
 
-        info!("Enhanced security analysis completed: {} total findings, security score: {}", total_findings, security_score);
+        info!(
+            "Enhanced security analysis completed: {} total findings, security score: {}",
+            total_findings, security_score
+        );
 
         Ok(EnhancedSecurityResult {
             security_score,
@@ -286,14 +316,15 @@ impl EnhancedSecurityScanner {
     }
 
     /// Scan dependencies for vulnerabilities
-    async fn scan_dependencies(&self, analysis_result: &AnalysisResult) -> Result<Vec<VulnerabilityRecord>> {
+    async fn scan_dependencies(
+        &self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<Vec<VulnerabilityRecord>> {
         let mut vulnerabilities = Vec::new();
 
         // Look for dependency files
         for file in &analysis_result.files {
-            let file_name = file.path.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("");
+            let file_name = file.path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
             match file_name {
                 "Cargo.toml" => {
@@ -329,9 +360,16 @@ impl EnhancedSecurityScanner {
         for line in content.lines() {
             if line.contains("=") && !line.trim_start().starts_with("#") {
                 if let Some(package_name) = self.extract_package_name(line) {
-                    match self.vulnerability_db.check_package_vulnerabilities(&package_name, None, "cargo").await {
+                    match self
+                        .vulnerability_db
+                        .check_package_vulnerabilities(&package_name, None, "cargo")
+                        .await
+                    {
                         Ok(vulns) => vulnerabilities.extend(vulns),
-                        Err(e) => debug!("Failed to check vulnerabilities for {}: {}", package_name, e),
+                        Err(e) => debug!(
+                            "Failed to check vulnerabilities for {}: {}",
+                            package_name, e
+                        ),
                     }
                 }
             }
@@ -347,11 +385,19 @@ impl EnhancedSecurityScanner {
 
         // Parse JSON and extract dependencies
         if let Ok(package_json) = serde_json::from_str::<serde_json::Value>(&content) {
-            if let Some(dependencies) = package_json.get("dependencies").and_then(|d| d.as_object()) {
+            if let Some(dependencies) = package_json.get("dependencies").and_then(|d| d.as_object())
+            {
                 for (package_name, _version) in dependencies {
-                    match self.vulnerability_db.check_package_vulnerabilities(package_name, None, "npm").await {
+                    match self
+                        .vulnerability_db
+                        .check_package_vulnerabilities(package_name, None, "npm")
+                        .await
+                    {
                         Ok(vulns) => vulnerabilities.extend(vulns),
-                        Err(e) => debug!("Failed to check vulnerabilities for {}: {}", package_name, e),
+                        Err(e) => debug!(
+                            "Failed to check vulnerabilities for {}: {}",
+                            package_name, e
+                        ),
                     }
                 }
             }
@@ -367,9 +413,16 @@ impl EnhancedSecurityScanner {
 
         for line in content.lines() {
             if let Some(package_name) = self.extract_python_package_name(line) {
-                match self.vulnerability_db.check_package_vulnerabilities(&package_name, None, "pypi").await {
+                match self
+                    .vulnerability_db
+                    .check_package_vulnerabilities(&package_name, None, "pypi")
+                    .await
+                {
                     Ok(vulns) => vulnerabilities.extend(vulns),
-                    Err(e) => debug!("Failed to check vulnerabilities for {}: {}", package_name, e),
+                    Err(e) => debug!(
+                        "Failed to check vulnerabilities for {}: {}",
+                        package_name, e
+                    ),
                 }
             }
         }
@@ -385,9 +438,16 @@ impl EnhancedSecurityScanner {
         for line in content.lines() {
             if line.trim_start().starts_with("require") || line.contains("v") {
                 if let Some(package_name) = self.extract_go_package_name(line) {
-                    match self.vulnerability_db.check_package_vulnerabilities(&package_name, None, "go").await {
+                    match self
+                        .vulnerability_db
+                        .check_package_vulnerabilities(&package_name, None, "go")
+                        .await
+                    {
                         Ok(vulns) => vulnerabilities.extend(vulns),
-                        Err(e) => debug!("Failed to check vulnerabilities for {}: {}", package_name, e),
+                        Err(e) => debug!(
+                            "Failed to check vulnerabilities for {}: {}",
+                            package_name, e
+                        ),
                     }
                 }
             }
@@ -397,15 +457,23 @@ impl EnhancedSecurityScanner {
     }
 
     /// Parse file and analyze for OWASP vulnerabilities
-    fn parse_and_analyze_owasp(&self, content: &str, file_path: &str, language: Language) -> Result<Vec<OwaspFinding>> {
+    fn parse_and_analyze_owasp(
+        &self,
+        content: &str,
+        file_path: &str,
+        language: Language,
+    ) -> Result<Vec<OwaspFinding>> {
         let parser = Parser::new(language)?;
         let tree = parser.parse(content, None)?;
-        self.owasp_detector.detect_vulnerabilities(&tree, content, file_path)
-            .map_err(|e| crate::error::Error::internal_error_with_context(
-                "enhanced_security",
-                format!("OWASP vulnerability detection failed: {}", e),
-                format!("File: {}", file_path)
-            ))
+        self.owasp_detector
+            .detect_vulnerabilities(&tree, content, file_path)
+            .map_err(|e| {
+                crate::error::Error::internal_error_with_context(
+                    "enhanced_security",
+                    format!("OWASP vulnerability detection failed: {}", e),
+                    format!("File: {}", file_path),
+                )
+            })
     }
 
     /// Detect programming language from file extension
@@ -425,7 +493,10 @@ impl EnhancedSecurityScanner {
     /// Check if file is a source code file
     fn is_source_file(&self, path: &Path) -> bool {
         if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-            matches!(ext, "rs" | "js" | "ts" | "py" | "c" | "cpp" | "cc" | "cxx" | "go" | "java" | "cs")
+            matches!(
+                ext,
+                "rs" | "js" | "ts" | "py" | "c" | "cpp" | "cc" | "cxx" | "go" | "java" | "cs"
+            )
         } else {
             false
         }
@@ -450,9 +521,7 @@ impl EnhancedSecurityScanner {
         }
 
         // Handle package==version, package>=version, etc.
-        let package_name = line.split(&['=', '>', '<', '!', '~'][..])
-            .next()?
-            .trim();
+        let package_name = line.split(&['=', '>', '<', '!', '~'][..]).next()?.trim();
 
         if !package_name.is_empty() {
             Some(package_name.to_string())
@@ -471,7 +540,7 @@ impl EnhancedSecurityScanner {
             } else {
                 parts[0]
             };
-            
+
             if !package_name.is_empty() {
                 Some(package_name.to_string())
             } else {
@@ -541,7 +610,8 @@ impl EnhancedSecurityScanner {
         // Calculate coverage percentage (simplified)
         let total_findings = critical_count + high_count + medium_count + low_count;
         let coverage_percentage = if total_findings > 0 {
-            (total_findings as f64 / (total_findings as f64 + COVERAGE_CALCULATION_DIVISOR)) * crate::constants::scoring::PERCENTAGE_FACTOR
+            (total_findings as f64 / (total_findings as f64 + COVERAGE_CALCULATION_DIVISOR))
+                * crate::constants::scoring::PERCENTAGE_FACTOR
         } else {
             crate::constants::scoring::PERFECT_SCORE
         };
@@ -563,13 +633,51 @@ impl EnhancedSecurityScanner {
         secret_findings: &[SecretFinding],
         owasp_findings: &[OwaspFinding],
     ) -> ComplianceAssessment {
-        let total_critical = vulnerability_findings.iter().filter(|v| v.severity.to_uppercase() == "CRITICAL").count()
-            + secret_findings.iter().filter(|s| matches!(s.severity, crate::security::secrets_detector::SecretSeverity::Critical)).count()
-            + owasp_findings.iter().filter(|o| matches!(o.severity, crate::security::owasp_detector::VulnSeverity::Critical)).count();
+        let total_critical = vulnerability_findings
+            .iter()
+            .filter(|v| v.severity.to_uppercase() == "CRITICAL")
+            .count()
+            + secret_findings
+                .iter()
+                .filter(|s| {
+                    matches!(
+                        s.severity,
+                        crate::security::secrets_detector::SecretSeverity::Critical
+                    )
+                })
+                .count()
+            + owasp_findings
+                .iter()
+                .filter(|o| {
+                    matches!(
+                        o.severity,
+                        crate::security::owasp_detector::VulnSeverity::Critical
+                    )
+                })
+                .count();
 
-        let total_high = vulnerability_findings.iter().filter(|v| v.severity.to_uppercase() == "HIGH").count()
-            + secret_findings.iter().filter(|s| matches!(s.severity, crate::security::secrets_detector::SecretSeverity::High)).count()
-            + owasp_findings.iter().filter(|o| matches!(o.severity, crate::security::owasp_detector::VulnSeverity::High)).count();
+        let total_high = vulnerability_findings
+            .iter()
+            .filter(|v| v.severity.to_uppercase() == "HIGH")
+            .count()
+            + secret_findings
+                .iter()
+                .filter(|s| {
+                    matches!(
+                        s.severity,
+                        crate::security::secrets_detector::SecretSeverity::High
+                    )
+                })
+                .count()
+            + owasp_findings
+                .iter()
+                .filter(|o| {
+                    matches!(
+                        o.severity,
+                        crate::security::owasp_detector::VulnSeverity::High
+                    )
+                })
+                .count();
 
         // OWASP compliance (based on OWASP findings)
         let owasp_compliance = if total_critical == 0 && total_high == 0 {
@@ -594,7 +702,13 @@ impl EnhancedSecurityScanner {
         // Secrets compliance (based on secret findings)
         let secrets_compliance = if secret_findings.is_empty() {
             HIGH_SECRETS_COMPLIANCE
-        } else if secret_findings.iter().all(|s| !matches!(s.severity, crate::security::secrets_detector::SecretSeverity::Critical | crate::security::secrets_detector::SecretSeverity::High)) {
+        } else if secret_findings.iter().all(|s| {
+            !matches!(
+                s.severity,
+                crate::security::secrets_detector::SecretSeverity::Critical
+                    | crate::security::secrets_detector::SecretSeverity::High
+            )
+        }) {
             MEDIUM_SECRETS_COMPLIANCE
         } else {
             50
@@ -604,7 +718,8 @@ impl EnhancedSecurityScanner {
 
         let mut recommendations = Vec::new();
         if total_critical > 0 {
-            recommendations.push("Address all critical security vulnerabilities immediately".to_string());
+            recommendations
+                .push("Address all critical security vulnerabilities immediately".to_string());
         }
         if total_high > 5 {
             recommendations.push("Implement comprehensive security review process".to_string());
@@ -613,7 +728,8 @@ impl EnhancedSecurityScanner {
             recommendations.push("Implement secrets management solution".to_string());
         }
         if owasp_findings.len() > 10 {
-            recommendations.push("Conduct OWASP Top 10 security training for development team".to_string());
+            recommendations
+                .push("Conduct OWASP Top 10 security training for development team".to_string());
         }
 
         ComplianceAssessment {
@@ -626,7 +742,11 @@ impl EnhancedSecurityScanner {
     }
 
     /// Calculate overall security score
-    fn calculate_security_score(&self, metrics: &SecurityMetrics, compliance: &ComplianceAssessment) -> u8 {
+    fn calculate_security_score(
+        &self,
+        metrics: &SecurityMetrics,
+        compliance: &ComplianceAssessment,
+    ) -> u8 {
         let mut score = BASE_SECURITY_SCORE;
 
         // Deduct points for findings
@@ -636,7 +756,8 @@ impl EnhancedSecurityScanner {
         score = score.saturating_sub(metrics.low_count as u8 * 3);
 
         // Factor in compliance
-        let compliance_factor = compliance.overall_compliance as f64 / crate::constants::scoring::PERCENTAGE_FACTOR;
+        let compliance_factor =
+            compliance.overall_compliance as f64 / crate::constants::scoring::PERCENTAGE_FACTOR;
         score = ((score as f64) * compliance_factor) as u8;
 
         // Factor in confidence
@@ -710,9 +831,13 @@ impl EnhancedSecurityScanner {
                 title: format!("Remove secret: {:?}", secret.secret_type),
                 description: secret.remediation.clone(),
                 priority: match secret.severity {
-                    crate::security::secrets_detector::SecretSeverity::Critical => ActionPriority::Critical,
+                    crate::security::secrets_detector::SecretSeverity::Critical => {
+                        ActionPriority::Critical
+                    }
                     crate::security::secrets_detector::SecretSeverity::High => ActionPriority::High,
-                    crate::security::secrets_detector::SecretSeverity::Medium => ActionPriority::Medium,
+                    crate::security::secrets_detector::SecretSeverity::Medium => {
+                        ActionPriority::Medium
+                    }
                     _ => ActionPriority::Low,
                 },
                 effort_hours: effort,
@@ -747,7 +872,9 @@ impl EnhancedSecurityScanner {
                 title: format!("Fix OWASP issue: {}", owasp.name),
                 description: owasp.remediation.clone(),
                 priority: match owasp.severity {
-                    crate::security::owasp_detector::VulnSeverity::Critical => ActionPriority::Critical,
+                    crate::security::owasp_detector::VulnSeverity::Critical => {
+                        ActionPriority::Critical
+                    }
                     crate::security::owasp_detector::VulnSeverity::High => ActionPriority::High,
                     crate::security::owasp_detector::VulnSeverity::Medium => ActionPriority::Medium,
                     crate::security::owasp_detector::VulnSeverity::Low => ActionPriority::Low,
@@ -868,17 +995,15 @@ mod tests {
     #[test]
     fn test_remediation_roadmap_creation() {
         let roadmap = RemediationRoadmap {
-            immediate_actions: vec![
-                RemediationAction {
-                    id: "critical-001".to_string(),
-                    title: "Critical Fix".to_string(),
-                    description: "Fix critical vulnerability".to_string(),
-                    priority: ActionPriority::Critical,
-                    effort_hours: 12.0,
-                    related_findings: vec!["CVE-2023-1234".to_string()],
-                    implementation_steps: vec!["Step 1".to_string(), "Step 2".to_string()],
-                }
-            ],
+            immediate_actions: vec![RemediationAction {
+                id: "critical-001".to_string(),
+                title: "Critical Fix".to_string(),
+                description: "Fix critical vulnerability".to_string(),
+                priority: ActionPriority::Critical,
+                effort_hours: 12.0,
+                related_findings: vec!["CVE-2023-1234".to_string()],
+                implementation_steps: vec!["Step 1".to_string(), "Step 2".to_string()],
+            }],
             short_term_actions: vec![],
             long_term_actions: vec![],
             total_effort_hours: 12.0,
@@ -938,7 +1063,11 @@ mod tests {
         assert!(cargo_line.contains("="));
 
         let python_line = "requests>=2.25.0";
-        let package_name = python_line.split(&['=', '>', '<'][..]).next().unwrap().trim();
+        let package_name = python_line
+            .split(&['=', '>', '<'][..])
+            .next()
+            .unwrap()
+            .trim();
         assert_eq!(package_name, "requests");
 
         let go_line = "require github.com/gorilla/mux v1.8.0";

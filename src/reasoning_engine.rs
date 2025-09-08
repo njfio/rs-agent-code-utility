@@ -1,14 +1,14 @@
 //! Automated Reasoning Engine
-//! 
+//!
 //! This module provides comprehensive automated reasoning capabilities for code analysis,
 //! including logical inference, theorem proving, constraint solving, and AI-driven analysis.
 
-use crate::{Result, FileInfo, AnalysisResult};
+use crate::{AnalysisResult, FileInfo, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Automated reasoning engine for code analysis
 #[derive(Debug, Clone)]
@@ -209,8 +209,7 @@ pub struct FunctionSignature {
 
 /// Inference engine for logical reasoning
 #[derive(Debug, Clone)]
-pub struct InferenceEngine {
-}
+pub struct InferenceEngine {}
 
 /// Reasoning strategies
 #[derive(Debug, Clone)]
@@ -329,7 +328,11 @@ pub enum ConstraintExpression {
     /// Constant value
     Constant(ConstraintValue),
     /// Binary operation
-    BinaryOp(BinaryOperator, Box<ConstraintExpression>, Box<ConstraintExpression>),
+    BinaryOp(
+        BinaryOperator,
+        Box<ConstraintExpression>,
+        Box<ConstraintExpression>,
+    ),
     /// Unary operation
     UnaryOp(UnaryOperator, Box<ConstraintExpression>),
     /// Function call
@@ -340,16 +343,29 @@ pub enum ConstraintExpression {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum BinaryOperator {
-    Add, Sub, Mul, Div, Mod,
-    Eq, Ne, Lt, Le, Gt, Ge,
-    And, Or, Implies,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    And,
+    Or,
+    Implies,
 }
 
 /// Unary operators
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum UnaryOperator {
-    Not, Neg, Abs,
+    Not,
+    Neg,
+    Abs,
 }
 
 /// Solver configuration
@@ -616,30 +632,34 @@ impl AutomatedReasoningEngine {
     /// Analyze code using automated reasoning
     pub fn analyze_code(&mut self, analysis: &AnalysisResult) -> Result<ReasoningResult> {
         let start_time = std::time::Instant::now();
-        
+
         // Extract facts from code analysis
         self.extract_facts_from_analysis(analysis)?;
-        
+
         // Perform reasoning
         let mut derived_facts = Vec::new();
         let mut constraint_solutions = HashMap::new();
         let mut proved_theorems = Vec::new();
-        
-        if self.config.enable_deductive || self.config.enable_inductive || self.config.enable_abductive {
+
+        if self.config.enable_deductive
+            || self.config.enable_inductive
+            || self.config.enable_abductive
+        {
             derived_facts = self.perform_inference()?;
         }
-        
+
         if self.config.enable_constraints {
             constraint_solutions = self.solve_constraints()?;
         }
-        
+
         if self.config.enable_theorem_proving {
             proved_theorems = self.prove_theorems()?;
         }
-        
+
         // Generate insights
-        let insights = self.generate_insights(&derived_facts, &constraint_solutions, &proved_theorems)?;
-        
+        let insights =
+            self.generate_insights(&derived_facts, &constraint_solutions, &proved_theorems)?;
+
         let elapsed = start_time.elapsed();
         let memory_usage = self.calculate_memory_usage();
         let metrics = ReasoningMetrics {
@@ -650,7 +670,7 @@ impl AutomatedReasoningEngine {
             theorems_attempted: proved_theorems.len(),
             memory_usage_bytes: memory_usage,
         };
-        
+
         Ok(ReasoningResult {
             derived_facts,
             constraint_solutions,
@@ -686,7 +706,9 @@ impl AutomatedReasoningEngine {
 
     /// Add a constraint variable
     pub fn add_variable(&mut self, variable: ConstraintVariable) {
-        self.constraint_solver.variables.insert(variable.name.clone(), variable);
+        self.constraint_solver
+            .variables
+            .insert(variable.name.clone(), variable);
     }
 
     // Private implementation methods
@@ -861,7 +883,11 @@ impl AutomatedReasoningEngine {
     }
 
     /// Check if literals match
-    fn literals_match(&self, fact_literal: &LiteralValue, condition_literal: &LiteralValue) -> bool {
+    fn literals_match(
+        &self,
+        fact_literal: &LiteralValue,
+        condition_literal: &LiteralValue,
+    ) -> bool {
         match (fact_literal, condition_literal) {
             (LiteralValue::String(f), LiteralValue::String(c)) => f == c,
             (LiteralValue::Integer(f), LiteralValue::Integer(c)) => f == c,
@@ -885,15 +911,20 @@ impl AutomatedReasoningEngine {
         for fact in &self.knowledge_base.facts {
             if fact.predicate == "function_complexity" {
                 if let (Term::Constant(file), Term::Literal(LiteralValue::Float(complexity))) =
-                    (&fact.arguments[0], &fact.arguments[1]) {
-                    file_complexities.entry(file.clone()).or_insert_with(Vec::new).push(*complexity);
+                    (&fact.arguments[0], &fact.arguments[1])
+                {
+                    file_complexities
+                        .entry(file.clone())
+                        .or_insert_with(Vec::new)
+                        .push(*complexity);
                 }
             }
         }
 
         for (file, complexities) in file_complexities {
             if complexities.len() >= 3 {
-                let avg_complexity: f64 = complexities.iter().sum::<f64>() / complexities.len() as f64;
+                let avg_complexity: f64 =
+                    complexities.iter().sum::<f64>() / complexities.len() as f64;
                 if avg_complexity > 10.0 {
                     let fact = Fact {
                         id: format!("inferred_high_complexity_{}", file),
@@ -952,7 +983,8 @@ impl AutomatedReasoningEngine {
         for fact in &self.knowledge_base.facts {
             if fact.predicate == "function_complexity" {
                 if let (Term::Constant(name), Term::Literal(LiteralValue::Float(complexity))) =
-                    (&fact.arguments[0], &fact.arguments[1]) {
+                    (&fact.arguments[0], &fact.arguments[1])
+                {
                     if name == func_name {
                         return *complexity;
                     }
@@ -994,7 +1026,10 @@ impl AutomatedReasoningEngine {
     }
 
     /// Solve a single constraint
-    fn solve_single_constraint(&self, constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_single_constraint(
+        &self,
+        constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified constraint solving
         match constraint.constraint_type {
             ConstraintType::Equality => self.solve_equality_constraint(constraint),
@@ -1008,43 +1043,64 @@ impl AutomatedReasoningEngine {
     }
 
     /// Solve equality constraint
-    fn solve_equality_constraint(&self, _constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_equality_constraint(
+        &self,
+        _constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified implementation
         Ok(None)
     }
 
     /// Solve inequality constraint
-    fn solve_inequality_constraint(&self, _constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_inequality_constraint(
+        &self,
+        _constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified implementation
         Ok(None)
     }
 
     /// Solve linear constraint
-    fn solve_linear_constraint(&self, _constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_linear_constraint(
+        &self,
+        _constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified linear constraint solving
         Ok(None)
     }
 
     /// Solve non-linear constraint
-    fn solve_nonlinear_constraint(&self, _constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_nonlinear_constraint(
+        &self,
+        _constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified non-linear constraint solving
         Ok(None)
     }
 
     /// Solve logic constraint
-    fn solve_logic_constraint(&self, _constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_logic_constraint(
+        &self,
+        _constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified logic constraint solving
         Ok(None)
     }
 
     /// Solve resource constraint
-    fn solve_resource_constraint(&self, _constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_resource_constraint(
+        &self,
+        _constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified resource constraint solving
         Ok(None)
     }
 
     /// Solve temporal constraint
-    fn solve_temporal_constraint(&self, _constraint: &Constraint) -> Result<Option<HashMap<String, ConstraintValue>>> {
+    fn solve_temporal_constraint(
+        &self,
+        _constraint: &Constraint,
+    ) -> Result<Option<HashMap<String, ConstraintValue>>> {
         // Simplified temporal constraint solving
         Ok(None)
     }
@@ -1078,7 +1134,7 @@ impl AutomatedReasoningEngine {
         &self,
         derived_facts: &[Fact],
         _constraint_solutions: &HashMap<String, ConstraintValue>,
-        _proved_theorems: &[ProofResult]
+        _proved_theorems: &[ProofResult],
     ) -> Result<Vec<ReasoningInsight>> {
         let mut insights = Vec::new();
 
@@ -1102,12 +1158,18 @@ impl AutomatedReasoningEngine {
                 }
                 "potential_code_smell" => {
                     if let (Term::Constant(func_name), Term::Constant(reason)) =
-                        (&fact.arguments[0], &fact.arguments[1]) {
+                        (&fact.arguments[0], &fact.arguments[1])
+                    {
                         insights.push(ReasoningInsight {
                             insight_type: InsightType::CodeSmell,
-                            description: format!("Function {} may have code smell: {}", func_name, reason),
+                            description: format!(
+                                "Function {} may have code smell: {}",
+                                func_name, reason
+                            ),
                             confidence: fact.confidence,
-                            evidence: vec![format!("Abductive reasoning based on complexity and coupling")],
+                            evidence: vec![format!(
+                                "Abductive reasoning based on complexity and coupling"
+                            )],
                             locations: vec![],
                         });
                     }
@@ -1147,7 +1209,11 @@ impl AutomatedReasoningEngine {
     }
 
     /// Test literal matching (for testing)
-    pub fn literals_match_public(&self, fact_literal: &LiteralValue, condition_literal: &LiteralValue) -> bool {
+    pub fn literals_match_public(
+        &self,
+        fact_literal: &LiteralValue,
+        condition_literal: &LiteralValue,
+    ) -> bool {
         self.literals_match(fact_literal, condition_literal)
     }
 
@@ -1159,7 +1225,8 @@ impl AutomatedReasoningEngine {
         total_bytes += self.knowledge_base.facts.len() * std::mem::size_of::<Fact>();
         total_bytes += self.knowledge_base.rules.len() * std::mem::size_of::<Rule>();
         total_bytes += self.knowledge_base.types.len() * std::mem::size_of::<TypeDefinition>();
-        total_bytes += self.knowledge_base.functions.len() * std::mem::size_of::<FunctionSignature>();
+        total_bytes +=
+            self.knowledge_base.functions.len() * std::mem::size_of::<FunctionSignature>();
 
         // Add string content estimates
         for fact in &self.knowledge_base.facts {
@@ -1171,7 +1238,8 @@ impl AutomatedReasoningEngine {
         }
 
         // Add constraint solver memory
-        total_bytes += self.constraint_solver.variables.len() * std::mem::size_of::<ConstraintVariable>();
+        total_bytes +=
+            self.constraint_solver.variables.len() * std::mem::size_of::<ConstraintVariable>();
         total_bytes += self.constraint_solver.constraints.len() * std::mem::size_of::<Constraint>();
 
         // Add theorem prover memory
@@ -1186,14 +1254,18 @@ impl AutomatedReasoningEngine {
         match term {
             Term::Variable(s) | Term::Constant(s) => s.len(),
             Term::Function(name, args) => {
-                name.len() + args.iter().map(|arg| self.estimate_term_size(arg)).sum::<usize>()
+                name.len()
+                    + args
+                        .iter()
+                        .map(|arg| self.estimate_term_size(arg))
+                        .sum::<usize>()
             }
             Term::Literal(lit) => match lit {
                 LiteralValue::String(s) => s.len(),
                 LiteralValue::Integer(_) => 8,
                 LiteralValue::Float(_) => 8,
                 LiteralValue::Boolean(_) => 1,
-            }
+            },
         }
     }
 }
@@ -1201,9 +1273,9 @@ impl AutomatedReasoningEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FileInfo, Symbol, AnalysisResult};
-    use std::path::PathBuf;
+    use crate::{AnalysisResult, FileInfo, Symbol};
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     fn create_test_analysis_result() -> AnalysisResult {
         let mut symbols = Vec::new();
@@ -1430,8 +1502,6 @@ impl KnowledgeBase {
         &self.rules
     }
 }
-
-
 
 impl ConstraintSolver {
     fn new() -> Self {

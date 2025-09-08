@@ -1,12 +1,12 @@
 //! Comprehensive unit tests for security analysis functionality
-//! 
+//!
 //! These tests verify the accuracy and reliability of security vulnerability
 //! detection across different programming languages and attack patterns.
 
-use rust_tree_sitter::{SecurityScanner, AnalysisResult, FileInfo, Result};
+use rust_tree_sitter::{AnalysisResult, FileInfo, Result, SecurityScanner};
+use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use std::fs;
 
 fn create_analysis_result_with_fs(specs: Vec<(&str, &str, &str)>) -> (TempDir, AnalysisResult) {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
@@ -15,7 +15,9 @@ fn create_analysis_result_with_fs(specs: Vec<(&str, &str, &str)>) -> (TempDir, A
     let mut files: Vec<FileInfo> = Vec::new();
     for (rel, content, language) in specs {
         let p = root.join(rel);
-        if let Some(parent) = p.parent() { fs::create_dir_all(parent).unwrap(); }
+        if let Some(parent) = p.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
         fs::write(&p, content).unwrap();
 
         files.push(FileInfo {
@@ -57,7 +59,7 @@ fn test_security_scanner_creation() -> Result<()> {
 #[test]
 fn test_sql_injection_detection() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     // Code with SQL injection vulnerability
     let vulnerable_code = r#"
         fn get_user(user_id: &str) -> String {
@@ -70,29 +72,31 @@ fn test_sql_injection_detection() -> Result<()> {
             String::new()
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("vulnerable.rs", vulnerable_code, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("vulnerable.rs", vulnerable_code, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should detect SQL injection vulnerability
     assert!(security_result.total_vulnerabilities > 0);
-    
-    let sql_injection_found = security_result.vulnerabilities.iter()
-        .any(|v| v.title.to_lowercase().contains("sql") 
-                || v.description.to_lowercase().contains("injection"));
-    
-    assert!(sql_injection_found, "SQL injection vulnerability should be detected");
-    
+
+    let sql_injection_found = security_result.vulnerabilities.iter().any(|v| {
+        v.title.to_lowercase().contains("sql") || v.description.to_lowercase().contains("injection")
+    });
+
+    assert!(
+        sql_injection_found,
+        "SQL injection vulnerability should be detected"
+    );
+
     Ok(())
 }
 
 #[test]
 fn test_command_injection_detection() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     // Code with command injection vulnerability
     let vulnerable_code = r#"
         use std::process::Command;
@@ -106,27 +110,30 @@ fn test_command_injection_detection() -> Result<()> {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("command_vuln.rs", vulnerable_code, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("command_vuln.rs", vulnerable_code, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should detect command injection vulnerability
-    let command_injection_found = security_result.vulnerabilities.iter()
-        .any(|v| v.title.to_lowercase().contains("command") 
-                || v.description.to_lowercase().contains("injection"));
-    
-    assert!(command_injection_found, "Command injection vulnerability should be detected");
-    
+    let command_injection_found = security_result.vulnerabilities.iter().any(|v| {
+        v.title.to_lowercase().contains("command")
+            || v.description.to_lowercase().contains("injection")
+    });
+
+    assert!(
+        command_injection_found,
+        "Command injection vulnerability should be detected"
+    );
+
     Ok(())
 }
 
 #[test]
 fn test_hardcoded_secrets_detection() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     // Code with hardcoded secrets
     let vulnerable_code = r#"
         const API_KEY: &str = "sk-1234567890abcdef1234567890abcdef";
@@ -138,28 +145,28 @@ fn test_hardcoded_secrets_detection() -> Result<()> {
             // ... rest of implementation
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("secrets.rs", vulnerable_code, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("secrets.rs", vulnerable_code, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should detect hardcoded secrets
-    let secrets_found = security_result.vulnerabilities.iter()
-        .any(|v| v.title.to_lowercase().contains("secret") 
-                || v.title.to_lowercase().contains("key")
-                || v.description.to_lowercase().contains("hardcoded"));
-    
+    let secrets_found = security_result.vulnerabilities.iter().any(|v| {
+        v.title.to_lowercase().contains("secret")
+            || v.title.to_lowercase().contains("key")
+            || v.description.to_lowercase().contains("hardcoded")
+    });
+
     assert!(secrets_found, "Hardcoded secrets should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_path_traversal_detection() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     // Code with path traversal vulnerability
     let vulnerable_code = r#"
         use std::fs;
@@ -174,27 +181,30 @@ fn test_path_traversal_detection() -> Result<()> {
             std::fs::read_to_string(user_path).unwrap_or_default()
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("path_traversal.rs", vulnerable_code, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("path_traversal.rs", vulnerable_code, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should detect path traversal vulnerability
-    let path_traversal_found = security_result.vulnerabilities.iter()
-        .any(|v| v.title.to_lowercase().contains("path") 
-                || v.description.to_lowercase().contains("traversal"));
-    
-    assert!(path_traversal_found, "Path traversal vulnerability should be detected");
-    
+    let path_traversal_found = security_result.vulnerabilities.iter().any(|v| {
+        v.title.to_lowercase().contains("path")
+            || v.description.to_lowercase().contains("traversal")
+    });
+
+    assert!(
+        path_traversal_found,
+        "Path traversal vulnerability should be detected"
+    );
+
     Ok(())
 }
 
 #[test]
 fn test_xss_detection() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     // JavaScript code with XSS vulnerability
     let vulnerable_code = r#"
         function displayUserInput(userInput) {
@@ -209,28 +219,28 @@ fn test_xss_detection() -> Result<()> {
             document.body.innerHTML += html;
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("xss_vuln.js", vulnerable_code, "JavaScript")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("xss_vuln.js", vulnerable_code, "JavaScript")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should detect XSS vulnerability
-    let xss_found = security_result.vulnerabilities.iter()
-        .any(|v| v.title.to_lowercase().contains("xss") 
-                || v.title.to_lowercase().contains("cross-site")
-                || v.description.to_lowercase().contains("script"));
-    
+    let xss_found = security_result.vulnerabilities.iter().any(|v| {
+        v.title.to_lowercase().contains("xss")
+            || v.title.to_lowercase().contains("cross-site")
+            || v.description.to_lowercase().contains("script")
+    });
+
     assert!(xss_found, "XSS vulnerability should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_insecure_random_detection() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     // Code with insecure random number generation
     let vulnerable_code = r#"
         use std::collections::hash_map::DefaultHasher;
@@ -248,27 +258,27 @@ fn test_insecure_random_detection() -> Result<()> {
             42 // Completely predictable
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("weak_random.rs", vulnerable_code, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("weak_random.rs", vulnerable_code, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should detect insecure randomness
-    let weak_random_found = security_result.vulnerabilities.iter()
-        .any(|v| v.title.to_lowercase().contains("random") 
-                || v.description.to_lowercase().contains("predictable"));
-    
+    let weak_random_found = security_result.vulnerabilities.iter().any(|v| {
+        v.title.to_lowercase().contains("random")
+            || v.description.to_lowercase().contains("predictable")
+    });
+
     assert!(weak_random_found, "Weak randomness should be detected");
-    
+
     Ok(())
 }
 
 #[test]
 fn test_safe_code_no_vulnerabilities() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     // Safe code that should not trigger vulnerabilities
     let safe_code = r#"
         use std::collections::HashMap;
@@ -292,52 +302,54 @@ fn test_safe_code_no_vulnerabilities() -> Result<()> {
             String::new()
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("safe.rs", safe_code, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("safe.rs", safe_code, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Safe code should have fewer or no vulnerabilities
     // Note: Some heuristic-based scanners might still flag false positives
-    assert!(security_result.security_score > 50, "Safe code should have a reasonable security score");
-    
+    assert!(
+        security_result.security_score > 50,
+        "Safe code should have a reasonable security score"
+    );
+
     Ok(())
 }
 
 #[test]
 fn test_multiple_files_analysis() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     let file1_code = r#"
         fn sql_injection(user_input: &str) -> String {
             format!("SELECT * FROM users WHERE name = '{}'", user_input)
         }
     "#;
-    
+
     let file2_code = r#"
         const SECRET_KEY: &str = "hardcoded-secret-key-123";
     "#;
-    
+
     let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
         ("file1.rs", file1_code, "Rust"),
         ("file2.rs", file2_code, "Rust"),
     ]);
-    
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should detect vulnerabilities from both files
     assert!(security_result.total_vulnerabilities >= 2);
     assert!(security_result.vulnerabilities.len() >= 2);
-    
+
     Ok(())
 }
 
 #[test]
 fn test_security_score_calculation() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     let vulnerable_code = r#"
         fn multiple_vulnerabilities(user_input: &str) -> String {
             let query = format!("SELECT * FROM users WHERE id = '{}'", user_input);
@@ -348,26 +360,28 @@ fn test_security_score_calculation() -> Result<()> {
         
         const API_KEY: &str = "sk-1234567890abcdef";
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("multiple_vulns.rs", vulnerable_code, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("multiple_vulns.rs", vulnerable_code, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Security score should be calculated and be between 0-100
     assert!(security_result.security_score <= 100);
-    
+
     // With multiple vulnerabilities, score should be lower
-    assert!(security_result.security_score < 80, "Multiple vulnerabilities should lower the security score");
-    
+    assert!(
+        security_result.security_score < 80,
+        "Multiple vulnerabilities should lower the security score"
+    );
+
     Ok(())
 }
 
 #[test]
 fn test_vulnerability_severity_classification() -> Result<()> {
     let scanner = SecurityScanner::new()?;
-    
+
     let code_with_critical_vuln = r#"
         fn execute_user_command(cmd: &str) -> String {
             std::process::Command::new("sh")
@@ -381,20 +395,27 @@ fn test_vulnerability_severity_classification() -> Result<()> {
                 .collect()
         }
     "#;
-    
-    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
-        ("critical.rs", code_with_critical_vuln, "Rust")
-    ]);
-    
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("critical.rs", code_with_critical_vuln, "Rust")]);
+
     let security_result = scanner.analyze(&analysis_result)?;
-    
+
     // Should classify vulnerabilities by severity
     if !security_result.vulnerabilities.is_empty() {
-        let has_high_severity = security_result.vulnerabilities.iter()
-            .any(|v| matches!(v.severity, rust_tree_sitter::SecuritySeverity::High | rust_tree_sitter::SecuritySeverity::Critical));
-        
-        assert!(has_high_severity, "Command injection should be classified as high/critical severity");
+        let has_high_severity = security_result.vulnerabilities.iter().any(|v| {
+            matches!(
+                v.severity,
+                rust_tree_sitter::SecuritySeverity::High
+                    | rust_tree_sitter::SecuritySeverity::Critical
+            )
+        });
+
+        assert!(
+            has_high_severity,
+            "Command injection should be classified as high/critical severity"
+        );
     }
-    
+
     Ok(())
 }

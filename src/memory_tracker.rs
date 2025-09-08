@@ -1,4 +1,4 @@
-use crate::{Result, Error, FileInfo, AnalysisResult, SyntaxTree};
+use crate::{AnalysisResult, Error, FileInfo, Result, SyntaxTree};
 use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "serde")]
@@ -382,7 +382,10 @@ impl MemoryTracker {
     }
 
     /// Analyze memory allocation patterns in a codebase
-    pub fn analyze_memory_allocations(&mut self, analysis_result: &AnalysisResult) -> Result<MemoryTrackingResult> {
+    pub fn analyze_memory_allocations(
+        &mut self,
+        analysis_result: &AnalysisResult,
+    ) -> Result<MemoryTrackingResult> {
         let mut allocation_hotspots = Vec::new();
         let mut leak_candidates = Vec::new();
         let mut call_stacks = Vec::new();
@@ -422,7 +425,8 @@ impl MemoryTracker {
         let fragmentation_analysis = self.analyze_fragmentation(&allocation_hotspots)?;
 
         // Convert patterns to vector
-        let allocation_patterns: Vec<AllocationPattern> = self.allocation_patterns.values().cloned().collect();
+        let allocation_patterns: Vec<AllocationPattern> =
+            self.allocation_patterns.values().cloned().collect();
 
         Ok(MemoryTrackingResult {
             total_allocations: self.memory_stats.total_allocations as usize,
@@ -439,7 +443,11 @@ impl MemoryTracker {
     }
 
     /// Detect memory allocation hotspots in source code
-    fn detect_allocation_hotspots(&self, content: &str, file: &FileInfo) -> Result<Vec<AllocationHotspot>> {
+    fn detect_allocation_hotspots(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationHotspot>> {
         let mut hotspots = Vec::new();
 
         // Parse the file using tree-sitter
@@ -448,19 +456,19 @@ impl MemoryTracker {
         match file.language.to_lowercase().as_str() {
             "rust" => {
                 hotspots.extend(self.detect_rust_allocations(&tree, content, file)?);
-            },
+            }
             "c" | "cpp" | "c++" => {
                 hotspots.extend(self.detect_c_cpp_allocations(&tree, content, file)?);
-            },
+            }
             "python" => {
                 hotspots.extend(self.detect_python_allocations(&tree, content, file)?);
-            },
+            }
             "javascript" | "typescript" => {
                 hotspots.extend(self.detect_js_allocations(&tree, content, file)?);
-            },
+            }
             "go" => {
                 hotspots.extend(self.detect_go_allocations(&tree, content, file)?);
-            },
+            }
             _ => {
                 // Generic allocation detection
                 hotspots.extend(self.detect_generic_allocations(content, file)?);
@@ -482,10 +490,12 @@ impl MemoryTracker {
             "c" => Language::C,
             "cpp" | "c++" => Language::Cpp,
             "go" => Language::Go,
-            _ => return Err(Error::not_supported_error(
-                format!("Language: {}", language),
-                "Memory tracking not implemented for this language"
-            )),
+            _ => {
+                return Err(Error::not_supported_error(
+                    format!("Language: {}", language),
+                    "Memory tracking not implemented for this language",
+                ))
+            }
         };
 
         let parser = Parser::new(lang)?;
@@ -493,7 +503,12 @@ impl MemoryTracker {
     }
 
     /// Detect Rust-specific memory allocations
-    fn detect_rust_allocations(&self, tree: &SyntaxTree, content: &str, file: &FileInfo) -> Result<Vec<AllocationHotspot>> {
+    fn detect_rust_allocations(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationHotspot>> {
         let mut hotspots = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -520,13 +535,16 @@ impl MemoryTracker {
 
                         if line_num < lines.len() {
                             let code_context = lines[line_num].trim().to_string();
-                            let in_loop = self.is_allocation_in_loop_simple(start_point.row, &lines);
+                            let in_loop =
+                                self.is_allocation_in_loop_simple(start_point.row, &lines);
 
                             hotspots.push(AllocationHotspot {
                                 id: format!("RUST_ALLOC_{}_{}", file.path.display(), line_num),
                                 location: AllocationLocation {
                                     file: file.path.display().to_string(),
-                                    function: self.find_function_at_line(line_num, &lines).unwrap_or_default(),
+                                    function: self
+                                        .find_function_at_line(line_num, &lines)
+                                        .unwrap_or_default(),
                                     line: line_num + 1,
                                     column: start_point.column + 1,
                                     code_context,
@@ -561,7 +579,12 @@ impl MemoryTracker {
     }
 
     /// Detect C/C++ memory allocations
-    fn detect_c_cpp_allocations(&self, tree: &SyntaxTree, content: &str, file: &FileInfo) -> Result<Vec<AllocationHotspot>> {
+    fn detect_c_cpp_allocations(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationHotspot>> {
         let mut hotspots = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -585,13 +608,16 @@ impl MemoryTracker {
 
                         if line_num < lines.len() {
                             let code_context = lines[line_num].trim().to_string();
-                            let in_loop = self.is_allocation_in_loop_simple(start_point.row, &lines);
+                            let in_loop =
+                                self.is_allocation_in_loop_simple(start_point.row, &lines);
 
                             hotspots.push(AllocationHotspot {
                                 id: format!("CPP_ALLOC_{}_{}", file.path.display(), line_num),
                                 location: AllocationLocation {
                                     file: file.path.display().to_string(),
-                                    function: self.find_function_at_line(line_num, &lines).unwrap_or_default(),
+                                    function: self
+                                        .find_function_at_line(line_num, &lines)
+                                        .unwrap_or_default(),
                                     line: line_num + 1,
                                     column: start_point.column + 1,
                                     code_context,
@@ -626,7 +652,12 @@ impl MemoryTracker {
     }
 
     /// Detect Python memory allocations
-    fn detect_python_allocations(&self, _tree: &SyntaxTree, content: &str, file: &FileInfo) -> Result<Vec<AllocationHotspot>> {
+    fn detect_python_allocations(
+        &self,
+        _tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationHotspot>> {
         let mut hotspots = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -648,7 +679,9 @@ impl MemoryTracker {
                         id: format!("PYTHON_ALLOC_{}_{}", file.path.display(), line_num),
                         location: AllocationLocation {
                             file: file.path.display().to_string(),
-                            function: self.find_function_at_line(line_num, &lines).unwrap_or_default(),
+                            function: self
+                                .find_function_at_line(line_num, &lines)
+                                .unwrap_or_default(),
                             line: line_num + 1,
                             column: line.find(pattern).unwrap_or(0) + 1,
                             code_context: line.trim().to_string(),
@@ -681,7 +714,12 @@ impl MemoryTracker {
     }
 
     /// Detect JavaScript/TypeScript memory allocations
-    fn detect_js_allocations(&self, _tree: &SyntaxTree, content: &str, file: &FileInfo) -> Result<Vec<AllocationHotspot>> {
+    fn detect_js_allocations(
+        &self,
+        _tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationHotspot>> {
         let mut hotspots = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -704,7 +742,9 @@ impl MemoryTracker {
                         id: format!("JS_ALLOC_{}_{}", file.path.display(), line_num),
                         location: AllocationLocation {
                             file: file.path.display().to_string(),
-                            function: self.find_function_at_line(line_num, &lines).unwrap_or_default(),
+                            function: self
+                                .find_function_at_line(line_num, &lines)
+                                .unwrap_or_default(),
                             line: line_num + 1,
                             column: line.find(pattern).unwrap_or(0) + 1,
                             code_context: line.trim().to_string(),
@@ -737,7 +777,12 @@ impl MemoryTracker {
     }
 
     /// Detect Go memory allocations
-    fn detect_go_allocations(&self, _tree: &SyntaxTree, content: &str, file: &FileInfo) -> Result<Vec<AllocationHotspot>> {
+    fn detect_go_allocations(
+        &self,
+        _tree: &SyntaxTree,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationHotspot>> {
         let mut hotspots = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -757,7 +802,9 @@ impl MemoryTracker {
                         id: format!("GO_ALLOC_{}_{}", file.path.display(), line_num),
                         location: AllocationLocation {
                             file: file.path.display().to_string(),
-                            function: self.find_function_at_line(line_num, &lines).unwrap_or_default(),
+                            function: self
+                                .find_function_at_line(line_num, &lines)
+                                .unwrap_or_default(),
                             line: line_num + 1,
                             column: line.find(pattern).unwrap_or(0) + 1,
                             code_context: line.trim().to_string(),
@@ -790,7 +837,11 @@ impl MemoryTracker {
     }
 
     /// Generic allocation detection for unsupported languages
-    fn detect_generic_allocations(&self, content: &str, file: &FileInfo) -> Result<Vec<AllocationHotspot>> {
+    fn detect_generic_allocations(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationHotspot>> {
         let mut hotspots = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -806,7 +857,9 @@ impl MemoryTracker {
                         id: format!("GENERIC_ALLOC_{}_{}", file.path.display(), line_num),
                         location: AllocationLocation {
                             file: file.path.display().to_string(),
-                            function: self.find_function_at_line(line_num, &lines).unwrap_or_default(),
+                            function: self
+                                .find_function_at_line(line_num, &lines)
+                                .unwrap_or_default(),
                             line: line_num + 1,
                             column: line.find(keyword).unwrap_or(0) + 1,
                             code_context: line.trim().to_string(),
@@ -840,23 +893,27 @@ impl MemoryTracker {
     }
 
     /// Detect potential memory leaks
-    fn detect_memory_leaks(&self, content: &str, file: &FileInfo) -> Result<Vec<MemoryLeakCandidate>> {
+    fn detect_memory_leaks(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<MemoryLeakCandidate>> {
         let mut leak_candidates = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
         match file.language.to_lowercase().as_str() {
             "rust" => {
                 leak_candidates.extend(self.detect_rust_memory_leaks(&lines, file)?);
-            },
+            }
             "c" | "cpp" | "c++" => {
                 leak_candidates.extend(self.detect_c_cpp_memory_leaks(&lines, file)?);
-            },
+            }
             "python" => {
                 leak_candidates.extend(self.detect_python_memory_leaks(&lines, file)?);
-            },
+            }
             "javascript" | "typescript" => {
                 leak_candidates.extend(self.detect_js_memory_leaks(&lines, file)?);
-            },
+            }
             _ => {
                 // Generic leak detection
                 leak_candidates.extend(self.detect_generic_memory_leaks(&lines, file)?);
@@ -867,7 +924,11 @@ impl MemoryTracker {
     }
 
     /// Detect Rust-specific memory leaks
-    fn detect_rust_memory_leaks(&self, lines: &[&str], file: &FileInfo) -> Result<Vec<MemoryLeakCandidate>> {
+    fn detect_rust_memory_leaks(
+        &self,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<MemoryLeakCandidate>> {
         let mut candidates = Vec::new();
 
         for (line_num, line) in lines.iter().enumerate() {
@@ -879,14 +940,16 @@ impl MemoryTracker {
                     id: format!("RUST_LEAK_RC_{}_{}", file.path.display(), line_num),
                     allocation_site: AllocationLocation {
                         file: file.path.display().to_string(),
-                        function: self.find_function_at_line(line_num, lines).unwrap_or_default(),
+                        function: self
+                            .find_function_at_line(line_num, lines)
+                            .unwrap_or_default(),
                         line: line_num + 1,
                         column: trimmed.find("Rc::new").unwrap_or(0) + 1,
                         code_context: trimmed.to_string(),
                     },
                     leak_type: LeakType::ReferenceCycle,
                     confidence: 0.7,
-                    leaked_bytes: 1024, // Estimate
+                    leaked_bytes: 1024,                     // Estimate
                     age: std::time::Duration::from_secs(0), // Would be tracked at runtime
                     call_stack: vec![format!("{}:{}", file.path.display(), line_num + 1)],
                     mitigation: vec![
@@ -902,7 +965,9 @@ impl MemoryTracker {
                     id: format!("RUST_LEAK_EXPLICIT_{}_{}", file.path.display(), line_num),
                     allocation_site: AllocationLocation {
                         file: file.path.display().to_string(),
-                        function: self.find_function_at_line(line_num, lines).unwrap_or_default(),
+                        function: self
+                            .find_function_at_line(line_num, lines)
+                            .unwrap_or_default(),
                         line: line_num + 1,
                         column: 0,
                         code_context: trimmed.to_string(),
@@ -924,7 +989,11 @@ impl MemoryTracker {
     }
 
     /// Detect C/C++ memory leaks
-    fn detect_c_cpp_memory_leaks(&self, lines: &[&str], file: &FileInfo) -> Result<Vec<MemoryLeakCandidate>> {
+    fn detect_c_cpp_memory_leaks(
+        &self,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<MemoryLeakCandidate>> {
         let mut candidates = Vec::new();
         let mut allocations = HashSet::new();
         let mut deallocations = HashSet::new();
@@ -933,7 +1002,8 @@ impl MemoryTracker {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            if trimmed.contains("malloc") || trimmed.contains("calloc") || trimmed.contains("new ") {
+            if trimmed.contains("malloc") || trimmed.contains("calloc") || trimmed.contains("new ")
+            {
                 allocations.insert(line_num);
             }
 
@@ -950,13 +1020,15 @@ impl MemoryTracker {
                         id: format!("CPP_LEAK_{}_{}", file.path.display(), alloc_line),
                         allocation_site: AllocationLocation {
                             file: file.path.display().to_string(),
-                            function: self.find_function_at_line(alloc_line, lines).unwrap_or_default(),
+                            function: self
+                                .find_function_at_line(alloc_line, lines)
+                                .unwrap_or_default(),
                             line: alloc_line + 1,
                             column: 0,
                             code_context: lines[alloc_line].trim().to_string(),
                         },
                         leak_type: LeakType::PossibleLeak,
-                        confidence: 0.5, // Low confidence without flow analysis
+                        confidence: 0.5,    // Low confidence without flow analysis
                         leaked_bytes: 4096, // Estimate
                         age: std::time::Duration::from_secs(0),
                         call_stack: vec![format!("{}:{}", file.path.display(), alloc_line + 1)],
@@ -973,19 +1045,27 @@ impl MemoryTracker {
     }
 
     /// Detect Python memory leaks
-    fn detect_python_memory_leaks(&self, lines: &[&str], file: &FileInfo) -> Result<Vec<MemoryLeakCandidate>> {
+    fn detect_python_memory_leaks(
+        &self,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<MemoryLeakCandidate>> {
         let mut candidates = Vec::new();
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
             // Circular references
-            if trimmed.contains("self.") && (trimmed.contains("parent") || trimmed.contains("child")) {
+            if trimmed.contains("self.")
+                && (trimmed.contains("parent") || trimmed.contains("child"))
+            {
                 candidates.push(MemoryLeakCandidate {
                     id: format!("PYTHON_LEAK_CIRCULAR_{}_{}", file.path.display(), line_num),
                     allocation_site: AllocationLocation {
                         file: file.path.display().to_string(),
-                        function: self.find_function_at_line(line_num, lines).unwrap_or_default(),
+                        function: self
+                            .find_function_at_line(line_num, lines)
+                            .unwrap_or_default(),
                         line: line_num + 1,
                         column: 0,
                         code_context: trimmed.to_string(),
@@ -1007,19 +1087,27 @@ impl MemoryTracker {
     }
 
     /// Detect JavaScript memory leaks
-    fn detect_js_memory_leaks(&self, lines: &[&str], file: &FileInfo) -> Result<Vec<MemoryLeakCandidate>> {
+    fn detect_js_memory_leaks(
+        &self,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<MemoryLeakCandidate>> {
         let mut candidates = Vec::new();
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
             // Event listeners without cleanup
-            if trimmed.contains("addEventListener") && !self.has_corresponding_remove_listener(line_num, lines) {
+            if trimmed.contains("addEventListener")
+                && !self.has_corresponding_remove_listener(line_num, lines)
+            {
                 candidates.push(MemoryLeakCandidate {
                     id: format!("JS_LEAK_LISTENER_{}_{}", file.path.display(), line_num),
                     allocation_site: AllocationLocation {
                         file: file.path.display().to_string(),
-                        function: self.find_function_at_line(line_num, lines).unwrap_or_default(),
+                        function: self
+                            .find_function_at_line(line_num, lines)
+                            .unwrap_or_default(),
                         line: line_num + 1,
                         column: 0,
                         code_context: trimmed.to_string(),
@@ -1042,7 +1130,9 @@ impl MemoryTracker {
                     id: format!("JS_LEAK_CLOSURE_{}_{}", file.path.display(), line_num),
                     allocation_site: AllocationLocation {
                         file: file.path.display().to_string(),
-                        function: self.find_function_at_line(line_num, lines).unwrap_or_default(),
+                        function: self
+                            .find_function_at_line(line_num, lines)
+                            .unwrap_or_default(),
                         line: line_num + 1,
                         column: 0,
                         code_context: trimmed.to_string(),
@@ -1064,7 +1154,11 @@ impl MemoryTracker {
     }
 
     /// Generic memory leak detection
-    fn detect_generic_memory_leaks(&self, lines: &[&str], file: &FileInfo) -> Result<Vec<MemoryLeakCandidate>> {
+    fn detect_generic_memory_leaks(
+        &self,
+        lines: &[&str],
+        file: &FileInfo,
+    ) -> Result<Vec<MemoryLeakCandidate>> {
         let mut candidates = Vec::new();
 
         // Simple heuristic: look for allocation without corresponding cleanup
@@ -1078,7 +1172,11 @@ impl MemoryTracker {
                 allocation_lines.push(line_num);
             }
 
-            if lower.contains("free") || lower.contains("delete") || lower.contains("close") || lower.contains("cleanup") {
+            if lower.contains("free")
+                || lower.contains("delete")
+                || lower.contains("close")
+                || lower.contains("cleanup")
+            {
                 cleanup_lines.push(line_num);
             }
         }
@@ -1091,13 +1189,15 @@ impl MemoryTracker {
                         id: format!("GENERIC_LEAK_{}_{}", file.path.display(), alloc_line),
                         allocation_site: AllocationLocation {
                             file: file.path.display().to_string(),
-                            function: self.find_function_at_line(alloc_line, lines).unwrap_or_default(),
+                            function: self
+                                .find_function_at_line(alloc_line, lines)
+                                .unwrap_or_default(),
                             line: alloc_line + 1,
                             column: 0,
                             code_context: lines[alloc_line].trim().to_string(),
                         },
                         leak_type: LeakType::PossibleLeak,
-                        confidence: 0.3, // Low confidence for generic detection
+                        confidence: 0.3,    // Low confidence for generic detection
                         leaked_bytes: 1024, // Generic estimate
                         age: std::time::Duration::from_secs(0),
                         call_stack: vec![format!("{}:{}", file.path.display(), alloc_line + 1)],
@@ -1114,7 +1214,11 @@ impl MemoryTracker {
     }
 
     /// Analyze call stacks for allocation patterns
-    fn analyze_call_stacks(&self, content: &str, file: &FileInfo) -> Result<Vec<AllocationCallStack>> {
+    fn analyze_call_stacks(
+        &self,
+        content: &str,
+        file: &FileInfo,
+    ) -> Result<Vec<AllocationCallStack>> {
         let mut call_stacks = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -1132,7 +1236,9 @@ impl MemoryTracker {
                                 function: function_name,
                                 file: file.path.display().to_string(),
                                 line: i + 1,
-                                module: file.path.file_stem()
+                                module: file
+                                    .path
+                                    .file_stem()
                                     .and_then(|s| s.to_str())
                                     .unwrap_or("unknown")
                                     .to_string(),
@@ -1193,12 +1299,13 @@ impl MemoryTracker {
     }
 
     /// Analyze memory fragmentation
-    fn analyze_fragmentation(&self, hotspots: &[AllocationHotspot]) -> Result<FragmentationAnalysis> {
+    fn analyze_fragmentation(
+        &self,
+        hotspots: &[AllocationHotspot],
+    ) -> Result<FragmentationAnalysis> {
         // Simple fragmentation analysis based on allocation patterns
         let total_allocations = hotspots.len();
-        let small_allocations = hotspots.iter()
-            .filter(|h| h.average_size < 1024.0)
-            .count();
+        let small_allocations = hotspots.iter().filter(|h| h.average_size < 1024.0).count();
 
         let fragmentation_percentage = if total_allocations > 0 {
             (small_allocations as f64 / total_allocations as f64) * 100.0
@@ -1206,7 +1313,8 @@ impl MemoryTracker {
             0.0
         };
 
-        let fragmentation_hotspots = hotspots.iter()
+        let fragmentation_hotspots = hotspots
+            .iter()
             .filter(|h| h.frequency > 100 && h.average_size < 512.0)
             .map(|h| FragmentationHotspot {
                 region: MemoryRegion {
@@ -1226,8 +1334,8 @@ impl MemoryTracker {
 
         Ok(FragmentationAnalysis {
             fragmentation_percentage,
-            largest_free_block: 0, // Would need runtime tracking
-            free_block_count: 0,    // Would need runtime tracking
+            largest_free_block: 0,        // Would need runtime tracking
+            free_block_count: 0,          // Would need runtime tracking
             average_free_block_size: 0.0, // Would need runtime tracking
             fragmentation_hotspots,
         })
@@ -1242,9 +1350,12 @@ impl MemoryTracker {
         for i in start..line_num {
             if i < lines.len() {
                 let line = lines[i].trim().to_lowercase();
-                if line.starts_with("for ") || line.starts_with("while ") ||
-                   line.contains(" for ") || line.contains(" while ") ||
-                   line.starts_with("loop ") {
+                if line.starts_with("for ")
+                    || line.starts_with("while ")
+                    || line.contains(" for ")
+                    || line.contains(" while ")
+                    || line.starts_with("loop ")
+                {
                     return true;
                 }
             }
@@ -1259,8 +1370,11 @@ impl MemoryTracker {
         for i in start..line_num {
             if i < lines.len() {
                 let line = lines[i].trim().to_lowercase();
-                if line.starts_with("for ") || line.starts_with("while ") ||
-                   line.contains(" for ") || line.contains(" while ") {
+                if line.starts_with("for ")
+                    || line.starts_with("while ")
+                    || line.contains(" for ")
+                    || line.contains(" while ")
+                {
                     return true;
                 }
             }
@@ -1333,21 +1447,25 @@ impl MemoryTracker {
     /// Estimate allocation size based on pattern
     fn estimate_allocation_size(&self, pattern: &str) -> u64 {
         match pattern {
-            p if p.contains("Vec") => 1024,      // Vector with some capacity
-            p if p.contains("String") => 256,    // String with some content
-            p if p.contains("HashMap") => 2048,  // HashMap with some entries
-            p if p.contains("Box") => 64,        // Single boxed value
-            p if p.contains("malloc") => 4096,   // Generic malloc
-            p if p.contains("new") => 512,       // Generic new
-            _ => 1024,                           // Default estimate
+            p if p.contains("Vec") => 1024,     // Vector with some capacity
+            p if p.contains("String") => 256,   // String with some content
+            p if p.contains("HashMap") => 2048, // HashMap with some entries
+            p if p.contains("Box") => 64,       // Single boxed value
+            p if p.contains("malloc") => 4096,  // Generic malloc
+            p if p.contains("new") => 512,      // Generic new
+            _ => 1024,                          // Default estimate
         }
     }
 
     /// Check if line contains allocation pattern
     fn contains_allocation_pattern(&self, line: &str) -> bool {
         let lower = line.to_lowercase();
-        lower.contains("new") || lower.contains("alloc") || lower.contains("malloc") ||
-        lower.contains("vec!") || lower.contains("::new") || lower.contains("make(")
+        lower.contains("new")
+            || lower.contains("alloc")
+            || lower.contains("malloc")
+            || lower.contains("vec!")
+            || lower.contains("::new")
+            || lower.contains("make(")
     }
 
     /// Extract function call from line
@@ -1355,9 +1473,13 @@ impl MemoryTracker {
         // Look for function call patterns
         if let Some(pos) = line.find('(') {
             let before_paren = &line[..pos];
-            if let Some(last_word_start) = before_paren.rfind(|c: char| c.is_whitespace() || c == '.') {
+            if let Some(last_word_start) =
+                before_paren.rfind(|c: char| c.is_whitespace() || c == '.')
+            {
                 let func_name = before_paren[last_word_start + 1..].trim();
-                if !func_name.is_empty() && func_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                if !func_name.is_empty()
+                    && func_name.chars().all(|c| c.is_alphanumeric() || c == '_')
+                {
                     return Some(func_name.to_string());
                 }
             } else if !before_paren.trim().is_empty() {

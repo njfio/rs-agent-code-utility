@@ -3,8 +3,8 @@
 //! Supports loading configuration from JSON/YAML files with environment variable
 //! overrides and validation.
 
-use crate::ai::types::{AIProvider, AIFeature};
 use crate::ai::error::{AIError, AIResult};
+use crate::ai::types::{AIFeature, AIProvider};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -253,20 +253,18 @@ impl Default for ProviderConfig {
             api_key: Some("mock-key".to_string()),
             base_url: Some("https://api.mock.com/v1".to_string()),
             organization: None,
-            models: vec![
-                ModelConfig {
-                    name: "mock-model".to_string(),
-                    context_length: 4096,
-                    max_tokens: 2048,
-                    supports_streaming: false,
-                    cost_per_token: Some(0.0),
-                    supported_features: vec![
-                        crate::ai::types::AIFeature::CodeExplanation,
-                        crate::ai::types::AIFeature::SecurityAnalysis,
-                        crate::ai::types::AIFeature::RefactoringSuggestions,
-                    ],
-                }
-            ],
+            models: vec![ModelConfig {
+                name: "mock-model".to_string(),
+                context_length: 4096,
+                max_tokens: 2048,
+                supports_streaming: false,
+                cost_per_token: Some(0.0),
+                supported_features: vec![
+                    crate::ai::types::AIFeature::CodeExplanation,
+                    crate::ai::types::AIFeature::SecurityAnalysis,
+                    crate::ai::types::AIFeature::RefactoringSuggestions,
+                ],
+            }],
             default_model: "mock-model".to_string(),
             timeout: Duration::from_secs(30),
             rate_limit: RateLimitConfig::default(),
@@ -280,31 +278,34 @@ impl AIConfig {
     pub fn from_file<P: AsRef<Path>>(path: P) -> AIResult<Self> {
         let content = std::fs::read_to_string(path.as_ref())
             .map_err(|e| AIError::configuration(format!("Failed to read config file: {}", e)))?;
-        
-        let extension = path.as_ref()
+
+        let extension = path
+            .as_ref()
             .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("json");
-        
+
         match extension {
             "json" => Self::from_json(&content),
             "yaml" | "yml" => Self::from_yaml(&content),
-            _ => Err(AIError::configuration("Unsupported config file format. Use .json or .yaml")),
+            _ => Err(AIError::configuration(
+                "Unsupported config file format. Use .json or .yaml",
+            )),
         }
     }
-    
+
     /// Load configuration from JSON string
     pub fn from_json(json: &str) -> AIResult<Self> {
         serde_json::from_str(json)
             .map_err(|e| AIError::configuration(format!("Invalid JSON config: {}", e)))
     }
-    
+
     /// Load configuration from YAML string
     pub fn from_yaml(yaml: &str) -> AIResult<Self> {
         serde_yaml::from_str(yaml)
             .map_err(|e| AIError::configuration(format!("Invalid YAML config: {}", e)))
     }
-    
+
     /// Apply environment variable overrides
     pub fn with_env_overrides(mut self) -> Self {
         // Override API keys from environment
@@ -321,49 +322,52 @@ impl AIConfig {
                 }
             }
         }
-        
+
         // Override default provider
         if let Ok(provider) = std::env::var("AI_DEFAULT_PROVIDER") {
             if let Ok(provider) = provider.parse::<AIProvider>() {
                 self.default_provider = provider;
             }
         }
-        
+
         self
     }
-    
+
     /// Validate the configuration
     pub fn validate(&self) -> AIResult<()> {
         // Check that default provider is configured
         if !self.providers.contains_key(&self.default_provider) {
-            return Err(AIError::configuration(
-                format!("Default provider {:?} is not configured", self.default_provider)
-            ));
+            return Err(AIError::configuration(format!(
+                "Default provider {:?} is not configured",
+                self.default_provider
+            )));
         }
-        
+
         // Validate each provider configuration
         for (provider, config) in &self.providers {
             if config.enabled && config.api_key.is_none() && *provider != AIProvider::Local {
-                return Err(AIError::configuration(
-                    format!("Provider {:?} is enabled but has no API key", provider)
-                ));
+                return Err(AIError::configuration(format!(
+                    "Provider {:?} is enabled but has no API key",
+                    provider
+                )));
             }
-            
+
             if config.models.is_empty() {
-                return Err(AIError::configuration(
-                    format!("Provider {:?} has no models configured", provider)
-                ));
+                return Err(AIError::configuration(format!(
+                    "Provider {:?} has no models configured",
+                    provider
+                )));
             }
-            
+
             // Check that default model exists
             if !config.models.iter().any(|m| m.name == config.default_model) {
-                return Err(AIError::configuration(
-                    format!("Default model '{}' not found for provider {:?}", 
-                           config.default_model, provider)
-                ));
+                return Err(AIError::configuration(format!(
+                    "Default model '{}' not found for provider {:?}",
+                    config.default_model, provider
+                )));
             }
         }
-        
+
         Ok(())
     }
 }

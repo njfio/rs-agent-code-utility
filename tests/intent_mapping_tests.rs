@@ -63,7 +63,7 @@ fn create_sample_implementation() -> Implementation {
 #[test]
 fn test_intent_mapping_system_creation() {
     let system = IntentMappingSystem::new();
-    
+
     // Should start with empty collections
     assert_eq!(system.requirements().len(), 0);
     assert_eq!(system.implementations().len(), 0);
@@ -79,9 +79,9 @@ fn test_intent_mapping_system_with_config() {
         max_mapping_distance: 0.9,
         auto_validation_threshold: 0.95,
     };
-    
+
     let system = IntentMappingSystem::with_config(config.clone());
-    
+
     assert_eq!(system.config().confidence_threshold, 0.8);
     assert_eq!(system.config().auto_validation_threshold, 0.95);
 }
@@ -90,9 +90,9 @@ fn test_intent_mapping_system_with_config() {
 fn test_add_requirement() {
     let mut system = IntentMappingSystem::new();
     let requirement = create_sample_requirement();
-    
+
     system.add_requirement(requirement.clone());
-    
+
     assert_eq!(system.requirements().len(), 1);
     assert_eq!(system.requirements()[0].id, "REQ-001");
     assert_eq!(system.requirements()[0].description, requirement.description);
@@ -101,7 +101,7 @@ fn test_add_requirement() {
 #[test]
 fn test_add_multiple_requirements() {
     let mut system = IntentMappingSystem::new();
-    
+
     let req1 = Requirement {
         id: "REQ-001".to_string(),
         requirement_type: RequirementType::Functional,
@@ -112,7 +112,7 @@ fn test_add_multiple_requirements() {
         tags: vec![],
         status: RequirementStatus::Approved,
     };
-    
+
     let req2 = Requirement {
         id: "REQ-002".to_string(),
         requirement_type: RequirementType::UserStory,
@@ -123,9 +123,9 @@ fn test_add_multiple_requirements() {
         tags: vec![],
         status: RequirementStatus::Draft,
     };
-    
+
     system.add_requirements(vec![req1, req2]);
-    
+
     assert_eq!(system.requirements().len(), 2);
     assert_eq!(system.requirements()[0].id, "REQ-001");
     assert_eq!(system.requirements()[1].id, "REQ-002");
@@ -135,9 +135,9 @@ fn test_add_multiple_requirements() {
 fn test_keyword_extraction() {
     let system = IntentMappingSystem::new();
     let text = "User authentication system with login and logout functionality";
-    
+
     let keywords = system.extract_keywords_public(text);
-    
+
     // Should extract meaningful keywords and filter stop words
     assert!(keywords.contains(&"user".to_string()));
     assert!(keywords.contains(&"authentication".to_string()));
@@ -145,7 +145,7 @@ fn test_keyword_extraction() {
     assert!(keywords.contains(&"login".to_string()));
     assert!(keywords.contains(&"logout".to_string()));
     assert!(keywords.contains(&"functionality".to_string()));
-    
+
     // Should not contain stop words
     assert!(!keywords.contains(&"with".to_string()));
     assert!(!keywords.contains(&"and".to_string()));
@@ -154,12 +154,12 @@ fn test_keyword_extraction() {
 #[test]
 fn test_keyword_similarity_calculation() {
     let system = IntentMappingSystem::new();
-    
+
     let keywords1 = vec!["user".to_string(), "authentication".to_string(), "login".to_string()];
     let keywords2 = vec!["user".to_string(), "login".to_string(), "system".to_string()];
-    
+
     let similarity = system.calculate_keyword_similarity_public(&keywords1, &keywords2);
-    
+
     // Should calculate Jaccard similarity
     // Intersection: {user, login} = 2
     // Union: {user, authentication, login, system} = 4
@@ -171,9 +171,9 @@ fn test_keyword_similarity_calculation() {
 fn test_implementation_keyword_extraction() {
     let system = IntentMappingSystem::new();
     let implementation = create_sample_implementation();
-    
+
     let keywords = system.extract_implementation_keywords_public(&implementation);
-    
+
     // Should extract keywords from file name and code elements
     assert!(keywords.contains(&"auth".to_string()));
     assert!(keywords.contains(&"login".to_string()));
@@ -183,7 +183,7 @@ fn test_implementation_keyword_extraction() {
 #[test]
 fn test_pattern_matching() {
     let system = IntentMappingSystem::new();
-    
+
     let user_story = Requirement {
         id: "REQ-US-001".to_string(),
         requirement_type: RequirementType::UserStory,
@@ -194,7 +194,7 @@ fn test_pattern_matching() {
         tags: vec![],
         status: RequirementStatus::Approved,
     };
-    
+
     let api_impl = Implementation {
         id: "IMPL-API-001".to_string(),
         implementation_type: ImplementationType::API,
@@ -204,9 +204,9 @@ fn test_pattern_matching() {
         quality_metrics: QualityMetrics::default(),
         documentation: None,
     };
-    
+
     let pattern_score = system.calculate_pattern_match_public(&user_story, &api_impl);
-    
+
     // Should have some pattern match score for UserStory -> API
     assert!(pattern_score > 0.0);
 }
@@ -214,13 +214,13 @@ fn test_pattern_matching() {
 #[test]
 fn test_mapping_validation() {
     let mut system = IntentMappingSystem::new();
-    
+
     let requirement = create_sample_requirement();
     let implementation = create_sample_implementation();
-    
+
     system.add_requirement(requirement.clone());
     system.add_implementation(implementation.clone());
-    
+
     // Create a high-confidence mapping
     let mapping = rust_tree_sitter::intent_mapping::IntentMapping {
         id: "MAP-001".to_string(),
@@ -232,9 +232,9 @@ fn test_mapping_validation() {
         validation_status: ValidationStatus::NotValidated,
         last_updated: 0,
     };
-    
+
     let validation_result = system.validate_mapping_public(&mapping).unwrap();
-    
+
     // Should validate as valid due to high confidence and good quality metrics
     assert_eq!(validation_result, ValidationStatus::Valid);
 }
@@ -242,10 +242,10 @@ fn test_mapping_validation() {
 #[test]
 fn test_traceability_matrix_building() {
     let mut system = IntentMappingSystem::new();
-    
+
     let requirement = create_sample_requirement();
     let implementation = create_sample_implementation();
-    
+
     system.add_requirement(requirement.clone());
     system.add_implementation(implementation.clone());
 
@@ -260,7 +260,7 @@ fn test_traceability_matrix_building() {
         validation_status: ValidationStatus::Valid,
         last_updated: 0,
     });
-    
+
     system.build_traceability_matrix_public();
 
     // Should have forward and backward traceability
@@ -277,7 +277,7 @@ fn test_traceability_matrix_building() {
 #[test]
 fn test_gap_identification() {
     let mut system = IntentMappingSystem::new();
-    
+
     // Add requirement without implementation
     let orphaned_req = Requirement {
         id: "REQ-ORPHAN".to_string(),
@@ -289,7 +289,7 @@ fn test_gap_identification() {
         tags: vec![],
         status: RequirementStatus::Approved,
     };
-    
+
     // Add implementation without requirement
     let orphaned_impl = Implementation {
         id: "IMPL-ORPHAN".to_string(),
@@ -306,16 +306,16 @@ fn test_gap_identification() {
         },
         documentation: None,
     };
-    
+
     system.add_requirement(orphaned_req);
     system.add_implementation(orphaned_impl);
 
     system.build_traceability_matrix_public();
     let gaps = system.identify_gaps_public().unwrap();
-    
+
     // Should identify gaps
     assert!(gaps.len() >= 2); // At least missing implementation and test gap
-    
+
     let gap_types: Vec<_> = gaps.iter().map(|g| &g.gap_type).collect();
     assert!(gap_types.contains(&&GapType::MissingImplementation));
     assert!(gap_types.contains(&&GapType::MissingRequirement));
@@ -325,7 +325,7 @@ fn test_gap_identification() {
 #[test]
 fn test_recommendation_generation() {
     let system = IntentMappingSystem::new();
-    
+
     let gaps = vec![
         rust_tree_sitter::intent_mapping::MappingGap {
             gap_type: GapType::MissingImplementation,
@@ -342,11 +342,11 @@ fn test_recommendation_generation() {
             suggested_actions: vec![],
         },
     ];
-    
+
     let recommendations = system.generate_recommendations_public(&gaps).unwrap();
-    
+
     assert_eq!(recommendations.len(), 2);
-    
+
     let rec_types: Vec<_> = recommendations.iter().map(|r| &r.recommendation_type).collect();
     assert!(rec_types.contains(&&RecommendationType::CreateImplementation));
     assert!(rec_types.contains(&&RecommendationType::AddTests));
@@ -355,10 +355,10 @@ fn test_recommendation_generation() {
 #[test]
 fn test_traceability_report() {
     let mut system = IntentMappingSystem::new();
-    
+
     let requirement = create_sample_requirement();
     let implementation = create_sample_implementation();
-    
+
     system.add_requirement(requirement.clone());
     system.add_implementation(implementation.clone());
 
@@ -373,10 +373,10 @@ fn test_traceability_report() {
         validation_status: ValidationStatus::Valid,
         last_updated: 0,
     });
-    
+
     system.build_traceability_matrix_public();
     let report = system.get_traceability_report();
-    
+
     assert_eq!(report.forward_coverage, 1.0);
     assert_eq!(report.backward_coverage, 1.0);
     assert_eq!(report.orphaned_requirements.len(), 0);

@@ -1,5 +1,5 @@
 //! CLI error handling module
-//! 
+//!
 //! Provides structured error types for CLI operations with user-friendly messages.
 
 use std::fmt;
@@ -109,17 +109,14 @@ pub fn validate_path(path: &std::path::Path) -> CliResult<()> {
     if !path.exists() {
         return Err(CliError::InvalidPath(path.to_path_buf()));
     }
-    
+
     // Check if we can read the path
     if path.is_dir() {
-        std::fs::read_dir(path)
-            .map_err(CliError::Io)?
-            .next(); // Just check if we can start reading
+        std::fs::read_dir(path).map_err(CliError::Io)?.next(); // Just check if we can start reading
     } else {
-        std::fs::File::open(path)
-            .map_err(CliError::Io)?;
+        std::fs::File::open(path).map_err(CliError::Io)?;
     }
-    
+
     Ok(())
 }
 
@@ -134,9 +131,12 @@ pub fn validate_format(format: &str, valid_formats: &[&str]) -> CliResult<()> {
 /// Helper function to validate language
 pub fn validate_language(language: &str) -> CliResult<()> {
     use crate::supported_languages;
-    
+
     let supported = supported_languages();
-    if !supported.iter().any(|lang| lang.name.to_lowercase() == language.to_lowercase()) {
+    if !supported
+        .iter()
+        .any(|lang| lang.name.to_lowercase() == language.to_lowercase())
+    {
         return Err(CliError::UnsupportedLanguage(language.to_string()));
     }
     Ok(())

@@ -1,12 +1,12 @@
-use rust_tree_sitter::Error;
 use rust_tree_sitter::error::QueryErrorType;
+use rust_tree_sitter::Error;
 use std::path::PathBuf;
 
 /// Test language error creation
 #[test]
 fn test_language_error() {
     let error = Error::language_error("Rust", "parsing");
-    
+
     match &error {
         Error::LanguageError { details } => {
             assert_eq!(details.language_name, "Rust");
@@ -26,12 +26,15 @@ fn test_language_error() {
 #[test]
 fn test_language_error_with_cause() {
     let error = Error::language_error_with_cause("Python", "initialization", "library not found");
-    
+
     match &error {
         Error::LanguageError { details } => {
             assert_eq!(details.language_name, "Python");
             assert_eq!(details.operation, "initialization");
-            assert_eq!(details.underlying_error, Some("library not found".to_string()));
+            assert_eq!(
+                details.underlying_error,
+                Some("library not found".to_string())
+            );
         }
         _ => panic!("Expected LanguageError"),
     }
@@ -46,7 +49,7 @@ fn test_language_error_with_cause() {
 #[test]
 fn test_parse_error() {
     let error = Error::parse_error("syntax error");
-    
+
     match error {
         Error::ParseError { details } => {
             assert_eq!(details.error_kind, "syntax error");
@@ -70,7 +73,7 @@ fn test_parse_error_with_location() {
         "unexpected token",
         Some("let x = ;".to_string()),
     );
-    
+
     match error {
         Error::ParseError { details } => {
             assert_eq!(details.file_path, Some(file_path));
@@ -87,7 +90,7 @@ fn test_parse_error_with_location() {
 #[test]
 fn test_query_error() {
     let error = Error::query_error("(function_item)", "Rust", QueryErrorType::SyntaxError);
-    
+
     match error {
         Error::QueryError { details } => {
             assert_eq!(details.pattern, "(function_item)");
@@ -109,7 +112,7 @@ fn test_query_error_with_position() {
         QueryErrorType::SyntaxError,
         15, // position as usize, not tuple
     );
-    
+
     match error {
         Error::QueryError { details } => {
             assert_eq!(details.pattern, "(invalid_pattern");
@@ -126,7 +129,7 @@ fn test_query_error_with_position() {
 #[test]
 fn test_tree_error() {
     let error = Error::tree_error("navigation");
-    
+
     match error {
         Error::TreeError { details } => {
             assert_eq!(details.operation, "navigation");
@@ -145,11 +148,14 @@ fn test_tree_error_with_context() {
         Some((5, 10)),
         Some("Node not found at position".to_string()),
     );
-    
+
     match error {
         Error::TreeError { details } => {
             assert_eq!(details.operation, "node access");
-            assert_eq!(details.context, Some("Node not found at position".to_string()));
+            assert_eq!(
+                details.context,
+                Some("Node not found at position".to_string())
+            );
         }
         _ => panic!("Expected TreeError"),
     }
@@ -159,7 +165,7 @@ fn test_tree_error_with_context() {
 #[test]
 fn test_invalid_input_error() {
     let error = Error::invalid_input_error("file path", "existing file", "/nonexistent/path");
-    
+
     match error {
         Error::InvalidInput { details } => {
             assert_eq!(details.input_type, "file path");
@@ -180,13 +186,16 @@ fn test_invalid_input_with_suggestion() {
         "unknown_lang",
         "Try 'rust', 'python', or 'javascript'",
     );
-    
+
     match error {
         Error::InvalidInput { details } => {
             assert_eq!(details.input_type, "language");
             assert_eq!(details.expected, "supported language");
             assert_eq!(details.actual, "unknown_lang");
-            assert_eq!(details.suggestion, Some("Try 'rust', 'python', or 'javascript'".to_string()));
+            assert_eq!(
+                details.suggestion,
+                Some("Try 'rust', 'python', or 'javascript'".to_string())
+            );
         }
         _ => panic!("Expected InvalidInput"),
     }
@@ -196,9 +205,13 @@ fn test_invalid_input_with_suggestion() {
 #[test]
 fn test_not_supported_error() {
     let error = Error::not_supported_error("advanced feature", "not implemented yet");
-    
+
     match error {
-        Error::NotSupported { feature, reason, alternative } => {
+        Error::NotSupported {
+            feature,
+            reason,
+            alternative,
+        } => {
             assert_eq!(feature, "advanced feature");
             assert_eq!(reason, "not implemented yet");
             assert!(alternative.is_none());
@@ -210,14 +223,15 @@ fn test_not_supported_error() {
 /// Test not supported error with alternative
 #[test]
 fn test_not_supported_with_alternative() {
-    let error = Error::not_supported_with_alternative(
-        "feature X",
-        "deprecated",
-        "use feature Y instead",
-    );
-    
+    let error =
+        Error::not_supported_with_alternative("feature X", "deprecated", "use feature Y instead");
+
     match error {
-        Error::NotSupported { feature, reason, alternative } => {
+        Error::NotSupported {
+            feature,
+            reason,
+            alternative,
+        } => {
             assert_eq!(feature, "feature X");
             assert_eq!(reason, "deprecated");
             assert_eq!(alternative, Some("use feature Y instead".to_string()));
@@ -230,9 +244,13 @@ fn test_not_supported_with_alternative() {
 #[test]
 fn test_internal_error() {
     let error = Error::internal_error("parser", "unexpected state");
-    
+
     match error {
-        Error::Internal { component, message, context } => {
+        Error::Internal {
+            component,
+            message,
+            context,
+        } => {
             assert_eq!(component, "parser");
             assert_eq!(message, "unexpected state");
             assert!(context.is_none());
@@ -249,9 +267,13 @@ fn test_internal_error_with_context() {
         "failed to process",
         "while analyzing file.rs",
     );
-    
+
     match error {
-        Error::Internal { component, message, context } => {
+        Error::Internal {
+            component,
+            message,
+            context,
+        } => {
             assert_eq!(component, "analyzer");
             assert_eq!(message, "failed to process");
             assert_eq!(context, Some("while analyzing file.rs".to_string()));
@@ -265,7 +287,7 @@ fn test_internal_error_with_context() {
 fn test_io_error_conversion() {
     let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
     let error: Error = io_error.into();
-    
+
     match error {
         Error::IoError(_) => {
             // Success - converted correctly
@@ -280,7 +302,7 @@ fn test_utf8_error_conversion() {
     let invalid_utf8 = &[0xFF, 0xFE, 0xFD]; // Invalid UTF-8 bytes
     let utf8_error = std::str::from_utf8(invalid_utf8).unwrap_err();
     let error: Error = utf8_error.into();
-    
+
     match error {
         Error::Utf8Error(_) => {
             // Success - converted correctly

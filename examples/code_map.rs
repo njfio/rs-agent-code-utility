@@ -1,4 +1,4 @@
-use rust_tree_sitter::{CodebaseAnalyzer, build_call_graph, build_module_graph};
+use rust_tree_sitter::{build_call_graph, build_module_graph, CodebaseAnalyzer};
 use std::env;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

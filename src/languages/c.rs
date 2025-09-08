@@ -279,10 +279,11 @@ impl CSyntax {
 
         // Look for type specifiers before the function declarator
         let mut type_parts = Vec::new();
-        
+
         for child in node.children() {
             match child.kind() {
-                "primitive_type" | "type_identifier" | "struct_specifier" | "union_specifier" | "enum_specifier" => {
+                "primitive_type" | "type_identifier" | "struct_specifier" | "union_specifier"
+                | "enum_specifier" => {
                     if let Ok(type_text) = child.text() {
                         type_parts.push(type_text.to_string());
                     }
@@ -392,7 +393,10 @@ impl CSyntax {
     }
 
     /// Get all function definitions in a syntax tree with start and end positions
-    pub fn find_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
@@ -407,7 +411,10 @@ impl CSyntax {
     }
 
     /// Get all struct definitions in a syntax tree with start and end positions
-    pub fn find_structs(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_structs(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut structs = Vec::new();
         let struct_nodes = tree.find_nodes_by_kind("struct_specifier");
 
@@ -421,10 +428,11 @@ impl CSyntax {
         structs
     }
 
-
-
     /// Get all enum definitions in a syntax tree with start and end positions
-    pub fn find_enums(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_enums(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut enums = Vec::new();
         let enum_nodes = tree.find_nodes_by_kind("enum_specifier");
 
@@ -439,7 +447,10 @@ impl CSyntax {
     }
 
     /// Get all typedef definitions in a syntax tree with start and end positions
-    pub fn find_typedefs(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_typedefs(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut typedefs = Vec::new();
         let type_definition_nodes = tree.find_nodes_by_kind("type_definition");
 
@@ -456,7 +467,10 @@ impl CSyntax {
     }
 
     /// Get all macro definitions in a syntax tree with start and end positions
-    pub fn find_macros(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_macros(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut macros = Vec::new();
 
         // Find simple macro definitions (#define NAME value)
@@ -590,7 +604,10 @@ impl CSyntax {
         if !tree.find_nodes_by_kind("function_declarator").is_empty() {
             let function_declarators = tree.find_nodes_by_kind("function_declarator");
             for decl in function_declarators {
-                if decl.parent().map_or(false, |p| p.kind() == "pointer_declarator") {
+                if decl
+                    .parent()
+                    .map_or(false, |p| p.kind() == "pointer_declarator")
+                {
                     features.push("Function Pointers".to_string());
                     break;
                 }
@@ -631,7 +648,8 @@ impl CSyntax {
         }
 
         if !tree.find_nodes_by_kind("preproc_ifdef").is_empty()
-            || !tree.find_nodes_by_kind("preproc_if").is_empty() {
+            || !tree.find_nodes_by_kind("preproc_if").is_empty()
+        {
             features.push("Conditional Compilation".to_string());
         }
 
@@ -665,7 +683,10 @@ impl CSyntax {
         if malloc_calls > 0 && free_calls == 0 {
             issues.push("Memory allocated but no free() calls found".to_string());
         } else if malloc_calls != free_calls {
-            issues.push(format!("Potential memory leak: {} allocations, {} free calls", malloc_calls, free_calls));
+            issues.push(format!(
+                "Potential memory leak: {} allocations, {} free calls",
+                malloc_calls, free_calls
+            ));
         }
 
         // Check for array bounds (basic check)
@@ -713,7 +734,10 @@ impl CSyntax {
     }
 
     /// Find function pointer declarations in a syntax tree
-    pub fn find_function_pointers(tree: &SyntaxTree, _source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_function_pointers(
+        tree: &SyntaxTree,
+        _source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut function_pointers = Vec::new();
 
         // Look for function pointer typedefs
@@ -745,13 +769,18 @@ impl CSyntax {
                                                         let name_node = name_cursor.node();
                                                         if name_node.kind() == "type_identifier" {
                                                             if let Ok(name) = name_node.text() {
-                                                                if let Ok(signature) = typedef_node.text() {
-                                                                    let ts_node = typedef_node.inner();
+                                                                if let Ok(signature) =
+                                                                    typedef_node.text()
+                                                                {
+                                                                    let ts_node =
+                                                                        typedef_node.inner();
                                                                     function_pointers.push((
                                                                         name.to_string(),
-                                                                        signature.trim().to_string(),
+                                                                        signature
+                                                                            .trim()
+                                                                            .to_string(),
                                                                         ts_node.start_position(),
-                                                                        ts_node.end_position()
+                                                                        ts_node.end_position(),
                                                                     ));
                                                                 }
                                                             }
@@ -789,7 +818,10 @@ impl CSyntax {
     }
 
     /// Find union declarations in a syntax tree
-    pub fn find_unions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_unions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut unions = Vec::new();
         let union_nodes = tree.find_nodes_by_kind("union_specifier");
 
@@ -804,7 +836,10 @@ impl CSyntax {
     }
 
     /// Find bit field declarations in structs
-    pub fn find_bit_fields(tree: &SyntaxTree, source: &str) -> Vec<(String, String, u32, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_bit_fields(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, u32, tree_sitter::Point, tree_sitter::Point)> {
         let mut bit_fields = Vec::new();
         let struct_nodes = tree.find_nodes_by_kind("struct_specifier");
 
@@ -842,9 +877,14 @@ impl CSyntax {
                                                     if bit_cursor.goto_first_child() {
                                                         loop {
                                                             let bit_child = bit_cursor.node();
-                                                            if bit_child.kind() == "number_literal" {
-                                                                if let Ok(bits_text) = bit_child.text() {
-                                                                    if let Ok(bits) = bits_text.parse::<u32>() {
+                                                            if bit_child.kind() == "number_literal"
+                                                            {
+                                                                if let Ok(bits_text) =
+                                                                    bit_child.text()
+                                                                {
+                                                                    if let Ok(bits) =
+                                                                        bits_text.parse::<u32>()
+                                                                    {
                                                                         bit_count = bits;
                                                                     }
                                                                 }
@@ -869,7 +909,7 @@ impl CSyntax {
                                                 field_name,
                                                 bit_count,
                                                 ts_node.start_position(),
-                                                ts_node.end_position()
+                                                ts_node.end_position(),
                                             ));
                                         }
                                     }
@@ -892,7 +932,10 @@ impl CSyntax {
     }
 
     /// Find preprocessor macros in a syntax tree
-    pub fn find_preprocessor_macros(tree: &SyntaxTree, source: &str) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_preprocessor_macros(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, String, tree_sitter::Point, tree_sitter::Point)> {
         let mut macros = Vec::new();
 
         // Find #define directives
@@ -905,7 +948,7 @@ impl CSyntax {
                         name,
                         macro_text.trim().to_string(),
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -921,7 +964,7 @@ impl CSyntax {
                         name,
                         macro_text.trim().to_string(),
                         ts_node.start_position(),
-                        ts_node.end_position()
+                        ts_node.end_position(),
                     ));
                 }
             }
@@ -931,7 +974,10 @@ impl CSyntax {
     }
 
     /// Find static functions in a syntax tree
-    pub fn find_static_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_static_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut static_functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
@@ -970,7 +1016,10 @@ impl CSyntax {
     }
 
     /// Find inline functions in a syntax tree
-    pub fn find_inline_functions(tree: &SyntaxTree, source: &str) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
+    pub fn find_inline_functions(
+        tree: &SyntaxTree,
+        source: &str,
+    ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut inline_functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 
@@ -1036,7 +1085,8 @@ inline int calculate(int a, int b) {
         let functions = CSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
 
-        let function_names: Vec<&str> = functions.iter().map(|(name, _, _)| name.as_str()).collect();
+        let function_names: Vec<&str> =
+            functions.iter().map(|(name, _, _)| name.as_str()).collect();
         assert!(function_names.contains(&"main"));
         assert!(function_names.contains(&"helper_function"));
         assert!(function_names.contains(&"calculate"));
@@ -1086,8 +1136,6 @@ typedef struct {
 
         let parser = Parser::new(crate::Language::C).unwrap();
         let tree = parser.parse(source, None).unwrap();
-
-
 
         let typedefs = CSyntax::find_typedefs(&tree, source);
         assert!(typedefs.len() >= 3); // At least Integer, String, Point_t
@@ -1144,8 +1192,6 @@ enum Status {
         assert!(macro_names.contains(&"MIN"));
         assert!(macro_names.contains(&"DEBUG_PRINT"));
     }
-
-
 
     #[test]
     fn test_function_parameters() {
@@ -1282,7 +1328,9 @@ int main() {
 
         let issues = CSyntax::check_memory_patterns(&tree, source);
         assert!(!issues.is_empty());
-        assert!(issues.iter().any(|issue| issue.contains("allocations") && issue.contains("free calls")));
+        assert!(issues
+            .iter()
+            .any(|issue| issue.contains("allocations") && issue.contains("free calls")));
         assert!(issues.iter().any(|issue| issue.contains("Array access")));
     }
 }

@@ -1,5 +1,5 @@
-use rust_tree_sitter::cli::{Cli, Execute};
 use clap::Parser;
+use rust_tree_sitter::cli::{Cli, Execute};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
@@ -9,4 +9,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
-

@@ -1,7 +1,7 @@
 use assert_cmd::prelude::*;
+use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
-use std::fs;
 
 #[test]
 fn dependencies_emits_sbom_when_output_ends_with_sbom_json() {
@@ -14,6 +14,8 @@ fn dependencies_emits_sbom_when_output_ends_with_sbom_json() {
     cmd.assert().success();
 
     let content = fs::read_to_string(&out).expect("sbom file written");
-    assert!(content.contains("CycloneDX"), "SBOM must contain CycloneDX header");
+    assert!(
+        content.contains("CycloneDX"),
+        "SBOM must contain CycloneDX header"
+    );
 }
-

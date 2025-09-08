@@ -84,22 +84,22 @@
 //! # }
 //! ```
 
+use crate::advanced_security::{AdvancedSecurityAnalyzer, SecurityVulnerability};
 use crate::error::{Error, Result};
+use crate::file_cache::FileCache;
 use crate::languages::Language;
 use crate::parser::Parser;
-use crate::advanced_security::{AdvancedSecurityAnalyzer, SecurityVulnerability};
 use crate::semantic_graph::SemanticGraphQuery;
-use crate::file_cache::FileCache;
 
 use crate::tree::SyntaxTree;
+use ignore::WalkBuilder;
+use rayon::prelude::*;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use rayon::prelude::*;
-use ignore::WalkBuilder;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Depth level for analysis
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -166,21 +166,36 @@ impl Default for AnalysisConfig {
             max_file_size: Some(1024 * 1024), // 1MB default
             include_extensions: None,
             exclude_extensions: vec![
-                "exe".to_string(), "bin".to_string(), "so".to_string(), "dll".to_string(),
-                "png".to_string(), "jpg".to_string(), "jpeg".to_string(), "gif".to_string(),
-                "pdf".to_string(), "zip".to_string(), "tar".to_string(), "gz".to_string(),
+                "exe".to_string(),
+                "bin".to_string(),
+                "so".to_string(),
+                "dll".to_string(),
+                "png".to_string(),
+                "jpg".to_string(),
+                "jpeg".to_string(),
+                "gif".to_string(),
+                "pdf".to_string(),
+                "zip".to_string(),
+                "tar".to_string(),
+                "gz".to_string(),
             ],
             exclude_dirs: vec![
-                ".git".to_string(), "node_modules".to_string(), "target".to_string(),
-                ".vscode".to_string(), ".idea".to_string(), "build".to_string(),
-                "dist".to_string(), "__pycache__".to_string(), ".pytest_cache".to_string(),
+                ".git".to_string(),
+                "node_modules".to_string(),
+                "target".to_string(),
+                ".vscode".to_string(),
+                ".idea".to_string(),
+                "build".to_string(),
+                "dist".to_string(),
+                "__pycache__".to_string(),
+                ".pytest_cache".to_string(),
             ],
             follow_symlinks: false,
             max_depth: Some(20),
             include_hidden: false,
             depth: AnalysisDepth::Full,
             enable_parallel: true,
-            thread_count: None, // Auto-detect
+            thread_count: None,     // Auto-detect
             parallel_threshold: 10, // Enable parallel processing for 10+ files
             enable_security: false,
         }
@@ -306,8 +321,15 @@ impl CodebaseAnalyzer {
             let parser = Parser::new(language)?;
             self.parsers.insert(language, parser);
         }
-        self.parsers.get(&language)
-            .ok_or_else(|| Error::internal_error("analyzer", format!("Parser for {} should exist after insertion", language.name())))
+        self.parsers.get(&language).ok_or_else(|| {
+            Error::internal_error(
+                "analyzer",
+                format!(
+                    "Parser for {} should exist after insertion",
+                    language.name()
+                ),
+            )
+        })
     }
 
     /// Analyze a single file and return structured results
@@ -315,11 +337,19 @@ impl CodebaseAnalyzer {
         let file_path = file_path.as_ref();
 
         if !file_path.exists() {
-            return Err(Error::invalid_input_error("file path", &file_path.display().to_string(), "existing file"));
+            return Err(Error::invalid_input_error(
+                "file path",
+                &file_path.display().to_string(),
+                "existing file",
+            ));
         }
 
         if !file_path.is_file() {
-            return Err(Error::invalid_input_error("path type", &file_path.display().to_string(), "file (not directory)"));
+            return Err(Error::invalid_input_error(
+                "path type",
+                &file_path.display().to_string(),
+                "file (not directory)",
+            ));
         }
 
         let mut result = AnalysisResult::new();
@@ -336,11 +366,19 @@ impl CodebaseAnalyzer {
         let root_path = path.as_ref().to_path_buf();
 
         if !root_path.exists() {
-            return Err(Error::invalid_input_error("directory path", &root_path.display().to_string(), "existing directory"));
+            return Err(Error::invalid_input_error(
+                "directory path",
+                &root_path.display().to_string(),
+                "existing directory",
+            ));
         }
 
         if !root_path.is_dir() {
-            return Err(Error::invalid_input_error("path type", &root_path.display().to_string(), "directory (not file)"));
+            return Err(Error::invalid_input_error(
+                "path type",
+                &root_path.display().to_string(),
+                "directory (not file)",
+            ));
         }
 
         // First, collect all files to analyze (respect .gitignore and common ignores)
@@ -424,13 +462,22 @@ impl CodebaseAnalyzer {
     }
 
     /// Analyze directory using parallel processing
-    fn analyze_directory_parallel(&self, root_path: PathBuf, file_paths: Vec<PathBuf>) -> Result<AnalysisResult> {
+    fn analyze_directory_parallel(
+        &self,
+        root_path: PathBuf,
+        file_paths: Vec<PathBuf>,
+    ) -> Result<AnalysisResult> {
         // Set up thread pool if custom thread count is specified
         if let Some(thread_count) = self.config.thread_count {
             rayon::ThreadPoolBuilder::new()
                 .num_threads(thread_count)
                 .build_global()
-                .map_err(|e| Error::internal_error("thread_pool", format!("Failed to set thread count: {}", e)))?;
+                .map_err(|e| {
+                    Error::internal_error(
+                        "thread_pool",
+                        format!("Failed to set thread count: {}", e),
+                    )
+                })?;
         }
 
         // Shared result structure protected by mutex
@@ -453,7 +500,11 @@ impl CodebaseAnalyzer {
                     Ok(Some(file_info)) => Some(file_info),
                     Ok(None) => None, // File was skipped
                     Err(e) => {
-                        eprintln!("Warning: Failed to analyze file {}: {}", file_path.display(), e);
+                        eprintln!(
+                            "Warning: Failed to analyze file {}: {}",
+                            file_path.display(),
+                            e
+                        );
                         None
                     }
                 }
@@ -461,8 +512,12 @@ impl CodebaseAnalyzer {
             .collect();
 
         // Aggregate results
-        let mut final_result = result.lock()
-            .map_err(|e| crate::error::Error::internal_error("analyzer", format!("Failed to acquire lock for result aggregation: {}", e)))?;
+        let mut final_result = result.lock().map_err(|e| {
+            crate::error::Error::internal_error(
+                "analyzer",
+                format!("Failed to acquire lock for result aggregation: {}", e),
+            )
+        })?;
         for file_info in file_infos {
             final_result.total_files += 1;
             final_result.total_lines += file_info.lines;
@@ -473,7 +528,10 @@ impl CodebaseAnalyzer {
                 final_result.error_files += 1;
             }
 
-            *final_result.languages.entry(file_info.language.clone()).or_insert(0) += 1;
+            *final_result
+                .languages
+                .entry(file_info.language.clone())
+                .or_insert(0) += 1;
             final_result.files.push(file_info);
         }
 
@@ -484,13 +542,16 @@ impl CodebaseAnalyzer {
         if self.semantic_graph.is_some() {
             // Note: Semantic graph building is kept sequential for now
             // as it requires complex coordination between threads
-            eprintln!("Note: Semantic graph building is performed sequentially even in parallel mode");
+            eprintln!(
+                "Note: Semantic graph building is performed sequentially even in parallel mode"
+            );
         }
 
         Ok(result)
     }
 
     /// Collect all files to be analyzed recursively
+    #[allow(dead_code)]
     fn collect_files_recursive(
         &self,
         current_path: &Path,
@@ -505,11 +566,21 @@ impl CodebaseAnalyzer {
             }
         }
 
-        let entries = fs::read_dir(current_path)
-            .map_err(|e| Error::internal_error_with_context("file_system", format!("Failed to read directory: {}", e), current_path.display().to_string()))?;
+        let entries = fs::read_dir(current_path).map_err(|e| {
+            Error::internal_error_with_context(
+                "file_system",
+                format!("Failed to read directory: {}", e),
+                current_path.display().to_string(),
+            )
+        })?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| Error::internal_error("file_system", format!("Failed to read directory entry: {}", e)))?;
+            let entry = entry.map_err(|e| {
+                Error::internal_error(
+                    "file_system",
+                    format!("Failed to read directory entry: {}", e),
+                )
+            })?;
             let path = entry.path();
 
             // Skip hidden files/directories if not included
@@ -555,11 +626,21 @@ impl CodebaseAnalyzer {
             }
         }
 
-        let entries = fs::read_dir(current_path)
-            .map_err(|e| Error::internal_error_with_context("file_system", format!("Failed to read directory: {}", e), current_path.display().to_string()))?;
+        let entries = fs::read_dir(current_path).map_err(|e| {
+            Error::internal_error_with_context(
+                "file_system",
+                format!("Failed to read directory: {}", e),
+                current_path.display().to_string(),
+            )
+        })?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| Error::internal_error("file_system", format!("Failed to read directory entry: {}", e)))?;
+            let entry = entry.map_err(|e| {
+                Error::internal_error(
+                    "file_system",
+                    format!("Failed to read directory entry: {}", e),
+                )
+            })?;
             let path = entry.path();
 
             // Skip hidden files/directories if not included
@@ -593,9 +674,14 @@ impl CodebaseAnalyzer {
     }
 
     /// Analyze a single file in standalone mode (for parallel processing)
-    fn analyze_file_standalone(&self, file_path: &Path, root_path: &Path) -> Result<Option<FileInfo>> {
+    fn analyze_file_standalone(
+        &self,
+        file_path: &Path,
+        root_path: &Path,
+    ) -> Result<Option<FileInfo>> {
         // Get file extension
-        let extension = file_path.extension()
+        let extension = file_path
+            .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("")
             .to_lowercase();
@@ -633,7 +719,8 @@ impl CodebaseAnalyzer {
         let line_count = content.lines().count();
 
         // Get relative path
-        let relative_path = file_path.strip_prefix(root_path)
+        let relative_path = file_path
+            .strip_prefix(root_path)
             .unwrap_or(file_path)
             .to_path_buf();
 
@@ -691,7 +778,9 @@ impl CodebaseAnalyzer {
                 }
 
                 // Perform security analysis for Deep and Full depth if enabled
-                if self.config.enable_security && matches!(self.config.depth, AnalysisDepth::Deep | AnalysisDepth::Full) {
+                if self.config.enable_security
+                    && matches!(self.config.depth, AnalysisDepth::Deep | AnalysisDepth::Full)
+                {
                     // Create a temporary FileInfo for security analysis with full path
                     let temp_file_info = FileInfo {
                         path: file_path.to_path_buf(), // Use full path for security analysis
@@ -705,8 +794,12 @@ impl CodebaseAnalyzer {
                     };
 
                     // Create a new security analyzer for this thread
-                    let security_analyzer = AdvancedSecurityAnalyzer::new()
-                        .map_err(|e| Error::internal_error("security_analyzer", format!("Failed to create security analyzer: {}", e)))?;
+                    let security_analyzer = AdvancedSecurityAnalyzer::new().map_err(|e| {
+                        Error::internal_error(
+                            "security_analyzer",
+                            format!("Failed to create security analyzer: {}", e),
+                        )
+                    })?;
 
                     match security_analyzer.detect_owasp_vulnerabilities(&temp_file_info) {
                         Ok(vulnerabilities) => {
@@ -718,7 +811,11 @@ impl CodebaseAnalyzer {
                             file_info.security_vulnerabilities = updated_vulnerabilities;
                         }
                         Err(e) => {
-                            eprintln!("Warning: Security analysis failed for {}: {}", file_path.display(), e);
+                            eprintln!(
+                                "Warning: Security analysis failed for {}: {}",
+                                file_path.display(),
+                                e
+                            );
                         }
                     }
                 }
@@ -732,9 +829,15 @@ impl CodebaseAnalyzer {
     }
 
     /// Analyze a single file (internal method)
-    fn analyze_file_internal(&mut self, file_path: &Path, root_path: &Path, result: &mut AnalysisResult) -> Result<()> {
+    fn analyze_file_internal(
+        &mut self,
+        file_path: &Path,
+        root_path: &Path,
+        result: &mut AnalysisResult,
+    ) -> Result<()> {
         // Get file extension
-        let extension = file_path.extension()
+        let extension = file_path
+            .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("")
             .to_lowercase();
@@ -760,7 +863,7 @@ impl CodebaseAnalyzer {
         // Check file size
         let metadata = fs::metadata(file_path)?;
         let file_size = metadata.len() as usize;
-        
+
         if let Some(max_size) = self.config.max_file_size {
             if file_size > max_size {
                 return Ok(()); // Skip large files
@@ -772,7 +875,8 @@ impl CodebaseAnalyzer {
         let line_count = content.lines().count();
 
         // Get relative path
-        let relative_path = file_path.strip_prefix(root_path)
+        let relative_path = file_path
+            .strip_prefix(root_path)
             .unwrap_or(file_path)
             .to_path_buf();
 
@@ -837,7 +941,9 @@ impl CodebaseAnalyzer {
                 }
 
                 // Perform security analysis for Deep and Full depth if enabled
-                if self.config.enable_security && matches!(self.config.depth, AnalysisDepth::Deep | AnalysisDepth::Full) {
+                if self.config.enable_security
+                    && matches!(self.config.depth, AnalysisDepth::Deep | AnalysisDepth::Full)
+                {
                     // Create a temporary FileInfo for security analysis with full path
                     let temp_file_info = FileInfo {
                         path: file_path.to_path_buf(), // Use full path for security analysis
@@ -850,7 +956,10 @@ impl CodebaseAnalyzer {
                         security_vulnerabilities: Vec::new(),
                     };
 
-                    match self.security_analyzer.detect_owasp_vulnerabilities(&temp_file_info) {
+                    match self
+                        .security_analyzer
+                        .detect_owasp_vulnerabilities(&temp_file_info)
+                    {
                         Ok(vulnerabilities) => {
                             // Update the vulnerabilities to use relative paths for consistency
                             let mut updated_vulnerabilities = vulnerabilities;
@@ -860,7 +969,11 @@ impl CodebaseAnalyzer {
                             file_info.security_vulnerabilities = updated_vulnerabilities;
                         }
                         Err(e) => {
-                            eprintln!("Warning: Security analysis failed for {}: {}", file_path.display(), e);
+                            eprintln!(
+                                "Warning: Security analysis failed for {}: {}",
+                                file_path.display(),
+                                e
+                            );
                         }
                     }
                 }
@@ -876,7 +989,12 @@ impl CodebaseAnalyzer {
     }
 
     /// Extract symbols from a syntax tree
-    fn extract_symbols(&self, tree: &SyntaxTree, content: &str, language: Language) -> Result<Vec<Symbol>> {
+    fn extract_symbols(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        language: Language,
+    ) -> Result<Vec<Symbol>> {
         let mut symbols = Vec::new();
 
         match language {
@@ -901,13 +1019,22 @@ impl CodebaseAnalyzer {
     }
 
     /// Extract Rust symbols
-    fn extract_rust_symbols(&self, tree: &SyntaxTree, content: &str, symbols: &mut Vec<Symbol>) -> Result<()> {
+    fn extract_rust_symbols(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
         // Extract functions
         let functions = tree.find_nodes_by_kind("function_item");
         for func in functions {
             if let Some(name_node) = func.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let visibility = if func.children().iter().any(|child| child.kind() == "visibility_modifier") {
+                    let visibility = if func
+                        .children()
+                        .iter()
+                        .any(|child| child.kind() == "visibility_modifier")
+                    {
                         "public"
                     } else {
                         "private"
@@ -934,12 +1061,16 @@ impl CodebaseAnalyzer {
         for struct_node in structs {
             if let Some(name_node) = struct_node.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let visibility = if struct_node.children().iter().any(|child| child.kind() == "visibility_modifier") {
+                    let visibility = if struct_node
+                        .children()
+                        .iter()
+                        .any(|child| child.kind() == "visibility_modifier")
+                    {
                         "public"
                     } else {
                         "private"
                     };
-                    
+
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "struct".to_string(),
@@ -959,7 +1090,11 @@ impl CodebaseAnalyzer {
         for enum_node in enums {
             if let Some(name_node) = enum_node.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let visibility = if enum_node.children().iter().any(|child| child.kind() == "visibility_modifier") {
+                    let visibility = if enum_node
+                        .children()
+                        .iter()
+                        .any(|child| child.kind() == "visibility_modifier")
+                    {
                         "public"
                     } else {
                         "private"
@@ -1015,7 +1150,13 @@ impl CodebaseAnalyzer {
                 .get(0)
                 .and_then(|n| n.text().ok())
                 .map(|s| s.to_string())
-                .unwrap_or_else(|| format!("var@{}:{}", let_node.start_position().row + 1, let_node.start_position().column));
+                .unwrap_or_else(|| {
+                    format!(
+                        "var@{}:{}",
+                        let_node.start_position().row + 1,
+                        let_node.start_position().column
+                    )
+                });
 
             symbols.push(Symbol {
                 name,
@@ -1033,7 +1174,12 @@ impl CodebaseAnalyzer {
     }
 
     /// Extract JavaScript symbols
-    fn extract_javascript_symbols(&self, tree: &SyntaxTree, content: &str, symbols: &mut Vec<Symbol>) -> Result<()> {
+    fn extract_javascript_symbols(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
         // Extract function declarations
         let functions = tree.find_nodes_by_kind("function_declaration");
         for func in functions {
@@ -1063,7 +1209,10 @@ impl CodebaseAnalyzer {
                         if let Some(value_node) = child.child_by_field_name("value") {
                             if value_node.kind() == "arrow_function" {
                                 if let Ok(name) = name_node.text() {
-                                    let docs = self.extract_js_doc_comments(content, var_decl.start_position().row);
+                                    let docs = self.extract_js_doc_comments(
+                                        content,
+                                        var_decl.start_position().row,
+                                    );
                                     symbols.push(Symbol {
                                         name: name.to_string(),
                                         kind: "function".to_string(),
@@ -1126,13 +1275,22 @@ impl CodebaseAnalyzer {
     }
 
     /// Extract Python symbols
-    fn extract_python_symbols(&self, tree: &SyntaxTree, content: &str, symbols: &mut Vec<Symbol>) -> Result<()> {
+    fn extract_python_symbols(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
         // Extract function definitions
         let functions = tree.find_nodes_by_kind("function_definition");
         for func in functions {
             if let Some(name_node) = func.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let visibility = if name.starts_with('_') { "private" } else { "public" };
+                    let visibility = if name.starts_with('_') {
+                        "private"
+                    } else {
+                        "public"
+                    };
                     let docs = self.extract_python_docstring(content, &func);
 
                     symbols.push(Symbol {
@@ -1154,7 +1312,11 @@ impl CodebaseAnalyzer {
         for class in classes {
             if let Some(name_node) = class.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let visibility = if name.starts_with('_') { "private" } else { "public" };
+                    let visibility = if name.starts_with('_') {
+                        "private"
+                    } else {
+                        "public"
+                    };
                     let docs = self.extract_python_docstring(content, &class);
 
                     symbols.push(Symbol {
@@ -1178,8 +1340,15 @@ impl CodebaseAnalyzer {
                 if left.kind() == "identifier" {
                     if let Ok(name) = left.text() {
                         // Only include if it looks like a constant (ALL_CAPS)
-                        if name.chars().all(|c| c.is_uppercase() || c == '_' || c.is_numeric()) {
-                            let visibility = if name.starts_with('_') { "private" } else { "public" };
+                        if name
+                            .chars()
+                            .all(|c| c.is_uppercase() || c == '_' || c.is_numeric())
+                        {
+                            let visibility = if name.starts_with('_') {
+                                "private"
+                            } else {
+                                "public"
+                            };
                             symbols.push(Symbol {
                                 name: name.to_string(),
                                 kind: "constant".to_string(),
@@ -1200,16 +1369,25 @@ impl CodebaseAnalyzer {
     }
 
     /// Extract C/C++ symbols
-    fn extract_c_symbols(&self, tree: &SyntaxTree, content: &str, symbols: &mut Vec<Symbol>) -> Result<()> {
+    fn extract_c_symbols(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
         // Extract function definitions
         let functions = tree.find_nodes_by_kind("function_definition");
         for func in functions {
             if let Some(declarator) = func.child_by_field_name("declarator") {
-                if let Some(func_declarator) = declarator.children().iter()
-                    .find(|child| child.kind() == "function_declarator") {
+                if let Some(func_declarator) = declarator
+                    .children()
+                    .iter()
+                    .find(|child| child.kind() == "function_declarator")
+                {
                     if let Some(name_node) = func_declarator.child_by_field_name("declarator") {
                         if let Ok(name) = name_node.text() {
-                            let docs = self.extract_c_doc_comments(content, func.start_position().row);
+                            let docs =
+                                self.extract_c_doc_comments(content, func.start_position().row);
                             symbols.push(Symbol {
                                 name: name.to_string(),
                                 kind: "function".to_string(),
@@ -1231,7 +1409,8 @@ impl CodebaseAnalyzer {
         for struct_node in structs {
             if let Some(name_node) = struct_node.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let docs = self.extract_c_doc_comments(content, struct_node.start_position().row);
+                    let docs =
+                        self.extract_c_doc_comments(content, struct_node.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "struct".to_string(),
@@ -1271,7 +1450,8 @@ impl CodebaseAnalyzer {
         for typedef_node in typedefs {
             if let Some(declarator) = typedef_node.child_by_field_name("declarator") {
                 if let Ok(name) = declarator.text() {
-                    let docs = self.extract_c_doc_comments(content, typedef_node.start_position().row);
+                    let docs =
+                        self.extract_c_doc_comments(content, typedef_node.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "typedef".to_string(),
@@ -1290,7 +1470,12 @@ impl CodebaseAnalyzer {
     }
 
     /// Extract Go symbols
-    fn extract_go_symbols(&self, tree: &SyntaxTree, _content: &str, symbols: &mut Vec<Symbol>) -> Result<()> {
+    fn extract_go_symbols(
+        &self,
+        tree: &SyntaxTree,
+        _content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
         // Extract function declarations
         let functions = tree.find_nodes_by_kind("function_declaration");
         for func in functions {
@@ -1652,31 +1837,39 @@ mod tests {
 
         // Create a Rust file
         let rust_file = temp_path.join("main.rs");
-        fs::write(&rust_file, r#"
+        fs::write(
+            &rust_file,
+            r#"
             /// Main entry point
             pub fn main() {
                 println!("Hello, world!");
             }
-            
+
             struct Point {
                 x: i32,
                 y: i32,
             }
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
 
         // Create a JavaScript file
         let js_file = temp_path.join("app.js");
-        fs::write(&js_file, r#"
+        fs::write(
+            &js_file,
+            r#"
             function greet(name) {
                 console.log("Hello, " + name);
             }
-            
+
             class Calculator {
                 add(a, b) {
                     return a + b;
                 }
             }
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
 
         // Analyze the directory
         let mut analyzer = CodebaseAnalyzer::new().unwrap();
@@ -1689,13 +1882,28 @@ mod tests {
         assert!(result.languages.contains_key("JavaScript"));
 
         // Check that symbols were extracted
-        let rust_file_info = result.files.iter().find(|f| f.path.extension().unwrap() == "rs").unwrap();
+        let rust_file_info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "rs")
+            .unwrap();
         assert!(rust_file_info.symbols.len() > 0);
-        let main_symbol = rust_file_info.symbols.iter().find(|s| s.name == "main").unwrap();
+        let main_symbol = rust_file_info
+            .symbols
+            .iter()
+            .find(|s| s.name == "main")
+            .unwrap();
         assert_eq!(main_symbol.visibility, "public");
-        assert_eq!(main_symbol.documentation.as_deref(), Some("Main entry point"));
+        assert_eq!(
+            main_symbol.documentation.as_deref(),
+            Some("Main entry point")
+        );
 
-        let js_file_info = result.files.iter().find(|f| f.path.extension().unwrap() == "js").unwrap();
+        let js_file_info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "js")
+            .unwrap();
         assert!(js_file_info.symbols.len() > 0);
         assert!(js_file_info.symbols.iter().any(|s| s.name == "greet"));
     }

@@ -1,9 +1,9 @@
 //! Explain command implementation
 
-use std::path::PathBuf;
-use crate::cli::error::{CliResult, validate_path};
+use crate::cli::error::{validate_path, CliResult};
 use crate::cli::utils::create_progress_bar;
-use crate::{CodebaseAnalyzer, AIAnalyzer, AIConfig};
+use crate::{AIAnalyzer, AIConfig, CodebaseAnalyzer};
+use std::path::PathBuf;
 
 pub fn execute(
     path: &PathBuf,
@@ -31,7 +31,8 @@ pub fn execute(
         analyzer.analyze_file(analysis_path)
     } else {
         analyzer.analyze_directory(analysis_path)
-    }.map_err(|e| format!("Failed to analyze path: {}", e))?;
+    }
+    .map_err(|e| format!("Failed to analyze path: {}", e))?;
 
     pb.set_message("Generating AI explanations...");
 
@@ -66,13 +67,21 @@ pub fn execute(
     Ok(())
 }
 
-fn filter_by_symbol(result: &crate::AIAnalysisResult, symbol_name: &str) -> crate::AIAnalysisResult {
+fn filter_by_symbol(
+    result: &crate::AIAnalysisResult,
+    symbol_name: &str,
+) -> crate::AIAnalysisResult {
     let mut filtered_result = result.clone();
 
     // Filter symbol explanations to only include those with the specified symbol
-    filtered_result.symbol_explanations.retain(|symbol_explanation| {
-        symbol_explanation.name.to_lowercase().contains(&symbol_name.to_lowercase())
-    });
+    filtered_result
+        .symbol_explanations
+        .retain(|symbol_explanation| {
+            symbol_explanation
+                .name
+                .to_lowercase()
+                .contains(&symbol_name.to_lowercase())
+        });
 
     filtered_result
 }
@@ -91,7 +100,11 @@ fn display_json(result: &crate::AIAnalysisResult) -> CliResult<()> {
     Ok(())
 }
 
-fn display_markdown(result: &crate::AIAnalysisResult, detailed: bool, learning: bool) -> CliResult<()> {
+fn display_markdown(
+    result: &crate::AIAnalysisResult,
+    detailed: bool,
+    learning: bool,
+) -> CliResult<()> {
     println!("# Code Analysis Report\n");
 
     // Overall explanation
@@ -158,9 +171,9 @@ fn display_markdown(result: &crate::AIAnalysisResult, detailed: bool, learning: 
     if detailed && !result.symbol_explanations.is_empty() {
         println!("## Symbol Analysis\n");
         for symbol_explanation in &result.symbol_explanations {
-            println!("### {} ({})\n",
-                symbol_explanation.name,
-                symbol_explanation.symbol_type
+            println!(
+                "### {} ({})\n",
+                symbol_explanation.name, symbol_explanation.symbol_type
             );
             println!("**Purpose**: {}\n", symbol_explanation.purpose);
             println!("**Usage**: {}\n", symbol_explanation.usage);
@@ -174,7 +187,11 @@ fn display_markdown(result: &crate::AIAnalysisResult, detailed: bool, learning: 
     Ok(())
 }
 
-fn display_table(result: &crate::AIAnalysisResult, detailed: bool, learning: bool) -> CliResult<()> {
+fn display_table(
+    result: &crate::AIAnalysisResult,
+    detailed: bool,
+    learning: bool,
+) -> CliResult<()> {
     use colored::Colorize;
 
     // Overall explanation
@@ -182,7 +199,11 @@ fn display_table(result: &crate::AIAnalysisResult, detailed: bool, learning: boo
     println!("{}", "📋 Overall Analysis".blue().bold());
     println!("{}", "─".repeat(50).blue());
     println!("{}: {}", "Purpose".cyan().bold(), explanation.purpose);
-    println!("{}: {}\n", "Architecture".cyan().bold(), explanation.architecture);
+    println!(
+        "{}: {}\n",
+        "Architecture".cyan().bold(),
+        explanation.architecture
+    );
 
     if detailed {
         if !explanation.technologies.is_empty() {
@@ -219,7 +240,11 @@ fn display_table(result: &crate::AIAnalysisResult, detailed: bool, learning: boo
         println!("{}", "═".repeat(60).blue());
 
         for file_explanation in &result.file_explanations {
-            println!("\n{} {}", "📄".blue(), file_explanation.file_path.white().bold());
+            println!(
+                "\n{} {}",
+                "📄".blue(),
+                file_explanation.file_path.white().bold()
+            );
             println!("{}", "─".repeat(40).white());
             println!("{}: {}", "Purpose".cyan().bold(), file_explanation.purpose);
             println!("{}: {}", "Role".cyan().bold(), file_explanation.role);
@@ -249,13 +274,18 @@ fn display_table(result: &crate::AIAnalysisResult, detailed: bool, learning: boo
         println!("{}", "═".repeat(60).yellow());
 
         for symbol_explanation in &result.symbol_explanations {
-            println!("\n{} {} ({})",
+            println!(
+                "\n{} {} ({})",
                 "🔧".yellow(),
                 symbol_explanation.name.white().bold(),
                 symbol_explanation.symbol_type.magenta()
             );
             println!("{}", "─".repeat(40).white());
-            println!("{}: {}", "Purpose".cyan().bold(), symbol_explanation.purpose);
+            println!(
+                "{}: {}",
+                "Purpose".cyan().bold(),
+                symbol_explanation.purpose
+            );
             println!("{}: {}", "Usage".cyan().bold(), symbol_explanation.usage);
 
             if let Some(ref sig) = symbol_explanation.signature_explanation {

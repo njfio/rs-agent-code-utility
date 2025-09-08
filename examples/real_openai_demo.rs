@@ -1,17 +1,17 @@
-use rust_tree_sitter::ai::{AIServiceBuilder, AIFeature, AIRequest, AIResult};
+use rust_tree_sitter::ai::{AIFeature, AIRequest, AIResult, AIServiceBuilder};
 
 #[tokio::main]
 async fn main() -> AIResult<()> {
     println!("🚀 REAL OpenAI API Integration Demo");
     println!("===================================");
     println!("Using your OpenAI API key with real credits!");
-    
+
     // Initialize AI service with real OpenAI provider
     let ai_service = AIServiceBuilder::new()
         .with_config_file("ai_config.yaml")?
         .build()
         .await?;
-    
+
     // Real problematic Rust code for analysis
     let vulnerable_code = r#"
 use std::collections::HashMap;
@@ -101,11 +101,11 @@ impl WebServer {
     println!("==================================");
     println!("Lines of code: {}", vulnerable_code.lines().count());
     println!("Contains multiple REAL security vulnerabilities");
-    
+
     // 1. REAL SECURITY ANALYSIS WITH OPENAI
     println!("\n🔒 REAL Security Analysis with OpenAI GPT");
     println!("==========================================");
-    
+
     let security_request = AIRequest::new(
         AIFeature::SecurityAnalysis,
         format!(
@@ -130,10 +130,10 @@ impl WebServer {
             vulnerable_code
         ),
     );
-    
+
     println!("🌐 Making REAL API call to OpenAI...");
     let start_time = std::time::Instant::now();
-    
+
     match ai_service.process_request(security_request).await {
         Ok(response) => {
             let duration = start_time.elapsed();
@@ -141,26 +141,28 @@ impl WebServer {
             println!("=================================");
             println!("🤖 Model: {}", response.metadata.model_used);
             println!("⏱️  Processing time: {:?}", duration);
-            println!("🎯 Tokens used: {} total ({} prompt + {} completion)", 
+            println!(
+                "🎯 Tokens used: {} total ({} prompt + {} completion)",
                 response.token_usage.total_tokens,
                 response.token_usage.prompt_tokens,
-                response.token_usage.completion_tokens);
-            
+                response.token_usage.completion_tokens
+            );
+
             if let Some(cost) = response.token_usage.estimated_cost {
                 println!("💰 Estimated cost: ${:.6}", cost);
             }
-            
+
             println!("📦 Cached: {}", response.metadata.cached);
             println!("🆔 Request ID: {}", response.metadata.request_id);
-            
+
             println!("\n🛡️  REAL Security Analysis Results:");
             println!("===================================");
             println!("{}", response.content);
-            
+
             // Verify this is real by checking for specific vulnerability mentions
             let content_lower = response.content.to_lowercase();
             let mut found_vulns = Vec::new();
-            
+
             if content_lower.contains("sql") || content_lower.contains("injection") {
                 found_vulns.push("SQL Injection");
             }
@@ -173,23 +175,22 @@ impl WebServer {
             if content_lower.contains("password") || content_lower.contains("hardcoded") {
                 found_vulns.push("Hardcoded Credentials");
             }
-            
+
             println!("\n🎯 AI Successfully Identified:");
             for vuln in found_vulns {
                 println!("   ✅ {}", vuln);
             }
-            
         }
         Err(e) => {
             println!("❌ Security analysis failed: {}", e);
             return Err(e);
         }
     }
-    
+
     // 2. REAL CODE EXPLANATION
     println!("\n📚 REAL Code Explanation with OpenAI");
     println!("====================================");
-    
+
     let explanation_request = AIRequest::new(
         AIFeature::CodeExplanation,
         format!(
@@ -206,10 +207,10 @@ impl WebServer {
             vulnerable_code
         ),
     );
-    
+
     println!("🌐 Making second REAL API call...");
     let start_time = std::time::Instant::now();
-    
+
     match ai_service.process_request(explanation_request).await {
         Ok(response) => {
             let duration = start_time.elapsed();
@@ -219,7 +220,7 @@ impl WebServer {
             println!("⏱️  Processing time: {:?}", duration);
             println!("🎯 Tokens used: {}", response.token_usage.total_tokens);
             println!("📦 Cached: {}", response.metadata.cached);
-            
+
             println!("\n📖 REAL Code Explanation:");
             println!("=========================");
             println!("{}", response.content);
@@ -228,11 +229,11 @@ impl WebServer {
             println!("❌ Code explanation failed: {}", e);
         }
     }
-    
+
     // 3. REAL REFACTORING SUGGESTIONS
     println!("\n🔧 REAL Refactoring Suggestions with OpenAI");
     println!("===========================================");
-    
+
     let refactor_request = AIRequest::new(
         AIFeature::RefactoringSuggestions,
         format!(
@@ -251,10 +252,10 @@ impl WebServer {
             vulnerable_code
         ),
     );
-    
+
     println!("🌐 Making third REAL API call...");
     let start_time = std::time::Instant::now();
-    
+
     match ai_service.process_request(refactor_request).await {
         Ok(response) => {
             let duration = start_time.elapsed();
@@ -264,7 +265,7 @@ impl WebServer {
             println!("⏱️  Processing time: {:?}", duration);
             println!("🎯 Tokens used: {}", response.token_usage.total_tokens);
             println!("📦 Cached: {}", response.metadata.cached);
-            
+
             println!("\n🔄 REAL Refactoring Recommendations:");
             println!("====================================");
             println!("{}", response.content);
@@ -273,17 +274,20 @@ impl WebServer {
             println!("❌ Refactoring analysis failed: {}", e);
         }
     }
-    
+
     // 4. CACHE TEST
     println!("\n⚡ Testing Cache Performance");
     println!("============================");
-    
+
     // Repeat the first request to test caching
     let cache_test_request = AIRequest::new(
         AIFeature::SecurityAnalysis,
-        format!("Please perform a security analysis of this code:\n\n{}", vulnerable_code),
+        format!(
+            "Please perform a security analysis of this code:\n\n{}",
+            vulnerable_code
+        ),
     );
-    
+
     let start_time = std::time::Instant::now();
     match ai_service.process_request(cache_test_request).await {
         Ok(response) => {
@@ -291,7 +295,7 @@ impl WebServer {
             println!("🚀 Cache Test Results:");
             println!("Response time: {:?}", duration);
             println!("Cached: {}", response.metadata.cached);
-            
+
             if response.metadata.cached {
                 println!("✅ CACHE HIT! Lightning-fast response from cache");
                 println!("💰 No additional API cost for cached response");
@@ -303,7 +307,7 @@ impl WebServer {
             println!("❌ Cache test failed: {}", e);
         }
     }
-    
+
     println!("\n🎉 REAL AI Integration Demo Complete!");
     println!("====================================");
     println!("✅ Made REAL API calls to OpenAI GPT");
@@ -313,9 +317,9 @@ impl WebServer {
     println!("✅ Tested caching performance");
     println!("✅ Tracked real token usage and costs");
     println!("✅ Demonstrated production-ready AI integration");
-    
+
     println!("\n🔥 This is NOT a mock - this is REAL AI analysis!");
     println!("The AI actually read your code and provided genuine insights!");
-    
+
     Ok(())
 }

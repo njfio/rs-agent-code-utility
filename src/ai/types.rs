@@ -128,7 +128,7 @@ impl TokenUsage {
             estimated_cost: None,
         }
     }
-    
+
     pub fn with_cost(mut self, cost: f64) -> Self {
         self.estimated_cost = Some(cost);
         self
@@ -154,27 +154,29 @@ impl AIRequest {
             },
         }
     }
-    
+
     pub fn with_context(mut self, key: String, value: String) -> Self {
         self.context.insert(key, value);
         self
     }
-    
+
     pub fn with_model_preference(mut self, model: String) -> Self {
-        self.model_preferences.get_or_insert_with(Vec::new).push(model);
+        self.model_preferences
+            .get_or_insert_with(Vec::new)
+            .push(model);
         self
     }
-    
+
     pub fn with_temperature(mut self, temperature: f64) -> Self {
         self.temperature = Some(temperature);
         self
     }
-    
+
     pub fn with_max_tokens(mut self, max_tokens: usize) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
-    
+
     pub fn with_streaming(mut self, stream: bool) -> Self {
         self.stream = stream;
         self

@@ -4,10 +4,9 @@
 //! perform method extraction and other refactoring operations.
 
 use rust_tree_sitter::{
-    AstTransformationEngine, TransformationConfig, Language,
-    Transformation, TransformationType, TransformationLocation, Position,
-    TransformationMetadata, TransformationImpact, ImpactScope, RiskLevel,
-    Result
+    AstTransformationEngine, ImpactScope, Language, Position, Result, RiskLevel, Transformation,
+    TransformationConfig, TransformationImpact, TransformationLocation, TransformationMetadata,
+    TransformationType,
 };
 use std::path::PathBuf;
 
@@ -62,8 +61,16 @@ fn test_transformation_metadata_creation() -> Result<()> {
 fn test_transformation_location() -> Result<()> {
     let location = TransformationLocation {
         file_path: PathBuf::from("test.rs"),
-        start_position: Position { line: 1, column: 0, byte_offset: 0 },
-        end_position: Position { line: 5, column: 10, byte_offset: 100 },
+        start_position: Position {
+            line: 1,
+            column: 0,
+            byte_offset: 0,
+        },
+        end_position: Position {
+            line: 5,
+            column: 10,
+            byte_offset: 100,
+        },
         node_kind: "function_item".to_string(),
     };
 
@@ -82,8 +89,16 @@ fn test_transformation_creation() -> Result<()> {
         transformation_type: TransformationType::ExtractMethod,
         target_location: TransformationLocation {
             file_path: PathBuf::from("test.rs"),
-            start_position: Position { line: 10, column: 4, byte_offset: 150 },
-            end_position: Position { line: 15, column: 5, byte_offset: 200 },
+            start_position: Position {
+                line: 10,
+                column: 4,
+                byte_offset: 150,
+            },
+            end_position: Position {
+                line: 15,
+                column: 5,
+                byte_offset: 200,
+            },
             node_kind: "block".to_string(),
         },
         original_code: "let result = x + y;".to_string(),
@@ -105,7 +120,10 @@ fn test_transformation_creation() -> Result<()> {
     };
 
     assert_eq!(transformation.id, "test_transform_1");
-    assert!(matches!(transformation.transformation_type, TransformationType::ExtractMethod));
+    assert!(matches!(
+        transformation.transformation_type,
+        TransformationType::ExtractMethod
+    ));
     assert_eq!(transformation.original_code, "let result = x + y;");
     assert_eq!(transformation.new_code, "let result = calculate_sum(x, y);");
     assert_eq!(transformation.metadata.confidence, 0.85);
@@ -124,7 +142,9 @@ fn test_simple_transformation_application() -> Result<()> {
 }"#;
 
     // Find the correct byte offsets for "Hello, world!"
-    let hello_world_start = source.find("\"Hello, world!\"").expect("Should find the string");
+    let hello_world_start = source
+        .find("\"Hello, world!\"")
+        .expect("Should find the string");
     let hello_world_end = hello_world_start + "\"Hello, world!\"".len();
 
     // Create a simple replace transformation
@@ -133,8 +153,16 @@ fn test_simple_transformation_application() -> Result<()> {
         transformation_type: TransformationType::Replace,
         target_location: TransformationLocation {
             file_path: PathBuf::from("test.rs"),
-            start_position: Position { line: 4, column: 13, byte_offset: hello_world_start },
-            end_position: Position { line: 4, column: 27, byte_offset: hello_world_end },
+            start_position: Position {
+                line: 4,
+                column: 13,
+                byte_offset: hello_world_start,
+            },
+            end_position: Position {
+                line: 4,
+                column: 27,
+                byte_offset: hello_world_end,
+            },
             node_kind: "string_literal".to_string(),
         },
         original_code: "\"Hello, world!\"".to_string(),

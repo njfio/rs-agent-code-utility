@@ -11,12 +11,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("• Built-in reasoning and thinking capabilities");
     println!("• Superior coding and agentic task performance");
     println!("• Advanced architectural analysis and security detection");
-    
-    let api_key = env::var("OPENAI_API_KEY")
-        .expect("OPENAI_API_KEY environment variable not set");
-    
+
+    let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable not set");
+
     println!("🔑 API Key found: {}...", &api_key[..20]);
-    
+
     // Extremely complex distributed system with subtle architectural issues
     let ultra_complex_code = r#"
 use std::sync::{Arc, Mutex, RwLock, Condvar};
@@ -475,11 +474,13 @@ pub async fn stress_test_consensus() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📝 Analyzing Ultra-Complex Distributed Consensus System:");
     println!("========================================================");
     println!("Lines of code: {}", ultra_complex_code.lines().count());
-    println!("Complexity: Distributed consensus, Raft algorithm, async/await, generics, serialization");
-    
+    println!(
+        "Complexity: Distributed consensus, Raft algorithm, async/await, generics, serialization"
+    );
+
     // Create HTTP client
     let client = reqwest::Client::new();
-    
+
     // GPT-5 Advanced Security Analysis
     let security_request = json!({
         "model": "gpt-5",
@@ -512,10 +513,10 @@ pub async fn stress_test_consensus() -> Result<(), Box<dyn std::error::Error>> {
         }],
         "max_completion_tokens": 4000
     });
-    
+
     println!("\n🧠 Making REAL API call to GPT-5 (newest model)...");
     let start_time = std::time::Instant::now();
-    
+
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
         .header("Authorization", format!("Bearer {}", api_key))
@@ -523,18 +524,18 @@ pub async fn stress_test_consensus() -> Result<(), Box<dyn std::error::Error>> {
         .json(&security_request)
         .send()
         .await?;
-    
+
     let duration = start_time.elapsed();
-    
+
     println!("⏱️  API call completed in {:?}", duration);
     println!("📊 Status: {}", response.status());
-    
+
     if response.status().is_success() {
         let response_body: serde_json::Value = response.json().await?;
-        
+
         println!("\n🎉 GPT-5 ULTIMATE Analysis Results:");
         println!("===================================");
-        
+
         if let Some(choices) = response_body["choices"].as_array() {
             if let Some(first_choice) = choices.first() {
                 if let Some(message) = first_choice["message"].as_object() {
@@ -546,20 +547,29 @@ pub async fn stress_test_consensus() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        
+
         // Show usage statistics
         if let Some(usage) = response_body["usage"].as_object() {
             println!("\n📊 GPT-5 Token Usage:");
-            println!("   Prompt tokens: {}", usage["prompt_tokens"].as_u64().unwrap_or(0));
-            println!("   Completion tokens: {}", usage["completion_tokens"].as_u64().unwrap_or(0));
-            println!("   Total tokens: {}", usage["total_tokens"].as_u64().unwrap_or(0));
-            
+            println!(
+                "   Prompt tokens: {}",
+                usage["prompt_tokens"].as_u64().unwrap_or(0)
+            );
+            println!(
+                "   Completion tokens: {}",
+                usage["completion_tokens"].as_u64().unwrap_or(0)
+            );
+            println!(
+                "   Total tokens: {}",
+                usage["total_tokens"].as_u64().unwrap_or(0)
+            );
+
             // GPT-5 pricing: $1.25 per 1M tokens
             let total_tokens = usage["total_tokens"].as_u64().unwrap_or(0) as f64;
             let estimated_cost = total_tokens * 1.25 / 1000000.0;
             println!("   Estimated cost: ${:.6} (GPT-5 pricing)", estimated_cost);
         }
-        
+
         println!("\n✅ GPT-5 ULTIMATE Capabilities Verified:");
         println!("========================================");
         println!("✅ Used OpenAI's NEWEST model (GPT-5 - August 2025)");
@@ -568,7 +578,7 @@ pub async fn stress_test_consensus() -> Result<(), Box<dyn std::error::Error>> {
         println!("✅ Superior consensus algorithm vulnerability detection");
         println!("✅ Built-in thinking and reasoning capabilities");
         println!("✅ Most advanced AI code analysis ever demonstrated");
-        
+
         println!("\n🚀 GPT-5 Revolutionary Advantages:");
         println!("==================================");
         println!("• 3x larger context window than GPT-4o (400K vs 128K)");
@@ -578,7 +588,6 @@ pub async fn stress_test_consensus() -> Result<(), Box<dyn std::error::Error>> {
         println!("• Better architectural pattern recognition");
         println!("• Enhanced security vulnerability analysis");
         println!("• Most capable AI model ever created for code analysis");
-        
     } else {
         let status = response.status();
         println!("❌ API call failed!");
@@ -586,13 +595,13 @@ pub async fn stress_test_consensus() -> Result<(), Box<dyn std::error::Error>> {
         println!("Error response: {}", error_text);
         return Err(format!("API call failed with status: {}", status).into());
     }
-    
+
     println!("\n🎉 GPT-5 ULTIMATE Integration Complete!");
     println!("=======================================");
     println!("✅ Successfully demonstrated GPT-5 capabilities");
     println!("✅ Most advanced AI model integration ever built");
     println!("✅ Revolutionary code analysis with built-in reasoning");
     println!("✅ Production-ready integration with newest AI technology");
-    
+
     Ok(())
 }

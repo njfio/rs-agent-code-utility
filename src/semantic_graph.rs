@@ -1,14 +1,14 @@
 //! Semantic Knowledge Graph Query System
-//! 
+//!
 //! This module provides graph query interface with relationship traversal
 //! and similarity search capabilities for code semantic analysis.
 
-use crate::{AnalysisResult, Result, FileInfo};
+use crate::{AnalysisResult, FileInfo, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Graph query system for semantic code analysis
 #[derive(Debug, Clone)]
@@ -258,7 +258,7 @@ impl SemanticGraphQuery {
             for node_id in node_ids.iter().take(config.max_results) {
                 if let Some(node) = self.nodes.get(node_id) {
                     nodes.push(node.clone());
-                    
+
                     // Add related edges if requested
                     if let Some(node_edges) = self.edges.get(node_id) {
                         edges.extend(node_edges.clone());
@@ -293,7 +293,7 @@ impl SemanticGraphQuery {
             examined += 1;
             if node.name.contains(pattern) {
                 nodes.push(node.clone());
-                
+
                 if let Some(node_edges) = self.edges.get(&node.id) {
                     edges.extend(node_edges.clone());
                 }
@@ -350,10 +350,12 @@ impl SemanticGraphQuery {
             if let Some(edges) = self.edges.get(&node_id) {
                 for edge in edges {
                     edges_traversed += 1;
-                    
-                    if relationship_types.is_empty() || relationship_types.contains(&edge.relationship) {
+
+                    if relationship_types.is_empty()
+                        || relationship_types.contains(&edge.relationship)
+                    {
                         result_edges.push(edge.clone());
-                        
+
                         if !visited.contains(&edge.to) && depth + 1 < config.max_depth {
                             visited.insert(edge.to.clone());
                             queue.push_back((edge.to.clone(), depth + 1));
@@ -364,7 +366,7 @@ impl SemanticGraphQuery {
         }
 
         let execution_time = start_time.elapsed().as_millis() as u64;
-        
+
         QueryResult {
             nodes: result_nodes,
             edges: result_edges,
@@ -401,7 +403,7 @@ impl SemanticGraphQuery {
             // Take top results
             for (node, _) in similarities.into_iter().take(config.max_results) {
                 similar_nodes.push(node.clone());
-                
+
                 if let Some(node_edges) = self.edges.get(&node.id) {
                     edges.extend(node_edges.clone());
                 }
@@ -434,7 +436,9 @@ impl SemanticGraphQuery {
 
         for edges in self.edges.values() {
             for edge in edges {
-                *relationship_counts.entry(edge.relationship.clone()).or_insert(0) += 1;
+                *relationship_counts
+                    .entry(edge.relationship.clone())
+                    .or_insert(0) += 1;
             }
         }
 
@@ -451,7 +455,12 @@ impl SemanticGraphQuery {
     /// Add nodes from a file's symbols
     fn add_file_nodes(&mut self, file: &FileInfo) -> Result<()> {
         for symbol in &file.symbols {
-            let node_id = format!("{}:{}:{}", file.path.display(), symbol.name, symbol.start_line);
+            let node_id = format!(
+                "{}:{}:{}",
+                file.path.display(),
+                symbol.name,
+                symbol.start_line
+            );
             let node_type = self.symbol_to_node_type(&symbol.kind);
 
             let node = Self::create_graph_node(
@@ -480,7 +489,7 @@ impl SemanticGraphQuery {
             "enum" => NodeType::Enum,
             "trait" => NodeType::Trait,
             "impl" => NodeType::Class, // Treat impl blocks as class-like
-            _ => NodeType::Function, // Default fallback
+            _ => NodeType::Function,   // Default fallback
         }
     }
 
@@ -503,11 +512,21 @@ impl SemanticGraphQuery {
 
         // Create relationships between symbols in the same file
         for (i, symbol1) in file_symbols.iter().enumerate() {
-            let node1_id = format!("{}:{}:{}", file.path.display(), symbol1.name, symbol1.start_line);
+            let node1_id = format!(
+                "{}:{}:{}",
+                file.path.display(),
+                symbol1.name,
+                symbol1.start_line
+            );
             let mut edges_for_node1 = Vec::new();
 
             for symbol2 in file_symbols.iter().skip(i + 1) {
-                let node2_id = format!("{}:{}:{}", file.path.display(), symbol2.name, symbol2.start_line);
+                let node2_id = format!(
+                    "{}:{}:{}",
+                    file.path.display(),
+                    symbol2.name,
+                    symbol2.start_line
+                );
 
                 // Create a basic "defined in same file" relationship
                 let edge = Self::create_graph_edge(
@@ -522,7 +541,10 @@ impl SemanticGraphQuery {
             }
 
             if !edges_for_node1.is_empty() {
-                self.edges.entry(node1_id).or_insert_with(Vec::new).extend(edges_for_node1);
+                self.edges
+                    .entry(node1_id)
+                    .or_insert_with(Vec::new)
+                    .extend(edges_for_node1);
             }
         }
 
@@ -574,12 +596,16 @@ impl SemanticGraphQuery {
         similarity += complexity_similarity * 0.1;
 
         // Degree similarity
-        let degree_diff = (node1.properties.in_degree as f64 - node2.properties.in_degree as f64).abs();
+        let degree_diff =
+            (node1.properties.in_degree as f64 - node2.properties.in_degree as f64).abs();
         let degree_similarity = 1.0 - (degree_diff / 10.0).min(1.0);
         similarity += degree_similarity * 0.1;
 
         // Tag similarity
-        let common_tags = node1.properties.tags.iter()
+        let common_tags = node1
+            .properties
+            .tags
+            .iter()
             .filter(|tag| node2.properties.tags.contains(tag))
             .count();
         let total_tags = (node1.properties.tags.len() + node2.properties.tags.len()).max(1);
@@ -614,19 +640,22 @@ impl SemanticGraphQuery {
 
         for (node_id, node) in &self.nodes {
             // Index by type
-            self.index.by_type
+            self.index
+                .by_type
                 .entry(node.node_type.clone())
                 .or_insert_with(HashSet::new)
                 .insert(node_id.to_string());
 
             // Index by file
-            self.index.by_file
+            self.index
+                .by_file
                 .entry(node.file_path.to_path_buf())
                 .or_insert_with(HashSet::new)
                 .insert(node_id.to_string());
 
             // Index by name
-            self.index.by_name
+            self.index
+                .by_name
                 .entry(node.name.to_string())
                 .or_insert_with(HashSet::new)
                 .insert(node_id.to_string());
@@ -713,7 +742,7 @@ impl std::fmt::Display for RelationshipType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Symbol};
+    use crate::Symbol;
     use std::collections::HashMap;
 
     fn create_test_analysis_result() -> AnalysisResult {
@@ -783,13 +812,17 @@ mod tests {
         assert_eq!(graph.nodes.len(), 2);
 
         // Check that nodes were created correctly
-        let function_nodes: Vec<_> = graph.nodes.values()
+        let function_nodes: Vec<_> = graph
+            .nodes
+            .values()
             .filter(|n| n.node_type == NodeType::Function)
             .collect();
         assert_eq!(function_nodes.len(), 1);
         assert_eq!(function_nodes[0].name, "test_function");
 
-        let class_nodes: Vec<_> = graph.nodes.values()
+        let class_nodes: Vec<_> = graph
+            .nodes
+            .values()
             .filter(|n| n.node_type == NodeType::Class)
             .collect();
         assert_eq!(class_nodes.len(), 1);
@@ -885,7 +918,10 @@ mod tests {
 
         assert_eq!(stats.total_nodes, 2);
         assert!(stats.total_edges > 0); // Should have some relationships
-        assert_eq!(stats.node_type_distribution.get(&NodeType::Function), Some(&1));
+        assert_eq!(
+            stats.node_type_distribution.get(&NodeType::Function),
+            Some(&1)
+        );
         assert_eq!(stats.node_type_distribution.get(&NodeType::Class), Some(&1));
     }
 
