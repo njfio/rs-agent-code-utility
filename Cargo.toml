@@ -35,6 +35,14 @@ petgraph = "0.6"
 ignore = "0.4"
 crc32fast = "1.4"
 pulldown-cmark = "0.10"
+flate2 = "1.0"
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+memmap2 = "0.9"
+
+# Enhanced interactive mode dependencies
+rustyline = "12.0"
+syntect = "5.0"
 
 # Security fixes - ring will be updated via dependency resolution
 

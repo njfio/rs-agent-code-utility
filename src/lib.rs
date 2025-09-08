@@ -140,32 +140,24 @@
 //! # }
 //! ```
 
-/// AI service layer and provider integrations
-pub mod ai;
 /// Advanced AI-powered code analysis capabilities
 pub mod advanced_ai_analysis;
+/// Advanced multi-level caching system
+pub mod advanced_cache;
+/// Advanced memory management system
+pub mod advanced_memory;
+/// Advanced parallel processing system
+pub mod advanced_parallel;
 /// Advanced security analysis with OWASP compliance
 pub mod advanced_security;
+/// AI service layer and provider integrations
+pub mod ai;
 /// AI-powered code explanation and insights
 pub mod ai_analysis;
-/// Utility functions for code analysis
-pub mod analysis_utils;
 /// Common analysis functionality and helpers
 pub mod analysis_common;
-/// Control flow graph construction and analysis
-pub mod control_flow;
-/// Code complexity metrics and analysis
-pub mod complexity_analysis;
-/// Taint analysis for security vulnerability detection
-pub mod taint_analysis;
-/// SQL injection vulnerability detection
-pub mod sql_injection_detector;
-/// Command injection vulnerability detection
-pub mod command_injection_detector;
-/// Symbol table construction and management
-pub mod symbol_table;
-/// Semantic context analysis and data flow
-pub mod semantic_context;
+/// Utility functions for code analysis
+pub mod analysis_utils;
 /// Main codebase analyzer functionality
 pub mod analyzer;
 /// AST transformation and refactoring engine
@@ -176,8 +168,14 @@ pub mod cli;
 pub mod code_evolution;
 /// Code mapping and visualization utilities
 pub mod code_map;
+/// Command injection vulnerability detection
+pub mod command_injection_detector;
+/// Code complexity metrics and analysis
+pub mod complexity_analysis;
 /// Configuration constants and defaults
 pub mod constants;
+/// Control flow graph construction and analysis
+pub mod control_flow;
 /// Dependency analysis and vulnerability scanning
 pub mod dependency_analysis;
 /// Enhanced security analysis with compliance checking
@@ -195,15 +193,23 @@ pub mod infrastructure;
 pub mod intent_mapping;
 #[cfg(not(feature = "ml"))]
 pub mod intent_mapping_stub;
+/// Semantic context analysis and data flow
+pub mod semantic_context;
+/// SQL injection vulnerability detection
+pub mod sql_injection_detector;
+/// Symbol table construction and management
+pub mod symbol_table;
+/// Taint analysis for security vulnerability detection
+pub mod taint_analysis;
 #[cfg(not(feature = "ml"))]
 pub use intent_mapping_stub as intent_mapping;
 /// Text embeddings and semantic similarity
 #[cfg(feature = "ml")]
 pub mod embeddings;
-/// Memory allocation tracking and analysis
-pub mod memory_tracker;
 /// Programming language support and parsers
 pub mod languages;
+/// Memory allocation tracking and analysis
+pub mod memory_tracker;
 /// Tree-sitter parser integration
 pub mod parser;
 /// Performance analysis and optimization detection
@@ -224,84 +230,127 @@ pub mod smart_refactoring;
 pub mod test_coverage;
 /// Syntax tree manipulation and traversal
 pub mod tree;
-    /// Wiki website generator
-    pub mod wiki;
+/// Wiki website generator
+pub mod wiki;
 
+/// Integration testing framework
+// pub mod integration_testing;
+/// Performance benchmarking suite
+// pub mod performance_benchmarking;
 
 // Re-export commonly used types
 
 // Core analysis types
-pub use analyzer::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth, AnalysisResult, FileInfo, Symbol};
+pub use analyzer::{
+    AnalysisConfig, AnalysisDepth, AnalysisResult, CodebaseAnalyzer, FileInfo, Symbol,
+};
 pub use error::{Error, Result};
 pub use languages::Language;
-pub use parser::{Parser, ParseOptions, create_edit};
-pub use query::{Query, QueryCapture, QueryMatch, QueryBuilder};
+pub use parser::{create_edit, ParseOptions, Parser};
+pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // Basic analysis modules
-pub use ai_analysis::{AIAnalyzer, AIAnalysisResult, AIConfig, CodebaseExplanation, FileExplanation, SymbolExplanation};
+pub use ai_analysis::{
+    AIAnalysisResult, AIAnalyzer, AIConfig, CodebaseExplanation, FileExplanation, SymbolExplanation,
+};
 pub use complexity_analysis::{ComplexityAnalyzer, ComplexityMetrics, HalsteadMetrics};
-pub use dependency_analysis::{DependencyAnalyzer, DependencyAnalysisResult, DependencyConfig, Dependency, PackageManager};
-pub use performance_analysis::{PerformanceAnalyzer, PerformanceAnalysisResult, PerformanceConfig, PerformanceHotspot};
-pub use refactoring::{RefactoringAnalyzer, RefactoringResult, RefactoringSuggestion, RefactoringConfig};
-pub use test_coverage::{TestCoverageAnalyzer, TestCoverageResult, TestCoverageConfig, MissingTest};
+pub use dependency_analysis::{
+    Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,
+};
+pub use performance_analysis::{
+    PerformanceAnalysisResult, PerformanceAnalyzer, PerformanceConfig, PerformanceHotspot,
+};
+pub use refactoring::{
+    RefactoringAnalyzer, RefactoringConfig, RefactoringResult, RefactoringSuggestion,
+};
+pub use test_coverage::{
+    MissingTest, TestCoverageAnalyzer, TestCoverageConfig, TestCoverageResult,
+};
 
 // Security analysis
+pub use advanced_security::{
+    AdvancedSecurityAnalyzer as SecurityScanner, AdvancedSecurityConfig as SecurityConfig,
+    AdvancedSecurityResult as SecurityScanResult, SecuritySeverity, SecurityVulnerability,
+};
+#[cfg(any(feature = "net", feature = "db"))]
+pub use enhanced_security::{
+    EnhancedSecurityConfig, EnhancedSecurityResult, EnhancedSecurityScanner,
+};
 pub use security::OwaspDetector;
 #[cfg(any(feature = "net", feature = "db"))]
-pub use security::{VulnerabilityDatabase, SecretsDetector};
-#[cfg(any(feature = "net", feature = "db"))]
-pub use enhanced_security::{EnhancedSecurityScanner, EnhancedSecurityResult, EnhancedSecurityConfig};
-pub use advanced_security::{AdvancedSecurityAnalyzer as SecurityScanner, AdvancedSecurityResult as SecurityScanResult, SecurityVulnerability, AdvancedSecurityConfig as SecurityConfig, SecuritySeverity};
+pub use security::{SecretsDetector, VulnerabilityDatabase};
 
 // AI service layer
-pub use ai::{AIService, AIServiceBuilder, AIConfig as AIServiceConfig, AIProvider, AIFeature, AIRequest, AIResponse, AIError, AIResult};
+pub use ai::{
+    AIConfig as AIServiceConfig, AIError, AIFeature, AIProvider, AIRequest, AIResponse, AIResult,
+    AIService, AIServiceBuilder,
+};
 
 // Advanced features
-pub use advanced_ai_analysis::{AdvancedAIAnalyzer, AdvancedAIResult, AdvancedAIConfig, SemanticAnalysis, ArchitecturePattern};
-pub use smart_refactoring::{SmartRefactoringEngine, SmartRefactoringResult, SmartRefactoringConfig, CodeSmellFix};
-pub use ast_transformation::{
-    AstTransformationEngine, TransformationConfig, Transformation, TransformationType,
-    TransformationResult, SemanticValidator, ValidationResult, ValidationConfig,
-    TransformationLocation, Position, TransformationMetadata, TransformationImpact,
-    ExtractedVariableAnalysis, VariableInfo, ImpactScope
+pub use advanced_ai_analysis::{
+    AdvancedAIAnalyzer, AdvancedAIConfig, AdvancedAIResult, ArchitecturePattern, SemanticAnalysis,
 };
-pub use code_map::{CallGraph, ModuleGraph, build_call_graph, build_module_graph};
+pub use ast_transformation::{
+    AstTransformationEngine, ExtractedVariableAnalysis, ImpactScope, Position, SemanticValidator,
+    Transformation, TransformationConfig, TransformationImpact, TransformationLocation,
+    TransformationMetadata, TransformationResult, TransformationType, ValidationConfig,
+    ValidationResult, VariableInfo,
+};
+pub use code_map::{build_call_graph, build_module_graph, CallGraph, ModuleGraph};
+pub use smart_refactoring::{
+    CodeSmellFix, SmartRefactoringConfig, SmartRefactoringEngine, SmartRefactoringResult,
+};
 
 // Specialized analysis tools
-pub use control_flow::{ControlFlowGraph, CfgBuilder, CfgNodeType};
-pub use taint_analysis::{TaintAnalyzer, TaintFlow, TaintSource, TaintSink, VulnerabilityType};
-pub use sql_injection_detector::{SqlInjectionDetector, SqlInjectionVulnerability, SqlInjectionType};
-pub use command_injection_detector::{CommandInjectionDetector, CommandInjectionVulnerability, CommandInjectionType};
-pub use symbol_table::{SymbolTableAnalyzer, SymbolTable, SymbolDefinition, SymbolReference, SymbolAnalysisResult, Scope, ScopeType, SymbolType, ReferenceType};
-pub use semantic_context::{SemanticContextAnalyzer, SemanticContext, DataFlowAnalysis, SecuritySemanticContext, ValidationPoint, SanitizationPoint, TrustLevel};
-pub use semantic_graph::{SemanticGraphQuery, GraphNode, GraphEdge, NodeType, RelationshipType, QueryResult, QueryConfig, GraphStatistics};
+pub use command_injection_detector::{
+    CommandInjectionDetector, CommandInjectionType, CommandInjectionVulnerability,
+};
+pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
+pub use semantic_context::{
+    DataFlowAnalysis, SanitizationPoint, SecuritySemanticContext, SemanticContext,
+    SemanticContextAnalyzer, TrustLevel, ValidationPoint,
+};
+pub use semantic_graph::{
+    GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
+    SemanticGraphQuery,
+};
+pub use sql_injection_detector::{
+    SqlInjectionDetector, SqlInjectionType, SqlInjectionVulnerability,
+};
+pub use symbol_table::{
+    ReferenceType, Scope, ScopeType, SymbolAnalysisResult, SymbolDefinition, SymbolReference,
+    SymbolTable, SymbolTableAnalyzer, SymbolType,
+};
+pub use taint_analysis::{TaintAnalyzer, TaintFlow, TaintSink, TaintSource, VulnerabilityType};
 
 // Advanced AI features
-pub use code_evolution::{CodeEvolutionTracker, EvolutionAnalysisResult, EvolutionConfig, ChangePattern, PatternType, EvolutionMetrics, FileInsight, EvolutionRecommendation, ChangeType};
-#[cfg(feature = "ml")]
-pub use intent_mapping::{
-    IntentMappingSystem, MappingAnalysisResult, MappingConfig, Requirement, Implementation,
-    IntentMapping, TraceabilityMatrix, TraceabilityReport, RequirementType, ImplementationType,
-    Priority as IntentPriority, RequirementStatus, ImplementationStatus, QualityMetrics,
-    CodeElement, MappingType, ValidationStatus, GapType, RecommendationType, MappingGap,
-    MappingRecommendation
+pub use code_evolution::{
+    ChangePattern, ChangeType, CodeEvolutionTracker, EvolutionAnalysisResult, EvolutionConfig,
+    EvolutionMetrics, EvolutionRecommendation, FileInsight, PatternType,
 };
 #[cfg(not(feature = "ml"))]
 pub use intent_mapping::IntentMappingSystem;
-pub use reasoning_engine::{
-    AutomatedReasoningEngine, ReasoningResult, ReasoningConfig, Fact, Rule, KnowledgeBase,
-    InferenceEngine, ConstraintSolver, TheoremProver, ReasoningInsight, InsightType
+#[cfg(feature = "ml")]
+pub use intent_mapping::{
+    CodeElement, GapType, Implementation, ImplementationStatus, ImplementationType, IntentMapping,
+    IntentMappingSystem, MappingAnalysisResult, MappingConfig, MappingGap, MappingRecommendation,
+    MappingType, Priority as IntentPriority, QualityMetrics, RecommendationType, Requirement,
+    RequirementStatus, RequirementType, TraceabilityMatrix, TraceabilityReport, ValidationStatus,
 };
 pub use memory_tracker::{
-    MemoryTracker, MemoryTrackingResult, MemoryTrackingConfig, AllocationHotspot,
-    MemoryLeakCandidate, AllocationPattern, FragmentationAnalysis, MemorySnapshot,
-    AllocationCallStack, AllocationType, LeakType, UsagePattern, AllocationLocation,
-    LifetimeStatistics, AllocationImpact, MemoryStatistics
+    AllocationCallStack, AllocationHotspot, AllocationImpact, AllocationLocation,
+    AllocationPattern, AllocationType, FragmentationAnalysis, LeakType, LifetimeStatistics,
+    MemoryLeakCandidate, MemorySnapshot, MemoryStatistics, MemoryTracker, MemoryTrackingConfig,
+    MemoryTrackingResult, UsagePattern,
+};
+pub use reasoning_engine::{
+    AutomatedReasoningEngine, ConstraintSolver, Fact, InferenceEngine, InsightType, KnowledgeBase,
+    ReasoningConfig, ReasoningInsight, ReasoningResult, Rule, TheoremProver,
 };
 
 // Utilities
-pub use file_cache::{FileCache, CacheStats};
+pub use file_cache::{CacheStats, FileCache};
 
 // Re-export tree-sitter types that users might need
 pub use tree_sitter::{InputEdit, Point, Range};
@@ -390,8 +439,14 @@ mod tests {
     #[test]
     fn test_language_detection() {
         assert_eq!(detect_language_from_extension("rs"), Some(Language::Rust));
-        assert_eq!(detect_language_from_extension("js"), Some(Language::JavaScript));
-        assert_eq!(detect_language_from_extension("ts"), Some(Language::TypeScript));
+        assert_eq!(
+            detect_language_from_extension("js"),
+            Some(Language::JavaScript)
+        );
+        assert_eq!(
+            detect_language_from_extension("ts"),
+            Some(Language::TypeScript)
+        );
         assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
         assert_eq!(detect_language_from_extension("go"), Some(Language::Go));
         assert_eq!(detect_language_from_extension("unknown"), None);
@@ -400,8 +455,14 @@ mod tests {
     #[test]
     fn test_path_detection() {
         assert_eq!(detect_language_from_path("main.rs"), Some(Language::Rust));
-        assert_eq!(detect_language_from_path("src/lib.rs"), Some(Language::Rust));
-        assert_eq!(detect_language_from_path("script.py"), Some(Language::Python));
+        assert_eq!(
+            detect_language_from_path("src/lib.rs"),
+            Some(Language::Rust)
+        );
+        assert_eq!(
+            detect_language_from_path("script.py"),
+            Some(Language::Python)
+        );
         assert_eq!(detect_language_from_path("unknown.txt"), None);
     }
 
