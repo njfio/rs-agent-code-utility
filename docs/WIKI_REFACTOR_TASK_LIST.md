@@ -18,6 +18,80 @@ Phase 0 — Design + Baseline (short)
   - Acceptance: test suite passes locally; a sample wiki builds without runtime JS errors in browser console.
 
 
+Phase 0 — Status (completed)
+
+- Tests: all wiki-related tests and full test suite pass locally.
+  - Command: `cargo test` (passed)
+  - Focused: `cargo test --tests --test wiki_generator --test wiki_generator_phase2 --test wiki_ai_mock --test wiki_sequence_calls --test wiki_sequence_methods --test wiki_cfg_flow --test wiki_cfg_true_false` (passed)
+- Sample wiki: generated to `wiki_sample_phase0/` from `src/`.
+  - Command: `cargo run --bin tree-sitter-cli -- wiki src --output wiki_sample_phase0 --include-api --depth full`
+  - Verified assets exist: `index.html`, `assets/{style.css,hljs.css,hljs.js,mermaid.js,search.js,search_index.{json,js}}`, `pages/` and `symbols.html`.
+- Notes: browser console not checked in CI; asset generation designed to be offline-safe with local stubs.
+
+
+Phase 0 — Responsibility Inventory (current → target module)
+
+- assets.rs
+  - write_style_css
+  - write_search_js
+  - write_highlight_assets
+  - write_mermaid_asset
+  - postprocess_cdn_refs
+
+- search.rs
+  - struct SearchEntry
+  - write_search_index
+  - (JS behavior stays in emitted `assets/search.js`)
+
+- diagrams.rs
+  - file_has_branching
+  - build_sequence_diagram
+  - build_control_flow
+  - build_sequence_or_flow_blocks (and inner helpers sanitize_label, short_branch)
+
+- templates.rs
+  - write_index_html
+  - write_file_page
+  - write_global_symbols
+  - build_nav
+  - build_sidebar_with_search
+  - write_security_overview_page
+  - write_security_hotspots_page
+  - generate_security_overview_block
+
+- ai_integration.rs
+  - parse_ai_json
+  - generate_project_ai_block
+  - render_ai_project_doc
+  - generate_file_ai_insights_sync
+  - generate_file_ai_block_and_tags
+  - render_ai_doc_file
+  - generate_ai_insights_sync (project-level fallback)
+
+- util.rs
+  - html_escape
+  - markdown_to_html
+  - sanitize_filename
+  - url_encode_path
+  - anchorize / safe_ident
+  - sanitize_display_code (currently unused)
+  - build_simple_dependency_graph (simple visualization helper)
+  - build_simple_flow (currently unused)
+  - walk_tree_for_calls (+ inner regex helpers)
+
+- Orchestration (remain in mod.rs)
+  - WikiConfig/WikiConfigBuilder, WikiGenerator, WikiGenerationResult
+  - analyze (wraps CodebaseAnalyzer)
+  - generate_site (calls into assets/templates/search/diagrams/ai/security)
+  - Security integration wiring (uses `security_enhancements`)
+
+Notes for Phase 1
+
+- Keep public surface (types/constructors) in `mod.rs`; submodules should be private where possible and re-export as needed.
+- Move large inline script blocks to a new emitted `assets/main.js` during Phase 4; for Phase 1, simply relocate builders to `templates.rs` without changing behavior.
+- Avoid API changes; migrate functions with the same signatures, then iteratively improve.
+
+
 Phase 1 — Module Split (no new deps)
 
 Target structure (Rust modules):
@@ -247,4 +321,3 @@ Owner/Review
 
 - Primary owner: Wiki module maintainers.
 - Reviewers: CLI maintainers (flags/docs), Security module owners (security pages), AI team (AI integration).
-

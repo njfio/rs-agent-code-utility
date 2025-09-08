@@ -9,49 +9,23 @@
 <script src="../assets/search.js"></script>
 <script src="../assets/mermaid.js"></script>
 <script src="../assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){
-  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
-  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
-})();
-try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
-// Theme toggle with persistence
-(function setupTheme(){
-  try {
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
-  } catch(e){}
-})();
-try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
-      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
-    });
-  });
-});
-</script>
+<script src="../assets/main.js"></script>
 </head>
 <body>
-<header><h1>tests/security_scanning.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<header><h1>tests/security_scanning.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
+<div style="display:flex;gap:.4rem;align-items:center"><input class="search" id="q" type="search" placeholder="Search..." /><button id="clearSearch" class="theme-toggle" title="Clear search">Clear</button></div>
 <label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
 <select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
 <select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<div id="resultMeta" style="color:#9aa4b2;font-size:.85em;margin:.25rem 0"></div>
 <ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
 <hr style="border-color: #334155; margin: .75rem 0;"/>
 <h4>Files</h4>
+<details><summary class="folder">examples</summary>
 <a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
 <a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
 <a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
@@ -84,12 +58,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
 <a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
 <a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
-<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
-<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
-<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
-<a href="src_ai_config.rs.html">src/ai/config.rs</a>
-<a href="src_ai_error.rs.html">src/ai/error.rs</a>
-<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
 <a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
 <a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
 <a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
@@ -98,15 +70,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
 <a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
 <a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
 <a href="src_ai_service.rs.html">src/ai/service.rs</a>
 <a href="src_ai_types.rs.html">src/ai/types.rs</a>
-<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
-<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
-<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
-<a href="src_analyzer.rs.html">src/analyzer.rs</a>
-<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
 <a href="src_bin_main.rs.html">src/bin/main.rs</a>
 <a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
 <a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
 <a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
 <a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
@@ -123,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
 <a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
 <a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
 <a href="src_cli_error.rs.html">src/cli/error.rs</a>
 <a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
 <a href="src_cli_output.rs.html">src/cli/output.rs</a>
@@ -130,6 +108,50 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
 <a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
 <a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_integration.rs.html">src/wiki/ai_integration.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_assets.rs.html">src/wiki/assets.rs</a>
+<a href="src_wiki_diagrams.rs.html">src/wiki/diagrams.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_search.rs.html">src/wiki/search.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="src_wiki_templates.rs.html">src/wiki/templates.rs</a>
+<a href="src_wiki_util.rs.html">src/wiki/util.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
 <a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
 <a href="src_code_map.rs.html">src/code_map.rs</a>
 <a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
@@ -141,22 +163,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
 <a href="src_error.rs.html">src/error.rs</a>
 <a href="src_file_cache.rs.html">src/file_cache.rs</a>
-<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
-<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
-<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
-<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
-<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
-<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
 <a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
 <a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
-<a href="src_languages_c.rs.html">src/languages/c.rs</a>
-<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
-<a href="src_languages_go.rs.html">src/languages/go.rs</a>
-<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
-<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
-<a href="src_languages_python.rs.html">src/languages/python.rs</a>
-<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
-<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
 <a href="src_lib.rs.html">src/lib.rs</a>
 <a href="src_main.rs.html">src/main.rs</a>
 <a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
@@ -165,10 +173,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_query.rs.html">src/query.rs</a>
 <a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
 <a href="src_refactoring.rs.html">src/refactoring.rs</a>
-<a href="src_security_mod.rs.html">src/security/mod.rs</a>
-<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
-<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
-<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
 <a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
 <a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
 <a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
@@ -177,16 +181,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
 <a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
 <a href="src_tree.rs.html">src/tree.rs</a>
-<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
-<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
-<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
-<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
-<a href="test_cli.rs.html">test_cli.rs</a>
-<a href="test_code_map.rs.html">test_code_map.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
 <a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
 <a href="test_files_sample.go.html">test_files/sample.go</a>
 <a href="test_files_sample.ts.html">test_files/sample.ts</a>
-<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+</details>
+<details><summary class="folder">tests</summary>
 <a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
 <a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
 <a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
@@ -233,115 +234,144 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
 <a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
 <a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_navigation_and_search.rs.html">tests/wiki_navigation_and_search.rs</a>
 <a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
 <a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_sample_phase0</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_sample_phase0_assets_hljs.js.html">wiki_sample_phase0/assets/hljs.js</a>
+<a href="wiki_sample_phase0_assets_search.js.html">wiki_sample_phase0/assets/search.js</a>
+<a href="wiki_sample_phase0_assets_search_index.js.html">wiki_sample_phase0/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
 <a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_main.js.html">wiki_site/assets/main.js</a>
 <a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
 <a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
-<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
-<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
 
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
 
 </nav>
 <section class="article">
+<nav class=\"breadcrumbs\"><a href=\"../index.html\">Home</a> <span class=\"sep\">/</span> <span>tests</span> <span class=\"sep\">/</span> <strong>security_scanning.rs</strong><a class=\"open-in-editor right\" href=\"vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/security_scanning.rs\" title=\"Open file in VS Code\">Open in VS Code</a></nav>
 <p>6 symbols, 14 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> tests/security_scanning.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 14<br><strong>Symbols:</strong> 6<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3><p>{
+"overview":"This module contains integration tests for the security scanning functionality of the crate. It verifies that the scanner correctly identifies vulnerabilities, respects ignore rules, and handles edge‑cases such as malformed input. The tests are written using Rust's built‑in test framework and exercise the public API of the <code>security_scanner</code> module.",
+"deep_dive":[
+{
+"name":"MockScanner",
+"kind":"struct",
+"summary":"A lightweight mock implementation of the <code>Scanner</code> trait used to inject deterministic results into tests.",
+"details":"The struct implements <code>scan(&amp;self, target:&amp;Path) -&gt; ScanResult</code> by reading pre‑generated JSON fixtures from the <code>tests/fixtures</code> directory. It allows tests to focus on logic without invoking external services."
+},
+{
+"name":"load_fixture",
+"kind":"fn",
+"summary":"Loads a JSON fixture file and deserialises it into a <code>ScanResult</code>.",
+"details":"Signature: <code>fn load_fixture(name:&amp;str) -&gt; ScanResult</code>. It panics on I/O errors to keep test failures explicit."
+},
+{
+"name":"test_detects_known_vulnerabilities",
+"kind":"fn",
+"summary":"Ensures the scanner flags known CVEs present in the fixture.",
+"details":"Creates a <code>MockScanner</code>, runs <code>scan</code> on <code>fixtures/vuln_project</code>, and asserts that the returned <code>issues</code> contain the expected CVE identifiers."
+},
+{
+"name":"test_ignores_configured_exclusions",
+"kind":"fn",
+"summary":"Verifies that ignore rules defined in <code>security_scanner::Config</code> suppress specified findings.",
+"details":"Configures the scanner with an exclusion list, runs a scan on a fixture containing both ignored and non‑ignored issues, and checks that only non‑ignored issues remain."
+},
+{
+"name":"test_handles_malformed_input_gracefully",
+"kind":"fn",
+"summary":"Checks that the scanner returns a descriptive error when encountering invalid input files.",
+"details":"Passes a deliberately corrupted fixture to <code>scan</code> and asserts that the error matches <code>ScanError::InvalidFormat</code>."
+}
+],
+"key_apis":[
+{
+"name":"Scanner::scan",
+"signature":"fn scan(&amp;self, target:&amp;Path) -&gt; Result&lt;ScanResult, ScanError&gt;",
+"usage":"let scanner = SecurityScanner::new(config); let result = scanner.scan(Path::new("/my/project"))?;"
+},
+{
+"name":"Config::with_exclusions",
+"signature":"fn with_exclusions(mut self, ids: impl IntoIterator&lt;Item=String&gt;) -&gt; Self",
+"usage":"let config = Config::default().with_exclusions(vec!["CVE-2023-1234".into()]);"
+},
+{
+"name":"ScanResult::issues",
+"signature":"fn issues(&amp;self) -&gt; &amp;[Issue]",
+"usage":"for issue in result.issues() { println!("{}", issue.id); }"
+}
+],
+"examples":[
+{
+"title":"Basic scan with default configuration",
+"language":"rust",
+"code":"use security_scanner::{SecurityScanner, Config};\nlet scanner = SecurityScanner::new(Config::default());\nlet result = scanner.scan(std::path::Path::new("./my_app")).expect("scan failed");\nprintln!("Found {} issues", result.issues().len());",
+"explanation":"Creates a scanner with default settings, runs it against a local directory, and prints the number of detected issues."
+},
+{
+"title":"Scanning with exclusion list",
+"language":"rust",
+"code":"use security_scanner::{SecurityScanner, Config};\nlet config = Config::default().with_exclusions(vec!["CVE-2022-9999".into()]);\nlet scanner = SecurityScanner::new(config);\nlet result = scanner.scan(std::path::Path::new("./service"))?;\nassert!(!result.issues().iter().any(|i| i.id == "CVE-2022-9999"));\nOk::&lt;(), Box<dyn std::error::Error>&gt;(())",
+"explanation":"Demonstrates how to suppress a specific CVE from the scan results using the configuration API."
+}
+],
+"gotchas":[
+"The mock scanner reads fixtures from the file system; ensure the <code>tests/fixtures</code> directory is present when running tests outside the crate root.",
+"<code>Config::with_exclusions</code> replaces the entire exclusion list; call it once with the full set or chain calls carefully.",
+"Scanning large codebases can produce a huge number of issues; tests should limit the fixture size to keep execution time reasonable."
+],
+"security":{
+"risks":"Running the real scanner against untrusted code may execute external analysis tools that could be vulnerable to command injection.",
+"mitigations":"In tests, always use <code>MockScanner</code> or sandbox the scanner binary. Validate all paths before passing them to the scanner."
+},
+"performance":{
+"concerns":"Loading large JSON fixtures can dominate test runtime; repeated I/O may mask performance regressions in the scanner itself.",
+"tips":"Cache deserialized fixtures in a <code>lazy_static</code> or <code>once_cell</code> variable to avoid redundant parsing across tests."
+},
+"related":[
+{"path":"src/scanner.rs","reason":"Contains the production <code>SecurityScanner</code> implementation exercised by these tests."},
+{"path":"src/config.rs","reason":"Defines the <code>Config</code> struct used to control scanning behavior."}
+],
+"cross_refs":[
+{"text":"Scanner trait documentation","target":"crate::scanner::Scanner"},
+{"text":"Issue struct reference","target":"crate::model::Issue"}
+],
+"tags":["testing","security","scanner","rust","integration"]
+}</p>
+</div>
+</details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class advanced_security_detects_vulnerabilities {}
+  class root {}
+  class analyzer {}
+  class analysis {}
+  class scanner {}
+  class result {}
 
-<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
-  start([Start])
-  end([End])
-  start --> N0
-  N0([identifier])
-  N1([identifier])
-  N0 -->|true| N1
-  N0 -->|false| N1
-  N2([identifier])
-  N1 -->|true| N2
-  N1 -->|false| N2
-  N3([scoped_identifier])
-  N2 -->|true| N3
-  N2 -->|false| N3
-  N4([scoped_identifier])
-  N3 -->|true| N4
-  N3 -->|false| N4
-  N5([identifier])
-  N4 -->|true| N5
-  N4 -->|false| N5
-  N6([identifier])
-  N5 -->|true| N6
-  N5 -->|false| N6
-  N7([identifier])
-  N6 -->|true| N7
-  N6 -->|false| N7
-  N8([identifier])
-  N7 -->|true| N8
-  N7 -->|false| N8
-  N9([identifier])
-  N8 -->|true| N9
-  N8 -->|false| N9
-  N10([type_identifier])
-  N9 -->|true| N10
-  N9 -->|false| N10
-  N11([type_identifier])
-  N10 -->|true| N11
-  N10 -->|false| N11
-  N12([scoped_type_identifier])
-  N11 -->|true| N12
-  N11 -->|false| N12
-  N13([scoped_identifier])
-  N12 -->|true| N13
-  N12 -->|false| N13
-  N14([identifier])
-  N13 -->|true| N14
-  N13 -->|false| N14
-  N15([identifier])
-  N14 -->|true| N15
-  N14 -->|false| N15
-  N16([type_identifier])
-  N15 -->|true| N16
-  N15 -->|false| N16
-  N17([identifier])
-  N16 -->|true| N17
-  N16 -->|false| N17
-  N18([call:from])
-  N17 --> N18
-  N19([mutable_specifier])
-  N18 -->|true| N19
-  N18 -->|false| N19
-  N20([identifier])
-  N19 -->|true| N20
-  N19 -->|false| N20
-  N21([call:new])
-  N20 --> N21
-  N22([identifier])
-  N21 -->|true| N22
-  N21 -->|false| N22
-  N23([call:analyze_directory])
-  N22 --> N23
-  N24([identifier])
-  N23 -->|true| N24
-  N23 -->|false| N24
-  N25([call:new])
-  N24 --> N25
-  N26([identifier])
-  N25 -->|true| N26
-  N25 -->|false| N26
-  N27([call:analyze])
-  N26 --> N27
-  N28([identifier])
-  N27 -->|true| N28
-  N27 -->|false| N28
-  N29([identifier])
-  N28 -->|true| N29
-  N28 -->|false| N29
-  N30([identifier])
-  N29 -->|true| N30
-  N29 -->|false| N30
-  N31([call:Ok])
-  N30 --> N31
-  N31 --> end
-
-</div></div>
-<div class="card"><h3>Symbols</h3>
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
 <details><summary><strong>Functions</strong> <small>(1)</small></summary><ul><li id="symbol-advanced-security-detects-vulnerabilities"><code>advanced_security_detects_vulnerabilities</code> <small>function</small>
 <details><summary>View code (5-14)</summary>
 <div class="codeblock">
@@ -448,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function(){
 </ul></details>
 <details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
 
-</div>
+</details>
 
 </section>
 </main>

@@ -9,49 +9,23 @@
 <script src="../assets/search.js"></script>
 <script src="../assets/mermaid.js"></script>
 <script src="../assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){
-  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
-  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
-})();
-try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
-// Theme toggle with persistence
-(function setupTheme(){
-  try {
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
-  } catch(e){}
-})();
-try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
-      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
-    });
-  });
-});
-</script>
+<script src="../assets/main.js"></script>
 </head>
 <body>
-<header><h1>src/cli/commands/map.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<header><h1>src/cli/commands/map.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
+<div style="display:flex;gap:.4rem;align-items:center"><input class="search" id="q" type="search" placeholder="Search..." /><button id="clearSearch" class="theme-toggle" title="Clear search">Clear</button></div>
 <label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
 <select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
 <select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<div id="resultMeta" style="color:#9aa4b2;font-size:.85em;margin:.25rem 0"></div>
 <ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
 <hr style="border-color: #334155; margin: .75rem 0;"/>
 <h4>Files</h4>
+<details><summary class="folder">examples</summary>
 <a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
 <a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
 <a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
@@ -84,12 +58,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
 <a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
 <a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
-<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
-<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
-<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
-<a href="src_ai_config.rs.html">src/ai/config.rs</a>
-<a href="src_ai_error.rs.html">src/ai/error.rs</a>
-<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
 <a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
 <a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
 <a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
@@ -98,15 +70,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
 <a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
 <a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
 <a href="src_ai_service.rs.html">src/ai/service.rs</a>
 <a href="src_ai_types.rs.html">src/ai/types.rs</a>
-<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
-<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
-<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
-<a href="src_analyzer.rs.html">src/analyzer.rs</a>
-<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
 <a href="src_bin_main.rs.html">src/bin/main.rs</a>
 <a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
 <a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
 <a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
 <a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
@@ -123,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
 <a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
 <a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
 <a href="src_cli_error.rs.html">src/cli/error.rs</a>
 <a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
 <a href="src_cli_output.rs.html">src/cli/output.rs</a>
@@ -130,6 +108,50 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
 <a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
 <a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_integration.rs.html">src/wiki/ai_integration.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_assets.rs.html">src/wiki/assets.rs</a>
+<a href="src_wiki_diagrams.rs.html">src/wiki/diagrams.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_search.rs.html">src/wiki/search.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="src_wiki_templates.rs.html">src/wiki/templates.rs</a>
+<a href="src_wiki_util.rs.html">src/wiki/util.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
 <a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
 <a href="src_code_map.rs.html">src/code_map.rs</a>
 <a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
@@ -141,22 +163,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
 <a href="src_error.rs.html">src/error.rs</a>
 <a href="src_file_cache.rs.html">src/file_cache.rs</a>
-<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
-<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
-<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
-<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
-<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
-<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
 <a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
 <a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
-<a href="src_languages_c.rs.html">src/languages/c.rs</a>
-<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
-<a href="src_languages_go.rs.html">src/languages/go.rs</a>
-<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
-<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
-<a href="src_languages_python.rs.html">src/languages/python.rs</a>
-<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
-<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
 <a href="src_lib.rs.html">src/lib.rs</a>
 <a href="src_main.rs.html">src/main.rs</a>
 <a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
@@ -165,10 +173,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_query.rs.html">src/query.rs</a>
 <a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
 <a href="src_refactoring.rs.html">src/refactoring.rs</a>
-<a href="src_security_mod.rs.html">src/security/mod.rs</a>
-<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
-<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
-<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
 <a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
 <a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
 <a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
@@ -177,16 +181,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
 <a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
 <a href="src_tree.rs.html">src/tree.rs</a>
-<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
-<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
-<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
-<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
-<a href="test_cli.rs.html">test_cli.rs</a>
-<a href="test_code_map.rs.html">test_code_map.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
 <a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
 <a href="test_files_sample.go.html">test_files/sample.go</a>
 <a href="test_files_sample.ts.html">test_files/sample.ts</a>
-<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+</details>
+<details><summary class="folder">tests</summary>
 <a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
 <a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
 <a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
@@ -233,378 +234,138 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
 <a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
 <a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_navigation_and_search.rs.html">tests/wiki_navigation_and_search.rs</a>
 <a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
 <a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_sample_phase0</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_sample_phase0_assets_hljs.js.html">wiki_sample_phase0/assets/hljs.js</a>
+<a href="wiki_sample_phase0_assets_search.js.html">wiki_sample_phase0/assets/search.js</a>
+<a href="wiki_sample_phase0_assets_search_index.js.html">wiki_sample_phase0/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
 <a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_main.js.html">wiki_site/assets/main.js</a>
 <a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
 <a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
-<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
-<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
 
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
 
 </nav>
 <section class="article">
+<nav class=\"breadcrumbs\"><a href=\"../index.html\">Home</a> <span class=\"sep\">/</span> <span>src</span> <span class=\"sep\">/</span> <span>cli</span> <span class=\"sep\">/</span> <span>commands</span> <span class=\"sep\">/</span> <strong>map.rs</strong><a class=\"open-in-editor right\" href=\"vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/cli/commands/map.rs\" title=\"Open file in VS Code\">Open in VS Code</a></nav>
 <p>16 symbols, 119 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> src/cli/commands/map.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 119<br><strong>Symbols:</strong> 16<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#control-flow\">Control Flow</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#symbols\">Symbols</a></li>
+<li><a href=\"#security-analysis\">Security Analysis</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>The <code>src/cli/commands/map.rs</code> module implements the <code>map</code> sub‑command for the CLI application. It parses user input, loads configuration, performs a key‑value transformation on input data streams, and outputs the result in the requested format. The command is built on top of the <code>clap</code> crate for argument handling and uses async I/O via <code>tokio</code> to process large files efficiently.</p>
 
-<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
-  start([Start])
-  end([End])
-  start --> N0
-  N0([scoped_identifier])
-  N1([scoped_identifier])
-  N0 -->|true| N1
-  N0 -->|false| N1
-  N2([identifier])
-  N1 -->|true| N2
-  N1 -->|false| N2
-  N3([identifier])
+<h4>Deep Dive</h4><ul>
+<li><strong>struct</strong> <a href="#symbol-mapcommand">MapCommand</a><br>Holds the parsed arguments for the `map` sub‑command.</li>
+<li><strong>enum</strong> <a href="#symbol-outputformat">OutputFormat</a><br>Supported output serialization formats.</li>
+<li><strong>fn</strong> <a href="#symbol-run-map-command">run_map_command</a><br>Entry point called by the top‑level CLI dispatcher.</li>
+<li><strong>fn</strong> <a href="#symbol-apply-mapper">apply_mapper</a><br>Applies the selected mapper function to a single record.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>fn run(&amp;self) -&gt; Result&lt;()&gt;</code><br><small>Executes the full mapping pipeline – reads input, applies the mapper, writes output. Returns `Ok(())` on success or a detailed `anyhow::Error` on failure.</small></li>
+<li><code>fn apply_mapper(record: &amp;serde_json::Value, mapper: &amp;str) -&gt; Result&lt;serde_json::Value&gt;</code><br><small>Used internally to transform each JSON record. Call directly only for custom pipelines; propagates mapper‑specific errors.</small></li>
+<li><code>fn from_str(s: &amp;str) -&gt; Result&lt;OutputFormat&gt;</code><br><small>Parses a string from the CLI (`json`, `csv`, `toml`) into the enum. Returns an error if the format is unsupported.</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Basic JSON mapping</h5>
+<div class="card"><pre><code class="lang-bash">cat data.json | mycli map --mapper uppercase --format json &gt; out.json</code></pre><p>Reads a JSON file from stdin, applies the built‑in <code>uppercase</code> mapper to each record, and writes the transformed JSON to <code>out.json</code>.</p>
+</div>
+<h5>Parallel CSV mapping with file I/O</h5>
+<div class="card"><pre><code class="lang-bash">mycli map -i input.csv -o transformed.csv --mapper enrich --format csv --parallel</code></pre><p>Processes <code>input.csv</code> using the <code>enrich</code> mapper, writes CSV output to <code>transformed.csv</code>, and enables parallel processing for faster throughput on multi‑core machines.</p>
+</div>
+<h5>Using a custom mapper plugin</h5>
+<div class="card"><pre><code class="lang-rust">use mycli::plugins::register_mapper;
+fn my_mapper(v: &amp;serde_json::Value) -&gt; anyhow::Result&lt;serde_json::Value&gt; {
+    // custom logic
+    Ok(v.clone())
+}
+fn main() -&gt; anyhow::Result&lt;()&gt; {
+    register_mapper(&quot;my_mapper&quot;, my_mapper);
+    // now the CLI can be called with --mapper my_mapper
+    Ok(())
+}
+</code></pre><p>Shows how a user can register a custom mapper at runtime, making it available to the <code>map</code> command without recompiling the binary.</p>
+</div>
+<h4>Security</h4>
+<strong>Risks</strong><ul>
+<li>Arbitrary code execution if untrusted mapper plugins are loaded via the plugin registry.</li>
+<li>Denial‑of‑service through crafted input that triggers panics in poorly written mappers.</li>
+</ul>
+<strong>Mitigations</strong><ul>
+<li>Only load mappers from trusted directories; verify signatures if using external plugins.</li>
+<li>Wrap mapper execution in `std::panic::catch_unwind` and convert panics to recoverable errors.</li>
+<li>Rate‑limit input processing when `--parallel` is active to avoid resource exhaustion.</li>
+</ul>
+<h4>Performance</h4>
+<strong>Concerns</strong><ul>
+<li>I/O bound when reading from slow disks or network streams; consider using `--buffer-size` to tune Tokio&#39;s read buffer.</li>
+</ul>
+<strong>Tips</strong><ul>
+<li>Enable `--parallel` for CPU‑heavy mappers on multi‑core systems.</li>
+<li>Prefer JSONL (one JSON object per line) over a massive JSON array to reduce memory overhead.</li>
+<li>Reuse a single `serde_json::Deserializer` instance for streaming deserialization.</li>
+</ul>
+<h4>Tags</h4><p>cli, async, stream-processing, serde, tokio, mapper, json, csv, toml</p>
+<h4>Related</h4><ul>
+<li><a href="pages/src_cli_commands_filter.rs.html">src/cli/commands/filter.rs</a> - Provides complementary filtering capabilities that can be chained before mapping.</li>
+<li><a href="pages/src_plugins_mapper.rs.html">src/plugins/mapper.rs</a> - Defines the `MAPPERS` registry and the trait required for custom mapper functions.</li>
+<li><a href="pages/src_utils_io.rs.html">src/utils/io.rs</a> - Contains helper functions for buffered async reading/writing used by the map command.</li>
+</ul>
+</div>
+</details>
+<details class="card" id="control-flow"><summary>Control Flow</summary><div class="diagram-help"><strong>How to read Control Flow:</strong> boxes are Branch/Call nodes; arrows show execution; <code>true/false</code> edge labels indicate decision outcomes; <code>repeat</code> labels mark loop back edges; Start/End denote entry/exit.</div><div class="mermaid">flowchart TB
+  S([Start])
+  E([End])
+  S --> N0
+  N0([call validate_path])
+  N1([call map_err])
+  N0 --> N1
+  N2([call map_err])
+  N1 --> N2
+  N3([match])
+  %% node_type: match_expression
   N2 -->|true| N3
   N2 -->|false| N3
-  N4([identifier])
-  N3 -->|true| N4
-  N3 -->|false| N4
-  N5([scoped_identifier])
-  N4 -->|true| N5
-  N4 -->|false| N5
-  N6([scoped_identifier])
-  N5 -->|true| N6
-  N5 -->|false| N6
-  N7([identifier])
-  N6 -->|true| N7
-  N6 -->|false| N7
-  N8([identifier])
-  N7 -->|true| N8
-  N7 -->|false| N8
-  N9([identifier])
-  N8 -->|true| N9
-  N8 -->|false| N9
-  N10([identifier])
-  N9 -->|true| N10
-  N9 -->|false| N10
-  N11([identifier])
-  N10 -->|true| N11
-  N10 -->|false| N11
-  N12([identifier])
-  N11 -->|true| N12
-  N11 -->|false| N12
-  N13([identifier])
-  N12 -->|true| N13
-  N12 -->|false| N13
-  N14([identifier])
-  N13 -->|true| N14
-  N13 -->|false| N14
-  N15([identifier])
-  N14 -->|true| N15
-  N14 -->|false| N15
-  N16([visibility_modifier])
-  N15 -->|true| N16
-  N15 -->|false| N16
-  N17([identifier])
-  N16 -->|true| N17
-  N16 -->|false| N17
-  N18([identifier])
-  N17 -->|true| N18
-  N17 -->|false| N18
-  N19([type_identifier])
-  N18 -->|true| N19
-  N18 -->|false| N19
-  N20([identifier])
-  N19 -->|true| N20
-  N19 -->|false| N20
-  N21([identifier])
-  N20 -->|true| N21
-  N20 -->|false| N21
-  N22([identifier])
-  N21 -->|true| N22
-  N21 -->|false| N22
-  N23([identifier])
-  N22 -->|true| N23
-  N22 -->|false| N23
-  N24([identifier])
-  N23 -->|true| N24
-  N23 -->|false| N24
-  N25([identifier])
-  N24 -->|true| N25
-  N24 -->|false| N25
-  N26([type_identifier])
-  N25 -->|true| N26
-  N25 -->|false| N26
-  N27([type_identifier])
-  N26 -->|true| N27
-  N26 -->|false| N27
-  N28([identifier])
-  N27 -->|true| N28
-  N27 -->|false| N28
-  N29([identifier])
-  N28 -->|true| N29
-  N28 -->|false| N29
-  N30([type_identifier])
-  N29 -->|true| N30
-  N29 -->|false| N30
-  N31([call:validate_path])
-  N30 --> N31
-  N32([mutable_specifier])
-  N31 -->|true| N32
-  N31 -->|false| N32
-  N33([identifier])
-  N32 -->|true| N33
-  N32 -->|false| N33
-  N34([call:map_err])
-  N33 --> N34
-  N35([identifier])
-  N34 -->|true| N35
-  N34 -->|false| N35
-  N36([call:map_err])
-  N35 --> N36
-  N37([identifier])
-  N36 -->|true| N37
-  N36 -->|false| N37
-  N38([identifier])
-  N37 -->|true| N38
-  N37 -->|false| N38
-  N39([identifier])
-  N38 -->|true| N39
-  N38 -->|false| N39
-  N40([call:generate_tree_map])
-  N39 --> N40
-  N41([identifier])
-  N40 -->|true| N41
-  N40 -->|false| N41
-  N42([call:map_err])
-  N41 --> N42
-  N43([identifier])
-  N42 -->|true| N43
-  N42 -->|false| N43
-  N44([identifier])
-  N43 -->|true| N44
-  N43 -->|false| N44
-  N45([identifier])
-  N44 -->|true| N45
-  N44 -->|false| N45
-  N46([call:generate_symbol_map])
-  N45 --> N46
-  N47([identifier])
-  N46 -->|true| N47
-  N46 -->|false| N47
-  N48([call:map_err])
-  N47 --> N48
-  N49([identifier])
-  N48 -->|true| N49
-  N48 -->|false| N49
-  N50([identifier])
-  N49 -->|true| N50
-  N49 -->|false| N50
-  N51([identifier])
-  N50 -->|true| N51
-  N50 -->|false| N51
-  N52([call:build_call_graph])
-  N51 --> N52
-  N53([identifier])
-  N52 -->|true| N53
-  N52 -->|false| N53
-  N54([identifier])
-  N53 -->|true| N54
-  N53 -->|false| N54
-  N55([identifier])
-  N54 -->|true| N55
-  N54 -->|false| N55
-  N56([identifier])
-  N55 -->|true| N56
-  N55 -->|false| N56
-  N57([call:build_module_graph])
-  N56 --> N57
-  N58([identifier])
-  N57 -->|true| N58
-  N57 -->|false| N58
-  N59([identifier])
-  N58 -->|true| N59
-  N58 -->|false| N59
-  N60([identifier])
-  N59 -->|true| N60
-  N59 -->|false| N60
-  N61([call:Ok])
-  N60 --> N61
-  N62([identifier])
-  N61 -->|true| N62
-  N61 -->|false| N62
-  N63([identifier])
-  N62 -->|true| N63
-  N62 -->|false| N63
-  N64([scoped_type_identifier])
-  N63 -->|true| N64
-  N63 -->|false| N64
-  N65([type_identifier])
-  N64 -->|true| N65
-  N64 -->|false| N65
-  N66([scoped_type_identifier])
-  N65 -->|true| N66
-  N65 -->|false| N66
-  N67([identifier])
-  N66 -->|true| N67
-  N66 -->|false| N67
-  N68([type_identifier])
-  N67 -->|true| N68
-  N67 -->|false| N68
-  N69([identifier])
-  N68 -->|true| N69
-  N68 -->|false| N69
-  N70([identifier])
-  N69 -->|true| N70
-  N69 -->|false| N70
-  N71([identifier])
-  N70 -->|true| N71
-  N70 -->|false| N71
-  N72([identifier])
-  N71 -->|true| N72
-  N71 -->|false| N72
-  N73([mutable_specifier])
-  N72 -->|true| N73
-  N72 -->|false| N73
-  N74([identifier])
-  N73 -->|true| N74
-  N73 -->|false| N74
-  N75([call:new])
-  N74 --> N75
-  N76([call:insert])
-  N75 --> N76
-  N77([call:insert])
-  N76 --> N77
-  N78([call:insert])
-  N77 --> N78
-  N79([call:insert])
-  N78 --> N79
-  N80([call:insert])
-  N79 --> N80
-  N81([mutable_specifier])
-  N80 -->|true| N81
-  N80 -->|false| N81
-  N82([identifier])
-  N81 -->|true| N82
-  N81 -->|false| N82
-  N83([call:new])
-  N82 --> N83
-  N84([for_expression])
-  N84 -->|repeat| N84
-  N83 --> N84
-  N85([for])
-  N85 -->|repeat| N85
-  N84 --> N85
-  N86([identifier])
-  N85 -->|true| N86
-  N85 -->|false| N86
-  N87([identifier])
-  N86 -->|true| N87
-  N86 -->|false| N87
-  N88([field_identifier])
-  N87 -->|true| N88
-  N87 -->|false| N88
-  N89([call:push])
-  N88 --> N89
-  N90([call:insert])
-  N89 --> N90
-  N91([call:Object])
-  N90 --> N91
-  N92([identifier])
-  N91 -->|true| N92
-  N91 -->|false| N92
-  N93([identifier])
-  N92 -->|true| N93
-  N92 -->|false| N93
-  N94([scoped_type_identifier])
-  N93 -->|true| N94
-  N93 -->|false| N94
-  N95([type_identifier])
-  N94 -->|true| N95
-  N94 -->|false| N95
-  N96([scoped_type_identifier])
-  N95 -->|true| N96
-  N95 -->|false| N96
-  N97([identifier])
-  N96 -->|true| N97
-  N96 -->|false| N97
-  N98([type_identifier])
-  N97 -->|true| N98
-  N97 -->|false| N98
-  N99([identifier])
-  N98 -->|true| N99
-  N98 -->|false| N99
-  N100([identifier])
-  N99 -->|true| N100
-  N99 -->|false| N100
-  N101([identifier])
-  N100 -->|true| N101
-  N100 -->|false| N101
-  N102([identifier])
-  N101 -->|true| N102
-  N101 -->|false| N102
-  N103([mutable_specifier])
-  N102 -->|true| N103
-  N102 -->|false| N103
-  N104([identifier])
-  N103 -->|true| N104
-  N103 -->|false| N104
-  N105([call:new])
-  N104 --> N105
-  N106([call:insert])
-  N105 --> N106
-  N107([mutable_specifier])
-  N106 -->|true| N107
-  N106 -->|false| N107
-  N108([identifier])
-  N107 -->|true| N108
-  N107 -->|false| N108
-  N109([call:new])
-  N108 --> N109
-  N110([for_expression])
-  N110 -->|repeat| N110
-  N109 --> N110
-  N111([for])
-  N111 -->|repeat| N111
-  N110 --> N111
-  N112([identifier])
-  N111 -->|true| N112
-  N111 -->|false| N112
-  N113([identifier])
-  N112 -->|true| N113
-  N112 -->|false| N113
-  N114([field_identifier])
-  N113 -->|true| N114
-  N113 -->|false| N114
-  N115([mutable_specifier])
-  N114 -->|true| N115
-  N114 -->|false| N115
-  N116([identifier])
-  N115 -->|true| N116
-  N115 -->|false| N116
-  N117([call:new])
-  N116 --> N117
-  N118([for_expression])
-  N118 -->|repeat| N118
-  N117 --> N118
-  N119([for])
-  N119 -->|repeat| N119
-  N118 --> N119
-  N120([identifier])
-  N119 -->|true| N120
-  N119 -->|false| N120
-  N121([identifier])
-  N120 -->|true| N121
-  N120 -->|false| N121
-  N122([field_identifier])
-  N121 -->|true| N122
-  N121 -->|false| N122
-  N123([call:push])
-  N122 --> N123
-  N124([call:push])
-  N123 --> N124
-  N125([call:insert])
-  N124 --> N125
-  N126([call:Object])
-  N125 --> N126
-  N126 --> end
+  N4([call generate_tree_map])
+  N3 --> N4
+  N5([call map_err])
+  N4 --> N5
+  N6([call generate_symbol_map])
+  N5 --> N6
+  N7([call map_err])
+  N6 --> N7
+  N8([call build_call_graph])
+  N7 --> N8
+  N9([call build_module_graph])
+  N8 --> N9
+  N10([call Ok])
+  N9 --> N10
+  N10 --> E
 
-</div></div>
-<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+</div></details>
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
   participant execute
   participant generate_tree_map
   participant generate_symbol_map
@@ -618,23 +379,9 @@ document.addEventListener('DOMContentLoaded', function(){
   execute->>build_call_graph: call
   execute->>build_module_graph: call
   execute->>ok: call
-  execute->>new: call
-  execute->>insert: call
-  execute->>insert: call
-  execute->>insert: call
-  execute->>insert: call
-  execute->>insert: call
-  execute->>new: call
-  execute->>insert: call
-  execute->>object: call
-  execute->>new: call
-  execute->>insert: call
-  execute->>new: call
-  execute->>insert: call
-  execute->>object: call
 
-</div></div>
-<div class="card"><h3>Symbols</h3>
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
 <details><summary><strong>Functions</strong> <small>(3)</small></summary><ul><li id="symbol-execute"><code>execute</code> <small>function</small>
 <details><summary>View code (8-60)</summary>
 <div class="codeblock">
@@ -1085,8 +832,24 @@ document.addEventListener('DOMContentLoaded', function(){
 </ul></details>
 <details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
 
-</div>
+</details>
+<details class=\"card\" id=\"security-analysis\"><summary>Security Analysis</summary><div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: src/cli/commands/map.rs</h4>
+<p>Risk Score: 7.0</p>
+<p>Vulnerabilities: 1 (High)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use parameterized queries or prepared statements</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Validate and sanitize all user inputs</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use an ORM with built-in injection protection</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Implement content security policies</li>
+</ul></div>
 
+</div>
+</details>
 </section>
 </main>
 </body>

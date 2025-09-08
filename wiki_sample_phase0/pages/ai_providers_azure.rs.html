@@ -1,0 +1,585 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai/providers/azure.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>ai/providers/azure.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="ai_providers_groq.rs.html">ai/providers/groq.rs</a>
+<a href="ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+</details>
+<a href="ai_cache.rs.html">ai/cache.rs</a>
+<a href="ai_config.rs.html">ai/config.rs</a>
+<a href="ai_error.rs.html">ai/error.rs</a>
+<a href="ai_mod.rs.html">ai/mod.rs</a>
+<a href="ai_service.rs.html">ai/service.rs</a>
+<a href="ai_types.rs.html">ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="bin_main.rs.html">bin/main.rs</a>
+<a href="bin_rts.rs.html">bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+</details>
+<a href="cli_error.rs.html">cli/error.rs</a>
+<a href="cli_mod.rs.html">cli/mod.rs</a>
+<a href="cli_output.rs.html">cli/output.rs</a>
+<a href="cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="cli_utils.rs.html">cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="languages_c.rs.html">languages/c.rs</a>
+<a href="languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="languages_go.rs.html">languages/go.rs</a>
+<a href="languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="languages_mod.rs.html">languages/mod.rs</a>
+<a href="languages_python.rs.html">languages/python.rs</a>
+<a href="languages_rust.rs.html">languages/rust.rs</a>
+<a href="languages_typescript.rs.html">languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="security_mod.rs.html">security/mod.rs</a>
+<a href="security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="wiki_ai_schema.rs.html">wiki/ai_schema.rs</a>
+<a href="wiki_enhanced_ai.rs.html">wiki/enhanced_ai.rs</a>
+<a href="wiki_mod.rs.html">wiki/mod.rs</a>
+<a href="wiki_security_enhancements.rs.html">wiki/security_enhancements.rs</a>
+</details>
+<a href="advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="advanced_security.rs.html">advanced_security.rs</a>
+<a href="ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="analysis_common.rs.html">analysis_common.rs</a>
+<a href="analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="analyzer.rs.html">analyzer.rs</a>
+<a href="ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="code_evolution.rs.html">code_evolution.rs</a>
+<a href="code_map.rs.html">code_map.rs</a>
+<a href="command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="constants.rs.html">constants.rs</a>
+<a href="control_flow.rs.html">control_flow.rs</a>
+<a href="dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="embeddings.rs.html">embeddings.rs</a>
+<a href="enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="error.rs.html">error.rs</a>
+<a href="file_cache.rs.html">file_cache.rs</a>
+<a href="intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="lib.rs.html">lib.rs</a>
+<a href="main.rs.html">main.rs</a>
+<a href="memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="parser.rs.html">parser.rs</a>
+<a href="performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="query.rs.html">query.rs</a>
+<a href="reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="refactoring.rs.html">refactoring.rs</a>
+<a href="semantic_context.rs.html">semantic_context.rs</a>
+<a href="semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="symbol_table.rs.html">symbol_table.rs</a>
+<a href="taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="test_coverage.rs.html">test_coverage.rs</a>
+<a href="tree.rs.html">tree.rs</a>
+
+
+</nav>
+<section class="article">
+<p>10 symbols, 79 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> ai/providers/azure.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 79<br><strong>Symbols:</strong> 10<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant new
+  participant provider
+  participant capabilities
+  participant validate_connection
+  participant process_request
+  participant best_model_for_feature
+  participant rate_limit_info
+  new->>provider: call
+  provider->>capabilities: call
+  capabilities->>validate_connection: call
+  validate_connection->>process_request: call
+  process_request->>best_model_for_feature: call
+  best_model_for_feature->>rate_limit_info: call
+
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class new {}
+  class provider {}
+  class capabilities {}
+  class validate_connection {}
+  class process_request {}
+  class best_model_for_feature {}
+  class rate_limit_info {}
+  class AzureProvider {}
+  class AzureProvider {}
+  class AzureProvider {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(7)</small></summary><ul><li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (15-17)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-15">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:15" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">15
+16
+17
+</pre>
+    <pre><code id="code-new-15" class="lang-rust hljs">    pub async fn new(config: ProviderConfig) -&gt; AIResult&lt;Self&gt; {
+        Ok(Self { config })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>function</small>
+<details><summary>View code (22-24)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-22">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:22" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">22
+23
+24
+</pre>
+    <pre><code id="code-provider-22" class="lang-rust hljs">    fn provider(&amp;self) -&gt; AIProvider {
+        AIProvider::AzureOpenAI
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-capabilities"><code>capabilities</code> <small>function</small>
+<details><summary>View code (26-35)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-capabilities-26">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:26" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+</pre>
+    <pre><code id="code-capabilities-26" class="lang-rust hljs">    fn capabilities(&amp;self) -&gt; Vec&lt;AICapability&gt; {
+        vec![
+            AICapability {
+                feature: AIFeature::CodeExplanation,
+                supported: true,
+                quality_score: 0.93,
+                description: &quot;Code explanations using Azure OpenAI&quot;.to_string(),
+            },
+        ]
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validate-connection"><code>validate_connection</code> <small>function</small>
+<details><summary>View code (37-39)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validate_connection-37">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:37" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">37
+38
+39
+</pre>
+    <pre><code id="code-validate_connection-37" class="lang-rust hljs">    async fn validate_connection(&amp;self) -&gt; AIResult&lt;()&gt; {
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-process-request"><code>process_request</code> <small>function</small>
+<details><summary>View code (41-64)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-process_request-41">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:41" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+</pre>
+    <pre><code id="code-process_request-41" class="lang-rust hljs">    async fn process_request(&amp;self, request: AIRequest) -&gt; AIResult&lt;AIResponse&gt; {
+        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use std::time::{Duration, SystemTime};
+        
+        // Placeholder implementation
+        tokio::time::sleep(Duration::from_millis(180)).await;
+        
+        Ok(AIResponse {
+            feature: request.feature,
+            content: format!(&quot;Azure OpenAI analysis: {}&quot;, request.content.chars().take(100).collect::&lt;String&gt;()),
+            structured_data: None,
+            confidence: Some(0.90),
+            token_usage: TokenUsage::new(70, 140),
+            metadata: ResponseMetadata {
+                request_id: request.metadata.request_id,
+                model_used: self.config.default_model.clone(),
+                provider: AIProvider::AzureOpenAI,
+                processing_time: Duration::from_millis(180),
+                cached: false,
+                timestamp: SystemTime::now(),
+                rate_limit_remaining: Some(60),
+            },
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-best-model-for-feature"><code>best_model_for_feature</code> <small>function</small>
+<details><summary>View code (66-68)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-best_model_for_feature-66">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:66" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">66
+67
+68
+</pre>
+    <pre><code id="code-best_model_for_feature-66" class="lang-rust hljs">    fn best_model_for_feature(&amp;self, _feature: AIFeature) -&gt; Option&lt;String&gt; {
+        Some(&quot;gpt-4&quot;.to_string())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rate-limit-info"><code>rate_limit_info</code> <small>function</small>
+<details><summary>View code (70-78)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rate_limit_info-70">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:70" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">70
+71
+72
+73
+74
+75
+76
+77
+78
+</pre>
+    <pre><code id="code-rate_limit_info-70" class="lang-rust hljs">    fn rate_limit_info(&amp;self) -&gt; Option&lt;RateLimitInfo&gt; {
+        Some(RateLimitInfo {
+            requests_per_minute: self.config.rate_limit.requests_per_minute,
+            tokens_per_minute: self.config.rate_limit.tokens_per_minute,
+            remaining_requests: None,
+            remaining_tokens: None,
+            reset_time: None,
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(0)</small></summary><ul></ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(3)</small></summary><ul><li id="symbol-azureprovider"><code>AzureProvider</code> <small>struct</small>
+<details><summary>View code (10-12)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-azureprovider-10">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:10" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">10
+11
+12
+</pre>
+    <pre><code id="code-azureprovider-10" class="lang-rust hljs">pub struct AzureProvider {
+    config: ProviderConfig,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-azureprovider"><code>AzureProvider</code> <small>impl</small>
+<details><summary>View code (14-18)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-azureprovider-14">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:14" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">14
+15
+16
+17
+18
+</pre>
+    <pre><code id="code-azureprovider-14" class="lang-rust hljs">impl AzureProvider {
+    pub async fn new(config: ProviderConfig) -&gt; AIResult&lt;Self&gt; {
+        Ok(Self { config })
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-azureprovider"><code>AzureProvider</code> <small>impl</small>
+<details><summary>View code (21-79)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-azureprovider-21">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/azure.rs:21" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+</pre>
+    <pre><code id="code-azureprovider-21" class="lang-rust hljs">impl AIProviderImpl for AzureProvider {
+    fn provider(&amp;self) -&gt; AIProvider {
+        AIProvider::AzureOpenAI
+    }
+    
+    fn capabilities(&amp;self) -&gt; Vec&lt;AICapability&gt; {
+        vec![
+            AICapability {
+                feature: AIFeature::CodeExplanation,
+                supported: true,
+                quality_score: 0.93,
+                description: &quot;Code explanations using Azure OpenAI&quot;.to_string(),
+            },
+        ]
+    }
+    
+    async fn validate_connection(&amp;self) -&gt; AIResult&lt;()&gt; {
+        Ok(())
+    }
+    
+    async fn process_request(&amp;self, request: AIRequest) -&gt; AIResult&lt;AIResponse&gt; {
+        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use std::time::{Duration, SystemTime};
+        
+        // Placeholder implementation
+        tokio::time::sleep(Duration::from_millis(180)).await;
+        
+        Ok(AIResponse {
+            feature: request.feature,
+            content: format!(&quot;Azure OpenAI analysis: {}&quot;, request.content.chars().take(100).collect::&lt;String&gt;()),
+            structured_data: None,
+            confidence: Some(0.90),
+            token_usage: TokenUsage::new(70, 140),
+            metadata: ResponseMetadata {
+                request_id: request.metadata.request_id,
+                model_used: self.config.default_model.clone(),
+                provider: AIProvider::AzureOpenAI,
+                processing_time: Duration::from_millis(180),
+                cached: false,
+                timestamp: SystemTime::now(),
+                rate_limit_remaining: Some(60),
+            },
+        })
+    }
+    
+    fn best_model_for_feature(&amp;self, _feature: AIFeature) -&gt; Option&lt;String&gt; {
+        Some(&quot;gpt-4&quot;.to_string())
+    }
+    
+    fn rate_limit_info(&amp;self) -&gt; Option&lt;RateLimitInfo&gt; {
+        Some(RateLimitInfo {
+            requests_per_minute: self.config.rate_limit.requests_per_minute,
+            tokens_per_minute: self.config.rate_limit.tokens_per_minute,
+            remaining_requests: None,
+            remaining_tokens: None,
+            reset_time: None,
+        })
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

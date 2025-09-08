@@ -1,0 +1,2905 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure/rate_limiter.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>infrastructure/rate_limiter.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="ai_providers_groq.rs.html">ai/providers/groq.rs</a>
+<a href="ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+</details>
+<a href="ai_cache.rs.html">ai/cache.rs</a>
+<a href="ai_config.rs.html">ai/config.rs</a>
+<a href="ai_error.rs.html">ai/error.rs</a>
+<a href="ai_mod.rs.html">ai/mod.rs</a>
+<a href="ai_service.rs.html">ai/service.rs</a>
+<a href="ai_types.rs.html">ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="bin_main.rs.html">bin/main.rs</a>
+<a href="bin_rts.rs.html">bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+</details>
+<a href="cli_error.rs.html">cli/error.rs</a>
+<a href="cli_mod.rs.html">cli/mod.rs</a>
+<a href="cli_output.rs.html">cli/output.rs</a>
+<a href="cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="cli_utils.rs.html">cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="languages_c.rs.html">languages/c.rs</a>
+<a href="languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="languages_go.rs.html">languages/go.rs</a>
+<a href="languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="languages_mod.rs.html">languages/mod.rs</a>
+<a href="languages_python.rs.html">languages/python.rs</a>
+<a href="languages_rust.rs.html">languages/rust.rs</a>
+<a href="languages_typescript.rs.html">languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="security_mod.rs.html">security/mod.rs</a>
+<a href="security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="wiki_ai_schema.rs.html">wiki/ai_schema.rs</a>
+<a href="wiki_enhanced_ai.rs.html">wiki/enhanced_ai.rs</a>
+<a href="wiki_mod.rs.html">wiki/mod.rs</a>
+<a href="wiki_security_enhancements.rs.html">wiki/security_enhancements.rs</a>
+</details>
+<a href="advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="advanced_security.rs.html">advanced_security.rs</a>
+<a href="ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="analysis_common.rs.html">analysis_common.rs</a>
+<a href="analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="analyzer.rs.html">analyzer.rs</a>
+<a href="ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="code_evolution.rs.html">code_evolution.rs</a>
+<a href="code_map.rs.html">code_map.rs</a>
+<a href="command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="constants.rs.html">constants.rs</a>
+<a href="control_flow.rs.html">control_flow.rs</a>
+<a href="dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="embeddings.rs.html">embeddings.rs</a>
+<a href="enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="error.rs.html">error.rs</a>
+<a href="file_cache.rs.html">file_cache.rs</a>
+<a href="intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="lib.rs.html">lib.rs</a>
+<a href="main.rs.html">main.rs</a>
+<a href="memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="parser.rs.html">parser.rs</a>
+<a href="performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="query.rs.html">query.rs</a>
+<a href="reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="refactoring.rs.html">refactoring.rs</a>
+<a href="semantic_context.rs.html">semantic_context.rs</a>
+<a href="semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="symbol_table.rs.html">symbol_table.rs</a>
+<a href="taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="test_coverage.rs.html">test_coverage.rs</a>
+<a href="tree.rs.html">tree.rs</a>
+
+
+</nav>
+<section class="article">
+<p>78 symbols, 471 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> infrastructure/rate_limiter.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 471<br><strong>Symbols:</strong> 78<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant default
+  participant default
+  participant new
+  participant add_service
+  participant wait_for_permit
+  participant check_permit
+  participant get_stats
+  participant get_services
+  participant new
+  participant wait_for_permit
+  participant check_permit
+  participant get_stats
+  participant reset_stats
+  participant service_name
+  participant record_success
+  participant record_failure
+  participant calculate_backoff_delay
+  participant wait_with_backoff
+  participant new
+  participant adjust_rate
+  participant get_current_rate
+  participant nvd_limiter
+  participant nvd_limiter_with_key
+  participant osv_limiter
+  participant github_limiter
+  participant github_limiter_with_token
+  participant create_default_multi_limiter
+  default->>default: call
+  default->>new: call
+  new->>add_service: call
+  add_service->>wait_for_permit: call
+  wait_for_permit->>check_permit: call
+  check_permit->>get_stats: call
+  get_stats->>get_services: call
+  get_services->>new: call
+  new->>wait_for_permit: call
+  wait_for_permit->>check_permit: call
+  check_permit->>get_stats: call
+  get_stats->>reset_stats: call
+  reset_stats->>service_name: call
+  service_name->>record_success: call
+  record_success->>record_failure: call
+  record_failure->>calculate_backoff_delay: call
+  calculate_backoff_delay->>wait_with_backoff: call
+  wait_with_backoff->>new: call
+  new->>adjust_rate: call
+  adjust_rate->>get_current_rate: call
+  get_current_rate->>nvd_limiter: call
+  nvd_limiter->>nvd_limiter_with_key: call
+  nvd_limiter_with_key->>osv_limiter: call
+  osv_limiter->>github_limiter: call
+  github_limiter->>github_limiter_with_token: call
+  github_limiter_with_token->>create_default_multi_limiter: call
+
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class default {}
+  class default {}
+  class new {}
+  class add_service {}
+  class wait_for_permit {}
+  class check_permit {}
+  class get_stats {}
+  class get_services {}
+  class new {}
+  class wait_for_permit {}
+  class check_permit {}
+  class get_stats {}
+  class reset_stats {}
+  class service_name {}
+  class record_success {}
+  class record_failure {}
+  class calculate_backoff_delay {}
+  class wait_with_backoff {}
+  class new {}
+  class adjust_rate {}
+  class get_current_rate {}
+  class nvd_limiter {}
+  class nvd_limiter_with_key {}
+  class osv_limiter {}
+  class github_limiter {}
+  class github_limiter_with_token {}
+  class create_default_multi_limiter {}
+  class MultiServiceRateLimiter {}
+  class ServiceRateLimiter {}
+  class ServiceStats {}
+  class RateLimitConfig {}
+  class BackoffConfig {}
+  class RateLimitStats {}
+  class AdaptiveRateLimiter {}
+  class RateLimiterFactory {}
+  class RateLimitResult {}
+  class ServiceStats {}
+  class BackoffConfig {}
+  class MultiServiceRateLimiter {}
+  class ServiceRateLimiter {}
+  class AdaptiveRateLimiter {}
+  class RateLimiterFactory {}
+  class service_limiter {}
+  class limiters {}
+  class limiters {}
+  class limiters {}
+  class limiters {}
+  class limiters {}
+  class requests_per_minute {}
+  class quota {}
+  class limiter {}
+  class stats {}
+  class retry_after {}
+  class stats {}
+  class elapsed {}
+  class tokens_replenished {}
+  class current_tokens {}
+  class stats {}
+  class stats {}
+  class stats {}
+  class stats {}
+  class base_delay {}
+  class multiplier {}
+  class delay_ms {}
+  class delay {}
+  class jitter_factor {}
+  class backoff_delay {}
+  class config {}
+  class base_limiter {}
+  class current_rate {}
+  class new_rate {}
+  class new_rate {}
+  class config {}
+  class config {}
+  class config {}
+  class config {}
+  class config {}
+  class multi_limiter {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(27)</small></summary><ul><li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (42-50)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-42">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:42" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">42
+43
+44
+45
+46
+47
+48
+49
+50
+</pre>
+    <pre><code id="code-default-42" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self {
+            total_requests: 0,
+            total_limited: 0,
+            last_reset: std::time::Instant::now(),
+            consecutive_failures: 0,
+            last_failure: None,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (81-88)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-81">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:81" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">81
+82
+83
+84
+85
+86
+87
+88
+</pre>
+    <pre><code id="code-default-81" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self {
+            initial_delay: Duration::from_millis(100),
+            max_delay: Duration::from_secs(60),
+            multiplier: 2.0,
+            jitter: true,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (93-97)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-93">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:93" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">93
+94
+95
+96
+97
+</pre>
+    <pre><code id="code-new-93" class="lang-rust hljs">    pub fn new() -&gt; Self {
+        Self {
+            limiters: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-add-service"><code>add_service</code> <small>function</small>
+<details><summary>View code (100-105)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-add_service-100">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:100" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">100
+101
+102
+103
+104
+105
+</pre>
+    <pre><code id="code-add_service-100" class="lang-rust hljs">    pub async fn add_service(&amp;self, config: RateLimitConfig) -&gt; Result&lt;()&gt; {
+        let service_limiter = ServiceRateLimiter::new(config)?;
+        let mut limiters = self.limiters.write().await;
+        limiters.insert(service_limiter.service_name.clone(), service_limiter);
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-wait-for-permit"><code>wait_for_permit</code> <small>function</small>
+<details><summary>View code (108-115)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-wait_for_permit-108">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:108" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">108
+109
+110
+111
+112
+113
+114
+115
+</pre>
+    <pre><code id="code-wait_for_permit-108" class="lang-rust hljs">    pub async fn wait_for_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;()&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            limiter.wait_for_permit().await
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-check-permit"><code>check_permit</code> <small>function</small>
+<details><summary>View code (118-125)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-check_permit-118">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:118" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">118
+119
+120
+121
+122
+123
+124
+125
+</pre>
+    <pre><code id="code-check_permit-118" class="lang-rust hljs">    pub async fn check_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitResult&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.check_permit())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-stats"><code>get_stats</code> <small>function</small>
+<details><summary>View code (128-135)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_stats-128">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:128" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">128
+129
+130
+131
+132
+133
+134
+135
+</pre>
+    <pre><code id="code-get_stats-128" class="lang-rust hljs">    pub async fn get_stats(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitStats&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.get_stats())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-services"><code>get_services</code> <small>function</small>
+<details><summary>View code (138-141)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_services-138">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:138" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">138
+139
+140
+141
+</pre>
+    <pre><code id="code-get_services-138" class="lang-rust hljs">    pub async fn get_services(&amp;self) -&gt; Vec&lt;String&gt; {
+        let limiters = self.limiters.read().await;
+        limiters.keys().cloned().collect()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (146-169)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-146">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:146" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+</pre>
+    <pre><code id="code-new-146" class="lang-rust hljs">    pub fn new(config: RateLimitConfig) -&gt; Result&lt;Self&gt; {
+        let requests_per_minute = NonZeroU32::new(config.requests_per_minute)
+            .ok_or_else(|| anyhow!(&quot;Requests per minute must be &gt; 0&quot;))?;
+
+        let quota = Quota::per_minute(requests_per_minute);
+        let limiter = Arc::new(GovRateLimiter::direct(quota));
+
+        debug!(&quot;Created rate limiter for {}: {} requests/minute&quot;, 
+               config.service_name, config.requests_per_minute);
+
+        Ok(Self {
+            limiter,
+            service_name: config.service_name,
+            requests_per_minute: config.requests_per_minute,
+            burst_size: config.burst_size.unwrap_or(config.requests_per_minute),
+            stats: Arc::new(RwLock::new(ServiceStats {
+                total_requests: 0,
+                total_limited: 0,
+                last_reset: std::time::Instant::now(),
+                consecutive_failures: 0,
+                last_failure: None,
+            })),
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-wait-for-permit"><code>wait_for_permit</code> <small>function</small>
+<details><summary>View code (172-183)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-wait_for_permit-172">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:172" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+</pre>
+    <pre><code id="code-wait_for_permit-172" class="lang-rust hljs">    pub async fn wait_for_permit(&amp;self) -&gt; Result&lt;()&gt; {
+        self.limiter.until_ready().await;
+
+        // Update statistics
+        {
+            let mut stats = self.stats.write().await;
+            stats.total_requests += 1;
+        }
+
+        debug!(&quot;Rate limit permit granted for {}&quot;, self.service_name);
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-check-permit"><code>check_permit</code> <small>function</small>
+<details><summary>View code (186-207)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-check_permit-186">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:186" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+</pre>
+    <pre><code id="code-check_permit-186" class="lang-rust hljs">    pub fn check_permit(&amp;self) -&gt; RateLimitResult {
+        match self.limiter.check() {
+            Ok(_) =&gt; {
+                // Update statistics for successful request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_requests += 1;
+                }
+                debug!(&quot;Rate limit check passed for {}&quot;, self.service_name);
+                RateLimitResult::Allowed
+            }
+            Err(negative) =&gt; {
+                // Update statistics for limited request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_limited += 1;
+                }
+                let retry_after = negative.wait_time_from(governor::clock::DefaultClock::default().now());
+                warn!(&quot;Rate limit exceeded for {}, retry after: {:?}&quot;,
+                      self.service_name, retry_after);
+                RateLimitResult::Limited { retry_after }
+            }
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-stats"><code>get_stats</code> <small>function</small>
+<details><summary>View code (210-230)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_stats-210">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:210" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+</pre>
+    <pre><code id="code-get_stats-210" class="lang-rust hljs">    pub fn get_stats(&amp;self) -&gt; RateLimitStats {
+        let stats = if let Ok(stats) = self.stats.try_read() {
+            stats.clone()
+        } else {
+            ServiceStats::default()
+        };
+
+        // Estimate current tokens based on time elapsed and rate
+        let elapsed = stats.last_reset.elapsed();
+        let tokens_replenished = (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;
+        let current_tokens = tokens_replenished.min(self.burst_size);
+
+        RateLimitStats {
+            service_name: self.service_name.clone(),
+            requests_per_minute: self.requests_per_minute,
+            burst_size: self.burst_size,
+            current_tokens,
+            total_requests: stats.total_requests,
+            total_limited: stats.total_limited,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-reset-stats"><code>reset_stats</code> <small>function</small>
+<details><summary>View code (233-238)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-reset_stats-233">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:233" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">233
+234
+235
+236
+237
+238
+</pre>
+    <pre><code id="code-reset_stats-233" class="lang-rust hljs">    pub async fn reset_stats(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.total_requests = 0;
+        stats.total_limited = 0;
+        stats.last_reset = std::time::Instant::now();
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-service-name"><code>service_name</code> <small>function</small>
+<details><summary>View code (241-243)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-service_name-241">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:241" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">241
+242
+243
+</pre>
+    <pre><code id="code-service_name-241" class="lang-rust hljs">    pub fn service_name(&amp;self) -&gt; &amp;str {
+        &amp;self.service_name
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-record-success"><code>record_success</code> <small>function</small>
+<details><summary>View code (246-250)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-record_success-246">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:246" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">246
+247
+248
+249
+250
+</pre>
+    <pre><code id="code-record_success-246" class="lang-rust hljs">    pub async fn record_success(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures = 0;
+        stats.last_failure = None;
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-record-failure"><code>record_failure</code> <small>function</small>
+<details><summary>View code (253-257)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-record_failure-253">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:253" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">253
+254
+255
+256
+257
+</pre>
+    <pre><code id="code-record_failure-253" class="lang-rust hljs">    pub async fn record_failure(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures += 1;
+        stats.last_failure = Some(std::time::Instant::now());
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-calculate-backoff-delay"><code>calculate_backoff_delay</code> <small>function</small>
+<details><summary>View code (260-287)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-calculate_backoff_delay-260">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:260" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+</pre>
+    <pre><code id="code-calculate_backoff_delay-260" class="lang-rust hljs">    pub async fn calculate_backoff_delay(&amp;self, config: &amp;BackoffConfig) -&gt; Duration {
+        let stats = self.stats.read().await;
+
+        if stats.consecutive_failures == 0 {
+            return Duration::from_millis(0);
+        }
+
+        // Calculate exponential delay
+        let base_delay = config.initial_delay.as_millis() as f64;
+        let multiplier = config.multiplier.powi(stats.consecutive_failures as i32 - 1);
+        let delay_ms = (base_delay * multiplier) as u64;
+
+        let mut delay = Duration::from_millis(delay_ms);
+
+        // Cap at max delay
+        if delay &gt; config.max_delay {
+            delay = config.max_delay;
+        }
+
+        // Add jitter if enabled
+        if config.jitter {
+            use rand::Rng;
+            let jitter_factor = rand::thread_rng().gen_range(0.5..1.5);
+            delay = Duration::from_millis((delay.as_millis() as f64 * jitter_factor) as u64);
+        }
+
+        delay
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-wait-with-backoff"><code>wait_with_backoff</code> <small>function</small>
+<details><summary>View code (290-300)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-wait_with_backoff-290">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:290" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+</pre>
+    <pre><code id="code-wait_with_backoff-290" class="lang-rust hljs">    pub async fn wait_with_backoff(&amp;self, config: &amp;BackoffConfig) -&gt; Result&lt;()&gt; {
+        let backoff_delay = self.calculate_backoff_delay(config).await;
+
+        if !backoff_delay.is_zero() {
+            debug!(&quot;Applying exponential backoff for {}: {:?}&quot;,
+                   self.service_name, backoff_delay);
+            tokio::time::sleep(backoff_delay).await;
+        }
+
+        self.wait_for_permit().await
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (326-349)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-326">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:326" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+</pre>
+    <pre><code id="code-new-326" class="lang-rust hljs">    pub fn new(
+        service_name: String,
+        initial_rate: u32,
+        min_rate: u32,
+        max_rate: u32,
+    ) -&gt; Result&lt;Self&gt; {
+        let config = RateLimitConfig {
+            service_name,
+            requests_per_minute: initial_rate,
+            burst_size: Some(initial_rate),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+
+        let base_limiter = ServiceRateLimiter::new(config)?;
+
+        Ok(Self {
+            base_limiter,
+            current_rate: Arc::new(tokio::sync::RwLock::new(initial_rate)),
+            min_rate,
+            max_rate,
+            adjustment_factor: 0.1, // 10% adjustment
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-adjust-rate"><code>adjust_rate</code> <small>function</small>
+<details><summary>View code (352-368)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-adjust_rate-352">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:352" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+</pre>
+    <pre><code id="code-adjust_rate-352" class="lang-rust hljs">    pub async fn adjust_rate(&amp;self, response_indicates_rate_limit: bool) {
+        let mut current_rate = self.current_rate.write().await;
+        
+        if response_indicates_rate_limit {
+            // Decrease rate
+            let new_rate = (*current_rate as f64 * (1.0 - self.adjustment_factor)) as u32;
+            *current_rate = new_rate.max(self.min_rate);
+            warn!(&quot;Decreased rate limit for {} to {}&quot;, 
+                  self.base_limiter.service_name, *current_rate);
+        } else {
+            // Gradually increase rate
+            let new_rate = (*current_rate as f64 * (1.0 + self.adjustment_factor * 0.1)) as u32;
+            *current_rate = new_rate.min(self.max_rate);
+            debug!(&quot;Increased rate limit for {} to {}&quot;, 
+                   self.base_limiter.service_name, *current_rate);
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get-current-rate"><code>get_current_rate</code> <small>function</small>
+<details><summary>View code (371-373)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get_current_rate-371">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:371" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">371
+372
+373
+</pre>
+    <pre><code id="code-get_current_rate-371" class="lang-rust hljs">    pub async fn get_current_rate(&amp;self) -&gt; u32 {
+        *self.current_rate.read().await
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-nvd-limiter"><code>nvd_limiter</code> <small>function</small>
+<details><summary>View code (381-390)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-nvd_limiter-381">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:381" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+</pre>
+    <pre><code id="code-nvd_limiter-381" class="lang-rust hljs">    pub fn nvd_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50, // NVD limit without API key
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-nvd-limiter-with-key"><code>nvd_limiter_with_key</code> <small>function</small>
+<details><summary>View code (393-402)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-nvd_limiter_with_key-393">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:393" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+</pre>
+    <pre><code id="code-nvd_limiter_with_key-393" class="lang-rust hljs">    pub fn nvd_limiter_with_key() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd_with_key&quot;.to_string(),
+            requests_per_minute: 100, // Higher limit with API key
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-osv-limiter"><code>osv_limiter</code> <small>function</small>
+<details><summary>View code (405-414)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-osv_limiter-405">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:405" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+</pre>
+    <pre><code id="code-osv_limiter-405" class="lang-rust hljs">    pub fn osv_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-github-limiter"><code>github_limiter</code> <small>function</small>
+<details><summary>View code (417-426)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-github_limiter-417">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:417" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+</pre>
+    <pre><code id="code-github_limiter-417" class="lang-rust hljs">    pub fn github_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60, // GitHub limit without token
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-github-limiter-with-token"><code>github_limiter_with_token</code> <small>function</small>
+<details><summary>View code (429-438)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-github_limiter_with_token-429">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:429" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+</pre>
+    <pre><code id="code-github_limiter_with_token-429" class="lang-rust hljs">    pub fn github_limiter_with_token() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github_with_token&quot;.to_string(),
+            requests_per_minute: 5000, // Much higher limit with token
+            burst_size: Some(100),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-create-default-multi-limiter"><code>create_default_multi_limiter</code> <small>function</small>
+<details><summary>View code (441-470)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-create_default_multi_limiter-441">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:441" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+</pre>
+    <pre><code id="code-create_default_multi_limiter-441" class="lang-rust hljs">    pub async fn create_default_multi_limiter() -&gt; Result&lt;MultiServiceRateLimiter&gt; {
+        let multi_limiter = MultiServiceRateLimiter::new();
+
+        // Add common service limiters
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        }).await?;
+
+        Ok(multi_limiter)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(36)</small></summary><ul><li id="symbol-service-limiter"><code>service_limiter</code> <small>variable</small>
+<details><summary>View code (101-101)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-service_limiter-101">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:101" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">101
+</pre>
+    <pre><code id="code-service_limiter-101" class="lang-rust hljs">        let service_limiter = ServiceRateLimiter::new(config)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (102-102)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-102">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:102" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">102
+</pre>
+    <pre><code id="code-limiters-102" class="lang-rust hljs">        let mut limiters = self.limiters.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (109-109)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-109">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:109" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">109
+</pre>
+    <pre><code id="code-limiters-109" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (119-119)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-119">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:119" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">119
+</pre>
+    <pre><code id="code-limiters-119" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (129-129)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-129">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:129" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">129
+</pre>
+    <pre><code id="code-limiters-129" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiters"><code>limiters</code> <small>variable</small>
+<details><summary>View code (139-139)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiters-139">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:139" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">139
+</pre>
+    <pre><code id="code-limiters-139" class="lang-rust hljs">        let limiters = self.limiters.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-requests-per-minute"><code>requests_per_minute</code> <small>variable</small>
+<details><summary>View code (147-148)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-requests_per_minute-147">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:147" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">147
+148
+</pre>
+    <pre><code id="code-requests_per_minute-147" class="lang-rust hljs">        let requests_per_minute = NonZeroU32::new(config.requests_per_minute)
+            .ok_or_else(|| anyhow!(&quot;Requests per minute must be &gt; 0&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-quota"><code>quota</code> <small>variable</small>
+<details><summary>View code (150-150)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-quota-150">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:150" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">150
+</pre>
+    <pre><code id="code-quota-150" class="lang-rust hljs">        let quota = Quota::per_minute(requests_per_minute);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiter"><code>limiter</code> <small>variable</small>
+<details><summary>View code (151-151)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiter-151">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:151" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">151
+</pre>
+    <pre><code id="code-limiter-151" class="lang-rust hljs">        let limiter = Arc::new(GovRateLimiter::direct(quota));</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (177-177)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-177">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:177" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">177
+</pre>
+    <pre><code id="code-stats-177" class="lang-rust hljs">            let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-retry-after"><code>retry_after</code> <small>variable</small>
+<details><summary>View code (201-201)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-retry_after-201">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:201" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">201
+</pre>
+    <pre><code id="code-retry_after-201" class="lang-rust hljs">                let retry_after = negative.wait_time_from(governor::clock::DefaultClock::default().now());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (211-215)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-211">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:211" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">211
+212
+213
+214
+215
+</pre>
+    <pre><code id="code-stats-211" class="lang-rust hljs">        let stats = if let Ok(stats) = self.stats.try_read() {
+            stats.clone()
+        } else {
+            ServiceStats::default()
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-elapsed"><code>elapsed</code> <small>variable</small>
+<details><summary>View code (218-218)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-elapsed-218">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:218" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">218
+</pre>
+    <pre><code id="code-elapsed-218" class="lang-rust hljs">        let elapsed = stats.last_reset.elapsed();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-tokens-replenished"><code>tokens_replenished</code> <small>variable</small>
+<details><summary>View code (219-219)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-tokens_replenished-219">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:219" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">219
+</pre>
+    <pre><code id="code-tokens_replenished-219" class="lang-rust hljs">        let tokens_replenished = (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-current-tokens"><code>current_tokens</code> <small>variable</small>
+<details><summary>View code (220-220)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-current_tokens-220">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:220" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">220
+</pre>
+    <pre><code id="code-current_tokens-220" class="lang-rust hljs">        let current_tokens = tokens_replenished.min(self.burst_size);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (234-234)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-234">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:234" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">234
+</pre>
+    <pre><code id="code-stats-234" class="lang-rust hljs">        let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (247-247)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-247">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:247" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">247
+</pre>
+    <pre><code id="code-stats-247" class="lang-rust hljs">        let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (254-254)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-254">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:254" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">254
+</pre>
+    <pre><code id="code-stats-254" class="lang-rust hljs">        let mut stats = self.stats.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (261-261)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-261">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:261" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">261
+</pre>
+    <pre><code id="code-stats-261" class="lang-rust hljs">        let stats = self.stats.read().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-base-delay"><code>base_delay</code> <small>variable</small>
+<details><summary>View code (268-268)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-base_delay-268">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:268" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">268
+</pre>
+    <pre><code id="code-base_delay-268" class="lang-rust hljs">        let base_delay = config.initial_delay.as_millis() as f64;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-multiplier"><code>multiplier</code> <small>variable</small>
+<details><summary>View code (269-269)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multiplier-269">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:269" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">269
+</pre>
+    <pre><code id="code-multiplier-269" class="lang-rust hljs">        let multiplier = config.multiplier.powi(stats.consecutive_failures as i32 - 1);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-delay-ms"><code>delay_ms</code> <small>variable</small>
+<details><summary>View code (270-270)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-delay_ms-270">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:270" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">270
+</pre>
+    <pre><code id="code-delay_ms-270" class="lang-rust hljs">        let delay_ms = (base_delay * multiplier) as u64;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-delay"><code>delay</code> <small>variable</small>
+<details><summary>View code (272-272)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-delay-272">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:272" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">272
+</pre>
+    <pre><code id="code-delay-272" class="lang-rust hljs">        let mut delay = Duration::from_millis(delay_ms);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-jitter-factor"><code>jitter_factor</code> <small>variable</small>
+<details><summary>View code (282-282)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-jitter_factor-282">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:282" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">282
+</pre>
+    <pre><code id="code-jitter_factor-282" class="lang-rust hljs">            let jitter_factor = rand::thread_rng().gen_range(0.5..1.5);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoff-delay"><code>backoff_delay</code> <small>variable</small>
+<details><summary>View code (291-291)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoff_delay-291">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:291" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">291
+</pre>
+    <pre><code id="code-backoff_delay-291" class="lang-rust hljs">        let backoff_delay = self.calculate_backoff_delay(config).await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (332-338)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-332">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:332" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">332
+333
+334
+335
+336
+337
+338
+</pre>
+    <pre><code id="code-config-332" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name,
+            requests_per_minute: initial_rate,
+            burst_size: Some(initial_rate),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-base-limiter"><code>base_limiter</code> <small>variable</small>
+<details><summary>View code (340-340)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-base_limiter-340">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:340" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">340
+</pre>
+    <pre><code id="code-base_limiter-340" class="lang-rust hljs">        let base_limiter = ServiceRateLimiter::new(config)?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-current-rate"><code>current_rate</code> <small>variable</small>
+<details><summary>View code (353-353)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-current_rate-353">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:353" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">353
+</pre>
+    <pre><code id="code-current_rate-353" class="lang-rust hljs">        let mut current_rate = self.current_rate.write().await;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new-rate"><code>new_rate</code> <small>variable</small>
+<details><summary>View code (357-357)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new_rate-357">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:357" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">357
+</pre>
+    <pre><code id="code-new_rate-357" class="lang-rust hljs">            let new_rate = (*current_rate as f64 * (1.0 - self.adjustment_factor)) as u32;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new-rate"><code>new_rate</code> <small>variable</small>
+<details><summary>View code (363-363)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new_rate-363">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:363" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">363
+</pre>
+    <pre><code id="code-new_rate-363" class="lang-rust hljs">            let new_rate = (*current_rate as f64 * (1.0 + self.adjustment_factor * 0.1)) as u32;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (382-388)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-382">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:382" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">382
+383
+384
+385
+386
+387
+388
+</pre>
+    <pre><code id="code-config-382" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50, // NVD limit without API key
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (394-400)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-394">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:394" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">394
+395
+396
+397
+398
+399
+400
+</pre>
+    <pre><code id="code-config-394" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;nvd_with_key&quot;.to_string(),
+            requests_per_minute: 100, // Higher limit with API key
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (406-412)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-406">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:406" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">406
+407
+408
+409
+410
+411
+412
+</pre>
+    <pre><code id="code-config-406" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (418-424)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-418">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:418" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">418
+419
+420
+421
+422
+423
+424
+</pre>
+    <pre><code id="code-config-418" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60, // GitHub limit without token
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (430-436)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-430">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:430" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">430
+431
+432
+433
+434
+435
+436
+</pre>
+    <pre><code id="code-config-430" class="lang-rust hljs">        let config = RateLimitConfig {
+            service_name: &quot;github_with_token&quot;.to_string(),
+            requests_per_minute: 5000, // Much higher limit with token
+            burst_size: Some(100),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-multi-limiter"><code>multi_limiter</code> <small>variable</small>
+<details><summary>View code (442-442)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multi_limiter-442">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:442" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">442
+</pre>
+    <pre><code id="code-multi_limiter-442" class="lang-rust hljs">        let multi_limiter = MultiServiceRateLimiter::new();</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(15)</small></summary><ul><li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>struct</small>
+<details><summary>View code (17-19)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multiserviceratelimiter-17">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:17" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">17
+18
+19
+</pre>
+    <pre><code id="code-multiserviceratelimiter-17" class="lang-rust hljs">pub struct MultiServiceRateLimiter {
+    limiters: Arc&lt;RwLock&lt;HashMap&lt;String, ServiceRateLimiter&gt;&gt;&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>struct</small>
+<details><summary>View code (23-29)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-serviceratelimiter-23">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:23" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">23
+24
+25
+26
+27
+28
+29
+</pre>
+    <pre><code id="code-serviceratelimiter-23" class="lang-rust hljs">pub struct ServiceRateLimiter {
+    limiter: Arc&lt;GovRateLimiter&lt;NotKeyed, InMemoryState, DefaultClock, NoOpMiddleware&gt;&gt;,
+    service_name: String,
+    requests_per_minute: u32,
+    burst_size: u32,
+    stats: Arc&lt;RwLock&lt;ServiceStats&gt;&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-servicestats"><code>ServiceStats</code> <small>struct</small>
+<details><summary>View code (33-39)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-servicestats-33">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:33" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">33
+34
+35
+36
+37
+38
+39
+</pre>
+    <pre><code id="code-servicestats-33" class="lang-rust hljs">struct ServiceStats {
+    total_requests: u64,
+    total_limited: u64,
+    last_reset: std::time::Instant,
+    consecutive_failures: u32,
+    last_failure: Option&lt;std::time::Instant&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimitconfig"><code>RateLimitConfig</code> <small>struct</small>
+<details><summary>View code (55-61)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitconfig-55">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:55" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">55
+56
+57
+58
+59
+60
+61
+</pre>
+    <pre><code id="code-ratelimitconfig-55" class="lang-rust hljs">pub struct RateLimitConfig {
+    pub service_name: String,
+    pub requests_per_minute: u32,
+    pub burst_size: Option&lt;u32&gt;,
+    pub enable_backoff: bool,
+    pub max_backoff_duration: Duration,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>struct</small>
+<details><summary>View code (73-78)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoffconfig-73">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:73" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">73
+74
+75
+76
+77
+78
+</pre>
+    <pre><code id="code-backoffconfig-73" class="lang-rust hljs">pub struct BackoffConfig {
+    pub initial_delay: Duration,
+    pub max_delay: Duration,
+    pub multiplier: f64,
+    pub jitter: bool,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimitstats"><code>RateLimitStats</code> <small>struct</small>
+<details><summary>View code (305-312)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitstats-305">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:305" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">305
+306
+307
+308
+309
+310
+311
+312
+</pre>
+    <pre><code id="code-ratelimitstats-305" class="lang-rust hljs">pub struct RateLimitStats {
+    pub service_name: String,
+    pub requests_per_minute: u32,
+    pub burst_size: u32,
+    pub current_tokens: u32,
+    pub total_requests: u64,
+    pub total_limited: u64,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>struct</small>
+<details><summary>View code (316-322)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-adaptiveratelimiter-316">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:316" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">316
+317
+318
+319
+320
+321
+322
+</pre>
+    <pre><code id="code-adaptiveratelimiter-316" class="lang-rust hljs">pub struct AdaptiveRateLimiter {
+    base_limiter: ServiceRateLimiter,
+    current_rate: Arc&lt;tokio::sync::RwLock&lt;u32&gt;&gt;,
+    min_rate: u32,
+    max_rate: u32,
+    adjustment_factor: f64,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>struct</small>
+<details><summary>View code (377-377)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimiterfactory-377">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:377" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">377
+</pre>
+    <pre><code id="code-ratelimiterfactory-377" class="lang-rust hljs">pub struct RateLimiterFactory;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimitresult"><code>RateLimitResult</code> <small>enum</small>
+<details><summary>View code (65-69)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitresult-65">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:65" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">65
+66
+67
+68
+69
+</pre>
+    <pre><code id="code-ratelimitresult-65" class="lang-rust hljs">pub enum RateLimitResult {
+    Allowed,
+    Limited { retry_after: Duration },
+    Error(String),
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-servicestats"><code>ServiceStats</code> <small>impl</small>
+<details><summary>View code (41-51)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-servicestats-41">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:41" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+</pre>
+    <pre><code id="code-servicestats-41" class="lang-rust hljs">impl Default for ServiceStats {
+    fn default() -&gt; Self {
+        Self {
+            total_requests: 0,
+            total_limited: 0,
+            last_reset: std::time::Instant::now(),
+            consecutive_failures: 0,
+            last_failure: None,
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoffconfig"><code>BackoffConfig</code> <small>impl</small>
+<details><summary>View code (80-89)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoffconfig-80">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:80" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+</pre>
+    <pre><code id="code-backoffconfig-80" class="lang-rust hljs">impl Default for BackoffConfig {
+    fn default() -&gt; Self {
+        Self {
+            initial_delay: Duration::from_millis(100),
+            max_delay: Duration::from_secs(60),
+            multiplier: 2.0,
+            jitter: true,
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-multiserviceratelimiter"><code>MultiServiceRateLimiter</code> <small>impl</small>
+<details><summary>View code (91-142)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-multiserviceratelimiter-91">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:91" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+</pre>
+    <pre><code id="code-multiserviceratelimiter-91" class="lang-rust hljs">impl MultiServiceRateLimiter {
+    /// Create a new multi-service rate limiter
+    pub fn new() -&gt; Self {
+        Self {
+            limiters: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Add a rate limiter for a specific service
+    pub async fn add_service(&amp;self, config: RateLimitConfig) -&gt; Result&lt;()&gt; {
+        let service_limiter = ServiceRateLimiter::new(config)?;
+        let mut limiters = self.limiters.write().await;
+        limiters.insert(service_limiter.service_name.clone(), service_limiter);
+        Ok(())
+    }
+
+    /// Wait for permission to make a request to a service
+    pub async fn wait_for_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;()&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            limiter.wait_for_permit().await
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }
+
+    /// Check if a request can be made immediately
+    pub async fn check_permit(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitResult&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.check_permit())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }
+
+    /// Get rate limiting statistics for a service
+    pub async fn get_stats(&amp;self, service_name: &amp;str) -&gt; Result&lt;RateLimitStats&gt; {
+        let limiters = self.limiters.read().await;
+        if let Some(limiter) = limiters.get(service_name) {
+            Ok(limiter.get_stats())
+        } else {
+            Err(anyhow!(&quot;No rate limiter configured for service: {}&quot;, service_name))
+        }
+    }
+
+    /// Get all configured services
+    pub async fn get_services(&amp;self) -&gt; Vec&lt;String&gt; {
+        let limiters = self.limiters.read().await;
+        limiters.keys().cloned().collect()
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-serviceratelimiter"><code>ServiceRateLimiter</code> <small>impl</small>
+<details><summary>View code (144-301)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-serviceratelimiter-144">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:144" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+</pre>
+    <pre><code id="code-serviceratelimiter-144" class="lang-rust hljs">impl ServiceRateLimiter {
+    /// Create a new service rate limiter
+    pub fn new(config: RateLimitConfig) -&gt; Result&lt;Self&gt; {
+        let requests_per_minute = NonZeroU32::new(config.requests_per_minute)
+            .ok_or_else(|| anyhow!(&quot;Requests per minute must be &gt; 0&quot;))?;
+
+        let quota = Quota::per_minute(requests_per_minute);
+        let limiter = Arc::new(GovRateLimiter::direct(quota));
+
+        debug!(&quot;Created rate limiter for {}: {} requests/minute&quot;, 
+               config.service_name, config.requests_per_minute);
+
+        Ok(Self {
+            limiter,
+            service_name: config.service_name,
+            requests_per_minute: config.requests_per_minute,
+            burst_size: config.burst_size.unwrap_or(config.requests_per_minute),
+            stats: Arc::new(RwLock::new(ServiceStats {
+                total_requests: 0,
+                total_limited: 0,
+                last_reset: std::time::Instant::now(),
+                consecutive_failures: 0,
+                last_failure: None,
+            })),
+        })
+    }
+
+    /// Wait for permission to make a request
+    pub async fn wait_for_permit(&amp;self) -&gt; Result&lt;()&gt; {
+        self.limiter.until_ready().await;
+
+        // Update statistics
+        {
+            let mut stats = self.stats.write().await;
+            stats.total_requests += 1;
+        }
+
+        debug!(&quot;Rate limit permit granted for {}&quot;, self.service_name);
+        Ok(())
+    }
+
+    /// Check if a request can be made immediately
+    pub fn check_permit(&amp;self) -&gt; RateLimitResult {
+        match self.limiter.check() {
+            Ok(_) =&gt; {
+                // Update statistics for successful request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_requests += 1;
+                }
+                debug!(&quot;Rate limit check passed for {}&quot;, self.service_name);
+                RateLimitResult::Allowed
+            }
+            Err(negative) =&gt; {
+                // Update statistics for limited request
+                if let Ok(mut stats) = self.stats.try_write() {
+                    stats.total_limited += 1;
+                }
+                let retry_after = negative.wait_time_from(governor::clock::DefaultClock::default().now());
+                warn!(&quot;Rate limit exceeded for {}, retry after: {:?}&quot;,
+                      self.service_name, retry_after);
+                RateLimitResult::Limited { retry_after }
+            }
+        }
+    }
+
+    /// Get rate limiting statistics
+    pub fn get_stats(&amp;self) -&gt; RateLimitStats {
+        let stats = if let Ok(stats) = self.stats.try_read() {
+            stats.clone()
+        } else {
+            ServiceStats::default()
+        };
+
+        // Estimate current tokens based on time elapsed and rate
+        let elapsed = stats.last_reset.elapsed();
+        let tokens_replenished = (elapsed.as_secs() as f64 / 60.0 * self.requests_per_minute as f64) as u32;
+        let current_tokens = tokens_replenished.min(self.burst_size);
+
+        RateLimitStats {
+            service_name: self.service_name.clone(),
+            requests_per_minute: self.requests_per_minute,
+            burst_size: self.burst_size,
+            current_tokens,
+            total_requests: stats.total_requests,
+            total_limited: stats.total_limited,
+        }
+    }
+
+    /// Reset statistics (useful for periodic reporting)
+    pub async fn reset_stats(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.total_requests = 0;
+        stats.total_limited = 0;
+        stats.last_reset = std::time::Instant::now();
+    }
+
+    /// Get the service name
+    pub fn service_name(&amp;self) -&gt; &amp;str {
+        &amp;self.service_name
+    }
+
+    /// Record a successful request (resets backoff)
+    pub async fn record_success(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures = 0;
+        stats.last_failure = None;
+    }
+
+    /// Record a failed request (increases backoff)
+    pub async fn record_failure(&amp;self) {
+        let mut stats = self.stats.write().await;
+        stats.consecutive_failures += 1;
+        stats.last_failure = Some(std::time::Instant::now());
+    }
+
+    /// Calculate exponential backoff delay
+    pub async fn calculate_backoff_delay(&amp;self, config: &amp;BackoffConfig) -&gt; Duration {
+        let stats = self.stats.read().await;
+
+        if stats.consecutive_failures == 0 {
+            return Duration::from_millis(0);
+        }
+
+        // Calculate exponential delay
+        let base_delay = config.initial_delay.as_millis() as f64;
+        let multiplier = config.multiplier.powi(stats.consecutive_failures as i32 - 1);
+        let delay_ms = (base_delay * multiplier) as u64;
+
+        let mut delay = Duration::from_millis(delay_ms);
+
+        // Cap at max delay
+        if delay &gt; config.max_delay {
+            delay = config.max_delay;
+        }
+
+        // Add jitter if enabled
+        if config.jitter {
+            use rand::Rng;
+            let jitter_factor = rand::thread_rng().gen_range(0.5..1.5);
+            delay = Duration::from_millis((delay.as_millis() as f64 * jitter_factor) as u64);
+        }
+
+        delay
+    }
+
+    /// Wait with exponential backoff if needed
+    pub async fn wait_with_backoff(&amp;self, config: &amp;BackoffConfig) -&gt; Result&lt;()&gt; {
+        let backoff_delay = self.calculate_backoff_delay(config).await;
+
+        if !backoff_delay.is_zero() {
+            debug!(&quot;Applying exponential backoff for {}: {:?}&quot;,
+                   self.service_name, backoff_delay);
+            tokio::time::sleep(backoff_delay).await;
+        }
+
+        self.wait_for_permit().await
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-adaptiveratelimiter"><code>AdaptiveRateLimiter</code> <small>impl</small>
+<details><summary>View code (324-374)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-adaptiveratelimiter-324">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:324" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+</pre>
+    <pre><code id="code-adaptiveratelimiter-324" class="lang-rust hljs">impl AdaptiveRateLimiter {
+    /// Create a new adaptive rate limiter
+    pub fn new(
+        service_name: String,
+        initial_rate: u32,
+        min_rate: u32,
+        max_rate: u32,
+    ) -&gt; Result&lt;Self&gt; {
+        let config = RateLimitConfig {
+            service_name,
+            requests_per_minute: initial_rate,
+            burst_size: Some(initial_rate),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+
+        let base_limiter = ServiceRateLimiter::new(config)?;
+
+        Ok(Self {
+            base_limiter,
+            current_rate: Arc::new(tokio::sync::RwLock::new(initial_rate)),
+            min_rate,
+            max_rate,
+            adjustment_factor: 0.1, // 10% adjustment
+        })
+    }
+
+    /// Adjust rate based on API response
+    pub async fn adjust_rate(&amp;self, response_indicates_rate_limit: bool) {
+        let mut current_rate = self.current_rate.write().await;
+        
+        if response_indicates_rate_limit {
+            // Decrease rate
+            let new_rate = (*current_rate as f64 * (1.0 - self.adjustment_factor)) as u32;
+            *current_rate = new_rate.max(self.min_rate);
+            warn!(&quot;Decreased rate limit for {} to {}&quot;, 
+                  self.base_limiter.service_name, *current_rate);
+        } else {
+            // Gradually increase rate
+            let new_rate = (*current_rate as f64 * (1.0 + self.adjustment_factor * 0.1)) as u32;
+            *current_rate = new_rate.min(self.max_rate);
+            debug!(&quot;Increased rate limit for {} to {}&quot;, 
+                   self.base_limiter.service_name, *current_rate);
+        }
+    }
+
+    /// Get current rate
+    pub async fn get_current_rate(&amp;self) -&gt; u32 {
+        *self.current_rate.read().await
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimiterfactory"><code>RateLimiterFactory</code> <small>impl</small>
+<details><summary>View code (379-471)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimiterfactory-379">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/rate_limiter.rs:379" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+</pre>
+    <pre><code id="code-ratelimiterfactory-379" class="lang-rust hljs">impl RateLimiterFactory {
+    /// Create rate limiter for NVD API
+    pub fn nvd_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50, // NVD limit without API key
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for NVD API with API key
+    pub fn nvd_limiter_with_key() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;nvd_with_key&quot;.to_string(),
+            requests_per_minute: 100, // Higher limit with API key
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for OSV API
+    pub fn osv_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for GitHub API
+    pub fn github_limiter() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60, // GitHub limit without token
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create rate limiter for GitHub API with token
+    pub fn github_limiter_with_token() -&gt; Result&lt;ServiceRateLimiter&gt; {
+        let config = RateLimitConfig {
+            service_name: &quot;github_with_token&quot;.to_string(),
+            requests_per_minute: 5000, // Much higher limit with token
+            burst_size: Some(100),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(60),
+        };
+        ServiceRateLimiter::new(config)
+    }
+
+    /// Create a multi-service rate limiter with common configurations
+    pub async fn create_default_multi_limiter() -&gt; Result&lt;MultiServiceRateLimiter&gt; {
+        let multi_limiter = MultiServiceRateLimiter::new();
+
+        // Add common service limiters
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;nvd&quot;.to_string(),
+            requests_per_minute: 50,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(120),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;osv&quot;.to_string(),
+            requests_per_minute: 100,
+            burst_size: Some(20),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(30),
+        }).await?;
+
+        multi_limiter.add_service(RateLimitConfig {
+            service_name: &quot;github&quot;.to_string(),
+            requests_per_minute: 60,
+            burst_size: Some(10),
+            enable_backoff: true,
+            max_backoff_duration: Duration::from_secs(300),
+        }).await?;
+
+        Ok(multi_limiter)
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

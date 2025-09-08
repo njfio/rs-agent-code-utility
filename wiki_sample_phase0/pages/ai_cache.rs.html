@@ -1,0 +1,1675 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai/cache.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>ai/cache.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="ai_providers_groq.rs.html">ai/providers/groq.rs</a>
+<a href="ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+</details>
+<a href="ai_cache.rs.html">ai/cache.rs</a>
+<a href="ai_config.rs.html">ai/config.rs</a>
+<a href="ai_error.rs.html">ai/error.rs</a>
+<a href="ai_mod.rs.html">ai/mod.rs</a>
+<a href="ai_service.rs.html">ai/service.rs</a>
+<a href="ai_types.rs.html">ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="bin_main.rs.html">bin/main.rs</a>
+<a href="bin_rts.rs.html">bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+</details>
+<a href="cli_error.rs.html">cli/error.rs</a>
+<a href="cli_mod.rs.html">cli/mod.rs</a>
+<a href="cli_output.rs.html">cli/output.rs</a>
+<a href="cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="cli_utils.rs.html">cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="languages_c.rs.html">languages/c.rs</a>
+<a href="languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="languages_go.rs.html">languages/go.rs</a>
+<a href="languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="languages_mod.rs.html">languages/mod.rs</a>
+<a href="languages_python.rs.html">languages/python.rs</a>
+<a href="languages_rust.rs.html">languages/rust.rs</a>
+<a href="languages_typescript.rs.html">languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="security_mod.rs.html">security/mod.rs</a>
+<a href="security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="wiki_ai_schema.rs.html">wiki/ai_schema.rs</a>
+<a href="wiki_enhanced_ai.rs.html">wiki/enhanced_ai.rs</a>
+<a href="wiki_mod.rs.html">wiki/mod.rs</a>
+<a href="wiki_security_enhancements.rs.html">wiki/security_enhancements.rs</a>
+</details>
+<a href="advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="advanced_security.rs.html">advanced_security.rs</a>
+<a href="ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="analysis_common.rs.html">analysis_common.rs</a>
+<a href="analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="analyzer.rs.html">analyzer.rs</a>
+<a href="ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="code_evolution.rs.html">code_evolution.rs</a>
+<a href="code_map.rs.html">code_map.rs</a>
+<a href="command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="constants.rs.html">constants.rs</a>
+<a href="control_flow.rs.html">control_flow.rs</a>
+<a href="dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="embeddings.rs.html">embeddings.rs</a>
+<a href="enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="error.rs.html">error.rs</a>
+<a href="file_cache.rs.html">file_cache.rs</a>
+<a href="intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="lib.rs.html">lib.rs</a>
+<a href="main.rs.html">main.rs</a>
+<a href="memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="parser.rs.html">parser.rs</a>
+<a href="performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="query.rs.html">query.rs</a>
+<a href="reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="refactoring.rs.html">refactoring.rs</a>
+<a href="semantic_context.rs.html">semantic_context.rs</a>
+<a href="semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="symbol_table.rs.html">symbol_table.rs</a>
+<a href="taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="test_coverage.rs.html">test_coverage.rs</a>
+<a href="tree.rs.html">tree.rs</a>
+
+
+</nav>
+<section class="article">
+<p>44 symbols, 259 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> ai/cache.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 259<br><strong>Symbols:</strong> 44<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant new
+  participant cleanup_expired
+  participant evict_lru
+  participant get
+  participant put
+  participant remove
+  participant clear
+  participant stats
+  participant generate_key
+  participant default
+  new->>cleanup_expired: call
+  cleanup_expired->>evict_lru: call
+  evict_lru->>get: call
+  get->>put: call
+  put->>remove: call
+  remove->>clear: call
+  clear->>stats: call
+  stats->>generate_key: call
+  generate_key->>default: call
+
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class new {}
+  class cleanup_expired {}
+  class evict_lru {}
+  class get {}
+  class put {}
+  class remove {}
+  class clear {}
+  class stats {}
+  class generate_key {}
+  class default {}
+  class CacheStats {}
+  class CacheConfig {}
+  class CacheEntry {}
+  class MemoryCache {}
+  class MemoryCache {}
+  class MemoryCache {}
+  class CacheConfig {}
+  class now {}
+  class entries {}
+  class stats {}
+  class initial_size {}
+  class evicted {}
+  class entries {}
+  class lru_key {}
+  class stats {}
+  class now {}
+  class entries {}
+  class stats {}
+  class stats {}
+  class response {}
+  class entries {}
+  class stats {}
+  class now {}
+  class ttl {}
+  class expires_at {}
+  class entry {}
+  class entries {}
+  class stats {}
+  class entries {}
+  class removed {}
+  class stats {}
+  class entries {}
+  class stats {}
+  class hasher {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(10)</small></summary><ul><li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (67-73)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-67">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:67" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">67
+68
+69
+70
+71
+72
+73
+</pre>
+    <pre><code id="code-new-67" class="lang-rust hljs">    pub fn new(config: CacheConfig) -&gt; Self {
+        Self {
+            entries: Arc::new(RwLock::new(HashMap::new())),
+            config,
+            stats: Arc::new(RwLock::new(CacheStats::default())),
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-cleanup-expired"><code>cleanup_expired</code> <small>function</small>
+<details><summary>View code (76-92)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cleanup_expired-76">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:76" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+</pre>
+    <pre><code id="code-cleanup_expired-76" class="lang-rust hljs">    pub fn cleanup_expired(&amp;self) -&gt; AIResult&lt;()&gt; {
+        let now = SystemTime::now();
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        
+        let initial_size = entries.len();
+        entries.retain(|_, entry| entry.expires_at &gt; now);
+        let evicted = initial_size - entries.len();
+        
+        stats.evictions += evicted as u64;
+        stats.size = entries.len();
+        
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-evict-lru"><code>evict_lru</code> <small>function</small>
+<details><summary>View code (95-118)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-evict_lru-95">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:95" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+</pre>
+    <pre><code id="code-evict_lru-95" class="lang-rust hljs">    fn evict_lru(&amp;self) -&gt; AIResult&lt;()&gt; {
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        
+        if entries.len() &lt; self.config.max_size {
+            return Ok(());
+        }
+        
+        // Find the least recently used entry
+        let lru_key = entries.iter()
+            .min_by_key(|(_, entry)| entry.last_accessed)
+            .map(|(key, _)| key.clone());
+        
+        if let Some(key) = lru_key {
+            entries.remove(&amp;key);
+            
+            let mut stats = self.stats.write()
+                .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+            stats.evictions += 1;
+            stats.size = entries.len();
+        }
+        
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get"><code>get</code> <small>function</small>
+<details><summary>View code (122-167)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get-122">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:122" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+</pre>
+    <pre><code id="code-get-122" class="lang-rust hljs">    fn get(&amp;self, key: &amp;str) -&gt; AIResult&lt;Option&lt;AIResponse&gt;&gt; {
+        let now = SystemTime::now();
+        
+        // First check if entry exists and is not expired
+        {
+            let entries = self.entries.read()
+                .map_err(|_| AIError::cache(&quot;Failed to acquire read lock&quot;))?;
+            
+            if let Some(entry) = entries.get(key) {
+                if entry.expires_at &lt;= now {
+                    // Entry is expired, will be cleaned up later
+                    let mut stats = self.stats.write()
+                        .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+                    stats.misses += 1;
+                    return Ok(None);
+                }
+                
+                // Entry is valid, update stats and return
+                let mut stats = self.stats.write()
+                    .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+                stats.hits += 1;
+                stats.hit_rate = stats.hits as f64 / (stats.hits + stats.misses) as f64;
+                
+                let response = entry.response.clone();
+                drop(entries); // Release read lock before acquiring write lock
+                
+                // Update access information
+                let mut entries = self.entries.write()
+                    .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+                if let Some(entry) = entries.get_mut(key) {
+                    entry.last_accessed = now;
+                    entry.access_count += 1;
+                }
+                
+                return Ok(Some(response));
+            }
+        }
+        
+        // Entry not found
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        stats.misses += 1;
+        stats.hit_rate = stats.hits as f64 / (stats.hits + stats.misses) as f64;
+        
+        Ok(None)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-put"><code>put</code> <small>function</small>
+<details><summary>View code (169-194)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-put-169">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:169" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+</pre>
+    <pre><code id="code-put-169" class="lang-rust hljs">    fn put(&amp;self, key: &amp;str, response: AIResponse, ttl: Option&lt;Duration&gt;) -&gt; AIResult&lt;()&gt; {
+        let now = SystemTime::now();
+        let ttl = ttl.unwrap_or(self.config.default_ttl);
+        let expires_at = now + ttl;
+        
+        // Evict LRU entries if necessary
+        self.evict_lru()?;
+        
+        let entry = CacheEntry {
+            response,
+            expires_at,
+            created_at: now,
+            access_count: 0,
+            last_accessed: now,
+        };
+        
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        entries.insert(key.to_string(), entry);
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        stats.size = entries.len();
+        
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-remove"><code>remove</code> <small>function</small>
+<details><summary>View code (196-206)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-remove-196">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:196" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+</pre>
+    <pre><code id="code-remove-196" class="lang-rust hljs">    fn remove(&amp;self, key: &amp;str) -&gt; AIResult&lt;bool&gt; {
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        let removed = entries.remove(key).is_some();
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        stats.size = entries.len();
+        
+        Ok(removed)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-clear"><code>clear</code> <small>function</small>
+<details><summary>View code (208-218)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-clear-208">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:208" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+</pre>
+    <pre><code id="code-clear-208" class="lang-rust hljs">    fn clear(&amp;self) -&gt; AIResult&lt;()&gt; {
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        entries.clear();
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        *stats = CacheStats::default();
+        
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>function</small>
+<details><summary>View code (220-224)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-220">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:220" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">220
+221
+222
+223
+224
+</pre>
+    <pre><code id="code-stats-220" class="lang-rust hljs">    fn stats(&amp;self) -&gt; CacheStats {
+        self.stats.read()
+            .map(|stats| stats.clone())
+            .unwrap_or_default()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-generate-key"><code>generate_key</code> <small>function</small>
+<details><summary>View code (226-248)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-generate_key-226">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:226" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+</pre>
+    <pre><code id="code-generate_key-226" class="lang-rust hljs">    fn generate_key(&amp;self, request: &amp;AIRequest) -&gt; String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        request.feature.hash(&amp;mut hasher);
+        request.content.hash(&amp;mut hasher);
+
+        // Hash context manually since HashMap doesn&#39;t implement Hash
+        for (key, value) in &amp;request.context {
+            key.hash(&amp;mut hasher);
+            value.hash(&amp;mut hasher);
+        }
+
+        // Hash temperature as bits since f64 doesn&#39;t implement Hash
+        if let Some(temp) = request.temperature {
+            temp.to_bits().hash(&amp;mut hasher);
+        }
+
+        request.max_tokens.hash(&amp;mut hasher);
+
+        format!(&quot;ai_cache_{:x}&quot;, hasher.finish())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (252-258)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-252">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:252" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">252
+253
+254
+255
+256
+257
+258
+</pre>
+    <pre><code id="code-default-252" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self {
+            max_size: 1000,
+            default_ttl: Duration::from_secs(3600), // 1 hour
+            cleanup_interval: Duration::from_secs(300), // 5 minutes
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(27)</small></summary><ul><li id="symbol-now"><code>now</code> <small>variable</small>
+<details><summary>View code (77-77)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-now-77">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:77" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">77
+</pre>
+    <pre><code id="code-now-77" class="lang-rust hljs">        let now = SystemTime::now();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entries"><code>entries</code> <small>variable</small>
+<details><summary>View code (78-79)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entries-78">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:78" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">78
+79
+</pre>
+    <pre><code id="code-entries-78" class="lang-rust hljs">        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (81-82)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-81">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:81" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">81
+82
+</pre>
+    <pre><code id="code-stats-81" class="lang-rust hljs">        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-initial-size"><code>initial_size</code> <small>variable</small>
+<details><summary>View code (84-84)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-initial_size-84">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:84" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">84
+</pre>
+    <pre><code id="code-initial_size-84" class="lang-rust hljs">        let initial_size = entries.len();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-evicted"><code>evicted</code> <small>variable</small>
+<details><summary>View code (86-86)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-evicted-86">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:86" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">86
+</pre>
+    <pre><code id="code-evicted-86" class="lang-rust hljs">        let evicted = initial_size - entries.len();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entries"><code>entries</code> <small>variable</small>
+<details><summary>View code (96-97)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entries-96">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:96" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">96
+97
+</pre>
+    <pre><code id="code-entries-96" class="lang-rust hljs">        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-lru-key"><code>lru_key</code> <small>variable</small>
+<details><summary>View code (104-106)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-lru_key-104">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:104" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">104
+105
+106
+</pre>
+    <pre><code id="code-lru_key-104" class="lang-rust hljs">        let lru_key = entries.iter()
+            .min_by_key(|(_, entry)| entry.last_accessed)
+            .map(|(key, _)| key.clone());</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (111-112)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-111">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:111" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">111
+112
+</pre>
+    <pre><code id="code-stats-111" class="lang-rust hljs">            let mut stats = self.stats.write()
+                .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-now"><code>now</code> <small>variable</small>
+<details><summary>View code (123-123)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-now-123">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:123" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">123
+</pre>
+    <pre><code id="code-now-123" class="lang-rust hljs">        let now = SystemTime::now();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entries"><code>entries</code> <small>variable</small>
+<details><summary>View code (127-128)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entries-127">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:127" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">127
+128
+</pre>
+    <pre><code id="code-entries-127" class="lang-rust hljs">            let entries = self.entries.read()
+                .map_err(|_| AIError::cache(&quot;Failed to acquire read lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (133-134)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-133">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:133" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">133
+134
+</pre>
+    <pre><code id="code-stats-133" class="lang-rust hljs">                    let mut stats = self.stats.write()
+                        .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (140-141)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-140">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:140" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">140
+141
+</pre>
+    <pre><code id="code-stats-140" class="lang-rust hljs">                let mut stats = self.stats.write()
+                    .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-response"><code>response</code> <small>variable</small>
+<details><summary>View code (145-145)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-response-145">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:145" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">145
+</pre>
+    <pre><code id="code-response-145" class="lang-rust hljs">                let response = entry.response.clone();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entries"><code>entries</code> <small>variable</small>
+<details><summary>View code (149-150)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entries-149">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:149" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">149
+150
+</pre>
+    <pre><code id="code-entries-149" class="lang-rust hljs">                let mut entries = self.entries.write()
+                    .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (161-162)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-161">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:161" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">161
+162
+</pre>
+    <pre><code id="code-stats-161" class="lang-rust hljs">        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-now"><code>now</code> <small>variable</small>
+<details><summary>View code (170-170)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-now-170">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:170" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">170
+</pre>
+    <pre><code id="code-now-170" class="lang-rust hljs">        let now = SystemTime::now();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ttl"><code>ttl</code> <small>variable</small>
+<details><summary>View code (171-171)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ttl-171">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:171" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">171
+</pre>
+    <pre><code id="code-ttl-171" class="lang-rust hljs">        let ttl = ttl.unwrap_or(self.config.default_ttl);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-expires-at"><code>expires_at</code> <small>variable</small>
+<details><summary>View code (172-172)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-expires_at-172">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:172" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">172
+</pre>
+    <pre><code id="code-expires_at-172" class="lang-rust hljs">        let expires_at = now + ttl;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entry"><code>entry</code> <small>variable</small>
+<details><summary>View code (177-183)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entry-177">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:177" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">177
+178
+179
+180
+181
+182
+183
+</pre>
+    <pre><code id="code-entry-177" class="lang-rust hljs">        let entry = CacheEntry {
+            response,
+            expires_at,
+            created_at: now,
+            access_count: 0,
+            last_accessed: now,
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entries"><code>entries</code> <small>variable</small>
+<details><summary>View code (185-186)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entries-185">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:185" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">185
+186
+</pre>
+    <pre><code id="code-entries-185" class="lang-rust hljs">        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (189-190)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-189">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:189" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">189
+190
+</pre>
+    <pre><code id="code-stats-189" class="lang-rust hljs">        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entries"><code>entries</code> <small>variable</small>
+<details><summary>View code (197-198)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entries-197">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:197" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">197
+198
+</pre>
+    <pre><code id="code-entries-197" class="lang-rust hljs">        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-removed"><code>removed</code> <small>variable</small>
+<details><summary>View code (199-199)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-removed-199">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:199" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">199
+</pre>
+    <pre><code id="code-removed-199" class="lang-rust hljs">        let removed = entries.remove(key).is_some();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (201-202)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-201">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:201" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">201
+202
+</pre>
+    <pre><code id="code-stats-201" class="lang-rust hljs">        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-entries"><code>entries</code> <small>variable</small>
+<details><summary>View code (209-210)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-entries-209">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:209" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">209
+210
+</pre>
+    <pre><code id="code-entries-209" class="lang-rust hljs">        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-stats"><code>stats</code> <small>variable</small>
+<details><summary>View code (213-214)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-stats-213">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:213" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">213
+214
+</pre>
+    <pre><code id="code-stats-213" class="lang-rust hljs">        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-hasher"><code>hasher</code> <small>variable</small>
+<details><summary>View code (230-230)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-hasher-230">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:230" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">230
+</pre>
+    <pre><code id="code-hasher-230" class="lang-rust hljs">        let mut hasher = DefaultHasher::new();</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(7)</small></summary><ul><li id="symbol-cachestats"><code>CacheStats</code> <small>struct</small>
+<details><summary>View code (12-18)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cachestats-12">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:12" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">12
+13
+14
+15
+16
+17
+18
+</pre>
+    <pre><code id="code-cachestats-12" class="lang-rust hljs">pub struct CacheStats {
+    pub hits: u64,
+    pub misses: u64,
+    pub evictions: u64,
+    pub size: usize,
+    pub hit_rate: f64,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-cacheconfig"><code>CacheConfig</code> <small>struct</small>
+<details><summary>View code (22-26)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cacheconfig-22">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:22" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">22
+23
+24
+25
+26
+</pre>
+    <pre><code id="code-cacheconfig-22" class="lang-rust hljs">pub struct CacheConfig {
+    pub max_size: usize,
+    pub default_ttl: Duration,
+    pub cleanup_interval: Duration,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-cacheentry"><code>CacheEntry</code> <small>struct</small>
+<details><summary>View code (30-36)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cacheentry-30">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:30" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">30
+31
+32
+33
+34
+35
+36
+</pre>
+    <pre><code id="code-cacheentry-30" class="lang-rust hljs">struct CacheEntry {
+    response: AIResponse,
+    expires_at: SystemTime,
+    created_at: SystemTime,
+    access_count: u64,
+    last_accessed: SystemTime,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-memorycache"><code>MemoryCache</code> <small>struct</small>
+<details><summary>View code (60-64)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-memorycache-60">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:60" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">60
+61
+62
+63
+64
+</pre>
+    <pre><code id="code-memorycache-60" class="lang-rust hljs">pub struct MemoryCache {
+    entries: Arc&lt;RwLock&lt;HashMap&lt;String, CacheEntry&gt;&gt;&gt;,
+    config: CacheConfig,
+    stats: Arc&lt;RwLock&lt;CacheStats&gt;&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-memorycache"><code>MemoryCache</code> <small>impl</small>
+<details><summary>View code (66-119)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-memorycache-66">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:66" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+</pre>
+    <pre><code id="code-memorycache-66" class="lang-rust hljs">impl MemoryCache {
+    pub fn new(config: CacheConfig) -&gt; Self {
+        Self {
+            entries: Arc::new(RwLock::new(HashMap::new())),
+            config,
+            stats: Arc::new(RwLock::new(CacheStats::default())),
+        }
+    }
+    
+    /// Clean up expired entries
+    pub fn cleanup_expired(&amp;self) -&gt; AIResult&lt;()&gt; {
+        let now = SystemTime::now();
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        
+        let initial_size = entries.len();
+        entries.retain(|_, entry| entry.expires_at &gt; now);
+        let evicted = initial_size - entries.len();
+        
+        stats.evictions += evicted as u64;
+        stats.size = entries.len();
+        
+        Ok(())
+    }
+    
+    /// Evict least recently used entries if cache is full
+    fn evict_lru(&amp;self) -&gt; AIResult&lt;()&gt; {
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        
+        if entries.len() &lt; self.config.max_size {
+            return Ok(());
+        }
+        
+        // Find the least recently used entry
+        let lru_key = entries.iter()
+            .min_by_key(|(_, entry)| entry.last_accessed)
+            .map(|(key, _)| key.clone());
+        
+        if let Some(key) = lru_key {
+            entries.remove(&amp;key);
+            
+            let mut stats = self.stats.write()
+                .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+            stats.evictions += 1;
+            stats.size = entries.len();
+        }
+        
+        Ok(())
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-memorycache"><code>MemoryCache</code> <small>impl</small>
+<details><summary>View code (121-249)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-memorycache-121">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:121" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+</pre>
+    <pre><code id="code-memorycache-121" class="lang-rust hljs">impl AICache for MemoryCache {
+    fn get(&amp;self, key: &amp;str) -&gt; AIResult&lt;Option&lt;AIResponse&gt;&gt; {
+        let now = SystemTime::now();
+        
+        // First check if entry exists and is not expired
+        {
+            let entries = self.entries.read()
+                .map_err(|_| AIError::cache(&quot;Failed to acquire read lock&quot;))?;
+            
+            if let Some(entry) = entries.get(key) {
+                if entry.expires_at &lt;= now {
+                    // Entry is expired, will be cleaned up later
+                    let mut stats = self.stats.write()
+                        .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+                    stats.misses += 1;
+                    return Ok(None);
+                }
+                
+                // Entry is valid, update stats and return
+                let mut stats = self.stats.write()
+                    .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+                stats.hits += 1;
+                stats.hit_rate = stats.hits as f64 / (stats.hits + stats.misses) as f64;
+                
+                let response = entry.response.clone();
+                drop(entries); // Release read lock before acquiring write lock
+                
+                // Update access information
+                let mut entries = self.entries.write()
+                    .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+                if let Some(entry) = entries.get_mut(key) {
+                    entry.last_accessed = now;
+                    entry.access_count += 1;
+                }
+                
+                return Ok(Some(response));
+            }
+        }
+        
+        // Entry not found
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        stats.misses += 1;
+        stats.hit_rate = stats.hits as f64 / (stats.hits + stats.misses) as f64;
+        
+        Ok(None)
+    }
+    
+    fn put(&amp;self, key: &amp;str, response: AIResponse, ttl: Option&lt;Duration&gt;) -&gt; AIResult&lt;()&gt; {
+        let now = SystemTime::now();
+        let ttl = ttl.unwrap_or(self.config.default_ttl);
+        let expires_at = now + ttl;
+        
+        // Evict LRU entries if necessary
+        self.evict_lru()?;
+        
+        let entry = CacheEntry {
+            response,
+            expires_at,
+            created_at: now,
+            access_count: 0,
+            last_accessed: now,
+        };
+        
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        entries.insert(key.to_string(), entry);
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        stats.size = entries.len();
+        
+        Ok(())
+    }
+    
+    fn remove(&amp;self, key: &amp;str) -&gt; AIResult&lt;bool&gt; {
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        let removed = entries.remove(key).is_some();
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        stats.size = entries.len();
+        
+        Ok(removed)
+    }
+    
+    fn clear(&amp;self) -&gt; AIResult&lt;()&gt; {
+        let mut entries = self.entries.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire write lock&quot;))?;
+        entries.clear();
+        
+        let mut stats = self.stats.write()
+            .map_err(|_| AIError::cache(&quot;Failed to acquire stats write lock&quot;))?;
+        *stats = CacheStats::default();
+        
+        Ok(())
+    }
+    
+    fn stats(&amp;self) -&gt; CacheStats {
+        self.stats.read()
+            .map(|stats| stats.clone())
+            .unwrap_or_default()
+    }
+    
+    fn generate_key(&amp;self, request: &amp;AIRequest) -&gt; String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        request.feature.hash(&amp;mut hasher);
+        request.content.hash(&amp;mut hasher);
+
+        // Hash context manually since HashMap doesn&#39;t implement Hash
+        for (key, value) in &amp;request.context {
+            key.hash(&amp;mut hasher);
+            value.hash(&amp;mut hasher);
+        }
+
+        // Hash temperature as bits since f64 doesn&#39;t implement Hash
+        if let Some(temp) = request.temperature {
+            temp.to_bits().hash(&amp;mut hasher);
+        }
+
+        request.max_tokens.hash(&amp;mut hasher);
+
+        format!(&quot;ai_cache_{:x}&quot;, hasher.finish())
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-cacheconfig"><code>CacheConfig</code> <small>impl</small>
+<details><summary>View code (251-259)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cacheconfig-251">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/cache.rs:251" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">251
+252
+253
+254
+255
+256
+257
+258
+259
+</pre>
+    <pre><code id="code-cacheconfig-251" class="lang-rust hljs">impl Default for CacheConfig {
+    fn default() -&gt; Self {
+        Self {
+            max_size: 1000,
+            default_ttl: Duration::from_secs(3600), // 1 hour
+            cleanup_interval: Duration::from_secs(300), // 5 minutes
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

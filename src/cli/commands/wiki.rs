@@ -18,6 +18,9 @@ pub fn execute(
     security_insights: bool,
     refactoring_hints: bool,
     diagram_annotations: bool,
+    wiki_max_results: Option<usize>,
+    wiki_max_index_symbols: Option<usize>,
+    wiki_templates: Option<&PathBuf>,
 ) -> CliResult<()> {
     let out_dir = output.cloned().unwrap_or_else(|| PathBuf::from("./wiki_site"));
 
@@ -36,6 +39,10 @@ pub fn execute(
 
     if let Some(cfg) = ai_config { builder = builder.with_ai_config_path(cfg); }
     if let Some(provider) = ai_provider { builder = builder.with_ai_provider(provider); }
+
+    if let Some(n) = wiki_max_results { builder = builder.with_search_max_results(n); }
+    if let Some(n) = wiki_max_index_symbols { builder = builder.with_max_index_symbols(n); }
+    if let Some(tpl) = wiki_templates { builder = builder.with_templates_dir(tpl); }
 
     let cfg = builder
         .build()

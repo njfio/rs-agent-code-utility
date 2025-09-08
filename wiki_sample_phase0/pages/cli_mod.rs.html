@@ -1,0 +1,1032 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cli/mod.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>cli/mod.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="ai_providers_groq.rs.html">ai/providers/groq.rs</a>
+<a href="ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+</details>
+<a href="ai_cache.rs.html">ai/cache.rs</a>
+<a href="ai_config.rs.html">ai/config.rs</a>
+<a href="ai_error.rs.html">ai/error.rs</a>
+<a href="ai_mod.rs.html">ai/mod.rs</a>
+<a href="ai_service.rs.html">ai/service.rs</a>
+<a href="ai_types.rs.html">ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="bin_main.rs.html">bin/main.rs</a>
+<a href="bin_rts.rs.html">bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+</details>
+<a href="cli_error.rs.html">cli/error.rs</a>
+<a href="cli_mod.rs.html">cli/mod.rs</a>
+<a href="cli_output.rs.html">cli/output.rs</a>
+<a href="cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="cli_utils.rs.html">cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="languages_c.rs.html">languages/c.rs</a>
+<a href="languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="languages_go.rs.html">languages/go.rs</a>
+<a href="languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="languages_mod.rs.html">languages/mod.rs</a>
+<a href="languages_python.rs.html">languages/python.rs</a>
+<a href="languages_rust.rs.html">languages/rust.rs</a>
+<a href="languages_typescript.rs.html">languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="security_mod.rs.html">security/mod.rs</a>
+<a href="security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="wiki_ai_schema.rs.html">wiki/ai_schema.rs</a>
+<a href="wiki_enhanced_ai.rs.html">wiki/enhanced_ai.rs</a>
+<a href="wiki_mod.rs.html">wiki/mod.rs</a>
+<a href="wiki_security_enhancements.rs.html">wiki/security_enhancements.rs</a>
+</details>
+<a href="advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="advanced_security.rs.html">advanced_security.rs</a>
+<a href="ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="analysis_common.rs.html">analysis_common.rs</a>
+<a href="analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="analyzer.rs.html">analyzer.rs</a>
+<a href="ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="code_evolution.rs.html">code_evolution.rs</a>
+<a href="code_map.rs.html">code_map.rs</a>
+<a href="command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="constants.rs.html">constants.rs</a>
+<a href="control_flow.rs.html">control_flow.rs</a>
+<a href="dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="embeddings.rs.html">embeddings.rs</a>
+<a href="enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="error.rs.html">error.rs</a>
+<a href="file_cache.rs.html">file_cache.rs</a>
+<a href="intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="lib.rs.html">lib.rs</a>
+<a href="main.rs.html">main.rs</a>
+<a href="memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="parser.rs.html">parser.rs</a>
+<a href="performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="query.rs.html">query.rs</a>
+<a href="reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="refactoring.rs.html">refactoring.rs</a>
+<a href="semantic_context.rs.html">semantic_context.rs</a>
+<a href="semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="symbol_table.rs.html">symbol_table.rs</a>
+<a href="taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="test_coverage.rs.html">test_coverage.rs</a>
+<a href="tree.rs.html">tree.rs</a>
+
+
+</nav>
+<section class="article">
+<p>2 symbols, 438 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> cli/mod.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 438<br><strong>Symbols:</strong> 2<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class Cli {}
+  class Commands {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(0)</small></summary><ul></ul></details>
+<details><summary><strong>Variables</strong> <small>(0)</small></summary><ul></ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(2)</small></summary><ul><li id="symbol-cli"><code>Cli</code> <small>struct</small>
+<details><summary>View code (23-26)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-cli-23">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/cli/mod.rs:23" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">23
+24
+25
+26
+</pre>
+    <pre><code id="code-cli-23" class="lang-rust hljs">pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-commands"><code>Commands</code> <small>enum</small>
+<details><summary>View code (30-431)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-commands-30">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/cli/mod.rs:30" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+</pre>
+    <pre><code id="code-commands-30" class="lang-rust hljs">pub enum Commands {
+    /// Analyze a codebase and extract insights
+    Analyze {
+        /// Directory to analyze
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+        
+        /// Output format (table, json, summary)
+        #[arg(short, long, default_value = &quot;table&quot;)]
+        format: String,
+        
+        /// Maximum file size to process (in KB)
+        #[arg(long, default_value = &quot;1024&quot;)]
+        max_size: usize,
+        
+        /// Maximum depth to traverse
+        #[arg(long, default_value = &quot;20&quot;)]
+        max_depth: usize,
+
+        /// Analysis depth: basic, deep, full
+        #[arg(long, default_value = &quot;full&quot;)]
+        depth: String,
+        
+        /// Include hidden files and directories
+        #[arg(long)]
+        include_hidden: bool,
+        
+        /// Exclude directories (comma-separated)
+        #[arg(long)]
+        exclude_dirs: Option&lt;String&gt;,
+        
+        /// Include only specific file extensions (comma-separated)
+        #[arg(long)]
+        include_exts: Option&lt;String&gt;,
+        
+        /// Save results to file
+        #[arg(short, long)]
+        output: Option&lt;PathBuf&gt;,
+        
+        /// Show detailed symbol information
+        #[arg(long)]
+        detailed: bool,
+
+        /// Number of threads to use (analysis)
+        #[arg(long)]
+        threads: Option&lt;usize&gt;,
+
+        /// Enable heavy security scanning during analysis
+        #[arg(long, default_value_t = false)]
+        enable_security: bool,
+
+        /// Print JSON schema and exit
+        #[arg(long, default_value_t = false)]
+        print_schema: bool,
+
+        /// Schema version to print
+        #[arg(long, default_value = &quot;1&quot;)]
+        schema_version: String,
+    },
+    
+    /// Query code patterns across the codebase
+    Query {
+        /// Directory to search
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+        
+        /// Tree-sitter query pattern
+        #[arg(short, long)]
+        pattern: String,
+        
+        /// Language to query (rust, javascript, python, c, cpp)
+        #[arg(short, long)]
+        language: String,
+
+        /// Prefilter files by substring before parsing
+        #[arg(long)]
+        prefilter: Option&lt;String&gt;,
+        
+        /// Show context lines around matches
+        #[arg(short, long, default_value = &quot;3&quot;)]
+        context: usize,
+        
+        /// Output format (table, json)
+        #[arg(short, long, default_value = &quot;table&quot;)]
+        format: String,
+    },
+    
+    /// Show statistics about a codebase
+    Stats {
+        /// Directory to analyze
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+        
+        /// Show top N files by various metrics
+        #[arg(long, default_value = &quot;10&quot;)]
+        top: usize,
+    },
+    
+    /// Find specific symbols (functions, classes, etc.)
+    Find {
+        /// Directory to search
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+        
+        /// Symbol name to find (supports wildcards)
+        #[arg(short, long)]
+        name: Option&lt;String&gt;,
+        
+        /// Symbol type (function, class, struct, enum)
+        #[arg(short, long)]
+        symbol_type: Option&lt;String&gt;,
+        
+        /// Language to search in
+        #[arg(short, long)]
+        language: Option&lt;String&gt;,
+        
+        /// Show only public symbols
+        #[arg(long)]
+        public_only: bool,
+    },
+
+    /// List all symbols grouped by file
+    Symbols {
+        /// Directory to analyze
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Output format (table or json)
+        #[arg(short, long, default_value = &quot;table&quot;)]
+        format: String,
+
+        /// Print JSON schema and exit
+        #[arg(long, default_value_t = false)]
+        print_schema: bool,
+
+        /// Schema version to print
+        #[arg(long, default_value = &quot;1&quot;)]
+        schema_version: String,
+    },
+    
+    /// Show supported languages and their capabilities
+    Languages,
+    
+    /// Interactive mode for exploring codebases
+    Interactive {
+        /// Directory to explore
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+    },
+
+    /// Generate AI-friendly insights and recommendations
+    Insights {
+        /// Directory to analyze
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Focus area (architecture, quality, complexity, dependencies)
+        #[arg(long, default_value = &quot;all&quot;)]
+        focus: String,
+
+        /// Output format (markdown, json, text)
+        #[arg(short, long, default_value = &quot;markdown&quot;)]
+        format: String,
+    },
+
+    /// Generate a visual code map of the project structure
+    Map {
+        /// Directory to map
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Map type (tree, symbols, dependencies, call, modules, overview)
+        #[arg(short, long, default_value = &quot;overview&quot;)]
+        map_type: String,
+
+        /// Output format (ascii, unicode, json, mermaid, dot)
+        #[arg(short, long, default_value = &quot;unicode&quot;)]
+        format: String,
+
+        /// Maximum depth to show
+        #[arg(long, default_value = &quot;5&quot;)]
+        max_depth: usize,
+
+        /// Show file sizes
+        #[arg(long)]
+        show_sizes: bool,
+
+        /// Show symbol counts
+        #[arg(long)]
+        show_symbols: bool,
+
+        /// Include only specific languages
+        #[arg(long)]
+        languages: Option&lt;String&gt;,
+
+        /// Collapse empty directories
+        #[arg(long)]
+        collapse_empty: bool,
+
+        /// Analysis depth: basic, deep, full
+        #[arg(long, default_value = &quot;full&quot;)]
+        depth: String,
+    },
+
+    /// AI-powered code explanations and insights
+    Explain {
+        /// Directory to analyze
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Focus on specific file
+        #[arg(short, long)]
+        file: Option&lt;PathBuf&gt;,
+
+        /// Focus on specific symbol
+        #[arg(short, long)]
+        symbol: Option&lt;String&gt;,
+
+        /// Output format (markdown, json, text)
+        #[arg(long, default_value = &quot;markdown&quot;)]
+        format: String,
+
+        /// Include detailed explanations
+        #[arg(long)]
+        detailed: bool,
+
+        /// Include learning recommendations
+        #[arg(long)]
+        learning: bool,
+    },
+
+    /// Security vulnerability scanning
+    Security {
+        /// Directory to scan
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Output format (table, json, markdown)
+        #[arg(short, long, default_value = &quot;table&quot;)]
+        format: String,
+
+        /// Minimum severity level (critical, high, medium, low, info)
+        #[arg(long, default_value = &quot;low&quot;)]
+        min_severity: String,
+
+        /// Save detailed report to file
+        #[arg(short, long)]
+        output: Option&lt;PathBuf&gt;,
+
+        /// Show only summary
+        #[arg(long)]
+        summary_only: bool,
+
+        /// Include compliance information
+        #[arg(long)]
+        compliance: bool,
+
+        /// Analysis depth: basic, deep, full
+        #[arg(long, default_value = &quot;full&quot;)]
+        depth: String,
+
+        /// Print JSON schema and exit
+        #[arg(long, default_value_t = false)]
+        print_schema: bool,
+
+        /// Schema version to print
+        #[arg(long, default_value = &quot;1&quot;)]
+        schema_version: String,
+        
+        /// Enable heavy security scanning during initial analysis (rarely needed)
+        #[arg(long, default_value_t = false)]
+        enable_security: bool,
+    },
+
+    /// Smart refactoring suggestions
+    Refactor {
+        /// Directory to analyze
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Focus on specific category (complexity, duplication, naming, performance, architecture)
+        #[arg(short, long)]
+        category: Option&lt;String&gt;,
+
+        /// Output format (table, json, markdown)
+        #[arg(short, long, default_value = &quot;table&quot;)]
+        format: String,
+
+        /// Show only quick wins (easy improvements)
+        #[arg(long)]
+        quick_wins: bool,
+
+        /// Show only major improvements
+        #[arg(long)]
+        major_only: bool,
+
+        /// Minimum priority level (critical, high, medium, low)
+        #[arg(long, default_value = &quot;low&quot;)]
+        min_priority: String,
+
+        /// Save detailed report to file
+        #[arg(short, long)]
+        output: Option&lt;PathBuf&gt;,
+    },
+
+    /// Enhanced dependency analysis and security scanning
+    Dependencies {
+        /// Directory to analyze
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Output format (table, json, markdown)
+        #[arg(short, long, default_value = &quot;table&quot;)]
+        format: String,
+
+        /// Include development dependencies
+        #[arg(long)]
+        include_dev: bool,
+
+        /// Enable vulnerability scanning
+        #[arg(long)]
+        vulnerabilities: bool,
+
+        /// Enable license compliance checking
+        #[arg(long)]
+        licenses: bool,
+
+        /// Show outdated dependencies
+        #[arg(long)]
+        outdated: bool,
+
+        /// Show dependency graph analysis
+        #[arg(long)]
+        graph: bool,
+
+        /// Save detailed report to file
+        #[arg(short, long)]
+        output: Option&lt;PathBuf&gt;,
+    },
+
+    /// Watch mode: re-run analysis at intervals (scaffold)
+    Watch {
+        /// Directory to analyze repeatedly
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Interval in seconds between runs
+        #[arg(long, default_value_t = 2u64)]
+        interval: u64,
+
+        /// Maximum iterations before exit (0 = run once)
+        #[arg(long, default_value_t = 0usize)]
+        max_iterations: usize,
+
+        /// Analysis depth: basic, deep, full
+        #[arg(long, default_value = &quot;basic&quot;)]
+        depth: String,
+    },
+
+    /// Wiki website generator
+    Wiki {
+        /// Directory to generate wiki for
+        #[arg(value_name = &quot;PATH&quot;)]
+        path: PathBuf,
+
+        /// Output directory for the site
+        #[arg(short, long, value_name = &quot;DIR&quot;)]
+        output: Option&lt;PathBuf&gt;,
+
+        /// Include API docs
+        #[arg(long, default_value_t = true)]
+        include_api: bool,
+
+        /// Include examples
+        #[arg(long, default_value_t = false)]
+        include_examples: bool,
+
+        /// Analysis depth (basic, deep, full)
+        #[arg(long, default_value = &quot;full&quot;)]
+        depth: String,
+
+        /// Enable AI-generated docs on the wiki
+        #[arg(long, default_value_t = false)]
+        ai: bool,
+
+        /// Use mock AI providers (offline deterministic)
+        #[arg(long, default_value_t = false)]
+        ai_mock: bool,
+
+        /// Path to AI configuration file
+        #[arg(long, value_name = &quot;FILE&quot;)]
+        ai_config: Option&lt;PathBuf&gt;,
+
+        /// Preferred AI provider (e.g. groq, openai)
+        #[arg(long, value_parser = [&quot;groq&quot;,&quot;openai&quot;,&quot;anthropic&quot;,&quot;google&quot;,&quot;azureopenai&quot;,&quot;local&quot;,&quot;ollama&quot;])]
+        ai_provider: Option&lt;String&gt;,
+
+        /// Request JSON responses from the AI (faster to render, more structured)
+        #[arg(long, default_value_t = false)]
+        ai_json: bool,
+    },
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

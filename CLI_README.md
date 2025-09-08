@@ -404,3 +404,45 @@ This project is licensed under either of Apache License, Version 2.0 or MIT lice
 ---
 
 **Built with ❤️ using tree-sitter and Rust**
+### `wiki` - Static Code Wiki Generator
+
+Generate a static, navigable documentation website from a codebase.
+
+```bash
+tree-sitter-cli wiki <PATH> [OPTIONS]
+```
+
+Options (legacy and explicit):
+- `--output <DIR>`: Output directory (default: `./wiki_site`)
+- `--include-api`: Include per-file API docs and symbols
+- `--include-examples`: Include examples (legacy)
+- `--depth <LEVEL>`: Analysis depth: basic, deep, full [default: full]
+- `--ai`, `--ai-json`: Legacy AI toggles (kept for compatibility)
+- `--ai-mock`: Use mock AI providers
+- `--ai-config <FILE>`: AI configuration
+- `--ai-provider <PROVIDER>`: AI provider (groq, openai, anthropic, google, azureopenai, local, ollama)
+
+Explicit wiki flags (preferred):
+- `--wiki-ai`: Enable AI-generated content
+- `--wiki-ai-json`: Request structured JSON responses
+- `--wiki-security`: Generate security pages/blocks
+- `--wiki-diagrams`: Enable diagram annotations
+- `--wiki-examples`: Include examples
+- `--wiki-max-results <N>`: Limit search results shown in UI (default 200)
+- `--wiki-max-index-symbols <N>`: Cap symbols per file in search index
+- `--wiki-templates <DIR>`: External templates directory (reserved)
+
+Examples:
+```bash
+# Basic wiki
+tree-sitter-cli wiki ./src --output wiki_site --include-api --depth full
+
+# Enable AI (explicit)
+tree-sitter-cli wiki ./src --output wiki_site --wiki-ai --wiki-ai-json
+
+# Security-focused site
+tree-sitter-cli wiki ./src --output wiki_site --wiki-security --wiki-diagrams
+
+# Tune search UX
+tree-sitter-cli wiki ./src --output wiki_site --include-api --wiki-max-results 150 --wiki-max-index-symbols 50
+```

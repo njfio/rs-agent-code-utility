@@ -400,7 +400,7 @@ pub enum Commands {
         #[arg(long, default_value_t = true)]
         include_api: bool,
 
-        /// Include examples
+        /// Include examples (legacy)
         #[arg(long, default_value_t = false)]
         include_examples: bool,
 
@@ -408,7 +408,7 @@ pub enum Commands {
         #[arg(long, default_value = "full")]
         depth: String,
 
-        /// Enable AI-generated docs on the wiki
+        /// Enable AI-generated docs on the wiki (legacy)
         #[arg(long, default_value_t = false)]
         ai: bool,
 
@@ -424,9 +424,34 @@ pub enum Commands {
         #[arg(long, value_parser = ["groq","openai","anthropic","google","azureopenai","local","ollama"])]
         ai_provider: Option<String>,
 
-        /// Request JSON responses from the AI (faster to render, more structured)
+        /// Request JSON responses from the AI (legacy)
         #[arg(long, default_value_t = false)]
         ai_json: bool,
+
+        /// Enable AI-generated docs (explicit)
+        #[arg(long, default_value_t = false)]
+        wiki_ai: bool,
+        /// Request JSON responses from AI (explicit)
+        #[arg(long, default_value_t = false)]
+        wiki_ai_json: bool,
+        /// Enable security insights pages/blocks
+        #[arg(long, default_value_t = false)]
+        wiki_security: bool,
+        /// Enable diagram annotations and pages
+        #[arg(long, default_value_t = false)]
+        wiki_diagrams: bool,
+        /// Include examples (explicit)
+        #[arg(long, default_value_t = false)]
+        wiki_examples: bool,
+        /// Maximum search results to display
+        #[arg(long, value_name = "N")]
+        wiki_max_results: Option<usize>,
+        /// Cap indexed symbols per file
+        #[arg(long, value_name = "N")]
+        wiki_max_index_symbols: Option<usize>,
+        /// External templates directory
+        #[arg(long, value_name = "DIR")]
+        wiki_templates: Option<PathBuf>,
     },
 }
 

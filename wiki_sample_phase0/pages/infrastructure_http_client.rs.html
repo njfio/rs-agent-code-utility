@@ -1,0 +1,2269 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure/http_client.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>infrastructure/http_client.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="ai_providers_groq.rs.html">ai/providers/groq.rs</a>
+<a href="ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+</details>
+<a href="ai_cache.rs.html">ai/cache.rs</a>
+<a href="ai_config.rs.html">ai/config.rs</a>
+<a href="ai_error.rs.html">ai/error.rs</a>
+<a href="ai_mod.rs.html">ai/mod.rs</a>
+<a href="ai_service.rs.html">ai/service.rs</a>
+<a href="ai_types.rs.html">ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="bin_main.rs.html">bin/main.rs</a>
+<a href="bin_rts.rs.html">bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+</details>
+<a href="cli_error.rs.html">cli/error.rs</a>
+<a href="cli_mod.rs.html">cli/mod.rs</a>
+<a href="cli_output.rs.html">cli/output.rs</a>
+<a href="cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="cli_utils.rs.html">cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="languages_c.rs.html">languages/c.rs</a>
+<a href="languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="languages_go.rs.html">languages/go.rs</a>
+<a href="languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="languages_mod.rs.html">languages/mod.rs</a>
+<a href="languages_python.rs.html">languages/python.rs</a>
+<a href="languages_rust.rs.html">languages/rust.rs</a>
+<a href="languages_typescript.rs.html">languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="security_mod.rs.html">security/mod.rs</a>
+<a href="security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="wiki_ai_schema.rs.html">wiki/ai_schema.rs</a>
+<a href="wiki_enhanced_ai.rs.html">wiki/enhanced_ai.rs</a>
+<a href="wiki_mod.rs.html">wiki/mod.rs</a>
+<a href="wiki_security_enhancements.rs.html">wiki/security_enhancements.rs</a>
+</details>
+<a href="advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="advanced_security.rs.html">advanced_security.rs</a>
+<a href="ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="analysis_common.rs.html">analysis_common.rs</a>
+<a href="analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="analyzer.rs.html">analyzer.rs</a>
+<a href="ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="code_evolution.rs.html">code_evolution.rs</a>
+<a href="code_map.rs.html">code_map.rs</a>
+<a href="command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="constants.rs.html">constants.rs</a>
+<a href="control_flow.rs.html">control_flow.rs</a>
+<a href="dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="embeddings.rs.html">embeddings.rs</a>
+<a href="enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="error.rs.html">error.rs</a>
+<a href="file_cache.rs.html">file_cache.rs</a>
+<a href="intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="lib.rs.html">lib.rs</a>
+<a href="main.rs.html">main.rs</a>
+<a href="memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="parser.rs.html">parser.rs</a>
+<a href="performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="query.rs.html">query.rs</a>
+<a href="reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="refactoring.rs.html">refactoring.rs</a>
+<a href="semantic_context.rs.html">semantic_context.rs</a>
+<a href="semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="symbol_table.rs.html">symbol_table.rs</a>
+<a href="taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="test_coverage.rs.html">test_coverage.rs</a>
+<a href="tree.rs.html">tree.rs</a>
+
+
+</nav>
+<section class="article">
+<p>64 symbols, 390 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> infrastructure/http_client.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 390<br><strong>Symbols:</strong> 64<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant new
+  participant with_config
+  participant get
+  participant post
+  participant request
+  participant execute_request
+  participant should_retry
+  participant default
+  participant new
+  participant wait_for_permit
+  participant check_permit
+  participant new
+  participant timeout
+  participant max_retries
+  participant user_agent
+  participant build
+  participant default
+  participant parse_json
+  participant is_rate_limited
+  participant extract_rate_limit_info
+  new->>with_config: call
+  with_config->>get: call
+  get->>post: call
+  post->>request: call
+  request->>execute_request: call
+  execute_request->>should_retry: call
+  should_retry->>default: call
+  default->>new: call
+  new->>wait_for_permit: call
+  wait_for_permit->>check_permit: call
+  check_permit->>new: call
+  new->>timeout: call
+  timeout->>max_retries: call
+  max_retries->>user_agent: call
+  user_agent->>build: call
+  build->>default: call
+  default->>parse_json: call
+  parse_json->>is_rate_limited: call
+  is_rate_limited->>extract_rate_limit_info: call
+
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class new {}
+  class with_config {}
+  class get {}
+  class post {}
+  class request {}
+  class execute_request {}
+  class should_retry {}
+  class default {}
+  class new {}
+  class wait_for_permit {}
+  class check_permit {}
+  class new {}
+  class timeout {}
+  class max_retries {}
+  class user_agent {}
+  class build {}
+  class default {}
+  class parse_json {}
+  class is_rate_limited {}
+  class extract_rate_limit_info {}
+  class HttpClient {}
+  class RequestConfig {}
+  class HttpResponse {}
+  class RateLimiter {}
+  class HttpClientBuilder {}
+  class RateLimitInfo {}
+  class AuthConfig {}
+  class HttpClient {}
+  class RequestConfig {}
+  class RateLimiter {}
+  class HttpClientBuilder {}
+  class HttpClientBuilder {}
+  class client {}
+  class client {}
+  class config {}
+  class timeout {}
+  class max_retries {}
+  class backoff_min {}
+  class backoff_max {}
+  class start_time {}
+  class duration {}
+  class shift {}
+  class factor {}
+  class min_nanos {}
+  class delay_nanos {}
+  class max_nanos {}
+  class rng {}
+  class jitter_factor {}
+  class jittered {}
+  class jittered {}
+  class delay {}
+  class request_builder {}
+  class response {}
+  class status {}
+  class headers {}
+  class url {}
+  class error_body {}
+  class body {}
+  class error_str {}
+  class quota {}
+  class limiter {}
+  class client {}
+  class remaining {}
+  class reset {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(20)</small></summary><ul><li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (59-70)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-59">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:59" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+</pre>
+    <pre><code id="code-new-59" class="lang-rust hljs">    pub fn new() -&gt; Result&lt;Self&gt; {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .user_agent(&quot;rust-tree-sitter/0.3.0&quot;)
+            .build()?;
+
+        Ok(Self {
+            client,
+            default_timeout: Duration::from_secs(30),
+            max_retries: 3,
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-with-config"><code>with_config</code> <small>function</small>
+<details><summary>View code (73-84)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-with_config-73">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:73" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+</pre>
+    <pre><code id="code-with_config-73" class="lang-rust hljs">    pub fn with_config(timeout: Duration, max_retries: usize) -&gt; Result&lt;Self&gt; {
+        let client = Client::builder()
+            .timeout(timeout)
+            .user_agent(&quot;rust-tree-sitter/0.3.0&quot;)
+            .build()?;
+
+        Ok(Self {
+            client,
+            default_timeout: timeout,
+            max_retries,
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-get"><code>get</code> <small>function</small>
+<details><summary>View code (87-89)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-get-87">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:87" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">87
+88
+89
+</pre>
+    <pre><code id="code-get-87" class="lang-rust hljs">    pub async fn get(&amp;self, url: &amp;str, config: Option&lt;RequestConfig&gt;) -&gt; Result&lt;HttpResponse&gt; {
+        self.request(&quot;GET&quot;, url, None::&lt;&amp;()&gt;, config).await
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-post"><code>post</code> <small>function</small>
+<details><summary>View code (92-94)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-post-92">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:92" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">92
+93
+94
+</pre>
+    <pre><code id="code-post-92" class="lang-rust hljs">    pub async fn post&lt;T: Serialize&gt;(&amp;self, url: &amp;str, body: Option&lt;&amp;T&gt;, config: Option&lt;RequestConfig&gt;) -&gt; Result&lt;HttpResponse&gt; {
+        self.request(&quot;POST&quot;, url, body, config).await
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-request"><code>request</code> <small>function</small>
+<details><summary>View code (97-143)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-request-97">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:97" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+</pre>
+    <pre><code id="code-request-97" class="lang-rust hljs">    async fn request&lt;T: Serialize&gt;(&amp;self, method: &amp;str, url: &amp;str, body: Option&lt;&amp;T&gt;, config: Option&lt;RequestConfig&gt;) -&gt; Result&lt;HttpResponse&gt; {
+        let config = config.unwrap_or_default();
+        let timeout = config.timeout.unwrap_or(self.default_timeout);
+        let max_retries = config.retries.unwrap_or(self.max_retries);
+
+        // Local exponential backoff with jitter: starts at 100ms, caps at 5s
+        let backoff_min = Duration::from_millis(100);
+        let backoff_max = Duration::from_secs(5);
+
+        for attempt in 0..=max_retries {
+            let start_time = std::time::Instant::now();
+            
+            match self.execute_request(method, url, body, &amp;config, timeout).await {
+                Ok(response) =&gt; {
+                    let duration = start_time.elapsed();
+                    debug!(&quot;HTTP {} {} completed in {:?} (attempt {})&quot;, method, url, duration, attempt + 1);
+                    return Ok(response);
+                }
+                Err(e) if attempt &lt; max_retries &amp;&amp; self.should_retry(&amp;e) =&gt; {
+                    // Compute exponential delay with jitter
+                    let shift = attempt.min(20) as u32; // cap at 2^20
+                    let factor = 1u32.checked_shl(shift).unwrap_or(u32::MAX);
+                    let min_nanos = backoff_min.as_nanos();
+                    let mut delay_nanos = min_nanos.saturating_mul(factor as u128);
+                    let max_nanos = backoff_max.as_nanos();
+                    if delay_nanos &gt; max_nanos { delay_nanos = max_nanos; }
+                    // jitter in [0.5, 1.5)
+                    let mut rng = thread_rng();
+                    let jitter_factor: f64 = rng.gen_range(0.5..1.5);
+                    let jittered = (delay_nanos as f64 * jitter_factor) as u128;
+                    let jittered = if jittered &gt; max_nanos { max_nanos } else { jittered };
+                    let delay = Duration::from_nanos(jittered as u64);
+                    warn!(&quot;HTTP {} {} failed (attempt {}), retrying in {:?}: {}&quot;, method, url, attempt + 1, delay, e);
+                    tokio::time::sleep(delay).await;
+                }
+                Err(e) =&gt; {
+                    error!(&quot;HTTP {} {} failed permanently (attempt {}): {}&quot;, method, url, attempt + 1, e);
+                    return Err(e);
+                }
+            }
+        }
+
+        Err(anyhow!(
+            &quot;Max retries ({}) exceeded for {} {}: All retry attempts failed&quot;,
+            self.max_retries, method, url
+        ))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-execute-request"><code>execute_request</code> <small>function</small>
+<details><summary>View code (146-211)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-execute_request-146">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:146" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+</pre>
+    <pre><code id="code-execute_request-146" class="lang-rust hljs">    async fn execute_request&lt;T: Serialize&gt;(
+        &amp;self,
+        method: &amp;str,
+        url: &amp;str,
+        body: Option&lt;&amp;T&gt;,
+        config: &amp;RequestConfig,
+        timeout: Duration,
+    ) -&gt; Result&lt;HttpResponse&gt; {
+        let mut request_builder = match method {
+            &quot;GET&quot; =&gt; self.client.get(url),
+            &quot;POST&quot; =&gt; self.client.post(url),
+            &quot;PUT&quot; =&gt; self.client.put(url),
+            &quot;DELETE&quot; =&gt; self.client.delete(url),
+            _ =&gt; return Err(anyhow!(
+                &quot;Unsupported HTTP method &#39;{}&#39;: expected GET, POST, PUT, or DELETE&quot;,
+                method
+            )),
+        };
+
+        // Add timeout
+        request_builder = request_builder.timeout(timeout);
+
+        // Add headers
+        for (key, value) in &amp;config.headers {
+            request_builder = request_builder.header(key, value);
+        }
+
+        // Add authentication
+        if let Some(auth) = &amp;config.auth {
+            request_builder = match auth {
+                AuthConfig::Bearer(token) =&gt; request_builder.bearer_auth(token),
+                AuthConfig::ApiKey { key, header } =&gt; request_builder.header(header, key),
+                AuthConfig::Basic { username, password } =&gt; request_builder.basic_auth(username, Some(password)),
+            };
+        }
+
+        // Add body for POST/PUT requests
+        if let Some(body_data) = body {
+            request_builder = request_builder.json(body_data);
+        }
+
+        // Execute request
+        let response = request_builder.send().await?;
+        let status = response.status();
+        let headers = response.headers().clone();
+        let url = response.url().to_string();
+
+        // Check for HTTP errors
+        if !status.is_success() {
+            let error_body = response.text().await.unwrap_or_default();
+            return Err(anyhow!(
+                &quot;HTTP {} error for {}: {}&quot;,
+                status, url, error_body
+            ));
+        }
+
+        let body = response.text().await?;
+
+        Ok(HttpResponse {
+            status,
+            headers,
+            body,
+            url,
+            duration: Duration::from_secs(0), // Will be set by caller
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-should-retry"><code>should_retry</code> <small>function</small>
+<details><summary>View code (214-229)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-should_retry-214">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:214" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+</pre>
+    <pre><code id="code-should_retry-214" class="lang-rust hljs">    fn should_retry(&amp;self, error: &amp;anyhow::Error) -&gt; bool {
+        // Retry on network errors, timeouts, and certain HTTP status codes
+        if let Some(reqwest_error) = error.downcast_ref::&lt;reqwest::Error&gt;() {
+            return reqwest_error.is_timeout() || 
+                   reqwest_error.is_connect() ||
+                   reqwest_error.is_request();
+        }
+
+        // Check for specific HTTP status codes that should be retried
+        let error_str = error.to_string();
+        error_str.contains(&quot;500&quot;) || // Internal Server Error
+        error_str.contains(&quot;502&quot;) || // Bad Gateway
+        error_str.contains(&quot;503&quot;) || // Service Unavailable
+        error_str.contains(&quot;504&quot;) || // Gateway Timeout
+        error_str.contains(&quot;429&quot;)    // Too Many Requests
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (233-240)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-233">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:233" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">233
+234
+235
+236
+237
+238
+239
+240
+</pre>
+    <pre><code id="code-default-233" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self {
+            timeout: None,
+            retries: None,
+            headers: Vec::new(),
+            auth: None,
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (245-256)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-245">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:245" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+</pre>
+    <pre><code id="code-new-245" class="lang-rust hljs">    pub fn new(requests_per_minute: u32) -&gt; Self {
+        use governor::{Quota, RateLimiter as GovRateLimiter};
+        use std::num::NonZeroU32;
+
+        let quota = Quota::per_minute(
+            NonZeroU32::new(requests_per_minute.max(1))
+                .expect(&quot;Rate limit creation failed: requests_per_minute.max(1) should always be &gt;= 1, but NonZeroU32::new returned None&quot;)
+        );
+        let limiter = GovRateLimiter::direct(quota);
+
+        Self { limiter }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-wait-for-permit"><code>wait_for_permit</code> <small>function</small>
+<details><summary>View code (259-262)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-wait_for_permit-259">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:259" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">259
+260
+261
+262
+</pre>
+    <pre><code id="code-wait_for_permit-259" class="lang-rust hljs">    pub async fn wait_for_permit(&amp;self) -&gt; Result&lt;()&gt; {
+        self.limiter.until_ready().await;
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-check-permit"><code>check_permit</code> <small>function</small>
+<details><summary>View code (265-267)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-check_permit-265">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:265" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">265
+266
+267
+</pre>
+    <pre><code id="code-check_permit-265" class="lang-rust hljs">    pub fn check_permit(&amp;self) -&gt; bool {
+        self.limiter.check().is_ok()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (279-285)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-279">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:279" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">279
+280
+281
+282
+283
+284
+285
+</pre>
+    <pre><code id="code-new-279" class="lang-rust hljs">    pub fn new() -&gt; Self {
+        Self {
+            timeout: Duration::from_secs(30),
+            max_retries: 3,
+            user_agent: &quot;rust-tree-sitter/0.3.0&quot;.to_string(),
+        }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-timeout"><code>timeout</code> <small>function</small>
+<details><summary>View code (288-291)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-timeout-288">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:288" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">288
+289
+290
+291
+</pre>
+    <pre><code id="code-timeout-288" class="lang-rust hljs">    pub fn timeout(mut self, timeout: Duration) -&gt; Self {
+        self.timeout = timeout;
+        self
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-max-retries"><code>max_retries</code> <small>function</small>
+<details><summary>View code (294-297)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-max_retries-294">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:294" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">294
+295
+296
+297
+</pre>
+    <pre><code id="code-max_retries-294" class="lang-rust hljs">    pub fn max_retries(mut self, max_retries: usize) -&gt; Self {
+        self.max_retries = max_retries;
+        self
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-user-agent"><code>user_agent</code> <small>function</small>
+<details><summary>View code (300-303)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-user_agent-300">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:300" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">300
+301
+302
+303
+</pre>
+    <pre><code id="code-user_agent-300" class="lang-rust hljs">    pub fn user_agent(mut self, user_agent: String) -&gt; Self {
+        self.user_agent = user_agent;
+        self
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-build"><code>build</code> <small>function</small>
+<details><summary>View code (306-317)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-build-306">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:306" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+</pre>
+    <pre><code id="code-build-306" class="lang-rust hljs">    pub fn build(self) -&gt; Result&lt;HttpClient&gt; {
+        let client = Client::builder()
+            .timeout(self.timeout)
+            .user_agent(&amp;self.user_agent)
+            .build()?;
+
+        Ok(HttpClient {
+            client,
+            default_timeout: self.timeout,
+            max_retries: self.max_retries,
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-default"><code>default</code> <small>function</small>
+<details><summary>View code (321-323)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-default-321">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:321" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">321
+322
+323
+</pre>
+    <pre><code id="code-default-321" class="lang-rust hljs">    fn default() -&gt; Self {
+        Self::new()
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-parse-json"><code>parse_json</code> <small>function</small>
+<details><summary>View code (337-343)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-parse_json-337">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:337" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">337
+338
+339
+340
+341
+342
+343
+</pre>
+    <pre><code id="code-parse_json-337" class="lang-rust hljs">    pub fn parse_json&lt;T: for&lt;&#39;de&gt; Deserialize&lt;&#39;de&gt;&gt;(response: &amp;HttpResponse) -&gt; Result&lt;T&gt; {
+        serde_json::from_str(&amp;response.body)
+            .map_err(|e| anyhow!(
+                &quot;Failed to parse JSON response: {}. Ensure the response contains valid JSON data&quot;,
+                e
+            ))
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-is-rate-limited"><code>is_rate_limited</code> <small>function</small>
+<details><summary>View code (354-361)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-is_rate_limited-354">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:354" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">354
+355
+356
+357
+358
+359
+360
+361
+</pre>
+    <pre><code id="code-is_rate_limited-354" class="lang-rust hljs">    pub fn is_rate_limited(response: &amp;HttpResponse) -&gt; bool {
+        response.status == StatusCode::TOO_MANY_REQUESTS ||
+        response.headers.get(&quot;x-ratelimit-remaining&quot;)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::&lt;u32&gt;().ok())
+            .map(|remaining| remaining == 0)
+            .unwrap_or(false)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-extract-rate-limit-info"><code>extract_rate_limit_info</code> <small>function</small>
+<details><summary>View code (372-382)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-extract_rate_limit_info-372">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:372" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+</pre>
+    <pre><code id="code-extract_rate_limit_info-372" class="lang-rust hljs">    pub fn extract_rate_limit_info(response: &amp;HttpResponse) -&gt; Option&lt;RateLimitInfo&gt; {
+        let remaining = response.headers.get(&quot;x-ratelimit-remaining&quot;)?
+            .to_str().ok()?
+            .parse().ok()?;
+        
+        let reset = response.headers.get(&quot;x-ratelimit-reset&quot;)?
+            .to_str().ok()?
+            .parse().ok()?;
+
+        Some(RateLimitInfo { remaining, reset })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(32)</small></summary><ul><li id="symbol-client"><code>client</code> <small>variable</small>
+<details><summary>View code (60-63)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-client-60">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:60" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">60
+61
+62
+63
+</pre>
+    <pre><code id="code-client-60" class="lang-rust hljs">        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .user_agent(&quot;rust-tree-sitter/0.3.0&quot;)
+            .build()?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-client"><code>client</code> <small>variable</small>
+<details><summary>View code (74-77)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-client-74">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:74" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">74
+75
+76
+77
+</pre>
+    <pre><code id="code-client-74" class="lang-rust hljs">        let client = Client::builder()
+            .timeout(timeout)
+            .user_agent(&quot;rust-tree-sitter/0.3.0&quot;)
+            .build()?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-config"><code>config</code> <small>variable</small>
+<details><summary>View code (98-98)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-config-98">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:98" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">98
+</pre>
+    <pre><code id="code-config-98" class="lang-rust hljs">        let config = config.unwrap_or_default();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-timeout"><code>timeout</code> <small>variable</small>
+<details><summary>View code (99-99)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-timeout-99">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:99" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">99
+</pre>
+    <pre><code id="code-timeout-99" class="lang-rust hljs">        let timeout = config.timeout.unwrap_or(self.default_timeout);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-max-retries"><code>max_retries</code> <small>variable</small>
+<details><summary>View code (100-100)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-max_retries-100">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:100" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">100
+</pre>
+    <pre><code id="code-max_retries-100" class="lang-rust hljs">        let max_retries = config.retries.unwrap_or(self.max_retries);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoff-min"><code>backoff_min</code> <small>variable</small>
+<details><summary>View code (103-103)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoff_min-103">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:103" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">103
+</pre>
+    <pre><code id="code-backoff_min-103" class="lang-rust hljs">        let backoff_min = Duration::from_millis(100);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-backoff-max"><code>backoff_max</code> <small>variable</small>
+<details><summary>View code (104-104)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-backoff_max-104">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:104" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">104
+</pre>
+    <pre><code id="code-backoff_max-104" class="lang-rust hljs">        let backoff_max = Duration::from_secs(5);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-start-time"><code>start_time</code> <small>variable</small>
+<details><summary>View code (107-107)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-start_time-107">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:107" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">107
+</pre>
+    <pre><code id="code-start_time-107" class="lang-rust hljs">            let start_time = std::time::Instant::now();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-duration"><code>duration</code> <small>variable</small>
+<details><summary>View code (111-111)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-duration-111">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:111" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">111
+</pre>
+    <pre><code id="code-duration-111" class="lang-rust hljs">                    let duration = start_time.elapsed();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-shift"><code>shift</code> <small>variable</small>
+<details><summary>View code (117-117)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-shift-117">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:117" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">117
+</pre>
+    <pre><code id="code-shift-117" class="lang-rust hljs">                    let shift = attempt.min(20) as u32; // cap at 2^20</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-factor"><code>factor</code> <small>variable</small>
+<details><summary>View code (118-118)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-factor-118">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:118" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">118
+</pre>
+    <pre><code id="code-factor-118" class="lang-rust hljs">                    let factor = 1u32.checked_shl(shift).unwrap_or(u32::MAX);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-min-nanos"><code>min_nanos</code> <small>variable</small>
+<details><summary>View code (119-119)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-min_nanos-119">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:119" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">119
+</pre>
+    <pre><code id="code-min_nanos-119" class="lang-rust hljs">                    let min_nanos = backoff_min.as_nanos();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-delay-nanos"><code>delay_nanos</code> <small>variable</small>
+<details><summary>View code (120-120)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-delay_nanos-120">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:120" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">120
+</pre>
+    <pre><code id="code-delay_nanos-120" class="lang-rust hljs">                    let mut delay_nanos = min_nanos.saturating_mul(factor as u128);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-max-nanos"><code>max_nanos</code> <small>variable</small>
+<details><summary>View code (121-121)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-max_nanos-121">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:121" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">121
+</pre>
+    <pre><code id="code-max_nanos-121" class="lang-rust hljs">                    let max_nanos = backoff_max.as_nanos();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rng"><code>rng</code> <small>variable</small>
+<details><summary>View code (124-124)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rng-124">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:124" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">124
+</pre>
+    <pre><code id="code-rng-124" class="lang-rust hljs">                    let mut rng = thread_rng();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-jitter-factor"><code>jitter_factor</code> <small>variable</small>
+<details><summary>View code (125-125)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-jitter_factor-125">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:125" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">125
+</pre>
+    <pre><code id="code-jitter_factor-125" class="lang-rust hljs">                    let jitter_factor: f64 = rng.gen_range(0.5..1.5);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-jittered"><code>jittered</code> <small>variable</small>
+<details><summary>View code (126-126)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-jittered-126">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:126" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">126
+</pre>
+    <pre><code id="code-jittered-126" class="lang-rust hljs">                    let jittered = (delay_nanos as f64 * jitter_factor) as u128;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-jittered"><code>jittered</code> <small>variable</small>
+<details><summary>View code (127-127)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-jittered-127">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:127" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">127
+</pre>
+    <pre><code id="code-jittered-127" class="lang-rust hljs">                    let jittered = if jittered &gt; max_nanos { max_nanos } else { jittered };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-delay"><code>delay</code> <small>variable</small>
+<details><summary>View code (128-128)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-delay-128">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:128" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">128
+</pre>
+    <pre><code id="code-delay-128" class="lang-rust hljs">                    let delay = Duration::from_nanos(jittered as u64);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-request-builder"><code>request_builder</code> <small>variable</small>
+<details><summary>View code (154-163)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-request_builder-154">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:154" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+</pre>
+    <pre><code id="code-request_builder-154" class="lang-rust hljs">        let mut request_builder = match method {
+            &quot;GET&quot; =&gt; self.client.get(url),
+            &quot;POST&quot; =&gt; self.client.post(url),
+            &quot;PUT&quot; =&gt; self.client.put(url),
+            &quot;DELETE&quot; =&gt; self.client.delete(url),
+            _ =&gt; return Err(anyhow!(
+                &quot;Unsupported HTTP method &#39;{}&#39;: expected GET, POST, PUT, or DELETE&quot;,
+                method
+            )),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-response"><code>response</code> <small>variable</small>
+<details><summary>View code (188-188)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-response-188">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:188" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">188
+</pre>
+    <pre><code id="code-response-188" class="lang-rust hljs">        let response = request_builder.send().await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-status"><code>status</code> <small>variable</small>
+<details><summary>View code (189-189)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-status-189">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:189" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">189
+</pre>
+    <pre><code id="code-status-189" class="lang-rust hljs">        let status = response.status();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-headers"><code>headers</code> <small>variable</small>
+<details><summary>View code (190-190)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-headers-190">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:190" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">190
+</pre>
+    <pre><code id="code-headers-190" class="lang-rust hljs">        let headers = response.headers().clone();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-url"><code>url</code> <small>variable</small>
+<details><summary>View code (191-191)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-url-191">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:191" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">191
+</pre>
+    <pre><code id="code-url-191" class="lang-rust hljs">        let url = response.url().to_string();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-error-body"><code>error_body</code> <small>variable</small>
+<details><summary>View code (195-195)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-error_body-195">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:195" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">195
+</pre>
+    <pre><code id="code-error_body-195" class="lang-rust hljs">            let error_body = response.text().await.unwrap_or_default();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-body"><code>body</code> <small>variable</small>
+<details><summary>View code (202-202)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-body-202">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:202" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">202
+</pre>
+    <pre><code id="code-body-202" class="lang-rust hljs">        let body = response.text().await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-error-str"><code>error_str</code> <small>variable</small>
+<details><summary>View code (223-223)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-error_str-223">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:223" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">223
+</pre>
+    <pre><code id="code-error_str-223" class="lang-rust hljs">        let error_str = error.to_string();</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-quota"><code>quota</code> <small>variable</small>
+<details><summary>View code (249-252)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-quota-249">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:249" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">249
+250
+251
+252
+</pre>
+    <pre><code id="code-quota-249" class="lang-rust hljs">        let quota = Quota::per_minute(
+            NonZeroU32::new(requests_per_minute.max(1))
+                .expect(&quot;Rate limit creation failed: requests_per_minute.max(1) should always be &gt;= 1, but NonZeroU32::new returned None&quot;)
+        );</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-limiter"><code>limiter</code> <small>variable</small>
+<details><summary>View code (253-253)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-limiter-253">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:253" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">253
+</pre>
+    <pre><code id="code-limiter-253" class="lang-rust hljs">        let limiter = GovRateLimiter::direct(quota);</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-client"><code>client</code> <small>variable</small>
+<details><summary>View code (307-310)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-client-307">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:307" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">307
+308
+309
+310
+</pre>
+    <pre><code id="code-client-307" class="lang-rust hljs">        let client = Client::builder()
+            .timeout(self.timeout)
+            .user_agent(&amp;self.user_agent)
+            .build()?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-remaining"><code>remaining</code> <small>variable</small>
+<details><summary>View code (373-375)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-remaining-373">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:373" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">373
+374
+375
+</pre>
+    <pre><code id="code-remaining-373" class="lang-rust hljs">        let remaining = response.headers.get(&quot;x-ratelimit-remaining&quot;)?
+            .to_str().ok()?
+            .parse().ok()?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-reset"><code>reset</code> <small>variable</small>
+<details><summary>View code (377-379)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-reset-377">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:377" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">377
+378
+379
+</pre>
+    <pre><code id="code-reset-377" class="lang-rust hljs">        let reset = response.headers.get(&quot;x-ratelimit-reset&quot;)?
+            .to_str().ok()?
+            .parse().ok()?;</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(12)</small></summary><ul><li id="symbol-httpclient"><code>HttpClient</code> <small>struct</small>
+<details><summary>View code (14-18)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-httpclient-14">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:14" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">14
+15
+16
+17
+18
+</pre>
+    <pre><code id="code-httpclient-14" class="lang-rust hljs">pub struct HttpClient {
+    client: Client,
+    default_timeout: Duration,
+    max_retries: usize,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-requestconfig"><code>RequestConfig</code> <small>struct</small>
+<details><summary>View code (22-27)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-requestconfig-22">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:22" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">22
+23
+24
+25
+26
+27
+</pre>
+    <pre><code id="code-requestconfig-22" class="lang-rust hljs">pub struct RequestConfig {
+    pub timeout: Option&lt;Duration&gt;,
+    pub retries: Option&lt;usize&gt;,
+    pub headers: Vec&lt;(String, String)&gt;,
+    pub auth: Option&lt;AuthConfig&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-httpresponse"><code>HttpResponse</code> <small>struct</small>
+<details><summary>View code (39-45)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-httpresponse-39">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:39" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">39
+40
+41
+42
+43
+44
+45
+</pre>
+    <pre><code id="code-httpresponse-39" class="lang-rust hljs">pub struct HttpResponse {
+    pub status: StatusCode,
+    pub headers: reqwest::header::HeaderMap,
+    pub body: String,
+    pub url: String,
+    pub duration: Duration,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimiter"><code>RateLimiter</code> <small>struct</small>
+<details><summary>View code (48-55)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimiter-48">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:48" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">48
+49
+50
+51
+52
+53
+54
+55
+</pre>
+    <pre><code id="code-ratelimiter-48" class="lang-rust hljs">pub struct RateLimiter {
+    limiter: governor::RateLimiter&lt;
+        governor::state::NotKeyed,
+        governor::state::InMemoryState,
+        governor::clock::DefaultClock,
+        governor::middleware::NoOpMiddleware,
+    &gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-httpclientbuilder"><code>HttpClientBuilder</code> <small>struct</small>
+<details><summary>View code (271-275)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-httpclientbuilder-271">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:271" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">271
+272
+273
+274
+275
+</pre>
+    <pre><code id="code-httpclientbuilder-271" class="lang-rust hljs">pub struct HttpClientBuilder {
+    timeout: Duration,
+    max_retries: usize,
+    user_agent: String,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimitinfo"><code>RateLimitInfo</code> <small>struct</small>
+<details><summary>View code (387-390)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitinfo-387">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:387" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">387
+388
+389
+390
+</pre>
+    <pre><code id="code-ratelimitinfo-387" class="lang-rust hljs">pub struct RateLimitInfo {
+    pub remaining: u32,
+    pub reset: u64, // Unix timestamp
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-authconfig"><code>AuthConfig</code> <small>enum</small>
+<details><summary>View code (31-35)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-authconfig-31">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:31" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">31
+32
+33
+34
+35
+</pre>
+    <pre><code id="code-authconfig-31" class="lang-rust hljs">pub enum AuthConfig {
+    Bearer(String),
+    ApiKey { key: String, header: String },
+    Basic { username: String, password: String },
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-httpclient"><code>HttpClient</code> <small>impl</small>
+<details><summary>View code (57-230)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-httpclient-57">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:57" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+</pre>
+    <pre><code id="code-httpclient-57" class="lang-rust hljs">impl HttpClient {
+    /// Create a new HTTP client with default configuration
+    pub fn new() -&gt; Result&lt;Self&gt; {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .user_agent(&quot;rust-tree-sitter/0.3.0&quot;)
+            .build()?;
+
+        Ok(Self {
+            client,
+            default_timeout: Duration::from_secs(30),
+            max_retries: 3,
+        })
+    }
+
+    /// Create a new HTTP client with custom configuration
+    pub fn with_config(timeout: Duration, max_retries: usize) -&gt; Result&lt;Self&gt; {
+        let client = Client::builder()
+            .timeout(timeout)
+            .user_agent(&quot;rust-tree-sitter/0.3.0&quot;)
+            .build()?;
+
+        Ok(Self {
+            client,
+            default_timeout: timeout,
+            max_retries,
+        })
+    }
+
+    /// Perform a GET request with retry logic
+    pub async fn get(&amp;self, url: &amp;str, config: Option&lt;RequestConfig&gt;) -&gt; Result&lt;HttpResponse&gt; {
+        self.request(&quot;GET&quot;, url, None::&lt;&amp;()&gt;, config).await
+    }
+
+    /// Perform a POST request with retry logic
+    pub async fn post&lt;T: Serialize&gt;(&amp;self, url: &amp;str, body: Option&lt;&amp;T&gt;, config: Option&lt;RequestConfig&gt;) -&gt; Result&lt;HttpResponse&gt; {
+        self.request(&quot;POST&quot;, url, body, config).await
+    }
+
+    /// Perform a generic HTTP request with retry logic
+    async fn request&lt;T: Serialize&gt;(&amp;self, method: &amp;str, url: &amp;str, body: Option&lt;&amp;T&gt;, config: Option&lt;RequestConfig&gt;) -&gt; Result&lt;HttpResponse&gt; {
+        let config = config.unwrap_or_default();
+        let timeout = config.timeout.unwrap_or(self.default_timeout);
+        let max_retries = config.retries.unwrap_or(self.max_retries);
+
+        // Local exponential backoff with jitter: starts at 100ms, caps at 5s
+        let backoff_min = Duration::from_millis(100);
+        let backoff_max = Duration::from_secs(5);
+
+        for attempt in 0..=max_retries {
+            let start_time = std::time::Instant::now();
+            
+            match self.execute_request(method, url, body, &amp;config, timeout).await {
+                Ok(response) =&gt; {
+                    let duration = start_time.elapsed();
+                    debug!(&quot;HTTP {} {} completed in {:?} (attempt {})&quot;, method, url, duration, attempt + 1);
+                    return Ok(response);
+                }
+                Err(e) if attempt &lt; max_retries &amp;&amp; self.should_retry(&amp;e) =&gt; {
+                    // Compute exponential delay with jitter
+                    let shift = attempt.min(20) as u32; // cap at 2^20
+                    let factor = 1u32.checked_shl(shift).unwrap_or(u32::MAX);
+                    let min_nanos = backoff_min.as_nanos();
+                    let mut delay_nanos = min_nanos.saturating_mul(factor as u128);
+                    let max_nanos = backoff_max.as_nanos();
+                    if delay_nanos &gt; max_nanos { delay_nanos = max_nanos; }
+                    // jitter in [0.5, 1.5)
+                    let mut rng = thread_rng();
+                    let jitter_factor: f64 = rng.gen_range(0.5..1.5);
+                    let jittered = (delay_nanos as f64 * jitter_factor) as u128;
+                    let jittered = if jittered &gt; max_nanos { max_nanos } else { jittered };
+                    let delay = Duration::from_nanos(jittered as u64);
+                    warn!(&quot;HTTP {} {} failed (attempt {}), retrying in {:?}: {}&quot;, method, url, attempt + 1, delay, e);
+                    tokio::time::sleep(delay).await;
+                }
+                Err(e) =&gt; {
+                    error!(&quot;HTTP {} {} failed permanently (attempt {}): {}&quot;, method, url, attempt + 1, e);
+                    return Err(e);
+                }
+            }
+        }
+
+        Err(anyhow!(
+            &quot;Max retries ({}) exceeded for {} {}: All retry attempts failed&quot;,
+            self.max_retries, method, url
+        ))
+    }
+
+    /// Execute a single HTTP request
+    async fn execute_request&lt;T: Serialize&gt;(
+        &amp;self,
+        method: &amp;str,
+        url: &amp;str,
+        body: Option&lt;&amp;T&gt;,
+        config: &amp;RequestConfig,
+        timeout: Duration,
+    ) -&gt; Result&lt;HttpResponse&gt; {
+        let mut request_builder = match method {
+            &quot;GET&quot; =&gt; self.client.get(url),
+            &quot;POST&quot; =&gt; self.client.post(url),
+            &quot;PUT&quot; =&gt; self.client.put(url),
+            &quot;DELETE&quot; =&gt; self.client.delete(url),
+            _ =&gt; return Err(anyhow!(
+                &quot;Unsupported HTTP method &#39;{}&#39;: expected GET, POST, PUT, or DELETE&quot;,
+                method
+            )),
+        };
+
+        // Add timeout
+        request_builder = request_builder.timeout(timeout);
+
+        // Add headers
+        for (key, value) in &amp;config.headers {
+            request_builder = request_builder.header(key, value);
+        }
+
+        // Add authentication
+        if let Some(auth) = &amp;config.auth {
+            request_builder = match auth {
+                AuthConfig::Bearer(token) =&gt; request_builder.bearer_auth(token),
+                AuthConfig::ApiKey { key, header } =&gt; request_builder.header(header, key),
+                AuthConfig::Basic { username, password } =&gt; request_builder.basic_auth(username, Some(password)),
+            };
+        }
+
+        // Add body for POST/PUT requests
+        if let Some(body_data) = body {
+            request_builder = request_builder.json(body_data);
+        }
+
+        // Execute request
+        let response = request_builder.send().await?;
+        let status = response.status();
+        let headers = response.headers().clone();
+        let url = response.url().to_string();
+
+        // Check for HTTP errors
+        if !status.is_success() {
+            let error_body = response.text().await.unwrap_or_default();
+            return Err(anyhow!(
+                &quot;HTTP {} error for {}: {}&quot;,
+                status, url, error_body
+            ));
+        }
+
+        let body = response.text().await?;
+
+        Ok(HttpResponse {
+            status,
+            headers,
+            body,
+            url,
+            duration: Duration::from_secs(0), // Will be set by caller
+        })
+    }
+
+    /// Determine if an error should trigger a retry
+    fn should_retry(&amp;self, error: &amp;anyhow::Error) -&gt; bool {
+        // Retry on network errors, timeouts, and certain HTTP status codes
+        if let Some(reqwest_error) = error.downcast_ref::&lt;reqwest::Error&gt;() {
+            return reqwest_error.is_timeout() || 
+                   reqwest_error.is_connect() ||
+                   reqwest_error.is_request();
+        }
+
+        // Check for specific HTTP status codes that should be retried
+        let error_str = error.to_string();
+        error_str.contains(&quot;500&quot;) || // Internal Server Error
+        error_str.contains(&quot;502&quot;) || // Bad Gateway
+        error_str.contains(&quot;503&quot;) || // Service Unavailable
+        error_str.contains(&quot;504&quot;) || // Gateway Timeout
+        error_str.contains(&quot;429&quot;)    // Too Many Requests
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-requestconfig"><code>RequestConfig</code> <small>impl</small>
+<details><summary>View code (232-241)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-requestconfig-232">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:232" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+</pre>
+    <pre><code id="code-requestconfig-232" class="lang-rust hljs">impl Default for RequestConfig {
+    fn default() -&gt; Self {
+        Self {
+            timeout: None,
+            retries: None,
+            headers: Vec::new(),
+            auth: None,
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-ratelimiter"><code>RateLimiter</code> <small>impl</small>
+<details><summary>View code (243-268)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimiter-243">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:243" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+</pre>
+    <pre><code id="code-ratelimiter-243" class="lang-rust hljs">impl RateLimiter {
+    /// Create a new rate limiter with the specified rate (requests per minute)
+    pub fn new(requests_per_minute: u32) -&gt; Self {
+        use governor::{Quota, RateLimiter as GovRateLimiter};
+        use std::num::NonZeroU32;
+
+        let quota = Quota::per_minute(
+            NonZeroU32::new(requests_per_minute.max(1))
+                .expect(&quot;Rate limit creation failed: requests_per_minute.max(1) should always be &gt;= 1, but NonZeroU32::new returned None&quot;)
+        );
+        let limiter = GovRateLimiter::direct(quota);
+
+        Self { limiter }
+    }
+
+    /// Wait until a request can be made (respecting rate limits)
+    pub async fn wait_for_permit(&amp;self) -&gt; Result&lt;()&gt; {
+        self.limiter.until_ready().await;
+        Ok(())
+    }
+
+    /// Check if a request can be made immediately
+    pub fn check_permit(&amp;self) -&gt; bool {
+        self.limiter.check().is_ok()
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-httpclientbuilder"><code>HttpClientBuilder</code> <small>impl</small>
+<details><summary>View code (277-318)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-httpclientbuilder-277">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:277" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+</pre>
+    <pre><code id="code-httpclientbuilder-277" class="lang-rust hljs">impl HttpClientBuilder {
+    /// Create a new HTTP client builder with default settings
+    pub fn new() -&gt; Self {
+        Self {
+            timeout: Duration::from_secs(30),
+            max_retries: 3,
+            user_agent: &quot;rust-tree-sitter/0.3.0&quot;.to_string(),
+        }
+    }
+
+    /// Set the request timeout duration
+    pub fn timeout(mut self, timeout: Duration) -&gt; Self {
+        self.timeout = timeout;
+        self
+    }
+
+    /// Set the maximum number of retry attempts for failed requests
+    pub fn max_retries(mut self, max_retries: usize) -&gt; Self {
+        self.max_retries = max_retries;
+        self
+    }
+
+    /// Set the User-Agent header for requests
+    pub fn user_agent(mut self, user_agent: String) -&gt; Self {
+        self.user_agent = user_agent;
+        self
+    }
+
+    /// Build the HTTP client with the configured settings
+    pub fn build(self) -&gt; Result&lt;HttpClient&gt; {
+        let client = Client::builder()
+            .timeout(self.timeout)
+            .user_agent(&amp;self.user_agent)
+            .build()?;
+
+        Ok(HttpClient {
+            client,
+            default_timeout: self.timeout,
+            max_retries: self.max_retries,
+        })
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-httpclientbuilder"><code>HttpClientBuilder</code> <small>impl</small>
+<details><summary>View code (320-324)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-httpclientbuilder-320">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/infrastructure/http_client.rs:320" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">320
+321
+322
+323
+324
+</pre>
+    <pre><code id="code-httpclientbuilder-320" class="lang-rust hljs">impl Default for HttpClientBuilder {
+    fn default() -&gt; Self {
+        Self::new()
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

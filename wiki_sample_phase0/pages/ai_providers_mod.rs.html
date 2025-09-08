@@ -1,0 +1,1007 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai/providers/mod.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>ai/providers/mod.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="ai_providers_groq.rs.html">ai/providers/groq.rs</a>
+<a href="ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+</details>
+<a href="ai_cache.rs.html">ai/cache.rs</a>
+<a href="ai_config.rs.html">ai/config.rs</a>
+<a href="ai_error.rs.html">ai/error.rs</a>
+<a href="ai_mod.rs.html">ai/mod.rs</a>
+<a href="ai_service.rs.html">ai/service.rs</a>
+<a href="ai_types.rs.html">ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="bin_main.rs.html">bin/main.rs</a>
+<a href="bin_rts.rs.html">bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+</details>
+<a href="cli_error.rs.html">cli/error.rs</a>
+<a href="cli_mod.rs.html">cli/mod.rs</a>
+<a href="cli_output.rs.html">cli/output.rs</a>
+<a href="cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="cli_utils.rs.html">cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="languages_c.rs.html">languages/c.rs</a>
+<a href="languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="languages_go.rs.html">languages/go.rs</a>
+<a href="languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="languages_mod.rs.html">languages/mod.rs</a>
+<a href="languages_python.rs.html">languages/python.rs</a>
+<a href="languages_rust.rs.html">languages/rust.rs</a>
+<a href="languages_typescript.rs.html">languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="security_mod.rs.html">security/mod.rs</a>
+<a href="security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="wiki_ai_schema.rs.html">wiki/ai_schema.rs</a>
+<a href="wiki_enhanced_ai.rs.html">wiki/enhanced_ai.rs</a>
+<a href="wiki_mod.rs.html">wiki/mod.rs</a>
+<a href="wiki_security_enhancements.rs.html">wiki/security_enhancements.rs</a>
+</details>
+<a href="advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="advanced_security.rs.html">advanced_security.rs</a>
+<a href="ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="analysis_common.rs.html">analysis_common.rs</a>
+<a href="analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="analyzer.rs.html">analyzer.rs</a>
+<a href="ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="code_evolution.rs.html">code_evolution.rs</a>
+<a href="code_map.rs.html">code_map.rs</a>
+<a href="command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="constants.rs.html">constants.rs</a>
+<a href="control_flow.rs.html">control_flow.rs</a>
+<a href="dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="embeddings.rs.html">embeddings.rs</a>
+<a href="enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="error.rs.html">error.rs</a>
+<a href="file_cache.rs.html">file_cache.rs</a>
+<a href="intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="lib.rs.html">lib.rs</a>
+<a href="main.rs.html">main.rs</a>
+<a href="memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="parser.rs.html">parser.rs</a>
+<a href="performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="query.rs.html">query.rs</a>
+<a href="reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="refactoring.rs.html">refactoring.rs</a>
+<a href="semantic_context.rs.html">semantic_context.rs</a>
+<a href="semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="symbol_table.rs.html">symbol_table.rs</a>
+<a href="taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="test_coverage.rs.html">test_coverage.rs</a>
+<a href="tree.rs.html">tree.rs</a>
+
+
+</nav>
+<section class="article">
+<p>21 symbols, 204 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> ai/providers/mod.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 204<br><strong>Symbols:</strong> 21<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant supports_feature
+  participant create_provider
+  participant new
+  participant provider
+  participant capabilities
+  participant validate_connection
+  participant process_request
+  participant best_model_for_feature
+  participant rate_limit_info
+  supports_feature->>any: call
+
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class supports_feature {}
+  class create_provider {}
+  class new {}
+  class provider {}
+  class capabilities {}
+  class validate_connection {}
+  class process_request {}
+  class best_model_for_feature {}
+  class rate_limit_info {}
+  class RateLimitInfo {}
+  class MockProvider {}
+  class MockProvider {}
+  class MockProvider {}
+  class provider {}
+  class provider {}
+  class provider {}
+  class provider {}
+  class provider {}
+  class provider {}
+  class provider {}
+  class content {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(9)</small></summary><ul><li id="symbol-supports-feature"><code>supports_feature</code> <small>function</small>
+<details><summary>View code (33-37)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-supports_feature-33">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:33" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">33
+34
+35
+36
+37
+</pre>
+    <pre><code id="code-supports_feature-33" class="lang-rust hljs">    fn supports_feature(&amp;self, feature: crate::ai::types::AIFeature) -&gt; bool {
+        self.capabilities()
+            .iter()
+            .any(|cap| cap.feature == feature &amp;&amp; cap.supported)
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-create-provider"><code>create_provider</code> <small>function</small>
+<details><summary>View code (57-97)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-create_provider-57">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:57" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+</pre>
+    <pre><code id="code-create_provider-57" class="lang-rust hljs">pub async fn create_provider(
+    provider: AIProvider,
+    config: ProviderConfig,
+) -&gt; AIResult&lt;Box&lt;dyn AIProviderImpl&gt;&gt; {
+    if !config.enabled {
+        return Err(AIError::configuration(
+            format!(&quot;Provider {:?} is disabled&quot;, provider)
+        ));
+    }
+    
+    match provider {
+        AIProvider::OpenAI =&gt; {
+            let provider = openai::OpenAIProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+        AIProvider::Anthropic =&gt; {
+            let provider = anthropic::AnthropicProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+        AIProvider::Google =&gt; {
+            let provider = google::GoogleProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+        AIProvider::AzureOpenAI =&gt; {
+            let provider = azure::AzureProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+        AIProvider::Local =&gt; {
+            let provider = local::LocalProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+        AIProvider::Ollama =&gt; {
+            let provider = ollama::OllamaProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+        AIProvider::Groq =&gt; {
+            let provider = groq::GroqProvider::new(config).await?;
+            Ok(Box::new(provider))
+        }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-new"><code>new</code> <small>function</small>
+<details><summary>View code (106-108)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-new-106">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:106" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">106
+107
+108
+</pre>
+    <pre><code id="code-new-106" class="lang-rust hljs">    pub fn new(provider: AIProvider, config: ProviderConfig) -&gt; Self {
+        Self { provider, config }
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>function</small>
+<details><summary>View code (113-115)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-113">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:113" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">113
+114
+115
+</pre>
+    <pre><code id="code-provider-113" class="lang-rust hljs">    fn provider(&amp;self) -&gt; AIProvider {
+        self.provider
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-capabilities"><code>capabilities</code> <small>function</small>
+<details><summary>View code (117-146)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-capabilities-117">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:117" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+</pre>
+    <pre><code id="code-capabilities-117" class="lang-rust hljs">    fn capabilities(&amp;self) -&gt; Vec&lt;AICapability&gt; {
+        use crate::ai::types::AIFeature;
+
+        vec![
+            AICapability {
+                feature: AIFeature::CodeExplanation,
+                supported: true,
+                quality_score: 0.8,
+                description: &quot;Mock code explanation capability&quot;.to_string(),
+            },
+            AICapability {
+                feature: AIFeature::SecurityAnalysis,
+                supported: true,
+                quality_score: 0.7,
+                description: &quot;Mock security analysis capability&quot;.to_string(),
+            },
+            AICapability {
+                feature: AIFeature::RefactoringSuggestions,
+                supported: true,
+                quality_score: 0.75,
+                description: &quot;Mock refactoring suggestions capability&quot;.to_string(),
+            },
+            AICapability {
+                feature: AIFeature::DocumentationGeneration,
+                supported: true,
+                quality_score: 0.8,
+                description: &quot;Mock documentation generation capability&quot;.to_string(),
+            },
+        ]
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-validate-connection"><code>validate_connection</code> <small>function</small>
+<details><summary>View code (148-151)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-validate_connection-148">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:148" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">148
+149
+150
+151
+</pre>
+    <pre><code id="code-validate_connection-148" class="lang-rust hljs">    async fn validate_connection(&amp;self) -&gt; AIResult&lt;()&gt; {
+        // Mock validation always succeeds
+        Ok(())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-process-request"><code>process_request</code> <small>function</small>
+<details><summary>View code (153-189)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-process_request-153">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:153" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+</pre>
+    <pre><code id="code-process_request-153" class="lang-rust hljs">    async fn process_request(&amp;self, request: AIRequest) -&gt; AIResult&lt;AIResponse&gt; {
+        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use std::time::{Duration, SystemTime};
+        
+        // Simulate processing delay
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        
+        let content = match request.feature {
+            crate::ai::types::AIFeature::CodeExplanation =&gt; {
+                format!(&quot;Mock explanation for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            crate::ai::types::AIFeature::SecurityAnalysis =&gt; {
+                format!(&quot;Mock security analysis for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            crate::ai::types::AIFeature::RefactoringSuggestions =&gt; {
+                format!(&quot;Mock refactoring suggestions for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            _ =&gt; format!(&quot;Mock response for {:?}&quot;, request.feature),
+        };
+        
+        Ok(AIResponse {
+            feature: request.feature,
+            content,
+            structured_data: None,
+            confidence: Some(0.8),
+            token_usage: TokenUsage::new(50, 100),
+            metadata: ResponseMetadata {
+                request_id: request.metadata.request_id,
+                model_used: self.config.default_model.clone(),
+                provider: self.provider,
+                processing_time: Duration::from_millis(100),
+                cached: false,
+                timestamp: SystemTime::now(),
+                rate_limit_remaining: Some(100),
+            },
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-best-model-for-feature"><code>best_model_for_feature</code> <small>function</small>
+<details><summary>View code (191-193)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-best_model_for_feature-191">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:191" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">191
+192
+193
+</pre>
+    <pre><code id="code-best_model_for_feature-191" class="lang-rust hljs">    fn best_model_for_feature(&amp;self, _feature: crate::ai::types::AIFeature) -&gt; Option&lt;String&gt; {
+        Some(self.config.default_model.clone())
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-rate-limit-info"><code>rate_limit_info</code> <small>function</small>
+<details><summary>View code (195-203)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-rate_limit_info-195">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:195" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">195
+196
+197
+198
+199
+200
+201
+202
+203
+</pre>
+    <pre><code id="code-rate_limit_info-195" class="lang-rust hljs">    fn rate_limit_info(&amp;self) -&gt; Option&lt;RateLimitInfo&gt; {
+        Some(RateLimitInfo {
+            requests_per_minute: self.config.rate_limit.requests_per_minute,
+            tokens_per_minute: self.config.rate_limit.tokens_per_minute,
+            remaining_requests: Some(100),
+            remaining_tokens: Some(10000),
+            reset_time: Some(SystemTime::now() + Duration::from_secs(60)),
+        })
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(8)</small></summary><ul><li id="symbol-provider"><code>provider</code> <small>variable</small>
+<details><summary>View code (69-69)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-69">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:69" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">69
+</pre>
+    <pre><code id="code-provider-69" class="lang-rust hljs">            let provider = openai::OpenAIProvider::new(config).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small>
+<details><summary>View code (73-73)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-73">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:73" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">73
+</pre>
+    <pre><code id="code-provider-73" class="lang-rust hljs">            let provider = anthropic::AnthropicProvider::new(config).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small>
+<details><summary>View code (77-77)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-77">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:77" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">77
+</pre>
+    <pre><code id="code-provider-77" class="lang-rust hljs">            let provider = google::GoogleProvider::new(config).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small>
+<details><summary>View code (81-81)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-81">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:81" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">81
+</pre>
+    <pre><code id="code-provider-81" class="lang-rust hljs">            let provider = azure::AzureProvider::new(config).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small>
+<details><summary>View code (85-85)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-85">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:85" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">85
+</pre>
+    <pre><code id="code-provider-85" class="lang-rust hljs">            let provider = local::LocalProvider::new(config).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small>
+<details><summary>View code (89-89)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-89">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:89" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">89
+</pre>
+    <pre><code id="code-provider-89" class="lang-rust hljs">            let provider = ollama::OllamaProvider::new(config).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-provider"><code>provider</code> <small>variable</small>
+<details><summary>View code (93-93)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-provider-93">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:93" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">93
+</pre>
+    <pre><code id="code-provider-93" class="lang-rust hljs">            let provider = groq::GroqProvider::new(config).await?;</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-content"><code>content</code> <small>variable</small>
+<details><summary>View code (160-171)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-content-160">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:160" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+</pre>
+    <pre><code id="code-content-160" class="lang-rust hljs">        let content = match request.feature {
+            crate::ai::types::AIFeature::CodeExplanation =&gt; {
+                format!(&quot;Mock explanation for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            crate::ai::types::AIFeature::SecurityAnalysis =&gt; {
+                format!(&quot;Mock security analysis for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            crate::ai::types::AIFeature::RefactoringSuggestions =&gt; {
+                format!(&quot;Mock refactoring suggestions for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            _ =&gt; format!(&quot;Mock response for {:?}&quot;, request.feature),
+        };</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(4)</small></summary><ul><li id="symbol-ratelimitinfo"><code>RateLimitInfo</code> <small>struct</small>
+<details><summary>View code (48-54)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-ratelimitinfo-48">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:48" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">48
+49
+50
+51
+52
+53
+54
+</pre>
+    <pre><code id="code-ratelimitinfo-48" class="lang-rust hljs">pub struct RateLimitInfo {
+    pub requests_per_minute: usize,
+    pub tokens_per_minute: usize,
+    pub remaining_requests: Option&lt;usize&gt;,
+    pub remaining_tokens: Option&lt;usize&gt;,
+    pub reset_time: Option&lt;std::time::SystemTime&gt;,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-mockprovider"><code>MockProvider</code> <small>struct</small>
+<details><summary>View code (100-103)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-mockprovider-100">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:100" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">100
+101
+102
+103
+</pre>
+    <pre><code id="code-mockprovider-100" class="lang-rust hljs">pub struct MockProvider {
+    provider: AIProvider,
+    config: ProviderConfig,
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-mockprovider"><code>MockProvider</code> <small>impl</small>
+<details><summary>View code (105-109)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-mockprovider-105">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:105" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">105
+106
+107
+108
+109
+</pre>
+    <pre><code id="code-mockprovider-105" class="lang-rust hljs">impl MockProvider {
+    pub fn new(provider: AIProvider, config: ProviderConfig) -&gt; Self {
+        Self { provider, config }
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-mockprovider"><code>MockProvider</code> <small>impl</small>
+<details><summary>View code (112-204)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-mockprovider-112">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/ai/providers/mod.rs:112" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+</pre>
+    <pre><code id="code-mockprovider-112" class="lang-rust hljs">impl AIProviderImpl for MockProvider {
+    fn provider(&amp;self) -&gt; AIProvider {
+        self.provider
+    }
+    
+    fn capabilities(&amp;self) -&gt; Vec&lt;AICapability&gt; {
+        use crate::ai::types::AIFeature;
+
+        vec![
+            AICapability {
+                feature: AIFeature::CodeExplanation,
+                supported: true,
+                quality_score: 0.8,
+                description: &quot;Mock code explanation capability&quot;.to_string(),
+            },
+            AICapability {
+                feature: AIFeature::SecurityAnalysis,
+                supported: true,
+                quality_score: 0.7,
+                description: &quot;Mock security analysis capability&quot;.to_string(),
+            },
+            AICapability {
+                feature: AIFeature::RefactoringSuggestions,
+                supported: true,
+                quality_score: 0.75,
+                description: &quot;Mock refactoring suggestions capability&quot;.to_string(),
+            },
+            AICapability {
+                feature: AIFeature::DocumentationGeneration,
+                supported: true,
+                quality_score: 0.8,
+                description: &quot;Mock documentation generation capability&quot;.to_string(),
+            },
+        ]
+    }
+    
+    async fn validate_connection(&amp;self) -&gt; AIResult&lt;()&gt; {
+        // Mock validation always succeeds
+        Ok(())
+    }
+    
+    async fn process_request(&amp;self, request: AIRequest) -&gt; AIResult&lt;AIResponse&gt; {
+        use crate::ai::types::{TokenUsage, ResponseMetadata};
+        use std::time::{Duration, SystemTime};
+        
+        // Simulate processing delay
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        
+        let content = match request.feature {
+            crate::ai::types::AIFeature::CodeExplanation =&gt; {
+                format!(&quot;Mock explanation for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            crate::ai::types::AIFeature::SecurityAnalysis =&gt; {
+                format!(&quot;Mock security analysis for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            crate::ai::types::AIFeature::RefactoringSuggestions =&gt; {
+                format!(&quot;Mock refactoring suggestions for: {}&quot;, request.content.chars().take(50).collect::&lt;String&gt;())
+            }
+            _ =&gt; format!(&quot;Mock response for {:?}&quot;, request.feature),
+        };
+        
+        Ok(AIResponse {
+            feature: request.feature,
+            content,
+            structured_data: None,
+            confidence: Some(0.8),
+            token_usage: TokenUsage::new(50, 100),
+            metadata: ResponseMetadata {
+                request_id: request.metadata.request_id,
+                model_used: self.config.default_model.clone(),
+                provider: self.provider,
+                processing_time: Duration::from_millis(100),
+                cached: false,
+                timestamp: SystemTime::now(),
+                rate_limit_remaining: Some(100),
+            },
+        })
+    }
+    
+    fn best_model_for_feature(&amp;self, _feature: crate::ai::types::AIFeature) -&gt; Option&lt;String&gt; {
+        Some(self.config.default_model.clone())
+    }
+    
+    fn rate_limit_info(&amp;self) -&gt; Option&lt;RateLimitInfo&gt; {
+        Some(RateLimitInfo {
+            requests_per_minute: self.config.rate_limit.requests_per_minute,
+            tokens_per_minute: self.config.rate_limit.tokens_per_minute,
+            remaining_requests: Some(100),
+            remaining_tokens: Some(10000),
+            reset_time: Some(SystemTime::now() + Duration::from_secs(60)),
+        })
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

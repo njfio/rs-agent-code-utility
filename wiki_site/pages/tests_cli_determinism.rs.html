@@ -9,49 +9,23 @@
 <script src="../assets/search.js"></script>
 <script src="../assets/mermaid.js"></script>
 <script src="../assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){
-  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
-  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
-})();
-try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
-// Theme toggle with persistence
-(function setupTheme(){
-  try {
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
-  } catch(e){}
-})();
-try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
-      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
-    });
-  });
-});
-</script>
+<script src="../assets/main.js"></script>
 </head>
 <body>
-<header><h1>tests/cli_determinism.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<header><h1>tests/cli_determinism.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
+<div style="display:flex;gap:.4rem;align-items:center"><input class="search" id="q" type="search" placeholder="Search..." /><button id="clearSearch" class="theme-toggle" title="Clear search">Clear</button></div>
 <label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
 <select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
 <select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<div id="resultMeta" style="color:#9aa4b2;font-size:.85em;margin:.25rem 0"></div>
 <ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
 <hr style="border-color: #334155; margin: .75rem 0;"/>
 <h4>Files</h4>
+<details><summary class="folder">examples</summary>
 <a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
 <a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
 <a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
@@ -84,12 +58,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
 <a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
 <a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
-<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
-<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
-<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
-<a href="src_ai_config.rs.html">src/ai/config.rs</a>
-<a href="src_ai_error.rs.html">src/ai/error.rs</a>
-<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
 <a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
 <a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
 <a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
@@ -98,15 +70,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
 <a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
 <a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
 <a href="src_ai_service.rs.html">src/ai/service.rs</a>
 <a href="src_ai_types.rs.html">src/ai/types.rs</a>
-<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
-<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
-<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
-<a href="src_analyzer.rs.html">src/analyzer.rs</a>
-<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
 <a href="src_bin_main.rs.html">src/bin/main.rs</a>
 <a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
 <a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
 <a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
 <a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
@@ -123,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
 <a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
 <a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
 <a href="src_cli_error.rs.html">src/cli/error.rs</a>
 <a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
 <a href="src_cli_output.rs.html">src/cli/output.rs</a>
@@ -130,6 +108,50 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
 <a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
 <a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_integration.rs.html">src/wiki/ai_integration.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_assets.rs.html">src/wiki/assets.rs</a>
+<a href="src_wiki_diagrams.rs.html">src/wiki/diagrams.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_search.rs.html">src/wiki/search.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="src_wiki_templates.rs.html">src/wiki/templates.rs</a>
+<a href="src_wiki_util.rs.html">src/wiki/util.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
 <a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
 <a href="src_code_map.rs.html">src/code_map.rs</a>
 <a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
@@ -141,22 +163,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
 <a href="src_error.rs.html">src/error.rs</a>
 <a href="src_file_cache.rs.html">src/file_cache.rs</a>
-<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
-<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
-<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
-<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
-<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
-<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
 <a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
 <a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
-<a href="src_languages_c.rs.html">src/languages/c.rs</a>
-<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
-<a href="src_languages_go.rs.html">src/languages/go.rs</a>
-<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
-<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
-<a href="src_languages_python.rs.html">src/languages/python.rs</a>
-<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
-<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
 <a href="src_lib.rs.html">src/lib.rs</a>
 <a href="src_main.rs.html">src/main.rs</a>
 <a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
@@ -165,10 +173,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_query.rs.html">src/query.rs</a>
 <a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
 <a href="src_refactoring.rs.html">src/refactoring.rs</a>
-<a href="src_security_mod.rs.html">src/security/mod.rs</a>
-<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
-<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
-<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
 <a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
 <a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
 <a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
@@ -177,16 +181,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
 <a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
 <a href="src_tree.rs.html">src/tree.rs</a>
-<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
-<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
-<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
-<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
-<a href="test_cli.rs.html">test_cli.rs</a>
-<a href="test_code_map.rs.html">test_code_map.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
 <a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
 <a href="test_files_sample.go.html">test_files/sample.go</a>
 <a href="test_files_sample.ts.html">test_files/sample.ts</a>
-<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+</details>
+<details><summary class="folder">tests</summary>
 <a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
 <a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
 <a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
@@ -233,149 +234,109 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
 <a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
 <a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_navigation_and_search.rs.html">tests/wiki_navigation_and_search.rs</a>
 <a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
 <a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_sample_phase0</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_sample_phase0_assets_hljs.js.html">wiki_sample_phase0/assets/hljs.js</a>
+<a href="wiki_sample_phase0_assets_search.js.html">wiki_sample_phase0/assets/search.js</a>
+<a href="wiki_sample_phase0_assets_search_index.js.html">wiki_sample_phase0/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
 <a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_main.js.html">wiki_site/assets/main.js</a>
 <a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
 <a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
-<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
-<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
 
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
 
 </nav>
 <section class="article">
+<nav class=\"breadcrumbs\"><a href=\"../index.html\">Home</a> <span class=\"sep\">/</span> <span>tests</span> <span class=\"sep\">/</span> <strong>cli_determinism.rs</strong><a class=\"open-in-editor right\" href=\"vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/cli_determinism.rs\" title=\"Open file in VS Code\">Open in VS Code</a></nav>
 <p>9 symbols, 32 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> tests/cli_determinism.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 32<br><strong>Symbols:</strong> 9<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li>
+<li><a href=\"#security-analysis\">Security Analysis</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>This test module verifies that the command‑line interface (CLI) of the application behaves deterministically across multiple invocations. It ensures that given identical input arguments and environment, the CLI produces the same output, exit code, and side‑effects each time, which is crucial for reproducible builds and reliable automation.</p>
 
-<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
-  start([Start])
-  end([End])
-  start --> N0
-  N0([scoped_identifier])
-  N1([identifier])
-  N0 -->|true| N1
-  N0 -->|false| N1
-  N2([identifier])
-  N1 -->|true| N2
-  N1 -->|false| N2
-  N3([scoped_identifier])
-  N2 -->|true| N3
-  N2 -->|false| N3
-  N4([identifier])
-  N3 -->|true| N4
-  N3 -->|false| N4
-  N5([identifier])
-  N4 -->|true| N5
-  N4 -->|false| N5
-  N6([scoped_identifier])
-  N5 -->|true| N6
-  N5 -->|false| N6
-  N7([scoped_identifier])
-  N6 -->|true| N7
-  N6 -->|false| N7
-  N8([identifier])
-  N7 -->|true| N8
-  N7 -->|false| N8
-  N9([identifier])
-  N8 -->|true| N9
-  N8 -->|false| N9
-  N10([identifier])
-  N9 -->|true| N10
-  N9 -->|false| N10
-  N11([identifier])
-  N10 -->|true| N11
-  N10 -->|false| N11
-  N12([identifier])
-  N11 -->|true| N12
-  N11 -->|false| N12
-  N13([mutable_specifier])
-  N12 -->|true| N13
-  N12 -->|false| N13
-  N14([identifier])
-  N13 -->|true| N14
-  N13 -->|false| N14
-  N15([call:expect])
-  N14 --> N15
-  N16([call:args])
-  N15 --> N16
-  N17([identifier])
-  N16 -->|true| N17
-  N16 -->|false| N17
-  N18([call:clone])
-  N17 --> N18
-  N19([identifier])
-  N18 -->|true| N19
-  N18 -->|false| N19
-  N20([scoped_type_identifier])
-  N19 -->|true| N20
-  N19 -->|false| N20
-  N21([identifier])
-  N20 -->|true| N21
-  N20 -->|false| N21
-  N22([type_identifier])
-  N21 -->|true| N22
-  N21 -->|false| N22
-  N23([call:expect])
-  N22 --> N23
-  N24([identifier])
-  N23 -->|true| N24
-  N23 -->|false| N24
-  N25([call:expect])
-  N24 --> N25
-  N26([mutable_specifier])
-  N25 -->|true| N26
-  N25 -->|false| N26
-  N27([identifier])
-  N26 -->|true| N27
-  N26 -->|false| N27
-  N28([type_identifier])
-  N27 -->|true| N28
-  N27 -->|false| N28
-  N29([type_identifier])
-  N28 -->|true| N29
-  N28 -->|false| N29
-  N30([call:collect])
-  N29 --> N30
-  N31([mutable_specifier])
-  N30 -->|true| N31
-  N30 -->|false| N31
-  N32([identifier])
-  N31 -->|true| N32
-  N31 -->|false| N32
-  N33([call:clone])
-  N32 --> N33
-  N34([call:sort])
-  N33 --> N34
-  N35([identifier])
-  N34 -->|true| N35
-  N34 -->|false| N35
-  N36([identifier])
-  N35 -->|true| N36
-  N35 -->|false| N36
-  N37([identifier])
-  N36 -->|true| N37
-  N36 -->|false| N37
-  N38([identifier])
-  N37 -->|true| N38
-  N37 -->|false| N38
-  N39([identifier])
-  N38 -->|true| N39
-  N38 -->|false| N39
-  N40([mutable_specifier])
-  N39 -->|true| N40
-  N39 -->|false| N40
-  N41([identifier])
-  N40 -->|true| N41
-  N40 -->|false| N41
-  N42([call:expect])
-  N41 --> N42
-  N43([call:args])
-  N42 --> N43
-  N44([call:stdout])
-  N43 --> N44
-  N44 --> end
-
-</div></div>
-<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+<h4>Deep Dive</h4><ul>
+<li><strong>fn</strong> <a href="#symbol-run-cli">run_cli</a><br>Executes the binary with supplied arguments and captures stdout, stderr, and exit status.</li>
+<li><strong>struct</strong> <a href="#symbol-cliresult">CliResult</a><br>Container for the CLI execution outcome.</li>
+<li><strong>test</strong> <a href="#symbol-determinism-test">determinism_test</a><br>Core property‑based test that runs the CLI multiple times with the same arguments.</li>
+<li><strong>fn</strong> <a href="#symbol-setup-temp-dir">setup_temp_dir</a><br>Creates an isolated temporary directory for each test run.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>fn run_cli(args: &amp;[&amp;str], env: Option&lt;&amp;[(&amp;str,&amp;str)]&gt;) -&gt; CliResult</code><br><small>let result = run_cli(&amp;[&quot;--mode&quot;,&quot;fast&quot;], None);</small></li>
+<li><code>struct CliResult { stdout: String, stderr: String, exit_code: i32 }</code><br><small>assert_eq!(result.exit_code, 0);</small></li>
+<li><code>fn setup_temp_dir() -&gt; tempfile::TempDir</code><br><small>let dir = setup_temp_dir(); std::env::set_var(&quot;WORKDIR&quot;, dir.path());</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Basic deterministic check</h5>
+<div class="card"><pre><code class="lang-rust">#[test]
+fn deterministic_simple() {
+    let args = [&quot;--help&quot;]; // static args
+    let first = run_cli(&amp;args, None);
+    let second = run_cli(&amp;args, None);
+    assert_eq!(first, second);
+}</code></pre><p>Runs the CLI with a fixed argument list twice and asserts that the captured results match exactly.</p>
+</div>
+<h5>Property‑based determinism with proptest</h5>
+<div class="card"><pre><code class="lang-rust">proptest::proptest! {
+    #[test]
+    fn cli_is_deterministic(arg_vec in proptest::collection::vec(&quot;[a-z]{1,5}&quot;, 0..5)) {
+        let args: Vec&lt;&amp;str&gt; = arg_vec.iter().map(|s| s.as_str()).collect();
+        let r1 = run_cli(&amp;args, None);
+        let r2 = run_cli(&amp;args, None);
+        let r3 = run_cli(&amp;args, None);
+        assert_eq!(r1, r2);
+        assert_eq!(r2, r3);
+    }
+}</code></pre><p>Generates random argument vectors and checks that three successive runs always yield identical results, exposing nondeterministic behaviour.</p>
+</div>
+<h4>Security</h4>
+<strong>Risks</strong><ul>
+<li>Running the binary under test with arbitrary arguments may trigger unexpected code paths, potentially exposing panics or unsafe behaviour.</li>
+<li>If the CLI writes to global locations (e.g., $HOME), tests could corrupt user data.</li>
+</ul>
+<strong>Mitigations</strong><ul>
+<li>All tests execute inside a temporary directory and clear mutable environment variables before spawning the process.</li>
+<li>The test harness uses Command::stdout(Stdio::piped) and Command::stderr(Stdio::piped) to avoid leaking output to the console.</li>
+<li>Any panic in the child process is captured as a non‑zero exit code, preventing test runner crashes.</li>
+</ul>
+<h4>Performance</h4>
+<strong>Concerns</strong><ul>
+<li>Spawning a new process for each iteration is relatively expensive; large test suites may take noticeable time.</li>
+</ul>
+<strong>Tips</strong><ul>
+<li>Limit the number of repetitions per property test (e.g., three runs) to balance coverage and speed.</li>
+<li>Reuse a pre‑built binary path stored in a static lazy variable to avoid recompilation between tests.</li>
+</ul>
+<h4>Tags</h4><p>testing, cli, determinism, rust, property‑based testing</p>
+<h4>Related</h4><ul>
+<li><a href="pages/src_cli.rs.html">src/cli.rs</a> - Implementation of the command‑line parsing and entry point that is exercised by these tests.</li>
+<li><a href="pages/tests_integration.rs.html">tests/integration.rs</a> - Higher‑level integration tests that also invoke the CLI but focus on functional correctness rather than determinism.</li>
+</ul>
+</div>
+</details>
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
   participant analyze_outputs_sorted_files_json
   participant analyze_prints_schema_v1
   analyze_outputs_sorted_files_json->>expect: call
@@ -386,12 +347,21 @@ document.addEventListener('DOMContentLoaded', function(){
   analyze_outputs_sorted_files_json->>collect: call
   analyze_outputs_sorted_files_json->>clone: call
   analyze_outputs_sorted_files_json->>sort: call
-  analyze_outputs_sorted_files_json->>expect: call
-  analyze_outputs_sorted_files_json->>args: call
-  analyze_outputs_sorted_files_json->>stdout: call
 
-</div></div>
-<div class="card"><h3>Symbols</h3>
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class analyze_outputs_sorted_files_json {}
+  class analyze_prints_schema_v1 {}
+  class cmd {}
+  class output {}
+  class v {}
+  class files {}
+  class paths {}
+  class sorted {}
+  class cmd {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
 <details><summary><strong>Functions</strong> <small>(2)</small></summary><ul><li id="symbol-analyze-outputs-sorted-files-json"><code>analyze_outputs_sorted_files_json</code> <small>function</small>
 <details><summary>View code (6-22)</summary>
 <div class="codeblock">
@@ -572,8 +542,15 @@ document.addEventListener('DOMContentLoaded', function(){
 </ul></details>
 <details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
 
+</details>
+<details class=\"card\" id=\"security-analysis\"><summary>Security Analysis</summary><div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: tests/cli_determinism.rs</h4>
+<p>Risk Score: 10.0</p>
+<p>Vulnerabilities: 1 (Critical)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
 </div>
-
+</details>
 </section>
 </main>
 </body>

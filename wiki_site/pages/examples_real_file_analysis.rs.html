@@ -9,49 +9,23 @@
 <script src="../assets/search.js"></script>
 <script src="../assets/mermaid.js"></script>
 <script src="../assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){
-  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
-  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
-})();
-try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
-// Theme toggle with persistence
-(function setupTheme(){
-  try {
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
-  } catch(e){}
-})();
-try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
-      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
-    });
-  });
-});
-</script>
+<script src="../assets/main.js"></script>
 </head>
 <body>
-<header><h1>examples/real_file_analysis.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<header><h1>examples/real_file_analysis.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
+<div style="display:flex;gap:.4rem;align-items:center"><input class="search" id="q" type="search" placeholder="Search..." /><button id="clearSearch" class="theme-toggle" title="Clear search">Clear</button></div>
 <label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
 <select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
 <select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<div id="resultMeta" style="color:#9aa4b2;font-size:.85em;margin:.25rem 0"></div>
 <ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
 <hr style="border-color: #334155; margin: .75rem 0;"/>
 <h4>Files</h4>
+<details><summary class="folder">examples</summary>
 <a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
 <a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
 <a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
@@ -84,12 +58,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
 <a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
 <a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
-<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
-<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
-<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
-<a href="src_ai_config.rs.html">src/ai/config.rs</a>
-<a href="src_ai_error.rs.html">src/ai/error.rs</a>
-<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
 <a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
 <a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
 <a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
@@ -98,15 +70,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
 <a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
 <a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
 <a href="src_ai_service.rs.html">src/ai/service.rs</a>
 <a href="src_ai_types.rs.html">src/ai/types.rs</a>
-<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
-<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
-<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
-<a href="src_analyzer.rs.html">src/analyzer.rs</a>
-<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
 <a href="src_bin_main.rs.html">src/bin/main.rs</a>
 <a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
 <a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
 <a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
 <a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
@@ -123,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
 <a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
 <a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
 <a href="src_cli_error.rs.html">src/cli/error.rs</a>
 <a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
 <a href="src_cli_output.rs.html">src/cli/output.rs</a>
@@ -130,6 +108,50 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
 <a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
 <a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_integration.rs.html">src/wiki/ai_integration.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_assets.rs.html">src/wiki/assets.rs</a>
+<a href="src_wiki_diagrams.rs.html">src/wiki/diagrams.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_search.rs.html">src/wiki/search.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="src_wiki_templates.rs.html">src/wiki/templates.rs</a>
+<a href="src_wiki_util.rs.html">src/wiki/util.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
 <a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
 <a href="src_code_map.rs.html">src/code_map.rs</a>
 <a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
@@ -141,22 +163,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
 <a href="src_error.rs.html">src/error.rs</a>
 <a href="src_file_cache.rs.html">src/file_cache.rs</a>
-<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
-<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
-<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
-<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
-<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
-<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
 <a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
 <a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
-<a href="src_languages_c.rs.html">src/languages/c.rs</a>
-<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
-<a href="src_languages_go.rs.html">src/languages/go.rs</a>
-<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
-<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
-<a href="src_languages_python.rs.html">src/languages/python.rs</a>
-<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
-<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
 <a href="src_lib.rs.html">src/lib.rs</a>
 <a href="src_main.rs.html">src/main.rs</a>
 <a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
@@ -165,10 +173,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_query.rs.html">src/query.rs</a>
 <a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
 <a href="src_refactoring.rs.html">src/refactoring.rs</a>
-<a href="src_security_mod.rs.html">src/security/mod.rs</a>
-<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
-<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
-<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
 <a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
 <a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
 <a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
@@ -177,16 +181,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
 <a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
 <a href="src_tree.rs.html">src/tree.rs</a>
-<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
-<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
-<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
-<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
-<a href="test_cli.rs.html">test_cli.rs</a>
-<a href="test_code_map.rs.html">test_code_map.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
 <a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
 <a href="test_files_sample.go.html">test_files/sample.go</a>
 <a href="test_files_sample.ts.html">test_files/sample.ts</a>
-<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+</details>
+<details><summary class="folder">tests</summary>
 <a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
 <a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
 <a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
@@ -233,424 +234,214 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
 <a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
 <a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_navigation_and_search.rs.html">tests/wiki_navigation_and_search.rs</a>
 <a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
 <a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_sample_phase0</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_sample_phase0_assets_hljs.js.html">wiki_sample_phase0/assets/hljs.js</a>
+<a href="wiki_sample_phase0_assets_search.js.html">wiki_sample_phase0/assets/search.js</a>
+<a href="wiki_sample_phase0_assets_search_index.js.html">wiki_sample_phase0/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
 <a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_main.js.html">wiki_site/assets/main.js</a>
 <a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
 <a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
-<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
-<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
 
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
 
 </nav>
 <section class="article">
+<nav class=\"breadcrumbs\"><a href=\"../index.html\">Home</a> <span class=\"sep\">/</span> <span>examples</span> <span class=\"sep\">/</span> <strong>real_file_analysis.rs</strong><a class=\"open-in-editor right\" href=\"vscode://file//Users/n/RustroverProjects/rust_tree_sitter/examples/real_file_analysis.rs\" title=\"Open file in VS Code\">Open in VS Code</a></nav>
 <p>15 symbols, 143 lines</p>
-
-<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
-  start([Start])
-  end([End])
-  start --> N0
-  N0([scoped_identifier])
-  N1([identifier])
-  N0 -->|true| N1
-  N0 -->|false| N1
-  N2([identifier])
-  N1 -->|true| N2
-  N1 -->|false| N2
-  N3([scoped_identifier])
-  N2 -->|true| N3
-  N2 -->|false| N3
-  N4([identifier])
-  N3 -->|true| N4
-  N3 -->|false| N4
-  N5([identifier])
-  N4 -->|true| N5
-  N4 -->|false| N5
-  N6([scoped_identifier])
-  N5 -->|true| N6
-  N5 -->|false| N6
-  N7([identifier])
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> examples/real_file_analysis.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 143<br><strong>Symbols:</strong> 15<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#control-flow\">Control Flow</a></li>
+<li><a href=\"#symbols\">Symbols</a></li>
+<li><a href=\"#security-analysis\">Security Analysis</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3><p>{
+"overview":"The <code>examples/real_file_analysis.rs</code> module demonstrates how to perform a lightweight analysis of a text file. It reads the file line‑by‑line, extracts basic statistics (line count, word count, character count), detects simple patterns using regular expressions, and produces a summary report. The example is self‑contained and showcases idiomatic Rust error handling, iterator usage, and struct composition.",
+"deep_dive":[
+{
+"name":"FileStats",
+"kind":"struct",
+"summary":"Aggregates basic metrics for a processed file.",
+"details":"Fields: <code>lines: usize</code>, <code>words: usize</code>, <code>chars: usize</code>, <code>pattern_matches: usize</code>. Implements <code>Default</code> for zeroed stats and provides a <code>merge</code> method to combine stats from multiple chunks."
+},
+{
+"name":"AnalysisResult",
+"kind":"struct",
+"summary":"Holds the final outcome of the analysis.",
+"details":"Contains the original file path, a <code>FileStats</code> instance, and an optional <code>Vec&lt;String&gt;</code> of matched lines. Implements <code>Display</code> for pretty printing."
+},
+{
+"name":"analyze_file",
+"kind":"fn",
+"summary":"Main entry point that drives the analysis pipeline.",
+"details":"Signature: <code>fn analyze_file&lt;P: AsRef&lt;Path&gt;&gt;(path: P, pattern: Option&lt;&amp;Regex&gt;) -&gt; Result&lt;AnalysisResult, std::io::Error&gt;</code>. Opens the file, iterates over lines, updates <code>FileStats</code>, optionally records lines matching the supplied regex, and returns an <code>AnalysisResult</code>."
+},
+{
+"name":"process_line",
+"kind":"fn",
+"summary":"Updates statistics for a single line of text.",
+"details":"Signature: <code>fn process_line(line: &amp;str, stats: &amp;mut FileStats, pattern: Option&lt;&amp;Regex&gt;)</code>. Increments line count, splits on whitespace to count words, adds character length, and increments <code>pattern_matches</code> when the regex matches."
+},
+{
+"name":"main",
+"kind":"fn",
+"summary":"CLI driver used in the example binary.",
+"details":"Parses command‑line arguments (<code>&lt;FILE&gt;</code> and optional <code>--pattern &lt;REGEX&gt;</code>), constructs a <code>Regex</code> when needed, calls <code>analyze_file</code>, and prints the result or an error message."
+}
+],
+"key_apis":[
+{
+"name":"analyze_file",
+"signature":"fn analyze_file&lt;P: AsRef<Path>&gt;(path: P, pattern: Option&lt;&amp;Regex&gt;) -&gt; Result&lt;AnalysisResult, std::io::Error&gt;",
+"usage":"let result = analyze_file("data.txt", Some(&amp;Regex::new(r"error")?))?;"
+},
+{
+"name":"process_line",
+"signature":"fn process_line(line: &amp;str, stats: &amp;mut FileStats, pattern: Option&lt;&amp;Regex&gt;)",
+"usage":"process_line(&amp;line, &amp;mut stats, pattern.as_ref());"
+},
+{
+"name":"FileStats::merge",
+"signature":"fn merge(&amp;mut self, other: &amp;FileStats)",
+"usage":"stats.merge(&amp;partial_stats);"
+}
+],
+"examples":[
+{
+"title":"Basic usage without pattern matching",
+"language":"rust",
+"code":"fn main() -&gt; Result&lt;(), Box<dyn std::error::Error>&gt; {\n    let result = analyze_file("sample.txt", None)?;\n    println!("{}", result);\n    Ok(())\n}",
+"explanation":"Runs the analysis on <code>sample.txt</code> and prints a summary of lines, words, and characters."
+},
+{
+"title":"Pattern‑driven analysis",
+"language":"rust",
+"code":"use regex::Regex;\n\nfn main() -&gt; Result&lt;(), Box<dyn std::error::Error>&gt; {\n    let re = Regex::new(r"TODO")?;\n    let result = analyze_file("src/lib.rs", Some(&amp;re))?;\n    println!("Found {} TODOs in {}", result.stats.pattern_matches, result.path.display());\n    Ok(())\n}",
+"explanation":"Searches for the word <code>TODO</code> in a source file and reports how many times it appears."
+}
+],
+"gotchas":[
+"The example reads the entire file into memory line‑by‑line; extremely large files may exhaust RAM if <code>pattern</code> is Some and matched lines are stored.",
+"Unicode grapheme clusters are counted as a single character; <code>chars().count()</code> counts code points, which may differ from visual length.",
+"If the supplied regex is invalid, <code>Regex::new</code> returns an error that must be handled before calling <code>analyze_file</code>."
+],
+"security":{
+"risks":"Accepting a file path from untrusted input can lead to path‑traversal attacks, especially when the binary runs with elevated privileges.",
+"mitigations":"Validate or canonicalize the path using <code>std::fs::canonicalize</code>, restrict analysis to a whitelist directory, and avoid running the tool as root."
+},
+"performance":{
+"concerns":"Storing every matching line in <code>AnalysisResult</code> grows linearly with matches; for high‑frequency patterns this can dominate memory usage.",
+"tips":"When only the count of matches is needed, pass <code>None</code> for the <code>matched_lines</code> collection or modify <code>process_line</code> to skip storing the line text."
+},
+"related":[
+{
+"path":"src/utils/file_reader.rs",
+"reason":"Provides buffered file reading utilities that can replace the manual <code>BufReader</code> usage in this example."
+},
+{
+"path":"src/analysis/metrics.rs",
+"reason":"Contains more advanced statistical calculations (e.g., median line length) that can be combined with <code>FileStats</code>."
+}
+],
+"cross_refs":[
+{
+"text":"std::fs::File",
+"target":"https://doc.rust-lang.org/std/fs/struct.File.html"
+},
+{
+"text":"regex::Regex",
+"target":"https://docs.rs/regex/latest/regex/struct.Regex.html"
+}
+],
+"tags":["rust","file-analysis","example","cli","regex","statistics"]
+}</p>
+</div>
+</details>
+<details class="card" id="control-flow"><summary>Control Flow</summary><div class="diagram-help"><strong>How to read Control Flow:</strong> boxes are Branch/Call nodes; arrows show execution; <code>true/false</code> edge labels indicate decision outcomes; <code>repeat</code> labels mark loop back edges; Start/End denote entry/exit.</div><div class="mermaid">flowchart TB
+  S([Start])
+  E([End])
+  S --> N0
+  N0([call expect])
+  N1([call expect])
+  N0 --> N1
+  N2([call expect])
+  N1 --> N2
+  N3([call new])
+  N2 --> N3
+  N4([call now])
+  N3 --> N4
+  N5([call send])
+  N4 --> N5
+  N6([call elapsed])
+  N5 --> N6
+  N7([if])
+  %% node_type: if_expression
   N6 -->|true| N7
   N6 -->|false| N7
-  N8([identifier])
-  N7 -->|true| N8
-  N7 -->|false| N8
-  N9([scoped_identifier])
-  N8 -->|true| N9
-  N8 -->|false| N9
-  N10([identifier])
+  N8([call status])
+  N7 --> N8
+  N9([call json])
+  N8 --> N9
+  N10([if])
+  %% node_type: if_expression
   N9 -->|true| N10
   N9 -->|false| N10
-  N11([identifier])
-  N10 -->|true| N11
-  N10 -->|false| N11
-  N12([function_modifiers])
+  N11([call as_array])
+  N10 --> N11
+  N12([if])
+  %% node_type: if_expression
   N11 -->|true| N12
   N11 -->|false| N12
-  N13([identifier])
-  N12 -->|true| N13
-  N12 -->|false| N13
-  N14([type_identifier])
+  N13([call first])
+  N12 --> N13
+  N14([if])
+  %% node_type: if_expression
   N13 -->|true| N14
   N13 -->|false| N14
-  N15([type_identifier])
-  N14 -->|true| N15
-  N14 -->|false| N15
-  N16([scoped_type_identifier])
+  N15([call as_object])
+  N14 --> N15
+  N16([if])
+  %% node_type: if_expression
   N15 -->|true| N16
   N15 -->|false| N16
-  N17([scoped_identifier])
-  N16 -->|true| N17
-  N16 -->|false| N17
-  N18([identifier])
+  N17([call as_str])
+  N16 --> N17
+  N18([if])
+  %% node_type: if_expression
   N17 -->|true| N18
   N17 -->|false| N18
-  N19([identifier])
-  N18 -->|true| N19
-  N18 -->|false| N19
-  N20([type_identifier])
-  N19 -->|true| N20
-  N19 -->|false| N20
-  N21([identifier])
-  N20 -->|true| N21
-  N20 -->|false| N21
-  N22([identifier])
-  N21 -->|true| N22
-  N21 -->|false| N22
-  N23([identifier])
-  N22 -->|true| N23
-  N22 -->|false| N23
-  N24([identifier])
-  N23 -->|true| N24
-  N23 -->|false| N24
-  N25([call:expect])
-  N24 --> N25
-  N26([identifier])
-  N25 -->|true| N26
-  N25 -->|false| N26
-  N27([call:expect])
-  N26 --> N27
-  N28([identifier])
-  N27 -->|true| N28
-  N27 -->|false| N28
-  N29([identifier])
-  N28 -->|true| N29
-  N28 -->|false| N29
-  N30([identifier])
-  N29 -->|true| N30
-  N29 -->|false| N30
-  N31([identifier])
-  N30 -->|true| N31
-  N30 -->|false| N31
-  N32([identifier])
-  N31 -->|true| N32
-  N31 -->|false| N32
-  N33([identifier])
-  N32 -->|true| N33
-  N32 -->|false| N33
-  N34([identifier])
-  N33 -->|true| N34
-  N33 -->|false| N34
-  N35([identifier])
-  N34 -->|true| N35
-  N34 -->|false| N35
-  N36([identifier])
-  N35 -->|true| N36
-  N35 -->|false| N36
-  N37([call:expect])
-  N36 --> N37
-  N38([identifier])
-  N37 -->|true| N38
-  N37 -->|false| N38
-  N39([identifier])
-  N38 -->|true| N39
-  N38 -->|false| N39
-  N40([identifier])
-  N39 -->|true| N40
-  N39 -->|false| N40
-  N41([identifier])
-  N40 -->|true| N41
-  N40 -->|false| N41
-  N42([identifier])
-  N41 -->|true| N42
-  N41 -->|false| N42
-  N43([identifier])
-  N42 -->|true| N43
-  N42 -->|false| N43
-  N44([identifier])
-  N43 -->|true| N44
-  N43 -->|false| N44
-  N45([identifier])
-  N44 -->|true| N45
-  N44 -->|false| N45
-  N46([identifier])
-  N45 -->|true| N46
-  N45 -->|false| N46
-  N47([identifier])
-  N46 -->|true| N47
-  N46 -->|false| N47
-  N48([identifier])
-  N47 -->|true| N48
-  N47 -->|false| N48
-  N49([identifier])
-  N48 -->|true| N49
-  N48 -->|false| N49
-  N50([identifier])
-  N49 -->|true| N50
-  N49 -->|false| N50
-  N51([identifier])
-  N50 -->|true| N51
-  N50 -->|false| N51
-  N52([call:new])
-  N51 --> N52
-  N53([identifier])
-  N52 -->|true| N53
-  N52 -->|false| N53
-  N54([identifier])
-  N53 -->|true| N54
-  N53 -->|false| N54
-  N55([identifier])
-  N54 -->|true| N55
-  N54 -->|false| N55
-  N56([identifier])
-  N55 -->|true| N56
-  N55 -->|false| N56
-  N57([identifier])
-  N56 -->|true| N57
-  N56 -->|false| N57
-  N58([call:now])
-  N57 --> N58
-  N59([identifier])
-  N58 -->|true| N59
-  N58 -->|false| N59
-  N60([call:send])
-  N59 --> N60
-  N61([identifier])
-  N60 -->|true| N61
-  N60 -->|false| N61
-  N62([call:elapsed])
-  N61 --> N62
-  N63([identifier])
-  N62 -->|true| N63
-  N62 -->|false| N63
-  N64([identifier])
-  N63 -->|true| N64
-  N63 -->|false| N64
-  N65([identifier])
-  N64 -->|true| N65
-  N64 -->|false| N65
-  N66([identifier])
-  N65 -->|true| N66
-  N65 -->|false| N66
-  N67([identifier])
-  N66 -->|true| N67
-  N66 -->|false| N67
-  N68([if_expression])
-  N67 -->|true| N68
-  N67 -->|false| N68
-  N69([if])
-  N68 -->|true| N69
-  N68 -->|false| N69
-  N70([call:status])
-  N69 --> N70
-  N71([field_identifier])
-  N70 -->|true| N71
-  N70 -->|false| N71
-  N72([identifier])
-  N71 -->|true| N72
-  N71 -->|false| N72
-  N73([scoped_type_identifier])
-  N72 -->|true| N73
-  N72 -->|false| N73
-  N74([identifier])
-  N73 -->|true| N74
-  N73 -->|false| N74
-  N75([type_identifier])
-  N74 -->|true| N75
-  N74 -->|false| N75
-  N76([call:json])
-  N75 --> N76
-  N77([if_expression])
-  N76 -->|true| N77
-  N76 -->|false| N77
-  N78([if])
-  N77 -->|true| N78
-  N77 -->|false| N78
-  N79([identifier])
-  N78 -->|true| N79
-  N78 -->|false| N79
-  N80([identifier])
-  N79 -->|true| N80
-  N79 -->|false| N80
-  N81([call:as_array])
-  N80 --> N81
-  N82([if_expression])
-  N81 -->|true| N82
-  N81 -->|false| N82
-  N83([if])
-  N82 -->|true| N83
-  N82 -->|false| N83
-  N84([identifier])
-  N83 -->|true| N84
-  N83 -->|false| N84
-  N85([identifier])
-  N84 -->|true| N85
-  N84 -->|false| N85
-  N86([call:first])
-  N85 --> N86
-  N87([if_expression])
-  N86 -->|true| N87
-  N86 -->|false| N87
-  N88([if])
-  N87 -->|true| N88
-  N87 -->|false| N88
-  N89([identifier])
-  N88 -->|true| N89
-  N88 -->|false| N89
-  N90([identifier])
-  N89 -->|true| N90
-  N89 -->|false| N90
-  N91([call:as_object])
-  N90 --> N91
-  N92([if_expression])
-  N91 -->|true| N92
-  N91 -->|false| N92
-  N93([if])
-  N92 -->|true| N93
-  N92 -->|false| N93
-  N94([identifier])
-  N93 -->|true| N94
-  N93 -->|false| N94
-  N95([identifier])
-  N94 -->|true| N95
-  N94 -->|false| N95
-  N96([call:as_str])
-  N95 --> N96
-  N97([identifier])
-  N96 -->|true| N97
-  N96 -->|false| N97
-  N98([identifier])
-  N97 -->|true| N98
-  N97 -->|false| N98
-  N99([identifier])
-  N98 -->|true| N99
-  N98 -->|false| N99
-  N100([identifier])
-  N99 -->|true| N100
-  N99 -->|false| N100
-  N101([if_expression])
-  N100 -->|true| N101
-  N100 -->|false| N101
-  N102([if])
-  N101 -->|true| N102
-  N101 -->|false| N102
-  N103([identifier])
-  N102 -->|true| N103
-  N102 -->|false| N103
-  N104([identifier])
-  N103 -->|true| N104
-  N103 -->|false| N104
-  N105([call:as_object])
-  N104 --> N105
-  N106([identifier])
-  N105 -->|true| N106
-  N105 -->|false| N106
-  N107([identifier])
-  N106 -->|true| N107
-  N106 -->|false| N107
-  N108([identifier])
-  N107 -->|true| N108
-  N107 -->|false| N108
-  N109([identifier])
-  N108 -->|true| N109
-  N108 -->|false| N109
-  N110([identifier])
-  N109 -->|true| N110
-  N109 -->|false| N110
-  N111([identifier])
-  N110 -->|true| N111
-  N110 -->|false| N111
-  N112([identifier])
-  N111 -->|true| N112
-  N111 -->|false| N112
-  N113([identifier])
-  N112 -->|true| N113
-  N112 -->|false| N113
-  N114([identifier])
-  N113 -->|true| N114
-  N113 -->|false| N114
-  N115([identifier])
-  N114 -->|true| N115
-  N114 -->|false| N115
-  N116([identifier])
-  N115 -->|true| N116
-  N115 -->|false| N116
-  N117([identifier])
-  N116 -->|true| N117
-  N116 -->|false| N117
-  N118([identifier])
-  N117 -->|true| N118
-  N117 -->|false| N118
-  N119([identifier])
-  N118 -->|true| N119
-  N118 -->|false| N119
-  N120([call:unwrap_or])
-  N119 --> N120
-  N121([identifier])
-  N120 -->|true| N121
-  N120 -->|false| N121
-  N122([identifier])
-  N121 -->|true| N122
-  N121 -->|false| N122
-  N123([identifier])
-  N122 -->|true| N123
-  N122 -->|false| N123
-  N124([identifier])
-  N123 -->|true| N124
-  N123 -->|false| N124
-  N125([identifier])
-  N124 -->|true| N125
-  N124 -->|false| N125
-  N126([identifier])
-  N125 -->|true| N126
-  N125 -->|false| N126
-  N127([identifier])
-  N126 -->|true| N127
-  N126 -->|false| N127
-  N128([identifier])
-  N127 -->|true| N128
-  N127 -->|false| N128
-  N129([identifier])
-  N128 -->|true| N129
-  N128 -->|false| N129
-  N130([identifier])
-  N129 -->|true| N130
-  N129 -->|false| N130
-  N131([identifier])
-  N130 -->|true| N131
-  N130 -->|false| N131
-  N132([call:status])
-  N131 --> N132
-  N133([identifier])
-  N132 -->|true| N133
-  N132 -->|false| N133
-  N134([identifier])
-  N133 -->|true| N134
-  N133 -->|false| N134
-  N135([call:text])
-  N134 --> N135
-  N136([identifier])
-  N135 -->|true| N136
-  N135 -->|false| N136
-  N137([identifier])
-  N136 -->|true| N137
-  N136 -->|false| N137
-  N138([call:Ok])
-  N137 --> N138
-  N138 --> end
+  N19([call as_object])
+  N18 --> N19
+  N20([call unwrap_or])
+  N19 --> N20
+  N21([call status])
+  N20 --> N21
+  N22([call text])
+  N21 --> N22
+  N23([call Ok])
+  N22 --> N23
+  N23 --> E
 
-</div></div>
-<div class="card"><h3>Symbols</h3>
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
 <details><summary><strong>Functions</strong> <small>(1)</small></summary><ul><li id="symbol-main"><code>main</code> <small>function</small>
 <details><summary>View code (6-143)</summary>
 <div class="codeblock">
@@ -1251,8 +1042,32 @@ document.addEventListener('DOMContentLoaded', function(){
 </ul></details>
 <details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
 
-</div>
+</details>
+<details class=\"card\" id=\"security-analysis\"><summary>Security Analysis</summary><div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: examples/real_file_analysis.rs</h4>
+<p>Risk Score: 30.0</p>
+<p>Vulnerabilities: 3 (Critical)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Implement proper authorization checks before sensitive operations</li>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Use role-based access control (RBAC)</li>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Apply the principle of least privilege</li>
+<li><strong><a href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/" target="_blank" rel="noopener">A01:2021 – Broken Access Control</a>:</strong> Implement proper session management</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Follow secure design principles from the start</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Implement threat modeling</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Use secure defaults and fail-safe behavior</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Regular security reviews of design decisions</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Secure default configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Regular configuration reviews</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Environment-specific configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Automated configuration validation</li>
+</ul></div>
 
+</div>
+</details>
 </section>
 </main>
 </body>

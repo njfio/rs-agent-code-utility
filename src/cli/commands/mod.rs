@@ -123,23 +123,35 @@ impl Execute for Commands {
             Commands::Watch { path, interval, max_iterations, depth } => {
                 watch::execute(path, *interval, *max_iterations, depth)
             }
-            Commands::Wiki { path, output, include_api, include_examples, depth, ai, ai_mock, ai_config, ai_provider, ai_json } => {
+            Commands::Wiki { path, output, include_api, include_examples, depth, ai, ai_mock, ai_config, ai_provider, ai_json, wiki_ai, wiki_ai_json, wiki_security, wiki_diagrams, wiki_examples, wiki_max_results, wiki_max_index_symbols, wiki_templates } => {
+                // Backward compatibility mapping: --ai implies --wiki-ai and --wiki-ai-json unless explicit flags are provided
+                let ai_final = if *wiki_ai { true } else { *ai };
+                let ai_json_final = if *wiki_ai_json { true } else { *ai_json || *ai };
+                let security_final = if *wiki_security { true } else { *ai };
+                let diagrams_final = *wiki_diagrams;
+                let examples_final = *include_examples || *wiki_examples;
+                let search_max_results = wiki_max_results.clone();
+                let max_index_symbols = wiki_max_index_symbols.clone();
+                let templates = wiki_templates.as_ref();
                 wiki::execute(
                     path,
                     output.as_ref(),
                     *include_api,
-                    *include_examples,
+                    examples_final,
                     depth,
-                    *ai,
+                    ai_final,
                     *ai_mock,
                     ai_config.as_ref(),
                     ai_provider.as_deref(),
-                    *ai_json,
-                    *ai, // enhanced_ai (same as ai for now)
-                    *ai, // function_enhancement (same as ai for now)
-                    *ai, // security_insights (same as ai for now)
-                    *ai, // refactoring_hints (same as ai for now)
-                    false // diagram_annotations (disabled by default)
+                    ai_json_final,
+                    ai_final, // enhanced_ai (same as ai for now)
+                    ai_final, // function_enhancement (same as ai for now)
+                    security_final, // security_insights
+                    ai_final, // refactoring_hints
+                    diagrams_final, // diagram_annotations
+                    search_max_results,
+                    max_index_symbols,
+                    templates
                 )
             }
         }

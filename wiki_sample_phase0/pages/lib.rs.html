@@ -1,0 +1,477 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>lib.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/hljs.css">
+<script src="../assets/search_index.js"></script>
+<script src="../assets/search.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/hljs.js"></script>
+<script>(function initMermaidWhenReady(){
+  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
+  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
+})();
+try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
+// Theme toggle with persistence
+(function setupTheme(){
+  try {
+    const key='wiki_theme';
+    const root=document.documentElement; const btn=document.getElementById('themeToggle');
+    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
+    const saved=localStorage.getItem(key)||'dark'; apply(saved);
+    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
+  } catch(e){}
+})();
+try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(!el) return; var text = el.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
+      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
+    });
+  });
+});
+</script>
+</head>
+<body>
+<header><h1>lib.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
+<select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
+<select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
+<label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
+<hr style="border-color: #334155; margin: .75rem 0;"/>
+<h4>Files</h4>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
+<a href="ai_providers_anthropic.rs.html">ai/providers/anthropic.rs</a>
+<a href="ai_providers_azure.rs.html">ai/providers/azure.rs</a>
+<a href="ai_providers_google.rs.html">ai/providers/google.rs</a>
+<a href="ai_providers_groq.rs.html">ai/providers/groq.rs</a>
+<a href="ai_providers_local.rs.html">ai/providers/local.rs</a>
+<a href="ai_providers_mod.rs.html">ai/providers/mod.rs</a>
+<a href="ai_providers_ollama.rs.html">ai/providers/ollama.rs</a>
+<a href="ai_providers_openai.rs.html">ai/providers/openai.rs</a>
+</details>
+<a href="ai_cache.rs.html">ai/cache.rs</a>
+<a href="ai_config.rs.html">ai/config.rs</a>
+<a href="ai_error.rs.html">ai/error.rs</a>
+<a href="ai_mod.rs.html">ai/mod.rs</a>
+<a href="ai_service.rs.html">ai/service.rs</a>
+<a href="ai_types.rs.html">ai/types.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
+<a href="bin_main.rs.html">bin/main.rs</a>
+<a href="bin_rts.rs.html">bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
+<a href="cli_commands_analyze.rs.html">cli/commands/analyze.rs</a>
+<a href="cli_commands_dependencies.rs.html">cli/commands/dependencies.rs</a>
+<a href="cli_commands_explain.rs.html">cli/commands/explain.rs</a>
+<a href="cli_commands_find.rs.html">cli/commands/find.rs</a>
+<a href="cli_commands_insights.rs.html">cli/commands/insights.rs</a>
+<a href="cli_commands_interactive.rs.html">cli/commands/interactive.rs</a>
+<a href="cli_commands_languages.rs.html">cli/commands/languages.rs</a>
+<a href="cli_commands_map.rs.html">cli/commands/map.rs</a>
+<a href="cli_commands_mod.rs.html">cli/commands/mod.rs</a>
+<a href="cli_commands_query.rs.html">cli/commands/query.rs</a>
+<a href="cli_commands_refactor.rs.html">cli/commands/refactor.rs</a>
+<a href="cli_commands_security.rs.html">cli/commands/security.rs</a>
+<a href="cli_commands_stats.rs.html">cli/commands/stats.rs</a>
+<a href="cli_commands_symbols.rs.html">cli/commands/symbols.rs</a>
+<a href="cli_commands_watch.rs.html">cli/commands/watch.rs</a>
+<a href="cli_commands_wiki.rs.html">cli/commands/wiki.rs</a>
+</details>
+<a href="cli_error.rs.html">cli/error.rs</a>
+<a href="cli_mod.rs.html">cli/mod.rs</a>
+<a href="cli_output.rs.html">cli/output.rs</a>
+<a href="cli_sarif.rs.html">cli/sarif.rs</a>
+<a href="cli_sbom.rs.html">cli/sbom.rs</a>
+<a href="cli_schemas.rs.html">cli/schemas.rs</a>
+<a href="cli_utils.rs.html">cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="infrastructure_cache.rs.html">infrastructure/cache.rs</a>
+<a href="infrastructure_config.rs.html">infrastructure/config.rs</a>
+<a href="infrastructure_database.rs.html">infrastructure/database.rs</a>
+<a href="infrastructure_http_client.rs.html">infrastructure/http_client.rs</a>
+<a href="infrastructure_mod.rs.html">infrastructure/mod.rs</a>
+<a href="infrastructure_rate_limiter.rs.html">infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="languages_c.rs.html">languages/c.rs</a>
+<a href="languages_cpp.rs.html">languages/cpp.rs</a>
+<a href="languages_go.rs.html">languages/go.rs</a>
+<a href="languages_javascript.rs.html">languages/javascript.rs</a>
+<a href="languages_mod.rs.html">languages/mod.rs</a>
+<a href="languages_python.rs.html">languages/python.rs</a>
+<a href="languages_rust.rs.html">languages/rust.rs</a>
+<a href="languages_typescript.rs.html">languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="security_mod.rs.html">security/mod.rs</a>
+<a href="security_owasp_detector.rs.html">security/owasp_detector.rs</a>
+<a href="security_secrets_detector.rs.html">security/secrets_detector.rs</a>
+<a href="security_vulnerability_db.rs.html">security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="wiki_ai_schema.rs.html">wiki/ai_schema.rs</a>
+<a href="wiki_enhanced_ai.rs.html">wiki/enhanced_ai.rs</a>
+<a href="wiki_mod.rs.html">wiki/mod.rs</a>
+<a href="wiki_security_enhancements.rs.html">wiki/security_enhancements.rs</a>
+</details>
+<a href="advanced_ai_analysis.rs.html">advanced_ai_analysis.rs</a>
+<a href="advanced_security.rs.html">advanced_security.rs</a>
+<a href="ai_analysis.rs.html">ai_analysis.rs</a>
+<a href="analysis_common.rs.html">analysis_common.rs</a>
+<a href="analysis_utils.rs.html">analysis_utils.rs</a>
+<a href="analyzer.rs.html">analyzer.rs</a>
+<a href="ast_transformation.rs.html">ast_transformation.rs</a>
+<a href="code_evolution.rs.html">code_evolution.rs</a>
+<a href="code_map.rs.html">code_map.rs</a>
+<a href="command_injection_detector.rs.html">command_injection_detector.rs</a>
+<a href="complexity_analysis.rs.html">complexity_analysis.rs</a>
+<a href="constants.rs.html">constants.rs</a>
+<a href="control_flow.rs.html">control_flow.rs</a>
+<a href="dependency_analysis.rs.html">dependency_analysis.rs</a>
+<a href="embeddings.rs.html">embeddings.rs</a>
+<a href="enhanced_security.rs.html">enhanced_security.rs</a>
+<a href="error.rs.html">error.rs</a>
+<a href="file_cache.rs.html">file_cache.rs</a>
+<a href="intent_mapping.rs.html">intent_mapping.rs</a>
+<a href="intent_mapping_stub.rs.html">intent_mapping_stub.rs</a>
+<a href="lib.rs.html">lib.rs</a>
+<a href="main.rs.html">main.rs</a>
+<a href="memory_tracker.rs.html">memory_tracker.rs</a>
+<a href="parser.rs.html">parser.rs</a>
+<a href="performance_analysis.rs.html">performance_analysis.rs</a>
+<a href="query.rs.html">query.rs</a>
+<a href="reasoning_engine.rs.html">reasoning_engine.rs</a>
+<a href="refactoring.rs.html">refactoring.rs</a>
+<a href="semantic_context.rs.html">semantic_context.rs</a>
+<a href="semantic_graph.rs.html">semantic_graph.rs</a>
+<a href="smart_refactoring.rs.html">smart_refactoring.rs</a>
+<a href="sql_injection_detector.rs.html">sql_injection_detector.rs</a>
+<a href="symbol_table.rs.html">symbol_table.rs</a>
+<a href="taint_analysis.rs.html">taint_analysis.rs</a>
+<a href="test_coverage.rs.html">test_coverage.rs</a>
+<a href="tree.rs.html">tree.rs</a>
+
+
+</nav>
+<section class="article">
+<p>8 symbols, 414 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> lib.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 414<br><strong>Symbols:</strong> 8<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li></ul></div>
+
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
+  participant supported_languages
+  participant detect_language_from_extension
+  participant detect_language_from_path
+  participant test_language_detection
+  participant test_path_detection
+  participant test_supported_languages
+  supported_languages->>detect_language_from_extension: call
+  detect_language_from_extension->>detect_language_from_path: call
+  detect_language_from_path->>test_language_detection: call
+  test_language_detection->>test_path_detection: call
+  test_path_detection->>test_supported_languages: call
+
+</div></details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+  class supported_languages {}
+  class detect_language_from_extension {}
+  class detect_language_from_path {}
+  class test_language_detection {}
+  class test_path_detection {}
+  class test_supported_languages {}
+  class LanguageInfo {}
+  class languages {}
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
+<details><summary><strong>Functions</strong> <small>(6)</small></summary><ul><li id="symbol-supported-languages"><code>supported_languages</code> <small>function</small>
+<details><summary>View code (324-362)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-supported_languages-324">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:324" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+</pre>
+    <pre><code id="code-supported_languages-324" class="lang-rust hljs">pub fn supported_languages() -&gt; Vec&lt;LanguageInfo&gt; {
+    vec![
+        LanguageInfo {
+            name: &quot;Rust&quot;,
+            version: &quot;0.21.0&quot;,
+            file_extensions: &amp;[&quot;rs&quot;],
+        },
+        LanguageInfo {
+            name: &quot;JavaScript&quot;,
+            version: &quot;0.21.0&quot;,
+            file_extensions: &amp;[&quot;js&quot;, &quot;mjs&quot;, &quot;jsx&quot;],
+        },
+        LanguageInfo {
+            name: &quot;Python&quot;,
+            version: &quot;0.21.0&quot;,
+            file_extensions: &amp;[&quot;py&quot;, &quot;pyi&quot;],
+        },
+        LanguageInfo {
+            name: &quot;C&quot;,
+            version: &quot;0.21.0&quot;,
+            file_extensions: &amp;[&quot;c&quot;, &quot;h&quot;],
+        },
+        LanguageInfo {
+            name: &quot;C++&quot;,
+            version: &quot;0.22.0&quot;,
+            file_extensions: &amp;[&quot;cpp&quot;, &quot;cxx&quot;, &quot;cc&quot;, &quot;hpp&quot;, &quot;hxx&quot;],
+        },
+        LanguageInfo {
+            name: &quot;TypeScript&quot;,
+            version: &quot;0.21.0&quot;,
+            file_extensions: &amp;[&quot;ts&quot;, &quot;tsx&quot;, &quot;mts&quot;, &quot;cts&quot;],
+        },
+        LanguageInfo {
+            name: &quot;Go&quot;,
+            version: &quot;0.21.0&quot;,
+            file_extensions: &amp;[&quot;go&quot;],
+        },
+    ]
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-detect-language-from-extension"><code>detect_language_from_extension</code> <small>function</small>
+<details><summary>View code (365-376)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-detect_language_from_extension-365">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:365" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+</pre>
+    <pre><code id="code-detect_language_from_extension-365" class="lang-rust hljs">pub fn detect_language_from_extension(extension: &amp;str) -&gt; Option&lt;Language&gt; {
+    match extension.to_lowercase().as_str() {
+        &quot;rs&quot; =&gt; Some(Language::Rust),
+        &quot;js&quot; | &quot;mjs&quot; | &quot;jsx&quot; =&gt; Some(Language::JavaScript),
+        &quot;ts&quot; | &quot;tsx&quot; | &quot;mts&quot; | &quot;cts&quot; =&gt; Some(Language::TypeScript),
+        &quot;py&quot; | &quot;pyi&quot; =&gt; Some(Language::Python),
+        &quot;c&quot; | &quot;h&quot; =&gt; Some(Language::C),
+        &quot;cpp&quot; | &quot;cxx&quot; | &quot;cc&quot; | &quot;hpp&quot; | &quot;hxx&quot; =&gt; Some(Language::Cpp),
+        &quot;go&quot; =&gt; Some(Language::Go),
+        _ =&gt; None,
+    }
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-detect-language-from-path"><code>detect_language_from_path</code> <small>function</small>
+<details><summary>View code (379-384)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-detect_language_from_path-379">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:379" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">379
+380
+381
+382
+383
+384
+</pre>
+    <pre><code id="code-detect_language_from_path-379" class="lang-rust hljs">pub fn detect_language_from_path(path: &amp;str) -&gt; Option&lt;Language&gt; {
+    std::path::Path::new(path)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .and_then(detect_language_from_extension)
+}</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-language-detection"><code>test_language_detection</code> <small>function</small>
+<details><summary>View code (391-398)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_language_detection-391">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:391" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">391
+392
+393
+394
+395
+396
+397
+398
+</pre>
+    <pre><code id="code-test_language_detection-391" class="lang-rust hljs">    fn test_language_detection() {
+        assert_eq!(detect_language_from_extension(&quot;rs&quot;), Some(Language::Rust));
+        assert_eq!(detect_language_from_extension(&quot;js&quot;), Some(Language::JavaScript));
+        assert_eq!(detect_language_from_extension(&quot;ts&quot;), Some(Language::TypeScript));
+        assert_eq!(detect_language_from_extension(&quot;py&quot;), Some(Language::Python));
+        assert_eq!(detect_language_from_extension(&quot;go&quot;), Some(Language::Go));
+        assert_eq!(detect_language_from_extension(&quot;unknown&quot;), None);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-path-detection"><code>test_path_detection</code> <small>function</small>
+<details><summary>View code (401-406)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_path_detection-401">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:401" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">401
+402
+403
+404
+405
+406
+</pre>
+    <pre><code id="code-test_path_detection-401" class="lang-rust hljs">    fn test_path_detection() {
+        assert_eq!(detect_language_from_path(&quot;main.rs&quot;), Some(Language::Rust));
+        assert_eq!(detect_language_from_path(&quot;src/lib.rs&quot;), Some(Language::Rust));
+        assert_eq!(detect_language_from_path(&quot;script.py&quot;), Some(Language::Python));
+        assert_eq!(detect_language_from_path(&quot;unknown.txt&quot;), None);
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+<li id="symbol-test-supported-languages"><code>test_supported_languages</code> <small>function</small>
+<details><summary>View code (409-413)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-test_supported_languages-409">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:409" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">409
+410
+411
+412
+413
+</pre>
+    <pre><code id="code-test_supported_languages-409" class="lang-rust hljs">    fn test_supported_languages() {
+        let languages = supported_languages();
+        assert!(!languages.is_empty());
+        assert!(languages.iter().any(|lang| lang.name == &quot;Rust&quot;));
+    }</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Variables</strong> <small>(1)</small></summary><ul><li id="symbol-languages"><code>languages</code> <small>variable</small>
+<details><summary>View code (410-410)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-languages-410">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:410" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">410
+</pre>
+    <pre><code id="code-languages-410" class="lang-rust hljs">        let languages = supported_languages();</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+<details><summary><strong>Types & Structures</strong> <small>(1)</small></summary><ul><li id="symbol-languageinfo"><code>LanguageInfo</code> <small>struct</small>
+<details><summary>View code (317-321)</summary>
+<div class="codeblock">
+  <div class="codeblock-header">
+    <button class="copy-btn" data-target="code-languageinfo-317">Copy</button>
+    <a class="open-in-editor" href="vscode://file//Users/n/RustroverProjects/rust_tree_sitter/src/lib.rs:317" title="Open in VS Code">Open in VS Code</a>
+  </div>
+  <div class="codeblock-body">
+    <pre class="gutter">317
+318
+319
+320
+321
+</pre>
+    <pre><code id="code-languageinfo-317" class="lang-rust hljs">pub struct LanguageInfo {
+    pub name: &amp;&#39;static str,
+    pub version: &amp;&#39;static str,
+    pub file_extensions: &amp;&#39;static [&amp;&#39;static str],
+}</code></pre>
+  </div>
+</div>
+</details></li>
+</ul></details>
+
+</details>
+
+</section>
+</main>
+</body>
+</html>

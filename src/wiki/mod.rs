@@ -14,9 +14,17 @@
 
 pub mod security_enhancements;
 mod ai_schema;
+mod util;
+mod assets;
+mod search;
+mod diagrams;
+mod templates;
+mod ai_integration;
 
 use crate::analyzer::{AnalysisConfig, AnalysisDepth, AnalysisResult};
 use crate::{CodebaseAnalyzer, Result};
+use self::search::SearchEntry;
+use self::util::{sanitize_filename, url_encode_path, html_escape, markdown_to_html, build_simple_dependency_graph};
 use security_enhancements::SecurityWikiGenerator;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -53,6 +61,12 @@ pub struct WikiConfig {
     pub ai_provider: Option<String>,
     /// Request AI in JSON mode and render via schema
     pub ai_json_mode: bool,
+    /// Maximum search results to display in UI
+    pub search_max_results: usize,
+    /// Cap number of symbols per file in search index
+    pub max_index_symbols_per_file: Option<usize>,
+    /// Optional external templates directory (reserved for future)
+    pub templates_dir: Option<PathBuf>,
 }
 
 impl WikiConfig {
@@ -77,6 +91,9 @@ pub struct WikiConfigBuilder {
     diagram_annotations_enabled: bool,
     ai_provider: Option<String>,
     ai_json_mode: bool,
+    search_max_results: Option<usize>,
+    max_index_symbols_per_file: Option<usize>,
+    templates_dir: Option<PathBuf>,
 }
 
 impl WikiConfigBuilder {
@@ -131,6 +148,13 @@ impl WikiConfigBuilder {
     /// Enable AI JSON mode (Groq/OpenAI JSON responses)
     pub fn with_ai_json(mut self, yes: bool) -> Self { self.ai_json_mode = yes; self }
 
+    /// Set maximum search results shown in UI (default: 200)
+    pub fn with_search_max_results(mut self, n: usize) -> Self { self.search_max_results = Some(n); self }
+    /// Cap number of indexed symbols per file for search index
+    pub fn with_max_index_symbols(mut self, n: usize) -> Self { self.max_index_symbols_per_file = Some(n); self }
+    /// Provide an external templates directory (reserved)
+    pub fn with_templates_dir<P: AsRef<Path>>(mut self, p: P) -> Self { self.templates_dir = Some(p.as_ref().to_path_buf()); self }
+
     /// Build final config
     pub fn build(self) -> Result<WikiConfig> {
         Ok(WikiConfig {
@@ -155,6 +179,9 @@ impl WikiConfigBuilder {
             diagram_annotations_enabled: self.diagram_annotations_enabled,
             ai_provider: self.ai_provider,
             ai_json_mode: self.ai_json_mode,
+            search_max_results: self.search_max_results.unwrap_or(200),
+            max_index_symbols_per_file: self.max_index_symbols_per_file,
+            templates_dir: self.templates_dir,
         })
     }
 }
@@ -167,9 +194,20 @@ pub struct WikiGenerationResult {
 }
 
 /// Wiki site generator
-#[derive(Debug, Clone)]
 pub struct WikiGenerator {
     config: WikiConfig,
+    ai_rt: std::cell::RefCell<Option<tokio::runtime::Runtime>>,
+    ai_service: std::cell::RefCell<Option<crate::ai::service::AIService>>,
+}
+
+impl Clone for WikiGenerator {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            ai_rt: std::cell::RefCell::new(None),
+            ai_service: std::cell::RefCell::new(None),
+        }
+    }
 }
 
 impl WikiGenerator {
@@ -227,20 +265,44 @@ impl WikiGenerator {
         md
     }
 
-    fn parse_ai_json<T: for<'de> serde::Deserialize<'de>>(raw: &str) -> Option<T> {
-        let s = raw.trim();
-        let s = s.strip_prefix("```json").and_then(|x| x.strip_suffix("```"))
-            .map(|x| x.trim()).unwrap_or(s);
-        if let Ok(v) = serde_json::from_str::<T>(s) { return Some(v); }
-        if let (Some(i), Some(j)) = (s.find('{'), s.rfind('}')) {
-            if i < j {
-                if let Ok(v) = serde_json::from_str::<T>(&s[i..=j]) { return Some(v); }
-            }
-        }
-        None
-    }
+    // parse_ai_json moved to ai_integration.rs
     /// Create a new generator
-    pub fn new(config: WikiConfig) -> Self { Self { config } }
+    pub fn new(config: WikiConfig) -> Self {
+        Self {
+            config,
+            ai_rt: std::cell::RefCell::new(None),
+            ai_service: std::cell::RefCell::new(None),
+        }
+    }
+
+    /// Ensure a single AI runtime and service are built and available
+    fn ensure_ai(&self) -> Result<()> {
+        // Initialize runtime once
+        if self.ai_rt.borrow().is_none() {
+            let rt = tokio::runtime::Runtime::new().map_err(|e| crate::error::Error::Internal {
+                component: "wiki".to_string(),
+                message: format!("tokio: {}", e),
+                context: None,
+            })?;
+            *self.ai_rt.borrow_mut() = Some(rt);
+        }
+        // Initialize service once using the runtime
+        if self.ai_service.borrow().is_none() {
+            let builder = self.make_ai_builder();
+            let service = self.ai_rt
+                .borrow()
+                .as_ref()
+                .expect("runtime just initialized")
+                .block_on(async { builder.build().await })
+                .map_err(|e| crate::error::Error::Internal {
+                    component: "wiki".to_string(),
+                    message: format!("ai build: {}", e),
+                    context: None,
+                })?;
+            *self.ai_service.borrow_mut() = Some(service);
+        }
+        Ok(())
+    }
 
     /// Generate the wiki site from a path (file or directory)
     pub fn generate_from_path<P: AsRef<Path>>(&self, path: P) -> Result<WikiGenerationResult> {
@@ -250,7 +312,24 @@ impl WikiGenerator {
     }
 
     fn analyze(&self, root: &Path) -> Result<AnalysisResult> {
-        let cfg = AnalysisConfig { depth: AnalysisDepth::Full, ..AnalysisConfig::default() };
+        // Build analysis config and exclude generated wiki directories to avoid self-scanning
+        let mut cfg = AnalysisConfig { depth: AnalysisDepth::Full, ..AnalysisConfig::default() };
+        // Always exclude the configured output directory name
+        if let Some(name) = self.config.output_dir.file_name().and_then(|s| s.to_str()) {
+            cfg.exclude_dirs.push(name.to_string());
+        }
+        // Also exclude any sibling directories under root that look like previous wiki outputs (wiki_site*)
+        if root.is_dir() {
+            if let Ok(entries) = std::fs::read_dir(root) {
+                for e in entries.flatten() {
+                    if let Some(fname) = e.file_name().to_str() {
+                        if fname.starts_with("wiki_site") {
+                            cfg.exclude_dirs.push(fname.to_string());
+                        }
+                    }
+                }
+            }
+        }
         let mut analyzer = CodebaseAnalyzer::with_config(cfg)?;
         analyzer.analyze_directory(root)
     }
@@ -264,12 +343,14 @@ impl WikiGenerator {
         fs::create_dir_all(&pages)?;
 
         // Assets
-        self.write_style_css(&assets.join("style.css"))?;
-        self.write_search_js(&assets.join("search.js"))?;
+        self.write_style_css_impl(&assets.join("style.css"))?;
+        self.write_search_js_impl(&assets.join("search.js"))?;
         // Bundle local syntax highlighting assets (with graceful fallback)
-        self.write_highlight_assets(&assets)?;
+        self.write_highlight_assets_impl(&assets)?;
         // Provide local Mermaid asset (attempt network fetch; fallback to stub)
-        self.write_mermaid_asset(&assets)?;
+        self.write_mermaid_asset_impl(&assets)?;
+        // Provide main page behavior JS
+        self.write_main_js_impl(&assets.join("main.js"))?;
 
         // Initialize security analysis if enabled
         let security_analysis = if self.config.security_insights_enabled {
@@ -347,13 +428,15 @@ impl WikiGenerator {
             let mut tags = vec![file.language.clone()];
             if !file.security_vulnerabilities.is_empty() { tags.push("vulnerable".to_string()); }
             for t in ai_tags { if !t.is_empty() { tags.push(t); } }
+            // Apply per-file symbol indexing cap if configured
+            let symbol_cap = self.config.max_index_symbols_per_file.unwrap_or_else(|| file.symbols.len());
             index_entries.push(SearchEntry {
                 title: title.clone(),
                 path: format!("pages/{}.html{}", safe_name, anchor),
                 description: desc,
-                symbols: file.symbols.iter().map(|s| s.name.clone()).collect(),
+                symbols: file.symbols.iter().take(symbol_cap).map(|s| s.name.clone()).collect(),
                 language: file.language.clone(),
-                kinds: file.symbols.iter().map(|s| s.kind.clone()).collect(),
+                kinds: file.symbols.iter().take(symbol_cap).map(|s| s.kind.clone()).collect(),
                 tags,
             });
         }
@@ -372,12 +455,13 @@ impl WikiGenerator {
         self.write_search_index(&assets.join("search_index.json"), &index_entries)?;
 
         // Post-process generated HTML to replace any residual CDN references in display-only code
-        self.postprocess_cdn_refs(out)?;
+        self.postprocess_cdn_refs_impl(out)?;
 
         Ok(WikiGenerationResult { pages: page_count })
     }
 
     // Add other methods here as needed...
+    /* legacy asset writers removed (moved to assets.rs)
     fn write_style_css(&self, path: &Path) -> Result<()> {
         let css = r#":root{--bg:#0b0f17;--fg:#e6e9ef;--muted:#9aa4b2;--accent:#7aa2f7;--card:#111826;--security-critical:#ef4444;--security-high:#f97316;--security-medium:#eab308;--security-low:#22c55e;--security-info:#6b7280}
 html{scroll-behavior:smooth}
@@ -700,6 +784,8 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
         Ok(())
     }
 
+    */
+    /* moved to templates.rs
     fn write_index_html(&self, out: &Path, analysis: &AnalysisResult, security_analysis: &Option<security_enhancements::SecurityAnalysisResult>, nav_content: &str) -> Result<()> {
 
         let ai_block = if self.config.ai_enabled {
@@ -747,62 +833,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
 <script src="assets/search.js"></script>
 <script src="assets/mermaid.js"></script>
 <script src="assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){{
-  function ready(){{ try {{ if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) {{ mermaid.initialize({{ startOnLoad: true, theme: 'dark' }}); return true; }} }} catch(e){{}} return false; }}
-  if (!ready()) {{ let i=0; const t=setInterval(()=>{{ if (ready() || ++i>50) clearInterval(t); }}, 120); }}
-}})();
-try {{ if (window.hljs) {{ hljs.highlightAll(); }} }} catch(e) {{ /* ignore */ }}
-// Pre-parse mermaid blocks to catch syntax errors and fallback to <pre>
-try {{
-  if (window.mermaid && mermaid.parse) {{
-    document.querySelectorAll('.mermaid').forEach(function(el){{
-      try {{ mermaid.parse(el.textContent); }} catch(e) {{
-        var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre);
-      }}
-    }});
-  }}
-}} catch(e) {{}}
-// Theme toggle with persistence
-(function setupTheme(){{
-  try {{
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){{ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }}
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); }});
-  }} catch(e){{}}
-}})();
-document.addEventListener('DOMContentLoaded', function(){{
-  document.querySelectorAll('.copy-btn').forEach(function(btn){{
-    btn.addEventListener('click', function(){{
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) {{ navigator.clipboard.writeText(text); }}
-      else {{ var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{{document.execCommand('copy');}}catch(e){{}} document.body.removeChild(ta); }}
-      btn.textContent='Copied'; setTimeout(function(){{ btn.textContent='Copy'; }},1200);
-    }});
-  }});
-  // Sidebar collapse toggle with persistence
-  try {{
-    const key='wiki_sidebar';
-    const body=document.body;
-    const btn=document.getElementById('sidebarToggle');
-    function apply(state){{
-      if(state==='collapsed'){{ body.classList.add('sidebar-collapsed'); }}
-      else {{ body.classList.remove('sidebar-collapsed'); }}
-      localStorage.setItem(key,state);
-      if (btn) btn.textContent = (state==='collapsed' ? 'Show Sidebar' : 'Hide Sidebar');
-    }}
-    const saved=localStorage.getItem(key)||'expanded';
-    apply(saved);
-    if (btn) btn.addEventListener('click', function(){{
-      const next = body.classList.contains('sidebar-collapsed') ? 'expanded' : 'collapsed';
-      apply(next);
-    }});
-  }} catch(e){{}}
-}});
-</script>
+<script src="assets/main.js"></script>
 </head>
 <body>
 <header><h1>{title}</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
@@ -842,9 +873,11 @@ document.addEventListener('DOMContentLoaded', function(){{
         );
         fs::write(out.join("index.html"), content).map_err(|e| e.into())
     }
+    */
 
 
 
+    /* moved to templates.rs
     fn write_global_symbols(&self, out: &Path, files: &[crate::analyzer::FileInfo]) -> Result<()> {
         let mut items = String::new();
         for f in files {
@@ -884,275 +917,27 @@ document.addEventListener('DOMContentLoaded', function(){{
         );
         fs::write(out.join("symbols.html"), content).map_err(|e| e.into())
     }
+    */
 
-    fn file_has_branching(file: &crate::analyzer::FileInfo) -> bool {
-        use crate::analysis_common::FileAnalyzer;
-        if let Ok(content) = std::fs::read_to_string(&file.path) {
-            if let Ok(tree) = FileAnalyzer::parse_file_content(&content, &file.language) {
-                let t = &tree;
-                let kinds = [
-                    "if_expression", "match_expression", "while_expression", "while_let_expression",
-                    "for_expression", "loop_expression", // rust
-                    "if_statement", "switch_statement", "conditional_expression", // js/ts/c/cpp/go
-                    "for_statement", "while_statement", "do_statement",
-                ];
-                return kinds.iter().any(|k| !t.find_nodes_by_kind(k).is_empty());
-            }
-        }
-        false
-    }
+    
 
-    fn build_sequence_diagram(file: &crate::analyzer::FileInfo, root_path: &Path) -> String {
-        // Participants from function symbols
-        let funcs: Vec<_> = file.symbols.iter().filter(|s| s.kind.contains("fn") || s.kind.contains("function")).collect();
+    
 
-        let mut out = String::new();
+    
 
-        // Add participants
-        for f in &funcs {
-            let _ = writeln!(&mut out, "  participant {}", Self::safe_ident(&f.name));
-        }
-
-        // Try building call list via CFG
-        let calls_from_cfg: Option<Vec<String>> = (|| {
-            use crate::analysis_common::FileAnalyzer;
-            let abs = if file.path.is_absolute() { file.path.clone() } else { root_path.join(&file.path) };
-            let content = std::fs::read_to_string(abs).ok()?;
-            let tree = FileAnalyzer::parse_file_content(&content, &file.language).ok()?;
-            let builder = crate::control_flow::CfgBuilder::new(&file.language);
-            let cfg = builder.build_cfg(&tree).ok()?;
-            let calls = cfg.call_sequence();
-            if !calls.is_empty() {
-                Some(calls)
-            } else {
-                None
-            }
-        })();
-
-        // Simple heuristic fallback for basic calls - look for patterns in the file
-        let simple_calls: Option<Vec<(String, String)>> = (|| {
-            use crate::analysis_common::FileAnalyzer;
-            if file.path.exists() {
-                let content = std::fs::read_to_string(&file.path).ok()?;
-                let tree = FileAnalyzer::parse_file_content(&content, &file.language).ok()?;
-
-                let mut calls = Vec::new();
-                // Simple heuristic: look for function calls in the syntax tree
-                walk_tree_for_calls(&tree, tree.inner().root_node(), &mut calls);
-                if !calls.is_empty() {
-                    Some(calls)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        })();
-
-        if let Some(calls) = calls_from_cfg {
-            // Use CFG calls
-            if let Some(caller) = funcs.first() {
-                let caller_id = Self::safe_ident(&caller.name);
-                for callee in calls {
-                    let _ = writeln!(&mut out, "  {}->>{}: call", caller_id, Self::safe_ident(&callee));
-                }
-            }
-        } else if let Some(simple_calls_data) = simple_calls {
-            // Use simple calls
-            for (caller_name, callee_name) in simple_calls_data {
-                if funcs.iter().any(|f| f.name == caller_name) && funcs.iter().any(|f| f.name == callee_name) {
-                    let _ = writeln!(&mut out, "  {}->>{}: call", Self::safe_ident(&caller_name), Self::safe_ident(&callee_name));
-                }
-            }
-        } else if funcs.len() >= 2 {
-            // Fallback: adjacent functions
-            for w in funcs.windows(2) {
-                let a = Self::safe_ident(&w[0].name);
-                let b = Self::safe_ident(&w[1].name);
-                let _ = writeln!(&mut out, "  {}->>{}: call", a, b);
-            }
-        }
-        out
-    }
-
-    fn build_control_flow(file: &crate::analyzer::FileInfo) -> String {
-        // Heuristic control flow based on symbol list
-        let mut out = String::new();
-        let _ = writeln!(&mut out, "  start([Start])\n  end([End])\n  start --> F0");
-        for (i, s) in file.symbols.iter().enumerate() {
-            let id = format!("F{}", i);
-            let _ = writeln!(&mut out, "  {}([{}])", id, html_escape(&s.name));
-            if i + 1 < file.symbols.len() {
-                let next = format!("F{}", i + 1);
-                let _ = writeln!(&mut out, "  {} --> {}", id, next);
-            } else {
-                let _ = writeln!(&mut out, "  {} --> end", id);
-            }
-        }
-
-        // Build CFG-based flowchart for better accuracy if possible (disabled in fallback)
-        // Leaving heuristic fallback only here to avoid duplicate logic
-
-        out
-    }
-
-    fn build_sequence_or_flow_blocks(file: &crate::analyzer::FileInfo, rels: &str, root_path: &Path) -> String {
-        // Build CFG once; use it to decide branching and to render flow if available
-        let (flow_from_cfg, has_branch) = (|| {
-            use crate::analysis_common::FileAnalyzer;
-            let abs_path = if file.path.is_absolute() { file.path.clone() } else { root_path.join(&file.path) };
-            let content = std::fs::read_to_string(&abs_path).ok()?;
-            let tree = FileAnalyzer::parse_file_content(&content, &file.language).ok()?;
-            let builder = crate::control_flow::CfgBuilder::new(&file.language);
-            let cfg = builder.build_cfg(&tree).ok()?;
-            // Determine branching from CFG
-            let has_branch = !cfg.decision_points().is_empty();
-            // Render a simple flowchart including Branch and Call nodes
-            let mut out = String::new();
-            use std::fmt::Write as _;
-            // Helpers: sanitize labels and shorten branch kinds for Mermaid reliability
-            fn sanitize_label(s: &str) -> String {
-                let mut t = String::with_capacity(s.len());
-                for ch in s.chars() {
-                    match ch {
-                        'a'..='z' | 'A'..='Z' | '0'..='9' | ' ' | '_' | '-' => t.push(ch),
-                        ':' | '.' | '/' | '\\' => t.push('_'),
-                        _ => {}
-                    }
-                }
-                if t.is_empty() { "node".to_string() } else { t }
-            }
-            fn short_branch(kind: &str) -> String {
-                let k = kind.to_lowercase();
-                if k.contains("if") { "if".to_string() }
-                else if k.contains("match") { "match".to_string() }
-                else if k.contains("switch") { "switch".to_string() }
-                else if k.contains("for") { "for".to_string() }
-                else if k.contains("while_let") { "while let".to_string() }
-                else if k.contains("while") { "while".to_string() }
-                else if k.contains("loop") { "loop".to_string() }
-                else { sanitize_label(kind) }
-            }
-            let _ = writeln!(&mut out, "  S([Start])\n  E([End])\n  S --> N0");
-            let mut idx = 0usize;
-            for n in cfg.graph.node_indices() {
-                match &cfg.graph[n] {
-                    crate::control_flow::CfgNodeType::Branch { node_type, .. } => {
-                        let label = short_branch(node_type);
-                        let _ = writeln!(&mut out, "  N{}([{}])", idx, label);
-                        // Include original node_type as a Mermaid comment to aid tests/search
-                        let _ = writeln!(&mut out, "  %% node_type: {}", node_type);
-                        if label == "if" || label == "match" || label == "switch" {
-                            if idx > 0 {
-                                let _ = writeln!(&mut out, "  N{} -->|true| N{}", idx-1, idx);
-                                let _ = writeln!(&mut out, "  N{} -->|false| N{}", idx-1, idx);
-                            } else {
-                                // First branch after Start: show labeled edges from S to N0
-                                let _ = writeln!(&mut out, "  S -->|true| N0");
-                                let _ = writeln!(&mut out, "  S -->|false| N0");
-                            }
-                        } else if idx > 0 {
-                            let _ = writeln!(&mut out, "  N{} --> N{}", idx-1, idx);
-                        }
-                        idx += 1;
-                    }
-                    crate::control_flow::CfgNodeType::Call { function_name, .. } => {
-                        let _ = writeln!(&mut out, "  N{}([call {}])", idx, sanitize_label(function_name));
-                        if idx > 0 { let _ = writeln!(&mut out, "  N{} --> N{}", idx-1, idx); }
-                        idx += 1;
-                    }
-                    _ => {}
-                }
-            }
-            if idx > 0 { let _ = writeln!(&mut out, "  N{} --> E", idx-1); } else { let _ = writeln!(&mut out, "  N0 --> E"); }
-            Some((out, has_branch))
-        })().unzip();
-
-        let flow_opt: Option<String> = flow_from_cfg; // first of tuple
-        let has_branch = has_branch.unwrap_or_else(|| Self::file_has_branching(file));
-        let multi_funcs = file.symbols.iter().filter(|s| s.kind.contains("fn") || s.kind.contains("function")).count() >= 2;
-        // Short helper snippets explaining how to read diagrams
-        let help_cf = "<div class=\"diagram-help\"><strong>How to read Control Flow:</strong> boxes are Branch/Call nodes; arrows show execution; <code>true/false</code> edge labels indicate decision outcomes; <code>repeat</code> labels mark loop back edges; Start/End denote entry/exit.</div>";
-        let help_seq = "<div class=\"diagram-help\"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the \"call\" label is a generic action description.</div>";
-
-        match (has_branch, multi_funcs) {
-            (true, true) => format!(
-                "<details class=\"card\" id=\"control-flow\"><summary>Control Flow</summary>{help_cf}<div class=\"mermaid\">flowchart TB\n{flow}\n</div></details>\n\
-                 <details class=\"card\" id=\"call-sequence\"><summary>Call Sequence</summary>{help_seq}<div class=\"mermaid\">sequenceDiagram\n{seq}\n</div></details>",
-                help_cf = help_cf,
-                help_seq = help_seq,
-                flow = flow_opt.unwrap_or_else(|| Self::build_control_flow(file)),
-                seq = Self::build_sequence_diagram(file, root_path),
-            ),
-            (true, false) => {
-                let flow = flow_opt.unwrap_or_else(|| Self::build_control_flow(file));
-                format!(
-                    "<details class=\"card\" id=\"control-flow\"><summary>Control Flow</summary>{help_cf}<div class=\"mermaid\">flowchart TB\n{flow}\n</div></details>",
-                    help_cf = help_cf,
-                    flow = flow,
-                )
-            },
-            (false, true) => format!(
-                "<details class=\"card\" id=\"call-sequence\"><summary>Call Sequence</summary>{help_seq}<div class=\"mermaid\">sequenceDiagram\n{seq}\n</div></details>\n\
-                 <details class=\"card\" id=\"class-diagram\"><summary>Class/Module Diagram</summary><div class=\"mermaid\">classDiagram\n{rels}\n</div></details>",
-                help_seq = help_seq,
-                seq = Self::build_sequence_diagram(file, root_path),
-                rels = rels,
-            ),
-            (false, false) => format!(
-                "<details class=\"card\" id=\"class-diagram\"><summary>Class/Module Diagram</summary><div class=\"mermaid\">classDiagram\n{rels}\n</div></details>",
-                rels = rels,
-            ),
-        }
-    }
+    
 
     fn generate_file_ai_insights_sync(&self, file: &crate::analyzer::FileInfo) -> Result<String> {
         use crate::ai::types::{AIRequest, AIFeature};
         let title = format!("File: {}", file.path.display());
         let mut html = String::new();
         use std::fmt::Write as _;
-        // Build service (prefer Groq if configured via env)
-        let mut builder = crate::ai::service::AIServiceBuilder::new();
-        let use_groq = std::env::var("AI_GROQ_API_KEY").is_ok() || std::env::var("GROQ_API_KEY").is_ok();
-        if use_groq {
-            use crate::ai::config::{ProviderConfig, ModelConfig, RateLimitConfig, RetryConfig};
-            let api_key = std::env::var("AI_GROQ_API_KEY").or_else(|_| std::env::var("GROQ_API_KEY")).ok();
-            let groq_cfg = ProviderConfig {
-                enabled: true,
-                api_key,
-                base_url: Some("https://api.groq.com/openai/v1".to_string()),
-                organization: None,
-                models: vec![ModelConfig {
-                    name: "openai/gpt-oss-120b".to_string(),
-                    context_length: 8192,
-                    max_tokens: 8001,
-                    supports_streaming: false,
-                    cost_per_token: None,
-                    supported_features: vec![
-                        crate::ai::types::AIFeature::DocumentationGeneration,
-                        crate::ai::types::AIFeature::CodeExplanation,
-                        crate::ai::types::AIFeature::SecurityAnalysis,
-                        crate::ai::types::AIFeature::RefactoringSuggestions,
-                        crate::ai::types::AIFeature::QualityAssessment,
-                    ],
-                }],
-                default_model: "openai/gpt-oss-120b".to_string(),
-                timeout: std::time::Duration::from_secs(30),
-                rate_limit: RateLimitConfig::default(),
-                retry: RetryConfig::default(),
-            };
-            builder = builder.with_provider(crate::ai::types::AIProvider::Groq, groq_cfg)
-                .with_default_provider(crate::ai::types::AIProvider::Groq);
-        } else {
-            builder = builder.with_default_provider(crate::ai::types::AIProvider::OpenAI);
-        }
-            let builder = if self.config.ai_use_mock
-                || (!use_groq && std::env::var("OPENAI_API_KEY").is_err() && std::env::var("AI_OPENAI_API_KEY").is_err())
-            {
-                builder.with_mock_providers(true)
-            } else { builder };
-        let rt = tokio::runtime::Runtime::new().map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("tokio: {}", e), context: None })?;
-        let service = rt.block_on(async { builder.build().await }).map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("ai build: {}", e), context: None })?;
+        // Ensure a single AI runtime/service
+        self.ensure_ai()?;
+        let rt = self.ai_rt.borrow();
+        let rt = rt.as_ref().expect("ai runtime initialized");
+        let service = self.ai_service.borrow();
+        let service = service.as_ref().expect("ai service initialized");
         if self.config.ai_json_mode {
             // Ask for structured JSON output per schema
             let mut prompt = String::new();
@@ -1205,48 +990,11 @@ document.addEventListener('DOMContentLoaded', function(){{
         if !self.config.ai_enabled { return (String::new(), vec![]); }
 
         if self.config.ai_json_mode {
-            // Build service (prefer Groq if configured via env)
-            let mut builder = crate::ai::service::AIServiceBuilder::new();
-            let use_groq = std::env::var("AI_GROQ_API_KEY").is_ok() || std::env::var("GROQ_API_KEY").is_ok();
-            if use_groq {
-                use crate::ai::config::{ProviderConfig, ModelConfig, RateLimitConfig, RetryConfig};
-                let api_key = std::env::var("AI_GROQ_API_KEY").or_else(|_| std::env::var("GROQ_API_KEY")).ok();
-                let groq_cfg = ProviderConfig {
-                    enabled: true,
-                    api_key,
-                    base_url: Some("https://api.groq.com/openai/v1".to_string()),
-                    organization: None,
-                    models: vec![ModelConfig {
-                        name: "openai/gpt-oss-120b".to_string(),
-                        context_length: 8192,
-                        max_tokens: 8001,
-                        supports_streaming: false,
-                        cost_per_token: None,
-                        supported_features: vec![
-                            crate::ai::types::AIFeature::DocumentationGeneration,
-                            crate::ai::types::AIFeature::CodeExplanation,
-                            crate::ai::types::AIFeature::SecurityAnalysis,
-                            crate::ai::types::AIFeature::RefactoringSuggestions,
-                            crate::ai::types::AIFeature::QualityAssessment,
-                        ],
-                    }],
-                    default_model: "openai/gpt-oss-120b".to_string(),
-                    timeout: std::time::Duration::from_secs(30),
-                    rate_limit: RateLimitConfig::default(),
-                    retry: RetryConfig::default(),
-                };
-                builder = builder.with_provider(crate::ai::types::AIProvider::Groq, groq_cfg)
-                    .with_default_provider(crate::ai::types::AIProvider::Groq);
-            } else {
-                builder = builder.with_default_provider(crate::ai::types::AIProvider::OpenAI);
-            }
-            let builder = if self.config.ai_use_mock
-                || (!use_groq && std::env::var("OPENAI_API_KEY").is_err() && std::env::var("AI_OPENAI_API_KEY").is_err())
-            {
-                builder.with_mock_providers(true)
-            } else { builder };
-            if let Ok(rt) = tokio::runtime::Runtime::new() {
-                if let Ok(service) = rt.block_on(async { builder.build().await }) {
+            if self.ensure_ai().is_ok() {
+                let rt_b = self.ai_rt.borrow();
+                let rt = rt_b.as_ref().expect("ai runtime initialized");
+                let svc_b = self.ai_service.borrow();
+                let service = svc_b.as_ref().expect("ai service initialized");
                     use std::fmt::Write as _;
                     let mut prompt = String::new();
                     let _ = writeln!(&mut prompt, "Provide structured wiki documentation for file '{}'.", file.path.display());
@@ -1262,7 +1010,6 @@ document.addEventListener('DOMContentLoaded', function(){{
                             return (html, doc.tags.unwrap_or_default());
                         }
                     }
-                }
             }
         }
 
@@ -1292,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', function(){{
     }
     fn safe_ident(s: &str) -> String { Self::anchorize(s).replace('-', "_") }
 
+    /* moved to templates.rs
     fn build_nav(&self, files: &[crate::analyzer::FileInfo], link_prefix: &str) -> String {
         use std::collections::BTreeMap;
         #[derive(Default)]
@@ -1347,8 +1095,10 @@ document.addEventListener('DOMContentLoaded', function(){{
         }
         out
     }
+    */
 
     /// Build sidebar HTML with search input, filters, and links
+    /* moved to templates.rs
     fn build_sidebar_with_search(
         &self,
         analysis: &AnalysisResult,
@@ -1396,17 +1146,12 @@ document.addEventListener('DOMContentLoaded', function(){{
 
         nav_content
     }
+    */
 
-    fn write_search_index(&self, path: &Path, entries: &[SearchEntry]) -> Result<()> {
-        let json = serde_json::to_string(entries).map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("serde error: {}", e), context: None })?;
-        fs::write(path, &json)?;
-        // Also emit a JS file to avoid file:// fetch/CORS issues
-        let js_path = path.with_file_name("search_index.js");
-        let js_content = format!("window.SEARCH_INDEX = {};", json);
-        fs::write(js_path, js_content).map_err(|e| e.into())
-    }
+    // write_search_index moved to search.rs
 
     /// Write a security overview page
+    /* moved to templates.rs
     fn write_security_overview_page(&self, out: &Path, security: &security_enhancements::SecurityAnalysisResult) -> Result<()> {
         let mut content = String::new();
         let _ = writeln!(&mut content, "<!doctype html>");
@@ -1414,9 +1159,9 @@ document.addEventListener('DOMContentLoaded', function(){{
         let _ = writeln!(&mut content, "<head>");
         let _ = writeln!(&mut content, "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
         let _ = writeln!(&mut content, "<title>Security Overview - {}</title>", html_escape(&self.config.site_title));
-        let _ = writeln!(&mut content, "<link rel=\"stylesheet\" href=\"assets/style.css\">");
+        let _ = writeln!(&mut content, "<link rel=\\\"stylesheet\\\" href=\\\"assets/style.css\\\">");
         let _ = writeln!(&mut content, "<script src=\\\"assets/mermaid.js\\\"></script>");
-        let _ = writeln!(&mut content, "<script>(function initMermaidWhenReady(){{ function ready(){{ try {{ if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) {{ mermaid.initialize({{ startOnLoad: true, theme: 'dark' }}); return true; }} }} catch(e){{}} return false; }} if (!ready()) {{ let i=0; const t=setInterval(()=>{{ if (ready() || ++i>50) clearInterval(t); }}, 120); }} }})();\ntry {{ if (window.mermaid && mermaid.parse) {{ document.querySelectorAll('.mermaid').forEach(function(el){{ try {{ mermaid.parse(el.textContent); }} catch(e) {{ var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); }} }}); }} }} catch(e) {{}}</script>");
+        let _ = writeln!(&mut content, "<script src=\\\"assets/main.js\\\"></script>");
         let _ = writeln!(&mut content, "</head>");
         let _ = writeln!(&mut content, "<body>");
         let _ = writeln!(&mut content, "<header><h1>Security Overview</h1><button id=\\\"themeToggle\\\" class=\\\"theme-toggle\\\"></button></header>");
@@ -1461,13 +1206,14 @@ document.addEventListener('DOMContentLoaded', function(){{
             let _ = writeln!(&mut content, "</div>");
         }
 
-        // Theme toggle
-        let _ = writeln!(&mut content, "<script>(function(){{ try {{ const key='wiki_theme'; const root=document.documentElement; const btn=document.getElementById('themeToggle'); function apply(t){{ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t);}} const saved=localStorage.getItem(key)||'dark'; apply(saved); if (btn) btn.addEventListener('click', ()=>{{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); }}); }} catch(e){{}} }})();</script>");
+        // Theme handled by main.js
         let _ = writeln!(&mut content, "</section></main></body></html>");
         fs::write(out.join("security.html"), content).map_err(|e| e.into())
     }
+    */
 
     /// Write security hotspots page
+    /* moved to templates.rs
     fn write_security_hotspots_page(&self, out: &Path, security: &security_enhancements::SecurityAnalysisResult) -> Result<()> {
         let mut content = String::new();
         let _ = writeln!(&mut content, "<!doctype html>");
@@ -1475,9 +1221,9 @@ document.addEventListener('DOMContentLoaded', function(){{
         let _ = writeln!(&mut content, "<head>");
         let _ = writeln!(&mut content, "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
         let _ = writeln!(&mut content, "<title>Security Hotspots - {}</title>", html_escape(&self.config.site_title));
-        let _ = writeln!(&mut content, "<link rel=\"stylesheet\" href=\"assets/style.css\">");
+        let _ = writeln!(&mut content, "<link rel=\\\"stylesheet\\\" href=\\\"assets/style.css\\\">");
         let _ = writeln!(&mut content, "<script src=\\\"assets/mermaid.js\\\"></script>");
-        let _ = writeln!(&mut content, "<script>(function initMermaidWhenReady(){{ function ready(){{ try {{ if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) {{ mermaid.initialize({{ startOnLoad: true, theme: 'dark' }}); return true; }} }} catch(e){{}} return false; }} if (!ready()) {{ let i=0; const t=setInterval(()=>{{ if (ready() || ++i>50) clearInterval(t); }}, 120); }} }})();\ntry {{ if (window.mermaid && mermaid.parse) {{ document.querySelectorAll('.mermaid').forEach(function(el){{ try {{ mermaid.parse(el.textContent); }} catch(e) {{ var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); }} }}); }} }} catch(e) {{}}</script>");
+        let _ = writeln!(&mut content, "<script src=\\\"assets/main.js\\\"></script>");
         let _ = writeln!(&mut content, "</head>");
         let _ = writeln!(&mut content, "<body>");
         let _ = writeln!(&mut content, "<header><h1>Security Hotspots</h1><button id=\\\"themeToggle\\\" class=\\\"theme-toggle\\\"></button></header>");
@@ -1507,13 +1253,14 @@ document.addEventListener('DOMContentLoaded', function(){{
             let _ = writeln!(&mut content, "</div>");
         }
 
-        // Theme toggle
-        let _ = writeln!(&mut content, "<script>(function(){{ try {{ const key='wiki_theme'; const root=document.documentElement; const btn=document.getElementById('themeToggle'); function apply(t){{ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t);}} const saved=localStorage.getItem(key)||'dark'; apply(saved); if (btn) btn.addEventListener('click', ()=>{{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); }}); }} catch(e){{}} }})();</script>");
+        // Theme handled by main.js
         let _ = writeln!(&mut content, "</section></main></body></html>");
         fs::write(out.join("security_hotspots.html"), content).map_err(|e| e.into())
     }
+    */
 
     /// Generate security overview block for inclusion in main page
+    /* moved to templates.rs
     fn generate_security_overview_block(&self, security: &security_enhancements::SecurityAnalysisResult) -> String {
         let mut block = String::new();
         let _ = writeln!(&mut block, "<div class=\"card\">");
@@ -1527,8 +1274,10 @@ document.addEventListener('DOMContentLoaded', function(){{
         let _ = writeln!(&mut block, "</div>");
         block
     }
+    */
 
     /// Update write_file_page signature and implementation
+    /* moved to templates.rs
     fn write_file_page(&self, page_path: &Path, title: &str, description: &str, file: &crate::analyzer::FileInfo, root_path: &Path, security_block: &str, nav_content: &str, ai_block_html: &str) -> Result<()> {
         let mut rels = String::new();
         for sym in &file.symbols {
@@ -1538,6 +1287,12 @@ document.addEventListener('DOMContentLoaded', function(){{
         // Prepare source content for collapsible code snippets
         let full_path = root_path.join(&file.path);
         let source = fs::read_to_string(&full_path).unwrap_or_default();
+        // Absolute path for editor link (whole file)
+        let abs_file = {
+            let p = root_path.join(&file.path);
+            std::fs::canonicalize(&p).unwrap_or(p)
+        };
+        let vscode_file_href = format!("vscode://file/{}", url_encode_path(&abs_file));
         let src_lines: Vec<&str> = source.lines().collect();
 
         // Build grouped symbol sections for better UX
@@ -1672,6 +1427,28 @@ document.addEventListener('DOMContentLoaded', function(){{
         if !security_section.is_empty() { toc_items.push("<li><a href=\\\"#security-analysis\\\">Security Analysis</a></li>".to_string()); }
         let toc_html = format!("<div class=\\\"card\\\"><h3>Contents</h3><ul>{}</ul></div>", toc_items.join("\n"));
 
+        // Build breadcrumbs from file.path components
+        let breadcrumbs_html = {
+            use std::fmt::Write as _;
+            let mut br = String::new();
+            let _ = write!(&mut br, "<nav class=\\\"breadcrumbs\\\"><a href=\\\"../index.html\\\">Home</a>");
+            let parts: Vec<String> = file
+                .path
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy().to_string())
+                .collect();
+            if !parts.is_empty() {
+                for (i, part) in parts.iter().enumerate() {
+                    let _ = write!(&mut br, " <span class=\\\"sep\\\">/</span> ");
+                    if i + 1 == parts.len() { let _ = write!(&mut br, "<strong>{}</strong>", html_escape(part)); }
+                    else { let _ = write!(&mut br, "<span>{}</span>", html_escape(part)); }
+                }
+            }
+            let _ = write!(&mut br, "<a class=\\\"open-in-editor right\\\" href=\\\"{}\\\" title=\\\"Open file in VS Code\\\">Open in VS Code</a>", html_escape(&vscode_file_href));
+            let _ = write!(&mut br, "</nav>");
+            br
+        };
+
         let content = format!(
             r#"<!doctype html>
 <html>
@@ -1684,35 +1461,7 @@ document.addEventListener('DOMContentLoaded', function(){{
 <script src="../assets/search.js"></script>
 <script src="../assets/mermaid.js"></script>
 <script src="../assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){{
-  function ready(){{ try {{ if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) {{ mermaid.initialize({{ startOnLoad: true, theme: 'dark' }}); return true; }} }} catch(e){{}} return false; }}
-  if (!ready()) {{ let i=0; const t=setInterval(()=>{{ if (ready() || ++i>50) clearInterval(t); }}, 120); }}
-}})();
-try {{ if (window.hljs) {{ hljs.highlightAll(); }} }} catch(e) {{ /* ignore */ }}
-// Theme toggle with persistence
-(function setupTheme(){{
-  try {{
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){{ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }}
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); }});
-  }} catch(e){{}}
-}})();
-try {{ if (window.mermaid && mermaid.parse) {{ document.querySelectorAll('.mermaid').forEach(function(el){{ try {{ mermaid.parse(el.textContent); }} catch(e) {{ var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); }} }}); }} }} catch(e) {{}}
-document.addEventListener('DOMContentLoaded', function(){{
-  document.querySelectorAll('.copy-btn').forEach(function(btn){{
-    btn.addEventListener('click', function(){{
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) {{ navigator.clipboard.writeText(text); }}
-      else {{ var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{{document.execCommand('copy');}}catch(e){{}} document.body.removeChild(ta); }}
-      btn.textContent='Copied'; setTimeout(function(){{ btn.textContent='Copy'; }},1200);
-    }});
-  }});
-}});
-</script>
+<script src="../assets/main.js"></script>
 </head>
 <body>
 <header><h1>{title}</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
@@ -1721,6 +1470,7 @@ document.addEventListener('DOMContentLoaded', function(){{
 {nav}
 </nav>
 <section class="article">
+{breadcrumbs}
 <p>{description}</p>
 {ai_summary}
 {toc}
@@ -1741,66 +1491,12 @@ document.addEventListener('DOMContentLoaded', function(){{
             symbols_block = symbols_block,
             security_section = security_section,
             nav = nav_content,
+            breadcrumbs = breadcrumbs_html,
         );
         fs::write(page_path, content).map_err(|e| e.into())
     }
+    */
 
-    fn render_ai_doc_file(&self, _file: &crate::analyzer::FileInfo, doc: &crate::wiki::ai_schema::AiDocFile) -> String {
-        // Minimal HTML rendering for AI JSON doc
-        let mut out = String::new();
-        use std::fmt::Write as _;
-        let _ = writeln!(&mut out, "<div class=\"card ai\"><h3>AI Commentary</h3>");
-        if let Some(ov) = &doc.overview {
-            let _ = writeln!(&mut out, "<h4>Overview</h4>{}", markdown_to_html(ov));
-        }
-if let Some(items) = &doc.deep_dive { if !items.is_empty() { let _ = writeln!(&mut out, "<h4>Deep Dive</h4><ul>");
-    for i in items {
-        let name = i.name.as_deref().unwrap_or("");
-        let kind = i.kind.as_deref().unwrap_or("");
-        let sum = i.summary.as_deref().unwrap_or("");
-        if !name.is_empty() {
-            let anchor = format!("#symbol-{}", Self::anchorize(name));
-            let _ = writeln!(&mut out, "<li><strong>{}</strong> <a href=\"{}\">{}</a><br>{}</li>", html_escape(kind), anchor, html_escape(name), html_escape(sum));
-        } else {
-            let _ = writeln!(&mut out, "<li><strong>{}</strong><br>{}</li>", html_escape(kind), html_escape(sum));
-        }
-    }
-    let _ = writeln!(&mut out, "</ul>"); }}
-if let Some(apis) = &doc.key_apis { if !apis.is_empty() { let _ = writeln!(&mut out, "<h4>Key APIs</h4><ul>");
-    for a in apis {
-        let sig = a.signature.as_deref().unwrap_or("");
-        let useg = a.usage.as_deref().unwrap_or("");
-        let _ = writeln!(&mut out, "<li><code>{}</code><br><small>{}</small></li>", html_escape(sig), html_escape(useg));
-    }
-    let _ = writeln!(&mut out, "</ul>"); }}
-if let Some(exs) = &doc.examples { if !exs.is_empty() { let _ = writeln!(&mut out, "<h4>Examples</h4>");
-    for e in exs {
-        let lang = e.language.as_deref().unwrap_or("text");
-        let code = e.code.as_deref().unwrap_or("");
-        let expl = e.explanation.as_deref().unwrap_or("");
-        let title = e.title.as_deref().unwrap_or("");
-        if !title.is_empty() { let _ = writeln!(&mut out, "<h5>{}</h5>", html_escape(title)); }
-        let _ = writeln!(&mut out, "<div class=\"card\"><pre><code class=\"lang-{}\">{}</code></pre>{}</div>", html_escape(lang), html_escape(code), markdown_to_html(expl));
-    }
-}}
-if let Some(sec) = &doc.security { if sec.risks.as_ref().map(|v| !v.is_empty()).unwrap_or(false) || sec.mitigations.as_ref().map(|v| !v.is_empty()).unwrap_or(false) {
-    let _ = writeln!(&mut out, "<h4>Security</h4>");
-    if let Some(risks) = &sec.risks { let _ = writeln!(&mut out, "<strong>Risks</strong><ul>"); for r in risks { let _ = writeln!(&mut out, "<li>{}</li>", html_escape(r)); } let _ = writeln!(&mut out, "</ul>"); }
-    if let Some(mit) = &sec.mitigations { let _ = writeln!(&mut out, "<strong>Mitigations</strong><ul>"); for m in mit { let _ = writeln!(&mut out, "<li>{}</li>", html_escape(m)); } let _ = writeln!(&mut out, "</ul>"); }
-}}
-if let Some(perf) = &doc.performance { if perf.concerns.as_ref().map(|v| !v.is_empty()).unwrap_or(false) || perf.tips.as_ref().map(|v| !v.is_empty()).unwrap_or(false) {
-    let _ = writeln!(&mut out, "<h4>Performance</h4>");
-    if let Some(cs) = &perf.concerns { let _ = writeln!(&mut out, "<strong>Concerns</strong><ul>"); for c in cs { let _ = writeln!(&mut out, "<li>{}</li>", html_escape(c)); } let _ = writeln!(&mut out, "</ul>"); }
-    if let Some(ts) = &perf.tips { let _ = writeln!(&mut out, "<strong>Tips</strong><ul>"); for t in ts { let _ = writeln!(&mut out, "<li>{}</li>", html_escape(t)); } let _ = writeln!(&mut out, "</ul>"); }
-}}
-        if let Some(tags) = &doc.tags { if !tags.is_empty() { let _ = writeln!(&mut out, "<h4>Tags</h4><p>{}</p>", html_escape(&tags.join(", "))); }}
-        if let Some(rel) = &doc.related { if !rel.is_empty() { let _ = writeln!(&mut out, "<h4>Related</h4><ul>"); for r in rel { let p=r.path.as_deref().unwrap_or(""); let reason=r.reason.as_deref().unwrap_or("");
-            if !p.is_empty() { let link = format!("pages/{}.html", sanitize_filename(&std::path::PathBuf::from(p))); let _ = writeln!(&mut out, "<li><a href=\"{}\">{}</a> - {}</li>", html_escape(&link), html_escape(p), html_escape(reason)); }
-            else { let _ = writeln!(&mut out, "<li>{}</li>", html_escape(reason)); }
-        } let _ = writeln!(&mut out, "</ul>"); }}
-        let _ = writeln!(&mut out, "</div>");
-        out
-    }
 
     /// Generate security enhancements block for a file
     fn generate_file_security_block(&self, _file: &crate::analyzer::FileInfo, hotspots: &[security_enhancements::SecurityHotspot], owasp_rec: &str) -> String {
@@ -1831,19 +1527,10 @@ if let Some(perf) = &doc.performance { if perf.concerns.as_ref().map(|v| !v.is_e
     }
 }
 
-#[derive(serde::Serialize)]
-struct SearchEntry {
-    title: String,
-    path: String,
-    description: String,
-    symbols: Vec<String>,
-    language: String,
-    kinds: Vec<String>,
-    tags: Vec<String>,
-}
+// SearchEntry moved to search.rs
 
 impl WikiGenerator {
-    fn generate_ai_insights_sync(analysis: &AnalysisResult, use_mock: bool, _cfg_path: Option<&PathBuf>) -> Result<String> {
+    fn generate_ai_insights_sync(&self, analysis: &AnalysisResult, _use_mock: bool, _cfg_path: Option<&PathBuf>) -> Result<String> {
         // For now, use the AI service builder with mock providers unless networking is configured.
 
         // We assemble a compact context of the codebase and ask for a concise summary.
@@ -1879,50 +1566,11 @@ impl WikiGenerator {
             .with_temperature(0.2)
             .with_max_tokens(400);
 
-        // Build service (prefer Groq if configured via env)
-        let mut builder = crate::ai::service::AIServiceBuilder::new();
-        let use_groq = std::env::var("AI_GROQ_API_KEY").is_ok() || std::env::var("GROQ_API_KEY").is_ok();
-        if use_groq {
-            use crate::ai::config::{ProviderConfig, ModelConfig, RateLimitConfig, RetryConfig};
-            let api_key = std::env::var("AI_GROQ_API_KEY").or_else(|_| std::env::var("GROQ_API_KEY")).ok();
-            let groq_cfg = ProviderConfig {
-                enabled: true,
-                api_key,
-                base_url: Some("https://api.groq.com/openai/v1".to_string()),
-                organization: None,
-                models: vec![ModelConfig {
-                    name: "openai/gpt-oss-120b".to_string(),
-                    context_length: 8192,
-                    max_tokens: 8001,
-                    supports_streaming: false,
-                    cost_per_token: None,
-                    supported_features: vec![
-                        crate::ai::types::AIFeature::DocumentationGeneration,
-                        crate::ai::types::AIFeature::CodeExplanation,
-                        crate::ai::types::AIFeature::SecurityAnalysis,
-                        crate::ai::types::AIFeature::RefactoringSuggestions,
-                        crate::ai::types::AIFeature::QualityAssessment,
-                    ],
-                }],
-                default_model: "openai/gpt-oss-120b".to_string(),
-                timeout: std::time::Duration::from_secs(30),
-                rate_limit: RateLimitConfig::default(),
-                retry: RetryConfig::default(),
-            };
-            builder = builder.with_provider(crate::ai::types::AIProvider::Groq, groq_cfg)
-                .with_default_provider(crate::ai::types::AIProvider::Groq);
-        } else {
-            builder = builder.with_default_provider(crate::ai::types::AIProvider::OpenAI);
-        }
-        let builder = if use_mock
-            || (!use_groq && std::env::var("OPENAI_API_KEY").is_err() && std::env::var("AI_OPENAI_API_KEY").is_err())
-        {
-            builder.with_mock_providers(true)
-        } else { builder };
-
-        let rt = tokio::runtime::Runtime::new().map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("tokio: {}", e), context: None })?;
-        let service = rt.block_on(async { builder.build().await })
-            .map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("ai build: {}", e), context: None })?;
+        self.ensure_ai()?;
+        let rt_b = self.ai_rt.borrow();
+        let rt = rt_b.as_ref().expect("ai runtime initialized");
+        let svc_b = self.ai_service.borrow();
+        let service = svc_b.as_ref().expect("ai service initialized");
 
         let resp = rt.block_on(async { service.process_request(req).await })
             .map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("ai: {}", e), context: None })?;
@@ -1932,105 +1580,8 @@ impl WikiGenerator {
     }
 }
 
-fn sanitize_filename(p: &Path) -> String {
-    p.display().to_string().replace('/', "_").replace('\n', "_").replace(' ', "_")
-}
 
-fn url_encode_path(p: &Path) -> String {
-    let mut s = p.display().to_string();
-    // Normalize Windows backslashes to forward slashes for vscode://file
-    s = s.replace('\\', "/");
-    let mut out = String::with_capacity(s.len() + 8);
-    for b in s.bytes() {
-        let c = b as char;
-        let is_unreserved = c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~' | '/' | ':' );
-        if is_unreserved { out.push(c); }
-        else { out.push('%'); out.push_str(&format!("{:02X}", b)); }
-    }
-    out
-}
-
-fn html_escape(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for ch in s.chars() {
-        match ch {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#39;"),
-            _ => out.push(ch),
-        }
-    }
-    out
-}
-
-fn sanitize_display_code(s: &str) -> String {
-    let mut out = s.to_string();
-    // Replace common CDN references with local asset placeholders for display only
-    out = out.replace(
-        "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js",
-        "assets/mermaid.js",
-    );
-    out = out.replace(
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js",
-        "assets/hljs.js",
-    );
-    out = out.replace(
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css",
-        "assets/hljs.css",
-    );
-    // Broad fallbacks for jsDelivr and cdnjs if versions change
-    if out.contains("https://cdn.jsdelivr.net/npm/mermaid") {
-        out = out.replace("https://cdn.jsdelivr.net/npm/mermaid", "assets/mermaid.js");
-    }
-    if out.contains("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/") {
-        out = out.replace("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/", "assets/");
-    }
-    out
-}
-
-fn markdown_to_html(md: &str) -> String {
-    use pulldown_cmark::{html, Options, Parser};
-    let mut opts = Options::empty();
-    opts.insert(Options::ENABLE_TABLES);
-    opts.insert(Options::ENABLE_FOOTNOTES);
-    opts.insert(Options::ENABLE_STRIKETHROUGH);
-    opts.insert(Options::ENABLE_TASKLISTS);
-    let parser = Parser::new_ext(md, opts);
-    let mut out = String::new();
-    html::push_html(&mut out, parser);
-    out
-}
-
-fn build_simple_dependency_graph(analysis: &AnalysisResult) -> String {
-    // Very simple file-to-file graph using count only (no actual imports available here)
-    // We create a linear chain to visualize presence, avoiding heavy analysis.
-    let mut out = String::new();
-    let mut prev: Option<String> = None;
-    for f in &analysis.files {
-        let id = format!("N{}", crc32fast::hash(f.path.display().to_string().as_bytes()));
-        let _ = writeln!(&mut out, "  {}[{}]", id, f.path.display());
-        if let Some(p) = prev {
-            let _ = writeln!(&mut out, "  {} --> {}", p, id);
-        }
-        prev = Some(id);
-    }
-    out
-}
-
-fn build_simple_flow(file: &crate::analyzer::FileInfo) -> String {
-    // Flow from file to symbols to end
-    let mut out = String::new();
-    let file_id = "File";
-    let _ = writeln!(&mut out, "  {}([{}])", file_id, file.path.display());
-    for (i, s) in file.symbols.iter().enumerate() {
-        let node = format!("S{}", i);
-        let _ = writeln!(&mut out, "  {}([{} {}])", node, s.kind, s.name);
-        let _ = writeln!(&mut out, "  {} --> {}", file_id, node);
-    }
-    out
-}
+fn sanitize_display_code(s: &str) -> String { util::sanitize_display_code(s) }
 
 /// Simple AST traversal to find function calls and their contexts
 /// Much simpler implementation that works around tree-sitter API issues
@@ -2105,48 +1656,11 @@ fn walk_tree_for_calls(tree: &crate::tree::SyntaxTree, node: tree_sitter::Node, 
 impl WikiGenerator {
     fn generate_project_ai_block(&self, analysis: &AnalysisResult) -> Result<String> {
         if self.config.ai_json_mode {
-            // Build service (prefer Groq if configured via env)
-            let mut builder = crate::ai::service::AIServiceBuilder::new();
-            let use_groq = std::env::var("AI_GROQ_API_KEY").is_ok() || std::env::var("GROQ_API_KEY").is_ok();
-            if use_groq {
-                use crate::ai::config::{ProviderConfig, ModelConfig, RateLimitConfig, RetryConfig};
-                let api_key = std::env::var("AI_GROQ_API_KEY").or_else(|_| std::env::var("GROQ_API_KEY")).ok();
-                let groq_cfg = ProviderConfig {
-                    enabled: true,
-                    api_key,
-                    base_url: Some("https://api.groq.com/openai/v1".to_string()),
-                    organization: None,
-                    models: vec![ModelConfig {
-                        name: "openai/gpt-oss-120b".to_string(),
-                        context_length: 8192,
-                        max_tokens: 8001,
-                        supports_streaming: false,
-                        cost_per_token: None,
-                        supported_features: vec![
-                            crate::ai::types::AIFeature::DocumentationGeneration,
-                            crate::ai::types::AIFeature::CodeExplanation,
-                            crate::ai::types::AIFeature::SecurityAnalysis,
-                            crate::ai::types::AIFeature::RefactoringSuggestions,
-                            crate::ai::types::AIFeature::QualityAssessment,
-                        ],
-                    }],
-                    default_model: "openai/gpt-oss-120b".to_string(),
-                    timeout: std::time::Duration::from_secs(30),
-                    rate_limit: RateLimitConfig::default(),
-                    retry: RetryConfig::default(),
-                };
-                builder = builder.with_provider(crate::ai::types::AIProvider::Groq, groq_cfg)
-                    .with_default_provider(crate::ai::types::AIProvider::Groq);
-            } else {
-                builder = builder.with_default_provider(crate::ai::types::AIProvider::OpenAI);
-            }
-            let builder = if self.config.ai_use_mock
-                || (!use_groq && std::env::var("OPENAI_API_KEY").is_err() && std::env::var("AI_OPENAI_API_KEY").is_err())
-            {
-                builder.with_mock_providers(true)
-            } else { builder };
-            let rt = tokio::runtime::Runtime::new().map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("tokio: {}", e), context: None })?;
-            let service = rt.block_on(async { builder.build().await }).map_err(|e| crate::error::Error::Internal { component: "wiki".to_string(), message: format!("ai build: {}", e), context: None })?;
+            self.ensure_ai()?;
+            let rt_b = self.ai_rt.borrow();
+            let rt = rt_b.as_ref().expect("ai runtime initialized");
+            let svc_b = self.ai_service.borrow();
+            let service = svc_b.as_ref().expect("ai service initialized");
 
             // Prompt for structured JSON
             use std::fmt::Write as _;
@@ -2175,18 +1689,8 @@ impl WikiGenerator {
             return Ok(format!("<div class=\"card ai\"><h3>AI Commentary</h3>{}</div>", markdown_to_html(&resp.content)));
         }
         // Non-JSON mode: reuse existing summary flow
-        Self::generate_ai_insights_sync(analysis, self.config.ai_use_mock, self.config.ai_config_path.as_ref())
+        self.generate_ai_insights_sync(analysis, self.config.ai_use_mock, self.config.ai_config_path.as_ref())
     }
 
-    fn render_ai_project_doc(&self, doc: &crate::wiki::ai_schema::AiDocProject) -> String {
-        let mut out = String::new();
-        use std::fmt::Write as _;
-        let _ = writeln!(&mut out, "<div class=\"card ai\"><h3>AI Commentary</h3>");
-        if let Some(ov) = &doc.overview { let _ = writeln!(&mut out, "{}", markdown_to_html(ov)); }
-        if let Some(hi) = &doc.highlights { if !hi.is_empty() { let _ = writeln!(&mut out, "<h4>Highlights</h4><ul>"); for h in hi { let _ = writeln!(&mut out, "<li>{}</li>", html_escape(h)); } let _ = writeln!(&mut out, "</ul>"); }}
-        if let Some(im) = &doc.improvements { if !im.is_empty() { let _ = writeln!(&mut out, "<h4>Potential Improvements</h4><ul>"); for i in im { let _ = writeln!(&mut out, "<li>{}</li>", html_escape(i)); } let _ = writeln!(&mut out, "</ul>"); }}
-        if let Some(tags) = &doc.tags { if !tags.is_empty() { let _ = writeln!(&mut out, "<p><small>Tags: {}</small></p>", html_escape(&tags.join(", "))); }}
-        let _ = writeln!(&mut out, "</div>");
-        out
-    }
+    // render_ai_project_doc moved to ai_integration.rs
 }

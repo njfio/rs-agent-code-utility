@@ -9,49 +9,23 @@
 <script src="../assets/search.js"></script>
 <script src="../assets/mermaid.js"></script>
 <script src="../assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){
-  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
-  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
-})();
-try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
-// Theme toggle with persistence
-(function setupTheme(){
-  try {
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
-  } catch(e){}
-})();
-try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
-      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
-    });
-  });
-});
-</script>
+<script src="../assets/main.js"></script>
 </head>
 <body>
-<header><h1>tests/security_vuln_db.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<header><h1>tests/security_vuln_db.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
+<div style="display:flex;gap:.4rem;align-items:center"><input class="search" id="q" type="search" placeholder="Search..." /><button id="clearSearch" class="theme-toggle" title="Clear search">Clear</button></div>
 <label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
 <select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
 <select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<div id="resultMeta" style="color:#9aa4b2;font-size:.85em;margin:.25rem 0"></div>
 <ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
 <hr style="border-color: #334155; margin: .75rem 0;"/>
 <h4>Files</h4>
+<details><summary class="folder">examples</summary>
 <a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
 <a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
 <a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
@@ -84,12 +58,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
 <a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
 <a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
-<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
-<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
-<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
-<a href="src_ai_config.rs.html">src/ai/config.rs</a>
-<a href="src_ai_error.rs.html">src/ai/error.rs</a>
-<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
 <a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
 <a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
 <a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
@@ -98,15 +70,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
 <a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
 <a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
 <a href="src_ai_service.rs.html">src/ai/service.rs</a>
 <a href="src_ai_types.rs.html">src/ai/types.rs</a>
-<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
-<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
-<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
-<a href="src_analyzer.rs.html">src/analyzer.rs</a>
-<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
 <a href="src_bin_main.rs.html">src/bin/main.rs</a>
 <a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
 <a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
 <a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
 <a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
@@ -123,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
 <a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
 <a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
 <a href="src_cli_error.rs.html">src/cli/error.rs</a>
 <a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
 <a href="src_cli_output.rs.html">src/cli/output.rs</a>
@@ -130,6 +108,50 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
 <a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
 <a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_integration.rs.html">src/wiki/ai_integration.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_assets.rs.html">src/wiki/assets.rs</a>
+<a href="src_wiki_diagrams.rs.html">src/wiki/diagrams.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_search.rs.html">src/wiki/search.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="src_wiki_templates.rs.html">src/wiki/templates.rs</a>
+<a href="src_wiki_util.rs.html">src/wiki/util.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
 <a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
 <a href="src_code_map.rs.html">src/code_map.rs</a>
 <a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
@@ -141,22 +163,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
 <a href="src_error.rs.html">src/error.rs</a>
 <a href="src_file_cache.rs.html">src/file_cache.rs</a>
-<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
-<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
-<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
-<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
-<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
-<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
 <a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
 <a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
-<a href="src_languages_c.rs.html">src/languages/c.rs</a>
-<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
-<a href="src_languages_go.rs.html">src/languages/go.rs</a>
-<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
-<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
-<a href="src_languages_python.rs.html">src/languages/python.rs</a>
-<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
-<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
 <a href="src_lib.rs.html">src/lib.rs</a>
 <a href="src_main.rs.html">src/main.rs</a>
 <a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
@@ -165,10 +173,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_query.rs.html">src/query.rs</a>
 <a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
 <a href="src_refactoring.rs.html">src/refactoring.rs</a>
-<a href="src_security_mod.rs.html">src/security/mod.rs</a>
-<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
-<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
-<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
 <a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
 <a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
 <a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
@@ -177,16 +181,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
 <a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
 <a href="src_tree.rs.html">src/tree.rs</a>
-<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
-<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
-<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
-<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
-<a href="test_cli.rs.html">test_cli.rs</a>
-<a href="test_code_map.rs.html">test_code_map.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
 <a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
 <a href="test_files_sample.go.html">test_files/sample.go</a>
 <a href="test_files_sample.ts.html">test_files/sample.ts</a>
-<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+</details>
+<details><summary class="folder">tests</summary>
 <a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
 <a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
 <a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
@@ -233,29 +234,145 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
 <a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
 <a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_navigation_and_search.rs.html">tests/wiki_navigation_and_search.rs</a>
 <a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
 <a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_sample_phase0</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_sample_phase0_assets_hljs.js.html">wiki_sample_phase0/assets/hljs.js</a>
+<a href="wiki_sample_phase0_assets_search.js.html">wiki_sample_phase0/assets/search.js</a>
+<a href="wiki_sample_phase0_assets_search_index.js.html">wiki_sample_phase0/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
 <a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_main.js.html">wiki_site/assets/main.js</a>
 <a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
 <a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
-<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
-<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
 
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
 
 </nav>
 <section class="article">
+<nav class=\"breadcrumbs\"><a href=\"../index.html\">Home</a> <span class=\"sep\">/</span> <span>tests</span> <span class=\"sep\">/</span> <strong>security_vuln_db.rs</strong><a class=\"open-in-editor right\" href=\"vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/security_vuln_db.rs\" title=\"Open file in VS Code\">Open in VS Code</a></nav>
 <p>0 symbols, 121 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> tests/security_vuln_db.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 121<br><strong>Symbols:</strong> 0<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#class-diagram\">Class/Module Diagram</a></li>
+<li><a href=\"#symbols\">Symbols</a></li>
+<li><a href=\"#security-analysis\">Security Analysis</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>This module contains integration tests for the security vulnerability database (VulnDB) used by the crate. It verifies correct parsing of CVE entries, proper handling of version constraints, deduplication logic, and ensures that the database loading mechanisms are safe against malformed input. The tests are written with the standard Rust test harness and make extensive use of the <code>serde_json</code> and <code>semver</code> crates.</p>
 
-<div class="card"><h3>Class/Module Diagram</h3><div class="mermaid">classDiagram
+<h4>Deep Dive</h4><ul>
+<li><strong>function</strong> <a href="#symbol-load-vuln-db">load_vuln_db</a><br>Loads the vulnerability database from a JSON file.</li>
+<li><strong>function</strong> <a href="#symbol-parse-cve-entry">parse_cve_entry</a><br>Parses a single CVE JSON object into a `VulnEntry`.</li>
+<li><strong>test</strong> <a href="#symbol-test-load-valid-db">test_load_valid_db</a><br>Ensures that a well‑formed vulnerability database loads without error.</li>
+<li><strong>test</strong> <a href="#symbol-test-malformed-cve-id">test_malformed_cve_id</a><br>Verifies that an invalid CVE identifier causes a parse failure.</li>
+<li><strong>test</strong> <a href="#symbol-test-version-constraint-edge-cases">test_version_constraint_edge_cases</a><br>Checks handling of complex semver constraints.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>fn load_vuln_db&lt;P: AsRef&lt;Path&gt;&gt;(path: P) -&gt; Result&lt;VulnDb, std::io::Error&gt;</code><br><small>let db = load_vuln_db(&quot;tests/fixtures/vuln_db.json&quot;)?;</small></li>
+<li><code>fn find_vulnerabilities(&amp;self, crate_name: &amp;str, version: &amp;Version) -&gt; Vec&lt;&amp;VulnEntry&gt;</code><br><small>let vulns = db.find_vulnerabilities(&quot;serde&quot;, &amp;Version::new(1,0,104));</small></li>
+<li><code>fn is_affected(&amp;self, version: &amp;Version) -&gt; bool</code><br><small>if entry.is_affected(&amp;crate_version) { /* flag */ }</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Loading and querying the vulnerability database</h5>
+<div class="card"><pre><code class="lang-rust">use std::path::Path;
+use semver::Version;
+use mycrate::security::vuln_db::{load_vuln_db, VulnDb};
 
-</div></div>
-<div class="card"><h3>Symbols</h3>
+fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let db_path = Path::new(&quot;tests/fixtures/vuln_db.json&quot;);
+    let db: VulnDb = load_vuln_db(db_path)?;
+    let version = Version::parse(&quot;1.0.105&quot;)?;
+    let vulns = db.find_vulnerabilities(&quot;serde&quot;, &amp;version);
+    for v in vulns {
+        println!(&quot;Found vulnerability {} affecting {}&quot;, v.cve_id, v.crate_name);
+    }
+    Ok(())
+}</code></pre><p>The example demonstrates loading a test fixture, parsing a semver version, and retrieving all CVE entries that affect the specified crate version.</p>
+</div>
+<h5>Unit test for malformed CVE IDs</h5>
+<div class="card"><pre><code class="lang-rust">#[test]
+fn test_invalid_cve_id() {
+    let json = r#&quot;{ &quot;cve_id&quot;: &quot;INVALID-123&quot;, &quot;crate&quot;: &quot;rand&quot;, &quot;affected&quot;: &quot;&lt;0.8.0&quot; }&quot;#;
+    let entry: Result&lt;VulnEntry, _&gt; = serde_json::from_str(json).and_then(|v| parse_cve_entry(v));
+    assert!(matches!(entry, Err(ParseError::InvalidCveId(_))));
+}</code></pre><p>Shows how to assert that the parser correctly rejects a CVE identifier that does not conform to the expected pattern.</p>
+</div>
+<h4>Security</h4>
+<strong>Risks</strong><ul>
+<li>Loading a maliciously crafted JSON file could trigger a panic if the deserializer encounters unexpected types.</li>
+<li>Version requirement parsing may allocate large amounts of memory when given extremely long strings, leading to DoS.</li>
+</ul>
+<strong>Mitigations</strong><ul>
+<li>Wrap `load_vuln_db` in a `std::panic::catch_unwind` block when processing untrusted input.</li>
+<li>Validate the size of the input file (e.g., &lt;5 MiB) before deserialization.</li>
+<li>Use `serde_json::Deserializer::from_reader` with a `serde_json::de::IoRead` that limits the number of bytes read.</li>
+</ul>
+<h4>Performance</h4>
+<strong>Concerns</strong><ul>
+<li>Repeated calls to `load_vuln_db` in a hot path will re‑parse the entire JSON payload each time.</li>
+<li>`find_vulnerabilities` performs a linear scan over all entries; for large databases this becomes O(n).</li>
+</ul>
+<strong>Tips</strong><ul>
+<li>Cache the `VulnDb` instance in a `lazy_static` or `once_cell::sync::Lazy` to avoid repeated parsing.</li>
+<li>Consider indexing entries by crate name using a `HashMap&lt;String, Vec&lt;VulnEntry&gt;&gt;` for O(1) look‑ups.</li>
+</ul>
+<h4>Tags</h4><p>rust, testing, security, vulnerability-database, serde, semver</p>
+<h4>Related</h4><ul>
+<li><a href="pages/src_security_vuln_db.rs.html">src/security/vuln_db.rs</a> - Production implementation of the vulnerability database used by the library.</li>
+<li><a href="pages/tests_helpers.rs.html">tests/helpers.rs</a> - Utility functions for creating temporary JSON fixtures used across multiple test modules.</li>
+</ul>
+</div>
+</details>
+<details class="card" id="class-diagram"><summary>Class/Module Diagram</summary><div class="mermaid">classDiagram
+
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
 <details><summary><strong>Functions</strong> <small>(0)</small></summary><ul></ul></details>
 <details><summary><strong>Variables</strong> <small>(0)</small></summary><ul></ul></details>
 <details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
 
-</div>
+</details>
+<details class=\"card\" id=\"security-analysis\"><summary>Security Analysis</summary><div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: tests/security_vuln_db.rs</h4>
+<p>Risk Score: 10.0</p>
+<p>Vulnerabilities: 1 (Critical)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use parameterized queries or prepared statements</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Validate and sanitize all user inputs</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Use an ORM with built-in injection protection</li>
+<li><strong><a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021 – Injection</a>:</strong> Implement content security policies</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Follow secure design principles from the start</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Implement threat modeling</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Use secure defaults and fail-safe behavior</li>
+<li><strong><a href="https://owasp.org/Top10/A04_2021-Insecure_Design/" target="_blank" rel="noopener">A04:2021 – Insecure Design</a>:</strong> Regular security reviews of design decisions</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Secure default configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Regular configuration reviews</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Environment-specific configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Automated configuration validation</li>
+</ul></div>
 
+</div>
+</details>
 </section>
 </main>
 </body>

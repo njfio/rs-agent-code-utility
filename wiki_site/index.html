@@ -10,58 +10,23 @@
 <script src="assets/search.js"></script>
 <script src="assets/mermaid.js"></script>
 <script src="assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){
-  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
-  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
-})();
-try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
-// Pre-parse mermaid blocks to catch syntax errors and fallback to <pre>
-try {
-  if (window.mermaid && mermaid.parse) {
-    document.querySelectorAll('.mermaid').forEach(function(el){
-      try { mermaid.parse(el.textContent); } catch(e) {
-        var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre);
-      }
-    });
-  }
-} catch(e) {}
-// Theme toggle with persistence
-(function setupTheme(){
-  try {
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
-  } catch(e){}
-})();
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
-      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
-    });
-  });
-});
-</script>
+<script src="assets/main.js"></script>
 </head>
 <body>
-<header><h1>Project Wiki</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<header><h1>Project Wiki</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
+<div style="display:flex;gap:.4rem;align-items:center"><input class="search" id="q" type="search" placeholder="Search..." /><button id="clearSearch" class="theme-toggle" title="Clear search">Clear</button></div>
 <label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
 <select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
 <select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<div id="resultMeta" style="color:#9aa4b2;font-size:.85em;margin:.25rem 0"></div>
 <ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
 <hr style="border-color: #334155; margin: .75rem 0;"/>
 <h4>Files</h4>
+<details><summary class="folder">examples</summary>
 <a href="pages/examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
 <a href="pages/examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
 <a href="pages/examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
@@ -94,12 +59,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
 <a href="pages/examples_simple_validation.rs.html">examples/simple_validation.rs</a>
 <a href="pages/examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
-<a href="pages/src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
-<a href="pages/src_advanced_security.rs.html">src/advanced_security.rs</a>
-<a href="pages/src_ai_cache.rs.html">src/ai/cache.rs</a>
-<a href="pages/src_ai_config.rs.html">src/ai/config.rs</a>
-<a href="pages/src_ai_error.rs.html">src/ai/error.rs</a>
-<a href="pages/src_ai_mod.rs.html">src/ai/mod.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
 <a href="pages/src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
 <a href="pages/src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
 <a href="pages/src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
@@ -108,15 +71,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
 <a href="pages/src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
 <a href="pages/src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="pages/src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="pages/src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="pages/src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="pages/src_ai_mod.rs.html">src/ai/mod.rs</a>
 <a href="pages/src_ai_service.rs.html">src/ai/service.rs</a>
 <a href="pages/src_ai_types.rs.html">src/ai/types.rs</a>
-<a href="pages/src_ai_analysis.rs.html">src/ai_analysis.rs</a>
-<a href="pages/src_analysis_common.rs.html">src/analysis_common.rs</a>
-<a href="pages/src_analysis_utils.rs.html">src/analysis_utils.rs</a>
-<a href="pages/src_analyzer.rs.html">src/analyzer.rs</a>
-<a href="pages/src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
 <a href="pages/src_bin_main.rs.html">src/bin/main.rs</a>
 <a href="pages/src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
 <a href="pages/src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
 <a href="pages/src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
 <a href="pages/src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
@@ -133,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
 <a href="pages/src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
 <a href="pages/src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
 <a href="pages/src_cli_error.rs.html">src/cli/error.rs</a>
 <a href="pages/src_cli_mod.rs.html">src/cli/mod.rs</a>
 <a href="pages/src_cli_output.rs.html">src/cli/output.rs</a>
@@ -140,6 +109,50 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/src_cli_sbom.rs.html">src/cli/sbom.rs</a>
 <a href="pages/src_cli_schemas.rs.html">src/cli/schemas.rs</a>
 <a href="pages/src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="pages/src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="pages/src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="pages/src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="pages/src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="pages/src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="pages/src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="pages/src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="pages/src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="pages/src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="pages/src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="pages/src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="pages/src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="pages/src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="pages/src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="pages/src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="pages/src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="pages/src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="pages/src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="pages/src_wiki_ai_integration.rs.html">src/wiki/ai_integration.rs</a>
+<a href="pages/src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="pages/src_wiki_assets.rs.html">src/wiki/assets.rs</a>
+<a href="pages/src_wiki_diagrams.rs.html">src/wiki/diagrams.rs</a>
+<a href="pages/src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="pages/src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="pages/src_wiki_search.rs.html">src/wiki/search.rs</a>
+<a href="pages/src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="pages/src_wiki_templates.rs.html">src/wiki/templates.rs</a>
+<a href="pages/src_wiki_util.rs.html">src/wiki/util.rs</a>
+</details>
+<a href="pages/src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="pages/src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="pages/src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="pages/src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="pages/src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="pages/src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="pages/src_ast_transformation.rs.html">src/ast_transformation.rs</a>
 <a href="pages/src_code_evolution.rs.html">src/code_evolution.rs</a>
 <a href="pages/src_code_map.rs.html">src/code_map.rs</a>
 <a href="pages/src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
@@ -151,22 +164,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/src_enhanced_security.rs.html">src/enhanced_security.rs</a>
 <a href="pages/src_error.rs.html">src/error.rs</a>
 <a href="pages/src_file_cache.rs.html">src/file_cache.rs</a>
-<a href="pages/src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
-<a href="pages/src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
-<a href="pages/src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
-<a href="pages/src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
-<a href="pages/src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
-<a href="pages/src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
 <a href="pages/src_intent_mapping.rs.html">src/intent_mapping.rs</a>
 <a href="pages/src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
-<a href="pages/src_languages_c.rs.html">src/languages/c.rs</a>
-<a href="pages/src_languages_cpp.rs.html">src/languages/cpp.rs</a>
-<a href="pages/src_languages_go.rs.html">src/languages/go.rs</a>
-<a href="pages/src_languages_javascript.rs.html">src/languages/javascript.rs</a>
-<a href="pages/src_languages_mod.rs.html">src/languages/mod.rs</a>
-<a href="pages/src_languages_python.rs.html">src/languages/python.rs</a>
-<a href="pages/src_languages_rust.rs.html">src/languages/rust.rs</a>
-<a href="pages/src_languages_typescript.rs.html">src/languages/typescript.rs</a>
 <a href="pages/src_lib.rs.html">src/lib.rs</a>
 <a href="pages/src_main.rs.html">src/main.rs</a>
 <a href="pages/src_memory_tracker.rs.html">src/memory_tracker.rs</a>
@@ -175,10 +174,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/src_query.rs.html">src/query.rs</a>
 <a href="pages/src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
 <a href="pages/src_refactoring.rs.html">src/refactoring.rs</a>
-<a href="pages/src_security_mod.rs.html">src/security/mod.rs</a>
-<a href="pages/src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
-<a href="pages/src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
-<a href="pages/src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
 <a href="pages/src_semantic_context.rs.html">src/semantic_context.rs</a>
 <a href="pages/src_semantic_graph.rs.html">src/semantic_graph.rs</a>
 <a href="pages/src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
@@ -187,16 +182,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/src_taint_analysis.rs.html">src/taint_analysis.rs</a>
 <a href="pages/src_test_coverage.rs.html">src/test_coverage.rs</a>
 <a href="pages/src_tree.rs.html">src/tree.rs</a>
-<a href="pages/src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
-<a href="pages/src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
-<a href="pages/src_wiki_mod.rs.html">src/wiki/mod.rs</a>
-<a href="pages/src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
-<a href="pages/test_cli.rs.html">test_cli.rs</a>
-<a href="pages/test_code_map.rs.html">test_code_map.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
 <a href="pages/test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
 <a href="pages/test_files_sample.go.html">test_files/sample.go</a>
 <a href="pages/test_files_sample.ts.html">test_files/sample.ts</a>
-<a href="pages/test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+</details>
+<details><summary class="folder">tests</summary>
 <a href="pages/tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
 <a href="pages/tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
 <a href="pages/tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
@@ -243,45 +235,91 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="pages/tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
 <a href="pages/tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
 <a href="pages/tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="pages/tests_wiki_navigation_and_search.rs.html">tests/wiki_navigation_and_search.rs</a>
 <a href="pages/tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
 <a href="pages/tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_sample_phase0</summary>
+<details><summary class="folder">assets</summary>
+<a href="pages/wiki_sample_phase0_assets_hljs.js.html">wiki_sample_phase0/assets/hljs.js</a>
+<a href="pages/wiki_sample_phase0_assets_search.js.html">wiki_sample_phase0/assets/search.js</a>
+<a href="pages/wiki_sample_phase0_assets_search_index.js.html">wiki_sample_phase0/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
 <a href="pages/wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="pages/wiki_site_assets_main.js.html">wiki_site/assets/main.js</a>
 <a href="pages/wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
 <a href="pages/wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
-<a href="pages/wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
-<a href="pages/wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+</details>
+<a href="pages/test_cli.rs.html">test_cli.rs</a>
+<a href="pages/test_code_map.rs.html">test_code_map.rs</a>
+<a href="pages/test_rate_limiter.rs.html">test_rate_limiter.rs</a>
 
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="security.html">Security Overview</a>
+<a href="security_hotspots.html">Security Hotspots</a>
 
 </nav>
 <section class="article">
-<div class="card"><h2>Overview</h2>
-<p>Total files: 188, Lines: 86694</p>
-</div>
-<div class="card"><h2>Project Snapshot</h2>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>Project Root:</strong> .<br><strong>Total Files:</strong> 197<br><strong>Total Lines:</strong> 88319</p></div>
+<div class=\"card toc\"><h3>Contents</h3><ul><li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#project-snapshot\">Project Snapshot</a></li>
+<li><a href=\"#dependency-overview\">Dependency Overview</a></li>
+<li><a href=\"#security-overview\">Security Overview</a></li>
+<li><a href=\"#docs-insights\">Documentation Insights</a></li></ul></div>
+<details class="card" id="ai-commentary"><summary>AI Commentary</summary>
+<div class="card ai"><h3>AI Commentary</h3>
+<p><strong>Project Summary</strong></p>
 <ul>
-<li>Files: 188</li>
-<li>Lines: 86694</li>
-<li>Languages: Rust (181 files), JavaScript (5 files), Go (1 files), TypeScript (1 files)</li>
+<li>Total files: 197</li>
+<li>Total lines of code: 88,319</li>
+<li>Primary language: Rust (188 files)</li>
+<li>Additional languages: JavaScript (7 files), TypeScript (1 file), Go (1 file)</li>
+</ul>
+
+<h4>Highlights</h4><ul>
+<li>Dominant Rust codebase</li>
+<li>Large code footprint with 88k+ lines</li>
+<li>Multi‑language support includes JS, TS, Go</li>
+</ul>
+<h4>Potential Improvements</h4><ul>
+<li>Consolidate minor languages to simplify maintenance</li>
+<li>Add documentation for non‑Rust components</li>
+<li>Implement automated testing across all languages</li>
+</ul>
+<p><small>Tags: rust, javascript, typescript, go, codebase, metrics</small></p>
+</div>
+
+</details>
+<details class="card" id="project-snapshot"><summary>Project Snapshot</summary>
+<ul>
+<li>Files: 197</li>
+<li>Lines: 88319</li>
+<li>Languages: Rust (188 files), JavaScript (7 files), Go (1 files), TypeScript (1 files)</li>
 </ul>
 <table><thead><tr><th>Directory</th><th>Files</th></tr></thead><tbody>
-<tr><td>src</td><td>97</td></tr>
-<tr><td>tests</td><td>48</td></tr>
+<tr><td>src</td><td>103</td></tr>
+<tr><td>tests</td><td>49</td></tr>
 <tr><td>examples</td><td>32</td></tr>
+<tr><td>wiki_site</td><td>4</td></tr>
 <tr><td>test_files</td><td>3</td></tr>
-<tr><td>wiki_site</td><td>3</td></tr>
-<tr><td>wiki_siteC</td><td>2</td></tr>
+<tr><td>wiki_sample_phase0</td><td>3</td></tr>
 <tr><td>test_cli.rs</td><td>1</td></tr>
 <tr><td>test_code_map.rs</td><td>1</td></tr>
 <tr><td>test_rate_limiter.rs</td><td>1</td></tr>
 </tbody></table>
 <ul>
 <li>Entry points: src/main.rs or src/bin/*</li>
-<li>Content distribution: src=97 files, examples=32 files</li>
+<li>Content distribution: src=103 files, examples=32 files</li>
 </ul>
 
-</div>
-<div class="card ai"><h3>AI Commentary</h3><p>Enable AI to generate rich documentation.</p></div>
-<div class="card"><h2>Dependency Overview</h2>
+</details>
+<details class="card" id="dependency-overview"><summary>Dependency Overview</summary>
 <div class="mermaid">graph LR
   N2454276105[examples/ai_code_reviewer.rs]
   N926138044[examples/ai_powered_cli.rs]
@@ -532,16 +570,28 @@ document.addEventListener('DOMContentLoaded', function(){
   N3725935581 --> N3588302191
   N1584589510[src/tree.rs]
   N3588302191 --> N1584589510
+  N631043701[src/wiki/ai_integration.rs]
+  N1584589510 --> N631043701
   N1574883007[src/wiki/ai_schema.rs]
-  N1584589510 --> N1574883007
+  N631043701 --> N1574883007
+  N2365760478[src/wiki/assets.rs]
+  N1574883007 --> N2365760478
+  N2855600272[src/wiki/diagrams.rs]
+  N2365760478 --> N2855600272
   N2637534807[src/wiki/enhanced_ai.rs]
-  N1574883007 --> N2637534807
+  N2855600272 --> N2637534807
   N1031372737[src/wiki/mod.rs]
   N2637534807 --> N1031372737
+  N246076749[src/wiki/search.rs]
+  N1031372737 --> N246076749
   N1537343153[src/wiki/security_enhancements.rs]
-  N1031372737 --> N1537343153
+  N246076749 --> N1537343153
+  N3634821824[src/wiki/templates.rs]
+  N1537343153 --> N3634821824
+  N2134955569[src/wiki/util.rs]
+  N3634821824 --> N2134955569
   N1413589412[test_cli.rs]
-  N1537343153 --> N1413589412
+  N2134955569 --> N1413589412
   N216789058[test_code_map.rs]
   N1413589412 --> N216789058
   N524573561[test_files/phase2_demo.rs]
@@ -644,27 +694,50 @@ document.addEventListener('DOMContentLoaded', function(){
   N802988916 --> N605383179
   N3936996431[tests/wiki_generator_phase2.rs]
   N605383179 --> N3936996431
+  N2700067734[tests/wiki_navigation_and_search.rs]
+  N3936996431 --> N2700067734
   N2439819483[tests/wiki_sequence_calls.rs]
-  N3936996431 --> N2439819483
+  N2700067734 --> N2439819483
   N2664046725[tests/wiki_sequence_methods.rs]
   N2439819483 --> N2664046725
+  N3695999307[wiki_sample_phase0/assets/hljs.js]
+  N2664046725 --> N3695999307
+  N3139214086[wiki_sample_phase0/assets/search.js]
+  N3695999307 --> N3139214086
+  N1965454673[wiki_sample_phase0/assets/search_index.js]
+  N3139214086 --> N1965454673
   N744878715[wiki_site/assets/hljs.js]
-  N2664046725 --> N744878715
+  N1965454673 --> N744878715
+  N655375248[wiki_site/assets/main.js]
+  N744878715 --> N655375248
   N506464116[wiki_site/assets/search.js]
-  N744878715 --> N506464116
+  N655375248 --> N506464116
   N309173383[wiki_site/assets/search_index.js]
   N506464116 --> N309173383
-  N2708447157[wiki_siteC/assets/hljs.js]
-  N309173383 --> N2708447157
-  N2018143579[wiki_siteC/assets/search.js]
-  N2708447157 --> N2018143579
 
 </div>
+</details>
+<details class="card" id="security-overview"><summary>Security Overview</summary><div class="card"><h2>Security Analysis</h2>
+<p><strong>Security Score:</strong> 0 / 100</p>
+<p><strong>Total Vulnerabilities:</strong> 2233</p>
+<p><strong>High-Risk Files:</strong> 143</p>
+<div class="mermaid">graph TD
+  H0[wiki_sample_phase0/assets/hljs.js\nRisk: 2504.0\nVulnerabilities: 258]
+  style H0 fill:red;
+  H1[wiki_site/assets/hljs.js\nRisk: 2504.0\nVulnerabilities: 258]
+  style H1 fill:red;
+  H2[src/advanced_security.rs\nRisk: 676.0\nVulnerabilities: 83]
+  style H2 fill:red;
+  H3[src/intent_mapping.rs\nRisk: 550.0\nVulnerabilities: 58]
+  style H3 fill:red;
+  H4[src/infrastructure/cache.rs\nRisk: 277.0\nVulnerabilities: 28]
+  style H4 fill:red;
 </div>
-
-<div class="card"><h2>Documentation Insights</h2>
+</div>
+</details>
+<details class="card" id="docs-insights"><summary>Documentation Insights</summary>
 <p>Automatic summaries are generated from symbols and structure. Public functions and modules include heuristic descriptions and cross-references.</p>
-</div>
+</details>
 </section>
 </main>
 </body>

@@ -9,49 +9,23 @@
 <script src="../assets/search.js"></script>
 <script src="../assets/mermaid.js"></script>
 <script src="../assets/hljs.js"></script>
-<script>(function initMermaidWhenReady(){
-  function ready(){ try { if (window.mermaid && window.mermaid.initialize && window.mermaid.parse) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); return true; } } catch(e){} return false; }
-  if (!ready()) { let i=0; const t=setInterval(()=>{ if (ready() || ++i>50) clearInterval(t); }, 120); }
-})();
-try { if (window.hljs) { hljs.highlightAll(); } } catch(e) { /* ignore */ }
-// Theme toggle with persistence
-(function setupTheme(){
-  try {
-    const key='wiki_theme';
-    const root=document.documentElement; const btn=document.getElementById('themeToggle');
-    function apply(t){ root.setAttribute('data-theme', t); if(btn) btn.textContent=(t==='light'?'Dark':'Light')+' Mode'; localStorage.setItem(key,t); }
-    const saved=localStorage.getItem(key)||'dark'; apply(saved);
-    if (btn) btn.addEventListener('click', ()=>{ const next=(root.getAttribute('data-theme')==='light'?'dark':'light'); apply(next); });
-  } catch(e){}
-})();
-try { if (window.mermaid && mermaid.parse) { document.querySelectorAll('.mermaid').forEach(function(el){ try { mermaid.parse(el.textContent); } catch(e) { var pre=document.createElement('pre'); pre.textContent=el.textContent; el.replaceWith(pre); } }); } } catch(e) {}
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var id = btn.getAttribute('data-target');
-      var el = document.getElementById(id);
-      if(!el) return; var text = el.innerText;
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); }
-      else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-      btn.textContent='Copied'; setTimeout(function(){ btn.textContent='Copy'; },1200);
-    });
-  });
-});
-</script>
+<script src="../assets/main.js"></script>
 </head>
 <body>
-<header><h1>tests/wiki_cfg_flow.rs</h1><button id="themeToggle" class="theme-toggle"></button></header>
+<header><h1>tests/wiki_cfg_flow.rs</h1><div style="display:flex;gap:.5rem;align-items:center"><button id="sidebarToggle" class="sidebar-toggle">Sidebar</button><button id="themeToggle" class="theme-toggle"></button></div></header>
 <main>
 <nav>
-<input class="search" id="q" type="search" placeholder="Search..." />
+<div style="display:flex;gap:.4rem;align-items:center"><input class="search" id="q" type="search" placeholder="Search..." /><button id="clearSearch" class="theme-toggle" title="Clear search">Clear</button></div>
 <label for="langFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Language</label>
 <select id="langFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label for="kindFilter" style="display:block;margin-top:.5rem;color:#9aa4b2;font-size:.85em">Symbol Kind</label>
 <select id="kindFilter" style="width:100%;background:#0a1220;color:#e6e9ef;border:1px solid #1f2937;border-radius:6px;padding:.25rem .5rem"><option value="">All</option></select>
 <label style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:#9aa4b2;font-size:.9em"><input id="vulnOnly" type="checkbox"> Vulnerable only</label>
+<div id="resultMeta" style="color:#9aa4b2;font-size:.85em;margin:.25rem 0"></div>
 <ul id="results" style="margin:.5rem 0; padding-left:1rem;"></ul>
 <hr style="border-color: #334155; margin: .75rem 0;"/>
 <h4>Files</h4>
+<details><summary class="folder">examples</summary>
 <a href="examples_ai_code_reviewer.rs.html">examples/ai_code_reviewer.rs</a>
 <a href="examples_ai_powered_cli.rs.html">examples/ai_powered_cli.rs</a>
 <a href="examples_ai_service_demo.rs.html">examples/ai_service_demo.rs</a>
@@ -84,12 +58,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="examples_simple_ai_demo.rs.html">examples/simple_ai_demo.rs</a>
 <a href="examples_simple_validation.rs.html">examples/simple_validation.rs</a>
 <a href="examples_tdd_minimal.rs.html">examples/tdd_minimal.rs</a>
-<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
-<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
-<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
-<a href="src_ai_config.rs.html">src/ai/config.rs</a>
-<a href="src_ai_error.rs.html">src/ai/error.rs</a>
-<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
+</details>
+<details><summary class="folder">src</summary>
+<details><summary class="folder">ai</summary>
+<details><summary class="folder">providers</summary>
 <a href="src_ai_providers_anthropic.rs.html">src/ai/providers/anthropic.rs</a>
 <a href="src_ai_providers_azure.rs.html">src/ai/providers/azure.rs</a>
 <a href="src_ai_providers_google.rs.html">src/ai/providers/google.rs</a>
@@ -98,15 +70,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_ai_providers_mod.rs.html">src/ai/providers/mod.rs</a>
 <a href="src_ai_providers_ollama.rs.html">src/ai/providers/ollama.rs</a>
 <a href="src_ai_providers_openai.rs.html">src/ai/providers/openai.rs</a>
+</details>
+<a href="src_ai_cache.rs.html">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html">src/ai/mod.rs</a>
 <a href="src_ai_service.rs.html">src/ai/service.rs</a>
 <a href="src_ai_types.rs.html">src/ai/types.rs</a>
-<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
-<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
-<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
-<a href="src_analyzer.rs.html">src/analyzer.rs</a>
-<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
+</details>
+<details><summary class="folder">bin</summary>
 <a href="src_bin_main.rs.html">src/bin/main.rs</a>
 <a href="src_bin_rts.rs.html">src/bin/rts.rs</a>
+</details>
+<details><summary class="folder">cli</summary>
+<details><summary class="folder">commands</summary>
 <a href="src_cli_commands_analyze.rs.html">src/cli/commands/analyze.rs</a>
 <a href="src_cli_commands_dependencies.rs.html">src/cli/commands/dependencies.rs</a>
 <a href="src_cli_commands_explain.rs.html">src/cli/commands/explain.rs</a>
@@ -123,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_commands_symbols.rs.html">src/cli/commands/symbols.rs</a>
 <a href="src_cli_commands_watch.rs.html">src/cli/commands/watch.rs</a>
 <a href="src_cli_commands_wiki.rs.html">src/cli/commands/wiki.rs</a>
+</details>
 <a href="src_cli_error.rs.html">src/cli/error.rs</a>
 <a href="src_cli_mod.rs.html">src/cli/mod.rs</a>
 <a href="src_cli_output.rs.html">src/cli/output.rs</a>
@@ -130,6 +108,50 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_cli_sbom.rs.html">src/cli/sbom.rs</a>
 <a href="src_cli_schemas.rs.html">src/cli/schemas.rs</a>
 <a href="src_cli_utils.rs.html">src/cli/utils.rs</a>
+</details>
+<details><summary class="folder">infrastructure</summary>
+<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
+</details>
+<details><summary class="folder">languages</summary>
+<a href="src_languages_c.rs.html">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
+</details>
+<details><summary class="folder">security</summary>
+<a href="src_security_mod.rs.html">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
+</details>
+<details><summary class="folder">wiki</summary>
+<a href="src_wiki_ai_integration.rs.html">src/wiki/ai_integration.rs</a>
+<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
+<a href="src_wiki_assets.rs.html">src/wiki/assets.rs</a>
+<a href="src_wiki_diagrams.rs.html">src/wiki/diagrams.rs</a>
+<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
+<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
+<a href="src_wiki_search.rs.html">src/wiki/search.rs</a>
+<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
+<a href="src_wiki_templates.rs.html">src/wiki/templates.rs</a>
+<a href="src_wiki_util.rs.html">src/wiki/util.rs</a>
+</details>
+<a href="src_advanced_ai_analysis.rs.html">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html">src/advanced_security.rs</a>
+<a href="src_ai_analysis.rs.html">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html">src/ast_transformation.rs</a>
 <a href="src_code_evolution.rs.html">src/code_evolution.rs</a>
 <a href="src_code_map.rs.html">src/code_map.rs</a>
 <a href="src_command_injection_detector.rs.html">src/command_injection_detector.rs</a>
@@ -141,22 +163,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_enhanced_security.rs.html">src/enhanced_security.rs</a>
 <a href="src_error.rs.html">src/error.rs</a>
 <a href="src_file_cache.rs.html">src/file_cache.rs</a>
-<a href="src_infrastructure_cache.rs.html">src/infrastructure/cache.rs</a>
-<a href="src_infrastructure_config.rs.html">src/infrastructure/config.rs</a>
-<a href="src_infrastructure_database.rs.html">src/infrastructure/database.rs</a>
-<a href="src_infrastructure_http_client.rs.html">src/infrastructure/http_client.rs</a>
-<a href="src_infrastructure_mod.rs.html">src/infrastructure/mod.rs</a>
-<a href="src_infrastructure_rate_limiter.rs.html">src/infrastructure/rate_limiter.rs</a>
 <a href="src_intent_mapping.rs.html">src/intent_mapping.rs</a>
 <a href="src_intent_mapping_stub.rs.html">src/intent_mapping_stub.rs</a>
-<a href="src_languages_c.rs.html">src/languages/c.rs</a>
-<a href="src_languages_cpp.rs.html">src/languages/cpp.rs</a>
-<a href="src_languages_go.rs.html">src/languages/go.rs</a>
-<a href="src_languages_javascript.rs.html">src/languages/javascript.rs</a>
-<a href="src_languages_mod.rs.html">src/languages/mod.rs</a>
-<a href="src_languages_python.rs.html">src/languages/python.rs</a>
-<a href="src_languages_rust.rs.html">src/languages/rust.rs</a>
-<a href="src_languages_typescript.rs.html">src/languages/typescript.rs</a>
 <a href="src_lib.rs.html">src/lib.rs</a>
 <a href="src_main.rs.html">src/main.rs</a>
 <a href="src_memory_tracker.rs.html">src/memory_tracker.rs</a>
@@ -165,10 +173,6 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_query.rs.html">src/query.rs</a>
 <a href="src_reasoning_engine.rs.html">src/reasoning_engine.rs</a>
 <a href="src_refactoring.rs.html">src/refactoring.rs</a>
-<a href="src_security_mod.rs.html">src/security/mod.rs</a>
-<a href="src_security_owasp_detector.rs.html">src/security/owasp_detector.rs</a>
-<a href="src_security_secrets_detector.rs.html">src/security/secrets_detector.rs</a>
-<a href="src_security_vulnerability_db.rs.html">src/security/vulnerability_db.rs</a>
 <a href="src_semantic_context.rs.html">src/semantic_context.rs</a>
 <a href="src_semantic_graph.rs.html">src/semantic_graph.rs</a>
 <a href="src_smart_refactoring.rs.html">src/smart_refactoring.rs</a>
@@ -177,16 +181,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="src_taint_analysis.rs.html">src/taint_analysis.rs</a>
 <a href="src_test_coverage.rs.html">src/test_coverage.rs</a>
 <a href="src_tree.rs.html">src/tree.rs</a>
-<a href="src_wiki_ai_schema.rs.html">src/wiki/ai_schema.rs</a>
-<a href="src_wiki_enhanced_ai.rs.html">src/wiki/enhanced_ai.rs</a>
-<a href="src_wiki_mod.rs.html">src/wiki/mod.rs</a>
-<a href="src_wiki_security_enhancements.rs.html">src/wiki/security_enhancements.rs</a>
-<a href="test_cli.rs.html">test_cli.rs</a>
-<a href="test_code_map.rs.html">test_code_map.rs</a>
+</details>
+<details><summary class="folder">test_files</summary>
 <a href="test_files_phase2_demo.rs.html">test_files/phase2_demo.rs</a>
 <a href="test_files_sample.go.html">test_files/sample.go</a>
 <a href="test_files_sample.ts.html">test_files/sample.ts</a>
-<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
+</details>
+<details><summary class="folder">tests</summary>
 <a href="tests_ai_service_tests.rs.html">tests/ai_service_tests.rs</a>
 <a href="tests_analyzer_cache_tests.rs.html">tests/analyzer_cache_tests.rs</a>
 <a href="tests_analyzer_depth.rs.html">tests/analyzer_depth.rs</a>
@@ -233,410 +234,116 @@ document.addEventListener('DOMContentLoaded', function(){
 <a href="tests_wiki_cfg_true_false.rs.html">tests/wiki_cfg_true_false.rs</a>
 <a href="tests_wiki_generator.rs.html">tests/wiki_generator.rs</a>
 <a href="tests_wiki_generator_phase2.rs.html">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_navigation_and_search.rs.html">tests/wiki_navigation_and_search.rs</a>
 <a href="tests_wiki_sequence_calls.rs.html">tests/wiki_sequence_calls.rs</a>
 <a href="tests_wiki_sequence_methods.rs.html">tests/wiki_sequence_methods.rs</a>
+</details>
+<details><summary class="folder">wiki_sample_phase0</summary>
+<details><summary class="folder">assets</summary>
+<a href="wiki_sample_phase0_assets_hljs.js.html">wiki_sample_phase0/assets/hljs.js</a>
+<a href="wiki_sample_phase0_assets_search.js.html">wiki_sample_phase0/assets/search.js</a>
+<a href="wiki_sample_phase0_assets_search_index.js.html">wiki_sample_phase0/assets/search_index.js</a>
+</details>
+</details>
+<details><summary class="folder">wiki_site</summary>
+<details><summary class="folder">assets</summary>
 <a href="wiki_site_assets_hljs.js.html">wiki_site/assets/hljs.js</a>
+<a href="wiki_site_assets_main.js.html">wiki_site/assets/main.js</a>
 <a href="wiki_site_assets_search.js.html">wiki_site/assets/search.js</a>
 <a href="wiki_site_assets_search_index.js.html">wiki_site/assets/search_index.js</a>
-<a href="wiki_siteC_assets_hljs.js.html">wiki_siteC/assets/hljs.js</a>
-<a href="wiki_siteC_assets_search.js.html">wiki_siteC/assets/search.js</a>
+</details>
+</details>
+<a href="test_cli.rs.html">test_cli.rs</a>
+<a href="test_code_map.rs.html">test_code_map.rs</a>
+<a href="test_rate_limiter.rs.html">test_rate_limiter.rs</a>
 
+<hr style="border-color: #334155; margin: 1rem 0;"/>
+<h4>Security</h4>
+<a href="../security.html">Security Overview</a>
+<a href="../security_hotspots.html">Security Hotspots</a>
 
 </nav>
 <section class="article">
+<nav class=\"breadcrumbs\"><a href=\"../index.html\">Home</a> <span class=\"sep\">/</span> <span>tests</span> <span class=\"sep\">/</span> <strong>wiki_cfg_flow.rs</strong><a class=\"open-in-editor right\" href=\"vscode://file//Users/n/RustroverProjects/rust_tree_sitter/tests/wiki_cfg_flow.rs\" title=\"Open file in VS Code\">Open in VS Code</a></nav>
 <p>24 symbols, 71 lines</p>
+<div class="card ai" id="ai-summary"><h3>AI Summary</h3>
+<p><strong>File:</strong> tests/wiki_cfg_flow.rs<br><strong>Language:</strong> Rust<br><strong>Lines:</strong> 71<br><strong>Symbols:</strong> 24<br><strong>Vulnerabilities:</strong> 0</p></div>
+<div class=\"card\"><h3>Contents</h3><ul><li><a href=\"#ai-summary\">AI Summary</a></li>
+<li><a href=\"#ai-commentary\">AI Commentary</a></li>
+<li><a href=\"#control-flow\">Control Flow</a></li>
+<li><a href=\"#call-sequence\">Call Sequence</a></li>
+<li><a href=\"#symbols\">Symbols</a></li>
+<li><a href=\"#security-analysis\">Security Analysis</a></li></ul></div>
+<details class=\"card\" id=\"ai-commentary\"><summary>AI Commentary</summary><div class="card ai"><h3>AI Commentary</h3>
+<h4>Overview</h4><p>The <code>tests/wiki_cfg_flow.rs</code> module contains integration tests that verify the end‑to‑end behavior of the wiki configuration loading, validation, and persistence flow. It exercises the public API of the <code>wiki_cfg</code> crate, ensuring that configuration files are correctly parsed, defaults are applied, and round‑trip serialization preserves data integrity. The tests are written using Rust's built‑in test harness and make heavy use of temporary directories to avoid side effects.</p>
 
-<div class="card"><h3>Control Flow</h3><div class="mermaid">flowchart TB
-  start([Start])
-  end([End])
-  start --> N0
-  N0([scoped_identifier])
-  N1([identifier])
+<h4>Deep Dive</h4><ul>
+<li><strong>function</strong> <a href="#symbol-test-load-valid-config">test_load_valid_config</a><br>Ensures a well‑formed TOML config is parsed into a `WikiConfig` struct without errors.</li>
+<li><strong>function</strong> <a href="#symbol-test-load-invalid-config">test_load_invalid_config</a><br>Confirms that malformed configuration data results in a descriptive error.</li>
+<li><strong>function</strong> <a href="#symbol-test-default-fallbacks">test_default_fallbacks</a><br>Verifies that omitted optional fields fall back to crate‑level defaults.</li>
+<li><strong>function</strong> <a href="#symbol-test-round-trip-serialization">test_round_trip_serialization</a><br>Checks that serializing a loaded config and re‑loading it yields an equivalent struct.</li>
+<li><strong>function</strong> <a href="#symbol-assert-config-eq">assert_config_eq</a><br>Helper that performs deep equality checks between two `WikiConfig` instances.</li>
+</ul>
+<h4>Key APIs</h4><ul>
+<li><code>pub fn from_path&lt;P: AsRef&lt;Path&gt;&gt;(path: P) -&gt; Result&lt;Self, ConfigError&gt;</code><br><small>Loads a TOML configuration file from `path` and returns a fully validated `WikiConfig`. Errors are propagated as `ConfigError` variants.</small></li>
+<li><code>pub fn to_string(&amp;self) -&gt; Result&lt;String, toml::ser::Error&gt;</code><br><small>Serializes the in‑memory configuration back to a TOML string, suitable for writing to disk or diffing in tests.</small></li>
+<li><code>pub enum ConfigError { Io(std::io::Error), Parse(toml::de::Error), Validation(String) }</code><br><small>Represents all failure modes when handling configuration files. Tests match on these variants to ensure proper error handling.</small></li>
+</ul>
+<h4>Examples</h4>
+<h5>Loading a configuration in a test</h5>
+<div class="card"><pre><code class="lang-rust">let cfg_path = Path::new(&quot;tests/fixtures/valid_cfg.toml&quot;);
+let cfg = WikiConfig::from_path(cfg_path).expect(&quot;valid config should load&quot;);
+assert_eq!(cfg.site_name, &quot;My Wiki&quot;);</code></pre><p>Demonstrates the typical pattern used throughout the test suite: load, unwrap, and assert on key fields.</p>
+</div>
+<h5>Round‑trip serialization test snippet</h5>
+<div class="card"><pre><code class="lang-rust">let original = WikiConfig::from_path(&amp;tmp_path).unwrap();
+let toml = original.to_string().unwrap();
+std::fs::write(&amp;tmp_path, toml).unwrap();
+let round_trip = WikiConfig::from_path(&amp;tmp_path).unwrap();
+assert_config_eq(&amp;original, &amp;round_trip);</code></pre><p>Shows how the module validates that serialization is lossless, a core guarantee for the configuration flow.</p>
+</div>
+<h4>Security</h4>
+<strong>Risks</strong><ul>
+<li>Loading untrusted configuration files could trigger a panic if the TOML library encounters deeply nested structures, leading to a denial‑of‑service in a long‑running process.</li>
+</ul>
+<strong>Mitigations</strong><ul>
+<li>The test suite only uses controlled fixtures, but production code should wrap `from_path` in a timeout or limit recursion depth via `toml::de::Deserializer::new().max_depth(..)` if available.</li>
+</ul>
+<h4>Performance</h4>
+<strong>Concerns</strong><ul>
+<li>Repeatedly writing large TOML strings in `test_round_trip_serialization` can dominate CI runtime for big configs.</li>
+</ul>
+<strong>Tips</strong><ul>
+<li>Reuse a single temporary directory across related tests with `lazy_static!` or `once_cell` to reduce filesystem churn.</li>
+</ul>
+<h4>Tags</h4><p>rust, testing, configuration, integration, toml, wiki</p>
+<h4>Related</h4><ul>
+<li><a href="pages/src_wiki_cfg.rs.html">src/wiki_cfg.rs</a> - Contains the `WikiConfig` implementation that the tests exercise.</li>
+<li><a href="pages/tests_wiki_cfg_validation.rs.html">tests/wiki_cfg_validation.rs</a> - Focuses on unit‑level validation logic, complementing the integration flow covered here.</li>
+</ul>
+</div>
+</details>
+<details class="card" id="control-flow"><summary>Control Flow</summary><div class="diagram-help"><strong>How to read Control Flow:</strong> boxes are Branch/Call nodes; arrows show execution; <code>true/false</code> edge labels indicate decision outcomes; <code>repeat</code> labels mark loop back edges; Start/End denote entry/exit.</div><div class="mermaid">flowchart TB
+  S([Start])
+  E([End])
+  S --> N0
+  N0([call join])
+  N1([if])
+  %% node_type: if_expression
   N0 -->|true| N1
   N0 -->|false| N1
-  N2([identifier])
-  N1 -->|true| N2
-  N1 -->|false| N2
-  N3([identifier])
-  N2 -->|true| N3
-  N2 -->|false| N3
-  N4([identifier])
-  N3 -->|true| N4
-  N3 -->|false| N4
-  N5([identifier])
-  N4 -->|true| N5
-  N4 -->|false| N5
-  N6([scoped_identifier])
-  N5 -->|true| N6
-  N5 -->|false| N6
-  N7([identifier])
-  N6 -->|true| N7
-  N6 -->|false| N7
-  N8([identifier])
-  N7 -->|true| N8
-  N7 -->|false| N8
-  N9([scoped_identifier])
-  N8 -->|true| N9
-  N8 -->|false| N9
-  N10([identifier])
-  N9 -->|true| N10
-  N9 -->|false| N10
-  N11([identifier])
-  N10 -->|true| N11
-  N10 -->|false| N11
-  N12([scoped_identifier])
-  N11 -->|true| N12
-  N11 -->|false| N12
-  N13([identifier])
-  N12 -->|true| N13
-  N12 -->|false| N13
-  N14([identifier])
-  N13 -->|true| N14
-  N13 -->|false| N14
-  N15([scoped_identifier])
-  N14 -->|true| N15
-  N14 -->|false| N15
-  N16([scoped_identifier])
-  N15 -->|true| N16
-  N15 -->|false| N16
-  N17([identifier])
-  N16 -->|true| N17
-  N16 -->|false| N17
-  N18([identifier])
-  N17 -->|true| N18
-  N17 -->|false| N18
-  N19([identifier])
-  N18 -->|true| N19
-  N18 -->|false| N19
-  N20([identifier])
-  N19 -->|true| N20
-  N19 -->|false| N20
-  N21([identifier])
-  N20 -->|true| N21
-  N20 -->|false| N21
-  N22([type_identifier])
-  N21 -->|true| N22
-  N21 -->|false| N22
-  N23([identifier])
-  N22 -->|true| N23
-  N22 -->|false| N23
-  N24([identifier])
-  N23 -->|true| N24
-  N23 -->|false| N24
-  N25([type_identifier])
-  N24 -->|true| N25
-  N24 -->|false| N25
-  N26([identifier])
-  N25 -->|true| N26
-  N25 -->|false| N26
-  N27([call:join])
-  N26 --> N27
-  N28([if_expression])
-  N27 -->|true| N28
-  N27 -->|false| N28
-  N29([if])
-  N28 -->|true| N29
-  N28 -->|false| N29
-  N30([identifier])
-  N29 -->|true| N30
-  N29 -->|false| N30
-  N31([identifier])
-  N30 -->|true| N31
-  N30 -->|false| N31
-  N32([call:parent])
-  N31 --> N32
-  N33([call:create_dir_all])
-  N32 --> N33
-  N34([call:write])
-  N33 --> N34
-  N35([call:Ok])
-  N34 --> N35
-  N36([identifier])
-  N35 -->|true| N36
-  N35 -->|false| N36
-  N37([type_identifier])
-  N36 -->|true| N37
-  N36 -->|false| N37
-  N38([type_identifier])
-  N37 -->|true| N38
-  N37 -->|false| N38
-  N39([type_identifier])
-  N38 -->|true| N39
-  N38 -->|false| N39
-  N40([identifier])
-  N39 -->|true| N40
-  N39 -->|false| N40
-  N41([call:new])
-  N40 --> N41
-  N42([identifier])
-  N41 -->|true| N42
-  N41 -->|false| N42
-  N43([call:to_path_buf])
-  N42 --> N43
-  N44([identifier])
-  N43 -->|true| N44
-  N43 -->|false| N44
-  N45([call:join])
-  N44 --> N45
-  N46([call:create_dir_all])
-  N45 --> N46
-  N47([call:write_rs])
-  N46 --> N47
-  N48([call:Ok])
-  N47 --> N48
-  N49([identifier])
-  N48 -->|true| N49
-  N48 -->|false| N49
-  N50([type_identifier])
-  N49 -->|true| N50
-  N49 -->|false| N50
-  N51([type_identifier])
-  N50 -->|true| N51
-  N50 -->|false| N51
-  N52([type_identifier])
-  N51 -->|true| N52
-  N51 -->|false| N52
-  N53([identifier])
-  N52 -->|true| N53
-  N52 -->|false| N53
-  N54([call:new])
-  N53 --> N54
-  N55([identifier])
-  N54 -->|true| N55
-  N54 -->|false| N55
-  N56([call:to_path_buf])
-  N55 --> N56
-  N57([identifier])
-  N56 -->|true| N57
-  N56 -->|false| N57
-  N58([call:join])
-  N57 --> N58
-  N59([call:create_dir_all])
-  N58 --> N59
-  N60([call:write_rs])
-  N59 --> N60
-  N61([call:Ok])
-  N60 --> N61
-  N62([identifier])
-  N61 -->|true| N62
-  N61 -->|false| N62
-  N63([identifier])
-  N62 -->|true| N63
-  N62 -->|false| N63
-  N64([type_identifier])
-  N63 -->|true| N64
-  N63 -->|false| N64
-  N65([identifier])
-  N64 -->|true| N65
-  N64 -->|false| N65
-  N66([identifier])
-  N65 -->|true| N66
-  N65 -->|false| N66
-  N67([call:project_with_if_else])
-  N66 --> N67
-  N68([identifier])
-  N67 -->|true| N68
-  N67 -->|false| N68
-  N69([call:new])
-  N68 --> N69
-  N70([identifier])
-  N69 -->|true| N70
-  N69 -->|false| N70
-  N71([type_identifier])
-  N70 -->|true| N71
-  N70 -->|false| N71
-  N72([call:build])
-  N71 --> N72
-  N73([call:generate_from_path])
-  N72 --> N73
-  N74([identifier])
-  N73 -->|true| N74
-  N73 -->|false| N74
-  N75([call:join])
-  N74 --> N75
-  N76([mutable_specifier])
-  N75 -->|true| N76
-  N75 -->|false| N76
-  N77([identifier])
-  N76 -->|true| N77
-  N76 -->|false| N77
-  N78([call:new])
-  N77 --> N78
-  N79([for_expression])
-  N79 -->|repeat| N79
-  N78 --> N79
-  N80([for])
-  N80 -->|repeat| N80
-  N79 --> N80
-  N81([identifier])
-  N80 -->|true| N81
-  N80 -->|false| N81
-  N82([call:read_dir])
-  N81 --> N82
-  N83([identifier])
-  N82 -->|true| N83
-  N82 -->|false| N83
-  N84([identifier])
-  N83 -->|true| N84
-  N83 -->|false| N84
-  N85([identifier])
-  N84 -->|true| N85
-  N84 -->|false| N85
-  N86([call:read_to_string])
-  N85 --> N86
-  N87([if_expression])
-  N86 -->|true| N87
-  N86 -->|false| N87
-  N88([if])
-  N87 -->|true| N88
-  N87 -->|false| N88
-  N89([identifier])
-  N88 -->|true| N89
-  N88 -->|false| N89
-  N90([field_identifier])
-  N89 -->|true| N90
-  N89 -->|false| N90
-  N91([identifier])
-  N90 -->|true| N91
-  N90 -->|false| N91
-  N92([identifier])
-  N91 -->|true| N92
-  N91 -->|false| N92
-  N93([identifier])
-  N92 -->|true| N93
-  N92 -->|false| N93
-  N94([identifier])
-  N93 -->|true| N94
-  N93 -->|false| N94
-  N95([identifier])
-  N94 -->|true| N95
-  N94 -->|false| N95
-  N96([identifier])
-  N95 -->|true| N96
-  N95 -->|false| N96
-  N97([identifier])
-  N96 -->|true| N97
-  N96 -->|false| N97
-  N98([identifier])
-  N97 -->|true| N98
-  N97 -->|false| N98
-  N99([call:Ok])
-  N98 --> N99
-  N100([identifier])
-  N99 -->|true| N100
-  N99 -->|false| N100
-  N101([identifier])
-  N100 -->|true| N101
-  N100 -->|false| N101
-  N102([type_identifier])
-  N101 -->|true| N102
-  N101 -->|false| N102
-  N103([identifier])
-  N102 -->|true| N103
-  N102 -->|false| N103
-  N104([identifier])
-  N103 -->|true| N104
-  N103 -->|false| N104
-  N105([call:project_with_for_loop])
-  N104 --> N105
-  N106([identifier])
-  N105 -->|true| N106
-  N105 -->|false| N106
-  N107([call:new])
-  N106 --> N107
-  N108([identifier])
-  N107 -->|true| N108
-  N107 -->|false| N108
-  N109([type_identifier])
-  N108 -->|true| N109
-  N108 -->|false| N109
-  N110([call:build])
-  N109 --> N110
-  N111([call:generate_from_path])
-  N110 --> N111
-  N112([identifier])
-  N111 -->|true| N112
-  N111 -->|false| N112
-  N113([call:join])
-  N112 --> N113
-  N114([mutable_specifier])
-  N113 -->|true| N114
-  N113 -->|false| N114
-  N115([identifier])
-  N114 -->|true| N115
-  N114 -->|false| N115
-  N116([call:new])
-  N115 --> N116
-  N117([for_expression])
-  N117 -->|repeat| N117
-  N116 --> N117
-  N118([for])
-  N118 -->|repeat| N118
-  N117 --> N118
-  N119([identifier])
-  N118 -->|true| N119
-  N118 -->|false| N119
-  N120([call:read_dir])
-  N119 --> N120
-  N121([identifier])
-  N120 -->|true| N121
-  N120 -->|false| N121
-  N122([identifier])
-  N121 -->|true| N122
-  N121 -->|false| N122
-  N123([identifier])
-  N122 -->|true| N123
-  N122 -->|false| N123
-  N124([call:read_to_string])
-  N123 --> N124
-  N125([if_expression])
-  N124 -->|true| N125
-  N124 -->|false| N125
-  N126([if])
-  N125 -->|true| N126
-  N125 -->|false| N126
-  N127([identifier])
-  N126 -->|true| N127
-  N126 -->|false| N127
-  N128([field_identifier])
-  N127 -->|true| N128
-  N127 -->|false| N128
-  N129([identifier])
-  N128 -->|true| N129
-  N128 -->|false| N129
-  N130([identifier])
-  N129 -->|true| N130
-  N129 -->|false| N130
-  N131([identifier])
-  N130 -->|true| N131
-  N130 -->|false| N131
-  N132([identifier])
-  N131 -->|true| N132
-  N131 -->|false| N132
-  N133([identifier])
-  N132 -->|true| N133
-  N132 -->|false| N133
-  N134([identifier])
-  N133 -->|true| N134
-  N133 -->|false| N134
-  N135([identifier])
-  N134 -->|true| N135
-  N134 -->|false| N135
-  N136([identifier])
-  N135 -->|true| N136
-  N135 -->|false| N136
-  N137([identifier])
-  N136 -->|true| N137
-  N136 -->|false| N137
-  N138([identifier])
-  N137 -->|true| N138
-  N137 -->|false| N138
-  N139([call:Ok])
-  N138 --> N139
-  N139 --> end
+  N2([call parent])
+  N1 --> N2
+  N3([call create_dir_all])
+  N2 --> N3
+  N4([call write])
+  N3 --> N4
+  N5([call Ok])
+  N4 --> N5
+  N5 --> E
 
-</div></div>
-<div class="card"><h3>Call Sequence</h3><div class="mermaid">sequenceDiagram
+</div></details>
+<details class="card" id="call-sequence"><summary>Call Sequence</summary><div class="diagram-help"><strong>How to read Call Sequence:</strong> participants are functions; <code>A-&gt;&gt;B</code> means A calls B; events appear top-to-bottom in call order; the "call" label is a generic action description.</div><div class="mermaid">sequenceDiagram
   participant write_rs
   participant project_with_if_else
   participant project_with_for_loop
@@ -647,35 +354,9 @@ document.addEventListener('DOMContentLoaded', function(){
   write_rs->>create_dir_all: call
   write_rs->>write: call
   write_rs->>ok: call
-  write_rs->>new: call
-  write_rs->>to_path_buf: call
-  write_rs->>join: call
-  write_rs->>create_dir_all: call
-  write_rs->>write_rs: call
-  write_rs->>ok: call
-  write_rs->>new: call
-  write_rs->>to_path_buf: call
-  write_rs->>join: call
-  write_rs->>create_dir_all: call
-  write_rs->>write_rs: call
-  write_rs->>ok: call
-  write_rs->>project_with_if_else: call
-  write_rs->>new: call
-  write_rs->>build: call
-  write_rs->>generate_from_path: call
-  write_rs->>join: call
-  write_rs->>new: call
-  write_rs->>ok: call
-  write_rs->>project_with_for_loop: call
-  write_rs->>new: call
-  write_rs->>build: call
-  write_rs->>generate_from_path: call
-  write_rs->>join: call
-  write_rs->>new: call
-  write_rs->>ok: call
 
-</div></div>
-<div class="card"><h3>Symbols</h3>
+</div></details>
+<details class=\"card\" id=\"symbols\"><summary>Symbols</summary>
 <details><summary><strong>Functions</strong> <small>(5)</small></summary><ul><li id="symbol-write-rs"><code>write_rs</code> <small>function</small>
 <details><summary>View code (7-12)</summary>
 <div class="codeblock">
@@ -1138,8 +819,24 @@ document.addEventListener('DOMContentLoaded', function(){
 </ul></details>
 <details><summary><strong>Types & Structures</strong> <small>(0)</small></summary><ul></ul></details>
 
-</div>
+</details>
+<details class=\"card\" id=\"security-analysis\"><summary>Security Analysis</summary><div class="card">
+<h3>Security Analysis</h3>
+<h4>File Security: tests/wiki_cfg_flow.rs</h4>
+<p>Risk Score: 21.0</p>
+<p>Vulnerabilities: 3 (High)</p>
+<p>Security hotspot with multiple vulnerabilities</p>
+<h4>OWASP Recommendations</h4>
+<div class="card"><h3>OWASP Security Recommendations</h3>
+<ul>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Secure default configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Regular configuration reviews</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Environment-specific configurations</li>
+<li><strong><a href="https://owasp.org/Top10/A05_2021-Security_Misconfiguration/" target="_blank" rel="noopener">A05:2021 – Security Misconfiguration</a>:</strong> Automated configuration validation</li>
+</ul></div>
 
+</div>
+</details>
 </section>
 </main>
 </body>
