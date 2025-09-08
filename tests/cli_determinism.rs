@@ -6,15 +6,36 @@ use std::process::Command;
 fn analyze_outputs_sorted_files_json() {
     // Run the CLI analyze command on test_files as JSON
     let mut cmd = Command::cargo_bin("tree-sitter-cli").expect("binary exists");
-    cmd.args(["analyze", "test_files", "--format", "json", "--threads", "1"]);
+    cmd.args([
+        "analyze",
+        "test_files",
+        "--format",
+        "json",
+        "--threads",
+        "1",
+    ]);
 
     let output = cmd.assert().success().get_output().stdout.clone();
-    let v: serde_json::Value = serde_json::from_slice(&output).expect("valid json");
-    let files = v.get("files").and_then(|f| f.as_array()).expect("files array");
+
+    // Find the start of JSON (skip any informational messages)
+    let output_str = String::from_utf8_lossy(&output);
+    let json_start = output_str.find('{').unwrap_or(0);
+    let json_data = &output[json_start..];
+
+    let v: serde_json::Value = serde_json::from_slice(json_data).expect("valid json");
+    let files = v
+        .get("files")
+        .and_then(|f| f.as_array())
+        .expect("files array");
 
     let mut paths: Vec<String> = files
         .iter()
-        .map(|f| f.get("path").and_then(|p| p.as_str()).unwrap_or("").to_string())
+        .map(|f| {
+            f.get("path")
+                .and_then(|p| p.as_str())
+                .unwrap_or("")
+                .to_string()
+        })
         .collect();
     let mut sorted = paths.clone();
     sorted.sort();
@@ -29,4 +50,3 @@ fn analyze_prints_schema_v1() {
         .success()
         .stdout(predicate::str::contains("AnalyzeResultV1"));
 }
-

@@ -1,12 +1,15 @@
 //! Analyze command implementation
-//! 
-//! Provides comprehensive codebase analysis with configurable output formats.
+//!
+//! Provides comprehensive codebase analysis with standardized output formats.
 
-use std::path::PathBuf;
+use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
+use crate::cli::output::{
+    print_enhanced_summary, print_info, print_success, OutputFormat, OutputHandler,
+};
+use crate::cli::utils::{create_analysis_config, create_progress_bar, validate_output_path};
 use crate::CodebaseAnalyzer;
-use crate::cli::error::{CliError, CliResult, validate_path, validate_format};
-use crate::cli::utils::{create_progress_bar, create_analysis_config, validate_output_path, print_success};
-use crate::cli::output::{OutputFormat, print_analysis_table, print_summary, save_to_file};
+use colored::Colorize;
+use std::path::PathBuf;
 
 /// Execute the analyze command
 pub fn execute(
@@ -26,15 +29,15 @@ pub fn execute(
     // Validate inputs
     validate_path(path)?;
     validate_format(format, &["table", "json", "summary", "sarif"])?;
-    
+
     if let Some(output_path) = output {
         validate_output_path(output_path)?;
     }
-    
+
     // Create progress bar
     let pb = create_progress_bar("Analyzing codebase...");
     pb.set_message("Scanning files...");
-    
+
     // Configure analyzer
     let config = create_analysis_config(
         max_size,
@@ -46,55 +49,81 @@ pub fn execute(
         threads,
         enable_security,
     )?;
-    
-    let mut analyzer = CodebaseAnalyzer::with_config(config)
-        .map_err(|e| CliError::Analysis(e.to_string()))?;
-    
+
+    let mut analyzer =
+        CodebaseAnalyzer::with_config(config).map_err(|e| CliError::Analysis(e.to_string()))?;
+
     // Run analysis
     pb.set_message("Running analysis...");
-    let result = analyzer.analyze_directory(path)
+    let result = analyzer
+        .analyze_directory(path)
         .map_err(|e| CliError::Analysis(e.to_string()))?;
-    
-    pb.finish_with_message("Analysis complete!");
-    
-    // Display results based on format
-    let output_format = OutputFormat::from_str(format)
-        .map_err(|e| CliError::UnsupportedFormat(e))?;
-    
+
+    // Display results using the enhanced output system
+    let output_format =
+        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+
+    // Finish progress bar and handle output based on format
     match output_format {
-        OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&result)?;
-            if let Some(output_path) = output {
-                std::fs::write(output_path, &json)?;
-                print_success(&format!("Results saved to {}", output_path.display()));
-            } else {
-                println!("{}", json);
-            }
+        OutputFormat::Json | OutputFormat::Sarif | OutputFormat::Csv => {
+            // Suppress all non-JSON output for structured formats
+            pb.finish_and_clear();
+            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
+            output_handler.output_analysis_result(&result)?;
         }
-        OutputFormat::Sarif => {
-            let sarif = crate::cli::sarif::to_sarif(&result);
-            let json = serde_json::to_string_pretty(&sarif)?;
+        OutputFormat::Table => {
+            pb.finish_with_message("Analysis complete!");
+            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
+            print_info(&format!(
+                "Analysis completed successfully - {} files processed",
+                result.files.len()
+            ));
+            print_enhanced_summary(&result);
             if let Some(output_path) = output {
-                std::fs::write(output_path, &json)?;
-                print_success(&format!("SARIF saved to {}", output_path.display()));
-            } else {
-                println!("{}", json);
+                output_handler.output_analysis_result(&result)?;
             }
         }
         OutputFormat::Summary => {
-            print_summary(&result);
+            pb.finish_with_message("Analysis complete!");
+            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
+            print_info(&format!(
+                "Analysis completed successfully - {} files processed",
+                result.files.len()
+            ));
+            print_enhanced_summary(&result);
             if let Some(output_path) = output {
-                save_to_file(&result, output_path)?;
+                output_handler.output_analysis_result(&result)?;
             }
         }
-        OutputFormat::Table | _ => {
-            print_analysis_table(&result, detailed);
-            if let Some(output_path) = output {
-                save_to_file(&result, output_path)?;
-            }
+        _ => {
+            pb.finish_with_message("Analysis complete!");
+            let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
+            output_handler.output_analysis_result(&result)?;
         }
     }
-    
+
+    // Print additional details if requested
+    if detailed && result.files.len() > 0 {
+        println!("\n{}", "📋 DETAILED ANALYSIS".bright_yellow().bold());
+        println!("{}", "─".repeat(50));
+
+        let total_symbols: usize = result.files.iter().map(|f| f.symbols.len()).sum();
+        let avg_symbols = total_symbols as f64 / result.files.len() as f64;
+        let avg_lines = result.total_lines as f64 / result.files.len() as f64;
+
+        println!("Average symbols per file: {:.1}", avg_symbols);
+        println!("Average lines per file: {:.1}", avg_lines);
+
+        // Show parsing statistics
+        let successful_parses = result
+            .files
+            .iter()
+            .filter(|f| f.parsed_successfully)
+            .count();
+        let success_rate = (successful_parses as f64 / result.files.len() as f64) * 100.0;
+        println!("Parse success rate: {:.1}%", success_rate);
+    }
+
     Ok(())
 }
 
@@ -103,34 +132,24 @@ mod tests {
     use super::*;
 
     use tempfile::TempDir;
-    
+
     #[test]
     fn test_analyze_command_validation() {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
-        
+
         // Test valid inputs
         let result = execute(
-            &path,
-            "table",
-            1024,
-            20,
-            "full",
-            false,
-            None,
-            None,
-            None,
-            false,
-            None,
+            &path, "table", 1024, 20, "full", false, None, None, None, false, None,
             false, // enable_security
         );
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_analyze_command_invalid_path() {
         let invalid_path = PathBuf::from("/nonexistent/path");
-        
+
         let result = execute(
             &invalid_path,
             "table",
@@ -148,12 +167,12 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CliError::InvalidPath(_)));
     }
-    
+
     #[test]
     fn test_analyze_command_invalid_format() {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
-        
+
         let result = execute(
             &path,
             "invalid_format",
@@ -169,6 +188,9 @@ mod tests {
             false, // enable_security
         );
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CliError::UnsupportedFormat(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            CliError::UnsupportedFormat(_)
+        ));
     }
 }

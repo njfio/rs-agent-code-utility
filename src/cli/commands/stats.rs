@@ -1,10 +1,13 @@
-//! Stats command implementation
+//! Stats command implementation with enhanced output formatting
 
-use std::path::PathBuf;
-use crate::cli::error::{CliResult, validate_path};
-use crate::cli::utils::create_progress_bar;
-use crate::AnalysisResult;
+use colored::Colorize;
 use std::collections::HashMap;
+use std::path::PathBuf;
+
+use crate::cli::error::{validate_path, CliResult};
+use crate::cli::output::{print_enhanced_header, print_success};
+use crate::cli::utils::create_progress_bar;
+use crate::{AnalysisResult, CodebaseAnalyzer};
 
 #[derive(Debug)]
 struct CodebaseStats {
@@ -26,10 +29,8 @@ struct LanguageStats {
 
 pub fn execute(path: &PathBuf, top: usize) -> CliResult<()> {
     validate_path(path)?;
-    
-    let pb = create_progress_bar("Calculating statistics...");
 
-    use crate::analyzer::CodebaseAnalyzer;
+    let pb = create_progress_bar("Calculating statistics...");
 
     // Initialize analyzer
     let mut analyzer = CodebaseAnalyzer::new()?;
@@ -46,9 +47,14 @@ pub fn execute(path: &PathBuf, top: usize) -> CliResult<()> {
 
     pb.finish_with_message("Statistics complete!");
 
-    // Output statistics
-    output_statistics(&stats);
-    
+    // Output enhanced statistics
+    output_enhanced_statistics(&stats, &analysis_result);
+
+    print_success(&format!(
+        "Statistics calculated for {} files with {} lines of code",
+        stats.total_files, stats.total_lines
+    ));
+
     Ok(())
 }
 
@@ -66,12 +72,14 @@ fn calculate_statistics(analysis: &AnalysisResult, top: usize) -> CodebaseStats 
         file_sizes.push((file.path.clone(), file.size as u64));
         file_complexity.push((file.path.clone(), file.symbols.len()));
 
-        let lang_stats = languages.entry(file.language.clone()).or_insert(LanguageStats {
-            file_count: 0,
-            line_count: 0,
-            size_bytes: 0,
-            symbol_count: 0,
-        });
+        let lang_stats = languages
+            .entry(file.language.clone())
+            .or_insert(LanguageStats {
+                file_count: 0,
+                line_count: 0,
+                size_bytes: 0,
+                symbol_count: 0,
+            });
 
         lang_stats.file_count += 1;
         lang_stats.line_count += file.lines;
@@ -96,53 +104,137 @@ fn calculate_statistics(analysis: &AnalysisResult, top: usize) -> CodebaseStats 
     }
 }
 
-fn output_statistics(stats: &CodebaseStats) {
-    println!("\n📊 Codebase Statistics");
-    println!("═══════════════════════");
+fn output_enhanced_statistics(stats: &CodebaseStats, analysis: &AnalysisResult) {
+    print_enhanced_header("📊 CODEBASE STATISTICS", None, "cyan");
 
-    // Overall stats
-    println!("\n📈 Overall:");
-    println!("   Total files: {}", stats.total_files);
-    println!("   Total lines: {}", stats.total_lines);
-    println!("   Total size: {:.2} MB", stats.total_size as f64 / 1_048_576.0);
+    // Overall statistics with enhanced formatting
+    println!("{}", "📈 OVERALL METRICS".bright_yellow().bold());
+    println!("{}", "─".repeat(50));
 
-    // Language breakdown
-    println!("\n🔤 Languages:");
-    let mut lang_vec: Vec<_> = stats.languages.iter().collect();
-    lang_vec.sort_by(|a, b| b.1.file_count.cmp(&a.1.file_count));
+    println!(
+        "   Files analyzed: {}",
+        stats.total_files.to_string().bright_white()
+    );
+    println!(
+        "   Total lines: {}",
+        stats.total_lines.to_string().bright_white()
+    );
+    println!(
+        "   Total size: {:.2} MB",
+        stats.total_size as f64 / 1_048_576.0
+    );
 
-    for (lang, lang_stats) in lang_vec {
-        let percentage = (lang_stats.file_count as f64 / stats.total_files as f64) * 100.0;
-        println!("   {}: {} files ({:.1}%), {} lines, {:.2} MB",
-            lang,
-            lang_stats.file_count,
-            percentage,
-            lang_stats.line_count,
-            lang_stats.size_bytes as f64 / 1_048_576.0
+    let total_symbols: usize = stats.languages.values().map(|l| l.symbol_count).sum();
+    if total_symbols > 0 {
+        println!(
+            "   Total symbols: {}",
+            total_symbols.to_string().bright_white()
         );
     }
 
+    // Language breakdown with progress bars
+    if !stats.languages.is_empty() {
+        println!("\n{}", "🔤 LANGUAGE BREAKDOWN".bright_yellow().bold());
+        println!("{}", "─".repeat(50));
+
+        let mut lang_vec: Vec<_> = stats.languages.iter().collect();
+        lang_vec.sort_by(|a, b| b.1.file_count.cmp(&a.1.file_count));
+
+        for (lang, lang_stats) in lang_vec.iter().take(8) {
+            let percentage = (lang_stats.file_count as f64 / stats.total_files as f64) * 100.0;
+
+            // Create a simple progress bar
+            let progress_width = 20;
+            let filled = ((percentage / 100.0) * progress_width as f64) as usize;
+            let progress_bar = format!(
+                "[{}{}] {:.1}%",
+                "█".repeat(filled).bright_green(),
+                "░".repeat(progress_width - filled).bright_black(),
+                percentage
+            );
+
+            println!(
+                "   {}: {} files, {} lines {}",
+                lang.bright_blue().bold(),
+                lang_stats.file_count.to_string().bright_white(),
+                lang_stats.line_count.to_string().bright_white(),
+                progress_bar
+            );
+        }
+
+        if lang_vec.len() > 8 {
+            println!("   ... and {} more languages", lang_vec.len() - 8);
+        }
+    }
+
+    // File analysis insights
+    println!("\n{}", "📁 FILE ANALYSIS".bright_yellow().bold());
+    println!("{}", "─".repeat(50));
+
     // Largest files
     if !stats.largest_files.is_empty() {
-        println!("\n📁 Largest Files:");
-        for (i, (path, size)) in stats.largest_files.iter().enumerate() {
-            println!("   {}. {} ({:.2} KB)",
+        println!("   {}", "Largest Files:".bright_cyan());
+        for (i, (path, size)) in stats.largest_files.iter().take(5).enumerate() {
+            let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+            let size_kb = *size as f64 / 1024.0;
+            println!(
+                "     {}. {} ({:.1} KB)",
                 i + 1,
-                path.display(),
-                *size as f64 / 1024.0
+                file_name.bright_white(),
+                size_kb
             );
         }
     }
 
-    // Most complex files (by symbol count)
+    // Most complex files
     if !stats.most_complex_files.is_empty() {
-        println!("\n🧩 Most Complex Files (by symbol count):");
-        for (i, (path, symbols)) in stats.most_complex_files.iter().enumerate() {
-            println!("   {}. {} ({} symbols)",
+        println!("   {}", "Most Complex Files:".bright_cyan());
+        for (i, (path, symbols)) in stats.most_complex_files.iter().take(5).enumerate() {
+            let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+            println!(
+                "     {}. {} ({} symbols)",
                 i + 1,
-                path.display(),
-                symbols
+                file_name.bright_white(),
+                symbols.to_string().bright_green()
             );
         }
+    }
+
+    // Parse success rate
+    let successful_parses = analysis
+        .files
+        .iter()
+        .filter(|f| f.parsed_successfully)
+        .count();
+    let success_rate = (successful_parses as f64 / stats.total_files as f64) * 100.0;
+
+    println!("   {}", "Parse Success Rate:".bright_cyan());
+    if success_rate >= 95.0 {
+        println!(
+            "     {:.1}% {}",
+            success_rate,
+            "✅ Excellent".bright_green()
+        );
+    } else if success_rate >= 80.0 {
+        println!("     {:.1}% {}", success_rate, "⚠️ Good".bright_yellow());
+    } else {
+        println!(
+            "     {:.1}% {}",
+            success_rate,
+            "❌ Needs attention".bright_red()
+        );
+    }
+
+    // Recommendations
+    if success_rate < 100.0 {
+        let failed_files = stats.total_files - successful_parses;
+        println!("\n{}", "💡 RECOMMENDATIONS".bright_yellow().bold());
+        println!("{}", "─".repeat(50));
+        println!("   {} files failed to parse completely", failed_files);
+        println!("   Consider checking file encodings or syntax errors");
+    }
+
+    if stats.languages.len() > 5 {
+        println!("   Consider breaking down large codebases by language");
     }
 }
