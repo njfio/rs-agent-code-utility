@@ -683,7 +683,7 @@ impl GoSyntax {
                             if cursor.goto_first_child() {
                                 loop {
                                     let node = cursor.node();
-                                    if node.kind() == "method_elem" {
+                                    if node.kind() == "method_spec" {
                                         // Look for field_identifier child which contains the method name
                                         if let Some(method_name_node) =
                                             node.child_by_field_name("name")

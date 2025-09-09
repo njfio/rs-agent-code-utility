@@ -32,6 +32,37 @@ impl CppSyntax {
         false
     }
 
+    /// Extract function name from a function_declarator node
+    pub fn extract_function_name_from_declarator(node: &Node, _source: &str) -> Option<String> {
+        if node.kind() != "function_declarator" {
+            return None;
+        }
+
+        // Look for identifier in the declarator
+        for child in node.children() {
+            match child.kind() {
+                "identifier" => {
+                    return child.text().ok().map(|s| s.to_string());
+                }
+                "field_identifier" => {
+                    return child.text().ok().map(|s| s.to_string());
+                }
+                "qualified_identifier" => {
+                    return child.text().ok().map(|s| s.to_string());
+                }
+                "operator_name" => {
+                    return child.text().ok().map(|s| s.to_string());
+                }
+                "destructor_name" => {
+                    return child.text().ok().map(|s| s.to_string());
+                }
+                _ => {}
+            }
+        }
+
+        None
+    }
+
     /// Check if a node represents a class declaration
     pub fn is_class_declaration(node: &Node) -> bool {
         node.kind() == "class_specifier"
@@ -353,12 +384,53 @@ impl CppSyntax {
         source: &str,
     ) -> Vec<(String, tree_sitter::Point, tree_sitter::Point)> {
         let mut functions = Vec::new();
-        let function_nodes = tree.find_nodes_by_kind("function_definition");
 
+        // Look for function definitions
+        let function_nodes = tree.find_nodes_by_kind("function_definition");
         for func_node in function_nodes {
             if let Some(name) = Self::function_name(&func_node, source) {
                 let ts_node = func_node.inner();
                 functions.push((name, ts_node.start_position(), ts_node.end_position()));
+            }
+        }
+
+        // Also look for function declarations (e.g., virtual methods in classes)
+        let declaration_nodes = tree.find_nodes_by_kind("declaration");
+        for decl_node in declaration_nodes {
+            if Self::has_function_declarator(&decl_node) {
+                if let Some(name) = Self::function_name(&decl_node, source) {
+                    let ts_node = decl_node.inner();
+                    functions.push((name, ts_node.start_position(), ts_node.end_position()));
+                }
+            }
+        }
+
+        // Also look for standalone function declarators (e.g., pure virtual methods)
+        let declarator_nodes = tree.find_nodes_by_kind("function_declarator");
+        for decl_node in declarator_nodes {
+            // Only process declarators that are not already handled by function_definition or declaration
+            let parent = decl_node.parent();
+            if let Some(parent) = parent {
+                // Skip if parent is function_definition (already handled above)
+                if parent.kind() == "function_definition" {
+                    continue;
+                }
+                // Skip if parent is declaration (already handled above)
+                if parent.kind() == "declaration" {
+                    continue;
+                }
+
+                // Check if this is a child of field_declaration or field_declaration_list (class methods)
+                if parent.kind() == "field_declaration_list" || parent.kind() == "field_declaration"
+                {
+                    // This is likely a class method declaration
+                    if let Some(name) =
+                        Self::extract_function_name_from_declarator(&decl_node, source)
+                    {
+                        let ts_node = decl_node.inner();
+                        functions.push((name, ts_node.start_position(), ts_node.end_position()));
+                    }
+                }
             }
         }
 
@@ -620,10 +692,16 @@ namespace MyNamespace {
         let method_nodes = tree.find_nodes_by_kind("function_declarator");
         println!("Found {} function_declarator nodes", method_nodes.len());
 
+        // Debug: let's see what declaration nodes we have
+        let declaration_nodes = tree.find_nodes_by_kind("declaration");
+        println!("Found {} declaration nodes", declaration_nodes.len());
+
+        // Debug output for function detection
         assert!(functions.len() >= 4); // main + class methods + namespaced function
 
         let function_names: Vec<&str> =
             functions.iter().map(|(name, _, _)| name.as_str()).collect();
+
         assert!(function_names.contains(&"main"));
         assert!(function_names.contains(&"method"));
         assert!(function_names.contains(&"virtual_method"));

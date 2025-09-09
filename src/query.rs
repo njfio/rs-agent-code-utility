@@ -15,7 +15,7 @@ impl Query {
     /// Create a new query for the specified language
     pub fn new(language: Language, pattern: &str) -> Result<Self> {
         let ts_language = language.tree_sitter_language()?;
-        let query = tree_sitter::Query::new(&ts_language, pattern)?;
+        let query = tree_sitter::Query::new(ts_language, pattern)?;
 
         Ok(Self {
             inner: query,
@@ -35,7 +35,11 @@ impl Query {
 
     /// Get capture names
     pub fn capture_names(&self) -> Vec<&str> {
-        self.inner.capture_names().iter().copied().collect()
+        self.inner
+            .capture_names()
+            .iter()
+            .map(|s| s.as_str())
+            .collect()
     }
 
     /// Execute the query on a syntax tree
@@ -157,6 +161,11 @@ impl Query {
             Language::C => "(function_definition declarator: (function_declarator declarator: (identifier) @name)) @function",
             Language::Cpp => "(function_definition declarator: (function_declarator declarator: (identifier) @name)) @function",
             Language::Go => "(function_declaration name: (identifier) @name) @function",
+            Language::Java => "(method_declaration name: (identifier) @name) @function",
+            Language::Php => "(function_definition name: (identifier) @name) @function",
+            Language::Ruby => "(method name: (identifier) @name) @function",
+            Language::Swift => "(function_declaration name: (simple_identifier) @name) @function",
+            Language::Kotlin => "(function_declaration name: (simple_identifier) @name) @function",
         };
 
         Self::new(language, pattern)
@@ -172,6 +181,11 @@ impl Query {
             Language::C => "(struct_specifier name: (type_identifier) @name) @struct",
             Language::Cpp => "[(class_specifier name: (type_identifier) @name) (struct_specifier name: (type_identifier) @name)] @class",
             Language::Go => "(type_declaration (type_spec name: (type_identifier) @name)) @struct",
+            Language::Java => "(class_declaration name: (identifier) @name) @class",
+            Language::Php => "(class_declaration name: (identifier) @name) @class",
+            Language::Ruby => "(class name: (constant) @name) @class",
+            Language::Swift => "(class_declaration name: (simple_identifier) @name) @class",
+            Language::Kotlin => "(class_declaration name: (simple_identifier) @name) @class",
         };
 
         Self::new(language, pattern)

@@ -1013,6 +1013,21 @@ impl CodebaseAnalyzer {
             Language::Go => {
                 self.extract_go_symbols(tree, content, &mut symbols)?;
             }
+            Language::Java => {
+                self.extract_java_symbols(tree, content, &mut symbols)?;
+            }
+            Language::Php => {
+                self.extract_php_symbols(tree, content, &mut symbols)?;
+            }
+            Language::Ruby => {
+                self.extract_ruby_symbols(tree, content, &mut symbols)?;
+            }
+            Language::Swift => {
+                self.extract_swift_symbols(tree, content, &mut symbols)?;
+            }
+            Language::Kotlin => {
+                self.extract_kotlin_symbols(tree, content, &mut symbols)?;
+            }
         }
 
         Ok(symbols)
@@ -1185,7 +1200,7 @@ impl CodebaseAnalyzer {
         for func in functions {
             if let Some(name_node) = func.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let docs = self.extract_js_doc_comments(content, func.start_position().row);
+                    let docs = self.extract_c_doc_comments(content, func.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "function".to_string(),
@@ -1209,7 +1224,7 @@ impl CodebaseAnalyzer {
                         if let Some(value_node) = child.child_by_field_name("value") {
                             if value_node.kind() == "arrow_function" {
                                 if let Ok(name) = name_node.text() {
-                                    let docs = self.extract_js_doc_comments(
+                                    let docs = self.extract_c_doc_comments(
                                         content,
                                         var_decl.start_position().row,
                                     );
@@ -1236,7 +1251,7 @@ impl CodebaseAnalyzer {
         for class in classes {
             if let Some(name_node) = class.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let docs = self.extract_js_doc_comments(content, class.start_position().row);
+                    let docs = self.extract_c_doc_comments(content, class.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "class".to_string(),
@@ -1256,7 +1271,7 @@ impl CodebaseAnalyzer {
         for method in method_definitions {
             if let Some(name_node) = method.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
-                    let docs = self.extract_js_doc_comments(content, method.start_position().row);
+                    let docs = self.extract_c_doc_comments(content, method.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "method".to_string(),
@@ -1565,6 +1580,426 @@ impl CodebaseAnalyzer {
         Ok(())
     }
 
+    /// Extract Java symbols
+    fn extract_java_symbols(
+        &self,
+        tree: &SyntaxTree,
+        _content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        // TODO: Implement full Java symbol extraction
+        // For now, extract basic class and method symbols
+        let classes = tree.find_nodes_by_kind("class_declaration");
+        for class in classes {
+            if let Some(name_node) = class.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "class".to_string(),
+                        start_line: class.start_position().row + 1,
+                        start_column: class.start_position().column,
+                        end_line: class.end_position().row + 1,
+                        end_column: class.end_position().column,
+                        visibility: "public".to_string(), // Default for Java
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        let methods = tree.find_nodes_by_kind("method_declaration");
+        for method in methods {
+            if let Some(name_node) = method.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "method".to_string(),
+                        start_line: method.start_position().row + 1,
+                        start_column: method.start_position().column,
+                        end_line: method.end_position().row + 1,
+                        end_column: method.end_position().column,
+                        visibility: "public".to_string(), // Default for Java
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Extract Ruby symbols
+    fn extract_ruby_symbols(
+        &self,
+        tree: &SyntaxTree,
+        _content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        // TODO: Implement full Ruby symbol extraction
+        // For now, extract basic class and method symbols
+        let classes = tree.find_nodes_by_kind("class");
+        for class in classes {
+            if let Some(name_node) = class.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "class".to_string(),
+                        start_line: class.start_position().row + 1,
+                        start_column: class.start_position().column,
+                        end_line: class.end_position().row + 1,
+                        end_column: class.end_position().column,
+                        visibility: "public".to_string(), // Ruby classes are public
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        let methods = tree.find_nodes_by_kind("method");
+        for method in methods {
+            if let Some(name_node) = method.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "method".to_string(),
+                        start_line: method.start_position().row + 1,
+                        start_column: method.start_position().column,
+                        end_line: method.end_position().row + 1,
+                        end_column: method.end_position().column,
+                        visibility: "public".to_string(), // Ruby methods are public by default
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Extract Swift symbols
+    fn extract_swift_symbols(
+        &self,
+        tree: &SyntaxTree,
+        _content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        // TODO: Implement full Swift symbol extraction
+        // For now, extract basic class, struct and function symbols
+        let classes = tree.find_nodes_by_kind("class_declaration");
+        for class in classes {
+            if let Some(name_node) = class.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "class".to_string(),
+                        start_line: class.start_position().row + 1,
+                        start_column: class.start_position().column,
+                        end_line: class.end_position().row + 1,
+                        end_column: class.end_position().column,
+                        visibility: "internal".to_string(), // Default for Swift
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        let structs = tree.find_nodes_by_kind("struct_declaration");
+        for struct_node in structs {
+            if let Some(name_node) = struct_node.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "struct".to_string(),
+                        start_line: struct_node.start_position().row + 1,
+                        start_column: struct_node.start_position().column,
+                        end_line: struct_node.end_position().row + 1,
+                        end_column: struct_node.end_position().column,
+                        visibility: "internal".to_string(), // Default for Swift
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        let functions = tree.find_nodes_by_kind("function_declaration");
+        for func in functions {
+            if let Some(name_node) = func.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "function".to_string(),
+                        start_line: func.start_position().row + 1,
+                        start_column: func.start_position().column,
+                        end_line: func.end_position().row + 1,
+                        end_column: func.end_position().column,
+                        visibility: "internal".to_string(), // Default for Swift
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Extract Kotlin symbols
+    fn extract_kotlin_symbols(
+        &self,
+        tree: &SyntaxTree,
+        _content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        // TODO: Implement full Kotlin symbol extraction
+        // For now, extract basic class and function symbols
+        let classes = tree.find_nodes_by_kind("class_declaration");
+        for class in classes {
+            if let Some(name_node) = class.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "class".to_string(),
+                        start_line: class.start_position().row + 1,
+                        start_column: class.start_position().column,
+                        end_line: class.end_position().row + 1,
+                        end_column: class.end_position().column,
+                        visibility: "public".to_string(), // Default for Kotlin
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        let functions = tree.find_nodes_by_kind("function_declaration");
+        for func in functions {
+            if let Some(name_node) = func.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "function".to_string(),
+                        start_line: func.start_position().row + 1,
+                        start_column: func.start_position().column,
+                        end_line: func.end_position().row + 1,
+                        end_column: func.end_position().column,
+                        visibility: "public".to_string(), // Default for Kotlin
+                        documentation: None,
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    // /// Extract Java symbols
+    // fn extract_java_symbols(
+    //     &self,
+    //     tree: &SyntaxTree,
+    //     _content: &str,
+    //     symbols: &mut Vec<Symbol>,
+    // ) -> Result<()> {
+    //     // TODO: Implement full Java symbol extraction
+    //     // For now, extract basic class and method symbols
+    //     let classes = tree.find_nodes_by_kind("class_declaration");
+    //     for class in classes {
+    //         if let Some(name_node) = class.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "class".to_string(),
+    //                     start_line: class.start_position().row + 1,
+    //                     start_column: class.start_position().column,
+    //                     end_line: class.end_position().row + 1,
+    //                     end_column: class.end_position().column,
+    //                     visibility: "public".to_string(), // Default for Java
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     let methods = tree.find_nodes_by_kind("method_declaration");
+    //     for method in methods {
+    //         if let Some(name_node) = method.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "method".to_string(),
+    //                     start_line: method.start_position().row + 1,
+    //                     start_column: method.start_position().column,
+    //                     end_line: method.end_position().row + 1,
+    //                     end_column: method.end_position().column,
+    //                     visibility: "public".to_string(), // Default for Java
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     Ok(())
+    // }
+
+    // /// Extract Ruby symbols
+    // fn extract_ruby_symbols(
+    //     &self,
+    //     tree: &SyntaxTree,
+    //     _content: &str,
+    //     symbols: &mut Vec<Symbol>,
+    // ) -> Result<()> {
+    //     // TODO: Implement full Ruby symbol extraction
+    //     // For now, extract basic class and method symbols
+    //     let classes = tree.find_nodes_by_kind("class");
+    //     for class in classes {
+    //         if let Some(name_node) = class.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "class".to_string(),
+    //                     start_line: class.start_position().row + 1,
+    //                     start_column: class.start_position().column,
+    //                     end_line: class.end_position().row + 1,
+    //                     end_column: class.end_position().column,
+    //                     visibility: "public".to_string(), // Ruby classes are public
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     let methods = tree.find_nodes_by_kind("method");
+    //     for method in methods {
+    //         if let Some(name_node) = method.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "method".to_string(),
+    //                     start_line: method.start_position().row + 1,
+    //                     start_column: method.start_position().column,
+    //                     end_line: method.end_position().row + 1,
+    //                     end_column: method.end_position().column,
+    //                     visibility: "public".to_string(), // Ruby methods are public by default
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     Ok(())
+    // }
+
+    // /// Extract Swift symbols
+    // fn extract_swift_symbols(
+    //     &self,
+    //     tree: &SyntaxTree,
+    //     _content: &str,
+    //     symbols: &mut Vec<Symbol>,
+    // ) -> Result<()> {
+    //     // TODO: Implement full Swift symbol extraction
+    //     // For now, extract basic class, struct and function symbols
+    //     let classes = tree.find_nodes_by_kind("class_declaration");
+    //     for class in classes {
+    //         if let Some(name_node) = class.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "class".to_string(),
+    //                     start_line: class.start_position().row + 1,
+    //                     start_column: class.start_position().column,
+    //                     end_line: class.end_position().row + 1,
+    //                     end_column: class.end_position().column,
+    //                     visibility: "internal".to_string(), // Default for Swift
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     let structs = tree.find_nodes_by_kind("struct_declaration");
+    //     for struct_node in structs {
+    //         if let Some(name_node) = struct_node.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "struct".to_string(),
+    //                     start_line: struct_node.start_position().row + 1,
+    //                     start_column: struct_node.start_position().column,
+    //                     end_line: struct_node.end_position().row + 1,
+    //                     end_column: struct_node.end_position().column,
+    //                     visibility: "internal".to_string(), // Default for Swift
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     let functions = tree.find_nodes_by_kind("function_declaration");
+    //     for func in functions {
+    //         if let Some(name_node) = func.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "function".to_string(),
+    //                     start_line: func.start_position().row + 1,
+    //                     start_column: func.start_position().column,
+    //                     end_line: func.end_position().row + 1,
+    //                     end_column: func.end_position().column,
+    //                     visibility: "internal".to_string(), // Default for Swift
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     Ok(())
+    // }
+
+    // /// Extract Kotlin symbols
+    // fn extract_kotlin_symbols(
+    //     &self,
+    //     tree: &SyntaxTree,
+    //     _content: &str,
+    //     symbols: &mut Vec<Symbol>,
+    // ) -> Result<()> {
+    //     // TODO: Implement full Kotlin symbol extraction
+    //     // For now, extract basic class and function symbols
+    //     let classes = tree.find_nodes_by_kind("class_declaration");
+    //     for class in classes {
+    //         if let Some(name_node) = class.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "class".to_string(),
+    //                     start_line: class.start_position().row + 1,
+    //                     start_column: class.start_position().column,
+    //                     end_line: class.end_position().row + 1,
+    //                     end_column: class.end_position().column,
+    //                     visibility: "public".to_string(), // Default for Kotlin
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     let functions = tree.find_nodes_by_kind("function_declaration");
+    //     for func in functions {
+    //         if let Some(name_node) = func.child_by_field_name("name") {
+    //             if let Ok(name) = name_node.text() {
+    //                 symbols.push(Symbol {
+    //                     name: name.to_string(),
+    //                     kind: "function".to_string(),
+    //                     start_line: func.start_position().row + 1,
+    //                     start_column: func.start_position().column,
+    //                     end_line: func.end_position().row + 1,
+    //                     end_column: func.end_position().column,
+    //                     visibility: "public".to_string(), // Default for Kotlin
+    //                     documentation: None,
+    //                 });
+    //             }
+    //         }
+    //     }
+
+    //     Ok(())
+    // }
+
     /// Extract doc comments preceding a Rust item start line
     fn extract_rust_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
         let lines: Vec<&str> = content.lines().collect();
@@ -1595,68 +2030,52 @@ impl CodebaseAnalyzer {
         }
     }
 
-    /// Extract JSDoc comments preceding a JavaScript item start line
-    fn extract_js_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
-        let lines: Vec<&str> = content.lines().collect();
-        if start_row == 0 {
-            return None;
-        }
-
-        let mut docs = Vec::new();
-        let mut line_idx = start_row as isize - 1;
-        let mut in_block_comment = false;
-
-        while line_idx >= 0 {
-            let line = lines[line_idx as usize].trim();
-
-            if line.ends_with("*/") && line.contains("/**") {
-                // Single line JSDoc comment
-                let doc_content = line.trim_start_matches("/**").trim_end_matches("*/").trim();
-                if !doc_content.is_empty() {
-                    docs.push(doc_content);
+    /// Extract PHP symbols
+    fn extract_php_symbols(
+        &self,
+        tree: &SyntaxTree,
+        _content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        // TODO: Implement full PHP symbol extraction
+        // For now, extract basic class and function symbols
+        let classes = tree.find_nodes_by_kind("class_declaration");
+        for class in classes {
+            if let Some(name_node) = class.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "class".to_string(),
+                        start_line: class.start_position().row + 1,
+                        start_column: class.start_position().column,
+                        end_line: class.end_position().row + 1,
+                        end_column: class.end_position().column,
+                        visibility: "public".to_string(), // PHP classes are public
+                        documentation: None,
+                    });
                 }
-                break;
-            } else if line.ends_with("*/") {
-                in_block_comment = true;
-                let doc_content = line.trim_end_matches("*/").trim();
-                if !doc_content.is_empty() && !doc_content.starts_with('*') {
-                    docs.push(doc_content);
-                } else if doc_content.starts_with('*') {
-                    docs.push(doc_content.trim_start_matches('*').trim());
-                }
-            } else if in_block_comment {
-                if line.starts_with("/**") {
-                    let doc_content = line.trim_start_matches("/**").trim();
-                    if !doc_content.is_empty() {
-                        docs.push(doc_content);
-                    }
-                    break;
-                } else if line.starts_with('*') {
-                    let doc_content = line.trim_start_matches('*').trim();
-                    if !doc_content.is_empty() {
-                        docs.push(doc_content);
-                    }
-                } else if !line.is_empty() {
-                    docs.push(line);
-                }
-            } else if line.starts_with("//") {
-                // Single line comment
-                docs.push(line.trim_start_matches("//").trim());
-            } else if line.is_empty() {
-                line_idx -= 1;
-                continue;
-            } else {
-                break;
             }
-            line_idx -= 1;
         }
 
-        if docs.is_empty() {
-            None
-        } else {
-            docs.reverse();
-            Some(docs.join("\n"))
+        let functions = tree.find_nodes_by_kind("function_definition");
+        for func in functions {
+            if let Some(name_node) = func.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "function".to_string(),
+                        start_line: func.start_position().row + 1,
+                        start_column: func.start_position().column,
+                        end_line: func.end_position().row + 1,
+                        end_column: func.end_position().column,
+                        visibility: "public".to_string(), // PHP functions are public
+                        documentation: None,
+                    });
+                }
+            }
         }
+
+        Ok(())
     }
 
     /// Extract Python docstring from function or class definition

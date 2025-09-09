@@ -46,7 +46,7 @@ impl Parser {
         let mut parser = tree_sitter::Parser::new();
         let ts_language = language.tree_sitter_language()?;
 
-        parser.set_language(&ts_language).map_err(|e| {
+        parser.set_language(ts_language).map_err(|e| {
             Error::language_error_with_cause(
                 language.name(),
                 "parser initialization",
@@ -208,7 +208,7 @@ impl Parser {
             Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e))
         })?;
 
-        parser.set_language(&ts_language).map_err(|e| {
+        parser.set_language(ts_language).map_err(|e| {
             Error::language_error_with_cause(language.name(), "language change", format!("{:?}", e))
         })?;
 

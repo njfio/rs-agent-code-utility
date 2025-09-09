@@ -40,11 +40,11 @@ const {name, age} = {name: "John", age: 30};
 class Counter {
     #count = 0;
     #secret = "hidden";
-    
+
     increment() {
         this.#count++;
     }
-    
+
     getCount() {
         return this.#count;
     }
@@ -128,7 +128,7 @@ type NonNullable<T> = T extends null | undefined ? never : T;
 })
 class UserComponent {
     @Input() name: string;
-    
+
     @Output() userClick = new EventEmitter();
 }
 "#;
@@ -220,15 +220,15 @@ def process_users(users: List[User]) -> dict[str, int]:
 class Circle:
     def __init__(self, radius: float):
         self._radius = radius
-    
+
     @property
     def radius(self) -> float:
         return self._radius
-    
+
     @staticmethod
     def from_diameter(diameter: float) -> 'Circle':
         return Circle(diameter / 2)
-    
+
     @classmethod
     def unit_circle(cls) -> 'Circle':
         return cls(1.0)

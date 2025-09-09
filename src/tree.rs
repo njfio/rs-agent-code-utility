@@ -140,6 +140,13 @@ impl<'a> Node<'a> {
             .map_err(|e| Error::tree_error(&format!("Failed to get node text: {}", e)))
     }
 
+    /// Get the UTF-8 text of this node (direct access to inner node method)
+    pub fn utf8_text<'b>(&self, source: &'b [u8]) -> Result<&'b str> {
+        self.inner
+            .utf8_text(source)
+            .map_err(|e| Error::tree_error(&format!("Failed to get node UTF-8 text: {}", e)))
+    }
+
     /// Get the byte range of this node
     pub fn byte_range(&self) -> Range {
         Range {

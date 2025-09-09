@@ -403,6 +403,75 @@ impl SymbolTableAnalyzer {
                     | "type_switch_statement"
                     | "select_statement"
             ),
+            Language::Java => matches!(
+                node_kind,
+                "class_declaration"
+                    | "interface_declaration"
+                    | "method_declaration"
+                    | "constructor_declaration"
+                    | "block"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "try_statement"
+                    | "switch_statement"
+            ),
+            Language::Php => matches!(
+                node_kind,
+                "class_declaration"
+                    | "interface_declaration"
+                    | "trait_declaration"
+                    | "method_declaration"
+                    | "function_definition"
+                    | "compound_statement"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "try_statement"
+                    | "switch_statement"
+            ),
+            Language::Ruby => matches!(
+                node_kind,
+                "class"
+                    | "module"
+                    | "method"
+                    | "singleton_method"
+                    | "function_definition"
+                    | "block"
+                    | "if"
+                    | "while"
+                    | "for"
+                    | "begin"
+                    | "rescue"
+            ),
+            Language::Swift => matches!(
+                node_kind,
+                "class_declaration"
+                    | "struct_declaration"
+                    | "enum_declaration"
+                    | "protocol_declaration"
+                    | "function_declaration"
+                    | "statements"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "do_statement"
+                    | "switch_statement"
+            ),
+            Language::Kotlin => matches!(
+                node_kind,
+                "class_declaration"
+                    | "interface_declaration"
+                    | "enum_class_declaration"
+                    | "object_declaration"
+                    | "function_declaration"
+                    | "statements"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "try_statement"
+                    | "when_statement"
+            ),
         }
     }
 
@@ -478,6 +547,44 @@ impl SymbolTableAnalyzer {
                 "method_declaration" => ScopeType::Method,
                 _ => ScopeType::Block,
             },
+            Language::Java => match node_kind {
+                "class_declaration" => ScopeType::Class,
+                "interface_declaration" => ScopeType::Class,
+                "method_declaration" => ScopeType::Method,
+                "constructor_declaration" => ScopeType::Method,
+                _ => ScopeType::Block,
+            },
+            Language::Php => match node_kind {
+                "class_declaration" => ScopeType::Class,
+                "interface_declaration" => ScopeType::Class,
+                "trait_declaration" => ScopeType::Class,
+                "method_declaration" => ScopeType::Method,
+                "function_definition" => ScopeType::Function,
+                _ => ScopeType::Block,
+            },
+            Language::Ruby => match node_kind {
+                "class" => ScopeType::Class,
+                "module" => ScopeType::Namespace,
+                "method" => ScopeType::Method,
+                "singleton_method" => ScopeType::Method,
+                _ => ScopeType::Block,
+            },
+            Language::Swift => match node_kind {
+                "class_declaration" => ScopeType::Class,
+                "struct_declaration" => ScopeType::Class,
+                "enum_declaration" => ScopeType::Class,
+                "protocol_declaration" => ScopeType::Class,
+                "function_declaration" => ScopeType::Function,
+                _ => ScopeType::Block,
+            },
+            Language::Kotlin => match node_kind {
+                "class_declaration" => ScopeType::Class,
+                "interface_declaration" => ScopeType::Class,
+                "enum_class_declaration" => ScopeType::Class,
+                "object_declaration" => ScopeType::Class,
+                "function_declaration" => ScopeType::Function,
+                _ => ScopeType::Block,
+            },
         }
     }
 
@@ -500,7 +607,36 @@ impl SymbolTableAnalyzer {
             Language::Python => self.extract_python_symbol_definition(node),
             Language::C | Language::Cpp => self.extract_c_symbol_definition(node),
             Language::Go => self.extract_go_symbol_definition(node),
+            Language::Java => self.extract_java_symbol_definition(node),
+            Language::Php => self.extract_php_symbol_definition(node),
+            Language::Ruby => self.extract_ruby_symbol_definition(node),
+            Language::Swift => self.extract_swift_symbol_definition(node),
+            Language::Kotlin => self.extract_kotlin_symbol_definition(node),
         }
+    }
+
+    /// Extract Java symbol definitions
+    fn extract_java_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
+        // TODO: Implement Java symbol definition extraction
+        Ok(None)
+    }
+
+    /// Extract Ruby symbol definitions
+    fn extract_ruby_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
+        // TODO: Implement Ruby symbol definition extraction
+        Ok(None)
+    }
+
+    /// Extract Swift symbol definitions
+    fn extract_swift_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
+        // TODO: Implement Swift symbol definition extraction
+        Ok(None)
+    }
+
+    /// Extract Kotlin symbol definitions
+    fn extract_kotlin_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
+        // TODO: Implement Kotlin symbol definition extraction
+        Ok(None)
     }
 
     /// Extract Rust symbol definitions
@@ -651,6 +787,11 @@ impl SymbolTableAnalyzer {
             Language::Python => matches!(node_kind, "identifier"),
             Language::C | Language::Cpp => matches!(node_kind, "identifier"),
             Language::Go => matches!(node_kind, "identifier"),
+            Language::Java => matches!(node_kind, "identifier" | "type_identifier"),
+            Language::Php => matches!(node_kind, "identifier" | "variable_name"),
+            Language::Ruby => matches!(node_kind, "identifier" | "constant"),
+            Language::Swift => matches!(node_kind, "simple_identifier" | "type_identifier"),
+            Language::Kotlin => matches!(node_kind, "simple_identifier" | "type_identifier"),
         }
     }
 
@@ -836,6 +977,11 @@ impl SymbolTableAnalyzer {
 
     fn extract_go_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
         // TODO: Implement Go symbol extraction
+        Ok(None)
+    }
+
+    fn extract_php_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
+        // TODO: Implement PHP symbol extraction
         Ok(None)
     }
 

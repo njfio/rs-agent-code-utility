@@ -259,7 +259,9 @@ impl CfgBuilder {
                 {
                     // Create intermediate node if needed
                     let intermediate_exit = if cursor.goto_next_sibling() {
-                        cursor.goto_previous_sibling(); // Go back to current child
+                        // Save current position and go back to process the child
+                        let current_node = cursor.node();
+                        cursor.reset(current_node);
                         graph.add_node(CfgNodeType::BasicBlock {
                             statements: vec!["intermediate".to_string()],
                             start_byte: child.end_byte(),
