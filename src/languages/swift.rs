@@ -267,8 +267,6 @@ impl SwiftSyntax {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::languages::Language;
-    use crate::parser::Parser;
 
     #[test]
     fn test_swift_syntax_detection() {

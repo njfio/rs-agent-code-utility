@@ -235,8 +235,6 @@ impl RubySyntax {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::languages::Language;
-    use crate::parser::Parser;
 
     #[test]
     fn test_ruby_syntax_detection() {

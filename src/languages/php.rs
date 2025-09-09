@@ -209,8 +209,6 @@ impl PhpSyntax {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::languages::Language;
-    use crate::parser::Parser;
 
     #[test]
     fn test_php_syntax_detection() {

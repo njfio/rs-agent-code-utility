@@ -242,8 +242,6 @@ impl KotlinSyntax {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::languages::Language;
-    use crate::parser::Parser;
 
     // #[test]
     // fn test_kotlin_syntax_detection() {

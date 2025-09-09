@@ -222,6 +222,11 @@ impl StreamingFileReader {
     pub fn is_eof(&self) -> bool {
         self.total_read >= self.file_size
     }
+
+    /// Get the chunk size used for reading
+    pub fn chunk_size(&self) -> usize {
+        self.chunk_size
+    }
 }
 
 /// Memory pool for efficient object reuse
