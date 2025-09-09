@@ -67,10 +67,10 @@ impl DatabaseManager {
         if let Some(parent) = Path::new(&config.url.replace("sqlite://", "")).parent() {
             if !parent.exists() {
                 std::fs::create_dir_all(parent).map_err(|e| {
-                    sqlx::Error::Io(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("Failed to create database directory: {}", e),
-                    ))
+                    sqlx::Error::Io(std::io::Error::other(format!(
+                        "Failed to create database directory: {}",
+                        e
+                    )))
                 })?;
             }
         }
@@ -218,7 +218,7 @@ impl DatabaseManager {
 
             sqlx::query(
                 r#"
-                INSERT OR IGNORE INTO secret_patterns 
+                INSERT OR IGNORE INTO secret_patterns
                 (id, name, pattern, entropy_threshold, confidence, enabled, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 1, ?, ?)
             "#,
@@ -241,7 +241,7 @@ impl DatabaseManager {
     pub async fn store_vulnerability(&self, vuln: &VulnerabilityRecord) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
-            INSERT OR REPLACE INTO vulnerabilities 
+            INSERT OR REPLACE INTO vulnerabilities
             (id, cve_id, package_name, affected_versions, severity, cvss_score, description,
              published_date, last_modified, "references", cwe_ids, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -289,7 +289,7 @@ impl DatabaseManager {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
-            INSERT OR REPLACE INTO analysis_cache 
+            INSERT OR REPLACE INTO analysis_cache
             (id, file_path, file_hash, analysis_type, result_data, created_at, expires_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         "#,

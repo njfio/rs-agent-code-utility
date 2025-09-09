@@ -15,6 +15,36 @@ use tabled::{
     Table, Tabled,
 };
 
+/// Accessibility configuration for CLI output
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessibilityConfig {
+    /// Enable screen reader friendly output
+    pub screen_reader_mode: bool,
+    /// Use high contrast colors
+    pub high_contrast: bool,
+    /// Disable ANSI color codes entirely
+    pub no_colors: bool,
+    /// Use simple text output without emojis/icons
+    pub simple_text: bool,
+    /// Language for localized messages
+    pub language: String,
+    /// Enable verbose descriptions
+    pub verbose_descriptions: bool,
+}
+
+impl Default for AccessibilityConfig {
+    fn default() -> Self {
+        Self {
+            screen_reader_mode: false,
+            high_contrast: true, // Default to high contrast for better accessibility
+            no_colors: false,
+            simple_text: false,
+            language: "en".to_string(),
+            verbose_descriptions: false,
+        }
+    }
+}
+
 /// Output format options
 #[derive(Debug, Clone, PartialEq)]
 pub enum OutputFormat {
@@ -27,6 +57,10 @@ pub enum OutputFormat {
     Html,
     Csv,
     Template(String),
+    /// Accessibility-focused text output
+    AccessibleText,
+    /// Localized accessible text output
+    LocalizedAccessibleText(String), // Language code
 }
 
 impl OutputFormat {
@@ -35,6 +69,19 @@ impl OutputFormat {
         if s.starts_with("template:") {
             let template_name = s.strip_prefix("template:").unwrap_or(s);
             return Ok(OutputFormat::Template(template_name.to_string()));
+        }
+
+        // Check for localized format
+        if s.starts_with("localized:") {
+            let lang_code = s.strip_prefix("localized:").unwrap_or("en");
+            if AccessibleOutputHandler::is_language_supported(lang_code) {
+                return Ok(OutputFormat::LocalizedAccessibleText(lang_code.to_string()));
+            } else {
+                return Err(format!(
+                    "Unsupported language: {}. Supported languages: en, es, fr, de, zh, ja",
+                    lang_code
+                ));
+            }
         }
 
         match s.to_lowercase().as_str() {
@@ -46,7 +93,8 @@ impl OutputFormat {
             "text" => Ok(OutputFormat::Text),
             "html" => Ok(OutputFormat::Html),
             "csv" => Ok(OutputFormat::Csv),
-            _ => Err(format!("Unsupported format: {}. Supported: table, json, sarif, markdown, summary, text, html, csv, template:<name>", s)),
+            "accessible" | "a11y" => Ok(OutputFormat::AccessibleText),
+            _ => Err(format!("Unsupported format: {}. Supported: table, json, sarif, markdown, summary, text, html, csv, accessible, localized:<lang>, template:<name>", s)),
         }
     }
 
@@ -60,8 +108,541 @@ impl OutputFormat {
             "text",
             "html",
             "csv",
+            "accessible",
+            "localized:<lang>", // e.g., localized:es, localized:fr
             "template:<name>",
         ]
+    }
+}
+
+/// Output handler with accessibility support
+#[derive(Debug, Clone)]
+pub struct AccessibleOutputHandler {
+    config: AccessibilityConfig,
+    localized_messages: HashMap<String, String>,
+}
+
+impl AccessibleOutputHandler {
+    pub fn new(config: AccessibilityConfig) -> Self {
+        let mut localized_messages = HashMap::new();
+
+        // Initialize localized messages based on language
+        match config.language.as_str() {
+            "en" | "" => Self::load_english_messages(&mut localized_messages),
+            "es" => Self::load_spanish_messages(&mut localized_messages),
+            "fr" => Self::load_french_messages(&mut localized_messages),
+            "de" => Self::load_german_messages(&mut localized_messages),
+            "zh" => Self::load_chinese_messages(&mut localized_messages),
+            "ja" => Self::load_japanese_messages(&mut localized_messages),
+            _ => {
+                // Fallback to English for unsupported languages
+                Self::load_english_messages(&mut localized_messages);
+            }
+        }
+
+        Self {
+            config,
+            localized_messages,
+        }
+    }
+
+    fn load_english_messages(messages: &mut HashMap<String, String>) {
+        messages.insert(
+            "analysis_complete".to_string(),
+            "Analysis completed successfully".to_string(),
+        );
+        messages.insert("files_analyzed".to_string(), "Files analyzed".to_string());
+        messages.insert("symbols_found".to_string(), "Symbols found".to_string());
+        messages.insert(
+            "security_issues".to_string(),
+            "Security issues detected".to_string(),
+        );
+        messages.insert("no_issues".to_string(), "No issues found".to_string());
+        messages.insert(
+            "error_occurred".to_string(),
+            "An error occurred".to_string(),
+        );
+        messages.insert("summary".to_string(), "SUMMARY".to_string());
+        messages.insert(
+            "security_analysis".to_string(),
+            "SECURITY ANALYSIS".to_string(),
+        );
+        messages.insert(
+            "files_analyzed_header".to_string(),
+            "FILES ANALYZED".to_string(),
+        );
+        messages.insert("file".to_string(), "File".to_string());
+        messages.insert("language".to_string(), "Language".to_string());
+        messages.insert("lines".to_string(), "Lines".to_string());
+        messages.insert("symbols".to_string(), "Symbols".to_string());
+        messages.insert("status".to_string(), "Status".to_string());
+        messages.insert("critical".to_string(), "Critical".to_string());
+        messages.insert("high".to_string(), "High".to_string());
+        messages.insert("medium".to_string(), "Medium".to_string());
+        messages.insert("low".to_string(), "Low".to_string());
+        messages.insert(
+            "screen_reader_mode".to_string(),
+            "Screen reader mode".to_string(),
+        );
+        messages.insert(
+            "high_contrast".to_string(),
+            "High contrast colors".to_string(),
+        );
+        messages.insert("ansi_colors".to_string(), "ANSI colors".to_string());
+        messages.insert("simple_text".to_string(), "Simple text mode".to_string());
+        messages.insert(
+            "verbose_descriptions".to_string(),
+            "Verbose descriptions".to_string(),
+        );
+        messages.insert(
+            "accessibility_settings".to_string(),
+            "Accessibility Settings".to_string(),
+        );
+    }
+
+    fn load_spanish_messages(messages: &mut HashMap<String, String>) {
+        messages.insert(
+            "analysis_complete".to_string(),
+            "Análisis completado exitosamente".to_string(),
+        );
+        messages.insert(
+            "files_analyzed".to_string(),
+            "Archivos analizados".to_string(),
+        );
+        messages.insert(
+            "symbols_found".to_string(),
+            "Símbolos encontrados".to_string(),
+        );
+        messages.insert(
+            "security_issues".to_string(),
+            "Problemas de seguridad detectados".to_string(),
+        );
+        messages.insert(
+            "no_issues".to_string(),
+            "No se encontraron problemas".to_string(),
+        );
+        messages.insert("error_occurred".to_string(), "Ocurrió un error".to_string());
+        messages.insert("summary".to_string(), "RESUMEN".to_string());
+        messages.insert(
+            "security_analysis".to_string(),
+            "ANÁLISIS DE SEGURIDAD".to_string(),
+        );
+        messages.insert(
+            "files_analyzed_header".to_string(),
+            "ARCHIVOS ANALIZADOS".to_string(),
+        );
+        messages.insert("file".to_string(), "Archivo".to_string());
+        messages.insert("language".to_string(), "Lenguaje".to_string());
+        messages.insert("lines".to_string(), "Líneas".to_string());
+        messages.insert("symbols".to_string(), "Símbolos".to_string());
+        messages.insert("status".to_string(), "Estado".to_string());
+        messages.insert("critical".to_string(), "Crítico".to_string());
+        messages.insert("high".to_string(), "Alto".to_string());
+        messages.insert("medium".to_string(), "Medio".to_string());
+        messages.insert("low".to_string(), "Bajo".to_string());
+        messages.insert(
+            "screen_reader_mode".to_string(),
+            "Modo lector de pantalla".to_string(),
+        );
+        messages.insert(
+            "high_contrast".to_string(),
+            "Colores de alto contraste".to_string(),
+        );
+        messages.insert("ansi_colors".to_string(), "Colores ANSI".to_string());
+        messages.insert("simple_text".to_string(), "Modo texto simple".to_string());
+        messages.insert(
+            "verbose_descriptions".to_string(),
+            "Descripciones detalladas".to_string(),
+        );
+        messages.insert(
+            "accessibility_settings".to_string(),
+            "Configuración de Accesibilidad".to_string(),
+        );
+    }
+
+    fn load_french_messages(messages: &mut HashMap<String, String>) {
+        messages.insert(
+            "analysis_complete".to_string(),
+            "Analyse terminée avec succès".to_string(),
+        );
+        messages.insert(
+            "files_analyzed".to_string(),
+            "Fichiers analysés".to_string(),
+        );
+        messages.insert("symbols_found".to_string(), "Symboles trouvés".to_string());
+        messages.insert(
+            "security_issues".to_string(),
+            "Problèmes de sécurité détectés".to_string(),
+        );
+        messages.insert("no_issues".to_string(), "Aucun problème trouvé".to_string());
+        messages.insert(
+            "error_occurred".to_string(),
+            "Une erreur s'est produite".to_string(),
+        );
+        messages.insert("summary".to_string(), "RÉSUMÉ".to_string());
+        messages.insert(
+            "security_analysis".to_string(),
+            "ANALYSE DE SÉCURITÉ".to_string(),
+        );
+        messages.insert(
+            "files_analyzed_header".to_string(),
+            "FICHIERS ANALYSÉS".to_string(),
+        );
+        messages.insert("file".to_string(), "Fichier".to_string());
+        messages.insert("language".to_string(), "Langage".to_string());
+        messages.insert("lines".to_string(), "Lignes".to_string());
+        messages.insert("symbols".to_string(), "Symboles".to_string());
+        messages.insert("status".to_string(), "Statut".to_string());
+        messages.insert("critical".to_string(), "Critique".to_string());
+        messages.insert("high".to_string(), "Élevé".to_string());
+        messages.insert("medium".to_string(), "Moyen".to_string());
+        messages.insert("low".to_string(), "Faible".to_string());
+        messages.insert(
+            "screen_reader_mode".to_string(),
+            "Mode lecteur d'écran".to_string(),
+        );
+        messages.insert(
+            "high_contrast".to_string(),
+            "Couleurs à haut contraste".to_string(),
+        );
+        messages.insert("ansi_colors".to_string(), "Couleurs ANSI".to_string());
+        messages.insert("simple_text".to_string(), "Mode texte simple".to_string());
+        messages.insert(
+            "verbose_descriptions".to_string(),
+            "Descriptions détaillées".to_string(),
+        );
+        messages.insert(
+            "accessibility_settings".to_string(),
+            "Paramètres d'Accessibilité".to_string(),
+        );
+    }
+
+    fn load_german_messages(messages: &mut HashMap<String, String>) {
+        messages.insert(
+            "analysis_complete".to_string(),
+            "Analyse erfolgreich abgeschlossen".to_string(),
+        );
+        messages.insert(
+            "files_analyzed".to_string(),
+            "Dateien analysiert".to_string(),
+        );
+        messages.insert("symbols_found".to_string(), "Symbole gefunden".to_string());
+        messages.insert(
+            "security_issues".to_string(),
+            "Sicherheitsprobleme erkannt".to_string(),
+        );
+        messages.insert(
+            "no_issues".to_string(),
+            "Keine Probleme gefunden".to_string(),
+        );
+        messages.insert(
+            "error_occurred".to_string(),
+            "Ein Fehler ist aufgetreten".to_string(),
+        );
+        messages.insert("summary".to_string(), "ZUSAMMENFASSUNG".to_string());
+        messages.insert(
+            "security_analysis".to_string(),
+            "SICHERHEITSANALYSE".to_string(),
+        );
+        messages.insert(
+            "files_analyzed_header".to_string(),
+            "ANALYSIERTE DATEIEN".to_string(),
+        );
+        messages.insert("file".to_string(), "Datei".to_string());
+        messages.insert("language".to_string(), "Sprache".to_string());
+        messages.insert("lines".to_string(), "Zeilen".to_string());
+        messages.insert("symbols".to_string(), "Symbole".to_string());
+        messages.insert("status".to_string(), "Status".to_string());
+        messages.insert("critical".to_string(), "Kritisch".to_string());
+        messages.insert("high".to_string(), "Hoch".to_string());
+        messages.insert("medium".to_string(), "Mittel".to_string());
+        messages.insert("low".to_string(), "Niedrig".to_string());
+        messages.insert(
+            "screen_reader_mode".to_string(),
+            "Bildschirmleser-Modus".to_string(),
+        );
+        messages.insert("high_contrast".to_string(), "Hoher Kontrast".to_string());
+        messages.insert("ansi_colors".to_string(), "ANSI-Farben".to_string());
+        messages.insert("simple_text".to_string(), "Einfacher Textmodus".to_string());
+        messages.insert(
+            "verbose_descriptions".to_string(),
+            "Ausführliche Beschreibungen".to_string(),
+        );
+        messages.insert(
+            "accessibility_settings".to_string(),
+            "Barrierefreiheitseinstellungen".to_string(),
+        );
+    }
+
+    fn load_chinese_messages(messages: &mut HashMap<String, String>) {
+        messages.insert("analysis_complete".to_string(), "分析成功完成".to_string());
+        messages.insert("files_analyzed".to_string(), "已分析文件".to_string());
+        messages.insert("symbols_found".to_string(), "找到的符号".to_string());
+        messages.insert("security_issues".to_string(), "检测到安全问题".to_string());
+        messages.insert("no_issues".to_string(), "未发现问题".to_string());
+        messages.insert("error_occurred".to_string(), "发生错误".to_string());
+        messages.insert("summary".to_string(), "摘要".to_string());
+        messages.insert("security_analysis".to_string(), "安全分析".to_string());
+        messages.insert(
+            "files_analyzed_header".to_string(),
+            "已分析文件".to_string(),
+        );
+        messages.insert("file".to_string(), "文件".to_string());
+        messages.insert("language".to_string(), "语言".to_string());
+        messages.insert("lines".to_string(), "行数".to_string());
+        messages.insert("symbols".to_string(), "符号".to_string());
+        messages.insert("status".to_string(), "状态".to_string());
+        messages.insert("critical".to_string(), "严重".to_string());
+        messages.insert("high".to_string(), "高".to_string());
+        messages.insert("medium".to_string(), "中".to_string());
+        messages.insert("low".to_string(), "低".to_string());
+        messages.insert(
+            "screen_reader_mode".to_string(),
+            "屏幕阅读器模式".to_string(),
+        );
+        messages.insert("high_contrast".to_string(), "高对比度".to_string());
+        messages.insert("ansi_colors".to_string(), "ANSI颜色".to_string());
+        messages.insert("simple_text".to_string(), "简单文本模式".to_string());
+        messages.insert("verbose_descriptions".to_string(), "详细描述".to_string());
+        messages.insert(
+            "accessibility_settings".to_string(),
+            "辅助功能设置".to_string(),
+        );
+    }
+
+    fn load_japanese_messages(messages: &mut HashMap<String, String>) {
+        messages.insert(
+            "analysis_complete".to_string(),
+            "分析が正常に完了しました".to_string(),
+        );
+        messages.insert(
+            "files_analyzed".to_string(),
+            "分析されたファイル".to_string(),
+        );
+        messages.insert(
+            "symbols_found".to_string(),
+            "見つかったシンボル".to_string(),
+        );
+        messages.insert(
+            "security_issues".to_string(),
+            "セキュリティ問題が検出されました".to_string(),
+        );
+        messages.insert("no_issues".to_string(), "問題が見つかりません".to_string());
+        messages.insert(
+            "error_occurred".to_string(),
+            "エラーが発生しました".to_string(),
+        );
+        messages.insert("summary".to_string(), "概要".to_string());
+        messages.insert(
+            "security_analysis".to_string(),
+            "セキュリティ分析".to_string(),
+        );
+        messages.insert(
+            "files_analyzed_header".to_string(),
+            "分析されたファイル".to_string(),
+        );
+        messages.insert("file".to_string(), "ファイル".to_string());
+        messages.insert("language".to_string(), "言語".to_string());
+        messages.insert("lines".to_string(), "行数".to_string());
+        messages.insert("symbols".to_string(), "シンボル".to_string());
+        messages.insert("status".to_string(), "状態".to_string());
+        messages.insert("critical".to_string(), "重大".to_string());
+        messages.insert("high".to_string(), "高".to_string());
+        messages.insert("medium".to_string(), "中".to_string());
+        messages.insert("low".to_string(), "低".to_string());
+        messages.insert(
+            "screen_reader_mode".to_string(),
+            "スクリーンリーダーモード".to_string(),
+        );
+        messages.insert("high_contrast".to_string(), "高コントラスト".to_string());
+        messages.insert("ansi_colors".to_string(), "ANSIカラー".to_string());
+        messages.insert(
+            "simple_text".to_string(),
+            "シンプルテキストモード".to_string(),
+        );
+        messages.insert("verbose_descriptions".to_string(), "詳細な説明".to_string());
+        messages.insert(
+            "accessibility_settings".to_string(),
+            "アクセシビリティ設定".to_string(),
+        );
+    }
+
+    pub fn get_message(&self, key: &str) -> String {
+        self.localized_messages
+            .get(key)
+            .cloned()
+            .unwrap_or_else(|| key.to_string())
+    }
+
+    pub fn format_accessible_text(&self, analysis: &AnalysisOutput) -> String {
+        let mut output = String::new();
+
+        // Header with screen reader friendly format
+        output.push_str(&format!(
+            "{}: {}\n",
+            self.get_message("analysis_complete"),
+            analysis.metadata.tool_version
+        ));
+
+        if self.config.verbose_descriptions {
+            output.push_str(&format!(
+                "Analysis performed on: {}\n",
+                analysis.metadata.target_path
+            ));
+            output.push_str(&format!(
+                "Duration: {} milliseconds\n",
+                analysis.metadata.analysis_duration_ms
+            ));
+        }
+
+        // Summary section
+        output.push_str(&format!("\n{}:\n", self.get_message("summary")));
+        output.push_str(&format!(
+            "{}: {}\n",
+            self.get_message("files_analyzed"),
+            analysis.summary.total_files
+        ));
+        output.push_str(&format!(
+            "Total lines of code: {}\n",
+            analysis.summary.total_lines
+        ));
+        output.push_str(&format!(
+            "{}: {}\n",
+            self.get_message("symbols_found"),
+            analysis.summary.total_symbols
+        ));
+
+        // Security section
+        if let Some(security) = &analysis.security {
+            output.push_str(&format!("\n{}:\n", self.get_message("security_analysis")));
+            if security.total_issues > 0 {
+                output.push_str(&format!(
+                    "{}: {}\n",
+                    self.get_message("security_issues"),
+                    security.total_issues
+                ));
+                output.push_str(&format!(
+                    "{}: {}\n",
+                    self.get_message("critical"),
+                    security.critical_count
+                ));
+                output.push_str(&format!(
+                    "{}: {}\n",
+                    self.get_message("high"),
+                    security.high_count
+                ));
+                output.push_str(&format!(
+                    "{}: {}\n",
+                    self.get_message("medium"),
+                    security.medium_count
+                ));
+                output.push_str(&format!(
+                    "{}: {}\n",
+                    self.get_message("low"),
+                    security.low_count
+                ));
+            } else {
+                output.push_str(&format!("{}\n", self.get_message("no_issues")));
+            }
+        }
+
+        // Files section
+        if !analysis.files.is_empty() {
+            output.push_str(&format!(
+                "\n{}:\n",
+                self.get_message("files_analyzed_header")
+            ));
+            for file in &analysis.files {
+                output.push_str(&format!(
+                    "{}: {}, {}: {}, {}: {}, {}: {}\n",
+                    self.get_message("file"),
+                    file.path,
+                    self.get_message("language"),
+                    file.language,
+                    self.get_message("lines"),
+                    file.lines,
+                    self.get_message("symbols"),
+                    file.symbols_count
+                ));
+            }
+        }
+
+        output
+    }
+
+    pub fn apply_accessibility_settings(&self) -> String {
+        let mut settings = Vec::new();
+
+        if self.config.screen_reader_mode {
+            settings.push(format!(
+                "{}: {}",
+                self.get_message("screen_reader_mode"),
+                "ENABLED"
+            ));
+        }
+
+        if self.config.high_contrast {
+            settings.push(format!(
+                "{}: {}",
+                self.get_message("high_contrast"),
+                "ENABLED"
+            ));
+        }
+
+        if self.config.no_colors {
+            settings.push(format!(
+                "{}: {}",
+                self.get_message("ansi_colors"),
+                "DISABLED"
+            ));
+        }
+
+        if self.config.simple_text {
+            settings.push(format!(
+                "{}: {}",
+                self.get_message("simple_text"),
+                "ENABLED"
+            ));
+        }
+
+        if self.config.verbose_descriptions {
+            settings.push(format!(
+                "{}: {}",
+                self.get_message("verbose_descriptions"),
+                "ENABLED"
+            ));
+        }
+
+        settings.push(format!(
+            "{}: {}",
+            self.get_message("language"),
+            self.config.language
+        ));
+
+        format!(
+            "{}:\n{}",
+            self.get_message("accessibility_settings"),
+            settings.join("\n")
+        )
+    }
+
+    /// Get supported languages
+    pub fn supported_languages() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("en", "English"),
+            ("es", "Español"),
+            ("fr", "Français"),
+            ("de", "Deutsch"),
+            ("zh", "中文"),
+            ("ja", "日本語"),
+        ]
+    }
+
+    /// Check if a language is supported
+    pub fn is_language_supported(lang_code: &str) -> bool {
+        Self::supported_languages()
+            .iter()
+            .any(|(code, _)| *code == lang_code)
     }
 }
 
@@ -177,26 +758,49 @@ pub trait EnhancedTable {
 /// Table row for file information with enhanced formatting
 #[derive(Tabled, Serialize, Deserialize, Debug, Clone)]
 pub struct FileRow {
-    #[tabled(rename = "📁 File")]
+    #[tabled(rename = "File")]
     pub path: String,
-    #[tabled(rename = "🔤 Language")]
+    #[tabled(rename = "Language")]
     pub language: String,
-    #[tabled(rename = "📊 Lines")]
+    #[tabled(rename = "Lines")]
     pub lines: String,
-    #[tabled(rename = "💾 Size")]
+    #[tabled(rename = "Size")]
     pub size: String,
-    #[tabled(rename = "🔧 Symbols")]
+    #[tabled(rename = "Symbols")]
     pub symbols: String,
-    #[tabled(rename = "✅ Status")]
+    #[tabled(rename = "Status")]
     pub status: String,
 }
 
 impl FileRow {
     pub fn new(file: &crate::FileInfo) -> Self {
-        let status_icon = if file.parsed_successfully {
-            "✅"
+        Self::new_with_accessibility(file, &AccessibilityConfig::default())
+    }
+
+    pub fn new_with_accessibility(
+        file: &crate::FileInfo,
+        accessibility: &AccessibilityConfig,
+    ) -> Self {
+        let (status_icon, status_text) = if file.parsed_successfully {
+            if accessibility.simple_text {
+                ("", "OK")
+            } else {
+                ("✅", "OK")
+            }
         } else {
-            "❌"
+            if accessibility.simple_text {
+                ("", "Failed")
+            } else {
+                ("❌", "Failed")
+            }
+        };
+
+        let status = if accessibility.screen_reader_mode {
+            format!("Status: {}", status_text)
+        } else if accessibility.simple_text {
+            status_text.to_string()
+        } else {
+            format!("{} {}", status_icon, status_text)
         };
 
         Self {
@@ -205,15 +809,7 @@ impl FileRow {
             lines: file.lines.to_string(),
             size: format_size(file.size),
             symbols: file.symbols.len().to_string(),
-            status: format!(
-                "{} {}",
-                status_icon,
-                if file.parsed_successfully {
-                    "OK"
-                } else {
-                    "Failed"
-                }
-            ),
+            status,
         }
     }
 }
@@ -272,26 +868,42 @@ impl EnhancedTable for Vec<FileRow> {
 /// Enhanced symbol table with better formatting
 #[derive(Tabled, Serialize, Deserialize, Debug, Clone)]
 pub struct SymbolRow {
-    #[tabled(rename = "🔧 Symbol")]
+    #[tabled(rename = "Symbol")]
     pub name: String,
-    #[tabled(rename = "📋 Type")]
+    #[tabled(rename = "Type")]
     pub kind: String,
-    #[tabled(rename = "📁 File")]
+    #[tabled(rename = "File")]
     pub file: String,
-    #[tabled(rename = "📍 Line")]
+    #[tabled(rename = "Line")]
     pub line: String,
-    #[tabled(rename = "👁️ Visibility")]
+    #[tabled(rename = "Visibility")]
     pub visibility: String,
 }
 
 impl SymbolRow {
     pub fn new(symbol: &crate::Symbol, file_path: &str) -> Self {
+        Self::new_with_accessibility(symbol, file_path, &AccessibilityConfig::default())
+    }
+
+    pub fn new_with_accessibility(
+        symbol: &crate::Symbol,
+        file_path: &str,
+        accessibility: &AccessibilityConfig,
+    ) -> Self {
         Self {
-            name: symbol.name.clone(),
+            name: if accessibility.verbose_descriptions {
+                format!("Symbol: {}", symbol.name)
+            } else {
+                symbol.name.clone()
+            },
             kind: format_symbol_type(&symbol.kind),
             file: file_path.to_string(),
             line: symbol.start_line.to_string(),
-            visibility: symbol.visibility.clone(),
+            visibility: if accessibility.screen_reader_mode {
+                format!("Visibility: {}", symbol.visibility)
+            } else {
+                symbol.visibility.clone()
+            },
         }
     }
 }
@@ -781,6 +1393,96 @@ pub fn print_info(message: &str) {
 }
 
 /// Create a unified output handler for consistent formatting across commands
+/// Convert crate::AnalysisResult to AnalysisOutput for accessibility formatting
+fn convert_to_analysis_output(result: &crate::AnalysisResult) -> AnalysisOutput {
+    let files: Vec<FileOutput> = result
+        .files
+        .iter()
+        .map(|file| FileOutput {
+            path: file.path.to_string_lossy().to_string(),
+            language: file.language.clone(),
+            lines: file.lines,
+            size_bytes: file.size,
+            symbols_count: file.symbols.len(),
+            parse_status: if file.parsed_successfully {
+                "success".to_string()
+            } else {
+                "failed".to_string()
+            },
+            complexity_score: None, // Could be calculated if needed
+        })
+        .collect();
+
+    let symbols: Vec<SymbolOutput> = result
+        .files
+        .iter()
+        .flat_map(|file| {
+            file.symbols.iter().map(|symbol| SymbolOutput {
+                name: symbol.name.clone(),
+                kind: symbol.kind.clone(),
+                file_path: file.path.to_string_lossy().to_string(),
+                start_line: symbol.start_line,
+                end_line: symbol.end_line,
+                visibility: symbol.visibility.clone(),
+                documentation: None, // Could be extracted if available
+                complexity: None,
+            })
+        })
+        .collect();
+
+    let mut languages = HashMap::new();
+    for file in &result.files {
+        let entry = languages
+            .entry(file.language.clone())
+            .or_insert(LanguageStats {
+                files_count: 0,
+                lines_count: 0,
+                symbols_count: 0,
+                size_bytes: 0,
+                percentage: 0.0,
+            });
+        entry.files_count += 1;
+        entry.lines_count += file.lines;
+        entry.symbols_count += file.symbols.len();
+        entry.size_bytes += file.size as u64;
+    }
+
+    // Calculate percentages
+    let total_files = result.files.len() as f64;
+    for stats in languages.values_mut() {
+        stats.percentage = (stats.files_count as f64 / total_files) * 100.0;
+    }
+
+    AnalysisOutput {
+        metadata: OutputMetadata {
+            tool_version: env!("CARGO_PKG_VERSION").to_string(),
+            analysis_timestamp: format!(
+                "{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
+            target_path: result.root_path.to_string_lossy().to_string(),
+            analysis_duration_ms: 0, // Could be tracked if needed
+            output_format: "accessible".to_string(),
+        },
+        summary: AnalysisSummary {
+            total_files: result.files.len(),
+            total_lines: result.files.iter().map(|f| f.lines).sum(),
+            total_size_bytes: result.files.iter().map(|f| f.size as u64).sum(),
+            total_symbols: result.files.iter().map(|f| f.symbols.len()).sum(),
+            languages_count: languages.len(),
+            analysis_status: "completed".to_string(),
+        },
+        files,
+        symbols,
+        languages,
+        security: None, // Could be populated if security analysis is available
+        dependencies: None,
+    }
+}
+
 pub struct OutputHandler {
     pub format: OutputFormat,
     pub output_path: Option<PathBuf>,
@@ -870,6 +1572,38 @@ impl OutputHandler {
                     print_success(&format!("HTML report saved to {}", path.display()));
                 } else {
                     println!("{}", html);
+                }
+            }
+            OutputFormat::AccessibleText => {
+                let accessibility_config = AccessibilityConfig::default();
+                let handler = AccessibleOutputHandler::new(accessibility_config);
+                let analysis_output = convert_to_analysis_output(result);
+                let accessible_text = handler.format_accessible_text(&analysis_output);
+                if let Some(path) = &self.output_path {
+                    std::fs::write(path, accessible_text)?;
+                    print_success(&format!(
+                        "Accessible text results saved to {}",
+                        path.display()
+                    ));
+                } else {
+                    println!("{}", accessible_text);
+                }
+            }
+            OutputFormat::LocalizedAccessibleText(lang_code) => {
+                let mut accessibility_config = AccessibilityConfig::default();
+                accessibility_config.language = lang_code.clone();
+                let handler = AccessibleOutputHandler::new(accessibility_config);
+                let analysis_output = convert_to_analysis_output(result);
+                let localized_text = handler.format_accessible_text(&analysis_output);
+                if let Some(path) = &self.output_path {
+                    std::fs::write(path, localized_text)?;
+                    print_success(&format!(
+                        "Localized accessible text results saved to {} (language: {})",
+                        path.display(),
+                        lang_code
+                    ));
+                } else {
+                    println!("{}", localized_text);
                 }
             }
         }

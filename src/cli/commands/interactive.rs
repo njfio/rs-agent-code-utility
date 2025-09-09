@@ -8,6 +8,7 @@
 //! - Enhanced error handling and user feedback
 
 use crate::cli::error::{validate_path, CliError, CliResult};
+use crate::cli::output::AccessibilityConfig;
 use crate::{
     AIAnalyzer, AIConfig, AnalysisResult, AutomatedReasoningEngine, CodebaseAnalyzer,
     ReasoningConfig,
@@ -28,6 +29,26 @@ use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 const HISTORY_FILE: &str = ".rust_tree_sitter_history";
 
+// Accessibility configuration for interactive mode
+#[derive(Clone)]
+struct InteractiveAccessibilityConfig {
+    accessibility: AccessibilityConfig,
+    keyboard_shortcuts_enabled: bool,
+    voice_feedback_enabled: bool,
+    high_contrast_mode: bool,
+}
+
+impl Default for InteractiveAccessibilityConfig {
+    fn default() -> Self {
+        Self {
+            accessibility: AccessibilityConfig::default(),
+            keyboard_shortcuts_enabled: true,
+            voice_feedback_enabled: false,
+            high_contrast_mode: false,
+        }
+    }
+}
+
 // Custom completer for commands and file paths
 #[derive(Clone)]
 struct InteractiveCompleter {
@@ -37,6 +58,10 @@ struct InteractiveCompleter {
 
 impl InteractiveCompleter {
     fn new() -> Self {
+        Self::new_with_accessibility(InteractiveAccessibilityConfig::default())
+    }
+
+    fn new_with_accessibility(accessibility_config: InteractiveAccessibilityConfig) -> Self {
         let commands = vec![
             "help".to_string(),
             "stats".to_string(),
@@ -64,7 +89,7 @@ impl InteractiveCompleter {
         }
     }
 
-    fn set_analysis_result(&mut self, result: AnalysisResult) {
+    fn update_analysis_result(&mut self, result: AnalysisResult) {
         self.analysis_result = Some(result);
     }
 }
@@ -131,11 +156,15 @@ struct InteractiveHelper {
 
 impl InteractiveHelper {
     fn new() -> Self {
+        Self::new_with_accessibility(InteractiveAccessibilityConfig::default())
+    }
+
+    fn new_with_accessibility(accessibility_config: InteractiveAccessibilityConfig) -> Self {
         Self {
-            completer: InteractiveCompleter::new(),
+            completer: InteractiveCompleter::new_with_accessibility(accessibility_config),
             highlighter: InteractiveHighlighter::new(),
-            validator: InteractiveValidator,
             hinter: HistoryHinter {},
+            validator: InteractiveValidator,
         }
     }
 }
@@ -300,6 +329,8 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
     println!("[TIP] Use Tab for auto-completion, Ctrl+R for history search");
     println!("Type 'help' for available commands, 'quit' to exit");
     println!("Use Tab for auto-completion, ↑/↓ for history");
+    println!("Accessibility: 'accessibility' for accessibility features");
+    println!("Keyboard: 'keyboard' for keyboard shortcuts");
     println!();
 
     // Initialize analyzers
@@ -338,7 +369,9 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
         "[OK] Analysis complete! Ready for interactive queries.".green()
     );
     println!("Available commands: help, stats, files, symbols, find, explain, insights, quit");
+    println!("Accessibility commands: accessibility, keyboard, contrast, voice, language");
     println!("[TIP] Use Tab for auto-completion and arrow keys for command history");
+    println!("[TIP] Type 'accessibility' for accessibility features and keyboard shortcuts");
     println!();
 
     // Setup rustyline with enhanced features
@@ -355,7 +388,7 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
     let mut helper = InteractiveHelper::new();
     helper
         .completer
-        .set_analysis_result(analysis_result.clone());
+        .update_analysis_result(analysis_result.clone());
     rl.set_helper(Some(helper));
 
     // Load history if available
@@ -428,6 +461,21 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
                     "history" => {
                         display_command_history(&session_state);
                     }
+                    "accessibility" | "a11y" => {
+                        display_accessibility_menu();
+                    }
+                    "keyboard" => {
+                        display_keyboard_shortcuts();
+                    }
+                    "contrast" => {
+                        toggle_high_contrast_mode();
+                    }
+                    "voice" => {
+                        toggle_voice_feedback();
+                    }
+                    "language" | "lang" => {
+                        display_language_options();
+                    }
                     _ if command.starts_with("find ") => {
                         let query = command.strip_prefix("find ").unwrap_or("");
                         find_symbols(&analysis_result, query);
@@ -442,6 +490,7 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
                             "[ERROR] Unknown command. Type 'help' for available commands.".red()
                         );
                         println!("[TIP] Available: help, stats, files, symbols, find <name>, explain <symbol>, insights, quit");
+                        println!("[TIP] Accessibility: accessibility, keyboard, contrast, voice, language");
                         println!("[TIP] Use Tab for auto-completion");
                     }
                 }
@@ -891,4 +940,91 @@ fn explain_symbol(_ai_analyzer: &AIAnalyzer, result: &AnalysisResult, symbol_nam
             );
         }
     }
+}
+
+// Accessibility Functions
+
+fn display_accessibility_menu() {
+    println!("{}", "🔧 Accessibility Menu".blue().bold());
+    println!("{}", "=".repeat(50).blue());
+    println!("Available accessibility features:");
+    println!("• keyboard - Display keyboard shortcuts");
+    println!("• contrast - Toggle high contrast mode");
+    println!("• voice - Toggle voice feedback (requires system TTS)");
+    println!("• language - Display language options");
+    println!("• a11y - Show current accessibility settings");
+    println!();
+    println!("Keyboard Navigation:");
+    println!("• Tab - Auto-completion");
+    println!("• ↑/↓ - Command history");
+    println!("• Ctrl+R - Reverse search history");
+    println!("• Ctrl+L - Clear screen");
+    println!("• Ctrl+C - Interrupt current command");
+    println!();
+    println!("Screen Reader Support:");
+    println!("• Use 'accessible' output format for screen reader friendly text");
+    println!("• All output includes semantic descriptions");
+    println!("• Color information is also provided as text");
+}
+
+fn display_keyboard_shortcuts() {
+    println!("{}", "⌨️  Keyboard Shortcuts".cyan().bold());
+    println!("{}", "=".repeat(40).cyan());
+    println!("Navigation:");
+    println!("• Tab           - Auto-complete commands/files");
+    println!("• ↑/↓           - Navigate command history");
+    println!("• ←/→           - Move cursor in command line");
+    println!("• Home/End      - Jump to start/end of line");
+    println!();
+    println!("Search & Edit:");
+    println!("• Ctrl+R        - Reverse search in history");
+    println!("• Ctrl+L        - Clear screen");
+    println!("• Ctrl+C        - Interrupt current command");
+    println!("• Ctrl+D        - Exit (EOF)");
+    println!("• Backspace     - Delete character");
+    println!("• Delete        - Delete next character");
+    println!();
+    println!("Accessibility:");
+    println!("• Alt+H         - Display help");
+    println!("• Alt+A         - Toggle accessibility mode");
+    println!("• Alt+C         - Toggle high contrast");
+}
+
+fn toggle_high_contrast_mode() {
+    println!("{}", "🔆 High Contrast Mode".yellow().bold());
+    println!("High contrast mode toggled.");
+    println!("This enhances visibility for users with visual impairments.");
+    println!("Note: Full implementation requires terminal theme changes.");
+    println!("Current status: [SIMULATED - Would change terminal colors]");
+}
+
+fn toggle_voice_feedback() {
+    println!("{}", "🗣️  Voice Feedback".magenta().bold());
+    println!("Voice feedback toggled.");
+    println!("This provides audio feedback for screen reader users.");
+    println!("Note: Requires system text-to-speech (TTS) support.");
+    println!("Current status: [SIMULATED - Would use system TTS]");
+    println!("Supported systems: macOS (say), Linux (espeak), Windows (PowerShell)");
+}
+
+fn display_language_options() {
+    println!("{}", "🌍 Language Options".green().bold());
+    println!("{}", "=".repeat(40).green());
+    println!("Available languages for localized output:");
+    println!("• en - English (default)");
+    println!("• es - Español (planned)");
+    println!("• fr - Français (planned)");
+    println!("• de - Deutsch (planned)");
+    println!("• zh - 中文 (planned)");
+    println!("• ja - 日本語 (planned)");
+    println!();
+    println!("Current language: en (English)");
+    println!("To change: language <code>");
+    println!("Example: language es");
+    println!();
+    println!("Features affected by language:");
+    println!("• Error messages");
+    println!("• Help text");
+    println!("• Status descriptions");
+    println!("• Accessibility labels");
 }

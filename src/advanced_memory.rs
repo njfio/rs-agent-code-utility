@@ -74,17 +74,17 @@ pub struct MemoryMappedFile {
 impl MemoryMappedFile {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(&path).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open file for memory mapping: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to open file for memory mapping: {}",
+                e
+            )))
         })?;
 
         let metadata = file.metadata().map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to get file metadata: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to get file metadata: {}",
+                e
+            )))
         })?;
 
         let file_size = metadata.len() as usize;
@@ -92,10 +92,10 @@ impl MemoryMappedFile {
         // Memory map the file
         let mmap = unsafe {
             MmapOptions::new().map(&file).map_err(|e| {
-                Error::IoError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to memory map file: {}", e),
-                ))
+                Error::IoError(std::io::Error::other(format!(
+                    "Failed to memory map file: {}",
+                    e
+                )))
             })?
         };
 
@@ -146,17 +146,17 @@ pub struct StreamingFileReader {
 impl StreamingFileReader {
     pub fn new<P: AsRef<Path>>(path: P, chunk_size: usize) -> Result<Self> {
         let file = File::open(&path).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open file for streaming: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to open file for streaming: {}",
+                e
+            )))
         })?;
 
         let metadata = file.metadata().map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to get file metadata: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to get file metadata: {}",
+                e
+            )))
         })?;
 
         let file_size = metadata.len() as usize;
@@ -174,10 +174,10 @@ impl StreamingFileReader {
     /// Read the next chunk of data
     pub fn read_chunk(&mut self) -> Result<Option<&[u8]>> {
         let bytes_read = self.reader.read(&mut self.buffer).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to read chunk: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to read chunk: {}",
+                e
+            )))
         })?;
 
         if bytes_read == 0 {
@@ -190,21 +190,18 @@ impl StreamingFileReader {
 
     /// Seek to a specific position
     pub fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
-        self.reader.seek(pos).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to seek: {}", e),
-            ))
-        })
+        self.reader
+            .seek(pos)
+            .map_err(|e| Error::IoError(std::io::Error::other(format!("Failed to seek: {}", e))))
     }
 
     /// Get current position
     pub fn position(&mut self) -> Result<u64> {
         self.reader.stream_position().map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to get position: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to get position: {}",
+                e
+            )))
         })
     }
 
@@ -314,7 +311,7 @@ impl GarbageCollector {
 
     /// Check if GC should be triggered and provide hints
     pub fn should_collect_garbage(&self) -> Result<Option<GCHint>> {
-        let current_usage = self.memory_tracker.current_usage();
+        let current_usage = self.memory_tracker.current_usage.load(Ordering::Relaxed);
 
         if current_usage >= self.gc_threshold_bytes {
             let mut last_hint = self.last_gc_hint.lock().unwrap();
@@ -327,7 +324,8 @@ impl GarbageCollector {
                 let hint = GCHint {
                     reason: GCReason::MemoryPressure,
                     recommended_action: GCAction::FullCollection,
-                    estimated_memory_reclaimable: current_usage - (self.gc_threshold_bytes / 2),
+                    estimated_memory_reclaimable: current_usage
+                        .saturating_sub(self.gc_threshold_bytes / 2),
                 };
 
                 return Ok(Some(hint));
@@ -425,7 +423,7 @@ impl MemoryTracker {
         self.deallocations.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// Record memory-mapped file
+    /// Record memory mapped file creation
     pub fn record_memory_mapped_file(&self) {
         self.memory_mapped_files.fetch_add(1, Ordering::Relaxed);
     }
@@ -435,7 +433,7 @@ impl MemoryTracker {
         self.streaming_chunks.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// Record GC cycle
+    /// Record garbage collection cycle
     pub fn record_gc_cycle(&self) {
         self.gc_cycles.fetch_add(1, Ordering::Relaxed);
     }
@@ -455,7 +453,7 @@ impl MemoryTracker {
         self.peak_usage.load(Ordering::Relaxed)
     }
 
-    /// Get comprehensive memory statistics
+    /// Get memory statistics
     pub fn stats(&self) -> MemoryStats {
         MemoryStats {
             current_usage_bytes: self.current_usage.load(Ordering::Relaxed),
@@ -467,6 +465,12 @@ impl MemoryTracker {
             gc_cycles: self.gc_cycles.load(Ordering::Relaxed) as u64,
             memory_pressure_events: self.pressure_events.load(Ordering::Relaxed) as u64,
         }
+    }
+}
+
+impl Default for MemoryTracker {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -500,10 +504,10 @@ impl AdvancedMemoryManager {
         file_path: P,
     ) -> Result<AnalysisStrategy> {
         let metadata = std::fs::metadata(&file_path).map_err(|e| {
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to get file metadata: {}", e),
-            ))
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to get file metadata: {}",
+                e
+            )))
         })?;
 
         let file_size = metadata.len() as usize;
@@ -528,7 +532,7 @@ impl AdvancedMemoryManager {
         match strategy {
             AnalysisStrategy::MemoryMapped => {
                 let mmap = MemoryMappedFile::new(&file_path)?;
-                self.tracker.record_memory_mapped_file();
+                self.gc.memory_tracker.record_memory_mapped_file();
                 Ok(Box::new(mmap))
             }
             AnalysisStrategy::Streaming => {
@@ -569,22 +573,12 @@ impl AdvancedMemoryManager {
 
     /// Get memory statistics
     pub fn memory_stats(&self) -> MemoryStats {
-        self.tracker.stats()
+        self.gc.memory_tracker.stats()
     }
 
     /// Force garbage collection
     pub fn force_gc(&self) -> Result<()> {
         self.gc.force_collection()
-    }
-
-    /// Record memory allocation for tracking
-    pub fn record_allocation(&self, bytes: usize) {
-        self.tracker.record_allocation(bytes);
-    }
-
-    /// Record memory deallocation for tracking
-    pub fn record_deallocation(&self, bytes: usize) {
-        self.tracker.record_deallocation(bytes);
     }
 }
 

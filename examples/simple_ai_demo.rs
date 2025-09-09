@@ -3,7 +3,6 @@
 //! A minimal example demonstrating the AI service functionality
 //! without dependencies on CLI modules.
 
-use std::collections::HashMap;
 use std::time::Duration;
 
 // Import only the AI types we need
