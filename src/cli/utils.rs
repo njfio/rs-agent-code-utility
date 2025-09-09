@@ -94,6 +94,40 @@ pub fn severity_meets_threshold(
     rank(actual) >= rank(threshold)
 }
 
+/// Parse AST severity level from string
+pub fn parse_ast_severity(
+    severity: &str,
+) -> Result<crate::security::ast_analyzer::SecuritySeverity, CliError> {
+    use crate::security::ast_analyzer::SecuritySeverity::*;
+    match severity.to_lowercase().as_str() {
+        "critical" => Ok(Critical),
+        "high" => Ok(High),
+        "medium" => Ok(Medium),
+        "low" => Ok(Low),
+        "info" => Ok(Info),
+        _ => Err(CliError::InvalidArgs(format!(
+            "Invalid severity level: {}. Must be one of: critical, high, medium, low, info",
+            severity
+        ))),
+    }
+}
+
+/// Check if AST severity meets threshold
+pub fn ast_severity_meets_threshold(
+    threshold: &crate::security::ast_analyzer::SecuritySeverity,
+    actual: &crate::security::ast_analyzer::SecuritySeverity,
+) -> bool {
+    use crate::security::ast_analyzer::SecuritySeverity::*;
+    let rank = |s: &crate::security::ast_analyzer::SecuritySeverity| match s {
+        Critical => 5,
+        High => 4,
+        Medium => 3,
+        Low => 2,
+        Info => 1,
+    };
+    rank(actual) >= rank(threshold)
+}
+
 /// Validate and normalize file path
 pub fn normalize_path(path: &PathBuf) -> CliResult<PathBuf> {
     let canonical = path

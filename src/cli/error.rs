@@ -17,6 +17,8 @@ pub enum CliError {
     Refactoring(String),
     /// Dependency analysis failed
     Dependencies(String),
+    /// Internal error
+    Internal(String),
     /// File I/O error
     Io(std::io::Error),
     /// JSON serialization/deserialization error
@@ -47,6 +49,7 @@ impl fmt::Display for CliError {
             CliError::Security(msg) => write!(f, "Security scan error: {}", msg),
             CliError::Refactoring(msg) => write!(f, "Refactoring analysis error: {}", msg),
             CliError::Dependencies(msg) => write!(f, "Dependency analysis error: {}", msg),
+            CliError::Internal(msg) => write!(f, "Internal error: {}", msg),
             CliError::Io(err) => write!(f, "File I/O error: {}", err),
             CliError::Json(err) => write!(f, "JSON error: {}", err),
             CliError::Config(msg) => write!(f, "Configuration error: {}", msg),

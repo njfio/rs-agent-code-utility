@@ -44,6 +44,7 @@ flate2 = "1.0"
 crossbeam-channel = "0.5"
 parking_lot = "0.12"
 memmap2 = "0.9"
+walkdir = "2.4"
 
 # Enhanced interactive mode dependencies
 rustyline = "12.0"

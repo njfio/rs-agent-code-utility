@@ -3,6 +3,7 @@
 //! This module contains the implementation of all CLI commands with proper separation of concerns.
 
 pub mod analyze;
+pub mod ast_security;
 pub mod dependencies;
 pub mod explain;
 pub mod find;
@@ -71,6 +72,31 @@ impl Execute for Commands {
                     *threads,
                     *enable_security,
                 )
+            }
+            Commands::AstSecurity {
+                path,
+                format,
+                min_severity,
+                output,
+                summary_only,
+                language,
+                include_tests,
+                include_examples,
+            } => {
+                // Convert the synchronous CLI call to async execution
+                let rt = tokio::runtime::Runtime::new()
+                    .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
+
+                rt.block_on(ast_security::execute(
+                    path,
+                    format,
+                    min_severity,
+                    output.as_ref(),
+                    *summary_only,
+                    language.as_deref(),
+                    *include_tests,
+                    *include_examples,
+                ))
             }
             Commands::Query {
                 path,

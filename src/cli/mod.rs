@@ -301,6 +301,41 @@ pub enum Commands {
         enable_security: bool,
     },
 
+    /// AST-based security analysis (intelligent, low false positives)
+    AstSecurity {
+        /// Directory to scan
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+
+        /// Output format (table, json, markdown, sarif)
+        #[arg(short, long, default_value = "table")]
+        format: String,
+
+        /// Minimum severity level (critical, high, medium, low, info)
+        #[arg(long, default_value = "low")]
+        min_severity: String,
+
+        /// Save detailed report to file
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Show only summary
+        #[arg(long)]
+        summary_only: bool,
+
+        /// Filter by specific language (rust, javascript, python, etc.)
+        #[arg(short, long)]
+        language: Option<String>,
+
+        /// Include test files in analysis
+        #[arg(long)]
+        include_tests: bool,
+
+        /// Include example/demo files in analysis
+        #[arg(long)]
+        include_examples: bool,
+    },
+
     /// Smart refactoring suggestions
     Refactor {
         /// Directory to analyze
