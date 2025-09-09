@@ -143,6 +143,7 @@ pub enum TaintStepType {
 }
 
 /// Taint analysis engine with enhanced inter-procedural analysis
+#[derive(Debug)]
 pub struct TaintAnalyzer {
     language: String,
     /// Known taint sources for the language

@@ -224,7 +224,7 @@ fn discover_files(
             continue;
         }
 
-        if let Some(language) = crate::languages::detect_language_from_path(entry.path()) {
+        if let Some(language) = crate::detect_language_from_path(&entry.path().to_string_lossy()) {
             if language_filter.is_none() || language_filter == Some(language) {
                 files.push((entry.path().to_path_buf(), language));
             }

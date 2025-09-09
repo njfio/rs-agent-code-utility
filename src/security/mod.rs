@@ -4,6 +4,7 @@
 //! vulnerability database integration, secrets detection, and OWASP compliance.
 
 pub mod ast_analyzer;
+pub mod ml_filter;
 pub mod owasp_detector;
 pub mod rust_analyzer;
 
@@ -13,6 +14,7 @@ pub mod secrets_detector;
 pub mod vulnerability_db;
 
 pub use ast_analyzer::*;
+pub use ml_filter::*;
 pub use owasp_detector::*;
 pub use rust_analyzer::*;
 

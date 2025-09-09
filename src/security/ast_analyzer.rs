@@ -6,7 +6,9 @@
 use crate::error::{Error, Result};
 use crate::languages::Language;
 use crate::parser::Parser;
-use crate::tree::{Node, SyntaxTree};
+use crate::security::ml_filter::MLFalsePositiveFilter;
+use crate::taint_analysis::{FunctionCall as TaintFunctionCall, TaintLocation, VariableAssignment};
+use crate::tree::SyntaxTree;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -20,6 +22,8 @@ pub struct AstSecurityAnalyzer {
     context_classifier: ContextClassifier,
     /// Semantic analysis engine
     semantic_engine: SemanticAnalysisEngine,
+    /// ML-based false positive filter
+    ml_filter: MLFalsePositiveFilter,
 }
 
 /// Language-specific security analyzer trait
@@ -172,6 +176,19 @@ pub struct SemanticInfo {
     pub function_calls: Vec<FunctionCall>,
 }
 
+impl Default for SemanticInfo {
+    fn default() -> Self {
+        Self {
+            functions: Vec::new(),
+            classes: Vec::new(),
+            variables: HashMap::new(),
+            imports: Vec::new(),
+            string_literals: Vec::new(),
+            function_calls: Vec::new(),
+        }
+    }
+}
+
 /// Function information
 #[derive(Debug, Clone)]
 pub struct FunctionInfo {
@@ -285,7 +302,8 @@ impl AstSecurityAnalyzer {
         Ok(Self {
             language_analyzers,
             context_classifier: ContextClassifier::new(),
-            semantic_engine: SemanticAnalysisEngine::new(),
+            semantic_engine: SemanticAnalysisEngine::new().with_language("rust"), // Default to Rust
+            ml_filter: crate::security::ml_filter::MLFalsePositiveFilter::new(),
         })
     }
 
@@ -321,19 +339,132 @@ impl AstSecurityAnalyzer {
             self.context_classifier
                 .classify_context(file_path, &source, &semantic_info)?;
 
+        // Create language-specific semantic engine for taint analysis
+        let semantic_engine = SemanticAnalysisEngine::new().with_language(language.name());
+
+        // Perform data flow analysis using taint analysis
+        let data_flows = semantic_engine.analyze_data_flow(&semantic_info)?;
+        let injection_points = semantic_engine.detect_injection_points(&semantic_info)?;
+
         // Perform AST-based analysis
         let mut findings = analyzer
             .analyze(&tree, &file_path.to_string_lossy())
             .await?;
 
+        // Add findings from data flow analysis
+        for flow in data_flows {
+            if !flow.is_safe {
+                findings.push(SecurityFinding {
+                    id: format!("DF_{}_{}", flow.source_variable, flow.sink_function),
+                    finding_type: SecurityFindingType::Injection,
+                    severity: SecuritySeverity::Medium,
+                    title: format!(
+                        "Potential data flow vulnerability: {} -> {}",
+                        flow.source_variable, flow.sink_function
+                    ),
+                    description: format!(
+                        "Data flows from {} to {} without proper sanitization",
+                        flow.source_variable, flow.sink_function
+                    ),
+                    file_path: file_path.to_string_lossy().to_string(),
+                    line_number: 1, // Would need more precise location tracking
+                    column_start: 0,
+                    column_end: 0,
+                    code_snippet: format!(
+                        "Flow: {} -> {}",
+                        flow.source_variable, flow.sink_function
+                    ),
+                    cwe_id: Some("CWE-20".to_string()), // Improper Input Validation
+                    remediation: format!(
+                        "Add input validation and sanitization for data flowing from {} to {}",
+                        flow.source_variable, flow.sink_function
+                    ),
+                    confidence: 0.7,
+                    context: context.clone(),
+                });
+            }
+        }
+
+        // Add findings from injection point analysis
+        for injection in injection_points {
+            findings.push(SecurityFinding {
+                id: format!(
+                    "INJ_{}_{}",
+                    injection.function_name, injection.parameter_index
+                ),
+                finding_type: SecurityFindingType::Injection,
+                severity: if injection.confidence > 0.8 {
+                    SecuritySeverity::High
+                } else {
+                    SecuritySeverity::Medium
+                },
+                title: format!("Potential {} vulnerability", injection.vulnerability_type),
+                description: format!(
+                    "Function {} at parameter {} may be vulnerable to {}",
+                    injection.function_name,
+                    injection.parameter_index,
+                    injection.vulnerability_type
+                ),
+                file_path: file_path.to_string_lossy().to_string(),
+                line_number: 1, // Would need more precise location tracking
+                column_start: 0,
+                column_end: 0,
+                code_snippet: format!("{}({})", injection.function_name, injection.parameter_index),
+                cwe_id: self.get_cwe_for_vulnerability(&injection.vulnerability_type),
+                remediation: format!(
+                    "Sanitize input before passing to {}",
+                    injection.function_name
+                ),
+                confidence: injection.confidence,
+                context: context.clone(),
+            });
+        }
+
+        // Apply ML-based false positive filtering
+        let mut filtered_findings = Vec::new();
+        for finding in findings {
+            let finding_type_str = match finding.finding_type {
+                SecurityFindingType::Injection => "Injection",
+                SecurityFindingType::BrokenAccessControl => "BrokenAccessControl",
+                SecurityFindingType::CryptographicFailure => "CryptographicFailure",
+                SecurityFindingType::InsecureDesign => "InsecureDesign",
+                SecurityFindingType::SecurityMisconfiguration => "SecurityMisconfiguration",
+                SecurityFindingType::HardcodedSecret => "HardcodedSecret",
+                SecurityFindingType::WeakAuthentication => "WeakAuthentication",
+                SecurityFindingType::InformationDisclosure => "InformationDisclosure",
+            };
+
+            let filter_result = self
+                .ml_filter
+                .filter_finding(
+                    finding_type_str,
+                    &finding.file_path,
+                    &finding.code_snippet,
+                    finding.confidence,
+                )
+                .await?;
+
+            if !filter_result.should_filter {
+                filtered_findings.push(finding);
+            } else {
+                debug!(
+                    "Filtered out finding {} with confidence {:.2}: {}",
+                    finding.id, filter_result.confidence, filter_result.reason
+                );
+            }
+        }
+
         // Enhance findings with semantic context
-        for finding in &mut findings {
+        for finding in &mut filtered_findings {
             finding.context = context.clone();
             self.enhance_finding_with_semantics(finding, &semantic_info)?;
         }
 
-        debug!("Completed AST analysis, found {} findings", findings.len());
-        Ok(findings)
+        debug!(
+            "Completed AST analysis with taint analysis and ML filtering, found {} findings",
+            filtered_findings.len()
+        );
+        Ok(filtered_findings)
     }
 
     /// Analyze multiple files
@@ -349,7 +480,7 @@ impl AstSecurityAnalyzer {
                     all_findings.append(&mut findings);
                 }
                 Err(e) => {
-                    warn!("Failed to analyze file {}: {}", file_path.display(), e);
+                    tracing::warn!("Failed to analyze file {}: {}", file_path.display(), e);
                 }
             }
         }
@@ -421,6 +552,19 @@ impl AstSecurityAnalyzer {
             None
         }
     }
+
+    /// Get CWE ID for a vulnerability type
+    fn get_cwe_for_vulnerability(&self, vuln_type: &str) -> Option<String> {
+        match vuln_type {
+            "SQL Injection" => Some("CWE-89".to_string()),
+            "Command Injection" => Some("CWE-78".to_string()),
+            "Cross-Site Scripting (XSS)" => Some("CWE-79".to_string()),
+            "Code Injection" => Some("CWE-94".to_string()),
+            "Path Traversal" => Some("CWE-22".to_string()),
+            "Deserialization Attack" => Some("CWE-502".to_string()),
+            _ => Some("CWE-20".to_string()), // Generic Improper Input Validation
+        }
+    }
 }
 
 // Language-specific analyzers will be implemented in separate modules
@@ -485,20 +629,20 @@ placeholder_analyzer!(KotlinAnalyzer);
 /// Context classifier for determining code context
 #[derive(Debug)]
 pub struct ContextClassifier {
-    test_patterns: HashSet<String>,
-    example_patterns: HashSet<String>,
-    config_patterns: HashSet<String>,
+    test_patterns: std::collections::HashSet<String>,
+    example_patterns: std::collections::HashSet<String>,
+    config_patterns: std::collections::HashSet<String>,
 }
 
 impl ContextClassifier {
     pub fn new() -> Self {
-        let mut test_patterns = HashSet::new();
+        let mut test_patterns = std::collections::HashSet::new();
         test_patterns.insert("test".to_string());
         test_patterns.insert("spec".to_string());
         test_patterns.insert("Test".to_string());
         test_patterns.insert("Spec".to_string());
 
-        let mut example_patterns = HashSet::new();
+        let mut example_patterns = std::collections::HashSet::new();
         example_patterns.insert("example".to_string());
         example_patterns.insert("Example".to_string());
         example_patterns.insert("demo".to_string());
@@ -506,7 +650,7 @@ impl ContextClassifier {
         example_patterns.insert("sample".to_string());
         example_patterns.insert("Sample".to_string());
 
-        let mut config_patterns = HashSet::new();
+        let mut config_patterns = std::collections::HashSet::new();
         config_patterns.insert("config".to_string());
         config_patterns.insert("Config".to_string());
         config_patterns.insert("settings".to_string());
@@ -602,26 +746,150 @@ impl ContextClassifier {
 
 /// Semantic analysis engine
 #[derive(Debug)]
-pub struct SemanticAnalysisEngine;
+pub struct SemanticAnalysisEngine {
+    taint_analyzer: crate::TaintAnalyzer,
+}
 
 impl SemanticAnalysisEngine {
     pub fn new() -> Self {
-        Self
+        Self {
+            taint_analyzer: crate::TaintAnalyzer::new("generic"), // Default to generic language
+        }
     }
 
-    /// Analyze data flow between variables and functions
+    pub fn with_language(mut self, language: &str) -> Self {
+        self.taint_analyzer = crate::TaintAnalyzer::new(language);
+        self
+    }
+
+    /// Analyze data flow between variables and functions using taint analysis
     pub fn analyze_data_flow(&self, semantic_info: &SemanticInfo) -> Result<Vec<DataFlowAnalysis>> {
-        // Placeholder implementation - will be enhanced
-        Ok(Vec::new())
+        let mut results = Vec::new();
+
+        // Analyze data flows between variables and function calls
+        for (var_name, var_info) in &semantic_info.variables {
+            for call in &semantic_info.function_calls {
+                // Check if variable is used in function call (potential data flow)
+                if call.arguments.iter().any(|arg| arg.contains(var_name)) {
+                    results.push(DataFlowAnalysis {
+                        source_variable: var_name.clone(),
+                        sink_function: call.function_name.clone(),
+                        flow_path: vec![var_name.clone(), call.function_name.clone()],
+                        is_safe: self.is_safe_data_flow(var_name, &call.function_name),
+                    });
+                }
+            }
+        }
+
+        Ok(results)
     }
 
-    /// Detect potential injection points
+    /// Detect potential injection points using taint analysis
     pub fn detect_injection_points(
         &self,
         semantic_info: &SemanticInfo,
     ) -> Result<Vec<InjectionPoint>> {
-        // Placeholder implementation - will be enhanced
-        Ok(Vec::new())
+        let mut injection_points = Vec::new();
+
+        for call in &semantic_info.function_calls {
+            // Check for common injection sink functions
+            if self.is_injection_sink(&call.function_name) {
+                for (i, arg) in call.arguments.iter().enumerate() {
+                    // Check if argument could be tainted (contains user input patterns)
+                    if self.could_be_tainted(arg) {
+                        injection_points.push(InjectionPoint {
+                            function_name: call.function_name.clone(),
+                            parameter_index: i,
+                            vulnerability_type: self
+                                .determine_vulnerability_type(&call.function_name),
+                            confidence: self
+                                .calculate_injection_confidence(arg, &call.function_name),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(injection_points)
+    }
+
+    /// Check if a data flow is considered safe
+    fn is_safe_data_flow(&self, source: &str, sink: &str) -> bool {
+        // Safe sinks that don't propagate vulnerabilities
+        let safe_sinks = ["println", "log", "debug", "to_string", "format"];
+
+        // Safe sources that are not user-controlled
+        let safe_sources = ["const", "static", "config"];
+
+        safe_sinks.iter().any(|&s| sink.contains(s))
+            || safe_sources.iter().any(|&s| source.contains(s))
+    }
+
+    /// Check if a function is a potential injection sink
+    fn is_injection_sink(&self, function_name: &str) -> bool {
+        let injection_sinks = [
+            "execute",
+            "exec",
+            "system",
+            "shell_exec",
+            "eval",
+            "query",
+            "sql",
+            "innerHTML",
+            "outerHTML",
+            "document.write",
+            "insertAdjacentHTML",
+            "setAttribute",
+            "createElement",
+            "appendChild",
+        ];
+
+        injection_sinks
+            .iter()
+            .any(|&sink| function_name.contains(sink))
+    }
+
+    /// Determine the type of vulnerability for an injection sink
+    fn determine_vulnerability_type(&self, function_name: &str) -> String {
+        if function_name.contains("sql") || function_name.contains("query") {
+            "SQL Injection".to_string()
+        } else if function_name.contains("exec") || function_name.contains("system") {
+            "Command Injection".to_string()
+        } else if function_name.contains("innerHTML") || function_name.contains("document.write") {
+            "Cross-Site Scripting (XSS)".to_string()
+        } else {
+            "Code Injection".to_string()
+        }
+    }
+
+    /// Check if an argument could be tainted (contain user input)
+    fn could_be_tainted(&self, argument: &str) -> bool {
+        // Look for patterns that suggest user input
+        let taint_patterns = [
+            "req.", "request.", "params", "query", "body", "input", "argv", "args", "stdin",
+            "read", "get", "post",
+        ];
+
+        taint_patterns
+            .iter()
+            .any(|&pattern| argument.contains(pattern))
+    }
+
+    /// Calculate confidence level for injection detection
+    fn calculate_injection_confidence(&self, argument: &str, function_name: &str) -> f64 {
+        let mut confidence: f64 = 0.5;
+
+        // Higher confidence if argument clearly indicates user input
+        if argument.contains("req.body") || argument.contains("request.params") {
+            confidence += 0.3;
+        }
+
+        // Higher confidence for known dangerous functions
+        if function_name.contains("eval") || function_name.contains("innerHTML") {
+            confidence += 0.2;
+        }
+
+        confidence.min(1.0)
     }
 }
 

@@ -15,6 +15,7 @@ use crate::tree::{Node, SyntaxTree};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, warn};
+use tree_sitter::{Query, QueryCursor};
 
 /// Rust-specific security analyzer
 #[derive(Debug)]
@@ -317,6 +318,15 @@ impl RustAnalyzer {
 
         // Analyze access control
         findings.extend(self.analyze_access_control(tree, file_path)?);
+
+        // Analyze unsafe macro usage
+        findings.extend(self.analyze_unsafe_macro_usage(tree, file_path)?);
+
+        // Analyze improper error handling
+        findings.extend(self.analyze_error_handling(tree, file_path)?);
+
+        // Analyze potential race conditions
+        findings.extend(self.analyze_race_conditions(tree, file_path)?);
 
         Ok(findings)
     }
@@ -917,6 +927,169 @@ impl RustAnalyzer {
         } else {
             false
         }
+    }
+
+    /// Analyze unsafe macro usage
+    fn analyze_unsafe_macro_usage(
+        &self,
+        tree: &SyntaxTree,
+        file_path: &str,
+    ) -> Result<Vec<SecurityFinding>> {
+        let mut findings = Vec::new();
+
+        // Look for macro invocations that could be unsafe
+        let macro_query = r#"
+        (macro_invocation
+          macro: (identifier) @macro_name
+          (#match? @macro_name "sql!|query!|format_args!|println!|eprintln!")
+        ) @macro_call
+        "#;
+
+        if let Ok(query) = Query::new(tree.language(), macro_query) {
+            let mut cursor = QueryCursor::new();
+            for match_ in cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes())
+            {
+                for capture in match_.captures {
+                    if capture.index == 1 {
+                        // macro_name capture
+                        if let Ok(macro_name) = capture.node.utf8_text(tree.source().as_bytes()) {
+                            if let Ok(args_text) = capture
+                                .node
+                                .parent()
+                                .unwrap()
+                                .utf8_text(tree.source().as_bytes())
+                            {
+                                // Check for potential format string vulnerabilities
+                                if macro_name.contains("println!")
+                                    || macro_name.contains("eprintln!")
+                                {
+                                    if args_text.contains("{}") && args_text.contains("user_input")
+                                    {
+                                        findings.push(SecurityFinding {
+                                            id: format!("RUST_MACRO_FMT_{}", capture.node.start_position().row + 1),
+                                            finding_type: SecurityFindingType::Injection,
+                                            severity: SecuritySeverity::Medium,
+                                            title: "Potential format string vulnerability in macro".to_string(),
+                                            description: format!("Macro {} may be vulnerable to format string attacks", macro_name),
+                                            file_path: file_path.to_string(),
+                                            line_number: capture.node.start_position().row + 1,
+                                            column_start: capture.node.start_position().column,
+                                            column_end: capture.node.end_position().column,
+                                            code_snippet: args_text.to_string(),
+                                            cwe_id: Some("CWE-134".to_string()),
+                                            remediation: "Use format! macro with explicit format arguments or sanitize user input".to_string(),
+                                            confidence: 0.7,
+                                            context: CodeContext::default(),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Analyze improper error handling
+    fn analyze_error_handling(
+        &self,
+        tree: &SyntaxTree,
+        file_path: &str,
+    ) -> Result<Vec<SecurityFinding>> {
+        let mut findings = Vec::new();
+
+        // Look for unwrap() and expect() calls that could panic
+        let unwrap_query = r#"
+        (call_expression
+          function: (field_expression
+            field: (identifier) @method
+            (#match? @method "unwrap|expect")
+          )
+        ) @unwrap_call
+        "#;
+
+        if let Ok(query) = Query::new(tree.language(), unwrap_query) {
+            let mut cursor = QueryCursor::new();
+            for match_ in cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes())
+            {
+                for capture in match_.captures {
+                    if capture.index == 0 {
+                        // unwrap_call capture
+                        if let Ok(code_text) = capture.node.utf8_text(tree.source().as_bytes()) {
+                            findings.push(SecurityFinding {
+                                id: format!("RUST_UNWRAP_{}", capture.node.start_position().row + 1),
+                                finding_type: SecurityFindingType::InsecureDesign,
+                                severity: SecuritySeverity::Low,
+                                title: "Use of unwrap() or expect() that could panic".to_string(),
+                                description: "unwrap() or expect() calls can cause panics in production".to_string(),
+                                file_path: file_path.to_string(),
+                                line_number: capture.node.start_position().row + 1,
+                                column_start: capture.node.start_position().column,
+                                column_end: capture.node.end_position().column,
+                                code_snippet: code_text.to_string(),
+                                cwe_id: Some("CWE-754".to_string()),
+                                remediation: "Use proper error handling with match, if let, or the ? operator".to_string(),
+                                confidence: 0.8,
+                                context: CodeContext::default(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Analyze potential race conditions
+    fn analyze_race_conditions(
+        &self,
+        tree: &SyntaxTree,
+        file_path: &str,
+    ) -> Result<Vec<SecurityFinding>> {
+        let mut findings = Vec::new();
+
+        // Look for static mut variables (potential race conditions)
+        let static_mut_query = r#"
+        (static_item
+          (mutable_specifier)
+        ) @static_mut
+        "#;
+
+        if let Ok(query) = Query::new(tree.language(), static_mut_query) {
+            let mut cursor = QueryCursor::new();
+            for match_ in cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes())
+            {
+                for capture in match_.captures {
+                    if capture.index == 0 {
+                        // static_mut capture
+                        if let Ok(code_text) = capture.node.utf8_text(tree.source().as_bytes()) {
+                            findings.push(SecurityFinding {
+                                id: format!("RUST_STATIC_MUT_{}", capture.node.start_position().row + 1),
+                                finding_type: SecurityFindingType::InsecureDesign,
+                                severity: SecuritySeverity::High,
+                                title: "Mutable static variable detected".to_string(),
+                                description: "Mutable static variables can cause race conditions in multi-threaded code".to_string(),
+                                file_path: file_path.to_string(),
+                                line_number: capture.node.start_position().row + 1,
+                                column_start: capture.node.start_position().column,
+                                column_end: capture.node.end_position().column,
+                                code_snippet: code_text.to_string(),
+                                cwe_id: Some("CWE-362".to_string()),
+                                remediation: "Use thread-safe types like Mutex, RwLock, or atomic types".to_string(),
+                                confidence: 0.9,
+                                context: CodeContext::default(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
     }
 }
 

@@ -39,7 +39,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("   Confidence: {:.1}%", finding.confidence * 100.0);
                         println!("   Location: {}:{}", finding.file_path, finding.line_number);
                         if !finding.code_snippet.is_empty() {
-                            println!("   Code: {}", finding.code_snippet.lines().next().unwrap_or(""));
+                            println!(
+                                "   Code: {}",
+                                finding.code_snippet.lines().next().unwrap_or("")
+                            );
                         }
                         println!();
                     }
@@ -50,7 +53,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     } else {
-        println!("⚠️  File {} not found, skipping example", file_path.display());
+        println!(
+            "⚠️  File {} not found, skipping example",
+            file_path.display()
+        );
     }
 
     // Example 2: Analyze multiple files
@@ -113,10 +119,7 @@ mod tests {
     #[test]
     fn test_example_config() {
         // Example configuration that might be flagged
-        let config = r#"
-            database_url: "postgres://user:password@localhost/test"
-            api_key: "example-key-12345"
-        "#;
+        let config = "database_url: postgres://user:password@localhost/test\n            api_key: example-key-12345";
         assert!(!config.is_empty());
     }
 }
@@ -131,16 +134,20 @@ fn example_function() {
     let test_file = "test_example.rs";
     std::fs::write(test_file, test_content)?;
 
-    match analyzer.analyze_file(&PathBuf::from(test_file), Language::Rust).await {
+    match analyzer
+        .analyze_file(&PathBuf::from(test_file), Language::Rust)
+        .await
+    {
         Ok(findings) => {
             println!("✅ Context-aware analysis completed for test file");
             println!("Found {} findings in test/example context", findings.len());
 
             for finding in &findings {
                 println!("- {} ({:?})", finding.title, finding.severity);
-                println!("  Context: Test={}, Example={}",
-                    finding.context.is_test_code,
-                    finding.context.is_example_code);
+                println!(
+                    "  Context: Test={}, Example={}",
+                    finding.context.is_test_code, finding.context.is_example_code
+                );
             }
         }
         Err(e) => {
