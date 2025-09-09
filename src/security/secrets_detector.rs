@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 use tracing::{debug, warn};
+use uuid;
 
 /// Static regex patterns for secret extraction
 static QUOTE_REGEX: OnceLock<Regex> = OnceLock::new();
@@ -119,12 +120,19 @@ impl SecretsDetector {
     /// Detect secrets in source code
     pub fn detect_secrets(&self, content: &str, file_path: &str) -> Result<Vec<SecretFinding>> {
         let mut findings = Vec::new();
+        let mut detected_strings = std::collections::HashSet::new();
 
         // Pattern-based detection
-        findings.extend(self.pattern_detection(content, file_path)?);
+        let pattern_findings = self.pattern_detection(content, file_path)?;
+        for finding in &pattern_findings {
+            detected_strings.insert(finding.matched_text.clone());
+        }
+        findings.extend(pattern_findings);
 
-        // Entropy-based detection
-        findings.extend(self.entropy_detection(content, file_path)?);
+        // Entropy-based detection (skip already detected strings)
+        let entropy_findings =
+            self.entropy_detection_with_filter(content, file_path, &detected_strings)?;
+        findings.extend(entropy_findings);
 
         // Filter false positives
         findings = self.filter_false_positives(findings, content, file_path)?;
@@ -153,10 +161,11 @@ impl SecretsDetector {
                     let matched_text = mat.as_str();
                     let entropy = self.calculate_shannon_entropy(matched_text);
 
-                    // Check entropy threshold if specified, otherwise use global threshold
-                    let threshold = pattern.entropy_threshold.unwrap_or(self.entropy_threshold);
-                    if entropy < threshold {
-                        continue;
+                    // Check entropy threshold only if explicitly specified for this pattern
+                    if let Some(threshold) = pattern.entropy_threshold {
+                        if entropy < threshold {
+                            continue;
+                        }
                     }
 
                     let secret_type = self.classify_secret_type(&pattern.name);
@@ -165,7 +174,8 @@ impl SecretsDetector {
                     let finding = SecretFinding {
                         id: uuid::Uuid::new_v4().to_string(),
                         secret_type: secret_type.clone(),
-                        confidence: pattern.confidence * (entropy / 8.0).min(1.0),
+                        confidence: (pattern.confidence * (entropy / 8.0).min(1.0).max(0.6))
+                            .min(1.0),
                         entropy,
                         line_number: line_num + 1,
                         column_start: mat.start(),
@@ -188,6 +198,16 @@ impl SecretsDetector {
 
     /// Entropy-based secret detection
     fn entropy_detection(&self, content: &str, file_path: &str) -> Result<Vec<SecretFinding>> {
+        self.entropy_detection_with_filter(content, file_path, &std::collections::HashSet::new())
+    }
+
+    /// Entropy-based secret detection with filtering for already detected strings
+    fn entropy_detection_with_filter(
+        &self,
+        content: &str,
+        file_path: &str,
+        detected_strings: &std::collections::HashSet<String>,
+    ) -> Result<Vec<SecretFinding>> {
         let mut findings = Vec::new();
 
         for (line_num, line) in content.lines().enumerate() {
@@ -195,13 +215,18 @@ impl SecretsDetector {
             let words = self.extract_potential_secrets(line);
 
             for word in words {
+                // Skip strings that have already been detected by pattern-based detection
+                if detected_strings.contains(&word.text) {
+                    continue;
+                }
+
                 let entropy = self.calculate_shannon_entropy(&word.text);
 
                 if entropy > self.entropy_threshold && word.text.len() >= 16 {
                     let finding = SecretFinding {
                         id: uuid::Uuid::new_v4().to_string(),
                         secret_type: SecretType::HighEntropy,
-                        confidence: (entropy / 8.0).min(1.0) * crate::constants::security::ENTROPY_CONFIDENCE_MULTIPLIER, // Lower confidence for entropy-only
+                        confidence: (entropy / 8.0).min(1.0) * crate::constants::security::ENTROPY_CONFIDENCE_MULTIPLIER * 1.2, // Boost confidence for entropy-only
                         entropy,
                         line_number: line_num + 1,
                         column_start: word.start,
@@ -313,7 +338,7 @@ impl SecretsDetector {
                 finding.confidence *= 0.1;
             }
 
-            // Check against known false positives
+            // Check against known false positives for this secret type
             if self
                 .false_positive_filter
                 .is_known_false_positive(&finding.secret_type, &finding.matched_text)
@@ -321,10 +346,19 @@ impl SecretsDetector {
                 finding.is_false_positive = true;
                 finding.confidence *= 0.1;
             }
+
+            // Also check for known false positives in all categories
+            if self
+                .false_positive_filter
+                .is_any_known_false_positive(&finding.matched_text)
+            {
+                finding.is_false_positive = true;
+                finding.confidence *= 0.1;
+            }
         }
 
-        // Remove findings with very low confidence
-        findings.retain(|f| f.confidence > self.min_confidence);
+        // Remove findings with very low confidence OR known false positives
+        findings.retain(|f| f.confidence > self.min_confidence && !f.is_false_positive);
 
         Ok(findings)
     }
@@ -513,6 +547,18 @@ impl FalsePositiveFilter {
             ],
         );
 
+        known_false_positives.insert(
+            "HighEntropy".to_string(),
+            vec![
+                "AKIAIOSFODNN7EXAMPLE".to_string(),
+                "AKIA1234567890123456".to_string(),
+                "your_api_key_here".to_string(),
+                "api_key_placeholder".to_string(),
+                "xxxxxxxxxxxxxxxx".to_string(),
+                "1234567890abcdef".to_string(),
+            ],
+        );
+
         let placeholder_patterns = vec![
             Regex::new(r"^[x]+$")?,
             Regex::new(r"^[0-9]+$")?,
@@ -543,5 +589,13 @@ impl FalsePositiveFilter {
         self.placeholder_patterns
             .iter()
             .any(|pattern| pattern.is_match(text))
+    }
+
+    /// Check if text is a known false positive in any category
+    fn is_any_known_false_positive(&self, text: &str) -> bool {
+        self.known_false_positives
+            .values()
+            .flatten()
+            .any(|fp| fp.eq_ignore_ascii_case(text))
     }
 }

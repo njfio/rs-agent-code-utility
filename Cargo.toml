@@ -263,6 +263,11 @@ path = "examples/security_analysis.rs"
 required-features = ["demo"]
 
 [[example]]
+name = "secrets_detection_demo"
+path = "examples/secrets_detection_demo.rs"
+required-features = ["demo"]
+
+[[example]]
 name = "simple_ai_demo"
 path = "examples/simple_ai_demo.rs"
 required-features = ["demo"]

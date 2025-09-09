@@ -377,6 +377,47 @@ impl DatabaseManager {
         })
     }
 
+    /// Get vulnerabilities by CWE ID
+    pub async fn get_vulnerabilities_by_cwe(
+        &self,
+        cwe_id: &str,
+    ) -> Result<Vec<VulnerabilityRecord>, sqlx::Error> {
+        let rows = sqlx::query_as::<_, VulnerabilityRecord>(
+            r#"
+            SELECT * FROM vulnerabilities
+            WHERE cwe_ids LIKE ?
+            ORDER BY cvss_score DESC NULLS LAST
+            LIMIT 50
+            "#,
+        )
+        .bind(format!("%{}%", cwe_id))
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    /// Search vulnerabilities by keyword in description
+    pub async fn search_vulnerabilities_by_keyword(
+        &self,
+        keyword: &str,
+    ) -> Result<Vec<VulnerabilityRecord>, sqlx::Error> {
+        let rows = sqlx::query_as::<_, VulnerabilityRecord>(
+            r#"
+            SELECT * FROM vulnerabilities
+            WHERE description LIKE ? OR cve_id LIKE ?
+            ORDER BY cvss_score DESC NULLS LAST
+            LIMIT 20
+            "#,
+        )
+        .bind(format!("%{}%", keyword))
+        .bind(format!("%{}%", keyword))
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
     /// Close the database connection
     pub async fn close(&self) {
         self.pool.close().await;

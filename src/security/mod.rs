@@ -7,6 +7,7 @@ pub mod ast_analyzer;
 pub mod ml_filter;
 pub mod owasp_detector;
 pub mod rust_analyzer;
+pub mod vulnerability_correlation;
 
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod secrets_detector;
@@ -17,6 +18,7 @@ pub use ast_analyzer::*;
 pub use ml_filter::*;
 pub use owasp_detector::*;
 pub use rust_analyzer::*;
+pub use vulnerability_correlation::*;
 
 #[cfg(any(feature = "net", feature = "db"))]
 pub use secrets_detector::*;
