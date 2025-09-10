@@ -3,18 +3,17 @@
 //! This module implements security analysis for Rust code using AST parsing,
 //! focusing on detecting common vulnerabilities and unsafe patterns.
 
-use crate::error::{Error, Result};
-use crate::languages::Language;
-use crate::parser::Parser;
+use crate::error::Result;
+
 use crate::security::ast_analyzer::{
-    CodeContext, FunctionCall, FunctionInfo, InjectionPoint, LanguageSpecificAnalyzer,
-    SecurityFinding, SecurityFindingType, SecuritySeverity, SemanticInfo, StringLiteral,
-    VariableInfo, VulnerabilityPattern,
+    CodeContext, FunctionCall, FunctionInfo, LanguageSpecificAnalyzer, SecurityFinding,
+    SecurityFindingType, SecuritySeverity, SemanticInfo, StringLiteral, VariableInfo,
+    VulnerabilityPattern,
 };
 use crate::tree::{Node, SyntaxTree};
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use tracing::{debug, warn};
+
+use std::collections::HashMap;
+
 use tree_sitter::{Query, QueryCursor};
 
 /// Rust-specific security analyzer
@@ -715,7 +714,7 @@ impl RustAnalyzer {
         "unknown".to_string()
     }
 
-    fn is_constant_declaration(&self, node: &Node) -> bool {
+    fn is_constant_declaration(&self, _node: &Node) -> bool {
         // In Rust, const declarations are separate from let declarations
         false
     }
@@ -1108,16 +1107,4 @@ impl LanguageSpecificAnalyzer for RustAnalyzer {
     }
 }
 
-impl Default for CodeContext {
-    fn default() -> Self {
-        Self {
-            is_test_code: false,
-            is_example_code: false,
-            is_config_code: false,
-            function_context: None,
-            class_context: None,
-            module_context: None,
-            variable_scope: HashMap::new(),
-        }
-    }
-}
+// Default for CodeContext is implemented in ast_analyzer.rs

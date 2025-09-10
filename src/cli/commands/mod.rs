@@ -21,6 +21,7 @@ pub mod wiki;
 
 use super::error::{CliError, CliResult};
 use super::{Commands, Execute};
+use tokio;
 
 impl Execute for Commands {
     type Error = CliError;
@@ -83,7 +84,7 @@ impl Execute for Commands {
                 include_tests,
                 include_examples,
             } => {
-                // Convert the synchronous CLI call to async execution
+                // Convert the async CLI call to sync execution
                 let rt = tokio::runtime::Runtime::new()
                     .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
 
@@ -108,7 +109,7 @@ impl Execute for Commands {
             } => query::execute(
                 path,
                 pattern,
-                language,
+                language.as_ref(),
                 prefilter.as_ref(),
                 *context,
                 format,
@@ -203,6 +204,9 @@ impl Execute for Commands {
                 print_schema,
                 schema_version,
                 enable_security,
+                include_tests,
+                include_examples,
+                include_non_code,
             } => {
                 if *print_schema {
                     match schema_version.as_str() {
@@ -218,7 +222,11 @@ impl Execute for Commands {
                         }
                     }
                 }
-                security::execute(
+                // Convert the async CLI call to sync execution
+                let rt = tokio::runtime::Runtime::new()
+                    .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
+
+                rt.block_on(security::execute(
                     path,
                     format,
                     min_severity,
@@ -227,7 +235,10 @@ impl Execute for Commands {
                     *compliance,
                     depth,
                     *enable_security,
-                )
+                    *include_tests,
+                    *include_examples,
+                    *include_non_code,
+                ))
             }
             Commands::Refactor {
                 path,

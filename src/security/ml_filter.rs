@@ -78,12 +78,19 @@ impl MLFalsePositiveFilter {
                     "_test".to_string(),
                     "example".to_string(),
                     "demo".to_string(),
+                    "fixture".to_string(),
+                    "mock".to_string(),
+                    "stub".to_string(),
                 ],
                 file_patterns: vec![
                     "*test*.rs".to_string(),
                     "*spec*.rs".to_string(),
                     "*example*.rs".to_string(),
                     "*demo*.rs".to_string(),
+                    "*fixture*.rs".to_string(),
+                    "*mock*.rs".to_string(),
+                    "tests/*".to_string(),
+                    "examples/*".to_string(),
                 ],
                 probability: 0.85,
                 reason: "Finding in test/example file".to_string(),
@@ -95,11 +102,16 @@ impl MLFalsePositiveFilter {
                     "doc".to_string(),
                     "comment".to_string(),
                     "documentation".to_string(),
+                    "guide".to_string(),
+                    "tutorial".to_string(),
+                    "sample".to_string(),
                 ],
                 file_patterns: vec![
                     "README.md".to_string(),
                     "docs/*".to_string(),
                     "*.md".to_string(),
+                    "CHANGELOG.md".to_string(),
+                    "CONTRIBUTING.md".to_string(),
                 ],
                 probability: 0.9,
                 reason: "Finding in documentation file".to_string(),
@@ -111,8 +123,16 @@ impl MLFalsePositiveFilter {
                     "settings".to_string(),
                     "const".to_string(),
                     "static".to_string(),
+                    "env".to_string(),
+                    "environment".to_string(),
+                    "default".to_string(),
                 ],
-                file_patterns: vec!["*config*.rs".to_string(), "*settings*.rs".to_string()],
+                file_patterns: vec![
+                    "*config*.rs".to_string(),
+                    "*settings*.rs".to_string(),
+                    "*env*.rs".to_string(),
+                    "*constants*.rs".to_string(),
+                ],
                 probability: 0.7,
                 reason: "Finding in configuration file with constants".to_string(),
             },
@@ -123,10 +143,77 @@ impl MLFalsePositiveFilter {
                     "sanitized".to_string(),
                     "validated".to_string(),
                     "escaped".to_string(),
+                    "encrypted".to_string(),
+                    "hashed".to_string(),
+                    "secure".to_string(),
                 ],
                 file_patterns: vec![],
                 probability: 0.6,
                 reason: "Code appears to use safe patterns".to_string(),
+            },
+            FalsePositivePattern {
+                name: "Logging Pattern".to_string(),
+                keywords: vec![
+                    "log".to_string(),
+                    "debug".to_string(),
+                    "info".to_string(),
+                    "warn".to_string(),
+                    "error".to_string(),
+                    "println".to_string(),
+                    "eprintln".to_string(),
+                    "trace".to_string(),
+                ],
+                file_patterns: vec![],
+                probability: 0.75,
+                reason: "Finding in logging/debugging context".to_string(),
+            },
+            FalsePositivePattern {
+                name: "Placeholder Pattern".to_string(),
+                keywords: vec![
+                    "placeholder".to_string(),
+                    "your_".to_string(),
+                    "replace_with".to_string(),
+                    "change_me".to_string(),
+                    "todo".to_string(),
+                    "fixme".to_string(),
+                    "xxxxx".to_string(),
+                    "*****".to_string(),
+                ],
+                file_patterns: vec![],
+                probability: 0.95,
+                reason: "Finding appears to be a placeholder or template value".to_string(),
+            },
+            FalsePositivePattern {
+                name: "Migration/Seed Pattern".to_string(),
+                keywords: vec![
+                    "migration".to_string(),
+                    "seed".to_string(),
+                    "fixture".to_string(),
+                    "initial".to_string(),
+                    "setup".to_string(),
+                    "bootstrap".to_string(),
+                ],
+                file_patterns: vec![
+                    "*migration*.rs".to_string(),
+                    "*seed*.rs".to_string(),
+                    "*fixture*.rs".to_string(),
+                ],
+                probability: 0.8,
+                reason: "Finding in database migration or seed file".to_string(),
+            },
+            FalsePositivePattern {
+                name: "Comment Pattern".to_string(),
+                keywords: vec![
+                    "//".to_string(),
+                    "/*".to_string(),
+                    "*/".to_string(),
+                    "#".to_string(),
+                    "///".to_string(),
+                    "//!".to_string(),
+                ],
+                file_patterns: vec![],
+                probability: 0.85,
+                reason: "Finding appears to be in a comment".to_string(),
             },
         ];
 
@@ -150,25 +237,39 @@ impl MLFalsePositiveFilter {
         let mut reason = "No filtering pattern matched".to_string();
         let mut adjustments = HashMap::new();
 
-        // Check file-based patterns
+        // Check file-based patterns with higher priority
         for pattern in &self.false_positive_patterns {
             if self.matches_file_pattern(file_path, &pattern.file_patterns) {
                 should_filter = true;
                 confidence = pattern.probability;
                 reason = pattern.reason.clone();
+                adjustments.insert("file_pattern_match".to_string(), pattern.probability);
                 break;
             }
         }
 
-        // Check keyword-based patterns
+        // Check keyword-based patterns with context analysis
         if !should_filter {
             for pattern in &self.false_positive_patterns {
-                if self.contains_keywords(code_snippet, &pattern.keywords) {
+                if self.contains_keywords_with_context(code_snippet, &pattern.keywords) {
                     should_filter = true;
                     confidence = pattern.probability;
                     reason = pattern.reason.clone();
+                    adjustments.insert("keyword_match".to_string(), pattern.probability);
                     break;
                 }
+            }
+        }
+
+        // Enhanced pattern combination analysis
+        if !should_filter {
+            let combined_score =
+                self.analyze_pattern_combination(finding_type, file_path, code_snippet);
+            if combined_score > 0.6 {
+                should_filter = true;
+                confidence = combined_score;
+                reason = "Multiple false positive indicators detected".to_string();
+                adjustments.insert("pattern_combination".to_string(), combined_score);
             }
         }
 
@@ -206,12 +307,131 @@ impl MLFalsePositiveFilter {
             adjustments.insert("confidence_boost".to_string(), -confidence * 0.3);
         }
 
+        // Apply confidence adjustments based on finding type
+        if let Some(base_threshold) = self.confidence_thresholds.get(finding_type) {
+            if current_confidence < *base_threshold * 0.8 {
+                let adjustment_factor = (1.0 - current_confidence / base_threshold).min(0.5);
+                confidence = confidence.max(adjustment_factor);
+                if !should_filter && adjustment_factor > 0.3 {
+                    should_filter = true;
+                    reason = format!("Low confidence finding ({:.2})", current_confidence);
+                }
+                adjustments.insert("low_confidence_penalty".to_string(), adjustment_factor);
+            }
+        }
+
         Ok(FilterResult {
             should_filter,
             confidence,
             reason,
             adjustments,
         })
+    }
+
+    /// Analyze combination of patterns for more accurate detection
+    fn analyze_pattern_combination(
+        &self,
+        finding_type: &str,
+        file_path: &str,
+        code_snippet: &str,
+    ) -> f64 {
+        let mut score = 0.0;
+        let mut indicators = 0;
+
+        // File path indicators
+        if file_path.contains("test") || file_path.contains("example") || file_path.contains("demo")
+        {
+            score += 0.3;
+            indicators += 1;
+        }
+
+        // Code content indicators
+        let snippet_lower = code_snippet.to_lowercase();
+        if snippet_lower.contains("example") || snippet_lower.contains("sample") {
+            score += 0.25;
+            indicators += 1;
+        }
+        if snippet_lower.contains("your_") || snippet_lower.contains("placeholder") {
+            score += 0.4;
+            indicators += 1;
+        }
+        if snippet_lower.contains("todo") || snippet_lower.contains("fixme") {
+            score += 0.35;
+            indicators += 1;
+        }
+
+        // Context-based scoring
+        if snippet_lower.contains("config") && snippet_lower.contains("const") {
+            score += 0.2;
+            indicators += 1;
+        }
+
+        // Finding type specific adjustments
+        match finding_type {
+            "HardcodedSecret" => {
+                if snippet_lower.contains("api_key") && snippet_lower.contains("example") {
+                    score += 0.5;
+                }
+            }
+            "Injection" => {
+                if snippet_lower.contains("test") && snippet_lower.contains("sql") {
+                    score += 0.4;
+                }
+            }
+            _ => {}
+        }
+
+        if indicators > 0 {
+            score / indicators as f64
+        } else {
+            0.0
+        }
+    }
+
+    /// Check if keywords are present with better context analysis
+    fn contains_keywords_with_context(&self, text: &str, keywords: &[String]) -> bool {
+        let text_lower = text.to_lowercase();
+
+        for keyword in keywords {
+            if text_lower.contains(&keyword.to_lowercase()) {
+                // Check if the keyword appears in a meaningful context
+                if self.is_meaningful_context(text, keyword) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Determine if a keyword appears in a meaningful false positive context
+    fn is_meaningful_context(&self, text: &str, keyword: &str) -> bool {
+        let text_lower = text.to_lowercase();
+        let keyword_lower = keyword.to_lowercase();
+
+        // For logging keywords, check if they're actually used in logging calls
+        if keyword_lower.contains("log") || keyword_lower.contains("println") {
+            return text_lower.contains("log::")
+                || text_lower.contains("println!")
+                || text_lower.contains("eprintln!")
+                || text_lower.contains("debug!")
+                || text_lower.contains("info!");
+        }
+
+        // For comment keywords, check if they're in actual comments
+        if keyword_lower == "//" || keyword_lower == "/*" || keyword_lower == "*/" {
+            return text_lower.contains("//") || text_lower.contains("/*");
+        }
+
+        // For placeholder keywords, check for common patterns
+        if keyword_lower == "your_" {
+            return text_lower.contains("your_api")
+                || text_lower.contains("your_secret")
+                || text_lower.contains("your_token");
+        }
+
+        // Default to true for other keywords
+        true
     }
 
     /// Update pattern statistics based on user feedback

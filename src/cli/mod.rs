@@ -12,6 +12,7 @@ pub mod utils;
 // pub mod watch; // TODO: Implement watch module
 
 use clap::{Parser, Subcommand};
+use colored::control as color_control;
 use std::path::PathBuf;
 
 /// Smart CLI interface for the rust-tree-sitter library
@@ -21,6 +22,10 @@ use std::path::PathBuf;
 #[command(version = "1.0.0")]
 #[command(author = "Rust Tree-sitter Team")]
 pub struct Cli {
+    /// Disable colored output (equivalent to NO_COLOR)
+    #[arg(long, global = true)]
+    pub no_color: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -299,6 +304,18 @@ pub enum Commands {
         /// Enable heavy security scanning during initial analysis (rarely needed)
         #[arg(long, default_value_t = false)]
         enable_security: bool,
+
+        /// Include test files (tests/, *_test.rs, test_*.rs)
+        #[arg(long, default_value_t = false)]
+        include_tests: bool,
+
+        /// Include example/demo files (examples/, demo/)
+        #[arg(long, default_value_t = false)]
+        include_examples: bool,
+
+        /// Include non-code assets (markdown, docs/)
+        #[arg(long, default_value_t = false)]
+        include_non_code: bool,
     },
 
     /// AST-based security analysis (intelligent, low false positives)
@@ -495,4 +512,11 @@ pub trait Execute {
     type Error;
 
     fn execute(&self) -> Result<(), Self::Error>;
+}
+
+/// Apply global CLI settings (e.g., color control)
+pub fn apply_global_cli_settings(cli: &Cli) {
+    if cli.no_color {
+        let _ = color_control::set_override(false);
+    }
 }

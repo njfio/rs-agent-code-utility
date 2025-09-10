@@ -7,12 +7,12 @@ use crate::error::{Error, Result};
 use crate::languages::Language;
 use crate::parser::Parser;
 use crate::security::ml_filter::MLFalsePositiveFilter;
-use crate::taint_analysis::{FunctionCall as TaintFunctionCall, TaintLocation, VariableAssignment};
+// use crate::taint_analysis::{FunctionCall as TaintFunctionCall, TaintLocation, VariableAssignment};
 use crate::tree::SyntaxTree;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// AST-based security analyzer
 pub struct AstSecurityAnalyzer {
@@ -92,7 +92,7 @@ pub struct SecurityFinding {
 }
 
 /// Types of security findings
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum SecurityFindingType {
     /// Injection vulnerability
     Injection,
@@ -112,6 +112,21 @@ pub enum SecurityFindingType {
     InformationDisclosure,
 }
 
+impl std::fmt::Display for SecurityFindingType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SecurityFindingType::Injection => write!(f, "Injection"),
+            SecurityFindingType::BrokenAccessControl => write!(f, "BrokenAccessControl"),
+            SecurityFindingType::CryptographicFailure => write!(f, "CryptographicFailure"),
+            SecurityFindingType::InsecureDesign => write!(f, "InsecureDesign"),
+            SecurityFindingType::SecurityMisconfiguration => write!(f, "SecurityMisconfiguration"),
+            SecurityFindingType::HardcodedSecret => write!(f, "HardcodedSecret"),
+            SecurityFindingType::WeakAuthentication => write!(f, "WeakAuthentication"),
+            SecurityFindingType::InformationDisclosure => write!(f, "InformationDisclosure"),
+        }
+    }
+}
+
 /// Security severity levels
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SecuritySeverity {
@@ -125,6 +140,18 @@ pub enum SecuritySeverity {
     High,
     /// Critical severity
     Critical,
+}
+
+impl std::fmt::Display for SecuritySeverity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SecuritySeverity::Info => write!(f, "Info"),
+            SecuritySeverity::Low => write!(f, "Low"),
+            SecuritySeverity::Medium => write!(f, "Medium"),
+            SecuritySeverity::High => write!(f, "High"),
+            SecuritySeverity::Critical => write!(f, "Critical"),
+        }
+    }
 }
 
 /// Code context information
@@ -144,6 +171,20 @@ pub struct CodeContext {
     pub module_context: Option<String>,
     /// Variable scope information
     pub variable_scope: HashMap<String, VariableInfo>,
+}
+
+impl Default for CodeContext {
+    fn default() -> Self {
+        Self {
+            is_test_code: false,
+            is_example_code: false,
+            is_config_code: false,
+            function_context: None,
+            class_context: None,
+            module_context: None,
+            variable_scope: HashMap::new(),
+        }
+    }
 }
 
 /// Variable information
@@ -242,6 +283,23 @@ pub struct FunctionCall {
     pub arguments: Vec<String>,
     pub line_number: usize,
     pub is_method_call: bool,
+}
+
+/// Result of semantic context analysis for false positive filtering
+#[derive(Debug, Clone)]
+pub struct SemanticContextResult {
+    /// Whether this appears to be test code
+    pub is_test_code: bool,
+    /// Whether this contains placeholder values
+    pub is_placeholder: bool,
+    /// Whether this is in documentation context
+    pub is_documentation: bool,
+    /// Whether this appears to be embedded code in string literals
+    pub is_embedded: bool,
+    /// Whether this uses safe patterns
+    pub is_safe_usage: bool,
+    /// Explanation of the semantic analysis
+    pub explanation: String,
 }
 
 impl AstSecurityAnalyzer {
@@ -522,7 +580,7 @@ impl AstSecurityAnalyzer {
         // Simple heuristic - look for variable-like patterns in the finding
         if finding.finding_type == SecurityFindingType::HardcodedSecret {
             // Extract potential variable names from the code snippet
-            if let Some(var_match) = finding.code_snippet.lines().find(|line| {
+            if let Some(_var_match) = finding.code_snippet.lines().find(|line| {
                 line.contains('=')
                     || line.contains("const")
                     || line.contains("let")
@@ -541,7 +599,7 @@ impl AstSecurityAnalyzer {
     /// Extract function name from finding if applicable
     fn extract_function_from_finding(&self, finding: &SecurityFinding) -> Option<String> {
         // Look for function patterns in the code snippet
-        if let Some(func_match) = finding
+        if let Some(_func_match) = finding
             .code_snippet
             .lines()
             .find(|line| line.contains("fn ") || line.contains("function") || line.contains("def "))
@@ -563,6 +621,793 @@ impl AstSecurityAnalyzer {
             "Path Traversal" => Some("CWE-22".to_string()),
             "Deserialization Attack" => Some("CWE-502".to_string()),
             _ => Some("CWE-20".to_string()), // Generic Improper Input Validation
+        }
+    }
+
+    /// Analyze semantic context for false positive filtering
+    pub fn analyze_semantic_context(
+        &self,
+        finding: &SecurityFinding,
+        code_context: &str,
+        full_file_content: Option<&str>,
+    ) -> Result<SemanticContextResult> {
+        // Determine language from file path
+        let language = self.detect_language_from_finding(finding)?;
+
+        // Parse code context to get basic AST
+        let parser = Parser::new(language)?;
+        let tree = parser.parse(code_context, None)?;
+
+        // Get language-specific analyzer
+        let analyzer = self.language_analyzers.get(&language).ok_or_else(|| {
+            Error::internal_error(
+                "Semantic Context Analyzer",
+                format!("No analyzer available for language: {}", language.name()),
+            )
+        })?;
+
+        // Extract semantic information
+        let semantic_info = analyzer.extract_semantic_info(&tree)?;
+
+        // Classify context
+        let file_path = std::path::Path::new(&finding.file_path);
+        let context = self.context_classifier.classify_context(
+            file_path,
+            full_file_content.unwrap_or(code_context),
+            &semantic_info,
+        )?;
+
+        // Determine if this is likely a false positive based on semantic analysis
+        let is_test_code = context.is_test_code;
+        let is_placeholder = self.is_placeholder_value(code_context);
+        let is_documentation = self.is_documentation_context(code_context);
+        let is_embedded = self.is_embedded_code(code_context);
+        let is_safe_usage = self.is_safe_usage_pattern(finding, &semantic_info);
+
+        let explanation = self.generate_semantic_explanation(
+            is_test_code,
+            is_placeholder,
+            is_documentation,
+            is_embedded,
+            is_safe_usage,
+        );
+
+        Ok(SemanticContextResult {
+            is_test_code,
+            is_placeholder,
+            is_documentation,
+            is_embedded,
+            is_safe_usage,
+            explanation,
+        })
+    }
+
+    /// Detect language from finding
+    fn detect_language_from_finding(&self, finding: &SecurityFinding) -> Result<Language> {
+        // Simple language detection based on file extension
+        let path = std::path::Path::new(&finding.file_path);
+        if let Some(extension) = path.extension() {
+            match extension.to_str() {
+                Some("rs") => Ok(Language::Rust),
+                Some("js") => Ok(Language::JavaScript),
+                Some("ts") => Ok(Language::TypeScript),
+                Some("py") => Ok(Language::Python),
+                Some("java") => Ok(Language::Java),
+                Some("go") => Ok(Language::Go),
+                Some("c") => Ok(Language::C),
+                Some("cpp") | Some("cc") | Some("cxx") => Ok(Language::Cpp),
+                Some("php") => Ok(Language::Php),
+                Some("rb") => Ok(Language::Ruby),
+                Some("swift") => Ok(Language::Swift),
+                Some("kt") => Ok(Language::Kotlin),
+                _ => Ok(Language::Rust), // Default fallback
+            }
+        } else {
+            Ok(Language::Rust) // Default fallback
+        }
+    }
+
+    /// Check if the code contains placeholder values
+    fn is_placeholder_value(&self, code_context: &str) -> bool {
+        let placeholders = [
+            "your_api_key_here",
+            "your_secret_key",
+            "placeholder",
+            "example_key",
+            "test_key",
+            "dummy_key",
+            "fake_key",
+            "sample_key",
+            "sk-test",
+            "pk_test",
+            "CHANGE_ME",
+            "REPLACE_ME",
+            "TODO",
+            "FIXME",
+        ];
+
+        let context_lower = code_context.to_lowercase();
+        placeholders
+            .iter()
+            .any(|placeholder| context_lower.contains(&placeholder.to_lowercase()))
+    }
+
+    /// Check if this is documentation context
+    fn is_documentation_context(&self, code_context: &str) -> bool {
+        let doc_patterns = [
+            "///", "//!", "/**", "/*!", "# ", "\"\"\"", "'''", "README", "readme", "example",
+            "Example", "doc", "Doc", "comment", "Comment",
+        ];
+
+        doc_patterns
+            .iter()
+            .any(|pattern| code_context.contains(pattern))
+    }
+
+    /// Check if this appears to be embedded code in string literals
+    fn is_embedded_code(&self, code_context: &str) -> bool {
+        // Check for JavaScript patterns that are commonly embedded
+        let js_patterns = [
+            "addEventListener",
+            "document.",
+            "window.",
+            "localStorage",
+            "sessionStorage",
+            "documentElement",
+            "getElementById",
+            "querySelector",
+            "innerHTML",
+            "textContent",
+            "classList",
+            "setAttribute",
+            "getAttribute",
+            "createElement",
+            "appendChild",
+            "function(",
+            "const ",
+            "let ",
+            "var ",
+            "=> {",
+            "try {",
+            "catch(",
+            "console.log",
+            "console.error",
+            "console.warn",
+            "setTimeout",
+            "setInterval",
+            "fetch(",
+            "XMLHttpRequest",
+            "WebSocket",
+            ".then(",
+            ".catch(",
+            "async ",
+            "await ",
+            "Promise",
+            "JSON.parse",
+            "JSON.stringify",
+        ];
+
+        // Check for HTML patterns
+        let html_patterns = [
+            "<div",
+            "<span",
+            "<script",
+            "<style",
+            "<button",
+            "<input",
+            "<form",
+            "<a href",
+            "<img",
+            "<p>",
+            "<h1",
+            "<h2",
+            "<h3",
+            "onclick=",
+            "onload=",
+            "onchange=",
+            "onsubmit=",
+            "class=",
+            "id=",
+            "style=",
+        ];
+
+        // Check for CSS patterns
+        let css_patterns = [
+            "background:",
+            "color:",
+            "font-size:",
+            "margin:",
+            "padding:",
+            "display:",
+            "position:",
+            "width:",
+            "height:",
+            "border:",
+            ".hljs",
+            "#hljs",
+            "@media",
+            "keyframes",
+        ];
+
+        // Check for SQL patterns
+        let sql_patterns = [
+            "SELECT ", "INSERT ", "UPDATE ", "DELETE ", "CREATE ", "ALTER ", "DROP ", "FROM ",
+            "WHERE ", "JOIN ", "INNER ", "LEFT ", "RIGHT ", "ORDER BY", "GROUP BY", "LIMIT ",
+        ];
+
+        let context_lower = code_context.to_lowercase();
+
+        // Count how many patterns match
+        let js_matches = js_patterns
+            .iter()
+            .filter(|p| context_lower.contains(&p.to_lowercase()))
+            .count();
+        let html_matches = html_patterns
+            .iter()
+            .filter(|p| context_lower.contains(&p.to_lowercase()))
+            .count();
+        let css_matches = css_patterns
+            .iter()
+            .filter(|p| context_lower.contains(&p.to_lowercase()))
+            .count();
+        let sql_matches = sql_patterns
+            .iter()
+            .filter(|p| context_lower.contains(&p.to_lowercase()))
+            .count();
+
+        // If we have multiple matches from different categories, this is likely embedded code
+        (js_matches >= 2) || (html_matches >= 2) || (css_matches >= 2) || (sql_matches >= 2) ||
+        // Or if we have a combination of different types
+        ((js_matches >= 1 && html_matches >= 1) ||
+         (js_matches >= 1 && css_matches >= 1) ||
+         (html_matches >= 1 && css_matches >= 1) ||
+         (js_matches >= 1 && sql_matches >= 1)) ||
+        // Check for string literal context (common in embedded code)
+        self.is_in_string_literal_context(code_context)
+    }
+
+    /// Check if code appears to be within string literals (indicating embedded code)
+    fn is_in_string_literal_context(&self, code_context: &str) -> bool {
+        // Look for patterns that suggest code is inside string literals
+        let string_indicators = [
+            "\"\"\"", // Python multiline strings
+            "'''",    // Python multiline strings
+            "`",      // JavaScript template literals
+            "\"",     // Regular string quotes
+            "'",      // Single quotes
+        ];
+
+        let mut in_string = false;
+        let mut string_char = ' ';
+        let mut escaped = false;
+
+        for ch in code_context.chars() {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+
+            if ch == '\\' {
+                escaped = true;
+                continue;
+            }
+
+            if !in_string {
+                for &quote in &string_indicators {
+                    if ch == quote.chars().next().unwrap() {
+                        in_string = true;
+                        string_char = ch;
+                        break;
+                    }
+                }
+            } else if ch == string_char {
+                in_string = false;
+                string_char = ' ';
+            }
+        }
+
+        // If we're still in a string at the end, or if we found string delimiters,
+        // this might be embedded code
+        in_string || string_indicators.iter().any(|s| code_context.contains(s))
+    }
+
+    /// Check if this is a safe usage pattern
+    fn is_safe_usage_pattern(
+        &self,
+        finding: &SecurityFinding,
+        semantic_info: &SemanticInfo,
+    ) -> bool {
+        match finding.finding_type {
+            SecurityFindingType::HardcodedSecret => {
+                // Check if the secret is used in a safe way
+                self.is_safe_secret_usage(finding, semantic_info)
+            }
+            SecurityFindingType::Injection => {
+                // Check if injection is properly sanitized
+                self.is_safe_injection_usage(finding, semantic_info)
+            }
+            SecurityFindingType::BrokenAccessControl => {
+                // Check for proper authorization patterns
+                self.is_safe_access_control(finding, semantic_info)
+            }
+            SecurityFindingType::WeakAuthentication => {
+                // Check for secure authentication patterns
+                self.is_safe_authentication(finding, semantic_info)
+            }
+            _ => false,
+        }
+    }
+
+    /// Check if access control is implemented safely
+    fn is_safe_access_control(
+        &self,
+        finding: &SecurityFinding,
+        semantic_info: &SemanticInfo,
+    ) -> bool {
+        let context_lower = finding.code_snippet.to_lowercase();
+
+        // Look for authorization patterns
+        let auth_patterns = [
+            "authorize",
+            "authenticate",
+            "permission",
+            "role",
+            "access_control",
+            "middleware",
+            "guard",
+            "policy",
+            "jwt",
+            "session",
+            "token",
+            "admin",
+            "user",
+            "role",
+            "permission",
+            "acl",
+        ];
+
+        for pattern in &auth_patterns {
+            if context_lower.contains(pattern) {
+                return true;
+            }
+        }
+
+        // Check for function calls that suggest authorization
+        for call in &semantic_info.function_calls {
+            let call_lower = call.function_name.to_lowercase();
+            if call_lower.contains("auth")
+                || call_lower.contains("check")
+                || call_lower.contains("verify")
+                || call_lower.contains("validate")
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if authentication is implemented safely
+    fn is_safe_authentication(
+        &self,
+        finding: &SecurityFinding,
+        semantic_info: &SemanticInfo,
+    ) -> bool {
+        let context_lower = finding.code_snippet.to_lowercase();
+
+        // Look for secure authentication patterns
+        let secure_auth_patterns = [
+            "bcrypt", "argon2", "pbkdf2", "scrypt", // Password hashing
+            "jwt", "oauth", "saml", "ldap", // Auth protocols
+            "ssl", "tls", "https", // Secure transport
+            "session", "cookie", "token", // Session management
+        ];
+
+        for pattern in &secure_auth_patterns {
+            if context_lower.contains(pattern) {
+                return true;
+            }
+        }
+
+        // Check for crypto-related imports
+        for import in &semantic_info.imports {
+            let import_lower = import.to_lowercase();
+            if import_lower.contains("crypto")
+                || import_lower.contains("bcrypt")
+                || import_lower.contains("hash")
+                || import_lower.contains("jwt")
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if secret usage is safe
+    fn is_safe_secret_usage(
+        &self,
+        finding: &SecurityFinding,
+        semantic_info: &SemanticInfo,
+    ) -> bool {
+        // Check if the secret is loaded from environment or config
+        let context_lower = finding.code_snippet.to_lowercase();
+
+        // Look for environment variable patterns
+        if context_lower.contains("env::var")
+            || context_lower.contains("std::env")
+            || context_lower.contains("process.env")
+            || context_lower.contains("os.environ")
+            || context_lower.contains("getenv")
+            || context_lower.contains("environment")
+            || context_lower.contains("dotenv")
+        {
+            return true;
+        }
+
+        // Look for config loading patterns
+        if context_lower.contains("config")
+            || context_lower.contains("settings")
+            || context_lower.contains("load")
+            || context_lower.contains("read")
+            || context_lower.contains("parse")
+            || context_lower.contains("deserialize")
+        {
+            return true;
+        }
+
+        // Check for secure key management patterns
+        let secure_patterns = [
+            "keyring",
+            "vault",
+            "secret_manager",
+            "aws_secretsmanager",
+            "azure_keyvault",
+            "gcp_secretmanager",
+            "kubernetes_secret",
+            "hashicorp_vault",
+            "key_management",
+            "kms",
+        ];
+
+        for pattern in &secure_patterns {
+            if context_lower.contains(pattern) {
+                return true;
+            }
+        }
+
+        // Check if it's a constant that's properly handled
+        for (var_name, var_info) in &semantic_info.variables {
+            if var_info.is_constant {
+                // Constants might be acceptable if they're not actual secrets
+                // But check if they have secure naming patterns
+                let var_name_lower = var_name.to_lowercase();
+                if var_name_lower.contains("key")
+                    || var_name_lower.contains("secret")
+                    || var_name_lower.contains("token")
+                    || var_name_lower.contains("password")
+                {
+                    // This might still be a hardcoded secret in a constant
+                    continue;
+                }
+                return true;
+            }
+        }
+
+        // Check for imports that suggest secure secret handling
+        for import in &semantic_info.imports {
+            let import_lower = import.to_lowercase();
+            if import_lower.contains("dotenv")
+                || import_lower.contains("config")
+                || import_lower.contains("env")
+                || import_lower.contains("secret")
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if injection usage is safe
+    fn is_safe_injection_usage(
+        &self,
+        finding: &SecurityFinding,
+        semantic_info: &SemanticInfo,
+    ) -> bool {
+        // Check for sanitization functions
+        let context_lower = finding.code_snippet.to_lowercase();
+
+        let sanitization_patterns = [
+            "sanitize",
+            "escape",
+            "encode",
+            "validate",
+            "filter",
+            "clean",
+            "prepared",
+            "parameterized",
+            "bind",
+            "quote",
+        ];
+
+        for pattern in &sanitization_patterns {
+            if context_lower.contains(pattern) {
+                return true;
+            }
+        }
+
+        // Check for ORM usage which typically handles injection
+        let orm_patterns = [
+            "diesel",
+            "sqlx",
+            "tokio-postgres",
+            "rusqlite",
+            "mongodb",
+            "mongoose",
+            "sequelize",
+            "typeorm",
+            "prisma",
+            "gorm",
+            "hibernate",
+            "jpa",
+            "activerecord",
+            "peewee",
+            "sqlalchemy",
+        ];
+
+        for pattern in &orm_patterns {
+            if context_lower.contains(pattern) {
+                return true;
+            }
+        }
+
+        // Check for parameterized query patterns
+        let param_patterns = [
+            "prepare",
+            "execute",
+            "query",
+            "stmt",
+            "bind_param",
+            "bind_value",
+            "parameter",
+            "placeholder",
+            "interpolate",
+        ];
+
+        let param_count = param_patterns
+            .iter()
+            .filter(|p| context_lower.contains(*p))
+            .count();
+
+        if param_count >= 2 {
+            return true; // Multiple parameterization indicators
+        }
+
+        // Check for escaping/sanitization function calls
+        for call in &semantic_info.function_calls {
+            let call_lower = call.function_name.to_lowercase();
+            if call_lower.contains("escape")
+                || call_lower.contains("sanitize")
+                || call_lower.contains("clean")
+                || call_lower.contains("filter")
+                || call_lower.contains("validate")
+                || call_lower.contains("encode")
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Generate explanation for semantic analysis
+    fn generate_semantic_explanation(
+        &self,
+        is_test: bool,
+        is_placeholder: bool,
+        is_doc: bool,
+        is_embedded: bool,
+        is_safe: bool,
+    ) -> String {
+        let mut reasons = Vec::new();
+
+        if is_test {
+            reasons.push("appears to be test code");
+        }
+        if is_placeholder {
+            reasons.push("contains placeholder values");
+        }
+        if is_doc {
+            reasons.push("is in documentation context");
+        }
+        if is_embedded {
+            reasons.push("appears to be embedded code in string literals");
+        }
+        if is_safe {
+            reasons.push("uses safe patterns and security best practices");
+        }
+
+        if reasons.is_empty() {
+            "No semantic false positive indicators found - this may be a legitimate security concern".to_string()
+        } else {
+            format!(
+                "Semantic analysis suggests this may be a false positive because it {}",
+                reasons.join(", and ")
+            )
+        }
+    }
+
+    /// Enhanced semantic analysis for complex scenarios
+    pub fn analyze_complex_semantic_context(
+        &self,
+        finding: &SecurityFinding,
+        code_context: &str,
+        full_file_content: Option<&str>,
+        semantic_info: &SemanticInfo,
+    ) -> Result<EnhancedSemanticResult> {
+        let mut confidence_adjustment = 0.0;
+        let mut additional_factors = Vec::new();
+
+        // Analyze code complexity and context
+        let complexity_score = self.analyze_code_complexity(code_context);
+        if complexity_score > 0.7 {
+            // Complex code is less likely to be a false positive
+            confidence_adjustment -= 0.1;
+            additional_factors.push("high code complexity suggests real vulnerability".to_string());
+        }
+
+        // Check for security-related comments or documentation
+        if self.has_security_comments(code_context) {
+            confidence_adjustment += 0.2;
+            additional_factors.push("security-related comments indicate awareness".to_string());
+        }
+
+        // Analyze variable naming patterns
+        let naming_score = self.analyze_variable_naming(semantic_info);
+        if naming_score > 0.6 {
+            confidence_adjustment += 0.15;
+            additional_factors.push("suspicious variable naming patterns".to_string());
+        }
+
+        // Check for multiple security issues in the same area
+        let clustering_score = self.analyze_issue_clustering(finding, semantic_info);
+        if clustering_score > 0.5 {
+            confidence_adjustment += 0.1;
+            additional_factors.push("multiple security issues in close proximity".to_string());
+        }
+
+        Ok(EnhancedSemanticResult {
+            confidence_adjustment,
+            additional_factors,
+            complexity_score,
+            naming_score,
+            clustering_score,
+        })
+    }
+
+    /// Analyze code complexity as an indicator of false positives
+    fn analyze_code_complexity(&self, code_context: &str) -> f64 {
+        let lines = code_context.lines().count();
+        let chars = code_context.chars().count();
+        let keywords = [
+            "if ", "for ", "while ", "match ", "fn ", "class ", "struct ",
+        ]
+        .iter()
+        .filter(|k| code_context.contains(*k))
+        .count();
+
+        // Simple complexity score based on size and control structures
+        let size_score = (lines as f64 / 50.0).min(1.0);
+        let keyword_score = (keywords as f64 / 10.0).min(1.0);
+
+        (size_score + keyword_score) / 2.0
+    }
+
+    /// Check for security-related comments
+    fn has_security_comments(&self, code_context: &str) -> bool {
+        let security_keywords = [
+            "security",
+            "vulnerable",
+            "exploit",
+            "attack",
+            "hack",
+            "injection",
+            "xss",
+            "csrf",
+            "auth",
+            "encrypt",
+            "hash",
+            "sanitize",
+            "validate",
+            "escape",
+            "filter",
+        ];
+
+        let context_lower = code_context.to_lowercase();
+        security_keywords.iter().any(|k| context_lower.contains(k))
+    }
+
+    /// Analyze variable naming patterns for suspicious indicators
+    fn analyze_variable_naming(&self, semantic_info: &SemanticInfo) -> f64 {
+        let mut suspicious_count = 0;
+        let mut total_vars = 0;
+
+        for (var_name, var_info) in &semantic_info.variables {
+            total_vars += 1;
+            let name_lower = var_name.to_lowercase();
+
+            // Check for suspicious naming patterns
+            if name_lower.contains("secret")
+                || name_lower.contains("key")
+                || name_lower.contains("token")
+                || name_lower.contains("password")
+                || name_lower.contains("auth")
+                || name_lower.contains("admin")
+            {
+                suspicious_count += 1;
+            }
+        }
+
+        if total_vars == 0 {
+            0.0
+        } else {
+            suspicious_count as f64 / total_vars as f64
+        }
+    }
+
+    /// Analyze clustering of security issues
+    fn analyze_issue_clustering(
+        &self,
+        _finding: &SecurityFinding,
+        semantic_info: &SemanticInfo,
+    ) -> f64 {
+        // Simple clustering based on number of function calls and variables
+        // More complex code tends to have more legitimate security issues
+        let function_density = semantic_info.functions.len() as f64 / 10.0;
+        let variable_density = semantic_info.variables.len() as f64 / 20.0;
+        let call_density = semantic_info.function_calls.len() as f64 / 15.0;
+
+        (function_density + variable_density + call_density).min(1.0)
+    }
+}
+
+/// Enhanced semantic analysis result
+#[derive(Debug, Clone)]
+pub struct EnhancedSemanticResult {
+    /// Confidence adjustment (-1.0 to 1.0, negative reduces false positive likelihood)
+    pub confidence_adjustment: f64,
+    /// Additional factors identified
+    pub additional_factors: Vec<String>,
+    /// Code complexity score (0.0 to 1.0)
+    pub complexity_score: f64,
+    /// Variable naming suspiciousness score (0.0 to 1.0)
+    pub naming_score: f64,
+    /// Issue clustering score (0.0 to 1.0)
+    pub clustering_score: f64,
+}
+
+impl Default for SemanticContextResult {
+    fn default() -> Self {
+        Self {
+            is_test_code: false,
+            is_placeholder: false,
+            is_documentation: false,
+            is_embedded: false,
+            is_safe_usage: false,
+            explanation: "No analysis performed".to_string(),
+        }
+    }
+}
+
+impl Default for EnhancedSemanticResult {
+    fn default() -> Self {
+        Self {
+            confidence_adjustment: 0.0,
+            additional_factors: Vec::new(),
+            complexity_score: 0.0,
+            naming_score: 0.0,
+            clustering_score: 0.0,
         }
     }
 }
@@ -767,7 +1612,7 @@ impl SemanticAnalysisEngine {
         let mut results = Vec::new();
 
         // Analyze data flows between variables and function calls
-        for (var_name, var_info) in &semantic_info.variables {
+        for (var_name, _var_info) in &semantic_info.variables {
             for call in &semantic_info.function_calls {
                 // Check if variable is used in function call (potential data flow)
                 if call.arguments.iter().any(|arg| arg.contains(var_name)) {

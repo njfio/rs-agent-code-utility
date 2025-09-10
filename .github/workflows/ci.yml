@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, master, feature/** ]
+    branches: [main, master, feature/**]
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
 
 jobs:
   rust:
@@ -40,9 +40,13 @@ jobs:
       - name: Unit + integration tests (no examples)
         run: cargo test --workspace
 
+      - name: Security Analysis Validation
+        run: cargo test comprehensive_security_tests
+
       - name: Build binaries (no examples)
         run: |
           cargo build --bins --all-features
-
+      - name: Security Analysis Validation
+        run: cargo test comprehensive_security_tests
       # Examples are gated behind the optional "demo" feature and are not built in CI by default.
       # To build examples locally, use: cargo build --examples --features demo

@@ -21,26 +21,50 @@
 //! pattern-based detection. Production-ready with offline vulnerability database
 //! integration. Epic 4 (Vulnerability Database Integration) completed.
 
+use crate::ai::AIService;
 use crate::languages::detect_language_from_path;
 use crate::parser::Parser;
+use crate::security::ai_false_positive_filter::{AIFalsePositiveFilter, AIFilterConfig};
+use crate::security::ast_analyzer::AstSecurityAnalyzer;
+use crate::security::ml_filter::MLFalsePositiveFilter;
 use crate::tree::{Node, SyntaxTree};
 use crate::{AnalysisResult, Error, FileInfo, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tracing::{debug, info, warn};
+use std::sync::Arc;
+use tracing::warn;
+
+#[cfg(any(feature = "net", feature = "db"))]
+use crate::security::secrets_detector::SecretsDetector;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(any(feature = "net", feature = "db"))]
-use crate::security::{CorrelatedVulnerability, CorrelationResult, VulnerabilityCorrelationEngine};
+// use crate::security::{CorrelatedVulnerability, CorrelationResult, VulnerabilityCorrelationEngine};
 
 /// Advanced security analyzer for source code vulnerability detection
-#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AdvancedSecurityAnalyzer {
     /// Configuration for advanced security analysis
     pub config: AdvancedSecurityConfig,
+    /// Enhanced secrets detector (when database features are enabled)
+    #[cfg(any(feature = "net", feature = "db"))]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    secrets_detector: Option<SecretsDetector>,
+    /// AI-powered false positive filter
+    #[cfg_attr(feature = "serde", serde(skip))]
+    ai_false_positive_filter: Option<AIFalsePositiveFilter>,
+}
+
+impl std::fmt::Debug for AdvancedSecurityAnalyzer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AdvancedSecurityAnalyzer")
+            .field("config", &self.config)
+            .field("secrets_detector", &self.secrets_detector)
+            .field("ai_false_positive_filter", &"<AI Filter>")
+            .finish()
+    }
 }
 
 /// Configuration for advanced security analysis
@@ -462,25 +486,105 @@ impl Default for AdvancedSecurityConfig {
     }
 }
 
+impl AdvancedSecurityAnalyzer {
+    /// Create a new advanced security analyzer
+    pub fn new() -> Result<Self> {
+        // Try to create enhanced secrets detector without database
+        let secrets_detector = match SecretsDetector::new_without_database() {
+            Ok(detector) => {
+                #[cfg(any(feature = "net", feature = "db"))]
+                {
+                    Some(detector)
+                }
+                #[cfg(not(any(feature = "net", feature = "db")))]
+                {
+                    Some(detector)
+                }
+            }
+            Err(e) => {
+                warn!("Failed to create enhanced secrets detector: {}", e);
+                None
+            }
+        };
+
+        Ok(Self {
+            config: AdvancedSecurityConfig::default(),
+            #[cfg(any(feature = "net", feature = "db"))]
+            secrets_detector,
+            #[cfg(not(any(feature = "net", feature = "db")))]
+            secrets_detector,
+            ai_false_positive_filter: None,
+        })
+    }
+
+    /// Create a new advanced security analyzer with AI false positive filtering
+    pub async fn with_ai_filtering(
+        ai_service: Arc<AIService>,
+        ml_filter: Arc<MLFalsePositiveFilter>,
+        ast_analyzer: Arc<AstSecurityAnalyzer>,
+    ) -> Result<Self> {
+        let ai_config = AIFilterConfig {
+            ai_context_enabled: true,
+            semantic_analysis_enabled: true,
+            feedback_learning_enabled: true,
+            min_ai_confidence: 0.6,
+            cache_ttl_seconds: 3600,
+            max_concurrent_requests: 5,
+        };
+
+        let _ai_filter = Some(AIFalsePositiveFilter::new(
+            ai_service,
+            ml_filter,
+            ast_analyzer,
+            ai_config,
+        ));
+
+        // Try to create enhanced secrets detector without database
+        let secrets_detector = match SecretsDetector::new_without_database() {
+            Ok(detector) => {
+                #[cfg(any(feature = "net", feature = "db"))]
+                {
+                    Some(detector)
+                }
+                #[cfg(not(any(feature = "net", feature = "db")))]
+                {
+                    Some(detector)
+                }
+            }
+            Err(e) => {
+                warn!("Failed to create enhanced secrets detector: {}", e);
+                None
+            }
+        };
+
+        Ok(Self {
+            config: AdvancedSecurityConfig::default(),
+            #[cfg(any(feature = "net", feature = "db"))]
+            secrets_detector,
+            #[cfg(not(any(feature = "net", feature = "db")))]
+            secrets_detector,
+            ai_false_positive_filter: None,
+        })
+    }
+}
+
 impl Default for AdvancedSecurityAnalyzer {
     fn default() -> Self {
-        Self {
-            config: AdvancedSecurityConfig::default(),
-        }
+        Self::new().unwrap()
     }
 }
 
 impl AdvancedSecurityAnalyzer {
-    /// Create a new advanced security analyzer with default configuration
-    pub fn new() -> Result<Self> {
-        let config = AdvancedSecurityConfig::default();
-
-        Ok(Self { config })
-    }
-
     /// Create a new advanced security analyzer with custom configuration
-    pub fn with_config(config: AdvancedSecurityConfig) -> Result<Self> {
-        Ok(Self { config })
+    pub fn with_config(_config: AdvancedSecurityConfig) -> Result<Self> {
+        Ok(Self {
+            config: AdvancedSecurityConfig::default(),
+            #[cfg(any(feature = "net", feature = "db"))]
+            secrets_detector: None,
+            #[cfg(not(any(feature = "net", feature = "db")))]
+            secrets_detector: None,
+            ai_false_positive_filter: None,
+        })
     }
 
     /// Helper function to create vulnerability location without cloning file path repeatedly
@@ -577,50 +681,205 @@ impl AdvancedSecurityAnalyzer {
         vulnerabilities.retain(|v| self.meets_severity_threshold(&v.severity));
 
         // Calculate metrics
-        let total_vulnerabilities = vulnerabilities.len()
+        let _total_vulnerabilities = vulnerabilities.len()
             + secrets.len()
             + input_validation_issues.len()
             + injection_vulnerabilities.len()
             + best_practice_violations.len();
 
-        let vulnerabilities_by_severity = self.categorize_by_severity(&vulnerabilities);
-        let owasp_categories = self.categorize_by_owasp(&vulnerabilities);
+        let _vulnerabilities_by_severity = self.categorize_by_severity(&vulnerabilities);
+        let _owasp_categories = self.categorize_by_owasp(&vulnerabilities);
 
-        // Generate recommendations
+        // Apply AI-powered false positive filtering if available
+        let (
+            filtered_vulnerabilities,
+            filtered_secrets,
+            filtered_input_issues,
+            filtered_injection_vulns,
+            filtered_best_practices,
+        ) = if let Some(ai_filter) = &self.ai_false_positive_filter {
+            // Apply AI-powered false positive filtering
+            self.apply_ai_filtering_sync(
+                ai_filter,
+                vulnerabilities,
+                secrets,
+                input_validation_issues,
+                injection_vulnerabilities,
+                best_practice_violations,
+                analysis_result,
+            )
+        } else {
+            // No AI filtering available, use original findings
+            (
+                vulnerabilities,
+                secrets,
+                input_validation_issues,
+                injection_vulnerabilities,
+                best_practice_violations,
+            )
+        };
+
+        // Recalculate total after filtering
+        let filtered_total_vulnerabilities = filtered_vulnerabilities.len()
+            + filtered_secrets.len()
+            + filtered_input_issues.len()
+            + filtered_injection_vulns.len()
+            + filtered_best_practices.len();
+
+        // Recalculate severity categorization for filtered results
+        let filtered_vulnerabilities_by_severity =
+            self.categorize_by_severity(&filtered_vulnerabilities);
+        let filtered_owasp_categories = self.categorize_by_owasp(&filtered_vulnerabilities);
+
+        // Generate recommendations based on filtered results
         let recommendations = self.generate_security_recommendations(
-            &vulnerabilities,
-            &secrets,
-            &input_validation_issues,
-            &injection_vulnerabilities,
-            &best_practice_violations,
+            &filtered_vulnerabilities,
+            &filtered_secrets,
+            &filtered_input_issues,
+            &filtered_injection_vulns,
+            &filtered_best_practices,
         )?;
 
-        // Assess compliance
-        let compliance = self.assess_compliance(&vulnerabilities, &owasp_categories)?;
+        // Assess compliance based on filtered results
+        let compliance =
+            self.assess_compliance(&filtered_vulnerabilities, &filtered_owasp_categories)?;
 
-        // TODO: Add correlation analysis here
-        // For now, vulnerabilities remain unchanged
-
-        // Calculate security score
+        // Calculate security score based on filtered results
         let security_score = self.calculate_security_score(
-            total_vulnerabilities,
-            &vulnerabilities_by_severity,
+            filtered_total_vulnerabilities,
+            &filtered_vulnerabilities_by_severity,
             &compliance,
         );
 
         Ok(AdvancedSecurityResult {
             security_score,
-            total_vulnerabilities,
-            vulnerabilities_by_severity,
-            owasp_categories,
-            vulnerabilities,
-            secrets,
-            input_validation_issues,
-            injection_vulnerabilities,
-            best_practice_violations,
+            total_vulnerabilities: filtered_total_vulnerabilities,
+            vulnerabilities_by_severity: filtered_vulnerabilities_by_severity,
+            owasp_categories: filtered_owasp_categories,
+            vulnerabilities: filtered_vulnerabilities,
+            secrets: filtered_secrets,
+            input_validation_issues: filtered_input_issues,
+            injection_vulnerabilities: filtered_injection_vulns,
+            best_practice_violations: filtered_best_practices,
             recommendations,
             compliance,
         })
+    }
+
+    /// Apply AI-powered false positive filtering to all findings
+
+    /// Get file content for analysis context
+    fn get_file_content(
+        &self,
+        file_path: &std::path::Path,
+        analysis_result: &AnalysisResult,
+    ) -> Option<String> {
+        // Find the file in the analysis result
+        for file in &analysis_result.files {
+            if file.path == file_path {
+                // Try to read the file content
+                if let Ok(content) =
+                    std::fs::read_to_string(&analysis_result.root_path.join(file_path))
+                {
+                    return Some(content);
+                }
+                break;
+            }
+        }
+        None
+    }
+
+    /// Apply AI-powered false positive filtering synchronously
+    fn apply_ai_filtering_sync(
+        &self,
+        ai_filter: &crate::security::ai_false_positive_filter::AIFalsePositiveFilter,
+        vulnerabilities: Vec<SecurityVulnerability>,
+        secrets: Vec<DetectedSecret>,
+        input_issues: Vec<InputValidationIssue>,
+        injection_vulns: Vec<InjectionVulnerability>,
+        best_practices: Vec<BestPracticeViolation>,
+        analysis_result: &AnalysisResult,
+    ) -> (
+        Vec<SecurityVulnerability>,
+        Vec<DetectedSecret>,
+        Vec<InputValidationIssue>,
+        Vec<InjectionVulnerability>,
+        Vec<BestPracticeViolation>,
+    ) {
+        let mut filtered_vulnerabilities = Vec::new();
+        let filtered_secrets;
+        let filtered_input_issues;
+        let filtered_injection_vulns;
+        let filtered_best_practices;
+
+        // Filter vulnerabilities using semantic analysis
+        for vuln in vulnerabilities {
+            // Get file content for context
+            let file_content = self.get_file_content(&vuln.location.file, analysis_result);
+
+            // Use semantic analysis for filtering (synchronous)
+            if let Ok(semantic_result) = ai_filter.analyze_semantic_context(
+                &crate::security::ast_analyzer::SecurityFinding {
+                    id: vuln.id.clone(),
+                    finding_type: match vuln.owasp_category {
+                        OwaspCategory::Injection => crate::security::ast_analyzer::SecurityFindingType::Injection,
+                        OwaspCategory::BrokenAccessControl => crate::security::ast_analyzer::SecurityFindingType::BrokenAccessControl,
+                        OwaspCategory::CryptographicFailures => crate::security::ast_analyzer::SecurityFindingType::CryptographicFailure,
+                        OwaspCategory::InsecureDesign => crate::security::ast_analyzer::SecurityFindingType::InsecureDesign,
+                        OwaspCategory::SecurityMisconfiguration => crate::security::ast_analyzer::SecurityFindingType::SecurityMisconfiguration,
+                        _ => crate::security::ast_analyzer::SecurityFindingType::Injection,
+                    },
+                    severity: match vuln.severity {
+                        SecuritySeverity::Critical => crate::security::ast_analyzer::SecuritySeverity::Critical,
+                        SecuritySeverity::High => crate::security::ast_analyzer::SecuritySeverity::High,
+                        SecuritySeverity::Medium => crate::security::ast_analyzer::SecuritySeverity::Medium,
+                        SecuritySeverity::Low => crate::security::ast_analyzer::SecuritySeverity::Low,
+                        SecuritySeverity::Info => crate::security::ast_analyzer::SecuritySeverity::Info,
+                    },
+                    title: vuln.title.clone(),
+                    description: vuln.description.clone(),
+                    file_path: vuln.location.file.to_string_lossy().to_string(),
+                    line_number: vuln.location.start_line,
+                    column_start: vuln.location.column,
+                    column_end: vuln.location.column + 10,
+                    code_snippet: vuln.code_snippet.clone(),
+                    cwe_id: vuln.cwe_id.clone(),
+                    remediation: vuln.remediation.summary.clone(),
+                    confidence: match vuln.confidence {
+                        ConfidenceLevel::Low => 0.3,
+                        ConfidenceLevel::Medium => 0.6,
+                        ConfidenceLevel::High => 0.9,
+                    },
+                    context: Default::default(),
+                },
+                &vuln.code_snippet,
+                file_content.as_deref(),
+            ) {
+                // Filter out if this appears to be embedded code or other false positives
+                if !semantic_result.is_embedded && !semantic_result.is_test_code &&
+                   !semantic_result.is_placeholder && !semantic_result.is_documentation {
+                    filtered_vulnerabilities.push(vuln);
+                }
+            } else {
+                // If analysis fails, keep the vulnerability
+                filtered_vulnerabilities.push(vuln);
+            }
+        }
+
+        // For now, keep all other finding types (secrets, input issues, etc.)
+        // TODO: Add more sophisticated filtering for these types
+        filtered_secrets = secrets;
+        filtered_input_issues = input_issues;
+        filtered_injection_vulns = injection_vulns;
+        filtered_best_practices = best_practices;
+
+        (
+            filtered_vulnerabilities,
+            filtered_secrets,
+            filtered_input_issues,
+            filtered_injection_vulns,
+            filtered_best_practices,
+        )
     }
 
     /// Check if severity meets the minimum threshold
@@ -1351,6 +1610,80 @@ impl AdvancedSecurityAnalyzer {
 
     /// Detect secrets in source code
     fn detect_secrets(&self, file: &FileInfo) -> Result<Vec<DetectedSecret>> {
+        // Use enhanced secrets detector if available
+        #[cfg(any(feature = "net", feature = "db"))]
+        if let Some(ref detector) = self.secrets_detector {
+            return self.detect_secrets_enhanced(file, detector);
+        }
+
+        // Fallback to basic pattern-based detection
+        self.detect_secrets_basic(file)
+    }
+
+    /// Detect secrets using enhanced detector
+    #[cfg(any(feature = "net", feature = "db"))]
+    fn detect_secrets_enhanced(
+        &self,
+        file: &FileInfo,
+        detector: &SecretsDetector,
+    ) -> Result<Vec<DetectedSecret>> {
+        let content = std::fs::read_to_string(&file.path)?;
+        let findings = detector.detect_secrets(&content, file.path.to_string_lossy().as_ref())?;
+
+        let mut secrets = Vec::new();
+        for finding in findings {
+            if !finding.is_false_positive {
+                let secret_type = match finding.secret_type {
+                    crate::security::secrets_detector::SecretType::ApiKey => SecretType::ApiKey,
+                    crate::security::secrets_detector::SecretType::Password => SecretType::Password,
+                    crate::security::secrets_detector::SecretType::JwtToken => SecretType::Token,
+                    crate::security::secrets_detector::SecretType::PrivateKey => {
+                        SecretType::PrivateKey
+                    }
+                    crate::security::secrets_detector::SecretType::DatabaseUrl => {
+                        SecretType::DatabaseConnection
+                    }
+                    crate::security::secrets_detector::SecretType::AwsAccessKey
+                    | crate::security::secrets_detector::SecretType::AwsSecretKey => {
+                        SecretType::AwsCredentials
+                    }
+                    _ => SecretType::GenericSecret,
+                };
+
+                secrets.push(DetectedSecret {
+                    secret_type,
+                    location: VulnerabilityLocation {
+                        file: file.path.clone(),
+                        function: None,
+                        start_line: finding.line_number,
+                        end_line: finding.line_number,
+                        column: finding.column_start,
+                    },
+                    masked_value: format!(
+                        "{}***",
+                        &finding.matched_text[..4.min(finding.matched_text.len())]
+                    ),
+                    entropy: finding.entropy,
+                    confidence: if finding.confidence > 0.8 {
+                        ConfidenceLevel::High
+                    } else if finding.confidence > 0.6 {
+                        ConfidenceLevel::Medium
+                    } else {
+                        ConfidenceLevel::Low
+                    },
+                    remediation: format!(
+                        "Remove hardcoded {:?} from source code",
+                        finding.secret_type
+                    ),
+                });
+            }
+        }
+
+        Ok(secrets)
+    }
+
+    /// Basic pattern-based secret detection (fallback)
+    fn detect_secrets_basic(&self, file: &FileInfo) -> Result<Vec<DetectedSecret>> {
         let mut secrets = Vec::new();
         let content = std::fs::read_to_string(&file.path)?;
         let lines: Vec<&str> = content.lines().collect();

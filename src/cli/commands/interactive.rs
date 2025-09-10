@@ -61,7 +61,7 @@ impl InteractiveCompleter {
         Self::new_with_accessibility(InteractiveAccessibilityConfig::default())
     }
 
-    fn new_with_accessibility(accessibility_config: InteractiveAccessibilityConfig) -> Self {
+    fn new_with_accessibility(_accessibility_config: InteractiveAccessibilityConfig) -> Self {
         let commands = vec![
             "help".to_string(),
             "stats".to_string(),

@@ -17,6 +17,7 @@ static QUOTE_REGEX: OnceLock<Regex> = OnceLock::new();
 static ASSIGNMENT_REGEX: OnceLock<Regex> = OnceLock::new();
 
 /// Real secrets detector with multiple detection methods
+#[derive(Debug)]
 pub struct SecretsDetector {
     patterns: Vec<CompiledPattern>,
     entropy_threshold: f64,
@@ -79,12 +80,14 @@ pub enum SecretSeverity {
 }
 
 /// Context analyzer for reducing false positives
+#[derive(Debug)]
 pub struct ContextAnalyzer {
     test_file_patterns: Vec<Regex>,
     comment_patterns: Vec<Regex>,
 }
 
 /// False positive filter
+#[derive(Debug)]
 pub struct FalsePositiveFilter {
     known_false_positives: HashMap<String, Vec<String>>,
     placeholder_patterns: Vec<Regex>,
@@ -96,6 +99,11 @@ impl SecretsDetector {
         Self::with_thresholds(database, None, None).await
     }
 
+    /// Create a new secrets detector without database (uses default patterns)
+    pub fn new_without_database() -> Result<Self> {
+        Self::with_defaults()
+    }
+
     /// Create a new secrets detector with custom thresholds
     pub async fn with_thresholds(
         database: &DatabaseManager,
@@ -105,6 +113,23 @@ impl SecretsDetector {
         let patterns = Self::load_patterns_from_database(database).await?;
         let entropy_threshold = entropy_threshold.unwrap_or(4.5);
         let min_confidence = min_confidence.unwrap_or(0.1);
+        let context_analyzer = ContextAnalyzer::new()?;
+        let false_positive_filter = FalsePositiveFilter::new()?;
+
+        Ok(Self {
+            patterns,
+            entropy_threshold,
+            min_confidence,
+            context_analyzer,
+            false_positive_filter,
+        })
+    }
+
+    /// Create a new secrets detector with default patterns (no database required)
+    pub fn with_defaults() -> Result<Self> {
+        let patterns = Self::load_default_patterns()?;
+        let entropy_threshold = 4.5;
+        let min_confidence = 0.1;
         let context_analyzer = ContextAnalyzer::new()?;
         let false_positive_filter = FalsePositiveFilter::new()?;
 
@@ -315,18 +340,27 @@ impl SecretsDetector {
     fn filter_false_positives(
         &self,
         mut findings: Vec<SecretFinding>,
-        _content: &str,
+        content: &str,
         file_path: &str,
     ) -> Result<Vec<SecretFinding>> {
         for finding in &mut findings {
+            let mut confidence_multiplier = 1.0;
+            let mut is_false_positive = false;
+
             // Check if it's in a test file
             if self.context_analyzer.is_test_file(file_path) {
-                finding.confidence *= 0.3; // Reduce confidence for test files
+                confidence_multiplier *= 0.3; // Reduce confidence for test files
             }
 
             // Check if it's in a comment
             if self.context_analyzer.is_in_comment(&finding.context) {
-                finding.confidence *= 0.5; // Reduce confidence for comments
+                confidence_multiplier *= 0.5; // Reduce confidence for comments
+            }
+
+            // Enhanced semantic context analysis
+            if self.is_in_semantic_false_positive_context(content, finding) {
+                confidence_multiplier *= 0.2;
+                is_false_positive = true;
             }
 
             // Check if it's an example or placeholder
@@ -334,8 +368,8 @@ impl SecretsDetector {
                 .false_positive_filter
                 .is_placeholder(&finding.matched_text)
             {
-                finding.is_false_positive = true;
-                finding.confidence *= 0.1;
+                is_false_positive = true;
+                confidence_multiplier *= 0.1;
             }
 
             // Check against known false positives for this secret type
@@ -343,8 +377,8 @@ impl SecretsDetector {
                 .false_positive_filter
                 .is_known_false_positive(&finding.secret_type, &finding.matched_text)
             {
-                finding.is_false_positive = true;
-                finding.confidence *= 0.1;
+                is_false_positive = true;
+                confidence_multiplier *= 0.1;
             }
 
             // Also check for known false positives in all categories
@@ -352,8 +386,23 @@ impl SecretsDetector {
                 .false_positive_filter
                 .is_any_known_false_positive(&finding.matched_text)
             {
+                is_false_positive = true;
+                confidence_multiplier *= 0.1;
+            }
+
+            // Check for common false positive patterns in code context
+            if self.is_common_false_positive_pattern(&finding.matched_text, &finding.context) {
+                confidence_multiplier *= 0.4;
+            }
+
+            // Apply entropy-based false positive detection
+            if self.is_entropy_false_positive(finding.entropy, &finding.secret_type) {
+                confidence_multiplier *= 0.6;
+            }
+
+            finding.confidence *= confidence_multiplier;
+            if is_false_positive && finding.confidence < 0.3 {
                 finding.is_false_positive = true;
-                finding.confidence *= 0.1;
             }
         }
 
@@ -370,6 +419,114 @@ impl SecretsDetector {
         let end = (line_num + context_lines + 1).min(lines.len());
 
         lines[start..end].join("\n")
+    }
+
+    /// Check if finding is in a semantic false positive context
+    fn is_in_semantic_false_positive_context(
+        &self,
+        content: &str,
+        finding: &SecretFinding,
+    ) -> bool {
+        // Consider only the line containing the finding
+        let current_line = content
+            .lines()
+            .nth(finding.line_number.saturating_sub(1))
+            .unwrap_or("");
+
+        // If on a comment line, likely an example or placeholder
+        if self.context_analyzer.is_comment_line(current_line) {
+            let doc_patterns = [
+                r"(?i)example|sample|demo|test|placeholder|template",
+                r"(?i)documentation|docs|readme|guide",
+                r"(?i)fake|mock|stub|dummy",
+                r"(?i)your_.*_here|replace_with",
+                r"(?i)config\.|settings\.|env\.",
+            ];
+            for pattern in &doc_patterns {
+                if regex::Regex::new(pattern).unwrap().is_match(current_line) {
+                    return true;
+                }
+            }
+            return true;
+        }
+
+        // For code lines, only treat explicit placeholder-like variable names as FP
+        let placeholder_var_regex = regex::Regex::new(
+            r"(?i)\b(let|const|var)\s+(test|demo|example|sample|fake|mock|dummy|placeholder)_?\w*\s*=",
+        )
+        .unwrap();
+        if placeholder_var_regex.is_match(current_line) {
+            return true;
+        }
+
+        // Logging on same line indicates illustrative code
+        if current_line.contains("println") || current_line.contains("log") || current_line.contains("debug") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check for common false positive patterns in code
+    fn is_common_false_positive_pattern(&self, text: &str, context: &str) -> bool {
+        // Check for obvious test/example patterns
+        if text.contains("test") || text.contains("example") || text.contains("sample") {
+            return true;
+        }
+
+        // Check for common placeholder patterns
+        let placeholders = [
+            "your_api_key",
+            "your_secret",
+            "your_token",
+            "your_password",
+            "api_key_here",
+            "secret_here",
+            "token_here",
+            "password_here",
+            "xxxxxxxx",
+            "********",
+            "......",
+        ];
+
+        for placeholder in &placeholders {
+            if text.to_lowercase().contains(placeholder) {
+                return true;
+            }
+        }
+
+        // Check if it's in a configuration template context
+        if context.contains("config")
+            || context.contains("Config")
+            || context.contains("settings")
+            || context.contains("Settings")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if entropy suggests this might be a false positive
+    fn is_entropy_false_positive(&self, entropy: f64, secret_type: &SecretType) -> bool {
+        match secret_type {
+            SecretType::ApiKey | SecretType::GitHubToken | SecretType::JwtToken => {
+                // API keys and tokens should have high entropy, but not suspiciously high
+                entropy < 3.5 || entropy > 6.5
+            }
+            SecretType::Password => {
+                // Passwords can have variable entropy
+                entropy < 2.5
+            }
+            SecretType::PrivateKey => {
+                // Private keys should have very high entropy
+                entropy < 4.0
+            }
+            _ => {
+                // For other types, be more conservative
+                entropy < 3.0 || entropy > 7.0
+            }
+        }
     }
 
     /// Classify secret type from pattern name
@@ -472,6 +629,61 @@ impl SecretsDetector {
         );
         Ok(compiled_patterns)
     }
+
+    /// Load default patterns (no database required)
+    fn load_default_patterns() -> Result<Vec<CompiledPattern>> {
+        let default_patterns = vec![
+            ("AWS Access Key", r"AKIA[0-9A-Z]{16}", None, 0.9),
+            ("AWS Secret Key", r"[0-9a-zA-Z/+]{40}", Some(4.5), 0.8),
+            ("GitHub Token", r"ghp_[0-9a-zA-Z]{36}", None, 0.95),
+            ("API Key", r"api[_]?key.*[0-9a-zA-Z]{32,45}", Some(4.0), 0.7),
+            (
+                "JWT Token",
+                r"eyJ[A-Za-z0-9-_]+\.eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_.]+",
+                None,
+                0.85,
+            ),
+            ("Private Key", r"-----BEGIN.*PRIVATE.*KEY-----", None, 0.95),
+            (
+                "Database URL",
+                r"(postgres|mysql|mongodb)://[^\s]+",
+                None,
+                0.8,
+            ),
+            (
+                "Password",
+                r"(password|passwd|pwd).*=[^;]{8,}",
+                Some(3.5),
+                0.6,
+            ),
+            ("High Entropy", r"[A-Za-z0-9+/=]{32,}", Some(4.5), 0.5),
+        ];
+
+        let mut compiled_patterns = Vec::new();
+
+        for (name, pattern, entropy_threshold, confidence) in default_patterns {
+            match Regex::new(pattern) {
+                Ok(regex) => {
+                    compiled_patterns.push(CompiledPattern {
+                        name: name.to_string(),
+                        regex,
+                        entropy_threshold,
+                        confidence,
+                        enabled: true,
+                    });
+                }
+                Err(e) => {
+                    warn!("Failed to compile default regex pattern '{}': {}", name, e);
+                }
+            }
+        }
+
+        debug!(
+            "Loaded {} default secret detection patterns",
+            compiled_patterns.len()
+        );
+        Ok(compiled_patterns)
+    }
 }
 
 /// Potential secret found in text
@@ -486,17 +698,32 @@ impl ContextAnalyzer {
     /// Create a new context analyzer
     fn new() -> Result<Self> {
         let test_file_patterns = vec![
-            Regex::new(r"test")?,
-            Regex::new(r"spec")?,
-            Regex::new(r"example")?,
-            Regex::new(r"demo")?,
+            Regex::new(r"(^|/)test")?,    // test files
+            Regex::new(r"(^|/)spec")?,    // spec files
+            Regex::new(r"(^|/)example")?, // example files
+            Regex::new(r"(^|/)demo")?,    // demo files
+            Regex::new(r"_test\.")?,      // *_test.* files
+            Regex::new(r"test_")?,        // test_* files
+            Regex::new(r"spec_")?,        // spec_* files
+            Regex::new(r"example_")?,     // example_* files
+            Regex::new(r"demo_")?,        // demo_* files
+            Regex::new(r"fixture")?,      // fixture files
+            Regex::new(r"mock")?,         // mock files
+            Regex::new(r"stub")?,         // stub files
         ];
 
         let comment_patterns = vec![
-            Regex::new(r"^\s*//")?,
-            Regex::new(r"^\s*/\*")?,
-            Regex::new(r"^\s*#")?,
-            Regex::new(r"^\s*<!--")?,
+            Regex::new(r"^\s*//")?,   // Single line comments (Rust, C++, Java, etc.)
+            Regex::new(r"^\s*/\*")?,  // Multi-line comment start (C-style)
+            Regex::new(r"^\s*#")?,    // Hash comments (Python, Ruby, Shell, etc.)
+            Regex::new(r"^\s*<!--")?, // HTML/XML comments
+            Regex::new(r"^\s*'{3}")?, // Python docstrings
+            Regex::new(r#"^\s*"""#)?, // Python docstrings
+            Regex::new(r"^\s*--")?,   // SQL comments
+            Regex::new(r"^\s*%")?,    // MATLAB/Octave comments
+            Regex::new(r"^\s*!")?,    // Fortran comments
+            Regex::new(r"^\s*C\s")?,  // Fortran alternative comments
+            Regex::new(r"^\s*\*")?,   // COBOL comments
         ];
 
         Ok(Self {
@@ -521,6 +748,13 @@ impl ContextAnalyzer {
                 .any(|pattern| pattern.is_match(line))
         })
     }
+
+    /// Check if a single line is a comment line
+    fn is_comment_line(&self, line: &str) -> bool {
+        self.comment_patterns
+            .iter()
+            .any(|pattern| pattern.is_match(line))
+    }
 }
 
 impl FalsePositiveFilter {
@@ -536,6 +770,14 @@ impl FalsePositiveFilter {
                 "api_key_placeholder".to_string(),
                 "xxxxxxxxxxxxxxxx".to_string(),
                 "1234567890abcdef".to_string(),
+                "sk-test1234567890abcdef".to_string(),
+                "pk-test1234567890abcdef".to_string(),
+                "example_api_key".to_string(),
+                "demo_api_key".to_string(),
+                "test_api_key".to_string(),
+                "sample_api_key".to_string(),
+                "fake_api_key".to_string(),
+                "mock_api_key".to_string(),
             ],
         );
 
@@ -544,6 +786,9 @@ impl FalsePositiveFilter {
             vec![
                 "AKIAIOSFODNN7EXAMPLE".to_string(),
                 "AKIA1234567890123456".to_string(),
+                "AKIAIOSFODNN7TEST".to_string(),
+                "AKIAIOSFODNN7DEMO".to_string(),
+                "AKIAIOSFODNN7SAMPLE".to_string(),
             ],
         );
 
@@ -556,6 +801,12 @@ impl FalsePositiveFilter {
                 "api_key_placeholder".to_string(),
                 "xxxxxxxxxxxxxxxx".to_string(),
                 "1234567890abcdef".to_string(),
+                "sk-test1234567890abcdef1234567890abcdef".to_string(),
+                "pk-test1234567890abcdef1234567890abcdef".to_string(),
+                "ghp_test1234567890abcdef1234567890abcdef".to_string(),
+                "example_high_entropy_string".to_string(),
+                "demo_high_entropy_string".to_string(),
+                "test_high_entropy_string".to_string(),
             ],
         );
 
@@ -563,7 +814,15 @@ impl FalsePositiveFilter {
             Regex::new(r"^[x]+$")?,
             Regex::new(r"^[0-9]+$")?,
             Regex::new(r"^[a-f0-9]+$")?,
-            Regex::new(r"example|placeholder|sample|demo|test")?,
+            Regex::new(r"example|placeholder|sample|demo|test|fake|mock|dummy|bogus")?,
+            Regex::new(r"your_.*_here")?,
+            Regex::new(r".*_placeholder")?,
+            Regex::new(r".*_example")?,
+            Regex::new(r".*_demo")?,
+            Regex::new(r".*_test")?,
+            Regex::new(r".*_sample")?,
+            Regex::new(r".*_fake")?,
+            Regex::new(r".*_mock")?,
         ];
 
         Ok(Self {

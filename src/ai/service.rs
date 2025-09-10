@@ -4,10 +4,12 @@ use crate::ai::cache::{AICache, CacheConfig, MemoryCache};
 use crate::ai::config::{AIConfig, ProviderConfig};
 use crate::ai::error::{AIError, AIResult};
 use crate::ai::providers::{create_provider, AIProviderImpl};
-use crate::ai::types::{AIFeature, AIProvider, AIRequest, AIResponse};
+use crate::ai::types::{
+    AIFeature, AIProvider, AIRequest, AIResponse, RequestMetadata, RequestPriority,
+};
 use std::collections::HashMap;
 // use std::sync::Arc; // Not currently used
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 /// Main AI service
 pub struct AIService {
@@ -280,5 +282,34 @@ impl AIService {
     /// Get configuration
     pub fn config(&self) -> &AIConfig {
         &self.config
+    }
+
+    /// Analyze security context for false positive detection
+    pub async fn analyze_security_context(&self, prompt: &str) -> AIResult<String> {
+        let request = AIRequest {
+            feature: AIFeature::SecurityAnalysis,
+            content: prompt.to_string(),
+            context: HashMap::new(),
+            model_preferences: None,
+            max_tokens: Some(1000),
+            temperature: Some(0.3), // Lower temperature for more consistent analysis
+            stream: false,
+            metadata: RequestMetadata {
+                request_id: format!(
+                    "security_context_{}",
+                    SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_nanos()
+                ),
+                timestamp: SystemTime::now(),
+                user_id: None,
+                session_id: None,
+                priority: RequestPriority::Normal,
+            },
+        };
+
+        let response = self.process_request(request).await?;
+        Ok(response.content)
     }
 }
