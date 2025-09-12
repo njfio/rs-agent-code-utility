@@ -1,0 +1,133 @@
+name: Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  security-matrix:
+    name: security (include-tests=${{ matrix.include_tests }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include_tests: [false, true]
+
+    env:
+      CARGO_TERM_COLOR: always
+      NO_COLOR: 1
+      WIKI_FETCH_ASSETS: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --workspace --all-features
+
+      - name: Run security scan (default scope)
+        if: ${{ matrix.include_tests == 'false' }}
+        run: |
+          cargo run --bin tree-sitter-cli -- security . \
+            --format sarif -o security.sarif \
+            --format json -o security.json \
+            --min-severity low --min-confidence low \
+            --fail-on high \
+            --baseline .ci/security-baseline.json \
+            --summary-only
+
+      - name: Summarize SARIF (default)
+        if: ${{ github.event_name == 'pull_request' && matrix.include_tests == 'false' }}
+        id: sarif_summary
+        run: |
+          TOTAL=$(jq '.runs[0].results | length' security.sarif)
+          NEW=$(jq '[.runs[0].results[] | select(.baselineState == "new")] | length' security.sarif)
+          UNCHANGED=$(jq '[.runs[0].results[] | select(.baselineState == "unchanged")] | length' security.sarif)
+          HIGH=$(jq '[.runs[0].results[] | select(.level == "error")] | length' security.sarif)
+          MED=$(jq '[.runs[0].results[] | select(.level == "warning")] | length' security.sarif)
+          LOW=$(jq '[.runs[0].results[] | select(.level == "note")] | length' security.sarif)
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "new=$NEW" >> $GITHUB_OUTPUT
+          echo "unchanged=$UNCHANGED" >> $GITHUB_OUTPUT
+          echo "errors=$HIGH" >> $GITHUB_OUTPUT
+          echo "warnings=$MED" >> $GITHUB_OUTPUT
+          echo "notes=$LOW" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR (default scope)
+        if: ${{ github.event_name == 'pull_request' && matrix.include_tests == 'false' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const total = core.getInput('total');
+            const neu = core.getInput('new');
+            const unchanged = core.getInput('unchanged');
+            const errors = core.getInput('errors');
+            const warnings = core.getInput('warnings');
+            const notes = core.getInput('notes');
+            const body = `\n**Security Scan Summary (default scope)**\n\n- Total findings: ${total}\n- New: ${neu}, Unchanged: ${unchanged}\n- Severity: errors=${errors}, warnings=${warnings}, notes=${notes}\n\nArtifacts: security.sarif, security.json`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            })
+        env:
+          total: ${{ steps.sarif_summary.outputs.total }}
+          new: ${{ steps.sarif_summary.outputs.new }}
+          unchanged: ${{ steps.sarif_summary.outputs.unchanged }}
+          errors: ${{ steps.sarif_summary.outputs.errors }}
+          warnings: ${{ steps.sarif_summary.outputs.warnings }}
+          notes: ${{ steps.sarif_summary.outputs.notes }}
+
+      - name: Run security scan (include tests)
+        if: ${{ matrix.include_tests == 'true' }}
+        run: |
+          cargo run --bin tree-sitter-cli -- security . \
+            --format sarif -o security-tests.sarif \
+            --format json -o security-tests.json \
+            --min-severity low --min-confidence low \
+            --fail-on high \
+            --baseline .ci/security-baseline.json \
+            --include-tests \
+            --summary-only
+
+      - name: Upload SARIF (default)
+        if: ${{ matrix.include_tests == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-sarif-default
+          path: security.sarif
+
+      - name: Upload JSON (default)
+        if: ${{ matrix.include_tests == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-json-default
+          path: security.json
+
+      - name: Upload SARIF (tests)
+        if: ${{ matrix.include_tests == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-sarif-tests
+          path: security-tests.sarif
+
+      - name: Upload JSON (tests)
+        if: ${{ matrix.include_tests == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-json-tests
+          path: security-tests.json

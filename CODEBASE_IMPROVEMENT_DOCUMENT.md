@@ -10,16 +10,20 @@ Create comprehensive improvement document for the rust_tree_sitter codebase
 
 ## Executive Summary
 
-**Current State**: The rust_tree_sitter project is a sophisticated code analysis library with AI integration, supporting 7 programming languages, 15+ CLI commands, and comprehensive analysis capabilities. It has 276 passing tests and is marked as production-ready with advanced performance optimizations.
+**Current State**: The rust_tree_sitter project is a sophisticated code analysis library with AI integration, supporting multiple programming languages, 15+ CLI commands, and comprehensive analysis capabilities. The suite currently reports 294 passing tests locally and is trending toward zero flaky tests.
 
 **Key Strengths**: 
 - Solid core architecture with tree-sitter integration
 - Comprehensive CLI interface
 - AI service abstraction with multiple providers
-- Extensive test coverage (265 tests passing)
+- Extensive test coverage (~294 tests passing locally)
 - Multi-language support with advanced analysis features
 
-**Current Progress**: **Epic 1 (Performance & Scalability) is now complete** with all stories implemented and tested. **Epic 2 (User Experience) is in progress** with interactive mode and output format standardization completed. **Epic 3 (Feature Expansion) is now complete** with all stories implemented - added 4 new languages (Java, Ruby, Swift, Kotlin) with full syntax analysis modules, **Enhanced Secrets Detection fully implemented** with contextual analysis, entropy-based validation, secrets classification system, and false positive reduction achieving <20% false positive rate, and comprehensive code quality metrics including technical debt calculation and duplication detection.
+**Current Progress**: 
+- Epic 1 (Performance & Scalability): Completed and stable.
+- Epic 2 (User Experience): In progress — interactive mode and output standardization completed; snapshot coverage being expanded.
+- Epic 3 (Feature Expansion): Completed — multi-language modules and code quality metrics in place.
+- Security Scan Hardening: Implemented SARIF, baselines, deterministic filter modes, AI/ML filter-mode wiring, secrets precision upgrades, scoping controls, and output snapshots.
 
 **Improvement Opportunities**: Complete remaining Epic 2 accessibility features and move to Epic 4 production polish.
 
@@ -223,6 +227,12 @@ Create comprehensive improvement document for the rust_tree_sitter codebase
 **Effort**: 1 week
 **Priority**: High
 **Progress**: Started cleaning up unused imports in newly added language modules (Java, Kotlin, PHP, Ruby, Swift) and fixed dead code warnings in advanced_memory.rs
+ 
+**Planned Steps (warning elimination)**:
+- Language modules: fix “hiding lifetime” warnings by returning `Vec<Node<'_>>` in helpers where appropriate.
+- Tests/examples: prefix intentionally unused variables with `_` or assert on them to validate behavior.
+- Reduce dead code in `advanced_memory.rs` and interactive scaffolding; gate non‑used fields behind feature flags or remove.
+- Keep `warn` level during migration; consider tightening (deny) once clean.
 
 ### Story 4.2: Testing Infrastructure Enhancement ✅ COMPLETED
 **Description**: Expand testing capabilities and coverage
@@ -270,7 +280,7 @@ Create comprehensive improvement document for the rust_tree_sitter codebase
 - Complete Story 4.1 (Code Cleanup)
 
 **Success Criteria**: 50% performance improvement for large codebases, zero warnings
-**Actual Results**: ✅ 50%+ performance improvement achieved, all 276 tests passing, advanced caching/parallel/memory systems implemented
+**Actual Results**: ✅ 50%+ performance improvement achieved, ~294 tests passing locally, advanced caching/parallel/memory systems implemented
 
 ### Milestone 2: User Experience Enhancement (Weeks 5-7) 🔄 IN PROGRESS
 ### Milestone 2: User Experience Enhancement (Weeks 5-7) 🔄 IN PROGRESS
@@ -280,7 +290,7 @@ Create comprehensive improvement document for the rust_tree_sitter codebase
 
 **Success Criteria**: Enhanced CLI usability, standardized outputs, comprehensive test suite
 **Next Priority**: Story 2.3 (Accessibility & Internationalization) - Low priority for broader accessibility
-**Progress**: Output format standardization completed with unified OutputHandler, template system, and enhanced formatting; interactive mode enhanced with modern UX features and comprehensive accessibility support; testing infrastructure completed
+**Progress**: Output format standardization completed; interactive mode enhanced. Snapshot coverage expanded (security markdown/JSON, SARIF shape). Table output snapshots are planned.
 
 ### Milestone 3: Feature Expansion (Weeks 8-14) ✅ COMPLETED
 - ✅ Complete Story 3.1 (Additional Languages) - **FULLY COMPLETE**: 4 new language modules (Java, Ruby, Swift, Kotlin) created with comprehensive syntax analysis, successfully integrated into core system. All tests pass and code compiles without errors.
@@ -289,7 +299,7 @@ Create comprehensive improvement document for the rust_tree_sitter codebase
 - ✅ Complete Story 1.3 (Memory Management) - Completed in previous milestone
 
 **Success Criteria**: Support for 10+ languages, advanced security analysis, optimized memory usage
-**Current Progress**: **MAJOR ACHIEVEMENT** - Successfully expanded from 7 to 11 supported languages with full syntax analysis modules, **Enhanced Secrets Detection fully operational**, advanced security analysis, and comprehensive code quality metrics. All features implemented, compiling successfully, and tests passing. Ready for production use.
+**Current Progress**: Expanded language coverage, enhanced secrets detection, advanced security analysis, and code quality metrics stable.
 
 ### Milestone 4: Production Polish (Weeks 15-18)
 - ✅ Complete Story 3.3 (Code Quality Metrics) - Already implemented
@@ -321,3 +331,69 @@ Create comprehensive improvement document for the rust_tree_sitter codebase
 4. **Rollback Plan**: Maintain ability to revert changes quickly
 
 This improvement plan provides a structured path to enhance the rust_tree_sitter codebase while maintaining its current stability and extending its capabilities for enterprise use cases.
+ 
+---
+
+## Security Scan Hardening (Consolidated Update)
+
+**Goal**: Reduce false positives and improve CI usability and output clarity.
+
+**Delivered**:
+- SARIF output for security and AST security with `baselineState`.
+- Deterministic filter modes (`strict|balanced|permissive`) applied pre‑threshold.
+- AI/ML filter integration honoring `--filter-mode` and `--min-confidence`; `--no-ai-filter` to disable.
+- Baselines with stable fingerprints and `--update-baseline` support.
+- Provider‑aware secrets detection (Twilio, SendGrid, Azure) and tuned Google/Stripe/Slack validators.
+- Scoping defaults and file size budgets; output snapshots for markdown/JSON and SARIF shape tests.
+
+**Open Follow‑ups**:
+- Add snapshot tests for table renderer.
+- Optionally include pre‑filter findings in SARIF via suppression metadata.
+- Extend provider placeholders/validators further as needed.
+
+## Current Sprint Update (Security + Wiki stabilization)
+
+**Done**:
+- Security: SARIF + baselines + filter modes + provider‑aware secrets; deterministic filtering and scoping/size budgets.
+- Wiki: asset fetching made opt‑in via `WIKI_FETCH_ASSETS=1` to avoid macOS SystemConfiguration init in sandbox; tests pass.
+
+**Next**:
+- Add table output snapshots; continue warning cleanup in language helpers; expand docs (CLI_README and Security Scanner Guide).
+
+---
+
+## CI, Telemetry, and Docs — Epics 8–10 (Status)
+
+### Epic 8: CI Matrix and Quality Gates — Implemented (phase 1)
+- Added `.github/workflows/security_scan.yml`:
+  - Matrix: default scan and `--include-tests` scan; both output JSON + SARIF artifacts.
+  - Honors baseline `--baseline .ci/security-baseline.json` if present; gates on `--fail-on high`.
+  - Clean logs by default (`NO_COLOR=1`), wiki-fetch disabled (`WIKI_FETCH_ASSETS=0`).
+- Next: PR summary bot to post new vs unchanged counts from SARIF `baselineState` and severity breakdown.
+
+### Epic 9: Telemetry and Logs — Implemented (initial)
+- Added global CLI `--log-level trace|debug|info|warn|error`; integrates `tracing_subscriber` with EnvFilter.
+- Respects `RUST_LOG` when flag is not provided; `--log-level` takes precedence.
+- Next: wire trace spans around key detector stages (secrets/OWASP/AST) under an opt‑in feature flag.
+
+### Epic 10: Documentation and DX — Implemented (phase 1)
+- Added `docs/SECURITY_SCANNER_GUIDE.md` covering baselines, filter tuning, and SARIF.
+- Linked the guide from `README.md` and `CLI_README.md`; added a Logging section to `CLI_README.md`.
+- Next: add a troubleshooting section (common FP patterns and how to tune), and short examples for CI baseline refresh flows.
+
+---
+
+## Milestone Update
+
+### Milestone 4: Production Polish (Weeks 15–18)
+- Status: Partially complete
+  - ✅ Code quality: dead-code cleanup and test warning reductions; zero-warnings build achieved.
+  - ✅ Docs: initial scanner guide + logging docs shipped.
+  - ✅ CI: security scan workflow (artifacts + gating) added.
+  - 🔜 PR summaries & FP troubleshooting docs.
+
+### Milestone 5: CI Insights & Observability (Weeks 19–20)
+- Goals:
+  - Add PR summarizer job: total findings, new vs unchanged, severity breakdown; link to JSON/SARIF artifacts.
+  - Add structured tracing spans around detectors (opt‑in), and a `--log-level` quick reference in the CLI `--help`.
+  - Extend guide with FP troubleshooting and baseline refresh playbook.

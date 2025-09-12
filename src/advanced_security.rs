@@ -25,6 +25,7 @@ use crate::ai::AIService;
 use crate::languages::detect_language_from_path;
 use crate::parser::Parser;
 use crate::security::ai_false_positive_filter::{AIFalsePositiveFilter, AIFilterConfig};
+use crate::security::deterministic_filter::FilterMode;
 use crate::security::ast_analyzer::AstSecurityAnalyzer;
 use crate::security::ml_filter::MLFalsePositiveFilter;
 use crate::tree::{Node, SyntaxTree};
@@ -522,17 +523,24 @@ impl AdvancedSecurityAnalyzer {
         ai_service: Arc<AIService>,
         ml_filter: Arc<MLFalsePositiveFilter>,
         ast_analyzer: Arc<AstSecurityAnalyzer>,
+        ai_min_confidence: f64,
+        mode: FilterMode,
     ) -> Result<Self> {
+        let (ai_context_enabled, semantic_enabled, feedback_enabled, cache_ttl, max_reqs) = match mode {
+            FilterMode::Strict => (true, true, true, 7200, 8),
+            FilterMode::Balanced => (true, true, true, 3600, 5),
+            FilterMode::Permissive => (false, false, false, 1800, 2),
+        };
         let ai_config = AIFilterConfig {
-            ai_context_enabled: true,
-            semantic_analysis_enabled: true,
-            feedback_learning_enabled: true,
-            min_ai_confidence: 0.6,
-            cache_ttl_seconds: 3600,
-            max_concurrent_requests: 5,
+            ai_context_enabled,
+            semantic_analysis_enabled: semantic_enabled,
+            feedback_learning_enabled: feedback_enabled,
+            min_ai_confidence: ai_min_confidence,
+            cache_ttl_seconds: cache_ttl,
+            max_concurrent_requests: max_reqs,
         };
 
-        let _ai_filter = Some(AIFalsePositiveFilter::new(
+        let ai_filter = Some(AIFalsePositiveFilter::new(
             ai_service,
             ml_filter,
             ast_analyzer,
@@ -563,7 +571,7 @@ impl AdvancedSecurityAnalyzer {
             secrets_detector,
             #[cfg(not(any(feature = "net", feature = "db")))]
             secrets_detector,
-            ai_false_positive_filter: None,
+            ai_false_positive_filter: ai_filter,
         })
     }
 }
@@ -1427,53 +1435,35 @@ impl AdvancedSecurityAnalyzer {
                 });
             }
 
-            // Command injection patterns
-            if (line_lower.contains("exec")
-                || line_lower.contains("system")
-                || line_lower.contains("shell")
-                || line_lower.contains("cmd"))
-                && (line.contains("+") || line.contains("format") || line.contains("{}"))
-            {
+            // Command injection (heuristic): only flag when a command API and concatenation appear together
+            let looks_like_command_api = line_lower.contains("std::process::command::new")
+                || line_lower.contains("child_process.exec")
+                || line_lower.contains("child_process.execsync")
+                || line_lower.contains("runtime.getruntime().exec");
+            let has_concatenation = line.contains('+') || line_lower.contains("format!(");
+            if looks_like_command_api && has_concatenation {
                 vulnerabilities.push(SecurityVulnerability {
                     id: format!("INJ002_{}", line_num),
-                    title: "Potential command injection vulnerability".to_string(),
-                    description: "Command execution with user input may allow command injection"
-                        .to_string(),
-                    severity: SecuritySeverity::Critical,
+                    title: "Potential command injection (heuristic)".to_string(),
+                    description: "Command construction with concatenation detected; verify untrusted input flow".to_string(),
+                    severity: SecuritySeverity::High,
                     owasp_category: OwaspCategory::Injection,
                     cwe_id: Some("CWE-78".to_string()),
-                    location: VulnerabilityLocation {
-                        file: file.path.clone(),
-                        function: None,
-                        start_line: line_num + 1,
-                        end_line: line_num + 1,
-                        column: 0,
-                    },
+                    location: Self::create_vulnerability_location(&file.path, None, line_num + 1, line_num + 1, 0),
                     code_snippet: line.to_string(),
-                    impact: SecurityImpact {
-                        confidentiality: ImpactLevel::Critical,
-                        integrity: ImpactLevel::Critical,
-                        availability: ImpactLevel::Critical,
-                        overall_score: 9.5,
-                    },
+                    impact: SecurityImpact { confidentiality: ImpactLevel::High, integrity: ImpactLevel::High, availability: ImpactLevel::Medium, overall_score: 8.0 },
                     remediation: RemediationGuidance {
-                        summary: "Avoid command execution with user input".to_string(),
+                        summary: "Use argument arrays and avoid concatenating user input into commands".to_string(),
                         steps: vec![
-                            "Use safe APIs instead of shell commands".to_string(),
+                            "Replace concatenation with separated arguments".to_string(),
                             "Validate and whitelist allowed commands".to_string(),
-                            "Escape shell metacharacters".to_string(),
+                            "Avoid invoking shells unless necessary".to_string(),
                         ],
-                        code_examples: vec![CodeExample {
-                            description: "Use safe API instead of shell".to_string(),
-                            vulnerable_code: "os.system('ls ' + user_input)".to_string(),
-                            secure_code: "subprocess.run(['ls', user_input], check=True)"
-                                .to_string(),
-                            language: "python".to_string(),
-                        }],
+                        code_examples: vec![],
                         references: vec!["https://owasp.org/Top10/A03_2021-Injection/".to_string()],
-                        effort: RemediationEffort::High,
+                        effort: RemediationEffort::Medium,
                     },
-                    confidence: ConfidenceLevel::High,
+                    confidence: ConfidenceLevel::Medium,
                 });
             }
         }
@@ -2227,8 +2217,13 @@ impl AdvancedSecurityAnalyzer {
     fn is_user_input_function(&self, function_name: &str) -> bool {
         let user_input_functions = [
             // Web/HTTP input
-            "request",
-            "req",
+            "request", // generic
+            "req", // Node/Express
+            "req.params",
+            "req.query",
+            "req.body",
+            "request.args",   // Flask
+            "request.form",
             "input",
             "param",
             "query",
@@ -2255,6 +2250,8 @@ impl AdvancedSecurityAnalyzer {
             "fgets",
             "getchar",
             "getch",
+            "process.argv", // Node
+            "sys.argv",     // Python
             // File input
             "read",
             "readfile",
@@ -3682,11 +3679,26 @@ impl AdvancedSecurityAnalyzer {
                                 let confidence = self
                                     .calculate_command_injection_confidence(node, content, context);
 
+                                // Gate severity by presence of untrusted input context
+                                let (severity, impact, summary) = if context.has_user_input {
+                                    (
+                                        SecuritySeverity::Critical,
+                                        SecurityImpact { confidentiality: ImpactLevel::Critical, integrity: ImpactLevel::Critical, availability: ImpactLevel::Critical, overall_score: 9.5 },
+                                        "User-controlled input flows into command execution",
+                                    )
+                                } else {
+                                    (
+                                        SecuritySeverity::High,
+                                        SecurityImpact { confidentiality: ImpactLevel::High, integrity: ImpactLevel::High, availability: ImpactLevel::Medium, overall_score: 8.0 },
+                                        "Dynamic command construction detected; verify untrusted input flow",
+                                    )
+                                };
+
                                 vulnerabilities.push(SecurityVulnerability {
                                     id: format!("AST_CMD_{}", node.start_position().row),
                                     title: "Command injection vulnerability detected".to_string(),
-                                    description: format!("Function '{}' executes dynamically constructed commands which may allow command injection", function_name),
-                                    severity: SecuritySeverity::Critical,
+                                    description: format!("Function '{}' executes dynamically constructed commands. {}", function_name, summary),
+                                    severity,
                                     owasp_category: OwaspCategory::Injection,
                                     cwe_id: Some("CWE-78".to_string()),
                                     location: VulnerabilityLocation {
@@ -3697,12 +3709,7 @@ impl AdvancedSecurityAnalyzer {
                                         column: node.start_position().column,
                                     },
                                     code_snippet: node.text().unwrap_or("").to_string(),
-                                    impact: SecurityImpact {
-                                        confidentiality: ImpactLevel::Critical,
-                                        integrity: ImpactLevel::Critical,
-                                        availability: ImpactLevel::Critical,
-                                        overall_score: 9.5,
-                                    },
+                                    impact,
                                     remediation: RemediationGuidance {
                                         summary: "Avoid dynamic command construction and use safe APIs".to_string(),
                                         steps: vec![
@@ -3751,18 +3758,29 @@ impl AdvancedSecurityAnalyzer {
     /// Check if function executes commands (enhanced version)
     fn is_command_execution_function_enhanced(&self, function_name: &str) -> bool {
         let cmd_functions = [
+            // Python
+            "os.system",
+            "subprocess.run",
+            "subprocess.call",
+            "subprocess.check_output",
+            "subprocess.Popen",
+            // Node.js
+            "child_process.exec",
+            "child_process.execsync",
+            "child_process.spawn",
+            // Java
+            "runtime.getruntime().exec",
+            "processbuilder",
+            // POSIX/C
             "system",
-            "exec",
-            "shell",
-            "cmd",
-            "popen",
-            "subprocess",
-            "spawn",
             "execve",
             "execl",
             "execlp",
             "execv",
             "execvp",
+            "popen",
+            // Generic terms (last)
+            "spawn",
             "run",
             "call",
             "check_output",

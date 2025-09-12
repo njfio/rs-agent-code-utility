@@ -108,3 +108,46 @@ Progress Update
 Next (Epics 2–3 follow-up hot spots)
 - Add `--no-color` to help text and CLI README examples; add a few output snapshots for markdown/json reports.
 - Tighten secrets placeholder patterns and add more fixtures to keep FP rate low across docs/examples.
+
+- Epic 3 (Secrets detection precision): Implemented.
+  - Added provider-aware validators: Twilio (SID/API Key), SendGrid, Azure (Storage Key/Client Secret); tuned Google/Stripe/Slack.
+  - Added entropy gates and placeholder allowlists; ignore code fences and typical examples; inline suppression `// secret-scan:ignore` supported.
+  - False positives in docs/tests reduced significantly; fixtures in `test_files/` confirm behavior.
+
+- Epic 4 (Rule precision and severity calibration): Implemented.
+  - Introduced confidence scoring and wired `--min-confidence low|medium|high` in security CLI.
+  - Calibrated severities; severity breakdowns computed from filtered results to avoid inflated counts.
+  - Integrated language-aware checks to avoid naïve matches (e.g., strings in examples).
+
+- Epic 5 (Deterministic filters): Implemented.
+  - Added deterministic filter with modes `strict|balanced|permissive` and `--no-ai-filter` switch.
+  - Wired filter-mode to ML/AI filtering to keep behavior consistent; added golden-ish snapshot tests for outputs.
+
+- Epic 6 (Baselines, SARIF, CI gating): Implemented.
+  - Added `--baseline`, `--update-baseline`, and `--fail-on` for CI gating.
+  - SARIF reports include `baselineState: new|unchanged`; baseline fingerprints are file+line+title+severity.
+  - JSON/Markdown renderers respect filtered results; markdown/JSON snapshots added; table snapshot added.
+
+- Epic 7 (Performance budgets and timeouts): Implemented (phase 1).
+  - Added `--max-file-kb` size budget in both security and ast-security; skip oversized files deterministically.
+  - Default excludes remove large non-code assets; future work: per-scan time budgets and backpressure.
+
+What’s next (Epics 8–10)
+- Epic 8 (CI matrix and quality gates): Implemented initial workflow.
+  - Added `.github/workflows/security_scan.yml` matrix (include-tests: false|true) building the workspace and running security scans.
+  - Stores SARIF and JSON artifacts for both legs; honors baseline if present; gates on `--fail-on high`.
+  - Future: PR summary bot could read artifacts and post counts/new vs unchanged.
+
+- Epic 9 (Telemetry and logs):
+  - Implemented: `--log-level trace|debug|info|warn|error` wired to `tracing_subscriber`; structured tracing used in detectors. Opt‑in by default; respects `RUST_LOG`.
+  - Documented usage in `CLI_README.md` and `docs/SECURITY_SCANNER_GUIDE.md`.
+
+- Epic 10 (Documentation and DX):
+  - Expand CLI_README examples (table/json/markdown/sarif, baseline usage, filter-mode guidance).
+  - Completed: `docs/SECURITY_SCANNER_GUIDE.md` with baselines, filter tuning, and SARIF. Add a troubleshooting section for FP triage.
+
+Additional Progress (Today)
+- Fixed unit tests in `src/cli/commands/security.rs` to match the updated `execute` signature (added `diagnostics` parameter).
+- Updated `tests/security_scoping.rs` to align with the stabilized JSON schema:
+  - Use `total_vulnerabilities` and `vulnerabilities` fields instead of the obsolete `secrets` field.
+  - Verified `--include-tests` correctly surfaces findings when enabled; default excludes still suppress docs/tests.

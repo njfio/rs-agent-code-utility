@@ -32,19 +32,19 @@ const HISTORY_FILE: &str = ".rust_tree_sitter_history";
 // Accessibility configuration for interactive mode
 #[derive(Clone)]
 struct InteractiveAccessibilityConfig {
-    accessibility: AccessibilityConfig,
-    keyboard_shortcuts_enabled: bool,
-    voice_feedback_enabled: bool,
-    high_contrast_mode: bool,
+    _accessibility: AccessibilityConfig,
+    _keyboard_shortcuts_enabled: bool,
+    _voice_feedback_enabled: bool,
+    _high_contrast_mode: bool,
 }
 
 impl Default for InteractiveAccessibilityConfig {
     fn default() -> Self {
         Self {
-            accessibility: AccessibilityConfig::default(),
-            keyboard_shortcuts_enabled: true,
-            voice_feedback_enabled: false,
-            high_contrast_mode: false,
+            _accessibility: AccessibilityConfig::default(),
+            _keyboard_shortcuts_enabled: true,
+            _voice_feedback_enabled: false,
+            _high_contrast_mode: false,
         }
     }
 }
@@ -57,10 +57,6 @@ struct InteractiveCompleter {
 }
 
 impl InteractiveCompleter {
-    fn new() -> Self {
-        Self::new_with_accessibility(InteractiveAccessibilityConfig::default())
-    }
-
     fn new_with_accessibility(_accessibility_config: InteractiveAccessibilityConfig) -> Self {
         let commands = vec![
             "help".to_string(),

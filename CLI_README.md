@@ -274,40 +274,81 @@ tree-sitter-cli map ./src --languages rust,javascript
 - **`json`**: Structured data for programmatic use
 - **`mermaid`**: Mermaid diagrams for documentation
 
-### `security` - Basic Vulnerability Scanning
-
-**⚠️ HIGH FALSE POSITIVE RATE** - Pattern-based security scanning with limited accuracy.
+### `security` - Security Scan (with Baselines, SARIF)
 
 ```bash
 tree-sitter-cli security <PATH> [OPTIONS]
 
 Options:
-  -f, --format <FORMAT>      Output format: table, json, markdown [default: table]
-  --min-severity <LEVEL>     Minimum severity to report [default: low]
-  --compliance               Include OWASP compliance report
-  -o, --output <FILE>        Save detailed report
-  --summary-only             Show summary only
+  -f, --format <FORMAT>           Output: table, json, markdown, sarif [default: table]
+  --min-severity <LEVEL>          Min severity: critical|high|medium|low|info [default: low]
+  --min-confidence <LEVEL>        Min confidence: low|medium|high [default: low]
+  --fail-on <LEVEL>               Exit non-zero if >= level findings
+  --summary-only                  Show summary only
+  --compliance                    Include OWASP/CWE compliance info
+  -o, --output <FILE>             Save report to file
+  --no-ai-filter                  Disable AI/ML false-positive filtering
+  --filter-mode <MODE>            strict|balanced|permissive [default: balanced]
+  --baseline <FILE>               Suppress unchanged findings using baseline JSON
+  --update-baseline               Rewrite baseline with current findings
+  --include-tests                 Include tests (tests/, *_test.rs, test_*.rs)
+  --include-examples              Include examples/demo files
+  --include-non-code              Include docs/ and markdown
+  --max-file-kb <N>               Skip files larger than N KB [default: 1024]
 ```
 
-**Example:**
+Examples:
+```bash
+# Human-readable table
+tree-sitter-cli security ./src --min-severity medium
+
+# JSON for automation
+tree-sitter-cli security ./src --format json > security.json
+
+# SARIF for code scanning integrations
+tree-sitter-cli security ./src --format sarif -o security.sarif
+
+# CI gating with baselines
+tree-sitter-cli security ./src --baseline .ci/security-baseline.json --fail-on high
+
+# Update baseline after triage
+tree-sitter-cli security ./src --update-baseline --baseline .ci/security-baseline.json
+```
+
+Notes:
+- Findings are filtered deterministically first (FilterMode), then by severity/confidence.
+- Baseline fingerprints use `file:start_line:title:severity`; SARIF `baselineState` is set to new/unchanged.
+- `--no-color` disables color globally; outputs avoid leaking debug `ColoredString`.
+
+See also: `docs/SECURITY_SCANNER_GUIDE.md` for full baseline and SARIF workflows.
+
+## Logging & Tracing
+
+- Use `--log-level trace|debug|info|warn|error` to enable structured logs (defaults to off).
+- `RUST_LOG` is also supported; `--log-level` takes precedence when provided.
+- Example: `tree-sitter-cli security . --log-level debug --summary-only`.
+
+### `ast-security` - AST-Based Security Analysis
+
+Low false-positive, AST-driven security scanning with SARIF support.
 
 ```bash
-tree-sitter-cli security ./src --summary-only
-```
+tree-sitter-cli ast-security <PATH> [OPTIONS]
 
-```text
-🔍 SECURITY REPORT
-Vulnerabilities: 216 (many false positives)
-Secrets Detected: 22 (pattern-based detection)
-Compliance: Basic pattern matching only
+Options:
+  -f, --format <FORMAT>           Output: table, json, markdown, sarif [default: table]
+  --min-severity <LEVEL>          Min severity: critical|high|medium|low|info [default: low]
+  --min-confidence <NUM>          Min confidence [0.0–1.0]
+  --fail-on <LEVEL>               Exit non-zero if >= level findings
+  --summary-only                  Show summary only
+  --language <LANG>               Restrict by language (rust, js, ts, py, c, cpp, go)
+  --baseline <FILE>               Suppress unchanged findings
+  --update-baseline               Rewrite baseline with current findings
+  --include-tests                 Include tests/spec files
+  --include-examples              Include example/demo files
+  -o, --output <FILE>             Save report to file
+  --max-file-kb <N>               Skip files larger than N KB [default: 1024]
 ```
-
-**Important Limitations:**
-- **High false positive rate** - Many findings are not actual vulnerabilities
-- **Pattern-based only** - No semantic analysis or context understanding
-- **No CVE integration** - Despite claims, no real vulnerability database lookup
-- **Basic compliance checking** - Simple pattern matching, not comprehensive assessment
-- **Not suitable for production security audits**
 
 ### `languages` - Supported Languages
 

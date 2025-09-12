@@ -28,6 +28,7 @@ fn analyze_outputs_sorted_files_json() {
         .and_then(|f| f.as_array())
         .expect("files array");
 
+    #[allow(unused_mut)]
     let mut paths: Vec<String> = files
         .iter()
         .map(|f| {

@@ -6,6 +6,7 @@ mod tests {
     use rust_tree_sitter::languages::Language;
     use rust_tree_sitter::security::accuracy_metrics::AccuracyMetrics;
     use rust_tree_sitter::security::ast_analyzer::AstSecurityAnalyzer;
+    #[allow(unused_imports)]
     use std::fs;
     use std::path::Path;
 
@@ -24,10 +25,7 @@ mod tests {
             // Should detect at least some security issues
             // Note: The actual analyzer might not detect SQL injection specifically yet
             // This test validates that the analysis pipeline works
-            assert!(
-                findings.len() >= 0,
-                "Analysis should complete without error"
-            );
+            let _ = findings.len();
 
             // If findings are detected, they should have proper structure
             for finding in &findings {
@@ -54,10 +52,7 @@ mod tests {
 
             // Secure code should ideally have fewer findings than vulnerable code
             // This is a basic validation that the pipeline works
-            assert!(
-                findings.len() >= 0,
-                "Analysis should complete without error"
-            );
+            let _ = findings.len();
         }
     }
 
@@ -74,10 +69,7 @@ mod tests {
                 .expect("Analysis failed");
 
             // Should detect at least some security issues
-            assert!(
-                findings.len() >= 0,
-                "Analysis should complete without error"
-            );
+            let _ = findings.len();
         }
     }
 
@@ -94,10 +86,7 @@ mod tests {
                 .expect("Analysis failed");
 
             // Secure code should ideally have fewer findings than vulnerable code
-            assert!(
-                findings.len() >= 0,
-                "Analysis should complete without error"
-            );
+            let _ = findings.len();
         }
     }
 
@@ -108,7 +97,7 @@ mod tests {
         let true_positives = 8;
         let false_positives = 2;
         let false_negatives = 1;
-        let total_actual_vulnerabilities = 9;
+        let _total_actual_vulnerabilities = 9;
         let total_predictions = 10;
 
         // Create metrics manually for testing
@@ -194,8 +183,8 @@ mod tests {
         }
 
         // Basic validation that analysis pipeline works
-        assert!(files_analyzed >= 0, "Should attempt to analyze files");
-        assert!(total_findings >= 0, "Findings count should be non-negative");
+        let _ = files_analyzed;
+        let _ = total_findings;
 
         println!("Comprehensive Analysis Results:");
         println!("Files analyzed: {}", files_analyzed);
@@ -245,7 +234,7 @@ mod tests {
             "Should be able to create AST security analyzer"
         );
 
-        let analyzer = analyzer_result.unwrap();
+        let _analyzer = analyzer_result.unwrap();
 
         // Analyzer should have language analyzers
         // This is a basic smoke test that the analyzer is properly initialized

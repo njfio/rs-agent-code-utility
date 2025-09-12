@@ -10,8 +10,9 @@ use rust_tree_sitter::{
         AstSecurityAnalyzer, CodeContext, LanguageSpecificAnalyzer, SecurityFinding,
         SecurityFindingType, SecuritySeverity, SemanticInfo,
     },
-    tree::SyntaxTree,
 };
+#[allow(unused_imports)]
+use rust_tree_sitter::tree::SyntaxTree;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -27,7 +28,7 @@ async fn test_ast_analyzer_initialization() {
 #[tokio::test]
 async fn test_rust_analyzer_creation() {
     use rust_tree_sitter::security::ast_analyzer::RustAnalyzer;
-    let analyzer = RustAnalyzer::new();
+    let _analyzer = RustAnalyzer::new();
     // Test passes if analyzer is created successfully
 }
 
@@ -64,7 +65,8 @@ fn test_rust_semantic_extraction() {
     // At minimum, we should have some semantic information
     let total_items =
         semantic_info.functions.len() + semantic_info.classes.len() + semantic_info.variables.len();
-    assert!(total_items >= 0, "Should extract some semantic information");
+    // Non-negative by type; keep variable to use semantic_info
+    let _ = total_items;
 }
 
 /// Test context classification for different file types
@@ -155,7 +157,7 @@ async fn test_hardcoded_secret_detection() {
         .unwrap();
 
     // Should detect hardcoded secrets (may not always trigger)
-    let secret_findings: Vec<_> = findings
+    let _secret_findings: Vec<_> = findings
         .iter()
         .filter(|f| f.finding_type == SecurityFindingType::HardcodedSecret)
         .collect();
@@ -190,7 +192,7 @@ async fn test_unsafe_block_detection() {
         .unwrap();
 
     // Should detect unsafe block usage (may not always trigger)
-    let unsafe_findings: Vec<_> = findings
+    let _unsafe_findings: Vec<_> = findings
         .iter()
         .filter(|f| f.title.contains("Unsafe Block Usage"))
         .collect();
@@ -227,7 +229,7 @@ async fn test_sql_injection_detection() {
         .unwrap();
 
     // Should detect SQL injection vulnerability (may not always trigger)
-    let sql_findings: Vec<_> = findings
+    let _sql_findings: Vec<_> = findings
         .iter()
         .filter(|f| f.finding_type == SecurityFindingType::Injection)
         .collect();
@@ -313,7 +315,7 @@ async fn test_multiple_file_analysis() {
         })
         .collect();
 
-    let findings = analyzer.analyze_files(file_paths).await.unwrap();
+    let _findings = analyzer.analyze_files(file_paths).await.unwrap();
 
     // Analysis completed successfully for multiple files
     // (Findings may vary based on detection implementation)
@@ -380,7 +382,7 @@ async fn test_language_specific_analysis() {
     let rust_file = temp_dir.path().join("test.rs");
     std::fs::write(&rust_file, "fn main() { println!(\"Hello\"); }").unwrap();
 
-    let rust_findings = analyzer
+    let _rust_findings = analyzer
         .analyze_file(&rust_file, Language::Rust)
         .await
         .unwrap();
@@ -437,7 +439,7 @@ async fn test_performance_large_file() {
 
     // Measure analysis time
     let start_time = std::time::Instant::now();
-    let findings = analyzer
+    let _findings = analyzer
         .analyze_file(&large_file, Language::Rust)
         .await
         .unwrap();
@@ -487,13 +489,13 @@ async fn test_finding_accuracy_and_deduplication() {
         .unwrap();
 
     // Should detect multiple unsafe blocks (may not always trigger)
-    let unsafe_findings: Vec<_> = findings
+    let _unsafe_findings: Vec<_> = findings
         .iter()
         .filter(|f| f.title.contains("Unsafe"))
         .collect();
 
     // Should detect hardcoded secrets (may not always trigger)
-    let secret_findings: Vec<_> = findings
+    let _secret_findings: Vec<_> = findings
         .iter()
         .filter(|f| f.finding_type == SecurityFindingType::HardcodedSecret)
         .collect();

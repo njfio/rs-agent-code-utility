@@ -106,22 +106,22 @@ impl SwiftSyntax {
     }
 
     /// Find all classes in the syntax tree
-    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("class_declaration")
     }
 
     /// Find all structs in the syntax tree
-    pub fn find_structs(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_structs(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("struct_declaration")
     }
 
     /// Find all functions in the syntax tree
-    pub fn find_functions(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_functions(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("function_declaration")
     }
 
     /// Find all methods in the syntax tree
-    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node<'_>> {
         let all_functions = tree.find_nodes_by_kind("function_declaration");
         // Filter to only include methods (functions inside types)
         all_functions
@@ -225,22 +225,22 @@ impl SwiftSyntax {
     }
 
     /// Find all enums in the syntax tree
-    pub fn find_enums(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_enums(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("enum_declaration")
     }
 
     /// Find all protocols in the syntax tree
-    pub fn find_protocols(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_protocols(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("protocol_declaration")
     }
 
     /// Find all import statements
-    pub fn find_imports(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_imports(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("import_declaration")
     }
 
     /// Find all properties in the syntax tree
-    pub fn find_properties(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_properties(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("property_declaration")
     }
 
@@ -266,6 +266,7 @@ impl SwiftSyntax {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

@@ -1,4 +1,5 @@
 use assert_cmd::prelude::*;
+#[allow(unused_imports)]
 use predicates::prelude::*;
 use serde_json::Value;
 use std::fs;
@@ -46,8 +47,9 @@ fn it_works() { let key = "sk-1234567890abcdef1234567890abcdef"; }"#,
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let v: Value = serde_json::from_str(&stdout)?;
-    // secrets should be empty because only docs/tests contained secrets
-    assert!(v["secrets"].as_array().map(|a| a.is_empty()).unwrap_or(true));
+    // Vulnerabilities should be empty because only docs/tests contained secrets
+    let total = v["total_vulnerabilities"].as_u64().unwrap_or(0);
+    assert_eq!(total, 0);
     Ok(())
 }
 
@@ -76,8 +78,8 @@ fn security_includes_tests_when_flag_set() -> Result<(), Box<dyn std::error::Err
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let v: Value = serde_json::from_str(&stdout)?;
-    // with include-tests, secrets should have at least one entry
-    let secrets_len = v["secrets"].as_array().map(|a| a.len()).unwrap_or(0);
-    assert!(secrets_len >= 1, "Expected at least 1 secret, got {}", secrets_len);
+    // with include-tests, vulnerabilities should have at least one entry
+    let vuln_len = v["vulnerabilities"].as_array().map(|a| a.len()).unwrap_or(0);
+    assert!(vuln_len >= 1, "Expected at least 1 vulnerability, got {}", vuln_len);
     Ok(())
 }

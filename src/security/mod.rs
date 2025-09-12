@@ -9,6 +9,7 @@ pub mod ml_filter;
 pub mod owasp_detector;
 pub mod rust_analyzer;
 pub mod vulnerability_correlation;
+pub mod deterministic_filter;
 
 pub mod accuracy_metrics;
 pub mod dashboard;
@@ -26,6 +27,7 @@ pub use ml_filter::*;
 pub use owasp_detector::*;
 pub use rust_analyzer::RustAnalyzer;
 pub use vulnerability_correlation::*;
+pub use deterministic_filter::*;
 
 #[cfg(any(feature = "net", feature = "db"))]
 pub use secrets_detector::*;

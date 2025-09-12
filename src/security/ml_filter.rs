@@ -4,6 +4,7 @@
 //! using machine learning techniques and pattern recognition.
 
 use crate::Result;
+use crate::security::deterministic_filter::FilterMode;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -221,6 +222,50 @@ impl MLFalsePositiveFilter {
             pattern_database: Arc::new(RwLock::new(HashMap::new())),
             confidence_thresholds,
             false_positive_patterns,
+        }
+    }
+
+    /// Create a new filter adjusted for a deterministic filter mode
+    pub fn with_mode(mode: FilterMode) -> Self {
+        let mut f = Self::new();
+        f.apply_mode(mode);
+        f
+    }
+
+    /// Adjust internal thresholds and heuristics for the given mode
+    pub fn apply_mode(&mut self, mode: FilterMode) {
+        match mode {
+            FilterMode::Strict => {
+                // Raise thresholds to be more aggressive in filtering
+                self.confidence_thresholds.insert("HardcodedSecret".into(), 0.75);
+                self.confidence_thresholds.insert("Injection".into(), 0.6);
+                self.confidence_thresholds.insert("WeakAuthentication".into(), 0.8);
+                self.confidence_thresholds.insert("InsecureDesign".into(), 0.5);
+                // Boost probabilities for docs/tests indicators
+                for p in &mut self.false_positive_patterns {
+                    if p.name.contains("Test") || p.name.contains("Documentation") {
+                        p.probability = (p.probability + 0.1).min(0.95);
+                    }
+                }
+            }
+            FilterMode::Balanced => {
+                // Defaults already tuned for balanced; ensure defaults
+                self.confidence_thresholds.insert("HardcodedSecret".into(), 0.6);
+                self.confidence_thresholds.insert("Injection".into(), 0.5);
+                self.confidence_thresholds.insert("WeakAuthentication".into(), 0.7);
+                self.confidence_thresholds.insert("InsecureDesign".into(), 0.4);
+            }
+            FilterMode::Permissive => {
+                // Lower thresholds to keep more findings
+                self.confidence_thresholds.insert("HardcodedSecret".into(), 0.45);
+                self.confidence_thresholds.insert("Injection".into(), 0.4);
+                self.confidence_thresholds.insert("WeakAuthentication".into(), 0.6);
+                self.confidence_thresholds.insert("InsecureDesign".into(), 0.3);
+                for p in &mut self.false_positive_patterns {
+                    // Slightly reduce pattern probability impact
+                    p.probability = (p.probability - 0.1).max(0.4);
+                }
+            }
         }
     }
 
@@ -497,14 +542,6 @@ impl MLFalsePositiveFilter {
             }
         }
         false
-    }
-
-    /// Check if text contains any of the keywords
-    fn contains_keywords(&self, text: &str, keywords: &[String]) -> bool {
-        let text_lower = text.to_lowercase();
-        keywords
-            .iter()
-            .any(|keyword| text_lower.contains(&keyword.to_lowercase()))
     }
 
     /// Simple pattern matching (supports * wildcards)

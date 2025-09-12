@@ -12,11 +12,9 @@
 //! - User feedback learning system
 
 use rust_tree_sitter::security::{
-    AIFalsePositiveFilter, AIFilterConfig, AstSecurityAnalyzer, MLFalsePositiveFilter,
-    SecurityFinding, SecurityFindingType, SecuritySeverity,
+    AIFilterConfig, AstSecurityAnalyzer, MLFalsePositiveFilter, SecurityFinding,
+    SecurityFindingType, SecuritySeverity,
 };
-use std::collections::HashMap;
-use std::path::PathBuf;
 
 /// Simulated security findings for demonstration
 fn create_sample_findings() -> Vec<SecurityFinding> {
@@ -83,7 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize analyzers
     println!("🔧 Setting up analyzers...");
-    let ml_filter = MLFalsePositiveFilter::new();
+    let _ml_filter = MLFalsePositiveFilter::new();
     let ast_analyzer = AstSecurityAnalyzer::new()?;
     println!("✅ Analyzers initialized");
     println!();

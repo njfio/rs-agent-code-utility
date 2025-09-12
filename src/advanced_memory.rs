@@ -477,7 +477,6 @@ impl Default for MemoryTracker {
 /// Advanced memory manager that coordinates all memory management features
 pub struct AdvancedMemoryManager {
     config: MemoryConfig,
-    tracker: Arc<MemoryTracker>,
     gc: GarbageCollector,
     memory_pools: HashMap<String, Box<dyn std::any::Any + Send + Sync>>,
 }
@@ -492,7 +491,6 @@ impl AdvancedMemoryManager {
 
         Self {
             config,
-            tracker,
             gc,
             memory_pools: HashMap::new(),
         }

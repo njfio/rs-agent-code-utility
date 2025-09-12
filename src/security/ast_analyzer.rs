@@ -21,7 +21,6 @@ pub struct AstSecurityAnalyzer {
     /// Context classifier for determining code context
     context_classifier: ContextClassifier,
     /// Semantic analysis engine
-    semantic_engine: SemanticAnalysisEngine,
     /// ML-based false positive filter
     ml_filter: MLFalsePositiveFilter,
 }
@@ -360,7 +359,7 @@ impl AstSecurityAnalyzer {
         Ok(Self {
             language_analyzers,
             context_classifier: ContextClassifier::new(),
-            semantic_engine: SemanticAnalysisEngine::new().with_language("rust"), // Default to Rust
+            
             ml_filter: crate::security::ml_filter::MLFalsePositiveFilter::new(),
         })
     }
@@ -1243,7 +1242,7 @@ impl AstSecurityAnalyzer {
         &self,
         finding: &SecurityFinding,
         code_context: &str,
-        full_file_content: Option<&str>,
+        _full_file_content: Option<&str>,
         semantic_info: &SemanticInfo,
     ) -> Result<EnhancedSemanticResult> {
         let mut confidence_adjustment = 0.0;
@@ -1289,7 +1288,7 @@ impl AstSecurityAnalyzer {
     /// Analyze code complexity as an indicator of false positives
     fn analyze_code_complexity(&self, code_context: &str) -> f64 {
         let lines = code_context.lines().count();
-        let chars = code_context.chars().count();
+        let _chars = code_context.chars().count();
         let keywords = [
             "if ", "for ", "while ", "match ", "fn ", "class ", "struct ",
         ]
@@ -1333,7 +1332,7 @@ impl AstSecurityAnalyzer {
         let mut suspicious_count = 0;
         let mut total_vars = 0;
 
-        for (var_name, var_info) in &semantic_info.variables {
+        for (var_name, _var_info) in &semantic_info.variables {
             total_vars += 1;
             let name_lower = var_name.to_lowercase();
 

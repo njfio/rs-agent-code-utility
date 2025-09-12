@@ -99,7 +99,7 @@ async fn ignores_test_files() {
         .detect_secrets(content, "tests/integration_test.rs")
         .unwrap();
     // Should be flagged but with lower confidence due to test context
-    assert!(results.len() >= 0); // May or may not detect depending on implementation
+    let _ = results.len();
 }
 
 #[tokio::test]

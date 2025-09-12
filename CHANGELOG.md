@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Security CLI: `--min-confidence`, `--fail-on`, `--no-ai-filter`, `--filter-mode`, `--baseline`, `--update-baseline`, `--include-tests`, `--include-examples`, `--include-non-code`, `--max-file-kb`, and `--format sarif`.
+- AST Security CLI: baseline handling, SARIF output, `--max-file-kb` size budget.
+- Deterministic false-positive filter with `strict|balanced|permissive` modes.
+- Secrets detector: added Twilio, SendGrid, Azure validators; tuned entropy and placeholders.
+- Markdown/JSON snapshot tests for security outputs.
+
+### Changed
+- Security SARIF now includes `baselineState` new/unchanged when baseline is provided.
+- Severity breakdowns computed after filtering for accurate counts.
+
 ## [0.1.0] - 2024-12-19
 
 ### Added

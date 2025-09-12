@@ -82,17 +82,17 @@ impl KotlinSyntax {
     }
 
     /// Find all classes in the syntax tree
-    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("class_declaration")
     }
 
     /// Find all functions in the syntax tree
-    pub fn find_functions(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_functions(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("function_declaration")
     }
 
     /// Find all properties in the syntax tree
-    pub fn find_properties(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_properties(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("property_declaration")
     }
 
@@ -190,27 +190,27 @@ impl KotlinSyntax {
     }
 
     /// Find all interfaces in the syntax tree
-    pub fn find_interfaces(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_interfaces(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("interface_declaration")
     }
 
     /// Find all enum classes in the syntax tree
-    pub fn find_enum_classes(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_enum_classes(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("enum_class_declaration")
     }
 
     /// Find all objects in the syntax tree
-    pub fn find_objects(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_objects(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("object_declaration")
     }
 
     /// Find all package declarations
-    pub fn find_packages(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_packages(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("package_declaration")
     }
 
     /// Find all import statements
-    pub fn find_imports(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_imports(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("import_declaration")
     }
 
@@ -241,6 +241,7 @@ impl KotlinSyntax {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     // #[test]

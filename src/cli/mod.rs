@@ -26,6 +26,10 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub no_color: bool,
 
+    /// Log level (trace, debug, info, warn, error). Also respects RUST_LOG.
+    #[arg(long, global = true, value_parser = ["trace","debug","info","warn","error"])]
+    pub log_level: Option<String>,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -269,7 +273,7 @@ pub enum Commands {
         #[arg(value_name = "PATH")]
         path: PathBuf,
 
-        /// Output format (table, json, markdown)
+        /// Output format (table, json, markdown, sarif)
         #[arg(short, long, default_value = "table")]
         format: String,
 
@@ -316,6 +320,38 @@ pub enum Commands {
         /// Include non-code assets (markdown, docs/)
         #[arg(long, default_value_t = false)]
         include_non_code: bool,
+
+        /// Include diagnostics (raw counts) in Markdown output
+        #[arg(long, default_value_t = false)]
+        diagnostics: bool,
+
+        /// Minimum confidence to include (low, medium, high)
+        #[arg(long, value_parser = ["low","medium","high"], default_value = "low")]
+        min_confidence: String,
+
+        /// Fail if findings at or above this severity exist
+        #[arg(long, value_parser = ["critical","high","medium","low","info"], conflicts_with = "summary_only")]
+        fail_on: Option<String>,
+
+        /// Disable AI/ML false-positive filtering
+        #[arg(long, default_value_t = false)]
+        no_ai_filter: bool,
+
+        /// Filter mode for false-positive filtering (strict|balanced|permissive)
+        #[arg(long, value_parser = ["strict","balanced","permissive"], default_value = "balanced")]
+        filter_mode: String,
+
+        /// Baseline file path to suppress existing findings
+        #[arg(long, value_name = "FILE")]
+        baseline: Option<PathBuf>,
+
+        /// Update baseline file with current findings
+        #[arg(long, default_value_t = false)]
+        update_baseline: bool,
+
+        /// Skip files larger than this size (KB)
+        #[arg(long, default_value_t = 1024)]
+        max_file_kb: usize,
     },
 
     /// AST-based security analysis (intelligent, low false positives)
@@ -351,6 +387,26 @@ pub enum Commands {
         /// Include example/demo files in analysis
         #[arg(long)]
         include_examples: bool,
+
+        /// Minimum confidence threshold (0.0-1.0)
+        #[arg(long, default_value_t = 0.0)]
+        min_confidence: f64,
+
+        /// Fail if findings at or above this severity exist
+        #[arg(long, value_parser = ["critical","high","medium","low","info"], conflicts_with = "summary_only")]
+        fail_on: Option<String>,
+
+        /// Baseline file path to suppress existing findings
+        #[arg(long, value_name = "FILE")]
+        baseline: Option<PathBuf>,
+
+        /// Update baseline file with current findings
+        #[arg(long, default_value_t = false)]
+        update_baseline: bool,
+
+        /// Skip files larger than this size (KB)
+        #[arg(long, default_value_t = 1024)]
+        max_file_kb: usize,
     },
 
     /// Smart refactoring suggestions
@@ -518,5 +574,25 @@ pub trait Execute {
 pub fn apply_global_cli_settings(cli: &Cli) {
     if cli.no_color {
         let _ = color_control::set_override(false);
+    }
+
+    // Initialize tracing subscriber if a log level was provided and no global subscriber is set yet.
+    if let Some(level) = &cli.log_level {
+        use tracing_subscriber::{fmt, EnvFilter};
+        // Compose an env filter; prefer explicit level, but honor RUST_LOG if set.
+        let filter = std::env::var("RUST_LOG")
+            .ok()
+            .and_then(|v| if v.trim().is_empty() { None } else { Some(v) })
+            .map(EnvFilter::new)
+            .unwrap_or_else(|| EnvFilter::new(level.as_str()));
+
+        // Try to initialize; ignore errors if already set by tests or external harness.
+        let _ = fmt()
+            .with_env_filter(filter)
+            .with_target(false)
+            .with_thread_ids(false)
+            .with_thread_names(false)
+            .without_time()
+            .try_init();
     }
 }

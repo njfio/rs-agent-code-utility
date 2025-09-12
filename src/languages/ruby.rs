@@ -95,22 +95,22 @@ impl RubySyntax {
     }
 
     /// Find all classes in the syntax tree
-    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("class")
     }
 
     /// Find all modules in the syntax tree
-    pub fn find_modules(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_modules(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("module")
     }
 
     /// Find all methods in the syntax tree
-    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("method")
     }
 
     /// Find all singleton methods (class methods) in the syntax tree
-    pub fn find_singleton_methods(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_singleton_methods(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("singleton_method")
     }
 
@@ -187,7 +187,7 @@ impl RubySyntax {
     }
 
     /// Find all constants in the syntax tree
-    pub fn find_constants(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_constants(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("assignment")
             .into_iter()
             .filter(|node| {
@@ -198,7 +198,7 @@ impl RubySyntax {
     }
 
     /// Find all require/include statements
-    pub fn find_requires(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_requires(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("call")
             .into_iter()
             .filter(|node| {
@@ -212,12 +212,12 @@ impl RubySyntax {
     }
 
     /// Find all instance variables
-    pub fn find_instance_variables(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_instance_variables(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("instance_variable")
     }
 
     /// Find all class variables
-    pub fn find_class_variables(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_class_variables(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("class_variable")
     }
 
@@ -234,11 +234,12 @@ impl RubySyntax {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
     fn test_ruby_syntax_detection() {
-        let source = r#"
+        let _source = r#"
             # A simple Ruby module
             module App
               # User class

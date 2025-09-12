@@ -83,6 +83,11 @@ impl Execute for Commands {
                 language,
                 include_tests,
                 include_examples,
+                min_confidence,
+                fail_on,
+                baseline,
+                update_baseline,
+                max_file_kb,
             } => {
                 // Convert the async CLI call to sync execution
                 let rt = tokio::runtime::Runtime::new()
@@ -97,6 +102,11 @@ impl Execute for Commands {
                     language.as_deref(),
                     *include_tests,
                     *include_examples,
+                    *min_confidence,
+                    fail_on.as_ref().map(|s| s.as_str()),
+                    baseline.as_ref(),
+                    *update_baseline,
+                    *max_file_kb,
                 ))
             }
             Commands::Query {
@@ -207,6 +217,14 @@ impl Execute for Commands {
                 include_tests,
                 include_examples,
                 include_non_code,
+                diagnostics,
+                min_confidence,
+                fail_on,
+                no_ai_filter,
+                filter_mode,
+                baseline,
+                update_baseline,
+                max_file_kb,
             } => {
                 if *print_schema {
                     match schema_version.as_str() {
@@ -233,11 +251,19 @@ impl Execute for Commands {
                     output.as_ref(),
                     *summary_only,
                     *compliance,
+                    *diagnostics,
                     depth,
                     *enable_security,
                     *include_tests,
                     *include_examples,
                     *include_non_code,
+                    min_confidence,
+                    fail_on.as_ref().map(|s| s.as_str()),
+                    *no_ai_filter,
+                    filter_mode,
+                    baseline.as_ref(),
+                    *update_baseline,
+                    *max_file_kb,
                 ))
             }
             Commands::Refactor {

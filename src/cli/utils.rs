@@ -128,6 +128,34 @@ pub fn ast_severity_meets_threshold(
     rank(actual) >= rank(threshold)
 }
 
+/// Parse confidence level (low, medium, high)
+pub fn parse_confidence_level(level: &str) -> CliResult<crate::advanced_security::ConfidenceLevel> {
+    use crate::advanced_security::ConfidenceLevel::*;
+    match level.to_lowercase().as_str() {
+        "low" => Ok(Low),
+        "medium" => Ok(Medium),
+        "high" => Ok(High),
+        _ => Err(CliError::InvalidArgs(format!(
+            "Invalid confidence level: {}. Must be one of: low, medium, high",
+            level
+        ))),
+    }
+}
+
+/// Check if confidence meets threshold (enum ordering)
+pub fn confidence_meets_threshold(
+    threshold: &crate::advanced_security::ConfidenceLevel,
+    actual: &crate::advanced_security::ConfidenceLevel,
+) -> bool {
+    use crate::advanced_security::ConfidenceLevel::*;
+    let rank = |c: &crate::advanced_security::ConfidenceLevel| match c {
+        Low => 1,
+        Medium => 2,
+        High => 3,
+    };
+    rank(actual) >= rank(threshold)
+}
+
 /// Validate and normalize file path
 pub fn normalize_path(path: &PathBuf) -> CliResult<PathBuf> {
     let canonical = path
@@ -205,4 +233,26 @@ pub fn print_error(message: &str) {
 /// Print info message
 pub fn print_info(message: &str) {
     println!("{} {}", "ℹ".bright_blue(), message.bright_white());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_confidence_level() {
+        assert!(matches!(parse_confidence_level("low").unwrap(), crate::advanced_security::ConfidenceLevel::Low));
+        assert!(matches!(parse_confidence_level("medium").unwrap(), crate::advanced_security::ConfidenceLevel::Medium));
+        assert!(matches!(parse_confidence_level("high").unwrap(), crate::advanced_security::ConfidenceLevel::High));
+        assert!(parse_confidence_level("nope").is_err());
+    }
+
+    #[test]
+    fn test_confidence_meets_threshold() {
+        use crate::advanced_security::ConfidenceLevel::*;
+        assert!(confidence_meets_threshold(&Low, &Low));
+        assert!(confidence_meets_threshold(&Low, &Medium));
+        assert!(confidence_meets_threshold(&Medium, &High));
+        assert!(!confidence_meets_threshold(&High, &Medium));
+    }
 }

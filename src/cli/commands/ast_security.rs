@@ -26,6 +26,11 @@ pub async fn execute(
     language_filter: Option<&str>,
     include_tests: bool,
     include_examples: bool,
+    min_confidence: f64,
+    fail_on: Option<&str>,
+    baseline: Option<&PathBuf>,
+    update_baseline: bool,
+    max_file_kb: usize,
 ) -> CliResult<()> {
     // Validate inputs
     validate_path(path)?;
@@ -57,7 +62,7 @@ pub async fn execute(
 
     // Discover files to analyze
     pb.set_message("Discovering source files...");
-    let files_to_analyze = discover_files(path, language_filter, include_tests, include_examples)?;
+    let files_to_analyze = discover_files(path, language_filter, include_tests, include_examples, max_file_kb)?;
 
     if files_to_analyze.is_empty() {
         pb.finish_with_message("No files found to analyze");
@@ -81,8 +86,11 @@ pub async fn execute(
 
         match analyzer.analyze_file(file_path, *language).await {
             Ok(mut findings) => {
-                // Filter by severity
+                // Filter by severity and confidence
                 findings.retain(|f| ast_severity_meets_threshold(&severity_threshold, &f.severity));
+                if min_confidence > 0.0 {
+                    findings.retain(|f| f.confidence >= min_confidence);
+                }
                 all_findings.append(&mut findings);
                 analyzed_files += 1;
             }
@@ -105,6 +113,19 @@ pub async fn execute(
         other => other,
     });
 
+    // Baseline suppression (capture baseline set for SARIF)
+    let mut baseline_set: Option<std::collections::HashSet<String>> = None;
+    if let Some(baseline_path) = baseline {
+        let base = load_baseline_ast(baseline_path)?;
+        baseline_set = Some(base.clone());
+        all_findings.retain(|f| !base.contains(&fingerprint_ast(f)));
+        if update_baseline {
+            let current: std::collections::HashSet<String> = all_findings.iter().map(|f| fingerprint_ast(f)).collect();
+            save_baseline_ast(baseline_path, &current)?;
+            baseline_set = Some(current); // reflect updated baseline if needed
+        }
+    }
+
     // Display results based on format
     let output_format =
         OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
@@ -123,7 +144,7 @@ pub async fn execute(
             }
         }
         OutputFormat::Sarif => {
-            let sarif = generate_sarif_report(&all_findings, path)?;
+            let sarif = generate_sarif_report(&all_findings, path, baseline_set.as_ref())?;
             if let Some(output_path) = output {
                 std::fs::write(output_path, &sarif)?;
                 print_success(&format!(
@@ -166,6 +187,49 @@ pub async fn execute(
     // Print summary statistics
     print_security_summary(&all_findings, analyzed_files, failed_files);
 
+    // CI gating: fail if findings at or above threshold
+    if let Some(fail_on_str) = fail_on {
+        let fail_threshold = parse_ast_severity(fail_on_str)?;
+        let offending = all_findings
+            .iter()
+            .any(|f| ast_severity_meets_threshold(&fail_threshold, &f.severity));
+        if offending {
+            return Err(CliError::Security(format!(
+                "Failing due to findings at or above '{}'",
+                fail_on_str
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn fingerprint_ast(f: &crate::security::ast_analyzer::SecurityFinding) -> String {
+    format!(
+        "{}:{}:{}:{:?}",
+        f.file_path,
+        f.line_number,
+        f.title,
+        f.severity
+    )
+}
+
+fn load_baseline_ast(path: &PathBuf) -> CliResult<std::collections::HashSet<String>> {
+    use std::fs;
+    use std::collections::HashSet;
+    if !path.exists() { return Ok(HashSet::new()); }
+    let content = fs::read_to_string(path).map_err(CliError::Io)?;
+    let list: Vec<String> = serde_json::from_str(&content).map_err(CliError::Json)?;
+    Ok(list.into_iter().collect())
+}
+
+fn save_baseline_ast(path: &PathBuf, entries: &std::collections::HashSet<String>) -> CliResult<()> {
+    use std::fs;
+    if let Some(parent) = path.parent() { if !parent.exists() { fs::create_dir_all(parent).map_err(CliError::Io)?; } }
+    let mut v: Vec<String> = entries.iter().cloned().collect();
+    v.sort();
+    let data = serde_json::to_string_pretty(&v).map_err(CliError::Json)?;
+    fs::write(path, data).map_err(CliError::Io)?;
     Ok(())
 }
 
@@ -175,6 +239,7 @@ fn discover_files(
     language_filter: Option<Language>,
     include_tests: bool,
     include_examples: bool,
+    max_file_kb: usize,
 ) -> CliResult<Vec<(PathBuf, Language)>> {
     let mut files = Vec::new();
 
@@ -222,6 +287,14 @@ fn discover_files(
     {
         if should_skip_file(&entry, include_tests, include_examples) {
             continue;
+        }
+
+        // Skip large files by size budget
+        if let Ok(md) = entry.metadata() {
+            if md.len() > (max_file_kb as u64) * 1024 {
+                warn!("Skipping large file {} (>{} KB)", entry.path().display(), max_file_kb);
+                continue;
+            }
         }
 
         if let Some(language) = crate::detect_language_from_path(&entry.path().to_string_lossy()) {
@@ -379,7 +452,7 @@ fn print_ast_security_markdown(
 }
 
 /// Render AST security results as markdown string
-fn render_ast_security_markdown(
+pub fn render_ast_security_markdown(
     findings: &[SecurityFinding],
     summary_only: bool,
     analyzed_files: usize,
@@ -444,7 +517,11 @@ fn render_ast_security_markdown(
 }
 
 /// Generate SARIF report for findings
-fn generate_sarif_report(findings: &[SecurityFinding], root_path: &PathBuf) -> CliResult<String> {
+fn generate_sarif_report(
+    findings: &[SecurityFinding],
+    root_path: &PathBuf,
+    baseline: Option<&std::collections::HashSet<String>>,
+) -> CliResult<String> {
     use serde_json::json;
 
     let rules: Vec<serde_json::Value> = findings
@@ -480,6 +557,8 @@ fn generate_sarif_report(findings: &[SecurityFinding], root_path: &PathBuf) -> C
         .iter()
         .enumerate()
         .map(|(i, finding)| {
+            let fp = fingerprint_ast(finding);
+            let is_baselined = baseline.map(|b| b.contains(&fp)).unwrap_or(false);
             let relative_path = finding
                 .file_path
                 .strip_prefix(&root_path.to_string_lossy().as_ref())
@@ -509,6 +588,7 @@ fn generate_sarif_report(findings: &[SecurityFinding], root_path: &PathBuf) -> C
                         }
                     }
                 }],
+                "baselineState": if is_baselined { "unchanged" } else { "new" },
                 "properties": {
                     "remediation": finding.remediation.clone(),
                     "confidence": finding.confidence
@@ -630,7 +710,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-        let result = execute(&path, "table", "low", None, false, None, false, false).await;
+    let result = execute(&path, "table", "low", None, false, None, false, false, 0.0, None, None, false, 1024).await;
         assert!(result.is_ok());
     }
 
@@ -639,17 +719,22 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-        let result = execute(
-            &path,
-            "table",
-            "invalid_severity",
-            None,
-            false,
-            None,
-            false,
-            false,
-        )
-        .await;
+          let result = execute(
+              &path,
+              "table",
+              "invalid_severity",
+              None,
+              false,
+              None,
+              false,
+              false,
+              0.0,
+              None,
+              None,
+              false,
+              1024,
+          )
+          .await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
     }
@@ -659,17 +744,22 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-        let result = execute(
-            &path,
-            "table",
-            "low",
-            None,
-            false,
-            Some("invalid_language"),
-            false,
-            false,
-        )
-        .await;
+          let result = execute(
+              &path,
+              "table",
+              "low",
+              None,
+              false,
+              Some("invalid_language"),
+              false,
+              false,
+              0.0,
+              None,
+              None,
+              false,
+              1024,
+          )
+          .await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
     }

@@ -93,17 +93,17 @@ impl PhpSyntax {
     }
 
     /// Find all classes in the syntax tree
-    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("class_declaration")
     }
 
     /// Find all functions in the syntax tree
-    pub fn find_functions(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_functions(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("function_definition")
     }
 
     /// Find all methods in the syntax tree
-    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("method_declaration")
     }
 
@@ -167,22 +167,22 @@ impl PhpSyntax {
     }
 
     /// Find all traits in the syntax tree
-    pub fn find_traits(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_traits(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("trait_declaration")
     }
 
     /// Find all interfaces in the syntax tree
-    pub fn find_interfaces(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_interfaces(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("interface_declaration")
     }
 
     /// Find all namespace declarations
-    pub fn find_namespaces(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_namespaces(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("namespace_definition")
     }
 
     /// Find all use statements
-    pub fn find_use_statements(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_use_statements(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("namespace_use_declaration")
     }
 
@@ -208,6 +208,7 @@ impl PhpSyntax {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

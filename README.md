@@ -99,6 +99,7 @@ tree-sitter-cli analyze ./src --format json
 ### `security` - Security Vulnerability Scanning
 
 Pattern-based security analysis with vulnerability detection and compliance assessment.
+For advanced usage (baselines, SARIF, filters), see `docs/SECURITY_SCANNER_GUIDE.md`.
 
 ```bash
 tree-sitter-cli security <PATH> [OPTIONS]

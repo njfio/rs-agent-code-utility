@@ -99,17 +99,17 @@ impl JavaSyntax {
     }
 
     /// Find all classes in the syntax tree
-    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_classes(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("class_declaration")
     }
 
     /// Find all interfaces in the syntax tree
-    pub fn find_interfaces(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_interfaces(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("interface_declaration")
     }
 
     /// Find all methods in the syntax tree
-    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_methods(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("method_declaration")
     }
 
@@ -194,28 +194,29 @@ impl JavaSyntax {
     }
 
     /// Find all annotations in the syntax tree
-    pub fn find_annotations(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_annotations(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("annotation")
     }
 
     /// Find all import statements
-    pub fn find_imports(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_imports(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("import_declaration")
     }
 
     /// Find all package declarations
-    pub fn find_packages(tree: &SyntaxTree) -> Vec<Node> {
+    pub fn find_packages(tree: &SyntaxTree) -> Vec<Node<'_>> {
         tree.find_nodes_by_kind("package_declaration")
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
     fn test_java_syntax_detection() {
-        let source = r#"
+        let _source = r#"
             package com.example;
 
             import java.util.List;
@@ -271,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_java_class_name_extraction() {
-        let source = "public class TestClass { }";
+        let _source = "public class TestClass { }";
         // let language = Language::Java;
         // let mut parser = Parser::new(language).unwrap();
         // let tree = parser.parse(source, None).unwrap();
@@ -286,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_java_javadoc_extraction() {
-        let source = r#"
+        let _source = r#"
             /**
              * This is a JavaDoc comment
              */
