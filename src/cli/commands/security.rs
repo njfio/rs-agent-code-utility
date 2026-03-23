@@ -222,10 +222,8 @@ pub async fn execute(
 
             let mut filtered_findings: Vec<serde_json::Value> = filtered_vulnerabilities
                 .iter()
-                .map(|vuln| {
-                    serde_json::to_value(vuln).expect("security vulnerability is serializable")
-                })
-                .collect();
+                .map(serde_json::to_value)
+                .collect::<Result<_, _>>()?;
 
             filtered_findings.extend(
                 security_result
@@ -392,7 +390,7 @@ pub async fn execute(
                     summary_only,
                     compliance,
                     &filtered_vulnerabilities,
-                );
+                )?;
                 if diagnostics {
                     use std::fmt::Write as _;
                     let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
@@ -874,26 +872,24 @@ pub fn render_security_markdown(
     summary_only: bool,
     compliance: bool,
     filtered_vulnerabilities: &[&crate::SecurityVulnerability],
-) -> String {
+) -> CliResult<String> {
     use std::fmt::Write;
     let mut out = String::new();
-    writeln!(out, "# 🔍 Security Scan Report\n").unwrap();
+    writeln!(out, "# 🔍 Security Scan Report\n")?;
 
-    writeln!(out, "## 📊 Executive Summary\n").unwrap();
+    writeln!(out, "## 📊 Executive Summary\n")?;
     writeln!(
         out,
         "- **Security Score**: {}/100",
         security_result.security_score
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Total Vulnerabilities**: {}",
         filtered_vulnerabilities.len()
-    )
-    .unwrap();
+    )?;
 
-    writeln!(out, "\n### Vulnerabilities by Severity\n").unwrap();
+    writeln!(out, "\n### Vulnerabilities by Severity\n")?;
     let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
         Default::default();
     for v in filtered_vulnerabilities {
@@ -907,46 +903,44 @@ pub fn render_security_markdown(
         crate::SecuritySeverity::Info,
     ] {
         let count = *sev_counts.get(&sev).unwrap_or(&0);
-        writeln!(out, "- **{:?}**: {}", sev, count).unwrap();
+        writeln!(out, "- **{:?}**: {}", sev, count)?;
     }
 
     if !summary_only && !filtered_vulnerabilities.is_empty() {
-        writeln!(out, "\n## 🚨 Detailed Findings\n").unwrap();
+        writeln!(out, "\n## 🚨 Detailed Findings\n")?;
         for (i, vuln) in filtered_vulnerabilities.iter().enumerate() {
-            writeln!(out, "### {}. {}\n", i + 1, vuln.title).unwrap();
-            writeln!(out, "- **Severity**: {:?}", vuln.severity).unwrap();
+            writeln!(out, "### {}. {}\n", i + 1, vuln.title)?;
+            writeln!(out, "- **Severity**: {:?}", vuln.severity)?;
             writeln!(
                 out,
                 "- **Location**: `{}:{}`",
                 vuln.location.file.display(),
                 vuln.location.start_line
-            )
-            .unwrap();
-            writeln!(out, "- **Description**: {}", vuln.description).unwrap();
-            writeln!(out, "- **Fix**: {}\n", vuln.remediation.summary).unwrap();
+            )?;
+            writeln!(out, "- **Description**: {}", vuln.description)?;
+            writeln!(out, "- **Fix**: {}\n", vuln.remediation.summary)?;
         }
     }
 
     if compliance {
-        writeln!(out, "## 📋 Compliance Status\n").unwrap();
+        writeln!(out, "## 📋 Compliance Status\n")?;
         writeln!(
             out,
             "- **OWASP Score**: {}/100",
             security_result.compliance.owasp_score
-        )
-        .unwrap();
+        )?;
         writeln!(
             out,
             "- **Overall Status**: {:?}\n",
             security_result.compliance.overall_status
-        )
-        .unwrap();
+        )?;
     }
 
-    out
+    Ok(out)
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

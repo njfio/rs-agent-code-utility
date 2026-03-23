@@ -1455,13 +1455,10 @@ fn convert_to_analysis_output(result: &crate::AnalysisResult) -> AnalysisOutput 
     AnalysisOutput {
         metadata: OutputMetadata {
             tool_version: env!("CARGO_PKG_VERSION").to_string(),
-            analysis_timestamp: format!(
-                "{}",
-                std::time::SystemTime::now()
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs()
-            ),
+            analysis_timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .map(|duration| duration.as_secs().to_string())
+                .unwrap_or_else(|_| "0".to_string()),
             target_path: result.root_path.to_string_lossy().to_string(),
             analysis_duration_ms: 0, // Could be tracked if needed
             output_format: "accessible".to_string(),

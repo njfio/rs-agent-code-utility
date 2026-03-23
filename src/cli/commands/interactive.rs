@@ -23,7 +23,7 @@ use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, Helper, KeyEvent}
 use std::borrow::Cow::{self, Borrowed};
 use std::path::PathBuf;
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Style, ThemeSet};
+use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
@@ -245,9 +245,12 @@ impl InteractiveHighlighter {
 
         let mut highlighted = String::new();
         for line in LinesWithEndings::from(code) {
-            let ranges: Vec<(Style, &str)> =
-                highlighter.highlight_line(line, &self._syntax_set).unwrap();
-            highlighted.push_str(&as_24_bit_terminal_escaped(&ranges[..], true));
+            match highlighter.highlight_line(line, &self._syntax_set) {
+                Ok(ranges) => {
+                    highlighted.push_str(&as_24_bit_terminal_escaped(&ranges[..], true));
+                }
+                Err(_) => highlighted.push_str(line),
+            }
         }
 
         highlighted

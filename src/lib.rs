@@ -139,98 +139,137 @@
 //! # Ok(())
 //! # }
 //! ```
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 /// Advanced AI-powered code analysis capabilities
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_ai_analysis;
 /// Advanced multi-level caching system
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_cache;
 /// Advanced memory management system
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_memory;
 /// Advanced parallel processing system
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_parallel;
 /// Advanced security analysis with OWASP compliance
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_security;
 /// AI service layer and provider integrations
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod ai;
 /// AI-powered code explanation and insights
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod ai_analysis;
 /// Common analysis functionality and helpers
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod analysis_common;
 /// Utility functions for code analysis
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod analysis_utils;
 /// Main codebase analyzer functionality
 pub mod analyzer;
 /// AST transformation and refactoring engine
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod ast_transformation;
 /// Command-line interface implementation
 pub mod cli;
 /// Code evolution tracking and analysis
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod code_evolution;
 /// Code mapping and visualization utilities
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod code_map;
 /// Command injection vulnerability detection
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod command_injection_detector;
 /// Code complexity metrics and analysis
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod complexity_analysis;
 /// Configuration constants and defaults
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod constants;
 /// Control flow graph construction and analysis
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod control_flow;
 /// Dependency analysis and vulnerability scanning
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod dependency_analysis;
 /// Enhanced security analysis with compliance checking
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod enhanced_security;
 /// Error types and handling
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod error;
 /// File caching for performance optimization
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod file_cache;
 /// Infrastructure and configuration management
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod infrastructure;
 /// Intent mapping between requirements and implementation
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "ml")]
 pub mod intent_mapping;
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(not(feature = "ml"))]
 pub mod intent_mapping_stub;
 /// Semantic context analysis and data flow
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod semantic_context;
 /// SQL injection vulnerability detection
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod sql_injection_detector;
 /// Symbol table construction and management
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod symbol_table;
 /// Taint analysis for security vulnerability detection
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod taint_analysis;
 #[cfg(not(feature = "ml"))]
 pub use intent_mapping_stub as intent_mapping;
 /// Text embeddings and semantic similarity
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "ml")]
 pub mod embeddings;
 /// Programming language support and parsers
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod languages;
 /// Memory allocation tracking and analysis
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod memory_tracker;
 /// Tree-sitter parser integration
 pub mod parser;
 /// Performance analysis and optimization detection
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod performance_analysis;
 /// Code querying and pattern matching
 pub mod query;
 /// Automated reasoning and inference engine
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod reasoning_engine;
 /// Code refactoring suggestions and analysis
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod refactoring;
 /// Security analysis and vulnerability detection
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod security;
 /// Semantic graph construction and querying
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod semantic_graph;
 /// Smart refactoring with AI assistance
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod smart_refactoring;
 /// Test coverage analysis and gap detection
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod test_coverage;
 /// Syntax tree manipulation and traversal
 pub mod tree;
 /// Wiki website generator
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod wiki;
 
 // Integration testing framework

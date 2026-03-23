@@ -249,12 +249,15 @@ impl Parser {
 
 impl Clone for Parser {
     fn clone(&self) -> Self {
-        // Note: This creates a new parser instance rather than sharing the inner parser
-        // This is safer for concurrent use
-        let mut parser = Self::with_options(self.language, self.options)
-            .expect("Failed to clone parser: parser creation should always succeed with valid language and options");
-        parser.max_cache_size = self.max_cache_size;
-        parser
+        // Clone shares the parser/cache handles behind mutexes and remains safe for concurrent
+        // use. Call `clone_parser()` when a fresh parser instance is required.
+        Self {
+            inner: Arc::clone(&self.inner),
+            language: self.language,
+            options: self.options,
+            cache: Arc::clone(&self.cache),
+            max_cache_size: self.max_cache_size,
+        }
     }
 }
 
@@ -281,6 +284,7 @@ pub fn create_edit(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

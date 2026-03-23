@@ -84,7 +84,7 @@ pub fn execute(
                     quick_wins,
                     major_only,
                     min_priority,
-                );
+                )?;
                 std::fs::write(output_path, markdown)?;
                 print_success(&format!(
                     "Refactoring report saved to {}",
@@ -318,76 +318,69 @@ fn render_refactoring_markdown(
     _quick_wins: bool,
     _major_only: bool,
     _min_priority: &str,
-) -> String {
+) -> CliResult<String> {
     use std::fmt::Write;
     let mut out = String::new();
 
-    writeln!(out, "# 🎯 Refactoring Analysis Report\n").unwrap();
-    writeln!(out, "## 📊 Summary\n").unwrap();
+    writeln!(out, "# 🎯 Refactoring Analysis Report\n")?;
+    writeln!(out, "## 📊 Summary\n")?;
     writeln!(
         out,
         "- **Refactoring Score**: {}/100",
         refactoring_result.refactoring_score
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Total Opportunities**: {}",
         refactoring_result.total_opportunities
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Code Smell Fixes**: {}",
         refactoring_result.code_smell_fixes.len()
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Pattern Recommendations**: {}",
         refactoring_result.pattern_recommendations.len()
-    )
-    .unwrap();
+    )?;
 
     let suggestions_to_show = &refactoring_result.code_smell_fixes;
 
     if !suggestions_to_show.is_empty() {
-        writeln!(out, "\n## 🔧 Refactoring Suggestions\n").unwrap();
+        writeln!(out, "\n## 🔧 Refactoring Suggestions\n")?;
         for (i, suggestion) in suggestions_to_show.iter().enumerate() {
-            writeln!(out, "### {}. {}\n", i + 1, suggestion.smell_name).unwrap();
-            writeln!(out, "- **Category**: {:?}", suggestion.category).unwrap();
+            writeln!(out, "### {}. {}\n", i + 1, suggestion.smell_name)?;
+            writeln!(out, "- **Category**: {:?}", suggestion.category)?;
             writeln!(
                 out,
                 "- **Confidence**: {:.1}%",
                 suggestion.confidence * 100.0
-            )
-            .unwrap();
-            writeln!(out, "- **Effort**: {:.1}h", suggestion.effort).unwrap();
+            )?;
+            writeln!(out, "- **Effort**: {:.1}h", suggestion.effort)?;
             writeln!(
                 out,
                 "- **Location**: `{}`",
                 suggestion.location.file.display()
-            )
-            .unwrap();
-            writeln!(out, "- **Description**: {}\n", suggestion.description).unwrap();
+            )?;
+            writeln!(out, "- **Description**: {}\n", suggestion.description)?;
 
             if !suggestion.benefits.is_empty() {
-                writeln!(out, "**Benefits**:").unwrap();
+                writeln!(out, "**Benefits**:")?;
                 for benefit in &suggestion.benefits {
-                    writeln!(out, "- {}", benefit).unwrap();
+                    writeln!(out, "- {}", benefit)?;
                 }
-                writeln!(out).unwrap();
+                writeln!(out)?;
             }
         }
     }
 
-    writeln!(out, "## 📈 Expected Impact\n").unwrap();
+    writeln!(out, "## 📈 Expected Impact\n")?;
     writeln!(
         out,
         "- **Overall Impact**: {}%",
         refactoring_result.impact_analysis.overall_impact
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Quality Impact**: {}%",
@@ -395,8 +388,7 @@ fn render_refactoring_markdown(
             .impact_analysis
             .quality_impact
             .readability_improvement
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Performance Impact**: {}%",
@@ -404,8 +396,7 @@ fn render_refactoring_markdown(
             .impact_analysis
             .performance_impact
             .performance_improvement
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Maintainability Impact**: {}%",
@@ -413,13 +404,13 @@ fn render_refactoring_markdown(
             .impact_analysis
             .maintainability_impact
             .complexity_reduction
-    )
-    .unwrap();
+    )?;
 
-    out
+    Ok(out)
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

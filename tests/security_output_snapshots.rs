@@ -40,6 +40,7 @@ fn render_security_markdown_wrapper(
         compliance,
         filtered,
     )
+    .expect("security markdown renderer should succeed")
 }
 
 #[test]
@@ -62,4 +63,5 @@ fn render_ast_security_markdown_wrapper(
         analyzed,
         failed,
     )
+    .expect("AST security markdown renderer should succeed")
 }

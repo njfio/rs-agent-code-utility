@@ -23,6 +23,8 @@ pub enum CliError {
     Io(std::io::Error),
     /// JSON serialization/deserialization error
     Json(serde_json::Error),
+    /// String formatting error
+    Fmt(fmt::Error),
     /// Invalid configuration
     Config(String),
     /// Invalid command arguments
@@ -52,6 +54,7 @@ impl fmt::Display for CliError {
             CliError::Internal(msg) => write!(f, "Internal error: {}", msg),
             CliError::Io(err) => write!(f, "File I/O error: {}", err),
             CliError::Json(err) => write!(f, "JSON error: {}", err),
+            CliError::Fmt(err) => write!(f, "Formatting error: {}", err),
             CliError::Config(msg) => write!(f, "Configuration error: {}", msg),
             CliError::InvalidArgs(msg) => write!(f, "Invalid arguments: {}", msg),
             CliError::InvalidPath(path) => write!(f, "Invalid path: {}", path.display()),
@@ -69,6 +72,7 @@ impl std::error::Error for CliError {
         match self {
             CliError::Io(err) => Some(err),
             CliError::Json(err) => Some(err),
+            CliError::Fmt(err) => Some(err),
             _ => None,
         }
     }
@@ -83,6 +87,12 @@ impl From<std::io::Error> for CliError {
 impl From<serde_json::Error> for CliError {
     fn from(err: serde_json::Error) -> Self {
         CliError::Json(err)
+    }
+}
+
+impl From<fmt::Error> for CliError {
+    fn from(err: fmt::Error) -> Self {
+        CliError::Fmt(err)
     }
 }
 

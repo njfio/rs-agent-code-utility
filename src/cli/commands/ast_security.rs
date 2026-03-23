@@ -174,7 +174,7 @@ pub async fn execute(
                     summary_only,
                     analyzed_files,
                     failed_files,
-                );
+                )?;
                 std::fs::write(output_path, markdown)?;
                 print_success(&format!(
                     "AST security report saved to {}",
@@ -475,15 +475,15 @@ pub fn render_ast_security_markdown(
     summary_only: bool,
     analyzed_files: usize,
     failed_files: usize,
-) -> String {
+) -> CliResult<String> {
     use std::fmt::Write;
     let mut out = String::new();
 
-    writeln!(out, "# 🔍 AST-Based Security Analysis Report\n").unwrap();
-    writeln!(out, "## 📊 Executive Summary\n").unwrap();
-    writeln!(out, "- **Files Analyzed**: {}", analyzed_files).unwrap();
-    writeln!(out, "- **Files Failed**: {}", failed_files).unwrap();
-    writeln!(out, "- **Total Findings**: {}", findings.len()).unwrap();
+    writeln!(out, "# 🔍 AST-Based Security Analysis Report\n")?;
+    writeln!(out, "## 📊 Executive Summary\n")?;
+    writeln!(out, "- **Files Analyzed**: {}", analyzed_files)?;
+    writeln!(out, "- **Files Failed**: {}", failed_files)?;
+    writeln!(out, "- **Total Findings**: {}", findings.len())?;
 
     // Group findings by severity
     let mut severity_counts = HashMap::new();
@@ -491,7 +491,7 @@ pub fn render_ast_security_markdown(
         *severity_counts.entry(finding.severity.clone()).or_insert(0) += 1;
     }
 
-    writeln!(out, "\n### Findings by Severity\n").unwrap();
+    writeln!(out, "\n### Findings by Severity\n")?;
     for severity in &[
         SecuritySeverity::Critical,
         SecuritySeverity::High,
@@ -500,38 +500,36 @@ pub fn render_ast_security_markdown(
         SecuritySeverity::Info,
     ] {
         let count = severity_counts.get(severity).copied().unwrap_or(0);
-        writeln!(out, "- **{:?}**: {}", severity, count).unwrap();
+        writeln!(out, "- **{:?}**: {}", severity, count)?;
     }
 
     if !summary_only && !findings.is_empty() {
-        writeln!(out, "\n## 🚨 Detailed Findings\n").unwrap();
+        writeln!(out, "\n## 🚨 Detailed Findings\n")?;
         for (i, finding) in findings.iter().enumerate() {
-            writeln!(out, "### {}. {}\n", i + 1, finding.title).unwrap();
-            writeln!(out, "- **Severity**: {:?}", finding.severity).unwrap();
-            writeln!(out, "- **Confidence**: {:.1}%", finding.confidence * 100.0).unwrap();
+            writeln!(out, "### {}. {}\n", i + 1, finding.title)?;
+            writeln!(out, "- **Severity**: {:?}", finding.severity)?;
+            writeln!(out, "- **Confidence**: {:.1}%", finding.confidence * 100.0)?;
             writeln!(
                 out,
                 "- **CWE**: {}",
                 finding.cwe_id.as_deref().unwrap_or("N/A")
-            )
-            .unwrap();
+            )?;
             writeln!(
                 out,
                 "- **Location**: `{}:{}`",
                 finding.file_path, finding.line_number
-            )
-            .unwrap();
-            writeln!(out, "- **Description**: {}", finding.description).unwrap();
+            )?;
+            writeln!(out, "- **Description**: {}", finding.description)?;
 
             if !finding.code_snippet.is_empty() {
-                writeln!(out, "- **Code**:\n```rust\n{}\n```", finding.code_snippet).unwrap();
+                writeln!(out, "- **Code**:\n```rust\n{}\n```", finding.code_snippet)?;
             }
 
-            writeln!(out, "- **Fix**: {}\n", finding.remediation).unwrap();
+            writeln!(out, "- **Fix**: {}\n", finding.remediation)?;
         }
     }
 
-    out
+    Ok(out)
 }
 
 /// Generate SARIF report for findings
@@ -719,6 +717,7 @@ fn print_security_summary(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

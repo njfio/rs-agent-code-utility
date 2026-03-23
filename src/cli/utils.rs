@@ -16,11 +16,10 @@ use std::path::PathBuf;
 /// Create a progress bar with spinner for long operations
 pub fn create_progress_bar(message: &str) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.green} {msg}")
-            .unwrap(),
-    );
+    let style = ProgressStyle::default_spinner()
+        .template("{spinner:.green} {msg}")
+        .unwrap_or_else(|_| ProgressStyle::default_spinner());
+    pb.set_style(style);
     pb.set_message(message.to_string());
     pb
 }
@@ -241,6 +240,7 @@ pub fn print_info(message: &str) {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

@@ -94,7 +94,7 @@ pub fn execute(
                     licenses,
                     outdated,
                     graph,
-                );
+                )?;
                 std::fs::write(output_path, markdown)?;
                 print_success(&format!(
                     "Dependency report saved to {}",
@@ -366,33 +366,30 @@ fn render_dependencies_markdown(
     show_licenses: bool,
     show_outdated: bool,
     show_graph: bool,
-) -> String {
+) -> CliResult<String> {
     use std::fmt::Write;
     let mut out = String::new();
 
-    writeln!(out, "# 🔍 Dependency Analysis Report\n").unwrap();
-    writeln!(out, "## 📊 Summary\n").unwrap();
+    writeln!(out, "# 🔍 Dependency Analysis Report\n")?;
+    writeln!(out, "## 📊 Summary\n")?;
     writeln!(
         out,
         "- **Total Dependencies**: {}",
         dependency_result.total_dependencies
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Direct Dependencies**: {}",
         dependency_result.direct_dependencies
-    )
-    .unwrap();
+    )?;
     writeln!(
         out,
         "- **Transitive Dependencies**: {}",
         dependency_result.transitive_dependencies
-    )
-    .unwrap();
+    )?;
 
     if !dependency_result.package_managers.is_empty() {
-        writeln!(out, "\n## 📦 Package Managers\n").unwrap();
+        writeln!(out, "\n## 📦 Package Managers\n")?;
         for pm in &dependency_result.package_managers {
             writeln!(
                 out,
@@ -402,18 +399,17 @@ fn render_dependencies_markdown(
                     .dependencies_by_manager
                     .get(&pm.manager)
                     .unwrap_or(&0)
-            )
-            .unwrap();
+            )?;
         }
     }
 
     if show_vulnerabilities && !dependency_result.vulnerabilities.is_empty() {
-        writeln!(out, "\n## 🚨 Security Vulnerabilities\n").unwrap();
+        writeln!(out, "\n## 🚨 Security Vulnerabilities\n")?;
         for vuln in &dependency_result.vulnerabilities {
-            writeln!(out, "### {}\n", vuln.title).unwrap();
-            writeln!(out, "- **Dependency**: {}", vuln.dependency).unwrap();
-            writeln!(out, "- **Severity**: {}", vuln.severity).unwrap();
-            writeln!(out, "- **Description**: {}\n", vuln.description).unwrap();
+            writeln!(out, "### {}\n", vuln.title)?;
+            writeln!(out, "- **Dependency**: {}", vuln.dependency)?;
+            writeln!(out, "- **Severity**: {}", vuln.severity)?;
+            writeln!(out, "- **Description**: {}\n", vuln.description)?;
         }
     }
 
@@ -423,55 +419,51 @@ fn render_dependencies_markdown(
             .compliance_issues
             .is_empty()
     {
-        writeln!(out, "\n## ⚖️ License Compliance Issues\n").unwrap();
+        writeln!(out, "\n## ⚖️ License Compliance Issues\n")?;
         for issue in &dependency_result.license_analysis.compliance_issues {
             writeln!(
                 out,
                 "- **{}**: {} license issue - {}",
                 issue.dependency, issue.issue_type, issue.description
-            )
-            .unwrap();
+            )?;
         }
     }
 
     if show_outdated && !dependency_result.outdated_dependencies.is_empty() {
-        writeln!(out, "\n## 📅 Outdated Dependencies\n").unwrap();
+        writeln!(out, "\n## 📅 Outdated Dependencies\n")?;
         for outdated in &dependency_result.outdated_dependencies {
             writeln!(
                 out,
                 "- **{}**: {} → {} ({})",
                 outdated.name, outdated.current_version, outdated.latest_version, outdated.urgency
-            )
-            .unwrap();
+            )?;
         }
     }
 
     if show_graph {
-        writeln!(out, "\n## 🕸️ Dependency Graph Analysis\n").unwrap();
+        writeln!(out, "\n## 🕸️ Dependency Graph Analysis\n")?;
         writeln!(
             out,
             "- **Total Nodes**: {}",
             dependency_result.graph_analysis.total_nodes
-        )
-        .unwrap();
+        )?;
         writeln!(
             out,
             "- **Maximum Depth**: {}",
             dependency_result.graph_analysis.max_depth
-        )
-        .unwrap();
+        )?;
         writeln!(
             out,
             "- **Circular Dependencies**: {}",
             dependency_result.graph_analysis.circular_dependencies.len()
-        )
-        .unwrap();
+        )?;
     }
 
-    out
+    Ok(out)
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
