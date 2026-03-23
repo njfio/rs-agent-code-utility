@@ -1,6 +1,7 @@
 //! AI Service Tests
 //!
 //! Tests for the AI service layer functionality
+#![allow(clippy::field_reassign_with_default)]
 
 use rust_tree_sitter::ai::config::{RateLimitConfig, RetryConfig};
 use rust_tree_sitter::ai::{

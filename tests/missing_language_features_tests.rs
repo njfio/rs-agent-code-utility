@@ -58,19 +58,19 @@ class Counter {
 
     // Test generator functions
     let generators = JavaScriptSyntax::find_generators(&tree, js_code);
-    assert!(generators.len() >= 1);
+    assert!(!generators.is_empty());
     assert!(generators.iter().any(|(name, _, _)| name == "fibonacci"));
 
     // Test async functions
     let async_functions = JavaScriptSyntax::find_async_functions(&tree, js_code);
-    assert!(async_functions.len() >= 1);
+    assert!(!async_functions.is_empty());
     assert!(async_functions
         .iter()
         .any(|(name, _, _)| name == "fetchData"));
 
     // Test closures (arrow functions)
     let closures = JavaScriptSyntax::find_closures(&tree, js_code);
-    assert!(closures.len() >= 1);
+    assert!(!closures.is_empty());
 
     // Test destructuring patterns
     let destructuring = JavaScriptSyntax::find_destructuring_patterns(&tree, js_code);
@@ -78,7 +78,7 @@ class Counter {
 
     // Test classes with private fields
     let private_classes = JavaScriptSyntax::find_classes_with_private_fields(&tree, js_code);
-    assert!(private_classes.len() >= 1);
+    assert!(!private_classes.is_empty());
     assert!(private_classes.iter().any(|(name, fields, _, _)| {
         name == "Counter" && fields.contains(&"#count".to_string())
     }));
@@ -144,16 +144,16 @@ class UserComponent {
 
     // Test namespaces
     let namespaces = TypeScriptSyntax::find_namespaces(&tree, ts_code);
-    assert!(namespaces.len() >= 1);
+    assert!(!namespaces.is_empty());
     assert!(namespaces.iter().any(|(name, _, _)| name == "Utils"));
 
     // Test mapped types
     let mapped_types = TypeScriptSyntax::find_mapped_types(&tree, ts_code);
-    assert!(mapped_types.len() >= 1);
+    assert!(!mapped_types.is_empty());
 
     // Test conditional types
     let conditional_types = TypeScriptSyntax::find_conditional_types(&tree, ts_code);
-    assert!(conditional_types.len() >= 1);
+    assert!(!conditional_types.is_empty());
 
     // Test decorators
     let decorators = TypeScriptSyntax::find_decorators(&tree, ts_code);
@@ -245,25 +245,25 @@ filter_even = lambda lst: [x for x in lst if x % 2 == 0]
 
     // Test async functions
     let async_functions = PythonSyntax::find_async_functions(&tree, py_code);
-    assert!(async_functions.len() >= 1);
+    assert!(!async_functions.is_empty());
     assert!(async_functions
         .iter()
         .any(|(name, _, _)| name == "fetch_data"));
 
     // Test context managers
     let context_managers = PythonSyntax::find_context_managers(&tree, py_code);
-    assert!(context_managers.len() >= 1);
+    assert!(!context_managers.is_empty());
 
     // Test metaclasses
     let metaclasses = PythonSyntax::find_metaclasses(&tree, py_code);
-    assert!(metaclasses.len() >= 1);
+    assert!(!metaclasses.is_empty());
     assert!(metaclasses.iter().any(|(class_name, meta_name, _, _)| {
         class_name == "Singleton" && meta_name == "SingletonMeta"
     }));
 
     // Test dataclasses
     let dataclasses = PythonSyntax::find_dataclasses(&tree, py_code);
-    assert!(dataclasses.len() >= 1);
+    assert!(!dataclasses.is_empty());
     assert!(dataclasses.iter().any(|(name, _, _)| name == "User"));
 
     // Test typed functions
@@ -340,14 +340,14 @@ int multiply(int a, int b) { return a * b; }
 
     // Test function pointers
     let function_pointers = CSyntax::find_function_pointers(&tree, c_code);
-    assert!(function_pointers.len() >= 1);
+    assert!(!function_pointers.is_empty());
     assert!(function_pointers
         .iter()
         .any(|(name, _, _, _)| name == "operation_t"));
 
     // Test unions
     let unions = CSyntax::find_unions(&tree, c_code);
-    assert!(unions.len() >= 1);
+    assert!(!unions.is_empty());
     assert!(unions.iter().any(|(name, _, _)| name == "Data"));
 
     // Test bit fields
@@ -360,14 +360,14 @@ int multiply(int a, int b) { return a * b; }
 
     // Test static functions
     let static_functions = CSyntax::find_static_functions(&tree, c_code);
-    assert!(static_functions.len() >= 1);
+    assert!(!static_functions.is_empty());
     assert!(static_functions
         .iter()
         .any(|(name, _, _)| name == "internal_helper"));
 
     // Test inline functions
     let inline_functions = CSyntax::find_inline_functions(&tree, c_code);
-    assert!(inline_functions.len() >= 1);
+    assert!(!inline_functions.is_empty());
     assert!(inline_functions
         .iter()
         .any(|(name, _, _)| name == "fast_add"));
@@ -480,14 +480,14 @@ func main() {
 
     // Test embedded types
     let embedded_types = GoSyntax::find_embedded_types(&tree, go_code);
-    assert!(embedded_types.len() >= 1);
+    assert!(!embedded_types.is_empty());
     assert!(embedded_types.iter().any(|(struct_name, embedded, _, _)| {
         struct_name == "Employee" && embedded.contains(&"Person".to_string())
     }));
 
     // Test type assertions
     let type_assertions = GoSyntax::find_type_assertions(&tree, go_code);
-    assert!(type_assertions.len() >= 1);
+    assert!(!type_assertions.is_empty());
 
     Ok(())
 }
@@ -596,12 +596,12 @@ where
 
     // Test macros
     let macros = RustSyntax::find_macros(&tree, rust_code);
-    assert!(macros.len() >= 1);
+    assert!(!macros.is_empty());
     assert!(macros.iter().any(|(name, _, _, _)| name == "vec_of"));
 
     // Test lifetimes
     let lifetimes = RustSyntax::find_lifetimes(&tree, rust_code);
-    assert!(lifetimes.len() >= 1);
+    assert!(!lifetimes.is_empty());
     assert!(lifetimes
         .iter()
         .any(|(func_name, lifetime, _, _)| { func_name == "longest" && lifetime.contains("'a") }));
@@ -615,7 +615,7 @@ where
 
     // Test const generics
     let const_generics = RustSyntax::find_const_generics(&tree, rust_code);
-    assert!(const_generics.len() >= 1);
+    assert!(!const_generics.is_empty());
     assert!(const_generics
         .iter()
         .any(|(struct_name, const_param, _, _)| {

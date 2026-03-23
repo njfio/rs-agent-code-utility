@@ -2,6 +2,11 @@
 //!
 //! Provides intelligent security vulnerability scanning using AST parsing
 //! and semantic analysis to reduce false positives and improve accuracy.
+#![allow(
+    clippy::ptr_arg,
+    clippy::too_many_arguments,
+    clippy::wildcard_in_or_patterns
+)]
 
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;

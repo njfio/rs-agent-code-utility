@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use rust_tree_sitter::ai::{AIFeature, AIRequest, AIResult, AIServiceBuilder};
 use std::time::Instant;
 

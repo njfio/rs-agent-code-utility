@@ -821,24 +821,20 @@ impl SymbolTableAnalyzer {
         let mut current_scope_id = scope_id;
         let mut distance = 0;
 
-        loop {
-            if let Some(scope) = self.symbol_table.scopes.get(&current_scope_id) {
-                // Check if symbol is defined in current scope
-                if let Some(&symbol_id) = scope.symbols.get(name) {
-                    return Some(SymbolResolution {
-                        symbol_id,
-                        resolved_scope: current_scope_id,
-                        scope_distance: distance,
-                    });
-                }
+        while let Some(scope) = self.symbol_table.scopes.get(&current_scope_id) {
+            // Check if symbol is defined in current scope
+            if let Some(&symbol_id) = scope.symbols.get(name) {
+                return Some(SymbolResolution {
+                    symbol_id,
+                    resolved_scope: current_scope_id,
+                    scope_distance: distance,
+                });
+            }
 
-                // Move to parent scope
-                if let Some(parent_id) = scope.parent {
-                    current_scope_id = parent_id;
-                    distance += 1;
-                } else {
-                    break;
-                }
+            // Move to parent scope
+            if let Some(parent_id) = scope.parent {
+                current_scope_id = parent_id;
+                distance += 1;
             } else {
                 break;
             }

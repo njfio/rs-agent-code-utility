@@ -1,4 +1,5 @@
 //! Map command implementation
+#![allow(clippy::too_many_arguments)]
 
 use crate::cli::error::{validate_path, CliResult};
 use crate::{

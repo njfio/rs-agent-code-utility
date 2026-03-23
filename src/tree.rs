@@ -1,4 +1,5 @@
 //! Syntax tree navigation and manipulation utilities
+#![allow(clippy::only_used_in_recursion)]
 
 use crate::error::{Error, Result};
 use tree_sitter::{InputEdit, Point, Range};

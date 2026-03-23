@@ -1,10 +1,10 @@
 use rust_tree_sitter::wiki::{WikiConfig, WikiConfigBuilder, WikiGenerator};
 use rust_tree_sitter::Result;
 use std::fs;
-use std::path::PathBuf;
+use std::path::Path;
 use tempfile::TempDir;
 
-fn write_rs(dir: &PathBuf, rel: &str, content: &str) -> Result<()> {
+fn write_rs(dir: &Path, rel: &str, content: &str) -> Result<()> {
     let p = dir.join(rel);
     if let Some(parent) = p.parent() {
         fs::create_dir_all(parent)?;

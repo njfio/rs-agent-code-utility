@@ -32,6 +32,6 @@ fn cli_symbols_json() -> Result<(), Box<dyn std::error::Error>> {
 
     let json_str = &data[json_start..json_end];
     let json: Value = serde_json::from_str(json_str)?;
-    assert!(json.as_object().unwrap().len() > 0);
+    assert!(!json.as_object().unwrap().is_empty());
     Ok(())
 }

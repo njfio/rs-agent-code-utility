@@ -1,3 +1,5 @@
+#![allow(clippy::ptr_arg, unused_variables)]
+
 use clap::{Parser, Subcommand};
 use rust_tree_sitter::{
     ai::{AIError, AIFeature, AIRequest, AIResult, AIServiceBuilder},

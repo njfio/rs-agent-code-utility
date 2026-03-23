@@ -21,7 +21,7 @@ async fn main() -> AIResult<()> {
         .map_err(|e| AIError::configuration(format!("Analyzer error: {}", e)))?;
 
     let analysis = analyzer
-        .analyze_directory(&PathBuf::from("./src"))
+        .analyze_directory(PathBuf::from("./src"))
         .map_err(|e| AIError::configuration(format!("Analysis error: {}", e)))?;
 
     println!(

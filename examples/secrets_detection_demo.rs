@@ -12,7 +12,6 @@
 
 use rust_tree_sitter::infrastructure::{AppConfig, DatabaseManager};
 use rust_tree_sitter::security::SecretsDetector;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 #[tokio::main]
@@ -71,7 +70,7 @@ const DB_PASSWORD: &str = "prod_super_secret_password";
     );
     for finding in &prod_results {
         println!(
-            "  - {}: confidence {:.2}, severity: {:?}",
+            "  - {:?}: confidence {:.2}, severity: {:?}",
             finding.secret_type, finding.confidence, finding.severity
         );
     }
@@ -144,13 +143,13 @@ const REAL_PASSWORD = "my_secure_password_2024!";
 
     println!("\nReal findings:");
     for finding in real_findings {
-        println!("  ✅ {}: {}", finding.secret_type, finding.matched_text);
+        println!("  ✅ {:?}: {}", finding.secret_type, finding.matched_text);
     }
 
     println!("\nFiltered false positives:");
     for finding in false_positives {
         println!(
-            "  ❌ {}: {} (confidence: {:.2})",
+            "  ❌ {:?}: {} (confidence: {:.2})",
             finding.secret_type, finding.matched_text, finding.confidence
         );
     }

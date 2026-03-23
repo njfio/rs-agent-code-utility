@@ -1,4 +1,5 @@
 //! Insights command implementation
+#![allow(clippy::wildcard_in_or_patterns)]
 
 use crate::cli::error::{validate_path, CliResult};
 use crate::cli::utils::create_progress_bar;

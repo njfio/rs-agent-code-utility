@@ -2,13 +2,13 @@
 //!
 //! This example demonstrates how to use the new AI service layer with
 //! configuration-driven provider setup.
+#![allow(clippy::field_reassign_with_default)]
 
 use rust_tree_sitter::ai::config::{RateLimitConfig, RetryConfig};
 use rust_tree_sitter::ai::{
     AIConfig as AIServiceConfig, AIFeature, AIProvider, AIRequest, AIService, AIServiceBuilder,
     ModelConfig, ProviderConfig,
 };
-use std::collections::HashMap;
 use std::time::Duration;
 
 #[tokio::main]

@@ -2,6 +2,7 @@
 //!
 //! This module provides comprehensive tracking of code changes, patterns,
 //! and evolution metrics for software development analysis.
+#![allow(clippy::too_many_arguments)]
 
 use crate::constants::common::RiskLevel;
 use crate::Result;

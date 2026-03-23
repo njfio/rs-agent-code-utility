@@ -1,4 +1,5 @@
 //! Deterministic false-positive filter (no ML/AI, fast and predictable)
+#![allow(clippy::should_implement_trait)]
 
 use crate::advanced_security::{SecuritySeverity, SecurityVulnerability};
 

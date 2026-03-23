@@ -9,6 +9,8 @@ use rust_tree_sitter::{
 };
 use std::path::PathBuf;
 
+use std::f64::consts::{E, PI};
+
 fn create_sample_analysis_result() -> AnalysisResult {
     let file_info = FileInfo {
         path: PathBuf::from("src/test.rs"),
@@ -414,9 +416,9 @@ fn test_literal_matching() {
     assert!(!engine.literals_match_public(&bool1, &bool3));
 
     // Test float literals (with tolerance)
-    let float1 = LiteralValue::Float(3.14159);
-    let float2 = LiteralValue::Float(3.14159);
-    let float3 = LiteralValue::Float(2.71828);
+    let float1 = LiteralValue::Float(PI);
+    let float2 = LiteralValue::Float(PI);
+    let float3 = LiteralValue::Float(E);
 
     assert!(engine.literals_match_public(&float1, &float2));
     assert!(!engine.literals_match_public(&float1, &float3));
@@ -440,11 +442,13 @@ fn test_reasoning_metrics() {
 
 #[test]
 fn test_configuration_effects() {
-    let mut config = ReasoningConfig::default();
-    config.enable_inductive = false;
-    config.enable_abductive = false;
-    config.enable_constraints = false;
-    config.enable_theorem_proving = false;
+    let config = ReasoningConfig {
+        enable_inductive: false,
+        enable_abductive: false,
+        enable_constraints: false,
+        enable_theorem_proving: false,
+        ..ReasoningConfig::default()
+    };
 
     let mut engine = AutomatedReasoningEngine::with_config(config);
     let analysis = create_sample_analysis_result();

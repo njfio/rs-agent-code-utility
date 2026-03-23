@@ -684,9 +684,10 @@ impl TestCoverageAnalyzer {
             .count();
         score -= (poorly_named_tests as f64 * 5.0).min(25.0);
 
-        score
-            .max(crate::constants::scoring::MIN_SCORE)
-            .min(crate::constants::test_coverage::MAX_COVERAGE_SCORE) as u8
+        score.clamp(
+            crate::constants::scoring::MIN_SCORE,
+            crate::constants::test_coverage::MAX_COVERAGE_SCORE,
+        ) as u8
     }
 
     /// Analyze coverage for source files

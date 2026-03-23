@@ -8,6 +8,7 @@
 //! - Cross-references between modules/files
 //! - Security trace analysis and vulnerability visualization
 //! - OWASP recommendations and security hotspot identification
+#![allow(clippy::if_same_then_else)]
 //!
 //! The API follows Result<T,E> patterns with comprehensive error handling
 //! and uses a builder for configuration.
@@ -452,7 +453,7 @@ impl WikiGenerator {
         self.write_main_js_impl(&assets.join("main.js"))?;
 
         // Initialize AI enhancer placeholder - to be implemented when enhanced AI module is ready
-        let ai_enhancer: Option<String> = if self.config.enhanced_ai_enabled {
+        let _ai_enhancer: Option<String> = if self.config.enhanced_ai_enabled {
             Some("enhanced_ai_enabled".to_string())
         } else {
             None
@@ -477,7 +478,7 @@ impl WikiGenerator {
         };
 
         // Generate AI-enhanced relationship map across all files
-        let relationship_map = self.generate_relationship_map_simple(analysis);
+        let _relationship_map = self.generate_relationship_map_simple(analysis);
 
         // Performance analysis placeholder - to be implemented when performance_analysis module is available
         let _performance_analysis_enabled = self.config.performance_analysis_enabled;
@@ -521,14 +522,14 @@ impl WikiGenerator {
             };
 
             // Determine additional fields for search filters
-            let language = file.language.clone();
-            let file_type = file
+            let _language = file.language.clone();
+            let _file_type = file
                 .path
                 .extension()
                 .and_then(|ext| ext.to_str())
                 .unwrap_or("file")
                 .to_string();
-            let security_level = if file_hotspots.is_empty() {
+            let _security_level = if file_hotspots.is_empty() {
                 "low".to_string()
             } else if file_hotspots
                 .iter()
@@ -545,7 +546,7 @@ impl WikiGenerator {
             };
 
             // Generate security enhancements for this file if enabled
-            let security_block = if let Some(ref security) = security_analysis {
+            let security_block = if security_analysis.is_some() {
                 // Generate OWASP recommendations for this file
                 let owasp_rec = if self.config.security_insights_enabled {
                     let temp_generator = SecurityWikiGenerator::new()?;
@@ -1413,7 +1414,7 @@ updateSearch();
     }
     */
 
-    /// Build sidebar HTML with search input, filters, and links
+    // Build sidebar HTML with search input, filters, and links.
     /* moved to templates.rs
     fn build_sidebar_with_search(
         &self,
@@ -1557,7 +1558,7 @@ updateSearch();
         relationships
     }
 
-    /// Write a security overview page
+    // Write a security overview page.
     /* moved to templates.rs
     fn write_security_overview_page(&self, out: &Path, security: &security_enhancements::SecurityAnalysisResult) -> Result<()> {
         let mut content = String::new();
@@ -1619,7 +1620,7 @@ updateSearch();
     }
     */
 
-    /// Write security hotspots page
+    // Write security hotspots page.
     /* moved to templates.rs
     fn write_security_hotspots_page(&self, out: &Path, security: &security_enhancements::SecurityAnalysisResult) -> Result<()> {
         let mut content = String::new();
@@ -1666,7 +1667,7 @@ updateSearch();
     }
     */
 
-    /// Generate security overview block for inclusion in main page
+    // Generate security overview block for inclusion in main page.
     /* moved to templates.rs
     fn generate_security_overview_block(&self, security: &security_enhancements::SecurityAnalysisResult) -> String {
         let mut block = String::new();
@@ -1683,7 +1684,7 @@ updateSearch();
     }
     */
 
-    /// Update write_file_page signature and implementation
+    // Update write_file_page signature and implementation.
     /* moved to templates.rs
         fn write_file_page(&self, page_path: &Path, title: &str, description: &str, file: &crate::analyzer::FileInfo, root_path: &Path, security_block: &str, nav_content: &str, ai_block_html: &str) -> Result<()> {
             let mut rels = String::new();

@@ -10,6 +10,7 @@
 //! - Variable scope and lifetime tracking
 //! - Type information and semantic relationships
 //! - Security-relevant context (sanitization, validation, etc.)
+#![allow(clippy::only_used_in_recursion, clippy::too_many_arguments)]
 
 use crate::error::Result;
 use crate::languages::Language;
@@ -1770,7 +1771,7 @@ mod tests {
     fn test_constant_value_variants() {
         let string_val = ConstantValue::String("test".to_string());
         let int_val = ConstantValue::Integer(42);
-        let float_val = ConstantValue::Float(3.14);
+        let float_val = ConstantValue::Float(std::f64::consts::PI);
         let bool_val = ConstantValue::Boolean(true);
         let null_val = ConstantValue::Null;
         let unknown_val = ConstantValue::Unknown;
@@ -1786,7 +1787,7 @@ mod tests {
         }
 
         match float_val {
-            ConstantValue::Float(f) => assert!((f - 3.14).abs() < f64::EPSILON),
+            ConstantValue::Float(f) => assert!((f - std::f64::consts::PI).abs() < f64::EPSILON),
             _ => panic!("Expected float value"),
         }
 

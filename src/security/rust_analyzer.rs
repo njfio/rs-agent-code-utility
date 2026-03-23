@@ -2,6 +2,7 @@
 //!
 //! This module implements security analysis for Rust code using AST parsing,
 //! focusing on detecting common vulnerabilities and unsafe patterns.
+#![allow(clippy::only_used_in_recursion)]
 
 use crate::error::Result;
 

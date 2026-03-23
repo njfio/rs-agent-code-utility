@@ -18,6 +18,7 @@
 //! ## Usage Examples
 //!
 //! ### Basic File Analysis
+#![allow(clippy::only_used_in_recursion)]
 //!
 //! ```rust
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
@@ -118,7 +119,8 @@ impl std::str::FromStr for AnalysisDepth {
         match s.to_lowercase().as_str() {
             "basic" => Ok(AnalysisDepth::Basic),
             "deep" => Ok(AnalysisDepth::Deep),
-            "full" | _ => Ok(AnalysisDepth::Full),
+            "full" => Ok(AnalysisDepth::Full),
+            _ => Ok(AnalysisDepth::Full),
         }
     }
 }

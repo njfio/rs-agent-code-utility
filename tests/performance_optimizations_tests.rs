@@ -139,7 +139,7 @@ fn test_optimized_tree_traversal() -> std::result::Result<(), Box<dyn std::error
         .find_descendants(|node| node.kind() == "block");
     let descendants_time = start.elapsed();
 
-    assert!(all_blocks.len() > 0, "Should find block nodes");
+    assert!(!all_blocks.is_empty(), "Should find block nodes");
     println!("Find descendants time: {:?}", descendants_time);
 
     Ok(())

@@ -20,6 +20,7 @@
 //! **Current Reality:** Basic correlation engine implemented with CWE mappings and
 //! pattern-based detection. Production-ready with offline vulnerability database
 //! integration. Epic 4 (Vulnerability Database Integration) completed.
+#![allow(clippy::only_used_in_recursion)]
 
 #[cfg(feature = "net")]
 use crate::ai::AIService;
@@ -754,8 +755,6 @@ impl AdvancedSecurityAnalyzer {
         })
     }
 
-    /// Apply AI-powered false positive filtering to all findings
-
     /// Get file content for analysis context
     fn get_file_content(
         &self,
@@ -779,6 +778,7 @@ impl AdvancedSecurityAnalyzer {
 
     /// Apply AI-powered false positive filtering synchronously
     #[cfg(feature = "net")]
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     fn apply_ai_filtering_sync(
         &self,
         ai_filter: &crate::security::ai_false_positive_filter::AIFalsePositiveFilter,
@@ -869,17 +869,20 @@ impl AdvancedSecurityAnalyzer {
 
     /// Check if severity meets the minimum threshold
     fn meets_severity_threshold(&self, severity: &SecuritySeverity) -> bool {
-        match (&self.config.min_severity, severity) {
-            (SecuritySeverity::Critical, SecuritySeverity::Critical) => true,
-            (SecuritySeverity::High, SecuritySeverity::Critical | SecuritySeverity::High) => true,
-            (
-                SecuritySeverity::Medium,
-                SecuritySeverity::Critical | SecuritySeverity::High | SecuritySeverity::Medium,
-            ) => true,
-            (SecuritySeverity::Low, _) => true,
-            (SecuritySeverity::Info, _) => true,
-            _ => false,
-        }
+        matches!(
+            (&self.config.min_severity, severity),
+            (SecuritySeverity::Critical, SecuritySeverity::Critical)
+                | (
+                    SecuritySeverity::High,
+                    SecuritySeverity::Critical | SecuritySeverity::High,
+                )
+                | (
+                    SecuritySeverity::Medium,
+                    SecuritySeverity::Critical | SecuritySeverity::High | SecuritySeverity::Medium,
+                )
+                | (SecuritySeverity::Low, _)
+                | (SecuritySeverity::Info, _)
+        )
     }
 
     /// Detect OWASP Top 10 vulnerabilities using AST-based analysis
@@ -2123,7 +2126,7 @@ impl AdvancedSecurityAnalyzer {
         // Factor in compliance score
         score *= compliance.owasp_score as f64 / 100.0;
 
-        score.max(0.0).min(100.0) as u8
+        score.clamp(0.0, 100.0) as u8
     }
     /// Build security context from AST
     fn build_security_context(&self, tree: &SyntaxTree, file: &FileInfo) -> SecurityContext {

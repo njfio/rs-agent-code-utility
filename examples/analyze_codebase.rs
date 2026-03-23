@@ -203,7 +203,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nMost complex files (by symbol count):");
     for file_info in files_by_complexity.iter().take(5) {
-        if file_info.symbols.len() > 0 {
+        if !file_info.symbols.is_empty() {
             println!(
                 "  {} ({} symbols)",
                 file_info.path.display(),

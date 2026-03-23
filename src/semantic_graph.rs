@@ -2,6 +2,7 @@
 //!
 //! This module provides graph query interface with relationship traversal
 //! and similarity search capabilities for code semantic analysis.
+#![allow(clippy::vec_init_then_push)]
 
 use crate::{AnalysisResult, FileInfo, Result};
 use std::collections::{HashMap, HashSet, VecDeque};

@@ -37,7 +37,7 @@ fn test_cache_hit_ratio() -> Result<(), Box<dyn std::error::Error>> {
     // Hit ratio should be greater than 0 after cache usage
     let hit_ratio = analyzer.cache_hit_ratio();
     assert!(
-        hit_ratio >= 0.0 && hit_ratio <= 1.0,
+        (0.0..=1.0).contains(&hit_ratio),
         "Hit ratio should be between 0 and 1"
     );
 

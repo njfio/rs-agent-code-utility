@@ -1375,7 +1375,7 @@ impl TaintAnalyzer {
         confidence *= 1.0 + (direct_assignments as f64 * 0.1);
 
         // Ensure confidence stays within bounds
-        confidence.max(0.1).min(1.0)
+        confidence.clamp(0.1, 1.0)
     }
 
     /// Check for sanitization along the path

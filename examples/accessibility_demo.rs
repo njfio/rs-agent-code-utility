@@ -1,3 +1,5 @@
+#![allow(clippy::field_reassign_with_default)]
+
 // use rust_tree_sitter::ai::AIService; // not used in this demo build
 use rust_tree_sitter::cli::output::{AccessibilityConfig, AccessibleOutputHandler, AnalysisOutput};
 use rust_tree_sitter::{AnalysisResult, CodebaseAnalyzer};

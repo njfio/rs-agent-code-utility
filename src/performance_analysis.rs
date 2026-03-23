@@ -6,6 +6,7 @@
 //! - I/O operation optimization
 //! - Concurrency and parallelization opportunities
 //! - Performance bottleneck identification
+#![allow(clippy::only_used_in_recursion)]
 
 use crate::analysis_common::PatternAnalyzer;
 use crate::analysis_utils::{ComplexityCalculator, LanguageParser};
@@ -751,10 +752,9 @@ impl PerformanceAnalyzer {
         // Advanced memory allocation tracking
         let memory_tracking = if self.config.memory_analysis {
             let mut memory_tracker = MemoryTracker::new();
-            match memory_tracker.analyze_memory_allocations(analysis_result) {
-                Ok(tracking_result) => Some(tracking_result),
-                Err(_) => None, // Graceful fallback if memory tracking fails
-            }
+            memory_tracker
+                .analyze_memory_allocations(analysis_result)
+                .ok()
         } else {
             None
         };
@@ -2021,7 +2021,7 @@ impl PerformanceAnalyzer {
             _ => vec!["for ", "while "],
         };
 
-        let linear_operations = vec![
+        let linear_operations = [
             ".find(",
             ".contains(",
             ".indexOf(",
@@ -3525,7 +3525,7 @@ impl PerformanceAnalyzer {
             score -= deduction;
         }
 
-        score.max(0.0).min(crate::constants::scoring::MAX_SCORE) as u8
+        score.clamp(0.0, crate::constants::scoring::MAX_SCORE) as u8
     }
 }
 

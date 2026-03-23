@@ -233,9 +233,9 @@ pub mod tree;
 /// Wiki website generator
 pub mod wiki;
 
-/// Integration testing framework
+// Integration testing framework
 // pub mod integration_testing;
-/// Performance benchmarking suite
+// Performance benchmarking suite
 // pub mod performance_benchmarking;
 // Re-export commonly used types
 

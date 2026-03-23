@@ -637,7 +637,5 @@ mod tests {
     async fn test_pattern_matching() {
         // Test basic functionality without accessing private methods
         let _filter = MLFalsePositiveFilter::new();
-        // This test just verifies the filter can be created
-        assert!(true, "ML filter created successfully");
     }
 }

@@ -2,6 +2,7 @@
 //!
 //! This module provides semantic analysis capabilities for security detection,
 //! replacing pattern-based approaches with proper AST understanding.
+#![allow(clippy::nonminimal_bool)]
 
 use crate::error::{Error, Result};
 use crate::languages::Language;

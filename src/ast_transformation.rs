@@ -7,6 +7,7 @@
 //! - Semantic preservation checks
 //! - Transformation rollback capabilities
 //! - Language-specific transformation rules
+#![allow(clippy::only_used_in_recursion)]
 
 use crate::constants::common::RiskLevel;
 use crate::{Error, Language, Node, Parser, Result, SyntaxTree};

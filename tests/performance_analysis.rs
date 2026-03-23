@@ -301,7 +301,7 @@ fn binary_search(arr: &[i32], target: i32) -> Option<usize> {
         .collect();
 
     assert!(
-        high_severity_hotspots.len() >= 1,
+        !high_severity_hotspots.is_empty(),
         "Should detect at least 1 high severity hotspot, found: {}",
         high_severity_hotspots.len()
     );
@@ -454,7 +454,7 @@ fn recursive_allocation(depth: usize) -> Vec<i32> {
         .collect();
 
     assert!(
-        memory_recommendations.len() >= 1,
+        !memory_recommendations.is_empty(),
         "Should provide memory-related recommendations, found: {}",
         memory_recommendations.len()
     );

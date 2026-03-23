@@ -759,8 +759,10 @@ mod tests {
     #[test]
     fn test_disk_cache_basic() {
         let temp_dir = tempdir().unwrap();
-        let mut config = CacheConfig::default();
-        config.cache_dir = temp_dir.path().to_path_buf();
+        let config = CacheConfig {
+            cache_dir: temp_dir.path().to_path_buf(),
+            ..CacheConfig::default()
+        };
 
         let cache: DiskCache<String> = DiskCache::new(config).unwrap();
 

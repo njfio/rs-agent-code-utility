@@ -1,4 +1,5 @@
 //! Parser functionality for tree-sitter
+#![allow(clippy::too_many_arguments)]
 
 use crate::error::{Error, Result};
 use crate::languages::Language;

@@ -1,3 +1,5 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use crate::{Result, SyntaxTree};
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;

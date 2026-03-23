@@ -2,6 +2,7 @@
 //!
 //! This module walks `CodebaseAnalyzer` results and constructs simplified
 //! graphs that can be exported in GraphViz DOT or Mermaid formats.
+#![allow(clippy::vec_init_then_push)]
 
 use crate::{AnalysisResult, FileInfo, Symbol};
 use std::collections::HashSet;
@@ -189,9 +190,7 @@ fn extract_function_calls_simple(content: &str) -> Vec<String> {
         let mut current_word = String::new();
 
         while let Some(ch) = chars.next() {
-            if ch.is_alphabetic() || ch == '_' {
-                current_word.push(ch);
-            } else if ch.is_numeric() && !current_word.is_empty() {
+            if ch.is_alphabetic() || ch == '_' || (ch.is_numeric() && !current_word.is_empty()) {
                 current_word.push(ch);
             } else if ch == '(' && !current_word.is_empty() {
                 // Found a function call
@@ -351,8 +350,8 @@ fn extract_dependencies_string_based(content: &str) -> Vec<String> {
         let trimmed = line.trim();
         if trimmed.starts_with("use ") || trimmed.starts_with("pub use ") {
             // Skip "use" or "pub use" and get the rest
-            let use_part = if trimmed.starts_with("pub use ") {
-                &trimmed[8..] // Skip "pub use "
+            let use_part = if let Some(stripped) = trimmed.strip_prefix("pub use ") {
+                stripped
             } else {
                 &trimmed[4..] // Skip "use "
             };

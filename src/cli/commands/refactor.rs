@@ -1,6 +1,7 @@
 //! Refactor command implementation
 //!
 //! Provides smart refactoring suggestions with configurable output formats.
+#![allow(clippy::wildcard_in_or_patterns)]
 
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;

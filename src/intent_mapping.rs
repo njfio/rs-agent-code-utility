@@ -2,6 +2,7 @@
 //!
 //! This module provides comprehensive mapping between natural language requirements,
 //! design intent, and actual code implementation for AI-assisted development.
+#![allow(clippy::field_reassign_with_default, clippy::ptr_arg)]
 
 use crate::constants::intent_mapping::*;
 use crate::embeddings::{Embedding, EmbeddingConfig, EmbeddingEngine};
@@ -2922,7 +2923,7 @@ impl IntentMappingSystem {
         }
 
         // Ensure confidence is within valid range
-        adjusted_confidence.max(0.0).min(1.0)
+        adjusted_confidence.clamp(0.0, 1.0)
     }
 
     /// Determine validation status based on confidence score

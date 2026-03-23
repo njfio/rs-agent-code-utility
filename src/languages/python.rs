@@ -2,6 +2,7 @@
 //!
 //! This module provides Python-specific utilities for parsing and analyzing
 //! Python source code using tree-sitter.
+#![allow(clippy::if_same_then_else, clippy::type_complexity)]
 
 use crate::error::Result;
 use crate::query::Query;

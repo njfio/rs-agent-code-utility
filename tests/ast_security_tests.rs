@@ -2,6 +2,7 @@
 //!
 //! These tests verify the accuracy, performance, and reliability of the
 //! AST-based security analyzer and its language-specific implementations.
+#![allow(clippy::assertions_on_constants)]
 
 #[allow(unused_imports)]
 use rust_tree_sitter::tree::SyntaxTree;

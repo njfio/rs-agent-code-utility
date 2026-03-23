@@ -2,6 +2,7 @@
 //!
 //! This module provides C-specific utilities for parsing and analyzing
 //! C source code using tree-sitter.
+#![allow(clippy::if_same_then_else)]
 
 use crate::error::Result;
 use crate::query::Query;

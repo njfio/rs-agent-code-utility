@@ -1,5 +1,6 @@
 // Comprehensive Security Test Suite for Epic 5
 // Tests security analysis accuracy against known vulnerable and secure code samples
+#![allow(clippy::assertions_on_constants)]
 
 #[cfg(test)]
 mod tests {
@@ -118,7 +119,7 @@ mod tests {
         // Test F1 score calculation - should be a reasonable value between 0 and 1
         let f1_score = metrics.f1_score();
         assert!(
-            f1_score >= 0.0 && f1_score <= 1.0,
+            (0.0..=1.0).contains(&f1_score),
             "F1 score should be between 0 and 1"
         );
 

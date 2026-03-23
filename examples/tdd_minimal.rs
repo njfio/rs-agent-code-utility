@@ -5,6 +5,7 @@ fn sum_of_even(values: &[i32]) -> i32 {
     values.iter().copied().filter(|n| n % 2 == 0).sum()
 }
 
+#[allow(dead_code)]
 fn normalize_whitespace(s: &str) -> String {
     // Functional: iterator pipeline, no mutable accumulation exposed externally
     s.split_whitespace().collect::<Vec<_>>().join(" ")

@@ -1,4 +1,5 @@
 // Phase 1: HTML template writers moved from mod.rs with minimal churn.
+#![allow(clippy::too_many_arguments)]
 
 use crate::analyzer::AnalysisResult;
 use std::fmt::Write as _;

@@ -7,6 +7,7 @@
 //! - Memory usage monitoring and throttling
 //! - Performance profiling and metrics collection
 //! - Custom thread pool implementation with fine-grained control
+#![allow(clippy::too_many_arguments)]
 
 use crate::error::{Error, Result};
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
@@ -508,7 +509,7 @@ impl Task for FileAnalysisTask {
         // Estimate based on file size if content is available
         if let Some(ref content) = self.content {
             let size_kb = content.len() / 1024;
-            Duration::from_millis((size_kb as u64).max(10).min(5000))
+            Duration::from_millis((size_kb as u64).clamp(10, 5000))
         } else {
             Duration::from_millis(100)
         }

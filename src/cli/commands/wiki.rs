@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::cli::error::{CliError, CliResult};
 use crate::wiki::{WikiConfig, WikiGenerator};
 use std::path::PathBuf;

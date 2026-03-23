@@ -1,4 +1,5 @@
 //! Rust language specific functionality
+#![allow(clippy::type_complexity)]
 
 use crate::error::Result;
 use crate::query::Query;

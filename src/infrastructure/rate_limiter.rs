@@ -117,8 +117,12 @@ impl MultiServiceRateLimiter {
 
     /// Wait for permission to make a request to a service
     pub async fn wait_for_permit(&self, service_name: &str) -> Result<()> {
-        let limiters = self.limiters.read().unwrap();
-        if let Some(limiter) = limiters.get(service_name) {
+        let limiter = {
+            let limiters = self.limiters.read().unwrap();
+            limiters.get(service_name).cloned()
+        };
+
+        if let Some(limiter) = limiter {
             limiter.wait_for_permit().await
         } else {
             Err(anyhow!(
@@ -130,8 +134,12 @@ impl MultiServiceRateLimiter {
 
     /// Check if a request can be made immediately
     pub async fn check_permit(&self, service_name: &str) -> Result<RateLimitResult> {
-        let limiters = self.limiters.read().unwrap();
-        if let Some(limiter) = limiters.get(service_name) {
+        let limiter = {
+            let limiters = self.limiters.read().unwrap();
+            limiters.get(service_name).cloned()
+        };
+
+        if let Some(limiter) = limiter {
             Ok(limiter.check_permit())
         } else {
             Err(anyhow!(

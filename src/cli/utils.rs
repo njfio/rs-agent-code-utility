@@ -1,6 +1,11 @@
 //! CLI utility functions
 //!
 //! Shared utilities for CLI operations including progress bars, configuration, and validation.
+#![allow(
+    clippy::field_reassign_with_default,
+    clippy::ptr_arg,
+    clippy::too_many_arguments
+)]
 
 use super::error::{CliError, CliResult};
 use crate::{AnalysisConfig, AnalysisDepth};

@@ -245,7 +245,7 @@ fn test_find_by_type() -> Result<(), Box<dyn std::error::Error>> {
     // Find all functions
     let function_result = graph.find_by_type(NodeType::Function, &config);
     assert!(
-        function_result.nodes.len() > 0,
+        !function_result.nodes.is_empty(),
         "Should find function nodes"
     );
 
@@ -260,7 +260,7 @@ fn test_find_by_type() -> Result<(), Box<dyn std::error::Error>> {
     // Find all constants
     let constant_result = graph.find_by_type(NodeType::Constant, &config);
     assert!(
-        constant_result.nodes.len() > 0,
+        !constant_result.nodes.is_empty(),
         "Should find constant nodes"
     );
 
@@ -285,7 +285,7 @@ fn test_find_by_name() -> Result<(), Box<dyn std::error::Error>> {
 
     // Find nodes with "User" in the name
     let user_result = graph.find_by_name("User", &config);
-    assert!(user_result.nodes.len() > 0, "Should find User nodes");
+    assert!(!user_result.nodes.is_empty(), "Should find User nodes");
 
     for node in &user_result.nodes {
         assert!(
@@ -297,7 +297,7 @@ fn test_find_by_name() -> Result<(), Box<dyn std::error::Error>> {
     // Find nodes with "get_name" in the name
     let get_name_result = graph.find_by_name("get_name", &config);
     assert!(
-        get_name_result.nodes.len() > 0,
+        !get_name_result.nodes.is_empty(),
         "Should find get_name nodes"
     );
 
@@ -491,7 +491,7 @@ function createUser() {
 
     assert!(stats.total_nodes > 0, "Graph should have nodes");
     assert!(
-        stats.node_type_distribution.len() > 0,
+        !stats.node_type_distribution.is_empty(),
         "Graph should have different node types"
     );
 
@@ -501,13 +501,13 @@ function createUser() {
     // Find all functions
     let function_result = graph.find_by_type(rust_tree_sitter::NodeType::Function, &config);
     assert!(
-        function_result.nodes.len() > 0,
+        !function_result.nodes.is_empty(),
         "Should find function nodes"
     );
 
     // Find nodes by name
     let user_result = graph.find_by_name("User", &config);
-    assert!(user_result.nodes.len() > 0, "Should find User nodes");
+    assert!(!user_result.nodes.is_empty(), "Should find User nodes");
 
     // Test relationship traversal
     if let Some(start_node) = function_result.nodes.first() {

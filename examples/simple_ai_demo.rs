@@ -2,6 +2,7 @@
 //!
 //! A minimal example demonstrating the AI service functionality
 //! without dependencies on CLI modules.
+#![allow(clippy::field_reassign_with_default)]
 
 use std::time::Duration;
 

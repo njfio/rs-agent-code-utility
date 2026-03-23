@@ -1,6 +1,7 @@
 //! Security command implementation
 //!
 //! Provides comprehensive security vulnerability scanning with configurable output formats.
+#![allow(clippy::too_many_arguments, clippy::wildcard_in_or_patterns)]
 
 #[cfg(feature = "net")]
 use crate::ai::AIServiceBuilder;
@@ -755,11 +756,7 @@ fn print_security_table(
             crate::SecuritySeverity::Low => "blue",
             crate::SecuritySeverity::Info => "bright_black",
         };
-        println!(
-            "  {}: {}",
-            format!("{:?}", sev),
-            count.to_string().color(color)
-        );
+        println!("  {sev:?}: {}", count.to_string().color(color));
     }
 
     if !summary_only && !filtered_vulnerabilities.is_empty() {
@@ -790,8 +787,8 @@ fn print_security_table(
             security_result.compliance.owasp_score
         );
         println!(
-            "Overall Status: {}",
-            format!("{:?}", security_result.compliance.overall_status)
+            "Overall Status: {:?}",
+            security_result.compliance.overall_status
         );
     }
 

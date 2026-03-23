@@ -5,6 +5,7 @@
 //! - Enhanced table formatting with colors and icons
 //! - Markdown output for documentation generation
 //! - Custom format templates support
+#![allow(clippy::should_implement_trait)]
 
 use colored::*;
 use serde::{Deserialize, Serialize};
@@ -1588,8 +1589,10 @@ impl OutputHandler {
                 }
             }
             OutputFormat::LocalizedAccessibleText(lang_code) => {
-                let mut accessibility_config = AccessibilityConfig::default();
-                accessibility_config.language = lang_code.clone();
+                let accessibility_config = AccessibilityConfig {
+                    language: lang_code.clone(),
+                    ..AccessibilityConfig::default()
+                };
                 let handler = AccessibleOutputHandler::new(accessibility_config);
                 let analysis_output = convert_to_analysis_output(result);
                 let localized_text = handler.format_accessible_text(&analysis_output);

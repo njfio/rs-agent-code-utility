@@ -1542,8 +1542,8 @@ impl MemoryTracker {
     fn has_corresponding_remove_listener(&self, line_num: usize, lines: &[&str]) -> bool {
         // Look ahead for removeEventListener
         let end = (line_num + 20).min(lines.len());
-        for i in line_num + 1..end {
-            if lines[i].contains("removeEventListener") {
+        for line in lines.iter().take(end).skip(line_num + 1) {
+            if line.contains("removeEventListener") {
                 return true;
             }
         }

@@ -1,6 +1,7 @@
 //! Dependencies command implementation
 //!
 //! Provides comprehensive dependency analysis with security scanning and license compliance.
+#![allow(clippy::too_many_arguments, clippy::wildcard_in_or_patterns)]
 
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
@@ -46,12 +47,14 @@ pub fn execute(
 
     // Run dependency analysis
     pb.set_message("Analyzing dependencies...");
-    let mut dep_config = crate::DependencyConfig::default();
-    dep_config.include_dev_dependencies = include_dev;
-    dep_config.vulnerability_scanning = vulnerabilities;
-    dep_config.license_compliance = licenses;
-    dep_config.outdated_detection = outdated;
-    dep_config.graph_analysis = graph;
+    let dep_config = crate::DependencyConfig {
+        include_dev_dependencies: include_dev,
+        vulnerability_scanning: vulnerabilities,
+        license_compliance: licenses,
+        outdated_detection: outdated,
+        graph_analysis: graph,
+        ..crate::DependencyConfig::default()
+    };
 
     let dependency_analyzer = DependencyAnalyzer::with_config(dep_config);
     let dependency_result = dependency_analyzer

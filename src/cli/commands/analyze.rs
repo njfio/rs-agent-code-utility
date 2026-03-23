@@ -1,6 +1,7 @@
 //! Analyze command implementation
 //!
 //! Provides comprehensive codebase analysis with standardized output formats.
+#![allow(clippy::too_many_arguments)]
 
 use crate::cli::error::{validate_path, CliError, CliResult};
 use crate::cli::output::{OutputFormat, OutputHandler};

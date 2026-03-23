@@ -2,6 +2,7 @@
 //!
 //! This module provides comprehensive automated reasoning capabilities for code analysis,
 //! including logical inference, theorem proving, constraint solving, and AI-driven analysis.
+#![allow(clippy::only_used_in_recursion, clippy::vec_init_then_push)]
 
 use crate::{AnalysisResult, FileInfo, Result};
 use std::collections::HashMap;
@@ -1608,8 +1609,8 @@ mod tests {
         assert!(!engine.literals_match_public(&bool1, &bool3));
 
         // Test float literals
-        let float1 = LiteralValue::Float(3.14);
-        let float2 = LiteralValue::Float(3.14);
+        let float1 = LiteralValue::Float(std::f64::consts::PI);
+        let float2 = LiteralValue::Float(std::f64::consts::PI);
         let float3 = LiteralValue::Float(2.71);
 
         assert!(engine.literals_match_public(&float1, &float2));

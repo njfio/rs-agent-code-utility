@@ -1,3 +1,5 @@
+#![allow(clippy::if_same_then_else)]
+
 use crate::analyzer::AnalysisResult;
 use std::fmt::Write as _;
 use std::path::Path;

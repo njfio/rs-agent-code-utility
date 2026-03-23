@@ -224,8 +224,7 @@ impl SecretsDetector {
                     let finding = SecretFinding {
                         id: uuid::Uuid::new_v4().to_string(),
                         secret_type: secret_type.clone(),
-                        confidence: (pattern.confidence * (entropy / 8.0).min(1.0).max(0.6))
-                            .min(1.0),
+                        confidence: (pattern.confidence * (entropy / 8.0).clamp(0.6, 1.0)).min(1.0),
                         entropy,
                         line_number: line_num + 1,
                         column_start: mat.start(),

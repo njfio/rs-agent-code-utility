@@ -6,6 +6,7 @@
 //! - Use screen reader friendly output formats
 //! - Configure accessibility options for better usability
 //! - Perform advanced security analysis with AI integration
+#![allow(clippy::ptr_arg)]
 //! - Analyze code quality metrics across multiple languages
 //! - Leverage the comprehensive multi-language support
 //!
@@ -80,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------------");
 
     let analysis_result = analyzer
-        .analyze_directory(&temp_dir.path())
+        .analyze_directory(temp_dir.path())
         .map_err(|e| format!("Analysis failed: {}", e))?;
 
     println!("✓ Analysis completed:");
