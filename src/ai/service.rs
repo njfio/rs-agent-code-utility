@@ -202,7 +202,7 @@ impl AIService {
                 for (provider_type, provider) in &self.providers {
                     if provider
                         .best_model_for_feature(request.feature)
-                        .map_or(false, |best_model| best_model == *model)
+                        .is_some_and(|best_model| best_model == *model)
                     {
                         return Ok(*provider_type);
                     }

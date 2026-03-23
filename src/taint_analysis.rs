@@ -619,7 +619,7 @@ impl TaintAnalyzer {
                 let func_key = current_function.unwrap_or("global").to_string();
                 self.variable_assignments
                     .entry(func_key)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(assignment);
             }
         }
@@ -628,10 +628,7 @@ impl TaintAnalyzer {
         if self.is_function_call(node.kind()) {
             if let Some(call) = self.extract_function_call(node, current_function)? {
                 let func_key = current_function.unwrap_or("global").to_string();
-                self.call_graph
-                    .entry(func_key)
-                    .or_insert_with(Vec::new)
-                    .push(call);
+                self.call_graph.entry(func_key).or_default().push(call);
             }
         }
 
@@ -780,11 +777,9 @@ impl TaintAnalyzer {
             // Look for assignment operator and source
             while cursor.goto_next_sibling() {
                 let child = cursor.node();
-                if self.is_assignment_operator(child.kind()) {
-                    if cursor.goto_next_sibling() {
-                        source = self.extract_assignment_source(cursor.node());
-                        break;
-                    }
+                if self.is_assignment_operator(child.kind()) && cursor.goto_next_sibling() {
+                    source = self.extract_assignment_source(cursor.node());
+                    break;
                 }
             }
         }
@@ -1145,15 +1140,15 @@ impl TaintAnalyzer {
         // Trace within source function
         if let Some(assignments) = self.variable_assignments.get(source_function) {
             for assignment in assignments {
-                if self.assignment_propagates_to_tainted(&assignment, tainted_variables) {
+                if self.assignment_propagates_to_tainted(assignment, tainted_variables) {
                     tainted_variables.insert(assignment.target.clone());
 
                     let step = TaintStep {
                         step_type: TaintStepType::Assignment,
                         name: assignment.target.clone(),
                         location: assignment.location.clone(),
-                        is_sanitizer: self.is_sanitizer_assignment(&assignment),
-                        sanitizer_method: self.get_sanitizer_method(&assignment),
+                        is_sanitizer: self.is_sanitizer_assignment(assignment),
+                        sanitizer_method: self.get_sanitizer_method(assignment),
                     };
                     path.push(step);
                 }
@@ -1173,15 +1168,15 @@ impl TaintAnalyzer {
         if source_function != sink_function {
             if let Some(assignments) = self.variable_assignments.get(sink_function) {
                 for assignment in assignments {
-                    if self.assignment_propagates_to_tainted(&assignment, tainted_variables) {
+                    if self.assignment_propagates_to_tainted(assignment, tainted_variables) {
                         tainted_variables.insert(assignment.target.clone());
 
                         let step = TaintStep {
                             step_type: TaintStepType::Assignment,
                             name: assignment.target.clone(),
                             location: assignment.location.clone(),
-                            is_sanitizer: self.is_sanitizer_assignment(&assignment),
-                            sanitizer_method: self.get_sanitizer_method(&assignment),
+                            is_sanitizer: self.is_sanitizer_assignment(assignment),
+                            sanitizer_method: self.get_sanitizer_method(assignment),
                         };
                         path.push(step);
                     }

@@ -33,6 +33,12 @@ pub struct ControlFlowGraph {
 #[derive(Debug, Clone)]
 pub struct CfgBuilder;
 
+impl Default for CfgBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CfgBuilder {
     pub fn new() -> Self {
         Self
@@ -45,6 +51,12 @@ impl CfgBuilder {
 
 #[derive(Debug, Clone)]
 pub struct TaintAnalyzer;
+
+impl Default for TaintAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl TaintAnalyzer {
     pub fn new() -> Self {
@@ -805,10 +817,7 @@ impl SemanticContextAnalyzer {
                                     .and_then(|v| v.text().ok())
                                     .map(|s| s.to_string()),
                             };
-                            definitions
-                                .entry(symbol_id)
-                                .or_insert_with(Vec::new)
-                                .push(def_site);
+                            definitions.entry(symbol_id).or_default().push(def_site);
                         }
                     }
                 }
@@ -828,10 +837,7 @@ impl SemanticContextAnalyzer {
                                     .and_then(|v| v.text().ok())
                                     .map(|s| s.to_string()),
                             };
-                            definitions
-                                .entry(symbol_id)
-                                .or_insert_with(Vec::new)
-                                .push(def_site);
+                            definitions.entry(symbol_id).or_default().push(def_site);
                         }
                     }
                 }
@@ -848,10 +854,7 @@ impl SemanticContextAnalyzer {
                                 definition_type: DefinitionType::Parameter,
                                 value: None,
                             };
-                            definitions
-                                .entry(symbol_id)
-                                .or_insert_with(Vec::new)
-                                .push(def_site);
+                            definitions.entry(symbol_id).or_default().push(def_site);
                         }
                     }
                 }
@@ -1001,7 +1004,7 @@ impl SemanticContextAnalyzer {
             for def_site in def_sites {
                 def_use_chains
                     .entry(def_site.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(*use_point);
             }
         }
@@ -1027,31 +1030,25 @@ impl SemanticContextAnalyzer {
         symbol_table: &SymbolTable,
         aliases: &mut HashMap<SymbolId, HashSet<SymbolId>>,
     ) -> Result<()> {
-        match node.kind() {
-            "assignment_expression" => {
-                // Check for pointer assignments like a = &b or a = b
-                if let (Some(left), Some(right)) = (
-                    node.child_by_field_name("left"),
-                    node.child_by_field_name("right"),
-                ) {
-                    if let (Ok(left_name), Ok(right_text)) = (left.text(), right.text()) {
-                        // Simple alias detection for reference assignments
-                        if right_text.starts_with('&') {
-                            let right_name = &right_text[1..]; // Remove &
-                            if let (Some(left_id), Some(right_id)) = (
-                                self.find_symbol_by_name(symbol_table, &left_name),
-                                self.find_symbol_by_name(symbol_table, right_name),
-                            ) {
-                                aliases
-                                    .entry(left_id)
-                                    .or_insert_with(HashSet::new)
-                                    .insert(right_id);
-                            }
+        if node.kind() == "assignment_expression" {
+            // Check for pointer assignments like a = &b or a = b
+            if let (Some(left), Some(right)) = (
+                node.child_by_field_name("left"),
+                node.child_by_field_name("right"),
+            ) {
+                if let (Ok(left_name), Ok(right_text)) = (left.text(), right.text()) {
+                    // Simple alias detection for reference assignments
+                    if let Some(right_name) = right_text.strip_prefix('&') {
+                        // Remove &
+                        if let (Some(left_id), Some(right_id)) = (
+                            self.find_symbol_by_name(symbol_table, left_name),
+                            self.find_symbol_by_name(symbol_table, right_name),
+                        ) {
+                            aliases.entry(left_id).or_default().insert(right_id);
                         }
                     }
                 }
             }
-            _ => {}
         }
 
         // Recursively process children
@@ -1432,7 +1429,7 @@ impl SemanticContextAnalyzer {
 
                     calls
                         .entry(node.start_position())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(function_call);
                 }
             }

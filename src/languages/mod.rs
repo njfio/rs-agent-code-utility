@@ -213,13 +213,9 @@ pub fn detect_language_from_path<P: AsRef<std::path::Path>>(path: P) -> Option<L
     let path = path.as_ref();
     let extension = path.extension()?.to_str()?.to_lowercase();
 
-    for language in Language::all() {
-        if language.file_extensions().contains(&extension.as_str()) {
-            return Some(language);
-        }
-    }
-
-    None
+    Language::all()
+        .into_iter()
+        .find(|&language| language.file_extensions().contains(&extension.as_str()))
 }
 
 impl std::fmt::Display for Language {

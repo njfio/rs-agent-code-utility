@@ -61,8 +61,7 @@ pub fn execute(
     pb.finish_with_message("Dependency analysis complete!");
 
     // Display results based on format
-    let output_format =
-        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+    let output_format = OutputFormat::from_str(format).map_err(CliError::UnsupportedFormat)?;
 
     match output_format {
         OutputFormat::Json => {
@@ -326,9 +325,7 @@ fn print_dependencies_markdown(
         for issue in &dependency_result.license_analysis.compliance_issues {
             println!(
                 "- **{}**: {} license issue - {}",
-                issue.dependency,
-                issue.issue_type.to_string(),
-                issue.description
+                issue.dependency, issue.issue_type, issue.description
             );
         }
     }
@@ -338,10 +335,7 @@ fn print_dependencies_markdown(
         for outdated in &dependency_result.outdated_dependencies {
             println!(
                 "- **{}**: {} → {} ({})",
-                outdated.name,
-                outdated.current_version,
-                outdated.latest_version,
-                outdated.urgency.to_string()
+                outdated.name, outdated.current_version, outdated.latest_version, outdated.urgency
             );
         }
     }
@@ -431,9 +425,7 @@ fn render_dependencies_markdown(
             writeln!(
                 out,
                 "- **{}**: {} license issue - {}",
-                issue.dependency,
-                issue.issue_type.to_string(),
-                issue.description
+                issue.dependency, issue.issue_type, issue.description
             )
             .unwrap();
         }
@@ -445,10 +437,7 @@ fn render_dependencies_markdown(
             writeln!(
                 out,
                 "- **{}**: {} → {} ({})",
-                outdated.name,
-                outdated.current_version,
-                outdated.latest_version,
-                outdated.urgency.to_string()
+                outdated.name, outdated.current_version, outdated.latest_version, outdated.urgency
             )
             .unwrap();
         }

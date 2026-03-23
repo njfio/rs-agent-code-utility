@@ -53,8 +53,7 @@ pub fn execute(
     pb.finish_with_message("Refactoring analysis complete!");
 
     // Display results based on format
-    let output_format =
-        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+    let output_format = OutputFormat::from_str(format).map_err(CliError::UnsupportedFormat)?;
 
     match output_format {
         OutputFormat::Json => {

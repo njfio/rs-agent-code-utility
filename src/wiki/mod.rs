@@ -582,7 +582,7 @@ impl WikiGenerator {
             // Add to search index (with anchors for first symbol if present)
             let anchor = file
                 .symbols
-                .get(0)
+                .first()
                 .map(|s| format!("#symbol-{}", Self::anchorize(&s.name)))
                 .unwrap_or_default();
             let mut tags = vec![file.language.clone()];
@@ -598,7 +598,7 @@ impl WikiGenerator {
             let symbol_cap = self
                 .config
                 .max_index_symbols_per_file
-                .unwrap_or_else(|| file.symbols.len());
+                .unwrap_or(file.symbols.len());
             index_entries.push(SearchEntry {
                 title: title.clone(),
                 path: format!("pages/{}.html{}", safe_name, anchor),
@@ -1286,38 +1286,36 @@ updateSearch();
             return (String::new(), vec![]);
         }
 
-        if self.config.ai_json_mode {
-            if self.ensure_ai().is_ok() {
-                let rt_b = self.ai_rt.borrow();
-                let rt = rt_b.as_ref().expect("ai runtime initialized");
-                let svc_b = self.ai_service.borrow();
-                let service = svc_b.as_ref().expect("ai service initialized");
-                use std::fmt::Write as _;
-                let mut prompt = String::new();
-                let _ = writeln!(
-                    &mut prompt,
-                    "Provide structured wiki documentation for file '{}'.",
-                    file.path.display()
-                );
-                let _ = writeln!(
-                    &mut prompt,
-                    "Context: language={}, lines={}, symbols={}",
-                    file.language,
-                    file.lines,
-                    file.symbols.len()
-                );
-                let _ = writeln!(&mut prompt, "Respond with a JSON object with keys: overview, deep_dive (list of {{name,kind,summary,details}}), key_apis (list of {{name,signature,usage}}), examples (list of {{title,language,code,explanation}}), gotchas (list), security {{risks,mitigations}}, performance {{concerns,tips}}, related (list of {{path,reason}}), cross_refs (list of {{text,target}}), tags (list)." );
-                let mut req = AIRequest::new(AIFeature::DocumentationGeneration, prompt)
-                    .with_temperature(0.2)
-                    .with_max_tokens(2000);
-                req = req.with_context("response_format".to_string(), "json_object".to_string());
-                if let Ok(resp) = rt.block_on(async { service.process_request(req).await }) {
-                    if let Some(doc) =
-                        Self::parse_ai_json::<crate::wiki::ai_schema::AiDocFile>(&resp.content)
-                    {
-                        let html = self.render_ai_doc_file(file, &doc);
-                        return (html, doc.tags.unwrap_or_default());
-                    }
+        if self.config.ai_json_mode && self.ensure_ai().is_ok() {
+            let rt_b = self.ai_rt.borrow();
+            let rt = rt_b.as_ref().expect("ai runtime initialized");
+            let svc_b = self.ai_service.borrow();
+            let service = svc_b.as_ref().expect("ai service initialized");
+            use std::fmt::Write as _;
+            let mut prompt = String::new();
+            let _ = writeln!(
+                &mut prompt,
+                "Provide structured wiki documentation for file '{}'.",
+                file.path.display()
+            );
+            let _ = writeln!(
+                &mut prompt,
+                "Context: language={}, lines={}, symbols={}",
+                file.language,
+                file.lines,
+                file.symbols.len()
+            );
+            let _ = writeln!(&mut prompt, "Respond with a JSON object with keys: overview, deep_dive (list of {{name,kind,summary,details}}), key_apis (list of {{name,signature,usage}}), examples (list of {{title,language,code,explanation}}), gotchas (list), security {{risks,mitigations}}, performance {{concerns,tips}}, related (list of {{path,reason}}), cross_refs (list of {{text,target}}), tags (list)." );
+            let mut req = AIRequest::new(AIFeature::DocumentationGeneration, prompt)
+                .with_temperature(0.2)
+                .with_max_tokens(2000);
+            req = req.with_context("response_format".to_string(), "json_object".to_string());
+            if let Ok(resp) = rt.block_on(async { service.process_request(req).await }) {
+                if let Some(doc) =
+                    Self::parse_ai_json::<crate::wiki::ai_schema::AiDocFile>(&resp.content)
+                {
+                    let html = self.render_ai_doc_file(file, &doc);
+                    return (html, doc.tags.unwrap_or_default());
                 }
             }
         }

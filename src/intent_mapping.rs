@@ -160,6 +160,12 @@ pub struct GraphCoverageMetrics {
     pub orphaned_implementations: usize,
 }
 
+impl Default for RelationshipGraph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RelationshipGraph {
     /// Create a new empty relationship graph
     pub fn new() -> Self {
@@ -1297,14 +1303,14 @@ impl IntentMappingSystem {
             self.traceability
                 .forward_trace
                 .entry(mapping.requirement_id.to_string())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(mapping.implementation_id.to_string());
 
             // Backward traceability
             self.traceability
                 .backward_trace
                 .entry(mapping.implementation_id.to_string())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(mapping.requirement_id.to_string());
         }
 
@@ -1347,7 +1353,7 @@ impl IntentMappingSystem {
                     gap_type: GapType::MissingImplementation,
                     description: format!("Requirement '{}' has no implementation", requirement.id),
                     affected_items: vec![requirement.id.clone()],
-                    severity: requirement.priority.clone(),
+                    severity: requirement.priority,
                     suggested_actions: vec![
                         "Create implementation".to_string(),
                         "Review requirement validity".to_string(),
@@ -1410,8 +1416,8 @@ impl IntentMappingSystem {
                 GapType::MissingImplementation => {
                     recommendations.push(MappingRecommendation {
                         recommendation_type: RecommendationType::CreateImplementation,
-                        description: format!("Implement missing functionality for requirement"),
-                        priority: gap.severity.clone(),
+                        description: "Implement missing functionality for requirement".to_string(),
+                        priority: gap.severity,
                         affected_items: gap.affected_items.clone(),
                         expected_impact: "Improved requirement coverage".to_string(),
                         effort_estimate: EffortLevel::Large,
@@ -1420,7 +1426,7 @@ impl IntentMappingSystem {
                 GapType::MissingRequirement => {
                     recommendations.push(MappingRecommendation {
                         recommendation_type: RecommendationType::CreateRequirement,
-                        description: format!("Document requirement for existing implementation"),
+                        description: "Document requirement for existing implementation".to_string(),
                         priority: Priority::Medium,
                         affected_items: gap.affected_items.clone(),
                         expected_impact: "Improved traceability".to_string(),
@@ -1430,7 +1436,7 @@ impl IntentMappingSystem {
                 GapType::TestGap => {
                     recommendations.push(MappingRecommendation {
                         recommendation_type: RecommendationType::AddTests,
-                        description: format!("Improve test coverage"),
+                        description: "Improve test coverage".to_string(),
                         priority: Priority::High,
                         affected_items: gap.affected_items.clone(),
                         expected_impact: "Improved quality and reliability".to_string(),
@@ -2905,7 +2911,7 @@ impl IntentMappingSystem {
         if implementation
             .documentation
             .as_ref()
-            .map_or(false, |doc| doc.len() > 200)
+            .is_some_and(|doc| doc.len() > 200)
         {
             adjusted_confidence = (adjusted_confidence * 1.05).min(1.0);
         }
@@ -3687,7 +3693,7 @@ mod tests {
 
     #[test]
     fn test_requirement_type_variants() {
-        let types = vec![
+        let types = [
             RequirementType::Functional,
             RequirementType::NonFunctional,
             RequirementType::Business,
@@ -3714,7 +3720,7 @@ mod tests {
 
     #[test]
     fn test_requirement_status_variants() {
-        let statuses = vec![
+        let statuses = [
             RequirementStatus::Draft,
             RequirementStatus::Approved,
             RequirementStatus::InProgress,
@@ -3763,7 +3769,7 @@ mod tests {
 
     #[test]
     fn test_implementation_type_variants() {
-        let types = vec![
+        let types = [
             ImplementationType::Function,
             ImplementationType::Class,
             ImplementationType::Module,
@@ -3800,7 +3806,7 @@ mod tests {
 
     #[test]
     fn test_implementation_status_variants() {
-        let statuses = vec![
+        let statuses = [
             ImplementationStatus::NotStarted,
             ImplementationStatus::InProgress,
             ImplementationStatus::Complete,
@@ -3864,7 +3870,7 @@ mod tests {
 
     #[test]
     fn test_mapping_type_variants() {
-        let types = vec![
+        let types = [
             MappingType::Direct,
             MappingType::OneToMany,
             MappingType::ManyToOne,
@@ -3880,7 +3886,7 @@ mod tests {
 
     #[test]
     fn test_validation_status_variants() {
-        let statuses = vec![
+        let statuses = [
             ValidationStatus::NotValidated,
             ValidationStatus::Valid,
             ValidationStatus::Invalid,

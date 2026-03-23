@@ -763,7 +763,7 @@ impl AdvancedSecurityAnalyzer {
             if file.path == file_path {
                 // Try to read the file content
                 if let Ok(content) =
-                    std::fs::read_to_string(&analysis_result.root_path.join(file_path))
+                    std::fs::read_to_string(analysis_result.root_path.join(file_path))
                 {
                     return Some(content);
                 }
@@ -792,10 +792,6 @@ impl AdvancedSecurityAnalyzer {
         Vec<BestPracticeViolation>,
     ) {
         let mut filtered_vulnerabilities = Vec::new();
-        let filtered_secrets;
-        let filtered_input_issues;
-        let filtered_injection_vulns;
-        let filtered_best_practices;
 
         // Filter vulnerabilities using semantic analysis
         for vuln in vulnerabilities {
@@ -853,10 +849,10 @@ impl AdvancedSecurityAnalyzer {
 
         // For now, keep all other finding types (secrets, input issues, etc.)
         // TODO: Add more sophisticated filtering for these types
-        filtered_secrets = secrets;
-        filtered_input_issues = input_issues;
-        filtered_injection_vulns = injection_vulns;
-        filtered_best_practices = best_practices;
+        let filtered_secrets = secrets;
+        let filtered_input_issues = input_issues;
+        let filtered_injection_vulns = injection_vulns;
+        let filtered_best_practices = best_practices;
 
         (
             filtered_vulnerabilities,
@@ -1001,16 +997,17 @@ impl AdvancedSecurityAnalyzer {
         file: &FileInfo,
     ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulns = Vec::new();
-        if content.contains("Command::new(\"sh\")") || content.contains("Command::new(\"bash\")") {
-            if content.contains(".arg(\"-c\")") {
-                // Look for an .arg( that likely references a variable or expression
-                if content.contains(".arg(")
-                    && (content.contains("user_")
-                        || content.contains("input")
-                        || content.contains("arg")
-                        || content.contains("cmd"))
-                {
-                    vulns.push(SecurityVulnerability {
+        if (content.contains("Command::new(\"sh\")") || content.contains("Command::new(\"bash\")"))
+            && content.contains(".arg(\"-c\")")
+        {
+            // Look for an .arg( that likely references a variable or expression
+            if content.contains(".arg(")
+                && (content.contains("user_")
+                    || content.contains("input")
+                    || content.contains("arg")
+                    || content.contains("cmd"))
+            {
+                vulns.push(SecurityVulnerability {
                         id: "STR_CMD_001".to_string(),
                         title: "Potential command injection (shell -c)".to_string(),
                         description: "Spawning a shell with '-c' and user-controlled arguments may allow command injection".to_string(),
@@ -1023,7 +1020,6 @@ impl AdvancedSecurityAnalyzer {
                         remediation: RemediationGuidance { summary: "Avoid shell with -c; use safe APIs".to_string(), steps: vec!["Avoid passing user input to shell".to_string(), "Use direct exec with separated args".to_string()], code_examples: vec![], references: vec![], effort: RemediationEffort::High },
                         confidence: ConfidenceLevel::Medium,
                     });
-                }
             }
         }
         Ok(vulns)
@@ -1294,53 +1290,53 @@ impl AdvancedSecurityAnalyzer {
             }
 
             // Check for hardcoded encryption keys
-            if line_lower.contains("key") && (line_lower.contains("=") || line_lower.contains(":"))
+            if line_lower.contains("key")
+                && (line_lower.contains("=") || line_lower.contains(":"))
+                && line.len() > 20
+                && line.chars().filter(|c| c.is_alphanumeric()).count() > 16
             {
-                if line.len() > 20 && line.chars().filter(|c| c.is_alphanumeric()).count() > 16 {
-                    vulnerabilities.push(SecurityVulnerability {
-                        id: format!("CF002_{}", line_num),
-                        title: "Potential hardcoded encryption key".to_string(),
-                        description: "Encryption key appears to be hardcoded in source code"
-                            .to_string(),
-                        severity: SecuritySeverity::Critical,
-                        owasp_category: OwaspCategory::CryptographicFailures,
-                        cwe_id: Some("CWE-798".to_string()),
-                        location: VulnerabilityLocation {
-                            file: file.path.clone(),
-                            function: None,
-                            start_line: line_num + 1,
-                            end_line: line_num + 1,
-                            column: 0,
-                        },
-                        code_snippet: line.to_string(),
-                        impact: SecurityImpact {
-                            confidentiality: ImpactLevel::Critical,
-                            integrity: ImpactLevel::High,
-                            availability: ImpactLevel::Medium,
-                            overall_score: 9.0,
-                        },
-                        remediation: RemediationGuidance {
-                            summary: "Move encryption keys to secure configuration".to_string(),
-                            steps: vec![
-                                "Remove hardcoded keys from source code".to_string(),
-                                "Use environment variables or secure key management".to_string(),
-                                "Implement key rotation policies".to_string(),
-                            ],
-                            code_examples: vec![CodeExample {
-                                description: "Use environment variable for key".to_string(),
-                                vulnerable_code: "key = 'hardcoded_key_123'".to_string(),
-                                secure_code: "key = os.getenv('ENCRYPTION_KEY')".to_string(),
-                                language: "python".to_string(),
-                            }],
-                            references: vec![
-                                "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
-                                    .to_string(),
-                            ],
-                            effort: RemediationEffort::Medium,
-                        },
-                        confidence: ConfidenceLevel::Medium,
-                    });
-                }
+                vulnerabilities.push(SecurityVulnerability {
+                    id: format!("CF002_{}", line_num),
+                    title: "Potential hardcoded encryption key".to_string(),
+                    description: "Encryption key appears to be hardcoded in source code"
+                        .to_string(),
+                    severity: SecuritySeverity::Critical,
+                    owasp_category: OwaspCategory::CryptographicFailures,
+                    cwe_id: Some("CWE-798".to_string()),
+                    location: VulnerabilityLocation {
+                        file: file.path.clone(),
+                        function: None,
+                        start_line: line_num + 1,
+                        end_line: line_num + 1,
+                        column: 0,
+                    },
+                    code_snippet: line.to_string(),
+                    impact: SecurityImpact {
+                        confidentiality: ImpactLevel::Critical,
+                        integrity: ImpactLevel::High,
+                        availability: ImpactLevel::Medium,
+                        overall_score: 9.0,
+                    },
+                    remediation: RemediationGuidance {
+                        summary: "Move encryption keys to secure configuration".to_string(),
+                        steps: vec![
+                            "Remove hardcoded keys from source code".to_string(),
+                            "Use environment variables or secure key management".to_string(),
+                            "Implement key rotation policies".to_string(),
+                        ],
+                        code_examples: vec![CodeExample {
+                            description: "Use environment variable for key".to_string(),
+                            vulnerable_code: "key = 'hardcoded_key_123'".to_string(),
+                            secure_code: "key = os.getenv('ENCRYPTION_KEY')".to_string(),
+                            language: "python".to_string(),
+                        }],
+                        references: vec![
+                            "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/".to_string(),
+                        ],
+                        effort: RemediationEffort::Medium,
+                    },
+                    confidence: ConfidenceLevel::Medium,
+                });
             }
         }
 
@@ -2116,7 +2112,7 @@ impl AdvancedSecurityAnalyzer {
         }
 
         // Factor in compliance score
-        score = score * (compliance.owasp_score as f64 / 100.0);
+        score *= compliance.owasp_score as f64 / 100.0;
 
         score.max(0.0).min(100.0) as u8
     }

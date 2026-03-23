@@ -532,7 +532,7 @@ impl EnhancedSecurityScanner {
 
     /// Extract package name from Go module line
     fn extract_go_package_name(&self, line: &str) -> Option<String> {
-        let parts: Vec<&str> = line.trim().split_whitespace().collect();
+        let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 2 && !parts[0].starts_with("//") {
             // Skip "require" keyword if present
             let package_name = if parts[0] == "require" && parts.len() >= 3 {
@@ -764,7 +764,7 @@ impl EnhancedSecurityScanner {
         let confidence_factor = metrics.avg_confidence;
         score = ((score as f64) * confidence_factor) as u8;
 
-        score.max(0).min(MAX_SECURITY_SCORE)
+        score.min(MAX_SECURITY_SCORE)
     }
 
     /// Generate remediation roadmap
@@ -1071,7 +1071,7 @@ mod tests {
         assert_eq!(package_name, "requests");
 
         let go_line = "require github.com/gorilla/mux v1.8.0";
-        let parts: Vec<&str> = go_line.trim().split_whitespace().collect();
+        let parts: Vec<&str> = go_line.split_whitespace().collect();
         assert_eq!(parts[0], "require");
         assert_eq!(parts[1], "github.com/gorilla/mux");
     }

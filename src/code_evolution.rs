@@ -355,7 +355,7 @@ impl CodeEvolutionTracker {
     /// Extract git history for all files
     fn extract_git_history(&mut self) -> Result<()> {
         let output = Command::new("git")
-            .args(&[
+            .args([
                 "log",
                 "--pretty=format:%H|%an|%at|%s",
                 "--numstat",
@@ -385,7 +385,7 @@ impl CodeEvolutionTracker {
     fn extract_file_history(&mut self, files: &[PathBuf]) -> Result<()> {
         for file in files {
             let output = Command::new("git")
-                .args(&[
+                .args([
                     "log",
                     "--pretty=format:%H|%an|%at|%s",
                     "--numstat",
@@ -435,7 +435,7 @@ impl CodeEvolutionTracker {
 
                         self.file_changes
                             .entry(file_path.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .push(change);
 
                         related_files.push(file_path);
@@ -936,9 +936,9 @@ impl CodeEvolutionTracker {
                 PatternType::Hotspot => {
                     recommendations.push(EvolutionRecommendation {
                         recommendation_type: RecommendationType::Refactor,
-                        description: format!(
+                        description:
                             "Consider refactoring hotspot files to reduce change frequency"
-                        ),
+                                .to_string(),
                         priority: Priority::High,
                         affected_files: pattern.files.clone(),
                         effort_estimate: EffortLevel::Hard,
@@ -949,9 +949,8 @@ impl CodeEvolutionTracker {
                 PatternType::KnowledgeSilo => {
                     recommendations.push(EvolutionRecommendation {
                         recommendation_type: RecommendationType::KnowledgeSharing,
-                        description: format!(
-                            "Share knowledge about files with single contributors"
-                        ),
+                        description: "Share knowledge about files with single contributors"
+                            .to_string(),
                         priority: Priority::Medium,
                         affected_files: pattern.files.clone(),
                         effort_estimate: EffortLevel::Medium,
@@ -962,9 +961,8 @@ impl CodeEvolutionTracker {
                 PatternType::TechnicalDebt => {
                     recommendations.push(EvolutionRecommendation {
                         recommendation_type: RecommendationType::Refactor,
-                        description: format!(
-                            "Address technical debt in frequently maintained files"
-                        ),
+                        description: "Address technical debt in frequently maintained files"
+                            .to_string(),
                         priority: Priority::High,
                         affected_files: pattern.files.clone(),
                         effort_estimate: EffortLevel::VeryHard,

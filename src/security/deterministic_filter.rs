@@ -22,10 +22,10 @@ impl FilterMode {
 
 /// Apply deterministic filtering heuristics to reduce false positives.
 /// Returns references into the original slice, preserving ordering.
-pub fn filter_vulnerabilities<'a>(
-    vulns: &'a [SecurityVulnerability],
+pub fn filter_vulnerabilities(
+    vulns: &[SecurityVulnerability],
     mode: FilterMode,
-) -> Vec<&'a SecurityVulnerability> {
+) -> Vec<&SecurityVulnerability> {
     vulns.iter().filter(|v| keep(v, mode)).collect()
 }
 

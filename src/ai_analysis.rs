@@ -194,6 +194,12 @@ impl Default for AIConfig {
     }
 }
 
+impl Default for AIAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AIAnalyzer {
     /// Create a new AI analyzer with default configuration
     pub fn new() -> Self {
@@ -476,7 +482,7 @@ impl AIAnalyzer {
         let mut technologies = Vec::new();
 
         // Add primary languages
-        for (language, _) in &result.languages {
+        for language in result.languages.keys() {
             technologies.push(language.clone());
         }
 
@@ -548,13 +554,11 @@ impl AIAnalyzer {
                     && (symbol.kind == "function"
                         || symbol.kind == "struct"
                         || symbol.kind == "class")
-                {
-                    if symbol.name.contains("new")
+                    && (symbol.name.contains("new")
                         || symbol.name.contains("create")
-                        || symbol.name.contains("init")
-                    {
-                        entry_points.push(format!("{}::{}", file.path.display(), symbol.name));
-                    }
+                        || symbol.name.contains("init"))
+                {
+                    entry_points.push(format!("{}::{}", file.path.display(), symbol.name));
                 }
             }
         }

@@ -462,7 +462,7 @@ impl SecurityWikiGenerator {
         }
 
         // Convert to sorted vector
-        let mut hotspot_vec: Vec<_> = hotspots.into_iter().map(|(_, hotspot)| hotspot).collect();
+        let mut hotspot_vec: Vec<_> = hotspots.into_values().collect();
 
         hotspot_vec.sort_by(|a, b| b.risk_score.partial_cmp(&a.risk_score).unwrap());
 

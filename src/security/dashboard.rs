@@ -68,11 +68,11 @@ impl SecurityDashboard {
         }
 
         // Calculate severity counts
-        let critical_findings = findings_by_severity.get("Critical").unwrap_or(&0).clone();
-        let high_findings = findings_by_severity.get("High").unwrap_or(&0).clone();
-        let medium_findings = findings_by_severity.get("Medium").unwrap_or(&0).clone();
-        let low_findings = findings_by_severity.get("Low").unwrap_or(&0).clone();
-        let info_findings = findings_by_severity.get("Info").unwrap_or(&0).clone();
+        let critical_findings = *findings_by_severity.get("Critical").unwrap_or(&0);
+        let high_findings = *findings_by_severity.get("High").unwrap_or(&0);
+        let medium_findings = *findings_by_severity.get("Medium").unwrap_or(&0);
+        let low_findings = *findings_by_severity.get("Low").unwrap_or(&0);
+        let info_findings = *findings_by_severity.get("Info").unwrap_or(&0);
 
         let summary = DashboardSummary {
             total_files_analyzed: total_files,
@@ -135,7 +135,7 @@ impl SecurityDashboard {
     pub fn generate_text_report(report: &DashboardReport) -> String {
         let mut output = String::new();
 
-        output.push_str(&format!("Security Analysis Dashboard Report\n"));
+        output.push_str("Security Analysis Dashboard Report\n");
         output.push_str(&format!("Generated: {}\n\n", report.timestamp));
 
         output.push_str("SUMMARY\n");

@@ -36,8 +36,7 @@ pub fn execute(path: &PathBuf, format: &str) -> CliResult<()> {
     );
 
     // Parse output format
-    let output_format =
-        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+    let output_format = OutputFormat::from_str(format).map_err(CliError::UnsupportedFormat)?;
 
     // Handle progress bar based on output format
     match output_format {

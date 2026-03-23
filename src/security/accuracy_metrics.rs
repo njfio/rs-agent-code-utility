@@ -13,6 +13,12 @@ pub struct AccuracyMetrics {
     pub total_samples: u32,
 }
 
+impl Default for AccuracyMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AccuracyMetrics {
     /// Create a new AccuracyMetrics instance with zero values
     pub fn new() -> Self {

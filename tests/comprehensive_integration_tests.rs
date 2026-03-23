@@ -493,7 +493,7 @@ fn test_dependency_analysis_integration() -> Result<()> {
     assert!(tokio_found, "tokio dependency should be detected");
 
     // Verify dependency structure
-    assert!(dependency_result.dependencies.len() > 0);
+    assert!(!dependency_result.dependencies.is_empty());
 
     Ok(())
 }

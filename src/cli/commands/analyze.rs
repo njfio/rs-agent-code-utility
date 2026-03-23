@@ -62,8 +62,7 @@ pub fn execute(
         .map_err(|e| CliError::Analysis(e.to_string()))?;
 
     // Display results using the enhanced output system
-    let output_format =
-        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+    let output_format = OutputFormat::from_str(format).map_err(CliError::UnsupportedFormat)?;
 
     // Create output handler for consistent formatting
     let output_handler = OutputHandler::new(output_format.clone(), output.cloned(), true);
@@ -84,7 +83,7 @@ pub fn execute(
     output_handler.output_analysis_result(&result)?;
 
     // Print additional details if requested
-    if detailed && result.files.len() > 0 {
+    if detailed && !result.files.is_empty() {
         println!("\n{}", "📋 DETAILED ANALYSIS".bright_yellow().bold());
         println!("{}", "─".repeat(50));
 

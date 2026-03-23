@@ -18,7 +18,7 @@ pub struct HttpClient {
 }
 
 /// HTTP request configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct RequestConfig {
     pub timeout: Option<Duration>,
     pub retries: Option<usize>,
@@ -268,17 +268,6 @@ impl HttpClient {
         error_str.contains("503") || // Service Unavailable
         error_str.contains("504") || // Gateway Timeout
         error_str.contains("429") // Too Many Requests
-    }
-}
-
-impl Default for RequestConfig {
-    fn default() -> Self {
-        Self {
-            timeout: None,
-            retries: None,
-            headers: Vec::new(),
-            auth: None,
-        }
     }
 }
 

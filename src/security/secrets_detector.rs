@@ -594,17 +594,17 @@ impl SecretsDetector {
         match secret_type {
             SecretType::ApiKey | SecretType::GitHubToken | SecretType::JwtToken => {
                 // API keys and tokens should have high entropy, but not suspiciously high
-                entropy < 3.5 || entropy > 6.5
+                !(3.5..=6.5).contains(&entropy)
             }
             SecretType::GoogleApiKey | SecretType::StripeSecretKey | SecretType::SlackToken => {
                 // Slightly different window based on typical formats
-                entropy < 3.8 || entropy > 7.0
+                !(3.8..=7.0).contains(&entropy)
             }
             SecretType::TwilioAccountSid
             | SecretType::TwilioApiKey
             | SecretType::SendgridApiKey
             | SecretType::AzureStorageKey
-            | SecretType::AzureClientSecret => entropy < 3.2 || entropy > 7.2,
+            | SecretType::AzureClientSecret => !(3.2..=7.2).contains(&entropy),
             SecretType::Password => {
                 // Passwords can have variable entropy
                 entropy < 2.5
@@ -615,7 +615,7 @@ impl SecretsDetector {
             }
             _ => {
                 // For other types, be more conservative
-                entropy < 3.0 || entropy > 7.0
+                !(3.0..=7.0).contains(&entropy)
             }
         }
     }
@@ -735,7 +735,7 @@ impl SecretsDetector {
             Err(_) => return false,
         };
         // Must have alg and typ in header
-        if !header_json.get("alg").is_some() {
+        if header_json.get("alg").is_none() {
             return false;
         }
         if let Some(t) = header_json.get("typ") {

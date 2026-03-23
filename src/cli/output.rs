@@ -787,12 +787,10 @@ impl FileRow {
             } else {
                 ("✅", "OK")
             }
+        } else if accessibility.simple_text {
+            ("", "Failed")
         } else {
-            if accessibility.simple_text {
-                ("", "Failed")
-            } else {
-                ("❌", "Failed")
-            }
+            ("❌", "Failed")
         };
 
         let status = if accessibility.screen_reader_mode {
@@ -823,7 +821,7 @@ impl EnhancedTable for Vec<FileRow> {
             .with(Alignment::left());
 
         // Apply color to status column
-        for (_i, row) in self.iter().enumerate() {
+        for row in self.iter() {
             if row.status.contains("❌") {
                 // This would apply red color to failed rows in a real implementation
             }
@@ -1175,7 +1173,7 @@ pub fn generate_markdown_report(result: &crate::AnalysisResult) -> String {
             let percentage = (*count as f64 / result.files.len() as f64) * 100.0;
             md.push_str(&format!("| {} | {} | {:.1}% |\n", lang, count, percentage));
         }
-        md.push_str("\n");
+        md.push('\n');
     }
 
     // Top files section
@@ -1852,6 +1850,12 @@ impl OutputTemplate {
 /// Enhanced template system with custom format support
 pub struct TemplateEngine {
     templates: HashMap<String, OutputTemplate>,
+}
+
+impl Default for TemplateEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TemplateEngine {

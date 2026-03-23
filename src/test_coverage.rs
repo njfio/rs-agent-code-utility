@@ -364,6 +364,12 @@ impl Default for TestCoverageConfig {
     }
 }
 
+impl Default for TestCoverageAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestCoverageAnalyzer {
     /// Create a new test coverage analyzer with default configuration
     pub fn new() -> Self {
@@ -529,20 +535,20 @@ impl TestCoverageAnalyzer {
         let mut types = Vec::new();
 
         for func in test_functions {
-            if func.name.contains("unit") || func.name.contains("test_") {
-                if !types.contains(&TestType::Unit) {
-                    types.push(TestType::Unit);
-                }
+            if (func.name.contains("unit") || func.name.contains("test_"))
+                && !types.contains(&TestType::Unit)
+            {
+                types.push(TestType::Unit);
             }
-            if func.name.contains("integration") || func.name.contains("e2e") {
-                if !types.contains(&TestType::Integration) {
-                    types.push(TestType::Integration);
-                }
+            if (func.name.contains("integration") || func.name.contains("e2e"))
+                && !types.contains(&TestType::Integration)
+            {
+                types.push(TestType::Integration);
             }
-            if func.name.contains("bench") || func.name.contains("performance") {
-                if !types.contains(&TestType::Performance) {
-                    types.push(TestType::Performance);
-                }
+            if (func.name.contains("bench") || func.name.contains("performance"))
+                && !types.contains(&TestType::Performance)
+            {
+                types.push(TestType::Performance);
             }
         }
 
@@ -560,23 +566,20 @@ impl TestCoverageAnalyzer {
 
         // Simplified pattern detection based on function names
         for func in test_functions {
-            if func.name.contains("given")
+            if (func.name.contains("given")
                 || func.name.contains("when")
-                || func.name.contains("then")
+                || func.name.contains("then"))
+                && !patterns.contains(&TestPattern::GivenWhenThen)
             {
-                if !patterns.contains(&TestPattern::GivenWhenThen) {
-                    patterns.push(TestPattern::GivenWhenThen);
-                }
+                patterns.push(TestPattern::GivenWhenThen);
             }
-            if func.name.contains("setup") || func.name.contains("teardown") {
-                if !patterns.contains(&TestPattern::SetupTeardown) {
-                    patterns.push(TestPattern::SetupTeardown);
-                }
+            if (func.name.contains("setup") || func.name.contains("teardown"))
+                && !patterns.contains(&TestPattern::SetupTeardown)
+            {
+                patterns.push(TestPattern::SetupTeardown);
             }
-            if func.name.contains("mock") {
-                if !patterns.contains(&TestPattern::Mocking) {
-                    patterns.push(TestPattern::Mocking);
-                }
+            if func.name.contains("mock") && !patterns.contains(&TestPattern::Mocking) {
+                patterns.push(TestPattern::Mocking);
             }
         }
 

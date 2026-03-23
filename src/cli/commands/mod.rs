@@ -355,8 +355,8 @@ impl Execute for Commands {
                 let security_final = if *wiki_security { true } else { *ai };
                 let diagrams_final = *wiki_diagrams;
                 let examples_final = *include_examples || *wiki_examples;
-                let search_max_results = wiki_max_results.clone();
-                let max_index_symbols = wiki_max_index_symbols.clone();
+                let search_max_results = *wiki_max_results;
+                let max_index_symbols = *wiki_max_index_symbols;
                 let templates = wiki_templates.as_ref();
                 wiki::execute(
                     path,

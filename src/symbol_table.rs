@@ -1215,7 +1215,7 @@ mod tests {
         assert_eq!(ScopeType::Global, ScopeType::Global);
         assert_ne!(ScopeType::Function, ScopeType::Class);
 
-        let scope_types = vec![
+        let scope_types = [
             ScopeType::Global,
             ScopeType::Function,
             ScopeType::Class,
@@ -1233,7 +1233,7 @@ mod tests {
         assert_eq!(SymbolType::Variable, SymbolType::Variable);
         assert_ne!(SymbolType::Function, SymbolType::Class);
 
-        let symbol_types = vec![
+        let symbol_types = [
             SymbolType::Variable,
             SymbolType::Function,
             SymbolType::Class,
@@ -1253,7 +1253,7 @@ mod tests {
         assert_eq!(ReferenceType::Read, ReferenceType::Read);
         assert_ne!(ReferenceType::Write, ReferenceType::Call);
 
-        let reference_types = vec![
+        let reference_types = [
             ReferenceType::Read,
             ReferenceType::Write,
             ReferenceType::Call,

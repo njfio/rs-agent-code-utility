@@ -345,7 +345,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#,
                         }
                     }
                 };
-                let _ = rt.block_on(fetch);
+                rt.block_on(fetch);
             }
         }
 
@@ -394,7 +394,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#,
                         }
                     }
                 };
-                let _ = rt.block_on(fetch);
+                rt.block_on(fetch);
             }
         }
 

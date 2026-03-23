@@ -67,10 +67,8 @@ pub fn execute(
             }
 
             // Filter by visibility if public_only is specified
-            if public_only {
-                if !symbol.visibility.to_lowercase().contains("public") {
-                    continue;
-                }
+            if public_only && !symbol.visibility.to_lowercase().contains("public") {
+                continue;
             }
 
             matching_symbols.push((file, symbol));

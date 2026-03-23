@@ -58,7 +58,8 @@ impl super::WikiGenerator {
         }
         let use_groq =
             std::env::var("AI_GROQ_API_KEY").is_ok() || std::env::var("GROQ_API_KEY").is_ok();
-        let builder = if self.config.ai_use_mock
+
+        if self.config.ai_use_mock
             || (!use_groq
                 && std::env::var("OPENAI_API_KEY").is_err()
                 && std::env::var("AI_OPENAI_API_KEY").is_err())
@@ -66,8 +67,7 @@ impl super::WikiGenerator {
             builder.with_mock_providers(true)
         } else {
             builder
-        };
-        builder
+        }
     }
 
     pub(super) fn render_ai_doc_file(

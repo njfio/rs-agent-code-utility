@@ -280,7 +280,7 @@ impl Cache {
 
     /// Get entry from disk cache
     async fn get_disk_entry(&self, key: &str) -> Result<Option<CacheEntry>> {
-        if let Some(_) = &self.disk_cache_dir {
+        if self.disk_cache_dir.is_some() {
             let file_path = self.get_disk_file_path(key)?;
 
             if file_path.exists() {
@@ -304,7 +304,7 @@ impl Cache {
 
     /// Check if disk entry exists
     async fn disk_entry_exists(&self, key: &str) -> Result<bool> {
-        if let Some(_) = &self.disk_cache_dir {
+        if self.disk_cache_dir.is_some() {
             let file_path = self.get_disk_file_path(key)?;
             Ok(file_path.exists())
         } else {
@@ -314,7 +314,7 @@ impl Cache {
 
     /// Remove entry from disk cache
     async fn remove_disk_entry(&self, key: &str) -> Result<bool> {
-        if let Some(_) = &self.disk_cache_dir {
+        if self.disk_cache_dir.is_some() {
             let file_path = self.get_disk_file_path(key)?;
             if file_path.exists() {
                 fs::remove_file(&file_path)?;
@@ -346,7 +346,7 @@ impl Cache {
 
                 for entry in fs::read_dir(disk_dir)? {
                     let entry = entry?;
-                    if entry.path().extension().map_or(false, |ext| ext == "cache") {
+                    if entry.path().extension().is_some_and(|ext| ext == "cache") {
                         entries += 1;
                         if let Ok(metadata) = entry.metadata() {
                             total_size += metadata.len() as usize;
@@ -416,7 +416,7 @@ impl Cache {
                 for entry in fs::read_dir(disk_dir)? {
                     let entry = entry?;
                     let path = entry.path();
-                    if path.extension().map_or(false, |ext| ext == "cache") {
+                    if path.extension().is_some_and(|ext| ext == "cache") {
                         if let Ok(data) = fs::read(&path) {
                             if let Ok(cache_entry) = serde_json::from_slice::<CacheEntry>(&data) {
                                 if now > cache_entry.expires_at {

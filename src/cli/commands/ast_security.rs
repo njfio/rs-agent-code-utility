@@ -127,15 +127,14 @@ pub async fn execute(
         all_findings.retain(|f| !base.contains(&fingerprint_ast(f)));
         if update_baseline {
             let current: std::collections::HashSet<String> =
-                all_findings.iter().map(|f| fingerprint_ast(f)).collect();
+                all_findings.iter().map(fingerprint_ast).collect();
             save_baseline_ast(baseline_path, &current)?;
             baseline_set = Some(current); // reflect updated baseline if needed
         }
     }
 
     // Display results based on format
-    let output_format =
-        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+    let output_format = OutputFormat::from_str(format).map_err(CliError::UnsupportedFormat)?;
 
     match output_format {
         OutputFormat::Json => {
@@ -257,9 +256,9 @@ fn discover_files(
         entry
             .file_name()
             .to_str()
-            .map_or(false, |s| s.starts_with('.'))
+            .is_some_and(|s| s.starts_with('.'))
             || entry.path().components().any(|c| {
-                c.as_os_str().to_str().map_or(false, |s| {
+                c.as_os_str().to_str().is_some_and(|s| {
                     s == "target" || s == "node_modules" || s == "__pycache__" || s == ".git"
                 })
             })
@@ -575,7 +574,7 @@ fn generate_sarif_report(
             let is_baselined = baseline.map(|b| b.contains(&fp)).unwrap_or(false);
             let relative_path = finding
                 .file_path
-                .strip_prefix(&root_path.to_string_lossy().as_ref())
+                .strip_prefix(root_path.to_string_lossy().as_ref())
                 .unwrap_or(&finding.file_path)
                 .to_string();
 

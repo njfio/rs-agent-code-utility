@@ -188,7 +188,7 @@ impl AIProviderImpl for AnthropicProvider {
 
             let start_time = SystemTime::now();
             let response = client
-                .post(&format!("{}/messages", self.base_url))
+                .post(format!("{}/messages", self.base_url))
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .header("Content-Type", "application/json")
                 .header("anthropic-version", "2023-06-01")

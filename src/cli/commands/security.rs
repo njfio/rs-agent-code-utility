@@ -199,8 +199,7 @@ pub async fn execute(
     }
 
     // Display results based on format
-    let output_format =
-        OutputFormat::from_str(format).map_err(|e| CliError::UnsupportedFormat(e))?;
+    let output_format = OutputFormat::from_str(format).map_err(CliError::UnsupportedFormat)?;
 
     match output_format {
         OutputFormat::Json => {
@@ -456,7 +455,7 @@ fn generate_security_sarif_report(
             "results": results
         }]
     });
-    Ok(serde_json::to_string_pretty(&sarif).map_err(CliError::Json)?)
+    serde_json::to_string_pretty(&sarif).map_err(CliError::Json)
 }
 
 fn fingerprint_vuln(v: &crate::SecurityVulnerability) -> String {
@@ -521,25 +520,23 @@ fn filter_analysis_result(
             .to_lowercase();
 
         // Tests filtering
-        if !include_tests {
-            if path_str.contains("/tests/")
+        if !include_tests
+            && (path_str.contains("/tests/")
                 || fname.starts_with("test_")
                 || fname.ends_with("_test.rs")
                 || path_str.contains("/spec/")
-                || path_str.contains("/specs/")
-            {
-                continue;
-            }
+                || path_str.contains("/specs/"))
+        {
+            continue;
         }
         // Examples/demo filtering
-        if !include_examples {
-            if path_str.contains("/examples/")
+        if !include_examples
+            && (path_str.contains("/examples/")
                 || path_str.contains("/example/")
                 || path_str.contains("/demo/")
-                || path_str.contains("/demos/")
-            {
-                continue;
-            }
+                || path_str.contains("/demos/"))
+        {
+            continue;
         }
         // Size filtering (skip very large files)
         if f.size / 1024 > max_file_kb {

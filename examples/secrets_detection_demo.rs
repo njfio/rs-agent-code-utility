@@ -60,7 +60,7 @@ const DB_PASSWORD: &str = "prod_super_secret_password";
     println!("Test file results ({} findings):", test_results.len());
     for finding in &test_results {
         println!(
-            "  - {}: confidence {:.2}, false_positive: {}",
+            "  - {:?}: confidence {:.2}, false_positive: {}",
             finding.secret_type, finding.confidence, finding.is_false_positive
         );
     }

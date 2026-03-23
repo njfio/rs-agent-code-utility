@@ -83,7 +83,7 @@ fn test_to_sarif_basic_shape() {
         r.rule_id.as_deref().unwrap().contains("CWE-78")
             || r.rule_id.as_deref().unwrap().contains("Injection")
     );
-    assert_eq!(r.level.as_deref(), Some("error")); // High -> error
+    assert_eq!(r.level, Some("error")); // High -> error
     assert!(r.message.text.contains("Untrusted input"));
     assert!(r.locations[0]
         .physical_location

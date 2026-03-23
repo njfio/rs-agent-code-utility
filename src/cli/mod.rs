@@ -573,7 +573,7 @@ pub trait Execute {
 /// Apply global CLI settings (e.g., color control)
 pub fn apply_global_cli_settings(cli: &Cli) {
     if cli.no_color {
-        let _ = color_control::set_override(false);
+        color_control::set_override(false);
     }
 
     // Initialize tracing subscriber if a log level was provided and no global subscriber is set yet.

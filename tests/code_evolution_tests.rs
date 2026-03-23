@@ -10,18 +10,18 @@ fn create_test_git_repo() -> Result<TempDir, Box<dyn std::error::Error>> {
 
     // Initialize git repository
     Command::new("git")
-        .args(&["init"])
+        .args(["init"])
         .current_dir(temp_dir.path())
         .output()?;
 
     // Configure git user
     Command::new("git")
-        .args(&["config", "user.name", "Test User"])
+        .args(["config", "user.name", "Test User"])
         .current_dir(temp_dir.path())
         .output()?;
 
     Command::new("git")
-        .args(&["config", "user.email", "test@example.com"])
+        .args(["config", "user.email", "test@example.com"])
         .current_dir(temp_dir.path())
         .output()?;
 
@@ -38,12 +38,12 @@ fn main() {
 
     // Add and commit
     Command::new("git")
-        .args(&["add", "."])
+        .args(["add", "."])
         .current_dir(temp_dir.path())
         .output()?;
 
     Command::new("git")
-        .args(&["commit", "-m", "feat: initial commit"])
+        .args(["commit", "-m", "feat: initial commit"])
         .current_dir(temp_dir.path())
         .output()?;
 
@@ -59,12 +59,12 @@ fn main() {
     )?;
 
     Command::new("git")
-        .args(&["add", "."])
+        .args(["add", "."])
         .current_dir(temp_dir.path())
         .output()?;
 
     Command::new("git")
-        .args(&["commit", "-m", "feat: add second line"])
+        .args(["commit", "-m", "feat: add second line"])
         .current_dir(temp_dir.path())
         .output()?;
 
@@ -80,12 +80,12 @@ fn main() {
     )?;
 
     Command::new("git")
-        .args(&["add", "."])
+        .args(["add", "."])
         .current_dir(temp_dir.path())
         .output()?;
 
     Command::new("git")
-        .args(&["commit", "-m", "fix: correct second line"])
+        .args(["commit", "-m", "fix: correct second line"])
         .current_dir(temp_dir.path())
         .output()?;
 
@@ -105,12 +105,12 @@ fn main() {
     )?;
 
     Command::new("git")
-        .args(&["add", "."])
+        .args(["add", "."])
         .current_dir(temp_dir.path())
         .output()?;
 
     Command::new("git")
-        .args(&["commit", "-m", "refactor: extract greet function"])
+        .args(["commit", "-m", "refactor: extract greet function"])
         .current_dir(temp_dir.path())
         .output()?;
 
@@ -242,12 +242,12 @@ fn main() {{
         )?;
 
         Command::new("git")
-            .args(&["add", "."])
+            .args(["add", "."])
             .current_dir(temp_dir.path())
             .output()?;
 
         Command::new("git")
-            .args(&["commit", "-m", &format!("feat: update greeting {}", i)])
+            .args(["commit", "-m", &format!("feat: update greeting {}", i)])
             .current_dir(temp_dir.path())
             .output()?;
     }

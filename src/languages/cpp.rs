@@ -885,7 +885,7 @@ int main() {
 
         let features = CppSyntax::detect_cpp_features(&tree);
         // Check for some basic features - parser may not detect all advanced features
-        assert!(features.len() > 0); // At least some features should be detected
+        assert!(!features.is_empty()); // At least some features should be detected
         println!("Detected features: {:?}", features); // Debug output
     }
 
@@ -912,7 +912,7 @@ public:
 
         let function_nodes = tree.find_nodes_by_kind("function_definition");
         // Relaxed assertion - parser may not detect all function types
-        assert!(function_nodes.len() >= 1); // At least some functions should be found
+        assert!(!function_nodes.is_empty()); // At least some functions should be found
         println!("Found {} function nodes", function_nodes.len()); // Debug output
     }
 

@@ -270,7 +270,7 @@ impl GoSyntax {
 
     /// Check if a function/method is exported (starts with uppercase)
     pub fn is_exported(name: &str) -> bool {
-        name.chars().next().map_or(false, |c| c.is_uppercase())
+        name.chars().next().is_some_and(|c| c.is_uppercase())
     }
 
     /// Check if a function is a main function
@@ -1072,7 +1072,7 @@ type privateStruct struct {
 
         let analysis = GoSyntax::analyze_package(&tree, source);
         // Relaxed assertion - parser may not extract package name correctly
-        assert!(analysis.package_name.len() > 0); // Some package name should be found
+        assert!(!analysis.package_name.is_empty()); // Some package name should be found
         assert_eq!(analysis.imports.len(), 2);
         assert!(analysis.imports.contains(&"fmt".to_string()));
         assert!(analysis.imports.contains(&"net/http".to_string()));
@@ -1156,7 +1156,7 @@ func variadic(args ...string) {
 
         let function_nodes = tree.find_nodes_by_kind("function_declaration");
         // Relaxed assertion - parser may not detect all functions
-        assert!(function_nodes.len() >= 1); // At least some functions should be found
+        assert!(!function_nodes.is_empty()); // At least some functions should be found
         println!("Found {} function nodes", function_nodes.len()); // Debug output
     }
 

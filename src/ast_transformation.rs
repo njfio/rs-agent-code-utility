@@ -607,6 +607,12 @@ impl Default for ValidationConfig {
     }
 }
 
+impl Default for AstTransformationEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AstTransformationEngine {
     /// Create a new AST transformation engine with default configuration
     pub fn new() -> Self {
@@ -1397,7 +1403,7 @@ impl AstTransformationEngine {
         if !self.is_valid_identifier(new_name, language) {
             return Err(Error::internal_error(
                 "ast_transformation",
-                &format!("Invalid identifier name: {}", new_name),
+                format!("Invalid identifier name: {}", new_name),
             ));
         }
 
@@ -1410,7 +1416,7 @@ impl AstTransformationEngine {
         if self.has_naming_conflict(tree, new_name, &occurrences, language)? {
             return Err(Error::internal_error(
                 "ast_transformation",
-                &format!(
+                format!(
                     "Naming conflict: identifier '{}' already exists in scope",
                     new_name
                 ),
@@ -1799,7 +1805,7 @@ impl AstTransformationEngine {
         if node.start_byte() <= target_start && node.end_byte() >= target_end {
             // Check if this is a scope-defining node
             if self.is_scope_defining_node(node) {
-                return Some(node.clone());
+                return Some(*node);
             }
 
             // Otherwise, check children
@@ -1810,7 +1816,7 @@ impl AstTransformationEngine {
             }
 
             // If no child scope found, this node is the containing scope
-            Some(node.clone())
+            Some(*node)
         } else {
             None
         }
@@ -1892,10 +1898,10 @@ impl AstTransformationEngine {
             }
 
             // Check child nodes (but not nested scopes)
-            if !self.is_scope_defining_node(&child) {
-                if self.identifier_exists_in_scope(&child, identifier)? {
-                    return Ok(true);
-                }
+            if !self.is_scope_defining_node(&child)
+                && self.identifier_exists_in_scope(&child, identifier)?
+            {
+                return Ok(true);
             }
         }
 
@@ -2141,7 +2147,7 @@ impl AstTransformationEngine {
         } else {
             Err(Error::internal_error(
                 "ast_transformation",
-                &format!("Variable declaration not found: {}", variable_name),
+                format!("Variable declaration not found: {}", variable_name),
             ))
         }
     }
@@ -2159,7 +2165,7 @@ impl AstTransformationEngine {
                 if child.kind() == "identifier" {
                     if let Ok(text) = child.text() {
                         if text == variable_name {
-                            return Some(node.clone());
+                            return Some(*node);
                         }
                     }
                 }
@@ -2284,7 +2290,7 @@ impl AstTransformationEngine {
         } else {
             Err(Error::internal_error(
                 "ast_transformation",
-                &format!("Method definition not found: {}", method_name),
+                format!("Method definition not found: {}", method_name),
             ))
         }
     }
@@ -2304,7 +2310,7 @@ impl AstTransformationEngine {
                 if child.kind() == "identifier" {
                     if let Ok(text) = child.text() {
                         if text == method_name {
-                            return Some(node.clone());
+                            return Some(*node);
                         }
                     }
                 }
@@ -2764,7 +2770,7 @@ impl AstTransformationEngine {
                 "assignment_expression" | "assignment" => {
                     // Look at the right-hand side of assignment
                     if let Some(value_node) = parent.child_by_field_name("right") {
-                        return Ok(self.infer_type_from_expression(&value_node, source)?);
+                        return self.infer_type_from_expression(&value_node, source);
                     }
                 }
                 "let_declaration" | "variable_declaration" => {
@@ -2775,7 +2781,7 @@ impl AstTransformationEngine {
                         }
                     }
                     if let Some(init_node) = parent.child_by_field_name("value") {
-                        return Ok(self.infer_type_from_expression(&init_node, source)?);
+                        return self.infer_type_from_expression(&init_node, source);
                     }
                 }
                 "parameter" => {
@@ -2807,7 +2813,7 @@ impl AstTransformationEngine {
                 // Try to infer from function name
                 if let Some(func_node) = node.child_by_field_name("function") {
                     if let Ok(func_name) = func_node.text() {
-                        return Ok(self.infer_return_type_from_function_name(&func_name));
+                        return Ok(self.infer_return_type_from_function_name(func_name));
                     }
                 }
                 Ok("auto".to_string())
@@ -2831,7 +2837,7 @@ impl AstTransformationEngine {
     /// Check if a variable is mutable based on its declaration context
     fn is_variable_mutable(&self, node: &Node) -> Result<bool> {
         // Walk up to find the declaration
-        let mut current = Some(node.clone());
+        let mut current = Some(*node);
         while let Some(node) = current {
             if self.is_variable_declaration_node(&node) {
                 // Check for mutability keywords
@@ -3411,6 +3417,12 @@ impl AstTransformationEngine {
     }
 }
 
+impl Default for SemanticValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SemanticValidator {
     /// Create a new semantic validator with default configuration
     pub fn new() -> Self {
@@ -3651,7 +3663,7 @@ impl SemanticValidator {
                 }
             }
             // Return this node if no child matches
-            Some(node.clone())
+            Some(*node)
         } else {
             None
         }
@@ -3662,7 +3674,7 @@ impl SemanticValidator {
         let mut variables = Vec::new();
 
         // Walk up the tree to find variable declarations
-        let mut current = Some(node.clone());
+        let mut current = Some(*node);
         while let Some(node) = current {
             // Look for variable declarations in this scope
             for child in node.children() {
@@ -3683,7 +3695,7 @@ impl SemanticValidator {
         let mut functions = Vec::new();
 
         // Walk up the tree to find function declarations
-        let mut current = Some(node.clone());
+        let mut current = Some(*node);
         while let Some(node) = current {
             // Look for function declarations in this scope
             for child in node.children() {

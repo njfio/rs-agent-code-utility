@@ -58,8 +58,8 @@ pub fn execute(
 
         // Read file content
         let file_path = analysis_result.root_path.join(&file.path);
-        let content = std::fs::read_to_string(&file_path)
-            .map_err(|e| crate::cli::error::CliError::IoError(e))?;
+        let content =
+            std::fs::read_to_string(&file_path).map_err(crate::cli::error::CliError::IoError)?;
 
         // Optional prefilter: skip files that don't contain the substring
         if let Some(sub) = prefilter {

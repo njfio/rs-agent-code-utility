@@ -143,7 +143,7 @@ impl Query {
     pub fn highlights(language: Language) -> Result<Self> {
         let highlights_query = language.highlights_query().ok_or_else(|| {
             Error::not_supported_error(
-                &format!("Highlights query for {}", language.name()),
+                format!("Highlights query for {}", language.name()),
                 "Language does not support syntax highlighting",
             )
         })?;

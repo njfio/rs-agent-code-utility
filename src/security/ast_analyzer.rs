@@ -154,7 +154,7 @@ impl std::fmt::Display for SecuritySeverity {
 }
 
 /// Code context information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CodeContext {
     /// Is this test code?
     pub is_test_code: bool,
@@ -172,20 +172,6 @@ pub struct CodeContext {
     pub variable_scope: HashMap<String, VariableInfo>,
 }
 
-impl Default for CodeContext {
-    fn default() -> Self {
-        Self {
-            is_test_code: false,
-            is_example_code: false,
-            is_config_code: false,
-            function_context: None,
-            class_context: None,
-            module_context: None,
-            variable_scope: HashMap::new(),
-        }
-    }
-}
-
 /// Variable information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VariableInfo {
@@ -200,7 +186,7 @@ pub struct VariableInfo {
 }
 
 /// Semantic information extracted from AST
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SemanticInfo {
     /// Functions and methods
     pub functions: Vec<FunctionInfo>,
@@ -214,19 +200,6 @@ pub struct SemanticInfo {
     pub string_literals: Vec<StringLiteral>,
     /// Function calls
     pub function_calls: Vec<FunctionCall>,
-}
-
-impl Default for SemanticInfo {
-    fn default() -> Self {
-        Self {
-            functions: Vec::new(),
-            classes: Vec::new(),
-            variables: HashMap::new(),
-            imports: Vec::new(),
-            string_literals: Vec::new(),
-            function_calls: Vec::new(),
-        }
-    }
 }
 
 /// Function information
@@ -579,17 +552,16 @@ impl AstSecurityAnalyzer {
         // Simple heuristic - look for variable-like patterns in the finding
         if finding.finding_type == SecurityFindingType::HardcodedSecret {
             // Extract potential variable names from the code snippet
-            if let Some(_var_match) = finding.code_snippet.lines().find(|line| {
-                line.contains('=')
-                    || line.contains("const")
-                    || line.contains("let")
-                    || line.contains("var")
-            }) {
-                // Simple extraction - this could be enhanced
-                Some("extracted_var".to_string())
-            } else {
-                None
-            }
+            finding
+                .code_snippet
+                .lines()
+                .find(|line| {
+                    line.contains('=')
+                        || line.contains("const")
+                        || line.contains("let")
+                        || line.contains("var")
+                })
+                .map(|_var_match| "extracted_var".to_string())
         } else {
             None
         }
@@ -598,16 +570,11 @@ impl AstSecurityAnalyzer {
     /// Extract function name from finding if applicable
     fn extract_function_from_finding(&self, finding: &SecurityFinding) -> Option<String> {
         // Look for function patterns in the code snippet
-        if let Some(_func_match) = finding
+        finding
             .code_snippet
             .lines()
             .find(|line| line.contains("fn ") || line.contains("function") || line.contains("def "))
-        {
-            // Simple extraction - this could be enhanced
-            Some("extracted_function".to_string())
-        } else {
-            None
-        }
+            .map(|_func_match| "extracted_function".to_string())
     }
 
     /// Get CWE ID for a vulnerability type
@@ -1332,7 +1299,7 @@ impl AstSecurityAnalyzer {
         let mut suspicious_count = 0;
         let mut total_vars = 0;
 
-        for (var_name, _var_info) in &semantic_info.variables {
+        for var_name in semantic_info.variables.keys() {
             total_vars += 1;
             let name_lower = var_name.to_lowercase();
 
@@ -1419,6 +1386,12 @@ macro_rules! placeholder_analyzer {
         #[derive(Debug)]
         pub struct $name;
 
+        impl Default for $name {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+
         impl $name {
             pub fn new() -> Self {
                 Self
@@ -1476,6 +1449,12 @@ pub struct ContextClassifier {
     test_patterns: std::collections::HashSet<String>,
     example_patterns: std::collections::HashSet<String>,
     config_patterns: std::collections::HashSet<String>,
+}
+
+impl Default for ContextClassifier {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ContextClassifier {
@@ -1594,6 +1573,12 @@ pub struct SemanticAnalysisEngine {
     taint_analyzer: crate::TaintAnalyzer,
 }
 
+impl Default for SemanticAnalysisEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SemanticAnalysisEngine {
     pub fn new() -> Self {
         Self {
@@ -1611,7 +1596,7 @@ impl SemanticAnalysisEngine {
         let mut results = Vec::new();
 
         // Analyze data flows between variables and function calls
-        for (var_name, _var_info) in &semantic_info.variables {
+        for var_name in semantic_info.variables.keys() {
             for call in &semantic_info.function_calls {
                 // Check if variable is used in function call (potential data flow)
                 if call.arguments.iter().any(|arg| arg.contains(var_name)) {

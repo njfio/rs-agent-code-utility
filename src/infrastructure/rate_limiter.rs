@@ -93,6 +93,12 @@ impl Default for BackoffConfig {
     }
 }
 
+impl Default for MultiServiceRateLimiter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MultiServiceRateLimiter {
     /// Create a new multi-service rate limiter
     pub fn new() -> Self {

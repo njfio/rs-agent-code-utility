@@ -800,10 +800,7 @@ fn display_dependencies(result: &AnalysisResult) {
 
 fn find_symbols(result: &AnalysisResult, query: &str) {
     if query.is_empty() {
-        println!(
-            "{}",
-            "[ERROR] Please provide a search query. Usage: find <symbol_name>"
-        );
+        println!("[ERROR] Please provide a search query. Usage: find <symbol_name>");
         return;
     }
 
@@ -878,10 +875,7 @@ fn find_symbols(result: &AnalysisResult, query: &str) {
 
 fn explain_symbol(_ai_analyzer: &AIAnalyzer, result: &AnalysisResult, symbol_name: &str) {
     if symbol_name.is_empty() {
-        println!(
-            "{}",
-            "[ERROR] Please provide a symbol name. Usage: explain <symbol_name>"
-        );
+        println!("[ERROR] Please provide a symbol name. Usage: explain <symbol_name>");
         return;
     }
 

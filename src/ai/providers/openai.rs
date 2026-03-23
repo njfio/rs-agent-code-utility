@@ -154,7 +154,7 @@ impl OpenAIProvider {
             .ok_or_else(|| AIError::configuration("HTTP client not available"))?;
 
         let response = client
-            .post(&format!("{}/chat/completions", self.base_url))
+            .post(format!("{}/chat/completions", self.base_url))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .json(&openai_request)

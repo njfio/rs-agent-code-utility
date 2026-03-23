@@ -212,7 +212,7 @@ impl AIFalsePositiveFilter {
         // Determine final filtering decision
         let should_filter = overall_confidence >= self.config.min_ai_confidence
             && (ml_result.should_filter
-                || ai_analysis.as_ref().map_or(false, |a| a.is_false_positive));
+                || ai_analysis.as_ref().is_some_and(|a| a.is_false_positive));
 
         // Generate comprehensive reasoning
         let reasoning = self.generate_reasoning(&factors, overall_confidence, should_filter);

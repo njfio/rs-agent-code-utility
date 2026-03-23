@@ -8,7 +8,6 @@ use rust_tree_sitter::{
     security::ast_analyzer::{AstSecurityAnalyzer, SecurityFinding, SecuritySeverity},
 };
 use std::path::PathBuf;
-use tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -573,6 +573,12 @@ impl Default for SmartRefactoringConfig {
     }
 }
 
+impl Default for SmartRefactoringEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SmartRefactoringEngine {
     /// Create a new smart refactoring engine with default configuration
     pub fn new() -> Self {
@@ -1611,7 +1617,7 @@ impl SmartRefactoringEngine {
 
             if let Ok(content) = file_content {
                 // Check for deprecated Rust patterns
-                if file.path.extension().map_or(false, |ext| ext == "rs") {
+                if file.path.extension().is_some_and(|ext| ext == "rs") {
                     // Check for old-style error handling
                     if content.contains("unwrap()") {
                         // Count unwrap() calls vs expect() calls (excluding comments)
@@ -1682,7 +1688,7 @@ impl SmartRefactoringEngine {
                 if file
                     .path
                     .extension()
-                    .map_or(false, |ext| ext == "js" || ext == "ts")
+                    .is_some_and(|ext| ext == "js" || ext == "ts")
                 {
                     // Check for var usage
                     if content.contains("var ") {
@@ -1761,11 +1767,7 @@ impl SmartRefactoringEngine {
             let mut module_dirs = 0;
 
             for file in &analysis_result.files {
-                if file
-                    .path
-                    .parent()
-                    .map_or(false, |p| p.file_name().is_some())
-                {
+                if file.path.parent().is_some_and(|p| p.file_name().is_some()) {
                     module_dirs += 1;
                 }
             }

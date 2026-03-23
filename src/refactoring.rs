@@ -175,6 +175,12 @@ impl Default for RefactoringConfig {
     }
 }
 
+impl Default for RefactoringAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RefactoringAnalyzer {
     /// Create a new refactoring analyzer with default configuration
     pub fn new() -> Self {

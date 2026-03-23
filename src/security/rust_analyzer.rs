@@ -22,6 +22,12 @@ pub struct RustAnalyzer {
     vulnerability_patterns: Vec<VulnerabilityPattern>,
 }
 
+impl Default for RustAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RustAnalyzer {
     pub fn new() -> Self {
         let vulnerability_patterns = Self::initialize_patterns();
@@ -246,7 +252,7 @@ impl RustAnalyzer {
     ) -> Result<()> {
         if node.kind() == "string_literal" {
             if let Ok(text) = node.text() {
-                let value = self.extract_string_content(&text);
+                let value = self.extract_string_content(text);
                 let line_number = node.start_position().row;
                 let is_multiline = text.contains("\\n") || text.lines().count() > 1;
                 let context = self.extract_literal_context(node)?;
@@ -271,7 +277,7 @@ impl RustAnalyzer {
     /// Extract function calls
     fn extract_function_calls(&self, node: &Node, calls: &mut Vec<FunctionCall>) -> Result<()> {
         if node.kind() == "call_expression" {
-            let function_name = self.extract_call_function_name(&node)?;
+            let function_name = self.extract_call_function_name(node)?;
             let arguments = self.extract_call_arguments(node)?;
             let line_number = node.start_position().row;
             let is_method_call = self.is_method_call(node)?;
@@ -503,7 +509,7 @@ impl RustAnalyzer {
 
         for node in tree.find_nodes_by_kind("string_literal") {
             if let Ok(text) = node.text() {
-                let content = self.extract_string_content(&text);
+                let content = self.extract_string_content(text);
 
                 // Check for potential secrets
                 if self.is_potential_secret(&content) {
@@ -959,12 +965,12 @@ impl RustAnalyzer {
                                 .utf8_text(tree.source().as_bytes())
                             {
                                 // Check for potential format string vulnerabilities
-                                if macro_name.contains("println!")
-                                    || macro_name.contains("eprintln!")
+                                if (macro_name.contains("println!")
+                                    || macro_name.contains("eprintln!"))
+                                    && args_text.contains("{}")
+                                    && args_text.contains("user_input")
                                 {
-                                    if args_text.contains("{}") && args_text.contains("user_input")
-                                    {
-                                        findings.push(SecurityFinding {
+                                    findings.push(SecurityFinding {
                                             id: format!("RUST_MACRO_FMT_{}", capture.node.start_position().row + 1),
                                             finding_type: SecurityFindingType::Injection,
                                             severity: SecuritySeverity::Medium,
@@ -980,7 +986,6 @@ impl RustAnalyzer {
                                             confidence: 0.7,
                                             context: CodeContext::default(),
                                         });
-                                    }
                                 }
                             }
                         }

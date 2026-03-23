@@ -463,7 +463,7 @@ pub enum OptimizationPotential {
 }
 
 /// Memory usage analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MemoryAnalysis {
     /// Memory allocation hotspots
     pub allocation_hotspots: Vec<MemoryHotspot>,
@@ -558,7 +558,7 @@ pub struct MemoryOptimization {
 }
 
 /// Concurrency analysis results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ConcurrencyAnalysis {
     /// Parallelization opportunities
     pub parallelization_opportunities: Vec<ParallelizationOpportunity>,
@@ -688,6 +688,12 @@ impl Default for PerformanceConfig {
             min_complexity_threshold: 10,
             max_function_length: 50,
         }
+    }
+}
+
+impl Default for PerformanceAnalyzer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1159,7 +1165,7 @@ impl PerformanceAnalyzer {
         let loop_nodes = self.find_loop_nodes(node, file);
 
         for loop_node in &loop_nodes {
-            let nesting_info = self.analyze_loop_nesting(&loop_node, content, file)?;
+            let nesting_info = self.analyze_loop_nesting(loop_node, content, file)?;
 
             if nesting_info.depth >= 2 {
                 let complexity_order = nesting_info.depth + 1;
@@ -1289,15 +1295,13 @@ impl PerformanceAnalyzer {
     ) -> Result<LoopNestingInfo> {
         let mut depth = 0;
         let current_node = *loop_node;
-        let iteration_variables;
-        let data_dependencies;
 
         // Count nested loops within this loop
         depth += self.count_nested_loops(&current_node, file);
 
         // Extract iteration variables and analyze dependencies
-        iteration_variables = self.extract_iteration_variables(&current_node, content, file)?;
-        data_dependencies =
+        let iteration_variables = self.extract_iteration_variables(&current_node, content, file)?;
+        let data_dependencies =
             self.analyze_data_dependencies(&current_node, &iteration_variables, content, file)?;
 
         Ok(LoopNestingInfo {
@@ -1358,7 +1362,7 @@ impl PerformanceAnalyzer {
         match file.language.to_lowercase().as_str() {
             "rust" => {
                 // For Rust: for var in iterator, while let Some(var) = ..., etc.
-                if let Some(text) = node.utf8_text(content.as_bytes()).ok() {
+                if let Ok(text) = node.utf8_text(content.as_bytes()) {
                     if text.contains("for ") {
                         // Extract variable from "for var in ..."
                         if let Some(start) = text.find("for ") {
@@ -1372,7 +1376,7 @@ impl PerformanceAnalyzer {
             }
             "python" => {
                 // For Python: for var in ..., while condition:
-                if let Some(text) = node.utf8_text(content.as_bytes()).ok() {
+                if let Ok(text) = node.utf8_text(content.as_bytes()) {
                     if text.contains("for ") {
                         if let Some(start) = text.find("for ") {
                             if let Some(end) = text[start..].find(" in ") {
@@ -1385,7 +1389,7 @@ impl PerformanceAnalyzer {
             }
             _ => {
                 // Generic extraction for other languages
-                if let Some(text) = node.utf8_text(content.as_bytes()).ok() {
+                if let Ok(text) = node.utf8_text(content.as_bytes()) {
                     // Simple heuristic: look for common iteration variable names
                     let common_vars = ["i", "j", "k", "index", "idx", "n", "m"];
                     for var in common_vars {
@@ -1410,7 +1414,7 @@ impl PerformanceAnalyzer {
     ) -> Result<Vec<DataDependency>> {
         let mut dependencies = Vec::new();
 
-        if let Some(text) = node.utf8_text(content.as_bytes()).ok() {
+        if let Ok(text) = node.utf8_text(content.as_bytes()) {
             for var in iteration_vars {
                 // Check for array/collection access patterns
                 if text.contains(&format!("[{}]", var)) || text.contains(&format!("[{} ", var)) {
@@ -1488,7 +1492,7 @@ impl PerformanceAnalyzer {
     ) -> Result<Vec<AccessPattern>> {
         let mut patterns = Vec::new();
 
-        if let Some(text) = node.utf8_text(content.as_bytes()).ok() {
+        if let Ok(text) = node.utf8_text(content.as_bytes()) {
             // Detect sequential access patterns
             if text.contains("[i]") || text.contains("[index]") {
                 patterns.push(AccessPattern {
@@ -1777,7 +1781,7 @@ impl PerformanceAnalyzer {
         let mut hotspots = Vec::new();
 
         // Analyze for inefficient data structure usage patterns
-        if let Some(text) = node.utf8_text(content.as_bytes()).ok() {
+        if let Ok(text) = node.utf8_text(content.as_bytes()) {
             // Detect O(n) operations in loops (leading to O(n²))
             if self.contains_linear_operations_in_loops(text, file) {
                 hotspots.push(PerformanceHotspot {
@@ -1829,7 +1833,7 @@ impl PerformanceAnalyzer {
     ) -> Result<Vec<PerformanceHotspot>> {
         let mut hotspots = Vec::new();
 
-        if let Some(text) = node.utf8_text(content.as_bytes()).ok() {
+        if let Ok(text) = node.utf8_text(content.as_bytes()) {
             // Detect bubble sort or similar O(n²) sorting
             if self.contains_inefficient_sorting(text, file) {
                 hotspots.push(PerformanceHotspot {
@@ -3534,28 +3538,6 @@ impl Default for ComplexityAnalysis {
             high_complexity_functions: Vec::new(),
             nested_loops: Vec::new(),
             recursive_functions: Vec::new(),
-        }
-    }
-}
-
-impl Default for MemoryAnalysis {
-    fn default() -> Self {
-        Self {
-            allocation_hotspots: Vec::new(),
-            leak_potential: Vec::new(),
-            inefficient_structures: Vec::new(),
-            optimizations: Vec::new(),
-        }
-    }
-}
-
-impl Default for ConcurrencyAnalysis {
-    fn default() -> Self {
-        Self {
-            parallelization_opportunities: Vec::new(),
-            synchronization_issues: Vec::new(),
-            thread_safety_concerns: Vec::new(),
-            async_optimizations: Vec::new(),
         }
     }
 }

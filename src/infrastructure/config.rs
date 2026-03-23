@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use tracing::{info, warn};
 
 /// Main application configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AppConfig {
     /// Database configuration
     pub database: DatabaseConfig,
@@ -37,7 +37,7 @@ pub struct DatabaseConfig {
 }
 
 /// External API configurations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ApiConfig {
     /// National Vulnerability Database (NVD) configuration
     pub nvd: NvdConfig,
@@ -137,18 +137,6 @@ pub struct CacheConfig {
     pub default_ttl: u64,
 }
 
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            database: DatabaseConfig::default(),
-            apis: ApiConfig::default(),
-            analysis: AnalysisConfig::default(),
-            logging: LoggingConfig::default(),
-            cache: CacheConfig::default(),
-        }
-    }
-}
-
 impl Default for DatabaseConfig {
     fn default() -> Self {
         let data_dir = dirs::data_dir()
@@ -160,16 +148,6 @@ impl Default for DatabaseConfig {
             max_connections: 10,
             connection_timeout: 30,
             enable_wal: true,
-        }
-    }
-}
-
-impl Default for ApiConfig {
-    fn default() -> Self {
-        Self {
-            nvd: NvdConfig::default(),
-            osv: OsvConfig::default(),
-            github: GitHubConfig::default(),
         }
     }
 }

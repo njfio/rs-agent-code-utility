@@ -118,9 +118,9 @@ fn test_reasoning_engine_with_config() {
 
     let engine = AutomatedReasoningEngine::with_config(config.clone());
 
-    assert_eq!(engine.config().enable_deductive, true);
-    assert_eq!(engine.config().enable_inductive, false);
-    assert_eq!(engine.config().enable_abductive, true);
+    assert!(engine.config().enable_deductive);
+    assert!(!engine.config().enable_inductive);
+    assert!(engine.config().enable_abductive);
     assert_eq!(engine.config().confidence_threshold, 0.8);
 }
 
@@ -214,7 +214,7 @@ fn test_fact_extraction_from_analysis() {
     let _result = engine.analyze_code(&analysis).unwrap();
 
     // Should have extracted facts from the analysis
-    assert!(engine.knowledge_base().facts().len() > 0);
+    assert!(!engine.knowledge_base().facts().is_empty());
 
     // Should have function facts
     let function_facts: Vec<_> = engine
