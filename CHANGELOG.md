@@ -7,16 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-23
+
 ### Added
 - Security CLI: `--min-confidence`, `--fail-on`, `--no-ai-filter`, `--filter-mode`, `--baseline`, `--update-baseline`, `--include-tests`, `--include-examples`, `--include-non-code`, `--max-file-kb`, and `--format sarif`.
 - AST Security CLI: baseline handling, SARIF output, `--max-file-kb` size budget.
 - Deterministic false-positive filter with `strict|balanced|permissive` modes.
 - Secrets detector: added Twilio, SendGrid, Azure validators; tuned entropy and placeholders.
 - Markdown/JSON snapshot tests for security outputs.
+- Feature-flag documentation in `docs/FEATURE_FLAGS.md`, including binary/example gating and dependency-to-feature mapping.
 
 ### Changed
+- Default features changed from `["std", "serde", "ml", "net", "db"]` to `["std", "serde"]`.
+- CLI binaries now require the opt-in `cli` feature, wiki generation is behind `wiki`, and `full` restores the broad pre-Phase-1 capability set.
+- Dependency analysis now preserves configured vulnerability providers across clones, populates per-package-manager dependency counts, and deduplicates inferred imports against manifest dependencies.
 - Security SARIF now includes `baselineState` new/unchanged when baseline is provided.
-- Severity breakdowns computed after filtering for accurate counts.
+- Severity breakdowns are computed after filtering for accurate counts.
+
+### Removed
+- Root-level stale planning documents and committed development artifacts that were not part of the shipped library surface.
+
+### Migration
+- Add `features = ["full"]` to restore the previous default behavior.
+- Add `features = ["cli"]` when building or installing the CLI without the rest of the optional surface.
+- Library consumers that relied on AI/network/database functionality from defaults must now opt into `ml`, `net`, and `db` explicitly.
 
 ## [0.1.0] - 2024-12-19
 
@@ -106,5 +120,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architecture reviews** with structural analysis
 - **Team onboarding** with visual project overviews
 
-[Unreleased]: https://github.com/njfio/rust-treesitter-agent-code-utility/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/njfio/rust-treesitter-agent-code-utility/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/njfio/rust-treesitter-agent-code-utility/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/njfio/rust-treesitter-agent-code-utility/releases/tag/v0.1.0
