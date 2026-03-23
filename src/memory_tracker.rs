@@ -1,7 +1,6 @@
 use crate::{AnalysisResult, Error, FileInfo, Result, SyntaxTree};
 use std::collections::{HashMap, HashSet};
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Comprehensive memory allocation tracking system
@@ -17,7 +16,7 @@ pub struct MemoryTracker {
 
 /// Configuration for memory allocation tracking
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MemoryTrackingConfig {
     /// Track heap allocations
     pub track_heap_allocations: bool,
@@ -39,7 +38,7 @@ pub struct MemoryTrackingConfig {
 
 /// Memory allocation tracking results
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MemoryTrackingResult {
     /// Total allocations tracked
     pub total_allocations: usize,
@@ -65,7 +64,7 @@ pub struct MemoryTrackingResult {
 
 /// Memory allocation hotspot
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AllocationHotspot {
     /// Unique identifier
     pub id: String,
@@ -89,7 +88,7 @@ pub struct AllocationHotspot {
 
 /// Location of memory allocation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AllocationLocation {
     /// File path
     pub file: String,
@@ -105,7 +104,7 @@ pub struct AllocationLocation {
 
 /// Types of memory allocation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum AllocationType {
     /// Heap allocation (malloc, new, Box::new)
     HeapAllocation,
@@ -127,7 +126,7 @@ pub enum AllocationType {
 
 /// Memory allocation pattern
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AllocationPattern {
     /// Pattern identifier
     pub id: String,
@@ -147,7 +146,7 @@ pub struct AllocationPattern {
 
 /// Memory usage pattern
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum UsagePattern {
     /// Allocate once, use many times
     AllocateOnceUseMany,
@@ -165,7 +164,7 @@ pub enum UsagePattern {
 
 /// Memory leak candidate
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MemoryLeakCandidate {
     /// Unique identifier
     pub id: String,
@@ -187,7 +186,7 @@ pub struct MemoryLeakCandidate {
 
 /// Types of memory leaks
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum LeakType {
     /// Direct memory leak (not freed)
     DirectLeak,
@@ -203,7 +202,7 @@ pub enum LeakType {
 
 /// Memory fragmentation analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FragmentationAnalysis {
     /// Fragmentation percentage
     pub fragmentation_percentage: f64,
@@ -219,7 +218,7 @@ pub struct FragmentationAnalysis {
 
 /// Memory fragmentation hotspot
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FragmentationHotspot {
     /// Memory region
     pub region: MemoryRegion,
@@ -233,7 +232,7 @@ pub struct FragmentationHotspot {
 
 /// Memory region
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MemoryRegion {
     /// Start address (for analysis purposes)
     pub start_offset: u64,
@@ -245,7 +244,7 @@ pub struct MemoryRegion {
 
 /// Memory snapshot at a point in time
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MemorySnapshot {
     /// Timestamp
     pub timestamp: std::time::SystemTime,
@@ -263,7 +262,7 @@ pub struct MemorySnapshot {
 
 /// Allocation call stack
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AllocationCallStack {
     /// Allocation identifier
     pub allocation_id: String,
@@ -277,7 +276,7 @@ pub struct AllocationCallStack {
 
 /// Stack frame information
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct StackFrame {
     /// Function name
     pub function: String,
@@ -291,7 +290,7 @@ pub struct StackFrame {
 
 /// Allocation lifetime statistics
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct LifetimeStatistics {
     /// Average lifetime
     pub average_lifetime: std::time::Duration,
@@ -307,7 +306,7 @@ pub struct LifetimeStatistics {
 
 /// Performance impact of allocations
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AllocationImpact {
     /// CPU overhead percentage
     pub cpu_overhead: f64,
@@ -323,7 +322,7 @@ pub struct AllocationImpact {
 
 /// Memory usage statistics
 #[derive(Debug, Clone, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MemoryStatistics {
     /// Total allocations tracked
     pub total_allocations: u64,

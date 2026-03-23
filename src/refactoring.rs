@@ -9,12 +9,11 @@ use crate::{AnalysisResult, FileInfo, Symbol};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Smart refactoring analyzer
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringAnalyzer {
     /// Configuration for refactoring analysis
     pub config: RefactoringConfig,
@@ -22,7 +21,7 @@ pub struct RefactoringAnalyzer {
 
 /// Configuration for refactoring analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringConfig {
     /// Enable complexity-based refactoring suggestions
     pub complexity_analysis: bool,
@@ -42,7 +41,7 @@ pub struct RefactoringConfig {
 
 /// Refactoring analysis results
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringResult {
     /// Overall code quality score (0-100)
     pub quality_score: u8,
@@ -62,7 +61,7 @@ pub struct RefactoringResult {
 
 /// A refactoring suggestion
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringSuggestion {
     /// Suggestion ID
     pub id: String,
@@ -94,7 +93,7 @@ pub struct RefactoringSuggestion {
 
 /// Location of code to refactor
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringLocation {
     /// File path
     pub file: PathBuf,
@@ -112,7 +111,7 @@ pub struct RefactoringLocation {
 
 /// Impact summary of all refactoring suggestions
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ImpactSummary {
     /// Estimated maintainability improvement (0-100)
     pub maintainability_improvement: u8,
@@ -128,7 +127,7 @@ pub struct ImpactSummary {
 
 /// Categories of refactoring
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum RefactoringCategory {
     /// Complexity reduction
     ComplexityReduction,
@@ -158,7 +157,7 @@ pub use crate::constants::common::EffortLevel as ImplementationEffort;
 
 /// Expected impact of refactoring
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ExpectedImpact {
     /// Maintainability impact (0-100)
     pub maintainability: u8,

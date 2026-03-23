@@ -21,6 +21,7 @@ pub mod wiki;
 
 use super::error::{CliError, CliResult};
 use super::{Commands, Execute};
+#[cfg(feature = "net")]
 use tokio;
 
 impl Execute for Commands {
@@ -89,25 +90,32 @@ impl Execute for Commands {
                 update_baseline,
                 max_file_kb,
             } => {
-                // Convert the async CLI call to sync execution
-                let rt = tokio::runtime::Runtime::new()
-                    .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
+                #[cfg(feature = "net")]
+                {
+                    // Convert the async CLI call to sync execution
+                    let rt = tokio::runtime::Runtime::new()
+                        .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
 
-                rt.block_on(ast_security::execute(
-                    path,
-                    format,
-                    min_severity,
-                    output.as_ref(),
-                    *summary_only,
-                    language.as_deref(),
-                    *include_tests,
-                    *include_examples,
-                    *min_confidence,
-                    fail_on.as_ref().map(|s| s.as_str()),
-                    baseline.as_ref(),
-                    *update_baseline,
-                    *max_file_kb,
-                ))
+                    rt.block_on(ast_security::execute(
+                        path,
+                        format,
+                        min_severity,
+                        output.as_ref(),
+                        *summary_only,
+                        language.as_deref(),
+                        *include_tests,
+                        *include_examples,
+                        *min_confidence,
+                        fail_on.as_ref().map(|s| s.as_str()),
+                        baseline.as_ref(),
+                        *update_baseline,
+                        *max_file_kb,
+                    ))
+                }
+                #[cfg(not(feature = "net"))]
+                {
+                    Err(CliError::Internal("ast-security command requires the 'net' feature".to_string()))
+                }
             }
             Commands::Query {
                 path,
@@ -240,31 +248,38 @@ impl Execute for Commands {
                         }
                     }
                 }
-                // Convert the async CLI call to sync execution
-                let rt = tokio::runtime::Runtime::new()
-                    .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
+                #[cfg(feature = "net")]
+                {
+                    // Convert the async CLI call to sync execution
+                    let rt = tokio::runtime::Runtime::new()
+                        .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
 
-                rt.block_on(security::execute(
-                    path,
-                    format,
-                    min_severity,
-                    output.as_ref(),
-                    *summary_only,
-                    *compliance,
-                    *diagnostics,
-                    depth,
-                    *enable_security,
-                    *include_tests,
-                    *include_examples,
-                    *include_non_code,
-                    min_confidence,
-                    fail_on.as_ref().map(|s| s.as_str()),
-                    *no_ai_filter,
-                    filter_mode,
-                    baseline.as_ref(),
-                    *update_baseline,
-                    *max_file_kb,
-                ))
+                    rt.block_on(security::execute(
+                        path,
+                        format,
+                        min_severity,
+                        output.as_ref(),
+                        *summary_only,
+                        *compliance,
+                        *diagnostics,
+                        depth,
+                        *enable_security,
+                        *include_tests,
+                        *include_examples,
+                        *include_non_code,
+                        min_confidence,
+                        fail_on.as_ref().map(|s| s.as_str()),
+                        *no_ai_filter,
+                        filter_mode,
+                        baseline.as_ref(),
+                        *update_baseline,
+                        *max_file_kb,
+                    ))
+                }
+                #[cfg(not(feature = "net"))]
+                {
+                    Err(CliError::Internal("security command requires the 'net' feature".to_string()))
+                }
             }
             Commands::Refactor {
                 path,

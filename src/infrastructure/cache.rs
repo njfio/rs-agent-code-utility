@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::fs;
+use std::fs;
 use tracing::{debug, error};
 
 /// Multi-level cache with memory and disk storage
@@ -83,6 +83,7 @@ impl Cache {
         }
 
         // Start cleanup task
+        #[cfg(feature = "net")]
         if config.enable_memory || config.enable_disk {
             let cache_clone = cache.clone();
             let cleanup_interval = config.cleanup_interval;
@@ -193,8 +194,8 @@ impl Cache {
 
         if let Some(disk_dir) = &self.disk_cache_dir {
             if disk_dir.exists() {
-                fs::remove_dir_all(disk_dir).await?;
-                fs::create_dir_all(disk_dir).await?;
+                fs::remove_dir_all(disk_dir)?;
+                fs::create_dir_all(disk_dir)?;
             }
         }
 
@@ -271,7 +272,7 @@ impl Cache {
         if let Some(_disk_dir) = &self.disk_cache_dir {
             let file_path = self.get_disk_file_path(key)?;
             let data = serde_json::to_vec(entry)?;
-            fs::write(&file_path, data).await?;
+            fs::write(&file_path, data)?;
             debug!("Stored disk cache entry: {}", file_path.display());
         }
         Ok(())
@@ -283,13 +284,13 @@ impl Cache {
             let file_path = self.get_disk_file_path(key)?;
 
             if file_path.exists() {
-                let data = fs::read(&file_path).await?;
+                let data = fs::read(&file_path)?;
                 let entry: CacheEntry = serde_json::from_slice(&data)?;
 
                 // Check if expired
                 let now = Utc::now();
                 if now > entry.expires_at {
-                    let _ = fs::remove_file(&file_path).await;
+                    let _ = fs::remove_file(&file_path);
                     return Ok(None);
                 }
 
@@ -316,7 +317,7 @@ impl Cache {
         if let Some(_) = &self.disk_cache_dir {
             let file_path = self.get_disk_file_path(key)?;
             if file_path.exists() {
-                fs::remove_file(&file_path).await?;
+                fs::remove_file(&file_path)?;
                 return Ok(true);
             }
         }
@@ -343,11 +344,11 @@ impl Cache {
                 let mut entries = 0;
                 let mut total_size = 0;
 
-                let mut dir_entries = fs::read_dir(disk_dir).await?;
-                while let Some(entry) = dir_entries.next_entry().await? {
+                for entry in fs::read_dir(disk_dir)? {
+                    let entry = entry?;
                     if entry.path().extension().map_or(false, |ext| ext == "cache") {
                         entries += 1;
-                        if let Ok(metadata) = entry.metadata().await {
+                        if let Ok(metadata) = entry.metadata() {
                             total_size += metadata.len() as usize;
                         }
                     }
@@ -379,6 +380,7 @@ impl Cache {
     }
 
     /// Background cleanup task
+    #[cfg(feature = "net")]
     async fn cleanup_task(&self, interval: Duration) {
         let mut cleanup_interval = tokio::time::interval(interval);
 
@@ -411,14 +413,14 @@ impl Cache {
         // Clean up expired disk entries
         if let Some(disk_dir) = &self.disk_cache_dir {
             if disk_dir.exists() {
-                let mut dir_entries = fs::read_dir(disk_dir).await?;
-                while let Some(entry) = dir_entries.next_entry().await? {
+                for entry in fs::read_dir(disk_dir)? {
+                    let entry = entry?;
                     let path = entry.path();
                     if path.extension().map_or(false, |ext| ext == "cache") {
-                        if let Ok(data) = fs::read(&path).await {
+                        if let Ok(data) = fs::read(&path) {
                             if let Ok(cache_entry) = serde_json::from_slice::<CacheEntry>(&data) {
                                 if now > cache_entry.expires_at {
-                                    let _ = fs::remove_file(&path).await;
+                                    let _ = fs::remove_file(&path);
                                     expired_keys.push(cache_entry.key);
                                 }
                             }

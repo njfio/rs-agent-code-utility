@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 use tracing::{debug, warn};
 
 /// Multi-service rate limiter with different limits per service
@@ -104,14 +104,14 @@ impl MultiServiceRateLimiter {
     /// Add a rate limiter for a specific service
     pub async fn add_service(&self, config: RateLimitConfig) -> Result<()> {
         let service_limiter = ServiceRateLimiter::new(config)?;
-        let mut limiters = self.limiters.write().await;
+        let mut limiters = self.limiters.write().unwrap();
         limiters.insert(service_limiter.service_name.clone(), service_limiter);
         Ok(())
     }
 
     /// Wait for permission to make a request to a service
     pub async fn wait_for_permit(&self, service_name: &str) -> Result<()> {
-        let limiters = self.limiters.read().await;
+        let limiters = self.limiters.read().unwrap();
         if let Some(limiter) = limiters.get(service_name) {
             limiter.wait_for_permit().await
         } else {
@@ -124,7 +124,7 @@ impl MultiServiceRateLimiter {
 
     /// Check if a request can be made immediately
     pub async fn check_permit(&self, service_name: &str) -> Result<RateLimitResult> {
-        let limiters = self.limiters.read().await;
+        let limiters = self.limiters.read().unwrap();
         if let Some(limiter) = limiters.get(service_name) {
             Ok(limiter.check_permit())
         } else {
@@ -137,7 +137,7 @@ impl MultiServiceRateLimiter {
 
     /// Get rate limiting statistics for a service
     pub async fn get_stats(&self, service_name: &str) -> Result<RateLimitStats> {
-        let limiters = self.limiters.read().await;
+        let limiters = self.limiters.read().unwrap();
         if let Some(limiter) = limiters.get(service_name) {
             Ok(limiter.get_stats())
         } else {
@@ -150,7 +150,7 @@ impl MultiServiceRateLimiter {
 
     /// Get all configured services
     pub async fn get_services(&self) -> Vec<String> {
-        let limiters = self.limiters.read().await;
+        let limiters = self.limiters.read().unwrap();
         limiters.keys().cloned().collect()
     }
 }
@@ -190,7 +190,7 @@ impl ServiceRateLimiter {
 
         // Update statistics
         {
-            let mut stats = self.stats.write().await;
+            let mut stats = self.stats.write().unwrap();
             stats.total_requests += 1;
         }
 
@@ -251,7 +251,7 @@ impl ServiceRateLimiter {
 
     /// Reset statistics (useful for periodic reporting)
     pub async fn reset_stats(&self) {
-        let mut stats = self.stats.write().await;
+        let mut stats = self.stats.write().unwrap();
         stats.total_requests = 0;
         stats.total_limited = 0;
         stats.last_reset = std::time::Instant::now();
@@ -264,21 +264,21 @@ impl ServiceRateLimiter {
 
     /// Record a successful request (resets backoff)
     pub async fn record_success(&self) {
-        let mut stats = self.stats.write().await;
+        let mut stats = self.stats.write().unwrap();
         stats.consecutive_failures = 0;
         stats.last_failure = None;
     }
 
     /// Record a failed request (increases backoff)
     pub async fn record_failure(&self) {
-        let mut stats = self.stats.write().await;
+        let mut stats = self.stats.write().unwrap();
         stats.consecutive_failures += 1;
         stats.last_failure = Some(std::time::Instant::now());
     }
 
     /// Calculate exponential backoff delay
     pub async fn calculate_backoff_delay(&self, config: &BackoffConfig) -> Duration {
-        let stats = self.stats.read().await;
+        let stats = self.stats.read().unwrap();
 
         if stats.consecutive_failures == 0 {
             return Duration::from_millis(0);
@@ -339,7 +339,7 @@ pub struct RateLimitStats {
 #[derive(Clone)]
 pub struct AdaptiveRateLimiter {
     base_limiter: ServiceRateLimiter,
-    current_rate: Arc<tokio::sync::RwLock<u32>>,
+    current_rate: Arc<std::sync::RwLock<u32>>,
     min_rate: u32,
     max_rate: u32,
     adjustment_factor: f64,
@@ -365,7 +365,7 @@ impl AdaptiveRateLimiter {
 
         Ok(Self {
             base_limiter,
-            current_rate: Arc::new(tokio::sync::RwLock::new(initial_rate)),
+            current_rate: Arc::new(std::sync::RwLock::new(initial_rate)),
             min_rate,
             max_rate,
             adjustment_factor: 0.1, // 10% adjustment
@@ -374,7 +374,7 @@ impl AdaptiveRateLimiter {
 
     /// Adjust rate based on API response
     pub async fn adjust_rate(&self, response_indicates_rate_limit: bool) {
-        let mut current_rate = self.current_rate.write().await;
+        let mut current_rate = self.current_rate.write().unwrap();
 
         if response_indicates_rate_limit {
             // Decrease rate
@@ -397,7 +397,7 @@ impl AdaptiveRateLimiter {
 
     /// Get current rate
     pub async fn get_current_rate(&self) -> u32 {
-        *self.current_rate.read().await
+        *self.current_rate.read().unwrap()
     }
 }
 

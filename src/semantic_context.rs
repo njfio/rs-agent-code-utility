@@ -22,8 +22,7 @@ use std::collections::{HashMap, HashSet};
 use tree_sitter::Point;
 
 // Serde support disabled for now due to Point type compatibility
-// #[cfg(feature = "serde")]
-// use serde::{Serialize, Deserialize};
+// // use serde::{Serialize, Deserialize};
 
 // Placeholder types for modules to be implemented
 #[derive(Debug, Clone)]

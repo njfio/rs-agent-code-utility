@@ -10,7 +10,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Code evolution tracking system
@@ -30,7 +29,7 @@ pub struct CodeEvolutionTracker {
 
 /// A single file change record
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FileChange {
     /// Commit hash
     pub commit_hash: String,
@@ -52,7 +51,7 @@ pub struct FileChange {
 
 /// Type of code change
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ChangeType {
     /// New feature addition
     Feature,
@@ -76,7 +75,7 @@ pub enum ChangeType {
 
 /// Detected change pattern
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ChangePattern {
     /// Pattern type
     pub pattern_type: PatternType,
@@ -94,7 +93,7 @@ pub struct ChangePattern {
 
 /// Types of evolution patterns
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum PatternType {
     /// Files frequently changed together
     CoupledChanges,
@@ -116,7 +115,7 @@ pub enum PatternType {
 
 /// Evolution metrics and statistics
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct EvolutionMetrics {
     /// Total commits analyzed
     pub total_commits: usize,
@@ -140,7 +139,7 @@ pub struct EvolutionMetrics {
 
 /// Trend direction indicator
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum TrendDirection {
     Improving,
     Stable,
@@ -178,7 +177,7 @@ impl Default for EvolutionConfig {
 
 /// Result of evolution analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct EvolutionAnalysisResult {
     /// Evolution metrics
     pub metrics: EvolutionMetrics,
@@ -194,7 +193,7 @@ pub struct EvolutionAnalysisResult {
 
 /// Insights for a specific file
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FileInsight {
     /// Change frequency
     pub change_frequency: f64,
@@ -214,7 +213,7 @@ pub struct FileInsight {
 
 /// Evolution-based recommendation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct EvolutionRecommendation {
     /// Recommendation type
     pub recommendation_type: RecommendationType,
@@ -232,7 +231,7 @@ pub struct EvolutionRecommendation {
 
 /// Types of recommendations
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum RecommendationType {
     Refactor,
     AddTests,

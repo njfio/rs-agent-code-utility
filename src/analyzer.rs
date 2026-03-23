@@ -94,7 +94,6 @@ use crate::semantic_graph::SemanticGraphQuery;
 use crate::tree::SyntaxTree;
 use ignore::WalkBuilder;
 use rayon::prelude::*;
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -103,7 +102,7 @@ use std::sync::{Arc, Mutex};
 
 /// Depth level for analysis
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum AnalysisDepth {
     /// Only collect basic file metadata without parsing
     Basic,
@@ -132,7 +131,7 @@ impl std::str::FromStr for AnalysisDepth {
 
 /// Configuration for codebase analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AnalysisConfig {
     /// Maximum file size to process (in bytes)
     pub max_file_size: Option<usize>,
@@ -204,7 +203,7 @@ impl Default for AnalysisConfig {
 
 /// Information about a parsed file
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FileInfo {
     /// File path relative to the analysis root
     pub path: PathBuf,
@@ -226,7 +225,7 @@ pub struct FileInfo {
 
 /// A code symbol (function, class, struct, etc.)
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct Symbol {
     /// Symbol name
     pub name: String,
@@ -248,7 +247,7 @@ pub struct Symbol {
 
 /// Results of codebase analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AnalysisResult {
     /// Root directory that was analyzed
     pub root_path: PathBuf,

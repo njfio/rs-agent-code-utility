@@ -41,7 +41,7 @@ impl AIProviderImpl for AzureProvider {
         use std::time::{Duration, SystemTime};
 
         // Placeholder implementation
-        tokio::time::sleep(Duration::from_millis(180)).await;
+        std::thread::sleep(Duration::from_millis(180));
 
         Ok(AIResponse {
             feature: request.feature,

@@ -246,6 +246,7 @@ pub struct WikiGenerationResult {
 /// Wiki site generator
 pub struct WikiGenerator {
     config: WikiConfig,
+    #[cfg(feature = "net")]
     ai_rt: std::cell::RefCell<Option<tokio::runtime::Runtime>>,
     ai_service: std::cell::RefCell<Option<crate::ai::service::AIService>>,
 }
@@ -254,6 +255,7 @@ impl Clone for WikiGenerator {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
+            #[cfg(feature = "net")]
             ai_rt: std::cell::RefCell::new(None),
             ai_service: std::cell::RefCell::new(None),
         }
@@ -351,12 +353,14 @@ impl WikiGenerator {
     pub fn new(config: WikiConfig) -> Self {
         Self {
             config,
+            #[cfg(feature = "net")]
             ai_rt: std::cell::RefCell::new(None),
             ai_service: std::cell::RefCell::new(None),
         }
     }
 
     /// Ensure a single AI runtime and service are built and available
+    #[cfg(feature = "net")]
     fn ensure_ai(&self) -> Result<()> {
         // Initialize runtime once
         if self.ai_rt.borrow().is_none() {
@@ -384,6 +388,16 @@ impl WikiGenerator {
             *self.ai_service.borrow_mut() = Some(service);
         }
         Ok(())
+    }
+
+    /// Stub when net feature is not available
+    #[cfg(not(feature = "net"))]
+    fn ensure_ai(&self) -> Result<()> {
+        Err(crate::error::Error::Internal {
+            component: "wiki".to_string(),
+            message: "AI features require the 'net' feature".to_string(),
+            context: None,
+        })
     }
 
     /// Generate the wiki site from a path (file or directory)
@@ -1116,6 +1130,7 @@ updateSearch();
         }
         */
 
+    #[cfg(feature = "net")]
     fn generate_file_ai_insights_sync(&self, file: &crate::analyzer::FileInfo) -> Result<String> {
         use crate::ai::types::{AIFeature, AIRequest};
         let title = format!("File: {}", file.path.display());
@@ -1248,7 +1263,12 @@ updateSearch();
             Ok(html)
         }
     }
+    #[cfg(not(feature = "net"))]
+    fn generate_file_ai_insights_sync(&self, _file: &crate::analyzer::FileInfo) -> Result<String> {
+        Ok(String::new())
+    }
     /// Generate AI block HTML and collect tags (prefers JSON mode when enabled)
+    #[cfg(feature = "net")]
     fn generate_file_ai_block_and_tags(
         &self,
         file: &crate::analyzer::FileInfo,
@@ -1299,6 +1319,13 @@ updateSearch();
             Ok(html) => (html, vec![]),
             Err(_) => ("<div class=\\\"card ai\\\"><h3>AI Commentary</h3><p>AI generation failed.</p></div>".to_string(), vec![]),
         }
+    }
+    #[cfg(not(feature = "net"))]
+    fn generate_file_ai_block_and_tags(
+        &self,
+        _file: &crate::analyzer::FileInfo,
+    ) -> (String, Vec<String>) {
+        (String::new(), vec![])
     }
 
     fn anchorize(s: &str) -> String {
@@ -1896,6 +1923,7 @@ updateSearch();
 // SearchEntry moved to search.rs
 
 impl WikiGenerator {
+    #[cfg(feature = "net")]
     fn generate_ai_insights_sync(
         &self,
         analysis: &AnalysisResult,
@@ -1973,10 +2001,20 @@ impl WikiGenerator {
         );
         Ok(html)
     }
+    #[cfg(not(feature = "net"))]
+    fn generate_ai_insights_sync(
+        &self,
+        _analysis: &AnalysisResult,
+        _use_mock: bool,
+        _cfg_path: Option<&PathBuf>,
+    ) -> Result<String> {
+        Ok(String::new())
+    }
 }
 
 /// Much simpler implementation that works around tree-sitter API issues
 impl WikiGenerator {
+    #[cfg(feature = "net")]
     fn generate_project_ai_block(&self, analysis: &AnalysisResult) -> Result<String> {
         if self.config.ai_json_mode {
             self.ensure_ai()?;
@@ -2039,6 +2077,10 @@ impl WikiGenerator {
             self.config.ai_use_mock,
             self.config.ai_config_path.as_ref(),
         )
+    }
+    #[cfg(not(feature = "net"))]
+    fn generate_project_ai_block(&self, _analysis: &AnalysisResult) -> Result<String> {
+        Ok(String::new())
     }
 
     // render_ai_project_doc moved to ai_integration.rs

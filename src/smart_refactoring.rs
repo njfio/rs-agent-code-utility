@@ -14,12 +14,11 @@ use crate::{AnalysisResult, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Smart refactoring engine for automated code improvements
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SmartRefactoringEngine {
     /// Configuration for smart refactoring
     pub config: SmartRefactoringConfig,
@@ -27,7 +26,7 @@ pub struct SmartRefactoringEngine {
 
 /// Configuration for smart refactoring
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SmartRefactoringConfig {
     /// Enable code smell detection and fixes
     pub code_smell_fixes: bool,
@@ -47,7 +46,7 @@ pub struct SmartRefactoringConfig {
 
 /// Results of smart refactoring analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SmartRefactoringResult {
     /// Overall refactoring score (0-100)
     pub refactoring_score: u8,
@@ -73,7 +72,7 @@ pub struct SmartRefactoringResult {
 
 /// Categories of refactoring opportunities
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum RefactoringCategory {
     CodeSmells,
     DesignPatterns,
@@ -84,7 +83,7 @@ pub enum RefactoringCategory {
 
 /// A code smell fix with automated solution
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CodeSmellFix {
     /// Fix ID
     pub id: String,
@@ -116,7 +115,7 @@ pub struct CodeSmellFix {
 
 /// Categories of code smells
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum SmellCategory {
     /// Long methods or functions
     LongMethod,
@@ -142,7 +141,7 @@ pub enum SmellCategory {
 
 /// Location of refactoring opportunity
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringLocation {
     /// File path
     pub file: PathBuf,
@@ -160,7 +159,7 @@ pub struct RefactoringLocation {
 
 /// Design pattern recommendation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PatternRecommendation {
     /// Recommendation ID
     pub id: String,
@@ -188,7 +187,7 @@ pub struct PatternRecommendation {
 
 /// Types of design patterns
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum PatternType {
     /// Creational patterns
     Creational,
@@ -202,7 +201,7 @@ pub enum PatternType {
 
 /// Implementation step for a pattern
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ImplementationStep {
     /// Step number
     pub step: usize,
@@ -216,7 +215,7 @@ pub struct ImplementationStep {
 
 /// A code change for implementation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CodeChange {
     /// Change type
     pub change_type: ChangeType,
@@ -232,7 +231,7 @@ pub struct CodeChange {
 
 /// Types of code changes
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ChangeType {
     /// Add new code
     Add,
@@ -248,7 +247,7 @@ pub enum ChangeType {
 
 /// Implementation complexity levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ImplementationComplexity {
     Trivial,
     Simple,
@@ -259,7 +258,7 @@ pub enum ImplementationComplexity {
 
 /// Performance optimization suggestion
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PerformanceOptimization {
     /// Optimization ID
     pub id: String,
@@ -287,7 +286,7 @@ pub struct PerformanceOptimization {
 
 /// Types of performance optimizations
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum OptimizationType {
     /// Algorithm optimization
     Algorithm,
@@ -307,7 +306,7 @@ pub enum OptimizationType {
 
 /// Expected performance gain
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PerformanceGain {
     /// CPU performance improvement percentage
     pub cpu_improvement: f64,
@@ -321,7 +320,7 @@ pub struct PerformanceGain {
 
 /// Modernization suggestion
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ModernizationSuggestion {
     /// Suggestion ID
     pub id: String,
@@ -345,7 +344,7 @@ pub struct ModernizationSuggestion {
 
 /// Types of modernization
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ModernizationType {
     /// Language version upgrade
     LanguageVersion,
@@ -361,7 +360,7 @@ pub enum ModernizationType {
 
 /// Architectural improvement suggestion
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ArchitecturalImprovement {
     /// Improvement ID
     pub id: String,
@@ -387,7 +386,7 @@ pub struct ArchitecturalImprovement {
 
 /// Types of architectural improvements
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ArchitecturalImprovementType {
     /// Modularization
     Modularization,
@@ -405,7 +404,7 @@ pub enum ArchitecturalImprovementType {
 
 /// Implementation phase for architectural improvements
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ImplementationPhase {
     /// Phase number
     pub phase: usize,
@@ -423,7 +422,7 @@ pub struct ImplementationPhase {
 
 /// Refactoring roadmap
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringRoadmap {
     /// Total estimated effort (person-days)
     pub total_effort: f64,
@@ -437,7 +436,7 @@ pub struct RefactoringRoadmap {
 
 /// A phase in the refactoring roadmap
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringPhase {
     /// Phase number
     pub phase: usize,
@@ -455,7 +454,7 @@ pub struct RefactoringPhase {
 
 /// A refactoring item
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringItem {
     /// Item ID
     pub id: String,
@@ -471,7 +470,7 @@ pub struct RefactoringItem {
 
 /// Priority levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum Priority {
     Critical,
     High,
@@ -481,7 +480,7 @@ pub enum Priority {
 
 /// Priority matrix for refactoring decisions
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PriorityMatrix {
     /// High impact, low effort items (quick wins)
     pub quick_wins: Vec<String>,
@@ -495,7 +494,7 @@ pub struct PriorityMatrix {
 
 /// Success metric for measuring refactoring progress
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SuccessMetric {
     /// Metric name
     pub name: String,
@@ -511,7 +510,7 @@ pub struct SuccessMetric {
 
 /// Impact analysis of refactoring changes
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ImpactAnalysis {
     /// Overall impact score (0-100)
     pub overall_impact: u8,
@@ -527,7 +526,7 @@ pub struct ImpactAnalysis {
 
 /// Quality impact assessment
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct QualityImpact {
     /// Readability improvement (0-100)
     pub readability_improvement: u8,
@@ -539,7 +538,7 @@ pub struct QualityImpact {
 
 /// Performance impact assessment
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PerformanceImpact {
     /// Expected performance improvement (0-100)
     pub performance_improvement: u8,
@@ -551,7 +550,7 @@ pub struct PerformanceImpact {
 
 /// Maintainability impact assessment
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MaintainabilityImpact {
     /// Code complexity reduction (0-100)
     pub complexity_reduction: u8,
@@ -563,7 +562,7 @@ pub struct MaintainabilityImpact {
 
 /// Risk assessment for refactoring
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RiskAssessment {
     /// Overall risk level
     pub overall_risk: RiskLevel,
@@ -577,7 +576,7 @@ pub struct RiskAssessment {
 
 /// A refactoring risk
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RefactoringRisk {
     /// Risk name
     pub name: String,

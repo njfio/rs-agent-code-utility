@@ -11,12 +11,11 @@ use crate::{AnalysisResult, FileInfo, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Test coverage analyzer for assessing testing quality and coverage
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestCoverageAnalyzer {
     /// Configuration for test coverage analysis
     pub config: TestCoverageConfig,
@@ -24,7 +23,7 @@ pub struct TestCoverageAnalyzer {
 
 /// Configuration for test coverage analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestCoverageConfig {
     /// Enable test coverage estimation
     pub coverage_estimation: bool,
@@ -42,7 +41,7 @@ pub struct TestCoverageConfig {
 
 /// Results of test coverage analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestCoverageResult {
     /// Overall test coverage score (0-100)
     pub coverage_score: u8,
@@ -68,7 +67,7 @@ pub struct TestCoverageResult {
 
 /// Analysis of a test file
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestFileAnalysis {
     /// Test file path
     pub file: PathBuf,
@@ -88,7 +87,7 @@ pub struct TestFileAnalysis {
 
 /// Types of tests
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum TestType {
     /// Unit tests
     Unit,
@@ -106,7 +105,7 @@ pub enum TestType {
 
 /// Test patterns and practices
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum TestPattern {
     /// Arrange-Act-Assert pattern
     ArrangeActAssert,
@@ -124,7 +123,7 @@ pub enum TestPattern {
 
 /// Issues found in test code
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestIssue {
     /// Issue type
     pub issue_type: TestIssueType,
@@ -140,7 +139,7 @@ pub struct TestIssue {
 
 /// Types of test issues
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum TestIssueType {
     /// Missing assertions
     MissingAssertions,
@@ -160,7 +159,7 @@ pub enum TestIssueType {
 
 /// Test issue severity
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum TestIssueSeverity {
     High,
     Medium,
@@ -169,7 +168,7 @@ pub enum TestIssueSeverity {
 
 /// Location of a test issue
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestLocation {
     /// File path
     pub file: String,
@@ -181,7 +180,7 @@ pub struct TestLocation {
 
 /// Coverage analysis for a file
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FileCoverage {
     /// Source file path
     pub file: PathBuf,
@@ -199,7 +198,7 @@ pub struct FileCoverage {
 
 /// Coverage status levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum CoverageStatus {
     Excellent,
     Good,
@@ -210,7 +209,7 @@ pub enum CoverageStatus {
 
 /// Missing test analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MissingTest {
     /// Function that needs testing
     pub function_name: String,
@@ -230,7 +229,7 @@ pub struct MissingTest {
 
 /// Function visibility levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum FunctionVisibility {
     Public,
     Private,
@@ -239,7 +238,7 @@ pub enum FunctionVisibility {
 
 /// Function complexity levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum FunctionComplexity {
     Low,
     Medium,
@@ -249,7 +248,7 @@ pub enum FunctionComplexity {
 
 /// Test priority levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum TestPriority {
     Critical,
     High,
@@ -259,7 +258,7 @@ pub enum TestPriority {
 
 /// Test quality metrics
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestQualityMetrics {
     /// Average test function length
     pub average_test_length: f64,
@@ -277,7 +276,7 @@ pub struct TestQualityMetrics {
 
 /// Test reliability metrics
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestReliabilityMetrics {
     /// Potential flaky tests
     pub potential_flaky_tests: usize,
@@ -291,7 +290,7 @@ pub struct TestReliabilityMetrics {
 
 /// Test organization analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestOrganizationAnalysis {
     /// Test directory structure quality
     pub structure_quality: u8,
@@ -305,7 +304,7 @@ pub struct TestOrganizationAnalysis {
 
 /// Test categorization analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestCategorization {
     /// Tests by type
     pub tests_by_type: HashMap<TestType, usize>,
@@ -317,7 +316,7 @@ pub struct TestCategorization {
 
 /// Test suite organization analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestSuiteOrganization {
     /// Test suites identified
     pub test_suites: Vec<TestSuite>,
@@ -329,7 +328,7 @@ pub struct TestSuiteOrganization {
 
 /// A test suite
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestSuite {
     /// Suite name
     pub name: String,
@@ -345,7 +344,7 @@ pub struct TestSuite {
 
 /// Testing recommendation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TestingRecommendation {
     /// Recommendation category
     pub category: String,
@@ -363,7 +362,7 @@ pub struct TestingRecommendation {
 
 /// Implementation difficulty levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ImplementationDifficulty {
     Easy,
     Medium,

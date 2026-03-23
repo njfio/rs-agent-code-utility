@@ -6,12 +6,15 @@ use crate::ai::types::{AICapability, AIProvider, AIRequest, AIResponse};
 use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
+#[cfg(feature = "net")]
 pub mod anthropic;
 pub mod azure;
 pub mod google;
+#[cfg(feature = "net")]
 pub mod groq;
 pub mod local;
 pub mod ollama;
+#[cfg(feature = "net")]
 pub mod openai;
 
 /// Provider implementation trait
@@ -66,13 +69,27 @@ pub async fn create_provider(
     }
 
     match provider {
+        #[cfg(feature = "net")]
         AIProvider::OpenAI => {
             let provider = openai::OpenAIProvider::new(config).await?;
             Ok(Box::new(provider))
         }
+        #[cfg(not(feature = "net"))]
+        AIProvider::OpenAI => {
+            Err(AIError::configuration(
+                "OpenAI provider requires the 'net' feature".to_string(),
+            ))
+        }
+        #[cfg(feature = "net")]
         AIProvider::Anthropic => {
             let provider = anthropic::AnthropicProvider::new(config).await?;
             Ok(Box::new(provider))
+        }
+        #[cfg(not(feature = "net"))]
+        AIProvider::Anthropic => {
+            Err(AIError::configuration(
+                "Anthropic provider requires the 'net' feature".to_string(),
+            ))
         }
         AIProvider::Google => {
             let provider = google::GoogleProvider::new(config).await?;
@@ -90,9 +107,16 @@ pub async fn create_provider(
             let provider = ollama::OllamaProvider::new(config).await?;
             Ok(Box::new(provider))
         }
+        #[cfg(feature = "net")]
         AIProvider::Groq => {
             let provider = groq::GroqProvider::new(config).await?;
             Ok(Box::new(provider))
+        }
+        #[cfg(not(feature = "net"))]
+        AIProvider::Groq => {
+            Err(AIError::configuration(
+                "Groq provider requires the 'net' feature".to_string(),
+            ))
         }
     }
 }
@@ -156,7 +180,7 @@ impl AIProviderImpl for MockProvider {
         use std::time::{Duration, SystemTime};
 
         // Simulate processing delay
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        std::thread::sleep(Duration::from_millis(100));
 
         let content = match request.feature {
             crate::ai::types::AIFeature::CodeExplanation => {

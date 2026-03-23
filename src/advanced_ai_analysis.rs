@@ -26,12 +26,11 @@ use crate::{AnalysisResult, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Advanced AI analyzer for deep semantic code understanding
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AdvancedAIAnalyzer {
     /// Configuration for advanced AI analysis
     pub config: AdvancedAIConfig,
@@ -39,7 +38,7 @@ pub struct AdvancedAIAnalyzer {
 
 /// Configuration for advanced AI analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AdvancedAIConfig {
     /// Enable deep semantic analysis
     pub semantic_analysis: bool,
@@ -59,7 +58,7 @@ pub struct AdvancedAIConfig {
 
 /// Results of advanced AI analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AdvancedAIResult {
     /// Overall code intelligence score (0-100)
     pub intelligence_score: u8,
@@ -81,7 +80,7 @@ pub struct AdvancedAIResult {
 
 /// Semantic analysis of the codebase
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SemanticAnalysis {
     /// Overall semantic complexity
     pub complexity_score: f64,
@@ -97,7 +96,7 @@ pub struct SemanticAnalysis {
 
 /// A semantic concept identified in the code
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SemanticConcept {
     /// Concept name
     pub name: String,
@@ -117,7 +116,7 @@ pub struct SemanticConcept {
 
 /// Categories of semantic concepts
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ConceptCategory {
     /// Business logic concepts
     BusinessLogic,
@@ -137,7 +136,7 @@ pub enum ConceptCategory {
 
 /// Code abstraction analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CodeAbstraction {
     /// Abstraction name
     pub name: String,
@@ -157,7 +156,7 @@ pub struct CodeAbstraction {
 
 /// Types of code abstractions
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum AbstractionType {
     /// Function or method abstraction
     Function,
@@ -175,7 +174,7 @@ pub enum AbstractionType {
 
 /// Quality metrics for abstractions
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AbstractionQuality {
     /// Cohesion score (0-10)
     pub cohesion: f64,
@@ -191,7 +190,7 @@ pub struct AbstractionQuality {
 
 /// Semantic cluster of related functionality
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SemanticCluster {
     /// Cluster name
     pub name: String,
@@ -211,7 +210,7 @@ pub struct SemanticCluster {
 
 /// Domain-specific insight
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DomainInsight {
     /// Domain name
     pub domain: String,
@@ -227,7 +226,7 @@ pub struct DomainInsight {
 
 /// Detected architecture pattern
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ArchitecturePattern {
     /// Pattern name
     pub name: String,
@@ -249,7 +248,7 @@ pub struct ArchitecturePattern {
 
 /// Types of architecture patterns
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum PatternType {
     /// Model-View-Controller
     MVC,
@@ -275,7 +274,7 @@ pub enum PatternType {
 
 /// Component of an architecture pattern
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PatternComponent {
     /// Component name
     pub name: String,
@@ -289,7 +288,7 @@ pub struct PatternComponent {
 
 /// Quality assessment of a pattern implementation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PatternQuality {
     /// Implementation completeness (0-10)
     pub completeness: f64,
@@ -303,7 +302,7 @@ pub struct PatternQuality {
 
 /// Code quality assessment
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct QualityAssessment {
     /// Overall quality score (0-100)
     pub overall_score: u8,
@@ -321,7 +320,7 @@ pub struct QualityAssessment {
 
 /// Maintainability metrics
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct MaintainabilityMetrics {
     /// Maintainability index (0-100)
     pub maintainability_index: f64,
@@ -337,7 +336,7 @@ pub struct MaintainabilityMetrics {
 
 /// Readability assessment
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ReadabilityAssessment {
     /// Overall readability score (0-10)
     pub readability_score: f64,
@@ -353,7 +352,7 @@ pub struct ReadabilityAssessment {
 
 /// Design quality metrics
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DesignQuality {
     /// SOLID principles adherence (0-10)
     pub solid_adherence: f64,
@@ -369,7 +368,7 @@ pub struct DesignQuality {
 
 /// Technical debt analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TechnicalDebtAnalysis {
     /// Total technical debt score (0-100)
     pub total_debt: f64,
@@ -385,7 +384,7 @@ pub struct TechnicalDebtAnalysis {
 
 /// A technical debt item
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DebtItem {
     /// Debt description
     pub description: String,
@@ -403,7 +402,7 @@ pub struct DebtItem {
 
 /// Technical debt severity levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum DebtSeverity {
     Critical,
     High,
@@ -413,7 +412,7 @@ pub enum DebtSeverity {
 
 /// Technical debt trends
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DebtTrends {
     /// Debt accumulation rate
     pub accumulation_rate: f64,
@@ -425,7 +424,7 @@ pub struct DebtTrends {
 
 /// Detected code smell
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CodeSmell {
     /// Smell name
     pub name: String,
@@ -443,7 +442,7 @@ pub struct CodeSmell {
 
 /// Categories of code smells
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum SmellCategory {
     /// Bloated code
     Bloaters,
@@ -459,7 +458,7 @@ pub enum SmellCategory {
 
 /// Code smell severity levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum SmellSeverity {
     Critical,
     High,
@@ -469,7 +468,7 @@ pub enum SmellSeverity {
 
 /// Learning path recommendation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct LearningPath {
     /// Path title
     pub title: String,
@@ -489,7 +488,7 @@ pub struct LearningPath {
 
 /// Skill levels for learning paths
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum SkillLevel {
     Beginner,
     Intermediate,
@@ -499,7 +498,7 @@ pub enum SkillLevel {
 
 /// A learning step
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct LearningStep {
     /// Step title
     pub title: String,
@@ -515,7 +514,7 @@ pub struct LearningStep {
 
 /// Learning resource
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct LearningResource {
     /// Resource title
     pub title: String,
@@ -529,7 +528,7 @@ pub struct LearningResource {
 
 /// Types of learning resources
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ResourceType {
     Documentation,
     Tutorial,
@@ -541,7 +540,7 @@ pub enum ResourceType {
 
 /// Code relationship between files or components
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CodeRelationship {
     /// Relationship type
     pub relationship_type: RelationshipType,
@@ -559,7 +558,7 @@ pub struct CodeRelationship {
 
 /// Types of code relationships
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum RelationshipType {
     /// Direct dependency
     Dependency,
@@ -577,7 +576,7 @@ pub enum RelationshipType {
 
 /// Impact of changes on relationships
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ChangeImpact {
     High,
     Medium,
@@ -587,7 +586,7 @@ pub enum ChangeImpact {
 
 /// Documentation insight generated by AI
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DocumentationInsight {
     /// Insight type
     pub insight_type: InsightType,
@@ -603,7 +602,7 @@ pub struct DocumentationInsight {
 
 /// Types of documentation insights
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum InsightType {
     /// Function or method documentation
     FunctionDoc,
@@ -621,7 +620,7 @@ pub enum InsightType {
 
 /// AI-powered recommendation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AIRecommendation {
     /// Recommendation category
     pub category: String,
@@ -641,7 +640,7 @@ pub struct AIRecommendation {
 
 /// AI recommendation priority levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum RecommendationPriority {
     Critical,
     High,

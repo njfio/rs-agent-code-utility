@@ -41,7 +41,7 @@ impl AIProviderImpl for LocalProvider {
         use std::time::{Duration, SystemTime};
 
         // Placeholder implementation
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        std::thread::sleep(Duration::from_millis(500));
 
         Ok(AIResponse {
             feature: request.feature,
