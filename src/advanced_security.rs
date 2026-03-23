@@ -21,9 +21,11 @@
 //! pattern-based detection. Production-ready with offline vulnerability database
 //! integration. Epic 4 (Vulnerability Database Integration) completed.
 
+#[cfg(feature = "net")]
 use crate::ai::AIService;
 use crate::languages::detect_language_from_path;
 use crate::parser::Parser;
+#[cfg(feature = "net")]
 use crate::security::ai_false_positive_filter::{AIFalsePositiveFilter, AIFilterConfig};
 use crate::security::deterministic_filter::FilterMode;
 use crate::security::ast_analyzer::AstSecurityAnalyzer;
@@ -38,39 +40,41 @@ use tracing::warn;
 #[cfg(any(feature = "net", feature = "db"))]
 use crate::security::secrets_detector::SecretsDetector;
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(any(feature = "net", feature = "db"))]
+// #[cfg(any(feature = "net", feature = "db"))]
 // use crate::security::{CorrelatedVulnerability, CorrelationResult, VulnerabilityCorrelationEngine};
 
 /// Advanced security analyzer for source code vulnerability detection
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AdvancedSecurityAnalyzer {
     /// Configuration for advanced security analysis
     pub config: AdvancedSecurityConfig,
     /// Enhanced secrets detector (when database features are enabled)
     #[cfg(any(feature = "net", feature = "db"))]
-    #[cfg_attr(feature = "serde", serde(skip))]
+    #[serde(skip)]
     secrets_detector: Option<SecretsDetector>,
     /// AI-powered false positive filter
-    #[cfg_attr(feature = "serde", serde(skip))]
+    #[cfg(feature = "net")]
+    #[serde(skip)]
     ai_false_positive_filter: Option<AIFalsePositiveFilter>,
 }
 
 impl std::fmt::Debug for AdvancedSecurityAnalyzer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AdvancedSecurityAnalyzer")
-            .field("config", &self.config)
-            .field("secrets_detector", &self.secrets_detector)
-            .field("ai_false_positive_filter", &"<AI Filter>")
-            .finish()
+        let mut s = f.debug_struct("AdvancedSecurityAnalyzer");
+        s.field("config", &self.config);
+        #[cfg(any(feature = "net", feature = "db"))]
+        s.field("secrets_detector", &self.secrets_detector);
+        #[cfg(feature = "net")]
+        s.field("ai_false_positive_filter", &"<AI Filter>");
+        s.finish()
     }
 }
 
 /// Configuration for advanced security analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AdvancedSecurityConfig {
     /// Enable OWASP Top 10 vulnerability detection
     pub owasp_analysis: bool,
@@ -109,7 +113,7 @@ struct SecurityContext {
 
 /// Results of advanced security analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AdvancedSecurityResult {
     /// Overall security score (0-100)
     pub security_score: u8,
@@ -137,7 +141,7 @@ pub struct AdvancedSecurityResult {
 
 /// Security vulnerability severity levels
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum SecuritySeverity {
     Critical,
     High,
@@ -148,7 +152,7 @@ pub enum SecuritySeverity {
 
 /// OWASP Top 10 categories
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum OwaspCategory {
     /// A01:2021 – Broken Access Control
     BrokenAccessControl,
@@ -174,7 +178,7 @@ pub enum OwaspCategory {
 
 /// A detected security vulnerability
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SecurityVulnerability {
     /// Vulnerability ID
     pub id: String,
@@ -202,7 +206,7 @@ pub struct SecurityVulnerability {
 
 /// Location of a vulnerability
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct VulnerabilityLocation {
     /// File path
     pub file: PathBuf,
@@ -218,7 +222,7 @@ pub struct VulnerabilityLocation {
 
 /// Security impact assessment
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SecurityImpact {
     /// Confidentiality impact
     pub confidentiality: ImpactLevel,
@@ -232,7 +236,7 @@ pub struct SecurityImpact {
 
 /// Impact levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ImpactLevel {
     None,
     Low,
@@ -243,7 +247,7 @@ pub enum ImpactLevel {
 
 /// Remediation guidance
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct RemediationGuidance {
     /// Short remediation summary
     pub summary: String,
@@ -259,7 +263,7 @@ pub struct RemediationGuidance {
 
 /// Code example for remediation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CodeExample {
     /// Description of the example
     pub description: String,
@@ -273,7 +277,7 @@ pub struct CodeExample {
 
 /// Remediation effort levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum RemediationEffort {
     Trivial,
     Low,
@@ -284,7 +288,7 @@ pub enum RemediationEffort {
 
 /// Confidence level of vulnerability detection
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ConfidenceLevel {
     Low,
     Medium,
@@ -293,7 +297,7 @@ pub enum ConfidenceLevel {
 
 /// Detected secret or sensitive data
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DetectedSecret {
     /// Secret type
     pub secret_type: SecretType,
@@ -311,7 +315,7 @@ pub struct DetectedSecret {
 
 /// Types of secrets
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum SecretType {
     ApiKey,
     Password,
@@ -324,7 +328,7 @@ pub enum SecretType {
 
 /// Input validation issue
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct InputValidationIssue {
     /// Issue type
     pub issue_type: InputValidationType,
@@ -340,7 +344,7 @@ pub struct InputValidationIssue {
 
 /// Types of input validation issues
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum InputValidationType {
     MissingValidation,
     InsufficientValidation,
@@ -350,7 +354,7 @@ pub enum InputValidationType {
 
 /// Injection vulnerability
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct InjectionVulnerability {
     /// Injection type
     pub injection_type: InjectionType,
@@ -366,7 +370,7 @@ pub struct InjectionVulnerability {
 
 /// Types of injection vulnerabilities
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum InjectionType {
     SqlInjection,
     CommandInjection,
@@ -378,7 +382,7 @@ pub enum InjectionType {
 
 /// Security best practice violation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct BestPracticeViolation {
     /// Practice category
     pub category: BestPracticeCategory,
@@ -394,7 +398,7 @@ pub struct BestPracticeViolation {
 
 /// Best practice categories
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum BestPracticeCategory {
     Cryptography,
     Authentication,
@@ -407,7 +411,7 @@ pub enum BestPracticeCategory {
 
 /// Security recommendation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SecurityRecommendation {
     /// Recommendation category
     pub category: String,
@@ -425,7 +429,7 @@ pub struct SecurityRecommendation {
 
 /// Recommendation priority levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum RecommendationPriority {
     Critical,
     High,
@@ -435,7 +439,7 @@ pub enum RecommendationPriority {
 
 /// Compliance assessment
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ComplianceAssessment {
     /// OWASP Top 10 compliance score
     pub owasp_score: u8,
@@ -449,7 +453,7 @@ pub struct ComplianceAssessment {
 
 /// Compliance status levels
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ComplianceStatus {
     Compliant,
     PartiallyCompliant,
@@ -459,7 +463,7 @@ pub enum ComplianceStatus {
 
 /// Custom security rule
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CustomSecurityRule {
     /// Rule name
     pub name: String,
@@ -491,17 +495,9 @@ impl AdvancedSecurityAnalyzer {
     /// Create a new advanced security analyzer
     pub fn new() -> Result<Self> {
         // Try to create enhanced secrets detector without database
+        #[cfg(any(feature = "net", feature = "db"))]
         let secrets_detector = match SecretsDetector::new_without_database() {
-            Ok(detector) => {
-                #[cfg(any(feature = "net", feature = "db"))]
-                {
-                    Some(detector)
-                }
-                #[cfg(not(any(feature = "net", feature = "db")))]
-                {
-                    Some(detector)
-                }
-            }
+            Ok(detector) => Some(detector),
             Err(e) => {
                 warn!("Failed to create enhanced secrets detector: {}", e);
                 None
@@ -512,13 +508,13 @@ impl AdvancedSecurityAnalyzer {
             config: AdvancedSecurityConfig::default(),
             #[cfg(any(feature = "net", feature = "db"))]
             secrets_detector,
-            #[cfg(not(any(feature = "net", feature = "db")))]
-            secrets_detector,
+            #[cfg(feature = "net")]
             ai_false_positive_filter: None,
         })
     }
 
     /// Create a new advanced security analyzer with AI false positive filtering
+    #[cfg(feature = "net")]
     pub async fn with_ai_filtering(
         ai_service: Arc<AIService>,
         ml_filter: Arc<MLFalsePositiveFilter>,
@@ -548,17 +544,9 @@ impl AdvancedSecurityAnalyzer {
         ));
 
         // Try to create enhanced secrets detector without database
+        #[cfg(any(feature = "net", feature = "db"))]
         let secrets_detector = match SecretsDetector::new_without_database() {
-            Ok(detector) => {
-                #[cfg(any(feature = "net", feature = "db"))]
-                {
-                    Some(detector)
-                }
-                #[cfg(not(any(feature = "net", feature = "db")))]
-                {
-                    Some(detector)
-                }
-            }
+            Ok(detector) => Some(detector),
             Err(e) => {
                 warn!("Failed to create enhanced secrets detector: {}", e);
                 None
@@ -568,8 +556,6 @@ impl AdvancedSecurityAnalyzer {
         Ok(Self {
             config: AdvancedSecurityConfig::default(),
             #[cfg(any(feature = "net", feature = "db"))]
-            secrets_detector,
-            #[cfg(not(any(feature = "net", feature = "db")))]
             secrets_detector,
             ai_false_positive_filter: ai_filter,
         })
@@ -589,8 +575,7 @@ impl AdvancedSecurityAnalyzer {
             config: AdvancedSecurityConfig::default(),
             #[cfg(any(feature = "net", feature = "db"))]
             secrets_detector: None,
-            #[cfg(not(any(feature = "net", feature = "db")))]
-            secrets_detector: None,
+            #[cfg(feature = "net")]
             ai_false_positive_filter: None,
         })
     }
@@ -699,6 +684,7 @@ impl AdvancedSecurityAnalyzer {
         let _owasp_categories = self.categorize_by_owasp(&vulnerabilities);
 
         // Apply AI-powered false positive filtering if available
+        #[cfg(feature = "net")]
         let (
             filtered_vulnerabilities,
             filtered_secrets,
@@ -726,6 +712,20 @@ impl AdvancedSecurityAnalyzer {
                 best_practice_violations,
             )
         };
+        #[cfg(not(feature = "net"))]
+        let (
+            filtered_vulnerabilities,
+            filtered_secrets,
+            filtered_input_issues,
+            filtered_injection_vulns,
+            filtered_best_practices,
+        ) = (
+            vulnerabilities,
+            secrets,
+            input_validation_issues,
+            injection_vulnerabilities,
+            best_practice_violations,
+        );
 
         // Recalculate total after filtering
         let filtered_total_vulnerabilities = filtered_vulnerabilities.len()
@@ -798,6 +798,7 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Apply AI-powered false positive filtering synchronously
+    #[cfg(feature = "net")]
     fn apply_ai_filtering_sync(
         &self,
         ai_filter: &crate::security::ai_false_positive_filter::AIFalsePositiveFilter,

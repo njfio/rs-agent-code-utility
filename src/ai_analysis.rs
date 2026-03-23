@@ -5,12 +5,11 @@
 
 use crate::{AnalysisResult, FileInfo, Symbol};
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// AI-powered code explanation and analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AIAnalyzer {
     /// Configuration for AI analysis
     pub config: AIConfig,
@@ -18,7 +17,7 @@ pub struct AIAnalyzer {
 
 /// Configuration for AI analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AIConfig {
     /// Enable detailed explanations
     pub detailed_explanations: bool,
@@ -34,7 +33,7 @@ pub struct AIConfig {
 
 /// AI analysis results for a codebase
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct AIAnalysisResult {
     /// Overall codebase explanation
     pub codebase_explanation: CodebaseExplanation,
@@ -52,7 +51,7 @@ pub struct AIAnalysisResult {
 
 /// High-level codebase explanation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct CodebaseExplanation {
     /// Brief summary of what the codebase does
     pub purpose: String,
@@ -70,7 +69,7 @@ pub struct CodebaseExplanation {
 
 /// File-level explanation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FileExplanation {
     /// File path
     pub file_path: String,
@@ -90,7 +89,7 @@ pub struct FileExplanation {
 
 /// Symbol-level explanation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct SymbolExplanation {
     /// Symbol name
     pub name: String,
@@ -114,7 +113,7 @@ pub struct SymbolExplanation {
 
 /// Architectural insights about the codebase
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ArchitecturalInsights {
     /// Overall architectural style
     pub style: String,
@@ -134,7 +133,7 @@ pub struct ArchitecturalInsights {
 
 /// Detected code pattern
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DetectedPattern {
     /// Pattern name
     pub name: String,
@@ -152,7 +151,7 @@ pub struct DetectedPattern {
 
 /// Location where a pattern was detected
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct PatternLocation {
     /// File path
     pub file: String,
@@ -166,7 +165,7 @@ pub struct PatternLocation {
 
 /// Type of detected pattern
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum PatternType {
     /// Good design pattern
     DesignPattern,
@@ -182,7 +181,7 @@ pub enum PatternType {
 
 /// Complexity level assessment
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ComplexityLevel {
     /// Simple and easy to understand
     Low,

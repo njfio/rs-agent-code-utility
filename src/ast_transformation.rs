@@ -14,7 +14,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tree_sitter::InputEdit;
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Core AST transformation engine
@@ -31,7 +30,7 @@ pub struct AstTransformationEngine {
 
 /// Configuration for AST transformations
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TransformationConfig {
     /// Enable semantic validation before applying transformations
     pub enable_semantic_validation: bool,
@@ -64,7 +63,7 @@ pub struct LanguageTransformationRules {
 
 /// Types of transformations supported
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum TransformationType {
     /// Extract method refactoring
     ExtractMethod,
@@ -90,7 +89,7 @@ pub enum TransformationType {
 
 /// Validation rules for transformations
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationRule {
     /// Rule identifier
     pub id: String,
@@ -106,7 +105,7 @@ pub struct ValidationRule {
 
 /// Severity levels for validation rules
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ValidationSeverity {
     /// Error - transformation must be blocked
     Error,
@@ -128,7 +127,7 @@ pub struct SemanticValidator {
 
 /// Configuration for semantic validation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationConfig {
     /// Enable scope analysis
     pub enable_scope_analysis: bool,
@@ -144,7 +143,7 @@ pub struct ValidationConfig {
 
 /// Result of semantic validation
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationResult {
     /// Whether validation passed
     pub is_valid: bool,
@@ -160,7 +159,7 @@ pub struct ValidationResult {
 
 /// Validation error
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationError {
     /// Error code
     pub code: String,
@@ -174,7 +173,7 @@ pub struct ValidationError {
 
 /// Validation warning
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationWarning {
     /// Warning code
     pub code: String,
@@ -188,7 +187,7 @@ pub struct ValidationWarning {
 
 /// Detailed validation analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationAnalysis {
     /// Scope analysis results
     pub scope_analysis: Option<ScopeAnalysisResult>,
@@ -202,7 +201,7 @@ pub struct ValidationAnalysis {
 
 /// Location information for transformations
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TransformationLocation {
     /// File path
     pub file_path: PathBuf,
@@ -216,7 +215,7 @@ pub struct TransformationLocation {
 
 /// Position in source code
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct Position {
     /// Line number (0-based)
     pub line: usize,
@@ -228,7 +227,7 @@ pub struct Position {
 
 /// Scope analysis result
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ScopeAnalysisResult {
     /// Variables in scope
     pub variables_in_scope: Vec<VariableInfo>,
@@ -240,7 +239,7 @@ pub struct ScopeAnalysisResult {
 
 /// Type analysis result
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TypeAnalysisResult {
     /// Type information for expressions
     pub expression_types: HashMap<String, String>,
@@ -252,7 +251,7 @@ pub struct TypeAnalysisResult {
 
 /// Control flow analysis result
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ControlFlowAnalysisResult {
     /// Control flow paths
     pub control_paths: Vec<ControlPath>,
@@ -264,7 +263,7 @@ pub struct ControlFlowAnalysisResult {
 
 /// Data flow analysis result
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DataFlowAnalysisResult {
     /// Data dependencies
     pub data_dependencies: Vec<DataDependency>,
@@ -276,7 +275,7 @@ pub struct DataFlowAnalysisResult {
 
 /// Variable information for scope analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct VariableInfo {
     /// Variable name
     pub name: String,
@@ -292,7 +291,7 @@ pub struct VariableInfo {
 
 /// Function information for scope analysis
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct FunctionInfo {
     /// Function name
     pub name: String,
@@ -306,7 +305,7 @@ pub struct FunctionInfo {
 
 /// Scope conflict information
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ScopeConflict {
     /// Conflict type
     pub conflict_type: ScopeConflictType,
@@ -320,7 +319,7 @@ pub struct ScopeConflict {
 
 /// Types of scope conflicts
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ScopeConflictType {
     /// Variable shadowing
     VariableShadowing,
@@ -334,7 +333,7 @@ pub enum ScopeConflictType {
 
 /// Type conflict information
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TypeConflict {
     /// Expected type
     pub expected_type: String,
@@ -348,7 +347,7 @@ pub struct TypeConflict {
 
 /// Control flow path
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ControlPath {
     /// Path identifier
     pub id: String,
@@ -360,7 +359,7 @@ pub struct ControlPath {
 
 /// Types of control flow paths
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ControlPathType {
     /// Sequential execution
     Sequential,
@@ -376,7 +375,7 @@ pub enum ControlPathType {
 
 /// Data dependency information
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DataDependency {
     /// Source location
     pub source: TransformationLocation,
@@ -390,7 +389,7 @@ pub struct DataDependency {
 
 /// Types of data dependencies
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum DataDependencyType {
     /// Read after write
     ReadAfterWrite,
@@ -404,7 +403,7 @@ pub enum DataDependencyType {
 
 /// Data flow issue
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct DataFlowIssue {
     /// Issue type
     pub issue_type: DataFlowIssueType,
@@ -418,7 +417,7 @@ pub struct DataFlowIssue {
 
 /// Types of data flow issues
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum DataFlowIssueType {
     /// Use of uninitialized variable
     UninitializedVariable,
@@ -519,7 +518,7 @@ pub struct TransformationMetadata {
 
 /// Impact assessment for transformations
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct TransformationImpact {
     /// Scope of impact
     pub scope: ImpactScope,
@@ -535,7 +534,7 @@ pub struct TransformationImpact {
 
 /// Scope of transformation impact
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub enum ImpactScope {
     /// Local to a single function
     Local,
@@ -596,7 +595,7 @@ pub struct FailedTransformation {
 
 /// Summary of validation results
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationSummary {
     /// Total validations performed
     pub total_validations: usize,

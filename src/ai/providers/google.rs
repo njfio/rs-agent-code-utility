@@ -41,7 +41,7 @@ impl AIProviderImpl for GoogleProvider {
         use std::time::{Duration, SystemTime};
 
         // Placeholder implementation
-        tokio::time::sleep(Duration::from_millis(150)).await;
+        std::thread::sleep(Duration::from_millis(150));
 
         Ok(AIResponse {
             feature: request.feature,

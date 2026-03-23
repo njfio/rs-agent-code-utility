@@ -7,7 +7,7 @@ use crate::Result;
 use crate::security::deterministic_filter::FilterMode;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 
 /// ML-based false positive filter
 #[derive(Debug)]
@@ -320,7 +320,7 @@ impl MLFalsePositiveFilter {
 
         // Check historical patterns
         let pattern_key = self.generate_pattern_key(finding_type, file_path, code_snippet);
-        if let Some(stats) = self.get_pattern_stats(&pattern_key).await {
+        if let Some(stats) = self.get_pattern_stats(&pattern_key) {
             let historical_fp_rate = stats.false_positives as f64 / stats.occurrences as f64;
             if historical_fp_rate > 0.7 {
                 should_filter = true;
@@ -489,7 +489,7 @@ impl MLFalsePositiveFilter {
         confidence: f64,
     ) -> Result<()> {
         let pattern_key = self.generate_pattern_key(finding_type, file_path, code_snippet);
-        let mut db = self.pattern_database.write().await;
+        let mut db = self.pattern_database.write().unwrap();
 
         let stats = db.entry(pattern_key).or_insert(PatternStats {
             occurrences: 0,
@@ -512,8 +512,8 @@ impl MLFalsePositiveFilter {
     }
 
     /// Get statistics for a pattern
-    async fn get_pattern_stats(&self, pattern_key: &str) -> Option<PatternStats> {
-        let db = self.pattern_database.read().await;
+    fn get_pattern_stats(&self, pattern_key: &str) -> Option<PatternStats> {
+        let db = self.pattern_database.read().unwrap();
         db.get(pattern_key).cloned()
     }
 
@@ -560,7 +560,7 @@ impl MLFalsePositiveFilter {
 
     /// Get filtering statistics
     pub async fn get_statistics(&self) -> Result<FilterStatistics> {
-        let db = self.pattern_database.read().await;
+        let db = self.pattern_database.read().unwrap();
         let total_patterns = db.len();
         let total_occurrences: u32 = db.values().map(|stats| stats.occurrences).sum();
         let total_false_positives: u32 = db.values().map(|stats| stats.false_positives).sum();

@@ -41,7 +41,7 @@ impl AIProviderImpl for OllamaProvider {
         use std::time::{Duration, SystemTime};
 
         // Placeholder implementation
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        std::thread::sleep(Duration::from_millis(300));
 
         Ok(AIResponse {
             feature: request.feature,

@@ -317,6 +317,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#,
 
         // Optionally try to download real assets if explicitly enabled.
         // Default is offline (no network/system-proxy access in CI/sandbox).
+        #[cfg(feature = "net")]
         if std::env::var("WIKI_FETCH_ASSETS").ok().as_deref() == Some("1") {
             // Use tokio + reqwest if available (default features include net)
             if let Ok(rt) = tokio::runtime::Runtime::new() {
@@ -374,6 +375,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#,
         }
 
         // Try to download the real library only if explicitly enabled; ignore failures
+        #[cfg(feature = "net")]
         if std::env::var("WIKI_FETCH_ASSETS").ok().as_deref() == Some("1") {
             let url = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
             if let Ok(rt) = tokio::runtime::Runtime::new() {

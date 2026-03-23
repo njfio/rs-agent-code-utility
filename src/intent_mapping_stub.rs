@@ -182,14 +182,14 @@ impl IntentMappingSystem {
     ) -> Result<()> {
         // Validate that both requirement and implementation exist
         if !self.requirements.contains_key(&requirement_id) {
-            return Err(Error::InvalidInput(format!(
+            return Err(Error::invalid_input(format!(
                 "Requirement '{}' not found",
                 requirement_id
             )));
         }
 
         if !self.implementations.contains_key(&implementation_id) {
-            return Err(Error::InvalidInput(format!(
+            return Err(Error::invalid_input(format!(
                 "Implementation '{}' not found",
                 implementation_id
             )));
@@ -307,7 +307,7 @@ impl IntentMappingSystem {
                 return Ok(true);
             }
         }
-        Err(Error::InvalidInput("Mapping not found".to_string()))
+        Err(Error::invalid_input("Mapping not found"))
     }
 
     /// Auto-discover potential mappings based on text similarity
@@ -331,16 +331,10 @@ impl IntentMappingSystem {
                 }
 
                 // Simple keyword matching
-                let req_words: Vec<&str> = requirement
-                    .description
-                    .to_lowercase()
-                    .split_whitespace()
-                    .collect();
-                let impl_words: Vec<&str> = implementation
-                    .description
-                    .to_lowercase()
-                    .split_whitespace()
-                    .collect();
+                let req_lower = requirement.description.to_lowercase();
+                let req_words: Vec<&str> = req_lower.split_whitespace().collect();
+                let impl_lower = implementation.description.to_lowercase();
+                let impl_words: Vec<&str> = impl_lower.split_whitespace().collect();
 
                 let common_words = req_words
                     .iter()

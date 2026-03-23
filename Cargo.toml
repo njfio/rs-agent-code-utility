@@ -24,7 +24,7 @@ tree-sitter-ruby = "0.20"
 tree-sitter-swift = "0.4"
 tree-sitter-kotlin = "0.2.11"
 thiserror = "1.0"
-serde = { version = "1.0", features = ["derive"], optional = true }
+serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 clap = { version = "4.0", features = ["derive"] }
 colored = "2.0"
@@ -88,9 +88,8 @@ assert_cmd = "2.0"
 predicates = "3.0"
 
 [features]
-default = ["std", "serde", "ml", "net", "db"]
+default = ["std", "ml", "net", "db"]
 std = []
-serde = ["dep:serde"]
 wasm = []
 
 # Demo feature gates all examples

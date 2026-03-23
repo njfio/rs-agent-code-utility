@@ -99,16 +99,9 @@ fn filter_insights_by_focus(
 }
 
 fn display_json(result: &crate::ReasoningResult) -> CliResult<()> {
-    #[cfg(feature = "serde")]
-    {
-        let json = serde_json::to_string_pretty(result)
-            .map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
-        println!("{}", json);
-    }
-    #[cfg(not(feature = "serde"))]
-    {
-        return Err("JSON output requires the 'serde' feature to be enabled".to_string());
-    }
+    let json = serde_json::to_string_pretty(result)
+        .map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
+    println!("{}", json);
     Ok(())
 }
 

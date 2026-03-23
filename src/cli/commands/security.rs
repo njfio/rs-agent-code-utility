@@ -2,6 +2,7 @@
 //!
 //! Provides comprehensive security vulnerability scanning with configurable output formats.
 
+#[cfg(feature = "net")]
 use crate::ai::AIServiceBuilder;
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
@@ -9,6 +10,7 @@ use crate::cli::utils::{
     create_analysis_config, create_progress_bar, parse_severity, print_success,
     severity_meets_threshold, validate_output_path,
 };
+#[cfg(feature = "net")]
 use crate::security::{AstSecurityAnalyzer, MLFalsePositiveFilter};
 use crate::security::deterministic_filter::{filter_vulnerabilities, FilterMode};
 use crate::{CodebaseAnalyzer, SecurityScanner};
@@ -16,6 +18,7 @@ use colored::*;
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
+#[cfg(feature = "net")]
 use std::sync::Arc;
 
 /// Execute the security command
@@ -117,31 +120,39 @@ pub async fn execute(
     let security_scanner = if no_ai_filter {
         SecurityScanner::new().map_err(|e| CliError::Security(e.to_string()))?
     } else {
-        let det_mode = FilterMode::from_str(filter_mode);
-        let ai_service = Arc::new(
-            AIServiceBuilder::new()
-                .with_mock_providers(true)
-                .build()
+        #[cfg(feature = "net")]
+        {
+            let det_mode = FilterMode::from_str(filter_mode);
+            let ai_service = Arc::new(
+                AIServiceBuilder::new()
+                    .with_mock_providers(true)
+                    .build()
+                    .await
+                    .map_err(|e| CliError::Security(format!("Failed to initialize AI service: {}", e)))?,
+            );
+            let ml_filter = Arc::new(MLFalsePositiveFilter::with_mode(det_mode));
+            let ast_analyzer = Arc::new(
+                AstSecurityAnalyzer::new()
+                    .map_err(|e| CliError::Security(format!("Failed to create AST analyzer: {}", e)))?,
+            );
+            // Adjust AI config based on filter mode
+            let ai_min_conf = match det_mode {
+                FilterMode::Strict => 0.8,
+                FilterMode::Balanced => 0.6,
+                FilterMode::Permissive => 0.4,
+            };
+            SecurityScanner::with_ai_filtering(ai_service, ml_filter, ast_analyzer, ai_min_conf, det_mode)
                 .await
-                .map_err(|e| CliError::Security(format!("Failed to initialize AI service: {}", e)))?,
-        );
-        let ml_filter = Arc::new(MLFalsePositiveFilter::with_mode(det_mode));
-        let ast_analyzer = Arc::new(
-            AstSecurityAnalyzer::new()
-                .map_err(|e| CliError::Security(format!("Failed to create AST analyzer: {}", e)))?,
-        );
-        // Adjust AI config based on filter mode
-        let ai_min_conf = match det_mode {
-            FilterMode::Strict => 0.8,
-            FilterMode::Balanced => 0.6,
-            FilterMode::Permissive => 0.4,
-        };
-        SecurityScanner::with_ai_filtering(ai_service, ml_filter, ast_analyzer, ai_min_conf, det_mode)
-            .await
-            .map_err(|e| CliError::Security(format!(
-                "Failed to create AI security scanner: {}",
-                e
-            )))?
+                .map_err(|e| CliError::Security(format!(
+                    "Failed to create AI security scanner: {}",
+                    e
+                )))?
+        }
+        #[cfg(not(feature = "net"))]
+        {
+            // AI filtering requires the 'net' feature; fall back to basic scanner
+            SecurityScanner::new().map_err(|e| CliError::Security(e.to_string()))?
+        }
     };
 
     pb.set_message("Running AI-powered security analysis...");
