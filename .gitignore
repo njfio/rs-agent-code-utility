@@ -116,5 +116,9 @@ credentials.*
 id_rsa
 id_ed25519
 
+# Output artifacts
+security_report.json
+*.backup
+
 # Rust package lock (libraries typically ignore)
 Cargo.lock

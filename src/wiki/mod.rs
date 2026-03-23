@@ -26,6 +26,7 @@ use self::util::{html_escape, markdown_to_html, sanitize_filename};
 use crate::analyzer::{AnalysisConfig, AnalysisDepth, AnalysisResult};
 use crate::{CodebaseAnalyzer, Result};
 use security_enhancements::SecurityWikiGenerator;
+use std::collections::HashMap;
 use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -240,17 +241,6 @@ impl WikiConfigBuilder {
 pub struct WikiGenerationResult {
     /// Number of pages generated
     pub pages: usize,
-}
-
-#[derive(serde::Serialize)]
-struct SearchEntry {
-    title: String,
-    path: String,
-    description: String,
-    symbols: Vec<String>,
-    language: String,
-    file_type: String,
-    security_level: String,
 }
 
 /// Wiki site generator
@@ -504,10 +494,9 @@ impl WikiGenerator {
             let title = format!("{}", file.path.display());
             let desc = format!("{} symbols, {} lines", file.symbols.len(), file.lines);
 
-            // Generate security enhancements for this file if enabled
-            let security_block = if let Some(ref security) = security_analysis {
-                // Find this file in security hotspots
-                let file_hotspots: Vec<_> = security
+            // Find security hotspots for this file if enabled
+            let file_hotspots: Vec<_> = if let Some(ref security) = security_analysis {
+                security
                     .security_hotspots
                     .iter()
                     .filter(|h| h.location.file == file.path)
@@ -1126,29 +1115,6 @@ updateSearch();
             fs::write(out.join("symbols.html"), content).map_err(|e| e.into())
         }
         */
-
-    fn generate_ai_insights_sync(analysis: &AnalysisResult, use_mock: bool, _cfg_path: Option<&PathBuf>) -> Result<String> {
-        // Create a placeholder implementation - comprehensive AI insights for the entire repository
-        let mut summary = String::new();
-        use std::fmt::Write as _;
-        let _ = writeln!(&mut summary, "Project Overview:");
-        for f in analysis.files.iter().take(5) {
-            let _ = writeln!(&mut summary, "- {} ({:} symbols)",
-                           f.path.display(), f.symbols.len());
-        }
-        let insights = format!(
-            "<div class=\"card\"><h3>AI Insights</h3>\
-            <p>Project analysis shows {total_files} files with {total_symbols} symbols: {summary}</p>\
-            <p><strong>Recommendations:</strong></p>\
-            <ul><li>Consider modularization for files with >50 functions</li>\
-            <li>Add comprehensive error handling patterns</li>\
-            <li>Optimize imports and dependencies</li></ul></div>",
-            total_files = analysis.total_files,
-            total_symbols = analysis.files.iter().map(|f| f.symbols.len()).sum::<usize>(),
-            summary = if summary.len() > 200 { &summary[..200] } else { &summary }
-        );
-        Ok(insights)
-    }
 
     fn generate_file_ai_insights_sync(&self, file: &crate::analyzer::FileInfo) -> Result<String> {
         use crate::ai::types::{AIFeature, AIRequest};
@@ -2007,6 +1973,7 @@ impl WikiGenerator {
         );
         Ok(html)
     }
+}
 
 /// Much simpler implementation that works around tree-sitter API issues
 impl WikiGenerator {
