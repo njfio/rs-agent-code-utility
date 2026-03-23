@@ -203,40 +203,166 @@ pub async fn execute(
 
     match output_format {
         OutputFormat::Json => {
+            use serde_json::json;
+
             #[derive(serde::Serialize)]
-            struct FilteredJsonReport<'a> {
+            struct FilteredJsonReport {
                 security_score: u8,
                 total_vulnerabilities: usize,
                 vulnerabilities_by_severity:
                     std::collections::BTreeMap<crate::SecuritySeverity, usize>,
-                vulnerabilities: Vec<&'a crate::SecurityVulnerability>,
-                compliance: &'a crate::advanced_security::ComplianceAssessment,
+                vulnerabilities: Vec<serde_json::Value>,
+                compliance: crate::advanced_security::ComplianceAssessment,
                 // Optional diagnostics to compare filtered vs raw
                 raw_total_vulnerabilities: usize,
                 raw_vulnerabilities_by_severity:
                     std::collections::BTreeMap<crate::SecuritySeverity, usize>,
             }
 
-            // Build severity counts from filtered list
+            let mut filtered_findings: Vec<serde_json::Value> = filtered_vulnerabilities
+                .iter()
+                .map(|vuln| {
+                    serde_json::to_value(vuln).expect("security vulnerability is serializable")
+                })
+                .collect();
+
+            filtered_findings.extend(
+                security_result
+                    .secrets
+                    .iter()
+                    .filter(|secret| {
+                        crate::cli::utils::confidence_meets_threshold(
+                            &confidence_threshold,
+                            &secret.confidence,
+                        )
+                    })
+                    .map(|secret| {
+                        json!({
+                            "finding_type": "secret",
+                            "title": format!("Hardcoded {:?} detected", secret.secret_type),
+                            "description": secret.remediation,
+                            "severity": crate::SecuritySeverity::Critical,
+                            "confidence": secret.confidence,
+                            "location": secret.location,
+                            "masked_value": secret.masked_value,
+                            "secret_type": secret.secret_type,
+                        })
+                    }),
+            );
+
+            filtered_findings.extend(
+                security_result
+                    .input_validation_issues
+                    .iter()
+                    .filter(|issue| severity_meets_threshold(&severity_threshold, &issue.severity))
+                    .map(|issue| {
+                        json!({
+                            "finding_type": "input_validation",
+                            "title": format!("{:?}", issue.issue_type),
+                            "description": issue.description,
+                            "severity": issue.severity,
+                            "confidence": serde_json::Value::Null,
+                            "location": issue.location,
+                            "remediation": issue.remediation,
+                        })
+                    }),
+            );
+
+            filtered_findings.extend(
+                security_result
+                    .injection_vulnerabilities
+                    .iter()
+                    .filter(|issue| severity_meets_threshold(&severity_threshold, &issue.severity))
+                    .map(|issue| {
+                        json!({
+                            "finding_type": "injection",
+                            "title": format!("{:?}", issue.injection_type),
+                            "description": issue.pattern,
+                            "severity": issue.severity,
+                            "confidence": serde_json::Value::Null,
+                            "location": issue.location,
+                            "remediation": issue.remediation,
+                        })
+                    }),
+            );
+
+            filtered_findings.extend(
+                security_result
+                    .best_practice_violations
+                    .iter()
+                    .filter(|issue| severity_meets_threshold(&severity_threshold, &issue.severity))
+                    .map(|issue| {
+                        json!({
+                            "finding_type": "best_practice",
+                            "title": format!("{:?}", issue.category),
+                            "description": issue.description,
+                            "severity": issue.severity,
+                            "confidence": serde_json::Value::Null,
+                            "location": issue.location,
+                            "recommendation": issue.recommendation,
+                        })
+                    }),
+            );
+
+            // Build severity counts from the flattened filtered list
             let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
                 Default::default();
-            for v in &filtered_vulnerabilities {
-                *sev_counts.entry(v.severity.clone()).or_insert(0) += 1;
+            for vuln in &filtered_vulnerabilities {
+                *sev_counts.entry(vuln.severity.clone()).or_insert(0) += 1;
+            }
+            for secret in &security_result.secrets {
+                if crate::cli::utils::confidence_meets_threshold(
+                    &confidence_threshold,
+                    &secret.confidence,
+                ) {
+                    *sev_counts
+                        .entry(crate::SecuritySeverity::Critical)
+                        .or_insert(0) += 1;
+                }
+            }
+            for issue in &security_result.input_validation_issues {
+                if severity_meets_threshold(&severity_threshold, &issue.severity) {
+                    *sev_counts.entry(issue.severity.clone()).or_insert(0) += 1;
+                }
+            }
+            for issue in &security_result.injection_vulnerabilities {
+                if severity_meets_threshold(&severity_threshold, &issue.severity) {
+                    *sev_counts.entry(issue.severity.clone()).or_insert(0) += 1;
+                }
+            }
+            for issue in &security_result.best_practice_violations {
+                if severity_meets_threshold(&severity_threshold, &issue.severity) {
+                    *sev_counts.entry(issue.severity.clone()).or_insert(0) += 1;
+                }
             }
 
-            // Convert raw severity counts to BTreeMap for stable ordering
+            // Convert raw severity counts to BTreeMap for stable ordering across all finding buckets
             let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
                 Default::default();
-            for (k, v) in &security_result.vulnerabilities_by_severity {
-                raw_counts.insert(k.clone(), *v);
+            for vuln in &security_result.vulnerabilities {
+                *raw_counts.entry(vuln.severity.clone()).or_insert(0) += 1;
+            }
+            for _ in &security_result.secrets {
+                *raw_counts
+                    .entry(crate::SecuritySeverity::Critical)
+                    .or_insert(0) += 1;
+            }
+            for issue in &security_result.input_validation_issues {
+                *raw_counts.entry(issue.severity.clone()).or_insert(0) += 1;
+            }
+            for issue in &security_result.injection_vulnerabilities {
+                *raw_counts.entry(issue.severity.clone()).or_insert(0) += 1;
+            }
+            for issue in &security_result.best_practice_violations {
+                *raw_counts.entry(issue.severity.clone()).or_insert(0) += 1;
             }
 
             let report = FilteredJsonReport {
                 security_score: security_result.security_score,
-                total_vulnerabilities: filtered_vulnerabilities.len(),
+                total_vulnerabilities: filtered_findings.len(),
                 vulnerabilities_by_severity: sev_counts,
-                vulnerabilities: filtered_vulnerabilities.clone(),
-                compliance: &security_result.compliance,
+                vulnerabilities: filtered_findings,
+                compliance: security_result.compliance.clone(),
                 raw_total_vulnerabilities: security_result.total_vulnerabilities,
                 raw_vulnerabilities_by_severity: raw_counts,
             };

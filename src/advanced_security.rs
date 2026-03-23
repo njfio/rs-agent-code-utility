@@ -545,6 +545,10 @@ impl Default for AdvancedSecurityAnalyzer {
 }
 
 impl AdvancedSecurityAnalyzer {
+    fn is_call_expression_kind(kind: &str) -> bool {
+        matches!(kind, "call_expression" | "call")
+    }
+
     /// Create a new advanced security analyzer with custom configuration
     pub fn with_config(_config: AdvancedSecurityConfig) -> Result<Self> {
         Ok(Self {
@@ -1410,6 +1414,11 @@ impl AdvancedSecurityAnalyzer {
 
             // Command injection (heuristic): only flag when a command API and concatenation appear together
             let looks_like_command_api = line_lower.contains("std::process::command::new")
+                || line_lower.contains("os.system")
+                || line_lower.contains("subprocess.run")
+                || line_lower.contains("subprocess.call")
+                || line_lower.contains("subprocess.check_output")
+                || line_lower.contains("subprocess.popen")
                 || line_lower.contains("child_process.exec")
                 || line_lower.contains("child_process.execsync")
                 || line_lower.contains("runtime.getruntime().exec");
@@ -2161,7 +2170,7 @@ impl AdvancedSecurityAnalyzer {
                     }
                 }
             }
-            "call_expression" => {
+            kind if Self::is_call_expression_kind(kind) => {
                 // Track function calls and detect user input sources
                 if let Some(function_node) = node.child_by_field_name("function") {
                     if let Ok(function_name) = function_node.text() {
@@ -2301,11 +2310,6 @@ impl AdvancedSecurityAnalyzer {
         for vuln in vulnerabilities {
             let mut is_false_positive = false;
 
-            // Check if it's in a test file
-            if context.is_test_file {
-                is_false_positive = true;
-            }
-
             // Check if it's in a comment
             if context.is_comment {
                 is_false_positive = true;
@@ -2386,7 +2390,7 @@ impl AdvancedSecurityAnalyzer {
         vulnerabilities: &mut Vec<SecurityVulnerability>,
     ) -> Result<()> {
         // Look for call expressions that might be database operations
-        if node.kind() == "call_expression" {
+        if Self::is_call_expression_kind(node.kind()) {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
                     let function_name_lower = function_name.to_lowercase();
@@ -2586,11 +2590,6 @@ impl AdvancedSecurityAnalyzer {
         for vuln in vulnerabilities {
             let mut is_false_positive = false;
 
-            // Check if it's in a test file
-            if context.is_test_file {
-                is_false_positive = true;
-            }
-
             // Check if it's in a comment
             if context.is_comment {
                 is_false_positive = true;
@@ -2669,7 +2668,7 @@ impl AdvancedSecurityAnalyzer {
         context: &SecurityContext,
         vulnerabilities: &mut Vec<SecurityVulnerability>,
     ) -> Result<()> {
-        if node.kind() == "call_expression" {
+        if Self::is_call_expression_kind(node.kind()) {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
                     let function_name_lower = function_name.to_lowercase();
@@ -2845,11 +2844,6 @@ impl AdvancedSecurityAnalyzer {
         for vuln in vulnerabilities {
             let mut is_false_positive = false;
 
-            // Check if it's in a test file
-            if context.is_test_file {
-                is_false_positive = true;
-            }
-
             // Check if it's in a comment or documentation
             if context.is_comment {
                 is_false_positive = true;
@@ -2942,7 +2936,7 @@ impl AdvancedSecurityAnalyzer {
         // Look for string literals that might contain secrets
         if node.kind() == "string_literal" || node.kind() == "string" {
             if let Ok(string_value) = node.text() {
-                if self.looks_like_secret(string_value) && !context.is_test_file {
+                if self.looks_like_secret(string_value) {
                     let confidence = self.calculate_secret_confidence(string_value, context);
 
                     if confidence >= ConfidenceLevel::Medium {
@@ -3096,7 +3090,7 @@ impl AdvancedSecurityAnalyzer {
         context: &SecurityContext,
         vulnerabilities: &mut Vec<SecurityVulnerability>,
     ) -> Result<()> {
-        if node.kind() == "call_expression" {
+        if Self::is_call_expression_kind(node.kind()) {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
                     let function_name_lower = function_name.to_lowercase();
@@ -3291,7 +3285,7 @@ impl AdvancedSecurityAnalyzer {
     /// Find authorization patterns in AST node
     fn find_authorization_patterns(&self, node: &Node, content: &str) -> bool {
         // Check current node for authorization patterns
-        if node.kind() == "call_expression" {
+        if Self::is_call_expression_kind(node.kind()) {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
                     let function_name_lower = function_name.to_lowercase();
@@ -3408,7 +3402,7 @@ impl AdvancedSecurityAnalyzer {
         context: &SecurityContext,
         vulnerabilities: &mut Vec<SecurityVulnerability>,
     ) -> Result<()> {
-        if node.kind() == "call_expression" {
+        if Self::is_call_expression_kind(node.kind()) {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
                     let function_name_lower = function_name.to_lowercase();
@@ -3546,7 +3540,7 @@ impl AdvancedSecurityAnalyzer {
             }
 
             // Check for format strings
-            if child.kind() == "call_expression" {
+            if Self::is_call_expression_kind(child.kind()) {
                 if let Some(func_node) = child.child_by_field_name("function") {
                     if let Ok(func_name) = func_node.text() {
                         if func_name.contains("format") {
@@ -3639,7 +3633,7 @@ impl AdvancedSecurityAnalyzer {
         context: &SecurityContext,
         vulnerabilities: &mut Vec<SecurityVulnerability>,
     ) -> Result<()> {
-        if node.kind() == "call_expression" {
+        if Self::is_call_expression_kind(node.kind()) {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
                     let function_name_lower = function_name.to_lowercase();
@@ -3791,7 +3785,7 @@ impl AdvancedSecurityAnalyzer {
             }
 
             // Check for format strings
-            if child.kind() == "call_expression" {
+            if Self::is_call_expression_kind(child.kind()) {
                 if let Some(func_node) = child.child_by_field_name("function") {
                     if let Ok(func_name) = func_node.text() {
                         if func_name.contains("format") {
@@ -3815,7 +3809,7 @@ impl AdvancedSecurityAnalyzer {
         vulnerabilities: &mut Vec<SecurityVulnerability>,
     ) -> Result<()> {
         // Look for output functions that might render user input
-        if node.kind() == "call_expression" {
+        if Self::is_call_expression_kind(node.kind()) {
             if let Some(function_node) = node.child_by_field_name("function") {
                 if let Ok(function_name) = function_node.text() {
                     let function_name_lower = function_name.to_lowercase();

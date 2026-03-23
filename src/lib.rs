@@ -80,7 +80,7 @@
 //! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //!
 //! // Analyze a Rust file
-//! let result = analyzer.analyze_file("src/main.rs")?;
+//! let result = analyzer.analyze_file("src/bin/main.rs")?;
 
 //! // Access analysis results
 //! println!("Functions found: {}", result.files[0].symbols.len());
@@ -128,7 +128,7 @@
 //! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //!
 //! // Analyze file for vulnerabilities
-//! let result = analyzer.analyze_file("src/main.rs")?;
+//! let result = analyzer.analyze_file("src/bin/main.rs")?;
 //!
 //! // Report security findings
 //! for vuln in &result.files[0].security_vulnerabilities {
