@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/parser_comprehensive_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/parser_comprehensive_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 10</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 49</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+test_parser_with_options"test_parser_with_options (fn)"]
+  test_parser_options_management"test_parser_options_management (fn)"]
+  test_parse_bytes"test_parse_bytes (fn)"]
+  test_parse_file"test_parse_file (fn)"]
+  test_parse_incremental"test_parse_incremental (fn)"]
+  test_parser_reset"test_parser_reset (fn)"]
+  test_set_language"test_set_language (fn)"]
+  test_clone_parser"test_clone_parser (fn)"]
+  test_parse_with_timeout"test_parse_with_timeout (fn)"]
+  test_parse_with_byte_limit"test_parse_with_byte_limit (fn)"]
+  test_parse_bytes --> test_parser_with_options
+  test_parse_bytes --> test_parser_options_management
+  test_parse_bytes --> test_parser_reset
+  test_parse_bytes --> test_clone_parser
+  test_parse_file --> test_parser_with_options
+  test_parse_file --> test_parser_options_management
+  test_parse_file --> test_parser_reset
+  test_parse_file --> test_clone_parser
+  test_parse_incremental --> test_parser_with_options
+  test_parse_incremental --> test_parser_options_management
+  test_parse_incremental --> test_parser_reset
+  test_parse_incremental --> test_clone_parser
+  test_set_language --> test_parser_reset
+  test_parse_with_timeout --> test_parser_with_options
+  test_parse_with_timeout --> test_parser_options_management
+  test_parse_with_timeout --> test_parser_reset
+  test_parse_with_timeout --> test_clone_parser
+  test_parse_with_byte_limit --> test_parser_with_options
+  test_parse_with_byte_limit --> test_parser_options_management
+  test_parse_with_byte_limit --> test_parse_bytes
+  test_parse_with_byte_limit --> test_parser_reset
+  test_parse_with_byte_limit --> test_clone_parser
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  test_parser_with_options["test_parser_with_options"Fn]
+  test_parser_options_management["test_parser_options_management"Fn]
+  test_parse_bytes["test_parse_bytes"Fn]
+  test_parse_file["test_parse_file"Fn]
+  test_parse_incremental["test_parse_incremental"Fn]
+  test_parser_reset["test_parser_reset"Fn]
+  test_set_language["test_set_language"Fn]
+  test_clone_parser["test_clone_parser"Fn]
+  test_parse_with_timeout["test_parse_with_timeout"Fn]
+  test_parse_with_byte_limit["test_parse_with_byte_limit"Fn]
+  Start --> test_parser_with_options
+  test_parser_with_options --> test_parser_options_management
+  test_parser_options_management --> test_parse_bytes
+  test_parse_bytes --> test_parse_file
+  test_parse_file --> test_parse_incremental
+  test_parse_incremental --> test_parser_reset
+  test_parser_reset --> test_set_language
+  test_set_language --> test_clone_parser
+  test_clone_parser --> test_parse_with_timeout
+  test_parse_with_timeout --> test_parse_with_byte_limit
+  test_parse_with_byte_limit --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

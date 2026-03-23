@@ -1,0 +1,283 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/tree.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/tree.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 51</li>
+<li><strong>Structures:</strong> 3</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 75</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  inner"inner (fn)"]
+  source"source (fn)"]
+  root_node"root_node (fn)"]
+  walk"walk (fn)"]
+  edit"edit (fn)"]
+  language"language (fn)"]
+  has_error"has_error (fn)"]
+  error_nodes"error_nodes (fn)"]
+  collect_error_nodes"collect_error_nodes (fn)"]
+  find_nodes_by_kind"find_nodes_by_kind (fn)"]
+  collect_nodes_by_kind"collect_nodes_by_kind (fn)"]
+  text_for_range"text_for_range (fn)"]
+  changed_ranges"changed_ranges (fn)"]
+  new"new (fn)"]
+  inner"inner (fn)"]
+  kind"kind (fn)"]
+  text"text (fn)"]
+  byte_range"byte_range (fn)"]
+  start_position"start_position (fn)"]
+  end_position"end_position (fn)"]
+  start_byte"start_byte (fn)"]
+  end_byte"end_byte (fn)"]
+  has_error"has_error (fn)"]
+  is_error"is_error (fn)"]
+  is_missing"is_missing (fn)"]
+  is_named"is_named (fn)"]
+  parent"parent (fn)"]
+  child_count"child_count (fn)"]
+  child"child (fn)"]
+  child_by_field_name"child_by_field_name (fn)"]
+  children"children (fn)"]
+  named_children"named_children (fn)"]
+  next_sibling"next_sibling (fn)"]
+  prev_sibling"prev_sibling (fn)"]
+  walk"walk (fn)"]
+  to_sexp"to_sexp (fn)"]
+  find_descendant"find_descendant (fn)"]
+  find_descendant_impl"find_descendant_impl (fn)"]
+  find_descendants"find_descendants (fn)"]
+  collect_descendants"collect_descendants (fn)"]
+  new"new (fn)"]
+  node"node (fn)"]
+  goto_first_child"goto_first_child (fn)"]
+  goto_next_sibling"goto_next_sibling (fn)"]
+  goto_parent"goto_parent (fn)"]
+  reset"reset (fn)"]
+  field_name"field_name (fn)"]
+  test_syntax_tree_basic"test_syntax_tree_basic (fn)"]
+  test_node_navigation"test_node_navigation (fn)"]
+  test_find_nodes_by_kind"test_find_nodes_by_kind (fn)"]
+  root_node --> error_nodes
+  root_node --> collect_error_nodes
+  root_node --> find_nodes_by_kind
+  root_node --> collect_nodes_by_kind
+  root_node --> test_find_nodes_by_kind
+  find_nodes_by_kind --> byte_range
+  find_nodes_by_kind --> start_byte
+  find_nodes_by_kind --> end_byte
+  collect_nodes_by_kind --> byte_range
+  collect_nodes_by_kind --> start_byte
+  collect_nodes_by_kind --> end_byte
+  text_for_range --> changed_ranges
+  byte_range --> changed_ranges
+  end_position --> find_descendant
+  end_position --> find_descendant_impl
+  end_position --> find_descendants
+  end_position --> collect_descendants
+  end_byte --> find_descendant
+  end_byte --> find_descendant_impl
+  end_byte --> find_descendants
+  end_byte --> collect_descendants
+  is_error --> is_missing
+  is_named --> is_missing
+  child_count --> children
+  child_count --> named_children
+  child --> children
+  child --> named_children
+  child_by_field_name --> byte_range
+  child_by_field_name --> start_byte
+  child_by_field_name --> end_byte
+  child_by_field_name --> is_named
+  child_by_field_name --> children
+  child_by_field_name --> named_children
+  to_sexp --> goto_first_child
+  to_sexp --> goto_next_sibling
+  to_sexp --> goto_parent
+  find_descendant --> find_descendants
+  find_descendant --> collect_descendants
+  find_descendant_impl --> find_descendants
+  find_descendant_impl --> collect_descendants
+  node --> error_nodes
+  node --> collect_error_nodes
+  node --> find_nodes_by_kind
+  node --> collect_nodes_by_kind
+  node --> test_find_nodes_by_kind
+  goto_first_child --> children
+  goto_first_child --> named_children
+  field_name --> is_named
+  field_name --> named_children
+  test_node_navigation --> error_nodes
+  test_node_navigation --> collect_error_nodes
+  test_node_navigation --> find_nodes_by_kind
+  test_node_navigation --> collect_nodes_by_kind
+  test_node_navigation --> test_find_nodes_by_kind
+  test_find_nodes_by_kind --> byte_range
+  test_find_nodes_by_kind --> start_byte
+  test_find_nodes_by_kind --> end_byte
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  syntaxtree["SyntaxTree"]
+  Start --> syntaxtree
+  node["Node"]
+  Start --> node
+  treecursor["TreeCursor"]
+  Start --> treecursor
+  new["new"Fn]
+  inner["inner"Fn]
+  source["source"Fn]
+  root_node["root_node"Fn]
+  walk["walk"Fn]
+  edit["edit"Fn]
+  language["language"Fn]
+  has_error["has_error"Fn]
+  error_nodes["error_nodes"Fn]
+  collect_error_nodes["collect_error_nodes"Fn]
+  find_nodes_by_kind["find_nodes_by_kind"Fn]
+  collect_nodes_by_kind["collect_nodes_by_kind"Fn]
+  text_for_range["text_for_range"Fn]
+  changed_ranges["changed_ranges"Fn]
+  new["new"Fn]
+  inner["inner"Fn]
+  kind["kind"Fn]
+  text["text"Fn]
+  byte_range["byte_range"Fn]
+  start_position["start_position"Fn]
+  end_position["end_position"Fn]
+  start_byte["start_byte"Fn]
+  end_byte["end_byte"Fn]
+  has_error["has_error"Fn]
+  is_error["is_error"Fn]
+  is_missing["is_missing"Fn]
+  is_named["is_named"Fn]
+  parent["parent"Fn]
+  child_count["child_count"Fn]
+  child["child"Fn]
+  child_by_field_name["child_by_field_name"Fn]
+  children["children"Fn]
+  named_children["named_children"Fn]
+  next_sibling["next_sibling"Fn]
+  prev_sibling["prev_sibling"Fn]
+  walk["walk"Fn]
+  to_sexp["to_sexp"Fn]
+  find_descendant["find_descendant"Fn]
+  find_descendant_impl["find_descendant_impl"Fn]
+  find_descendants["find_descendants"Fn]
+  collect_descendants["collect_descendants"Fn]
+  new["new"Fn]
+  node["node"Fn]
+  goto_first_child["goto_first_child"Fn]
+  goto_next_sibling["goto_next_sibling"Fn]
+  goto_parent["goto_parent"Fn]
+  reset["reset"Fn]
+  field_name["field_name"Fn]
+  test_syntax_tree_basic["test_syntax_tree_basic"Fn]
+  test_node_navigation["test_node_navigation"Fn]
+  test_find_nodes_by_kind["test_find_nodes_by_kind"Fn]
+  syntaxtree --> new
+  new --> inner
+  inner --> source
+  source --> root_node
+  root_node --> walk
+  walk --> edit
+  edit --> language
+  language --> has_error
+  has_error --> error_nodes
+  error_nodes --> collect_error_nodes
+  collect_error_nodes --> find_nodes_by_kind
+  find_nodes_by_kind --> collect_nodes_by_kind
+  collect_nodes_by_kind --> text_for_range
+  text_for_range --> changed_ranges
+  changed_ranges --> new
+  new --> inner
+  inner --> kind
+  kind --> text
+  text --> byte_range
+  byte_range --> start_position
+  start_position --> end_position
+  end_position --> start_byte
+  start_byte --> end_byte
+  end_byte --> has_error
+  has_error --> is_error
+  is_error --> is_missing
+  is_missing --> is_named
+  is_named --> parent
+  parent --> child_count
+  child_count --> child
+  child --> child_by_field_name
+  child_by_field_name --> children
+  children --> named_children
+  named_children --> next_sibling
+  next_sibling --> prev_sibling
+  prev_sibling --> walk
+  walk --> to_sexp
+  to_sexp --> find_descendant
+  find_descendant --> find_descendant_impl
+  find_descendant_impl --> find_descendants
+  find_descendants --> collect_descendants
+  collect_descendants --> new
+  new --> node
+  node --> goto_first_child
+  goto_first_child --> goto_next_sibling
+  goto_next_sibling --> goto_parent
+  goto_parent --> reset
+  reset --> field_name
+  field_name --> test_syntax_tree_basic
+  test_syntax_tree_basic --> test_node_navigation
+  test_node_navigation --> test_find_nodes_by_kind
+  test_find_nodes_by_kind --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class SyntaxTree {
+    +SyntaxTree()
+  }
+  class Node {
+    +Node()
+  }
+  class TreeCursor {
+    +TreeCursor()
+  }
+  root_node ..> Node : uses
+  error_nodes ..> Node : uses
+  collect_error_nodes ..> Node : uses
+  find_nodes_by_kind ..> Node : uses
+  collect_nodes_by_kind ..> Node : uses
+  node ..> Node : uses
+  test_node_navigation ..> Node : uses
+  test_find_nodes_by_kind ..> Node : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

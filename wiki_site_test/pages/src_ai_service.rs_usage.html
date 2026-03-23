@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/ai/service.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/ai/service.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 18</li>
+<li><strong>Structures:</strong> 2</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 42</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  with_config"with_config (fn)"]
+  with_config_file"with_config_file (fn)"]
+  with_mock_providers"with_mock_providers (fn)"]
+  with_provider"with_provider (fn)"]
+  with_default_provider"with_default_provider (fn)"]
+  build"build (fn)"]
+  default"default (fn)"]
+  new"new (fn)"]
+  process_request"process_request (fn)"]
+  select_provider"select_provider (fn)"]
+  get_feature_config"get_feature_config (fn)"]
+  validate_connections"validate_connections (fn)"]
+  available_providers"available_providers (fn)"]
+  is_feature_supported"is_feature_supported (fn)"]
+  cache_stats"cache_stats (fn)"]
+  clear_cache"clear_cache (fn)"]
+  config"config (fn)"]
+  with_provider --> with_mock_providers
+  with_provider --> available_providers
+  with_default_provider --> with_mock_providers
+  with_default_provider --> available_providers
+  select_provider --> with_mock_providers
+  select_provider --> available_providers
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  aiservice["AIService"]
+  Start --> aiservice
+  aiservicebuilder["AIServiceBuilder"]
+  Start --> aiservicebuilder
+  new["new"Fn]
+  with_config["with_config"Fn]
+  with_config_file["with_config_file"Fn]
+  with_mock_providers["with_mock_providers"Fn]
+  with_provider["with_provider"Fn]
+  with_default_provider["with_default_provider"Fn]
+  build["build"Fn]
+  default["default"Fn]
+  new["new"Fn]
+  process_request["process_request"Fn]
+  select_provider["select_provider"Fn]
+  get_feature_config["get_feature_config"Fn]
+  validate_connections["validate_connections"Fn]
+  available_providers["available_providers"Fn]
+  is_feature_supported["is_feature_supported"Fn]
+  cache_stats["cache_stats"Fn]
+  clear_cache["clear_cache"Fn]
+  config["config"Fn]
+  aiservice --> new
+  new --> with_config
+  with_config --> with_config_file
+  with_config_file --> with_mock_providers
+  with_mock_providers --> with_provider
+  with_provider --> with_default_provider
+  with_default_provider --> build
+  build --> default
+  default --> new
+  new --> process_request
+  process_request --> select_provider
+  select_provider --> get_feature_config
+  get_feature_config --> validate_connections
+  validate_connections --> available_providers
+  available_providers --> is_feature_supported
+  is_feature_supported --> cache_stats
+  cache_stats --> clear_cache
+  clear_cache --> config
+  config --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AIService {
+    +AIService()
+  }
+  class AIServiceBuilder {
+    +AIServiceBuilder()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

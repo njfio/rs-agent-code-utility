@@ -1,0 +1,269 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/analyzer.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/analyzer.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 38</li>
+<li><strong>Structures:</strong> 5</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 180</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  from_str"from_str (fn)"]
+  default"default (fn)"]
+  new"new (fn)"]
+  sort_stable"sort_stable (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  get_parser"get_parser (fn)"]
+  analyze_file"analyze_file (fn)"]
+  analyze_directory"analyze_directory (fn)"]
+  collect_files_ignore"collect_files_ignore (fn)"]
+  analyze_directory_parallel"analyze_directory_parallel (fn)"]
+  collect_files_recursive"collect_files_recursive (fn)"]
+  analyze_directory_recursive"analyze_directory_recursive (fn)"]
+  analyze_file_standalone"analyze_file_standalone (fn)"]
+  analyze_file_internal"analyze_file_internal (fn)"]
+  extract_symbols"extract_symbols (fn)"]
+  extract_rust_symbols"extract_rust_symbols (fn)"]
+  extract_javascript_symbols"extract_javascript_symbols (fn)"]
+  extract_python_symbols"extract_python_symbols (fn)"]
+  extract_c_symbols"extract_c_symbols (fn)"]
+  extract_go_symbols"extract_go_symbols (fn)"]
+  extract_rust_doc_comments"extract_rust_doc_comments (fn)"]
+  extract_js_doc_comments"extract_js_doc_comments (fn)"]
+  extract_python_docstring"extract_python_docstring (fn)"]
+  extract_c_doc_comments"extract_c_doc_comments (fn)"]
+  enable_semantic_graph"enable_semantic_graph (fn)"]
+  disable_semantic_graph"disable_semantic_graph (fn)"]
+  semantic_graph"semantic_graph (fn)"]
+  semantic_graph_mut"semantic_graph_mut (fn)"]
+  is_semantic_graph_enabled"is_semantic_graph_enabled (fn)"]
+  cache_stats"cache_stats (fn)"]
+  cache_hit_ratio"cache_hit_ratio (fn)"]
+  clear_cache"clear_cache (fn)"]
+  is_cached"is_cached (fn)"]
+  default"default (fn)"]
+  test_analyzer_creation"test_analyzer_creation (fn)"]
+  test_analyze_directory"test_analyze_directory (fn)"]
+  from_str --> extract_python_docstring
+  analyze_file --> collect_files_ignore
+  analyze_file --> collect_files_recursive
+  analyze_file --> test_analyzer_creation
+  analyze_directory --> test_analyzer_creation
+  analyze_directory_parallel --> test_analyzer_creation
+  analyze_directory_recursive --> test_analyzer_creation
+  analyze_file_standalone --> collect_files_ignore
+  analyze_file_standalone --> collect_files_recursive
+  analyze_file_standalone --> test_analyzer_creation
+  analyze_file_internal --> collect_files_ignore
+  analyze_file_internal --> collect_files_recursive
+  analyze_file_internal --> test_analyzer_creation
+  extract_c_symbols --> with_config
+  extract_c_symbols --> analyze_directory
+  extract_c_symbols --> collect_files_ignore
+  extract_c_symbols --> analyze_directory_parallel
+  extract_c_symbols --> collect_files_recursive
+  extract_c_symbols --> analyze_directory_recursive
+  extract_c_symbols --> extract_symbols
+  extract_c_symbols --> extract_rust_symbols
+  extract_c_symbols --> extract_javascript_symbols
+  extract_c_symbols --> extract_python_symbols
+  extract_c_symbols --> extract_go_symbols
+  extract_c_symbols --> extract_rust_doc_comments
+  extract_c_symbols --> extract_js_doc_comments
+  extract_c_symbols --> extract_python_docstring
+  extract_c_symbols --> extract_c_doc_comments
+  extract_c_symbols --> enable_semantic_graph
+  extract_c_symbols --> disable_semantic_graph
+  extract_c_symbols --> semantic_graph
+  extract_c_symbols --> semantic_graph_mut
+  extract_c_symbols --> is_semantic_graph_enabled
+  extract_c_symbols --> cache_stats
+  extract_c_symbols --> cache_hit_ratio
+  extract_c_symbols --> clear_cache
+  extract_c_symbols --> is_cached
+  extract_c_symbols --> test_analyzer_creation
+  extract_c_symbols --> test_analyze_directory
+  extract_rust_doc_comments --> extract_python_docstring
+  extract_js_doc_comments --> extract_python_docstring
+  extract_c_doc_comments --> with_config
+  extract_c_doc_comments --> analyze_directory
+  extract_c_doc_comments --> collect_files_ignore
+  extract_c_doc_comments --> analyze_directory_parallel
+  extract_c_doc_comments --> collect_files_recursive
+  extract_c_doc_comments --> analyze_directory_recursive
+  extract_c_doc_comments --> extract_symbols
+  extract_c_doc_comments --> extract_rust_symbols
+  extract_c_doc_comments --> extract_javascript_symbols
+  extract_c_doc_comments --> extract_python_symbols
+  extract_c_doc_comments --> extract_c_symbols
+  extract_c_doc_comments --> extract_go_symbols
+  extract_c_doc_comments --> extract_rust_doc_comments
+  extract_c_doc_comments --> extract_js_doc_comments
+  extract_c_doc_comments --> extract_python_docstring
+  extract_c_doc_comments --> enable_semantic_graph
+  extract_c_doc_comments --> disable_semantic_graph
+  extract_c_doc_comments --> semantic_graph
+  extract_c_doc_comments --> semantic_graph_mut
+  extract_c_doc_comments --> is_semantic_graph_enabled
+  extract_c_doc_comments --> cache_stats
+  extract_c_doc_comments --> cache_hit_ratio
+  extract_c_doc_comments --> clear_cache
+  extract_c_doc_comments --> is_cached
+  extract_c_doc_comments --> test_analyzer_creation
+  extract_c_doc_comments --> test_analyze_directory
+  enable_semantic_graph --> is_semantic_graph_enabled
+  is_semantic_graph_enabled --> disable_semantic_graph
+  cache_stats --> is_cached
+  cache_hit_ratio --> is_cached
+  clear_cache --> is_cached
+  is_cached --> disable_semantic_graph
+  test_analyze_directory --> test_analyzer_creation
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  analysisconfig["AnalysisConfig"]
+  Start --> analysisconfig
+  fileinfo["FileInfo"]
+  Start --> fileinfo
+  symbol["Symbol"]
+  Start --> symbol
+  analysisresult["AnalysisResult"]
+  Start --> analysisresult
+  codebaseanalyzer["CodebaseAnalyzer"]
+  Start --> codebaseanalyzer
+  default["default"Fn]
+  from_str["from_str"Fn]
+  default["default"Fn]
+  new["new"Fn]
+  sort_stable["sort_stable"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  get_parser["get_parser"Fn]
+  analyze_file["analyze_file"Fn]
+  analyze_directory["analyze_directory"Fn]
+  collect_files_ignore["collect_files_ignore"Fn]
+  analyze_directory_parallel["analyze_directory_parallel"Fn]
+  collect_files_recursive["collect_files_recursive"Fn]
+  analyze_directory_recursive["analyze_directory_recursive"Fn]
+  analyze_file_standalone["analyze_file_standalone"Fn]
+  analyze_file_internal["analyze_file_internal"Fn]
+  extract_symbols["extract_symbols"Fn]
+  extract_rust_symbols["extract_rust_symbols"Fn]
+  extract_javascript_symbols["extract_javascript_symbols"Fn]
+  extract_python_symbols["extract_python_symbols"Fn]
+  extract_c_symbols["extract_c_symbols"Fn]
+  extract_go_symbols["extract_go_symbols"Fn]
+  extract_rust_doc_comments["extract_rust_doc_comments"Fn]
+  extract_js_doc_comments["extract_js_doc_comments"Fn]
+  extract_python_docstring["extract_python_docstring"Fn]
+  extract_c_doc_comments["extract_c_doc_comments"Fn]
+  enable_semantic_graph["enable_semantic_graph"Fn]
+  disable_semantic_graph["disable_semantic_graph"Fn]
+  semantic_graph["semantic_graph"Fn]
+  semantic_graph_mut["semantic_graph_mut"Fn]
+  is_semantic_graph_enabled["is_semantic_graph_enabled"Fn]
+  cache_stats["cache_stats"Fn]
+  cache_hit_ratio["cache_hit_ratio"Fn]
+  clear_cache["clear_cache"Fn]
+  is_cached["is_cached"Fn]
+  default["default"Fn]
+  test_analyzer_creation["test_analyzer_creation"Fn]
+  test_analyze_directory["test_analyze_directory"Fn]
+  analysisconfig --> default
+  default --> from_str
+  from_str --> default
+  default --> new
+  new --> sort_stable
+  sort_stable --> new
+  new --> with_config
+  with_config --> get_parser
+  get_parser --> analyze_file
+  analyze_file --> analyze_directory
+  analyze_directory --> collect_files_ignore
+  collect_files_ignore --> analyze_directory_parallel
+  analyze_directory_parallel --> collect_files_recursive
+  collect_files_recursive --> analyze_directory_recursive
+  analyze_directory_recursive --> analyze_file_standalone
+  analyze_file_standalone --> analyze_file_internal
+  analyze_file_internal --> extract_symbols
+  extract_symbols --> extract_rust_symbols
+  extract_rust_symbols --> extract_javascript_symbols
+  extract_javascript_symbols --> extract_python_symbols
+  extract_python_symbols --> extract_c_symbols
+  extract_c_symbols --> extract_go_symbols
+  extract_go_symbols --> extract_rust_doc_comments
+  extract_rust_doc_comments --> extract_js_doc_comments
+  extract_js_doc_comments --> extract_python_docstring
+  extract_python_docstring --> extract_c_doc_comments
+  extract_c_doc_comments --> enable_semantic_graph
+  enable_semantic_graph --> disable_semantic_graph
+  disable_semantic_graph --> semantic_graph
+  semantic_graph --> semantic_graph_mut
+  semantic_graph_mut --> is_semantic_graph_enabled
+  is_semantic_graph_enabled --> cache_stats
+  cache_stats --> cache_hit_ratio
+  cache_hit_ratio --> clear_cache
+  clear_cache --> is_cached
+  is_cached --> default
+  default --> test_analyzer_creation
+  test_analyzer_creation --> test_analyze_directory
+  test_analyze_directory --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AnalysisConfig {
+    +AnalysisConfig()
+  }
+  class FileInfo {
+    +FileInfo()
+  }
+  class Symbol {
+    +Symbol()
+  }
+  class AnalysisResult {
+    +AnalysisResult()
+  }
+  class CodebaseAnalyzer {
+    +CodebaseAnalyzer()
+  }
+  extract_symbols ..> Symbol : uses
+  extract_rust_symbols ..> Symbol : uses
+  extract_javascript_symbols ..> Symbol : uses
+  extract_python_symbols ..> Symbol : uses
+  extract_c_symbols ..> Symbol : uses
+  extract_go_symbols ..> Symbol : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

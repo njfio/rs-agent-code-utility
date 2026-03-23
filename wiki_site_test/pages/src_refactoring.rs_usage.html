@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/refactoring.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/refactoring.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 27</li>
+<li><strong>Structures:</strong> 7</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 65</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze"analyze (fn)"]
+  analyze_file"analyze_file (fn)"]
+  analyze_cross_file_opportunities"analyze_cross_file_opportunities (fn)"]
+  analyze_file_complexity"analyze_file_complexity (fn)"]
+  check_large_file"check_large_file (fn)"]
+  check_symbol_density"check_symbol_density (fn)"]
+  create_file_location"create_file_location (fn)"]
+  create_large_file_impact"create_large_file_impact (fn)"]
+  create_density_impact"create_density_impact (fn)"]
+  get_large_file_instructions"get_large_file_instructions (fn)"]
+  get_large_file_benefits"get_large_file_benefits (fn)"]
+  get_large_file_risks"get_large_file_risks (fn)"]
+  get_density_instructions"get_density_instructions (fn)"]
+  get_density_benefits"get_density_benefits (fn)"]
+  get_density_risks"get_density_risks (fn)"]
+  calculate_quality_score"calculate_quality_score (fn)"]
+  calculate_impact_summary"calculate_impact_summary (fn)"]
+  analyze_symbol"analyze_symbol (fn)"]
+  analyze_file_naming"analyze_file_naming (fn)"]
+  analyze_symbol_naming"analyze_symbol_naming (fn)"]
+  analyze_symbol_complexity"analyze_symbol_complexity (fn)"]
+  detect_code_duplication"detect_code_duplication (fn)"]
+  analyze_architecture"analyze_architecture (fn)"]
+  fmt"fmt (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  refactoringanalyzer["RefactoringAnalyzer"]
+  Start --> refactoringanalyzer
+  refactoringconfig["RefactoringConfig"]
+  Start --> refactoringconfig
+  refactoringresult["RefactoringResult"]
+  Start --> refactoringresult
+  refactoringsuggestion["RefactoringSuggestion"]
+  Start --> refactoringsuggestion
+  refactoringlocation["RefactoringLocation"]
+  Start --> refactoringlocation
+  impactsummary["ImpactSummary"]
+  Start --> impactsummary
+  expectedimpact["ExpectedImpact"]
+  Start --> expectedimpact
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze["analyze"Fn]
+  analyze_file["analyze_file"Fn]
+  analyze_cross_file_opportunities["analyze_cross_file_opportunities"Fn]
+  analyze_file_complexity["analyze_file_complexity"Fn]
+  check_large_file["check_large_file"Fn]
+  check_symbol_density["check_symbol_density"Fn]
+  create_file_location["create_file_location"Fn]
+  create_large_file_impact["create_large_file_impact"Fn]
+  create_density_impact["create_density_impact"Fn]
+  get_large_file_instructions["get_large_file_instructions"Fn]
+  get_large_file_benefits["get_large_file_benefits"Fn]
+  get_large_file_risks["get_large_file_risks"Fn]
+  get_density_instructions["get_density_instructions"Fn]
+  get_density_benefits["get_density_benefits"Fn]
+  get_density_risks["get_density_risks"Fn]
+  calculate_quality_score["calculate_quality_score"Fn]
+  calculate_impact_summary["calculate_impact_summary"Fn]
+  analyze_symbol["analyze_symbol"Fn]
+  analyze_file_naming["analyze_file_naming"Fn]
+  analyze_symbol_naming["analyze_symbol_naming"Fn]
+  analyze_symbol_complexity["analyze_symbol_complexity"Fn]
+  detect_code_duplication["detect_code_duplication"Fn]
+  analyze_architecture["analyze_architecture"Fn]
+  fmt["fmt"Fn]
+  refactoringanalyzer --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze
+  analyze --> analyze_file
+  analyze_file --> analyze_cross_file_opportunities
+  analyze_cross_file_opportunities --> analyze_file_complexity
+  analyze_file_complexity --> check_large_file
+  check_large_file --> check_symbol_density
+  check_symbol_density --> create_file_location
+  create_file_location --> create_large_file_impact
+  create_large_file_impact --> create_density_impact
+  create_density_impact --> get_large_file_instructions
+  get_large_file_instructions --> get_large_file_benefits
+  get_large_file_benefits --> get_large_file_risks
+  get_large_file_risks --> get_density_instructions
+  get_density_instructions --> get_density_benefits
+  get_density_benefits --> get_density_risks
+  get_density_risks --> calculate_quality_score
+  calculate_quality_score --> calculate_impact_summary
+  calculate_impact_summary --> analyze_symbol
+  analyze_symbol --> analyze_file_naming
+  analyze_file_naming --> analyze_symbol_naming
+  analyze_symbol_naming --> analyze_symbol_complexity
+  analyze_symbol_complexity --> detect_code_duplication
+  detect_code_duplication --> analyze_architecture
+  analyze_architecture --> fmt
+  fmt --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class RefactoringAnalyzer {
+    +RefactoringAnalyzer()
+  }
+  class RefactoringConfig {
+    +RefactoringConfig()
+  }
+  class RefactoringResult {
+    +RefactoringResult()
+  }
+  class RefactoringSuggestion {
+    +RefactoringSuggestion()
+  }
+  class RefactoringLocation {
+    +RefactoringLocation()
+  }
+  class ImpactSummary {
+    +ImpactSummary()
+  }
+  class ExpectedImpact {
+    +ExpectedImpact()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

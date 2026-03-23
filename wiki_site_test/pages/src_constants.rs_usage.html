@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/constants.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/constants.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 13</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 22</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  test_security_constants"test_security_constants (fn)"]
+  test_intent_mapping_constants"test_intent_mapping_constants (fn)"]
+  test_performance_constants"test_performance_constants (fn)"]
+  test_test_coverage_constants"test_test_coverage_constants (fn)"]
+  test_refactoring_constants"test_refactoring_constants (fn)"]
+  test_file_processing_constants"test_file_processing_constants (fn)"]
+  test_scoring_constants"test_scoring_constants (fn)"]
+  test_constants_consistency"test_constants_consistency (fn)"]
+  test_constants_ranges"test_constants_ranges (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  test_security_constants["test_security_constants"Fn]
+  test_intent_mapping_constants["test_intent_mapping_constants"Fn]
+  test_performance_constants["test_performance_constants"Fn]
+  test_test_coverage_constants["test_test_coverage_constants"Fn]
+  test_refactoring_constants["test_refactoring_constants"Fn]
+  test_file_processing_constants["test_file_processing_constants"Fn]
+  test_scoring_constants["test_scoring_constants"Fn]
+  test_constants_consistency["test_constants_consistency"Fn]
+  test_constants_ranges["test_constants_ranges"Fn]
+  Start --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> test_security_constants
+  test_security_constants --> test_intent_mapping_constants
+  test_intent_mapping_constants --> test_performance_constants
+  test_performance_constants --> test_test_coverage_constants
+  test_test_coverage_constants --> test_refactoring_constants
+  test_refactoring_constants --> test_file_processing_constants
+  test_file_processing_constants --> test_scoring_constants
+  test_scoring_constants --> test_constants_consistency
+  test_constants_consistency --> test_constants_ranges
+  test_constants_ranges --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

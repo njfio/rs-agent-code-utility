@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/infrastructure/http_client.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/infrastructure/http_client.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 20</li>
+<li><strong>Structures:</strong> 6</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 64</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  with_config"with_config (fn)"]
+  get"get (fn)"]
+  post"post (fn)"]
+  request"request (fn)"]
+  execute_request"execute_request (fn)"]
+  should_retry"should_retry (fn)"]
+  default"default (fn)"]
+  new"new (fn)"]
+  wait_for_permit"wait_for_permit (fn)"]
+  check_permit"check_permit (fn)"]
+  new"new (fn)"]
+  timeout"timeout (fn)"]
+  max_retries"max_retries (fn)"]
+  user_agent"user_agent (fn)"]
+  build"build (fn)"]
+  default"default (fn)"]
+  parse_json"parse_json (fn)"]
+  is_rate_limited"is_rate_limited (fn)"]
+  extract_rate_limit_info"extract_rate_limit_info (fn)"]
+  extract_rate_limit_info --> is_rate_limited
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  httpclient["HttpClient"]
+  Start --> httpclient
+  requestconfig["RequestConfig"]
+  Start --> requestconfig
+  httpresponse["HttpResponse"]
+  Start --> httpresponse
+  ratelimiter["RateLimiter"]
+  Start --> ratelimiter
+  httpclientbuilder["HttpClientBuilder"]
+  Start --> httpclientbuilder
+  ratelimitinfo["RateLimitInfo"]
+  Start --> ratelimitinfo
+  new["new"Fn]
+  with_config["with_config"Fn]
+  get["get"Fn]
+  post["post"Fn]
+  request["request"Fn]
+  execute_request["execute_request"Fn]
+  should_retry["should_retry"Fn]
+  default["default"Fn]
+  new["new"Fn]
+  wait_for_permit["wait_for_permit"Fn]
+  check_permit["check_permit"Fn]
+  new["new"Fn]
+  timeout["timeout"Fn]
+  max_retries["max_retries"Fn]
+  user_agent["user_agent"Fn]
+  build["build"Fn]
+  default["default"Fn]
+  parse_json["parse_json"Fn]
+  is_rate_limited["is_rate_limited"Fn]
+  extract_rate_limit_info["extract_rate_limit_info"Fn]
+  httpclient --> new
+  new --> with_config
+  with_config --> get
+  get --> post
+  post --> request
+  request --> execute_request
+  execute_request --> should_retry
+  should_retry --> default
+  default --> new
+  new --> wait_for_permit
+  wait_for_permit --> check_permit
+  check_permit --> new
+  new --> timeout
+  timeout --> max_retries
+  max_retries --> user_agent
+  user_agent --> build
+  build --> default
+  default --> parse_json
+  parse_json --> is_rate_limited
+  is_rate_limited --> extract_rate_limit_info
+  extract_rate_limit_info --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class HttpClient {
+    +HttpClient()
+  }
+  class RequestConfig {
+    +RequestConfig()
+  }
+  class HttpResponse {
+    +HttpResponse()
+  }
+  class RateLimiter {
+    +RateLimiter()
+  }
+  class HttpClientBuilder {
+    +HttpClientBuilder()
+  }
+  class RateLimitInfo {
+    +RateLimitInfo()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

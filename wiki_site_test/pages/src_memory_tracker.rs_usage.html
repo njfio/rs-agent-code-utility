@@ -1,0 +1,378 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/memory_tracker.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/memory_tracker.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 37</li>
+<li><strong>Structures:</strong> 16</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 150</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze_memory_allocations"analyze_memory_allocations (fn)"]
+  detect_allocation_hotspots"detect_allocation_hotspots (fn)"]
+  parse_file"parse_file (fn)"]
+  detect_rust_allocations"detect_rust_allocations (fn)"]
+  detect_c_cpp_allocations"detect_c_cpp_allocations (fn)"]
+  detect_python_allocations"detect_python_allocations (fn)"]
+  detect_js_allocations"detect_js_allocations (fn)"]
+  detect_go_allocations"detect_go_allocations (fn)"]
+  detect_generic_allocations"detect_generic_allocations (fn)"]
+  detect_memory_leaks"detect_memory_leaks (fn)"]
+  detect_rust_memory_leaks"detect_rust_memory_leaks (fn)"]
+  detect_c_cpp_memory_leaks"detect_c_cpp_memory_leaks (fn)"]
+  detect_python_memory_leaks"detect_python_memory_leaks (fn)"]
+  detect_js_memory_leaks"detect_js_memory_leaks (fn)"]
+  detect_generic_memory_leaks"detect_generic_memory_leaks (fn)"]
+  analyze_call_stacks"analyze_call_stacks (fn)"]
+  update_allocation_patterns"update_allocation_patterns (fn)"]
+  analyze_fragmentation"analyze_fragmentation (fn)"]
+  is_allocation_in_loop_simple"is_allocation_in_loop_simple (fn)"]
+  is_line_in_loop"is_line_in_loop (fn)"]
+  find_containing_function_simple"find_containing_function_simple (fn)"]
+  find_function_at_line"find_function_at_line (fn)"]
+  extract_function_name"extract_function_name (fn)"]
+  estimate_allocation_size"estimate_allocation_size (fn)"]
+  contains_allocation_pattern"contains_allocation_pattern (fn)"]
+  extract_function_call"extract_function_call (fn)"]
+  classify_allocation_pattern"classify_allocation_pattern (fn)"]
+  infer_usage_pattern"infer_usage_pattern (fn)"]
+  suggest_optimizations"suggest_optimizations (fn)"]
+  has_corresponding_remove_listener"has_corresponding_remove_listener (fn)"]
+  get_statistics"get_statistics (fn)"]
+  reset_statistics"reset_statistics (fn)"]
+  update_config"update_config (fn)"]
+  get_config"get_config (fn)"]
+  detect_allocation_hotspots --> analyze_memory_allocations
+  detect_allocation_hotspots --> detect_rust_allocations
+  detect_allocation_hotspots --> detect_c_cpp_allocations
+  detect_allocation_hotspots --> detect_python_allocations
+  detect_allocation_hotspots --> detect_js_allocations
+  detect_allocation_hotspots --> detect_go_allocations
+  detect_allocation_hotspots --> detect_generic_allocations
+  detect_c_cpp_allocations --> with_config
+  detect_c_cpp_allocations --> analyze_memory_allocations
+  detect_c_cpp_allocations --> detect_allocation_hotspots
+  detect_c_cpp_allocations --> detect_rust_allocations
+  detect_c_cpp_allocations --> detect_python_allocations
+  detect_c_cpp_allocations --> detect_js_allocations
+  detect_c_cpp_allocations --> detect_go_allocations
+  detect_c_cpp_allocations --> detect_generic_allocations
+  detect_c_cpp_allocations --> detect_memory_leaks
+  detect_c_cpp_allocations --> detect_rust_memory_leaks
+  detect_c_cpp_allocations --> detect_c_cpp_memory_leaks
+  detect_c_cpp_allocations --> detect_python_memory_leaks
+  detect_c_cpp_allocations --> detect_js_memory_leaks
+  detect_c_cpp_allocations --> detect_generic_memory_leaks
+  detect_c_cpp_allocations --> analyze_call_stacks
+  detect_c_cpp_allocations --> update_allocation_patterns
+  detect_c_cpp_allocations --> is_allocation_in_loop_simple
+  detect_c_cpp_allocations --> find_containing_function_simple
+  detect_c_cpp_allocations --> find_function_at_line
+  detect_c_cpp_allocations --> extract_function_name
+  detect_c_cpp_allocations --> estimate_allocation_size
+  detect_c_cpp_allocations --> contains_allocation_pattern
+  detect_c_cpp_allocations --> extract_function_call
+  detect_c_cpp_allocations --> classify_allocation_pattern
+  detect_c_cpp_allocations --> has_corresponding_remove_listener
+  detect_c_cpp_allocations --> get_statistics
+  detect_c_cpp_allocations --> reset_statistics
+  detect_c_cpp_allocations --> update_config
+  detect_c_cpp_allocations --> get_config
+  detect_c_cpp_memory_leaks --> with_config
+  detect_c_cpp_memory_leaks --> analyze_memory_allocations
+  detect_c_cpp_memory_leaks --> detect_allocation_hotspots
+  detect_c_cpp_memory_leaks --> detect_rust_allocations
+  detect_c_cpp_memory_leaks --> detect_c_cpp_allocations
+  detect_c_cpp_memory_leaks --> detect_python_allocations
+  detect_c_cpp_memory_leaks --> detect_js_allocations
+  detect_c_cpp_memory_leaks --> detect_go_allocations
+  detect_c_cpp_memory_leaks --> detect_generic_allocations
+  detect_c_cpp_memory_leaks --> detect_memory_leaks
+  detect_c_cpp_memory_leaks --> detect_rust_memory_leaks
+  detect_c_cpp_memory_leaks --> detect_python_memory_leaks
+  detect_c_cpp_memory_leaks --> detect_js_memory_leaks
+  detect_c_cpp_memory_leaks --> detect_generic_memory_leaks
+  detect_c_cpp_memory_leaks --> analyze_call_stacks
+  detect_c_cpp_memory_leaks --> update_allocation_patterns
+  detect_c_cpp_memory_leaks --> is_allocation_in_loop_simple
+  detect_c_cpp_memory_leaks --> find_containing_function_simple
+  detect_c_cpp_memory_leaks --> find_function_at_line
+  detect_c_cpp_memory_leaks --> extract_function_name
+  detect_c_cpp_memory_leaks --> estimate_allocation_size
+  detect_c_cpp_memory_leaks --> contains_allocation_pattern
+  detect_c_cpp_memory_leaks --> extract_function_call
+  detect_c_cpp_memory_leaks --> classify_allocation_pattern
+  detect_c_cpp_memory_leaks --> has_corresponding_remove_listener
+  detect_c_cpp_memory_leaks --> get_statistics
+  detect_c_cpp_memory_leaks --> reset_statistics
+  detect_c_cpp_memory_leaks --> update_config
+  detect_c_cpp_memory_leaks --> get_config
+  update_allocation_patterns --> analyze_memory_allocations
+  update_allocation_patterns --> detect_rust_allocations
+  update_allocation_patterns --> detect_c_cpp_allocations
+  update_allocation_patterns --> detect_python_allocations
+  update_allocation_patterns --> detect_js_allocations
+  update_allocation_patterns --> detect_go_allocations
+  update_allocation_patterns --> detect_generic_allocations
+  is_allocation_in_loop_simple --> analyze_memory_allocations
+  is_allocation_in_loop_simple --> detect_rust_allocations
+  is_allocation_in_loop_simple --> detect_c_cpp_allocations
+  is_allocation_in_loop_simple --> detect_python_allocations
+  is_allocation_in_loop_simple --> detect_js_allocations
+  is_allocation_in_loop_simple --> detect_go_allocations
+  is_allocation_in_loop_simple --> detect_generic_allocations
+  is_allocation_in_loop_simple --> is_line_in_loop
+  is_allocation_in_loop_simple --> find_containing_function_simple
+  is_allocation_in_loop_simple --> find_function_at_line
+  is_allocation_in_loop_simple --> contains_allocation_pattern
+  is_allocation_in_loop_simple --> infer_usage_pattern
+  is_allocation_in_loop_simple --> has_corresponding_remove_listener
+  is_allocation_in_loop_simple --> get_statistics
+  is_allocation_in_loop_simple --> reset_statistics
+  is_line_in_loop --> find_containing_function_simple
+  is_line_in_loop --> find_function_at_line
+  is_line_in_loop --> contains_allocation_pattern
+  is_line_in_loop --> infer_usage_pattern
+  is_line_in_loop --> has_corresponding_remove_listener
+  is_line_in_loop --> get_statistics
+  is_line_in_loop --> reset_statistics
+  find_function_at_line --> analyze_memory_allocations
+  find_function_at_line --> detect_allocation_hotspots
+  find_function_at_line --> detect_rust_allocations
+  find_function_at_line --> detect_c_cpp_allocations
+  find_function_at_line --> detect_python_allocations
+  find_function_at_line --> detect_js_allocations
+  find_function_at_line --> detect_go_allocations
+  find_function_at_line --> detect_generic_allocations
+  find_function_at_line --> update_allocation_patterns
+  find_function_at_line --> analyze_fragmentation
+  find_function_at_line --> is_allocation_in_loop_simple
+  find_function_at_line --> estimate_allocation_size
+  find_function_at_line --> contains_allocation_pattern
+  find_function_at_line --> classify_allocation_pattern
+  find_function_at_line --> infer_usage_pattern
+  find_function_at_line --> suggest_optimizations
+  find_function_at_line --> get_statistics
+  find_function_at_line --> reset_statistics
+  find_function_at_line --> update_config
+  estimate_allocation_size --> analyze_memory_allocations
+  estimate_allocation_size --> detect_rust_allocations
+  estimate_allocation_size --> detect_c_cpp_allocations
+  estimate_allocation_size --> detect_python_allocations
+  estimate_allocation_size --> detect_js_allocations
+  estimate_allocation_size --> detect_go_allocations
+  estimate_allocation_size --> detect_generic_allocations
+  contains_allocation_pattern --> analyze_memory_allocations
+  contains_allocation_pattern --> detect_rust_allocations
+  contains_allocation_pattern --> detect_c_cpp_allocations
+  contains_allocation_pattern --> detect_python_allocations
+  contains_allocation_pattern --> detect_js_allocations
+  contains_allocation_pattern --> detect_go_allocations
+  contains_allocation_pattern --> detect_generic_allocations
+  contains_allocation_pattern --> update_allocation_patterns
+  classify_allocation_pattern --> analyze_memory_allocations
+  classify_allocation_pattern --> detect_rust_allocations
+  classify_allocation_pattern --> detect_c_cpp_allocations
+  classify_allocation_pattern --> detect_python_allocations
+  classify_allocation_pattern --> detect_js_allocations
+  classify_allocation_pattern --> detect_go_allocations
+  classify_allocation_pattern --> detect_generic_allocations
+  classify_allocation_pattern --> update_allocation_patterns
+  infer_usage_pattern --> update_allocation_patterns
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  memorytracker["MemoryTracker"]
+  Start --> memorytracker
+  memorytrackingconfig["MemoryTrackingConfig"]
+  Start --> memorytrackingconfig
+  memorytrackingresult["MemoryTrackingResult"]
+  Start --> memorytrackingresult
+  allocationhotspot["AllocationHotspot"]
+  Start --> allocationhotspot
+  allocationlocation["AllocationLocation"]
+  Start --> allocationlocation
+  allocationpattern["AllocationPattern"]
+  Start --> allocationpattern
+  memoryleakcandidate["MemoryLeakCandidate"]
+  Start --> memoryleakcandidate
+  fragmentationanalysis["FragmentationAnalysis"]
+  Start --> fragmentationanalysis
+  fragmentationhotspot["FragmentationHotspot"]
+  Start --> fragmentationhotspot
+  memoryregion["MemoryRegion"]
+  Start --> memoryregion
+  memorysnapshot["MemorySnapshot"]
+  Start --> memorysnapshot
+  allocationcallstack["AllocationCallStack"]
+  Start --> allocationcallstack
+  stackframe["StackFrame"]
+  Start --> stackframe
+  lifetimestatistics["LifetimeStatistics"]
+  Start --> lifetimestatistics
+  allocationimpact["AllocationImpact"]
+  Start --> allocationimpact
+  memorystatistics["MemoryStatistics"]
+  Start --> memorystatistics
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze_memory_allocations["analyze_memory_allocations"Fn]
+  detect_allocation_hotspots["detect_allocation_hotspots"Fn]
+  parse_file["parse_file"Fn]
+  detect_rust_allocations["detect_rust_allocations"Fn]
+  detect_c_cpp_allocations["detect_c_cpp_allocations"Fn]
+  detect_python_allocations["detect_python_allocations"Fn]
+  detect_js_allocations["detect_js_allocations"Fn]
+  detect_go_allocations["detect_go_allocations"Fn]
+  detect_generic_allocations["detect_generic_allocations"Fn]
+  detect_memory_leaks["detect_memory_leaks"Fn]
+  detect_rust_memory_leaks["detect_rust_memory_leaks"Fn]
+  detect_c_cpp_memory_leaks["detect_c_cpp_memory_leaks"Fn]
+  detect_python_memory_leaks["detect_python_memory_leaks"Fn]
+  detect_js_memory_leaks["detect_js_memory_leaks"Fn]
+  detect_generic_memory_leaks["detect_generic_memory_leaks"Fn]
+  analyze_call_stacks["analyze_call_stacks"Fn]
+  update_allocation_patterns["update_allocation_patterns"Fn]
+  analyze_fragmentation["analyze_fragmentation"Fn]
+  is_allocation_in_loop_simple["is_allocation_in_loop_simple"Fn]
+  is_line_in_loop["is_line_in_loop"Fn]
+  find_containing_function_simple["find_containing_function_simple"Fn]
+  find_function_at_line["find_function_at_line"Fn]
+  extract_function_name["extract_function_name"Fn]
+  estimate_allocation_size["estimate_allocation_size"Fn]
+  contains_allocation_pattern["contains_allocation_pattern"Fn]
+  extract_function_call["extract_function_call"Fn]
+  classify_allocation_pattern["classify_allocation_pattern"Fn]
+  infer_usage_pattern["infer_usage_pattern"Fn]
+  suggest_optimizations["suggest_optimizations"Fn]
+  has_corresponding_remove_listener["has_corresponding_remove_listener"Fn]
+  get_statistics["get_statistics"Fn]
+  reset_statistics["reset_statistics"Fn]
+  update_config["update_config"Fn]
+  get_config["get_config"Fn]
+  memorytracker --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze_memory_allocations
+  analyze_memory_allocations --> detect_allocation_hotspots
+  detect_allocation_hotspots --> parse_file
+  parse_file --> detect_rust_allocations
+  detect_rust_allocations --> detect_c_cpp_allocations
+  detect_c_cpp_allocations --> detect_python_allocations
+  detect_python_allocations --> detect_js_allocations
+  detect_js_allocations --> detect_go_allocations
+  detect_go_allocations --> detect_generic_allocations
+  detect_generic_allocations --> detect_memory_leaks
+  detect_memory_leaks --> detect_rust_memory_leaks
+  detect_rust_memory_leaks --> detect_c_cpp_memory_leaks
+  detect_c_cpp_memory_leaks --> detect_python_memory_leaks
+  detect_python_memory_leaks --> detect_js_memory_leaks
+  detect_js_memory_leaks --> detect_generic_memory_leaks
+  detect_generic_memory_leaks --> analyze_call_stacks
+  analyze_call_stacks --> update_allocation_patterns
+  update_allocation_patterns --> analyze_fragmentation
+  analyze_fragmentation --> is_allocation_in_loop_simple
+  is_allocation_in_loop_simple --> is_line_in_loop
+  is_line_in_loop --> find_containing_function_simple
+  find_containing_function_simple --> find_function_at_line
+  find_function_at_line --> extract_function_name
+  extract_function_name --> estimate_allocation_size
+  estimate_allocation_size --> contains_allocation_pattern
+  contains_allocation_pattern --> extract_function_call
+  extract_function_call --> classify_allocation_pattern
+  classify_allocation_pattern --> infer_usage_pattern
+  infer_usage_pattern --> suggest_optimizations
+  suggest_optimizations --> has_corresponding_remove_listener
+  has_corresponding_remove_listener --> get_statistics
+  get_statistics --> reset_statistics
+  reset_statistics --> update_config
+  update_config --> get_config
+  get_config --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class MemoryTracker {
+    +MemoryTracker()
+  }
+  class MemoryTrackingConfig {
+    +MemoryTrackingConfig()
+  }
+  class MemoryTrackingResult {
+    +MemoryTrackingResult()
+  }
+  class AllocationHotspot {
+    +AllocationHotspot()
+  }
+  class AllocationLocation {
+    +AllocationLocation()
+  }
+  class AllocationPattern {
+    +AllocationPattern()
+  }
+  class MemoryLeakCandidate {
+    +MemoryLeakCandidate()
+  }
+  class FragmentationAnalysis {
+    +FragmentationAnalysis()
+  }
+  class FragmentationHotspot {
+    +FragmentationHotspot()
+  }
+  class MemoryRegion {
+    +MemoryRegion()
+  }
+  class MemorySnapshot {
+    +MemorySnapshot()
+  }
+  class AllocationCallStack {
+    +AllocationCallStack()
+  }
+  class StackFrame {
+    +StackFrame()
+  }
+  class LifetimeStatistics {
+    +LifetimeStatistics()
+  }
+  class AllocationImpact {
+    +AllocationImpact()
+  }
+  class MemoryStatistics {
+    +MemoryStatistics()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

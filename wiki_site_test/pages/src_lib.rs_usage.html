@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/lib.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/lib.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 6</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 8</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+supported_languages"supported_languages (fn)"]
+  detect_language_from_extension"detect_language_from_extension (fn)"]
+  detect_language_from_path"detect_language_from_path (fn)"]
+  test_language_detection"test_language_detection (fn)"]
+  test_path_detection"test_path_detection (fn)"]
+  test_supported_languages"test_supported_languages (fn)"]
+  detect_language_from_extension --> supported_languages
+  detect_language_from_extension --> test_language_detection
+  detect_language_from_extension --> test_path_detection
+  detect_language_from_extension --> test_supported_languages
+  detect_language_from_path --> supported_languages
+  detect_language_from_path --> test_language_detection
+  detect_language_from_path --> test_path_detection
+  detect_language_from_path --> test_supported_languages
+  test_language_detection --> supported_languages
+  test_language_detection --> test_supported_languages
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  languageinfo["LanguageInfo"]
+  Start --> languageinfo
+  supported_languages["supported_languages"Fn]
+  detect_language_from_extension["detect_language_from_extension"Fn]
+  detect_language_from_path["detect_language_from_path"Fn]
+  test_language_detection["test_language_detection"Fn]
+  test_path_detection["test_path_detection"Fn]
+  test_supported_languages["test_supported_languages"Fn]
+  languageinfo --> supported_languages
+  supported_languages --> detect_language_from_extension
+  detect_language_from_extension --> detect_language_from_path
+  detect_language_from_path --> test_language_detection
+  test_language_detection --> test_path_detection
+  test_path_detection --> test_supported_languages
+  test_supported_languages --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class LanguageInfo {
+    +LanguageInfo()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,545 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/performance_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/performance_analysis.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 71</li>
+<li><strong>Structures:</strong> 30</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 332</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze"analyze (fn)"]
+  analyze_file_performance"analyze_file_performance (fn)"]
+  detect_file_hotspots"detect_file_hotspots (fn)"]
+  detect_ast_hotspots"detect_ast_hotspots (fn)"]
+  detect_nested_loop_hotspots"detect_nested_loop_hotspots (fn)"]
+  detect_semantic_complexity_patterns"detect_semantic_complexity_patterns (fn)"]
+  analyze_nested_iteration_patterns"analyze_nested_iteration_patterns (fn)"]
+  find_loop_nodes"find_loop_nodes (fn)"]
+  traverse_for_loops"traverse_for_loops (fn)"]
+  analyze_loop_nesting"analyze_loop_nesting (fn)"]
+  count_nested_loops"count_nested_loops (fn)"]
+  extract_iteration_variables"extract_iteration_variables (fn)"]
+  analyze_data_dependencies"analyze_data_dependencies (fn)"]
+  classify_loop_types"classify_loop_types (fn)"]
+  analyze_access_patterns"analyze_access_patterns (fn)"]
+  perform_semantic_loop_analysis"perform_semantic_loop_analysis (fn)"]
+  calculate_complexity_confidence"calculate_complexity_confidence (fn)"]
+  generate_complexity_optimization"generate_complexity_optimization (fn)"]
+  extract_function_name_from_content"extract_function_name_from_content (fn)"]
+  extract_code_snippet"extract_code_snippet (fn)"]
+  analyze_recursive_complexity_patterns"analyze_recursive_complexity_patterns (fn)"]
+  analyze_data_structure_access_patterns"analyze_data_structure_access_patterns (fn)"]
+  analyze_algorithmic_antipatterns"analyze_algorithmic_antipatterns (fn)"]
+  find_function_nodes"find_function_nodes (fn)"]
+  traverse_for_functions"traverse_for_functions (fn)"]
+  extract_function_name"extract_function_name (fn)"]
+  is_recursive_function"is_recursive_function (fn)"]
+  analyze_recursion_complexity"analyze_recursion_complexity (fn)"]
+  contains_linear_operations_in_loops"contains_linear_operations_in_loops (fn)"]
+  contains_inefficient_sorting"contains_inefficient_sorting (fn)"]
+  detect_memory_hotspots"detect_memory_hotspots (fn)"]
+  detect_complexity_hotspots"detect_complexity_hotspots (fn)"]
+  calculate_function_complexity"calculate_function_complexity (fn)"]
+  extract_function_name_from_node"extract_function_name_from_node (fn)"]
+  find_nodes_in_subtree"find_nodes_in_subtree (fn)"]
+  collect_nodes_recursive"collect_nodes_recursive (fn)"]
+  is_inside_loop"is_inside_loop (fn)"]
+  find_nested_loops_in_node"find_nested_loops_in_node (fn)"]
+  detect_cross_file_hotspots"detect_cross_file_hotspots (fn)"]
+  generate_optimizations"generate_optimizations (fn)"]
+  calculate_file_complexity"calculate_file_complexity (fn)"]
+  calculate_ast_complexity"calculate_ast_complexity (fn)"]
+  parse_language"parse_language (fn)"]
+  create_syntax_tree"create_syntax_tree (fn)"]
+  calculate_cyclomatic_complexity"calculate_cyclomatic_complexity (fn)"]
+  detect_nested_loops"detect_nested_loops (fn)"]
+  count_nested_loops_in_file"count_nested_loops_in_file (fn)"]
+  count_recursive_functions"count_recursive_functions (fn)"]
+  count_memory_allocations"count_memory_allocations (fn)"]
+  detect_memory_allocations"detect_memory_allocations (fn)"]
+  count_allocation_patterns"count_allocation_patterns (fn)"]
+  count_io_operations"count_io_operations (fn)"]
+  count_database_queries"count_database_queries (fn)"]
+  calculate_file_performance_score"calculate_file_performance_score (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  analyze_function_complexities"analyze_function_complexities (fn)"]
+  analyze_memory_usage"analyze_memory_usage (fn)"]
+  detect_memory_allocation_patterns"detect_memory_allocation_patterns (fn)"]
+  detect_potential_memory_leaks"detect_potential_memory_leaks (fn)"]
+  analyze_concurrency"analyze_concurrency (fn)"]
+  generate_recommendations"generate_recommendations (fn)"]
+  calculate_performance_score"calculate_performance_score (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  detect_nested_loop_hotspots --> traverse_for_loops
+  detect_nested_loop_hotspots --> count_nested_loops
+  detect_nested_loop_hotspots --> contains_linear_operations_in_loops
+  detect_nested_loop_hotspots --> find_nested_loops_in_node
+  detect_nested_loop_hotspots --> detect_nested_loops
+  detect_nested_loop_hotspots --> count_nested_loops_in_file
+  detect_semantic_complexity_patterns --> analyze_algorithmic_antipatterns
+  analyze_nested_iteration_patterns --> analyze_algorithmic_antipatterns
+  find_loop_nodes --> traverse_for_loops
+  find_loop_nodes --> count_nested_loops
+  find_loop_nodes --> contains_linear_operations_in_loops
+  find_loop_nodes --> find_nested_loops_in_node
+  find_loop_nodes --> detect_nested_loops
+  find_loop_nodes --> count_nested_loops_in_file
+  traverse_for_loops --> analyze_file_performance
+  traverse_for_loops --> perform_semantic_loop_analysis
+  traverse_for_loops --> calculate_file_performance_score
+  traverse_for_loops --> calculate_performance_score
+  analyze_loop_nesting --> traverse_for_loops
+  analyze_loop_nesting --> count_nested_loops
+  analyze_loop_nesting --> contains_linear_operations_in_loops
+  analyze_loop_nesting --> find_nested_loops_in_node
+  analyze_loop_nesting --> detect_nested_loops
+  analyze_loop_nesting --> count_nested_loops_in_file
+  analyze_data_dependencies --> count_database_queries
+  classify_loop_types --> traverse_for_loops
+  classify_loop_types --> count_nested_loops
+  classify_loop_types --> contains_linear_operations_in_loops
+  classify_loop_types --> find_nested_loops_in_node
+  classify_loop_types --> detect_nested_loops
+  classify_loop_types --> count_nested_loops_in_file
+  analyze_access_patterns --> analyze_algorithmic_antipatterns
+  perform_semantic_loop_analysis --> analyze_file_performance
+  perform_semantic_loop_analysis --> traverse_for_loops
+  perform_semantic_loop_analysis --> count_nested_loops
+  perform_semantic_loop_analysis --> contains_linear_operations_in_loops
+  perform_semantic_loop_analysis --> find_nested_loops_in_node
+  perform_semantic_loop_analysis --> detect_nested_loops
+  perform_semantic_loop_analysis --> count_nested_loops_in_file
+  perform_semantic_loop_analysis --> calculate_file_performance_score
+  perform_semantic_loop_analysis --> calculate_performance_score
+  generate_complexity_optimization --> generate_optimizations
+  extract_function_name_from_content --> traverse_for_functions
+  extract_function_name_from_content --> count_recursive_functions
+  analyze_recursive_complexity_patterns --> analyze_algorithmic_antipatterns
+  analyze_data_structure_access_patterns --> analyze_algorithmic_antipatterns
+  analyze_data_structure_access_patterns --> count_database_queries
+  find_function_nodes --> traverse_for_functions
+  find_function_nodes --> count_recursive_functions
+  traverse_for_functions --> analyze_file_performance
+  traverse_for_functions --> perform_semantic_loop_analysis
+  traverse_for_functions --> calculate_file_performance_score
+  traverse_for_functions --> calculate_performance_score
+  extract_function_name --> traverse_for_functions
+  extract_function_name --> count_recursive_functions
+  is_recursive_function --> perform_semantic_loop_analysis
+  is_recursive_function --> traverse_for_functions
+  is_recursive_function --> count_recursive_functions
+  contains_linear_operations_in_loops --> find_loop_nodes
+  contains_linear_operations_in_loops --> analyze_loop_nesting
+  contains_linear_operations_in_loops --> find_function_nodes
+  contains_linear_operations_in_loops --> contains_inefficient_sorting
+  contains_linear_operations_in_loops --> find_nodes_in_subtree
+  contains_linear_operations_in_loops --> is_inside_loop
+  contains_linear_operations_in_loops --> find_nested_loops_in_node
+  calculate_function_complexity --> traverse_for_functions
+  calculate_function_complexity --> count_recursive_functions
+  extract_function_name_from_node --> find_loop_nodes
+  extract_function_name_from_node --> find_function_nodes
+  extract_function_name_from_node --> traverse_for_functions
+  extract_function_name_from_node --> find_nodes_in_subtree
+  extract_function_name_from_node --> collect_nodes_recursive
+  extract_function_name_from_node --> count_recursive_functions
+  find_nodes_in_subtree --> find_loop_nodes
+  find_nodes_in_subtree --> analyze_loop_nesting
+  find_nodes_in_subtree --> find_function_nodes
+  find_nodes_in_subtree --> contains_linear_operations_in_loops
+  find_nodes_in_subtree --> contains_inefficient_sorting
+  find_nodes_in_subtree --> is_inside_loop
+  find_nodes_in_subtree --> find_nested_loops_in_node
+  is_inside_loop --> traverse_for_loops
+  is_inside_loop --> count_nested_loops
+  is_inside_loop --> perform_semantic_loop_analysis
+  is_inside_loop --> contains_linear_operations_in_loops
+  is_inside_loop --> find_nested_loops_in_node
+  is_inside_loop --> detect_nested_loops
+  is_inside_loop --> count_nested_loops_in_file
+  find_nested_loops_in_node --> find_loop_nodes
+  find_nested_loops_in_node --> analyze_loop_nesting
+  find_nested_loops_in_node --> find_function_nodes
+  find_nested_loops_in_node --> contains_linear_operations_in_loops
+  find_nested_loops_in_node --> contains_inefficient_sorting
+  find_nested_loops_in_node --> find_nodes_in_subtree
+  find_nested_loops_in_node --> collect_nodes_recursive
+  find_nested_loops_in_node --> is_inside_loop
+  create_syntax_tree --> find_nodes_in_subtree
+  count_nested_loops_in_file --> find_loop_nodes
+  count_nested_loops_in_file --> analyze_loop_nesting
+  count_nested_loops_in_file --> find_function_nodes
+  count_nested_loops_in_file --> contains_linear_operations_in_loops
+  count_nested_loops_in_file --> contains_inefficient_sorting
+  count_nested_loops_in_file --> find_nodes_in_subtree
+  count_nested_loops_in_file --> is_inside_loop
+  count_nested_loops_in_file --> find_nested_loops_in_node
+  count_allocation_patterns --> analyze_algorithmic_antipatterns
+  count_allocation_patterns --> count_memory_allocations
+  count_allocation_patterns --> detect_memory_allocations
+  count_io_operations --> analyze_nested_iteration_patterns
+  count_io_operations --> extract_iteration_variables
+  count_io_operations --> generate_complexity_optimization
+  count_io_operations --> extract_function_name_from_content
+  count_io_operations --> find_function_nodes
+  count_io_operations --> traverse_for_functions
+  count_io_operations --> extract_function_name
+  count_io_operations --> is_recursive_function
+  count_io_operations --> analyze_recursion_complexity
+  count_io_operations --> contains_linear_operations_in_loops
+  count_io_operations --> calculate_function_complexity
+  count_io_operations --> extract_function_name_from_node
+  count_io_operations --> generate_optimizations
+  count_io_operations --> count_recursive_functions
+  count_io_operations --> count_memory_allocations
+  count_io_operations --> detect_memory_allocations
+  count_io_operations --> count_allocation_patterns
+  count_io_operations --> analyze_function_complexities
+  count_io_operations --> detect_memory_allocation_patterns
+  count_io_operations --> generate_recommendations
+  analyze_function_complexities --> traverse_for_functions
+  analyze_function_complexities --> count_recursive_functions
+  detect_memory_allocation_patterns --> analyze_algorithmic_antipatterns
+  detect_memory_allocation_patterns --> count_memory_allocations
+  detect_memory_allocation_patterns --> detect_memory_allocations
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  loopnestinginfo["LoopNestingInfo"]
+  Start --> loopnestinginfo
+  datadependency["DataDependency"]
+  Start --> datadependency
+  accesspattern["AccessPattern"]
+  Start --> accesspattern
+  semanticloopanalysis["SemanticLoopAnalysis"]
+  Start --> semanticloopanalysis
+  recursionanalysis["RecursionAnalysis"]
+  Start --> recursionanalysis
+  performanceanalyzer["PerformanceAnalyzer"]
+  Start --> performanceanalyzer
+  performanceconfig["PerformanceConfig"]
+  Start --> performanceconfig
+  performanceanalysisresult["PerformanceAnalysisResult"]
+  Start --> performanceanalysisresult
+  performancehotspot["PerformanceHotspot"]
+  Start --> performancehotspot
+  hotspotlocation["HotspotLocation"]
+  Start --> hotspotlocation
+  performanceimpact["PerformanceImpact"]
+  Start --> performanceimpact
+  expectedimprovement["ExpectedImprovement"]
+  Start --> expectedimprovement
+  optimizationopportunity["OptimizationOpportunity"]
+  Start --> optimizationopportunity
+  effortestimate["EffortEstimate"]
+  Start --> effortestimate
+  fileperformancemetrics["FilePerformanceMetrics"]
+  Start --> fileperformancemetrics
+  complexityanalysis["ComplexityAnalysis"]
+  Start --> complexityanalysis
+  complexfunction["ComplexFunction"]
+  Start --> complexfunction
+  nestedloopanalysis["NestedLoopAnalysis"]
+  Start --> nestedloopanalysis
+  recursivefunction["RecursiveFunction"]
+  Start --> recursivefunction
+  memoryanalysis["MemoryAnalysis"]
+  Start --> memoryanalysis
+  memoryhotspot["MemoryHotspot"]
+  Start --> memoryhotspot
+  memoryleakrisk["MemoryLeakRisk"]
+  Start --> memoryleakrisk
+  inefficiientdatastructure["InefficiientDataStructure"]
+  Start --> inefficiientdatastructure
+  memoryoptimization["MemoryOptimization"]
+  Start --> memoryoptimization
+  concurrencyanalysis["ConcurrencyAnalysis"]
+  Start --> concurrencyanalysis
+  parallelizationopportunity["ParallelizationOpportunity"]
+  Start --> parallelizationopportunity
+  synchronizationissue["SynchronizationIssue"]
+  Start --> synchronizationissue
+  threadsafetyconcern["ThreadSafetyConcern"]
+  Start --> threadsafetyconcern
+  asyncoptimization["AsyncOptimization"]
+  Start --> asyncoptimization
+  performancerecommendation["PerformanceRecommendation"]
+  Start --> performancerecommendation
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze["analyze"Fn]
+  analyze_file_performance["analyze_file_performance"Fn]
+  detect_file_hotspots["detect_file_hotspots"Fn]
+  detect_ast_hotspots["detect_ast_hotspots"Fn]
+  detect_nested_loop_hotspots["detect_nested_loop_hotspots"Fn]
+  detect_semantic_complexity_patterns["detect_semantic_complexity_patterns"Fn]
+  analyze_nested_iteration_patterns["analyze_nested_iteration_patterns"Fn]
+  find_loop_nodes["find_loop_nodes"Fn]
+  traverse_for_loops["traverse_for_loops"Fn]
+  analyze_loop_nesting["analyze_loop_nesting"Fn]
+  count_nested_loops["count_nested_loops"Fn]
+  extract_iteration_variables["extract_iteration_variables"Fn]
+  analyze_data_dependencies["analyze_data_dependencies"Fn]
+  classify_loop_types["classify_loop_types"Fn]
+  analyze_access_patterns["analyze_access_patterns"Fn]
+  perform_semantic_loop_analysis["perform_semantic_loop_analysis"Fn]
+  calculate_complexity_confidence["calculate_complexity_confidence"Fn]
+  generate_complexity_optimization["generate_complexity_optimization"Fn]
+  extract_function_name_from_content["extract_function_name_from_content"Fn]
+  extract_code_snippet["extract_code_snippet"Fn]
+  analyze_recursive_complexity_patterns["analyze_recursive_complexity_patterns"Fn]
+  analyze_data_structure_access_patterns["analyze_data_structure_access_patterns"Fn]
+  analyze_algorithmic_antipatterns["analyze_algorithmic_antipatterns"Fn]
+  find_function_nodes["find_function_nodes"Fn]
+  traverse_for_functions["traverse_for_functions"Fn]
+  extract_function_name["extract_function_name"Fn]
+  is_recursive_function["is_recursive_function"Fn]
+  analyze_recursion_complexity["analyze_recursion_complexity"Fn]
+  contains_linear_operations_in_loops["contains_linear_operations_in_loops"Fn]
+  contains_inefficient_sorting["contains_inefficient_sorting"Fn]
+  detect_memory_hotspots["detect_memory_hotspots"Fn]
+  detect_complexity_hotspots["detect_complexity_hotspots"Fn]
+  calculate_function_complexity["calculate_function_complexity"Fn]
+  extract_function_name_from_node["extract_function_name_from_node"Fn]
+  find_nodes_in_subtree["find_nodes_in_subtree"Fn]
+  collect_nodes_recursive["collect_nodes_recursive"Fn]
+  is_inside_loop["is_inside_loop"Fn]
+  find_nested_loops_in_node["find_nested_loops_in_node"Fn]
+  detect_cross_file_hotspots["detect_cross_file_hotspots"Fn]
+  generate_optimizations["generate_optimizations"Fn]
+  calculate_file_complexity["calculate_file_complexity"Fn]
+  calculate_ast_complexity["calculate_ast_complexity"Fn]
+  parse_language["parse_language"Fn]
+  create_syntax_tree["create_syntax_tree"Fn]
+  calculate_cyclomatic_complexity["calculate_cyclomatic_complexity"Fn]
+  detect_nested_loops["detect_nested_loops"Fn]
+  count_nested_loops_in_file["count_nested_loops_in_file"Fn]
+  count_recursive_functions["count_recursive_functions"Fn]
+  count_memory_allocations["count_memory_allocations"Fn]
+  detect_memory_allocations["detect_memory_allocations"Fn]
+  count_allocation_patterns["count_allocation_patterns"Fn]
+  count_io_operations["count_io_operations"Fn]
+  count_database_queries["count_database_queries"Fn]
+  calculate_file_performance_score["calculate_file_performance_score"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  analyze_function_complexities["analyze_function_complexities"Fn]
+  analyze_memory_usage["analyze_memory_usage"Fn]
+  detect_memory_allocation_patterns["detect_memory_allocation_patterns"Fn]
+  detect_potential_memory_leaks["detect_potential_memory_leaks"Fn]
+  analyze_concurrency["analyze_concurrency"Fn]
+  generate_recommendations["generate_recommendations"Fn]
+  calculate_performance_score["calculate_performance_score"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  loopnestinginfo --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze
+  analyze --> analyze_file_performance
+  analyze_file_performance --> detect_file_hotspots
+  detect_file_hotspots --> detect_ast_hotspots
+  detect_ast_hotspots --> detect_nested_loop_hotspots
+  detect_nested_loop_hotspots --> detect_semantic_complexity_patterns
+  detect_semantic_complexity_patterns --> analyze_nested_iteration_patterns
+  analyze_nested_iteration_patterns --> find_loop_nodes
+  find_loop_nodes --> traverse_for_loops
+  traverse_for_loops --> analyze_loop_nesting
+  analyze_loop_nesting --> count_nested_loops
+  count_nested_loops --> extract_iteration_variables
+  extract_iteration_variables --> analyze_data_dependencies
+  analyze_data_dependencies --> classify_loop_types
+  classify_loop_types --> analyze_access_patterns
+  analyze_access_patterns --> perform_semantic_loop_analysis
+  perform_semantic_loop_analysis --> calculate_complexity_confidence
+  calculate_complexity_confidence --> generate_complexity_optimization
+  generate_complexity_optimization --> extract_function_name_from_content
+  extract_function_name_from_content --> extract_code_snippet
+  extract_code_snippet --> analyze_recursive_complexity_patterns
+  analyze_recursive_complexity_patterns --> analyze_data_structure_access_patterns
+  analyze_data_structure_access_patterns --> analyze_algorithmic_antipatterns
+  analyze_algorithmic_antipatterns --> find_function_nodes
+  find_function_nodes --> traverse_for_functions
+  traverse_for_functions --> extract_function_name
+  extract_function_name --> is_recursive_function
+  is_recursive_function --> analyze_recursion_complexity
+  analyze_recursion_complexity --> contains_linear_operations_in_loops
+  contains_linear_operations_in_loops --> contains_inefficient_sorting
+  contains_inefficient_sorting --> detect_memory_hotspots
+  detect_memory_hotspots --> detect_complexity_hotspots
+  detect_complexity_hotspots --> calculate_function_complexity
+  calculate_function_complexity --> extract_function_name_from_node
+  extract_function_name_from_node --> find_nodes_in_subtree
+  find_nodes_in_subtree --> collect_nodes_recursive
+  collect_nodes_recursive --> is_inside_loop
+  is_inside_loop --> find_nested_loops_in_node
+  find_nested_loops_in_node --> detect_cross_file_hotspots
+  detect_cross_file_hotspots --> generate_optimizations
+  generate_optimizations --> calculate_file_complexity
+  calculate_file_complexity --> calculate_ast_complexity
+  calculate_ast_complexity --> parse_language
+  parse_language --> create_syntax_tree
+  create_syntax_tree --> calculate_cyclomatic_complexity
+  calculate_cyclomatic_complexity --> detect_nested_loops
+  detect_nested_loops --> count_nested_loops_in_file
+  count_nested_loops_in_file --> count_recursive_functions
+  count_recursive_functions --> count_memory_allocations
+  count_memory_allocations --> detect_memory_allocations
+  detect_memory_allocations --> count_allocation_patterns
+  count_allocation_patterns --> count_io_operations
+  count_io_operations --> count_database_queries
+  count_database_queries --> calculate_file_performance_score
+  calculate_file_performance_score --> analyze_complexity
+  analyze_complexity --> analyze_function_complexities
+  analyze_function_complexities --> analyze_memory_usage
+  analyze_memory_usage --> detect_memory_allocation_patterns
+  detect_memory_allocation_patterns --> detect_potential_memory_leaks
+  detect_potential_memory_leaks --> analyze_concurrency
+  analyze_concurrency --> generate_recommendations
+  generate_recommendations --> calculate_performance_score
+  calculate_performance_score --> default
+  default --> default
+  default --> default
+  default --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class LoopNestingInfo {
+    +LoopNestingInfo()
+  }
+  class DataDependency {
+    +DataDependency()
+  }
+  class AccessPattern {
+    +AccessPattern()
+  }
+  class SemanticLoopAnalysis {
+    +SemanticLoopAnalysis()
+  }
+  class RecursionAnalysis {
+    +RecursionAnalysis()
+  }
+  class PerformanceAnalyzer {
+    +PerformanceAnalyzer()
+  }
+  class PerformanceConfig {
+    +PerformanceConfig()
+  }
+  class PerformanceAnalysisResult {
+    +PerformanceAnalysisResult()
+  }
+  class PerformanceHotspot {
+    +PerformanceHotspot()
+  }
+  class HotspotLocation {
+    +HotspotLocation()
+  }
+  class PerformanceImpact {
+    +PerformanceImpact()
+  }
+  class ExpectedImprovement {
+    +ExpectedImprovement()
+  }
+  class OptimizationOpportunity {
+    +OptimizationOpportunity()
+  }
+  class EffortEstimate {
+    +EffortEstimate()
+  }
+  class FilePerformanceMetrics {
+    +FilePerformanceMetrics()
+  }
+  class ComplexityAnalysis {
+    +ComplexityAnalysis()
+  }
+  class ComplexFunction {
+    +ComplexFunction()
+  }
+  class NestedLoopAnalysis {
+    +NestedLoopAnalysis()
+  }
+  class RecursiveFunction {
+    +RecursiveFunction()
+  }
+  class MemoryAnalysis {
+    +MemoryAnalysis()
+  }
+  class MemoryHotspot {
+    +MemoryHotspot()
+  }
+  class MemoryLeakRisk {
+    +MemoryLeakRisk()
+  }
+  class InefficiientDataStructure {
+    +InefficiientDataStructure()
+  }
+  class MemoryOptimization {
+    +MemoryOptimization()
+  }
+  class ConcurrencyAnalysis {
+    +ConcurrencyAnalysis()
+  }
+  class ParallelizationOpportunity {
+    +ParallelizationOpportunity()
+  }
+  class SynchronizationIssue {
+    +SynchronizationIssue()
+  }
+  class ThreadSafetyConcern {
+    +ThreadSafetyConcern()
+  }
+  class AsyncOptimization {
+    +AsyncOptimization()
+  }
+  class PerformanceRecommendation {
+    +PerformanceRecommendation()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

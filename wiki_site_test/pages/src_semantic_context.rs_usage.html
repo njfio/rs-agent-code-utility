@@ -1,0 +1,484 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/semantic_context.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/semantic_context.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 57</li>
+<li><strong>Structures:</strong> 31</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 192</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  build_cfg"build_cfg (fn)"]
+  new"new (fn)"]
+  analyze_taint_flows"analyze_taint_flows (fn)"]
+  new"new (fn)"]
+  analyze"analyze (fn)"]
+  analyze_data_flow"analyze_data_flow (fn)"]
+  compute_reaching_definitions"compute_reaching_definitions (fn)"]
+  collect_definitions"collect_definitions (fn)"]
+  find_symbol_at_location"find_symbol_at_location (fn)"]
+  propagate_definitions"propagate_definitions (fn)"]
+  compute_use_def_chains"compute_use_def_chains (fn)"]
+  collect_uses"collect_uses (fn)"]
+  is_definition_site"is_definition_site (fn)"]
+  compute_def_use_chains"compute_def_use_chains (fn)"]
+  compute_aliases"compute_aliases (fn)"]
+  analyze_aliases"analyze_aliases (fn)"]
+  find_symbol_by_name"find_symbol_by_name (fn)"]
+  compute_constants"compute_constants (fn)"]
+  propagate_constants"propagate_constants (fn)"]
+  compute_taint_flows"compute_taint_flows (fn)"]
+  build_call_graph"build_call_graph (fn)"]
+  collect_function_definitions"collect_function_definitions (fn)"]
+  extract_parameters"extract_parameters (fn)"]
+  is_parameter_mutable"is_parameter_mutable (fn)"]
+  analyze_function_attributes"analyze_function_attributes (fn)"]
+  analyze_function_body"analyze_function_body (fn)"]
+  is_io_function"is_io_function (fn)"]
+  is_security_sensitive_function"is_security_sensitive_function (fn)"]
+  is_sanitization_function"is_sanitization_function (fn)"]
+  is_validation_function"is_validation_function (fn)"]
+  collect_function_calls"collect_function_calls (fn)"]
+  extract_arguments"extract_arguments (fn)"]
+  build_call_chains"build_call_chains (fn)"]
+  analyze_security_context"analyze_security_context (fn)"]
+  analyze_security_patterns"analyze_security_patterns (fn)"]
+  analyze_types"analyze_types (fn)"]
+  infer_types"infer_types (fn)"]
+  analyze_patterns"analyze_patterns (fn)"]
+  detect_patterns"detect_patterns (fn)"]
+  test_semantic_context_analyzer_creation"test_semantic_context_analyzer_creation (fn)"]
+  test_definition_site_creation"test_definition_site_creation (fn)"]
+  test_constant_value_variants"test_constant_value_variants (fn)"]
+  test_function_call_creation"test_function_call_creation (fn)"]
+  test_validation_point_creation"test_validation_point_creation (fn)"]
+  test_sanitization_point_creation"test_sanitization_point_creation (fn)"]
+  test_trust_level_ordering"test_trust_level_ordering (fn)"]
+  test_validation_strength_ordering"test_validation_strength_ordering (fn)"]
+  test_sanitization_effectiveness_ordering"test_sanitization_effectiveness_ordering (fn)"]
+  test_authentication_strength_ordering"test_authentication_strength_ordering (fn)"]
+  test_error_handling_quality_ordering"test_error_handling_quality_ordering (fn)"]
+  test_anti_pattern_severity_ordering"test_anti_pattern_severity_ordering (fn)"]
+  test_type_info_creation"test_type_info_creation (fn)"]
+  test_code_pattern_creation"test_code_pattern_creation (fn)"]
+  test_anti_pattern_creation"test_anti_pattern_creation (fn)"]
+  test_security_boundary_creation"test_security_boundary_creation (fn)"]
+  test_data_flow_analysis_creation"test_data_flow_analysis_creation (fn)"]
+  analyze_taint_flows --> test_semantic_context_analyzer_creation
+  analyze --> test_semantic_context_analyzer_creation
+  analyze_data_flow --> analyze_taint_flows
+  analyze_data_flow --> compute_taint_flows
+  analyze_data_flow --> test_semantic_context_analyzer_creation
+  find_symbol_at_location --> analyze_data_flow
+  find_symbol_at_location --> propagate_definitions
+  find_symbol_at_location --> propagate_constants
+  find_symbol_at_location --> analyze_function_attributes
+  find_symbol_at_location --> is_sanitization_function
+  find_symbol_at_location --> is_validation_function
+  find_symbol_at_location --> analyze_security_patterns
+  find_symbol_at_location --> analyze_patterns
+  find_symbol_at_location --> detect_patterns
+  find_symbol_at_location --> test_semantic_context_analyzer_creation
+  find_symbol_at_location --> test_definition_site_creation
+  find_symbol_at_location --> test_function_call_creation
+  find_symbol_at_location --> test_validation_point_creation
+  find_symbol_at_location --> test_sanitization_point_creation
+  find_symbol_at_location --> test_validation_strength_ordering
+  find_symbol_at_location --> test_sanitization_effectiveness_ordering
+  find_symbol_at_location --> test_authentication_strength_ordering
+  find_symbol_at_location --> test_anti_pattern_severity_ordering
+  find_symbol_at_location --> test_type_info_creation
+  find_symbol_at_location --> test_code_pattern_creation
+  find_symbol_at_location --> test_anti_pattern_creation
+  find_symbol_at_location --> test_security_boundary_creation
+  find_symbol_at_location --> test_data_flow_analysis_creation
+  compute_use_def_chains --> compute_reaching_definitions
+  compute_use_def_chains --> collect_definitions
+  compute_use_def_chains --> propagate_definitions
+  compute_use_def_chains --> collect_uses
+  compute_use_def_chains --> is_definition_site
+  compute_use_def_chains --> collect_function_definitions
+  compute_use_def_chains --> test_definition_site_creation
+  is_definition_site --> compute_reaching_definitions
+  is_definition_site --> collect_definitions
+  is_definition_site --> propagate_definitions
+  is_definition_site --> collect_function_definitions
+  is_definition_site --> test_data_flow_analysis_creation
+  compute_def_use_chains --> compute_reaching_definitions
+  compute_def_use_chains --> collect_definitions
+  compute_def_use_chains --> propagate_definitions
+  compute_def_use_chains --> collect_uses
+  compute_def_use_chains --> is_definition_site
+  compute_def_use_chains --> collect_function_definitions
+  compute_def_use_chains --> test_definition_site_creation
+  analyze_aliases --> test_semantic_context_analyzer_creation
+  build_call_graph --> collect_function_calls
+  is_parameter_mutable --> extract_parameters
+  is_parameter_mutable --> test_data_flow_analysis_creation
+  analyze_function_attributes --> test_semantic_context_analyzer_creation
+  analyze_function_body --> test_semantic_context_analyzer_creation
+  is_io_function --> compute_reaching_definitions
+  is_io_function --> collect_definitions
+  is_io_function --> find_symbol_at_location
+  is_io_function --> propagate_definitions
+  is_io_function --> is_definition_site
+  is_io_function --> collect_function_definitions
+  is_io_function --> analyze_function_attributes
+  is_io_function --> analyze_function_body
+  is_io_function --> is_security_sensitive_function
+  is_io_function --> is_sanitization_function
+  is_io_function --> is_validation_function
+  is_io_function --> collect_function_calls
+  is_io_function --> test_semantic_context_analyzer_creation
+  is_io_function --> test_definition_site_creation
+  is_io_function --> test_function_call_creation
+  is_io_function --> test_validation_point_creation
+  is_io_function --> test_sanitization_point_creation
+  is_io_function --> test_validation_strength_ordering
+  is_io_function --> test_sanitization_effectiveness_ordering
+  is_io_function --> test_authentication_strength_ordering
+  is_io_function --> test_type_info_creation
+  is_io_function --> test_code_pattern_creation
+  is_io_function --> test_anti_pattern_creation
+  is_io_function --> test_security_boundary_creation
+  is_io_function --> test_data_flow_analysis_creation
+  is_security_sensitive_function --> test_data_flow_analysis_creation
+  is_sanitization_function --> test_data_flow_analysis_creation
+  is_validation_function --> test_data_flow_analysis_creation
+  build_call_chains --> collect_function_calls
+  analyze_security_context --> test_semantic_context_analyzer_creation
+  analyze_security_patterns --> test_semantic_context_analyzer_creation
+  analyze_types --> test_semantic_context_analyzer_creation
+  analyze_patterns --> test_semantic_context_analyzer_creation
+  test_definition_site_creation --> compute_reaching_definitions
+  test_definition_site_creation --> collect_definitions
+  test_definition_site_creation --> propagate_definitions
+  test_definition_site_creation --> collect_function_definitions
+  test_constant_value_variants --> compute_constants
+  test_constant_value_variants --> propagate_constants
+  test_function_call_creation --> collect_function_calls
+  test_anti_pattern_severity_ordering --> analyze_security_patterns
+  test_anti_pattern_severity_ordering --> analyze_patterns
+  test_anti_pattern_severity_ordering --> detect_patterns
+  test_anti_pattern_severity_ordering --> test_semantic_context_analyzer_creation
+  test_type_info_creation --> analyze_types
+  test_type_info_creation --> infer_types
+  test_code_pattern_creation --> analyze_security_patterns
+  test_code_pattern_creation --> analyze_patterns
+  test_code_pattern_creation --> detect_patterns
+  test_anti_pattern_creation --> analyze_security_patterns
+  test_anti_pattern_creation --> analyze_patterns
+  test_anti_pattern_creation --> detect_patterns
+  test_anti_pattern_creation --> test_semantic_context_analyzer_creation
+  test_data_flow_analysis_creation --> analyze_taint_flows
+  test_data_flow_analysis_creation --> compute_taint_flows
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  controlflowgraph["ControlFlowGraph"]
+  Start --> controlflowgraph
+  cfgbuilder["CfgBuilder"]
+  Start --> cfgbuilder
+  taintanalyzer["TaintAnalyzer"]
+  Start --> taintanalyzer
+  taintanalysisresult["TaintAnalysisResult"]
+  Start --> taintanalysisresult
+  taintflow["TaintFlow"]
+  Start --> taintflow
+  semanticcontext["SemanticContext"]
+  Start --> semanticcontext
+  dataflowanalysis["DataFlowAnalysis"]
+  Start --> dataflowanalysis
+  definitionsite["DefinitionSite"]
+  Start --> definitionsite
+  callgraph["CallGraph"]
+  Start --> callgraph
+  functioncall["FunctionCall"]
+  Start --> functioncall
+  argumentinfo["ArgumentInfo"]
+  Start --> argumentinfo
+  functiondefinition["FunctionDefinition"]
+  Start --> functiondefinition
+  parameterinfo["ParameterInfo"]
+  Start --> parameterinfo
+  functionattributes["FunctionAttributes"]
+  Start --> functionattributes
+  callchain["CallChain"]
+  Start --> callchain
+  securitysemanticcontext["SecuritySemanticContext"]
+  Start --> securitysemanticcontext
+  validationpoint["ValidationPoint"]
+  Start --> validationpoint
+  sanitizationpoint["SanitizationPoint"]
+  Start --> sanitizationpoint
+  authenticationcheck["AuthenticationCheck"]
+  Start --> authenticationcheck
+  authorizationcheck["AuthorizationCheck"]
+  Start --> authorizationcheck
+  errorhandlingpattern["ErrorHandlingPattern"]
+  Start --> errorhandlingpattern
+  securityboundary["SecurityBoundary"]
+  Start --> securityboundary
+  trustlevelchange["TrustLevelChange"]
+  Start --> trustlevelchange
+  typecontext["TypeContext"]
+  Start --> typecontext
+  typeinfo["TypeInfo"]
+  Start --> typeinfo
+  typeconstraint["TypeConstraint"]
+  Start --> typeconstraint
+  patterncontext["PatternContext"]
+  Start --> patterncontext
+  codepattern["CodePattern"]
+  Start --> codepattern
+  antipattern["AntiPattern"]
+  Start --> antipattern
+  codeidiom["CodeIdiom"]
+  Start --> codeidiom
+  semanticcontextanalyzer["SemanticContextAnalyzer"]
+  Start --> semanticcontextanalyzer
+  new["new"Fn]
+  build_cfg["build_cfg"Fn]
+  new["new"Fn]
+  analyze_taint_flows["analyze_taint_flows"Fn]
+  new["new"Fn]
+  analyze["analyze"Fn]
+  analyze_data_flow["analyze_data_flow"Fn]
+  compute_reaching_definitions["compute_reaching_definitions"Fn]
+  collect_definitions["collect_definitions"Fn]
+  find_symbol_at_location["find_symbol_at_location"Fn]
+  propagate_definitions["propagate_definitions"Fn]
+  compute_use_def_chains["compute_use_def_chains"Fn]
+  collect_uses["collect_uses"Fn]
+  is_definition_site["is_definition_site"Fn]
+  compute_def_use_chains["compute_def_use_chains"Fn]
+  compute_aliases["compute_aliases"Fn]
+  analyze_aliases["analyze_aliases"Fn]
+  find_symbol_by_name["find_symbol_by_name"Fn]
+  compute_constants["compute_constants"Fn]
+  propagate_constants["propagate_constants"Fn]
+  compute_taint_flows["compute_taint_flows"Fn]
+  build_call_graph["build_call_graph"Fn]
+  collect_function_definitions["collect_function_definitions"Fn]
+  extract_parameters["extract_parameters"Fn]
+  is_parameter_mutable["is_parameter_mutable"Fn]
+  analyze_function_attributes["analyze_function_attributes"Fn]
+  analyze_function_body["analyze_function_body"Fn]
+  is_io_function["is_io_function"Fn]
+  is_security_sensitive_function["is_security_sensitive_function"Fn]
+  is_sanitization_function["is_sanitization_function"Fn]
+  is_validation_function["is_validation_function"Fn]
+  collect_function_calls["collect_function_calls"Fn]
+  extract_arguments["extract_arguments"Fn]
+  build_call_chains["build_call_chains"Fn]
+  analyze_security_context["analyze_security_context"Fn]
+  analyze_security_patterns["analyze_security_patterns"Fn]
+  analyze_types["analyze_types"Fn]
+  infer_types["infer_types"Fn]
+  analyze_patterns["analyze_patterns"Fn]
+  detect_patterns["detect_patterns"Fn]
+  test_semantic_context_analyzer_creation["test_semantic_context_analyzer_creation"Fn]
+  test_definition_site_creation["test_definition_site_creation"Fn]
+  test_constant_value_variants["test_constant_value_variants"Fn]
+  test_function_call_creation["test_function_call_creation"Fn]
+  test_validation_point_creation["test_validation_point_creation"Fn]
+  test_sanitization_point_creation["test_sanitization_point_creation"Fn]
+  test_trust_level_ordering["test_trust_level_ordering"Fn]
+  test_validation_strength_ordering["test_validation_strength_ordering"Fn]
+  test_sanitization_effectiveness_ordering["test_sanitization_effectiveness_ordering"Fn]
+  test_authentication_strength_ordering["test_authentication_strength_ordering"Fn]
+  test_error_handling_quality_ordering["test_error_handling_quality_ordering"Fn]
+  test_anti_pattern_severity_ordering["test_anti_pattern_severity_ordering"Fn]
+  test_type_info_creation["test_type_info_creation"Fn]
+  test_code_pattern_creation["test_code_pattern_creation"Fn]
+  test_anti_pattern_creation["test_anti_pattern_creation"Fn]
+  test_security_boundary_creation["test_security_boundary_creation"Fn]
+  test_data_flow_analysis_creation["test_data_flow_analysis_creation"Fn]
+  controlflowgraph --> new
+  new --> build_cfg
+  build_cfg --> new
+  new --> analyze_taint_flows
+  analyze_taint_flows --> new
+  new --> analyze
+  analyze --> analyze_data_flow
+  analyze_data_flow --> compute_reaching_definitions
+  compute_reaching_definitions --> collect_definitions
+  collect_definitions --> find_symbol_at_location
+  find_symbol_at_location --> propagate_definitions
+  propagate_definitions --> compute_use_def_chains
+  compute_use_def_chains --> collect_uses
+  collect_uses --> is_definition_site
+  is_definition_site --> compute_def_use_chains
+  compute_def_use_chains --> compute_aliases
+  compute_aliases --> analyze_aliases
+  analyze_aliases --> find_symbol_by_name
+  find_symbol_by_name --> compute_constants
+  compute_constants --> propagate_constants
+  propagate_constants --> compute_taint_flows
+  compute_taint_flows --> build_call_graph
+  build_call_graph --> collect_function_definitions
+  collect_function_definitions --> extract_parameters
+  extract_parameters --> is_parameter_mutable
+  is_parameter_mutable --> analyze_function_attributes
+  analyze_function_attributes --> analyze_function_body
+  analyze_function_body --> is_io_function
+  is_io_function --> is_security_sensitive_function
+  is_security_sensitive_function --> is_sanitization_function
+  is_sanitization_function --> is_validation_function
+  is_validation_function --> collect_function_calls
+  collect_function_calls --> extract_arguments
+  extract_arguments --> build_call_chains
+  build_call_chains --> analyze_security_context
+  analyze_security_context --> analyze_security_patterns
+  analyze_security_patterns --> analyze_types
+  analyze_types --> infer_types
+  infer_types --> analyze_patterns
+  analyze_patterns --> detect_patterns
+  detect_patterns --> test_semantic_context_analyzer_creation
+  test_semantic_context_analyzer_creation --> test_definition_site_creation
+  test_definition_site_creation --> test_constant_value_variants
+  test_constant_value_variants --> test_function_call_creation
+  test_function_call_creation --> test_validation_point_creation
+  test_validation_point_creation --> test_sanitization_point_creation
+  test_sanitization_point_creation --> test_trust_level_ordering
+  test_trust_level_ordering --> test_validation_strength_ordering
+  test_validation_strength_ordering --> test_sanitization_effectiveness_ordering
+  test_sanitization_effectiveness_ordering --> test_authentication_strength_ordering
+  test_authentication_strength_ordering --> test_error_handling_quality_ordering
+  test_error_handling_quality_ordering --> test_anti_pattern_severity_ordering
+  test_anti_pattern_severity_ordering --> test_type_info_creation
+  test_type_info_creation --> test_code_pattern_creation
+  test_code_pattern_creation --> test_anti_pattern_creation
+  test_anti_pattern_creation --> test_security_boundary_creation
+  test_security_boundary_creation --> test_data_flow_analysis_creation
+  test_data_flow_analysis_creation --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class ControlFlowGraph {
+    +ControlFlowGraph()
+  }
+  class CfgBuilder {
+    +CfgBuilder()
+  }
+  class TaintAnalyzer {
+    +TaintAnalyzer()
+  }
+  class TaintAnalysisResult {
+    +TaintAnalysisResult()
+  }
+  class TaintFlow {
+    +TaintFlow()
+  }
+  class SemanticContext {
+    +SemanticContext()
+  }
+  class DataFlowAnalysis {
+    +DataFlowAnalysis()
+  }
+  class DefinitionSite {
+    +DefinitionSite()
+  }
+  class CallGraph {
+    +CallGraph()
+  }
+  class FunctionCall {
+    +FunctionCall()
+  }
+  class ArgumentInfo {
+    +ArgumentInfo()
+  }
+  class FunctionDefinition {
+    +FunctionDefinition()
+  }
+  class ParameterInfo {
+    +ParameterInfo()
+  }
+  class FunctionAttributes {
+    +FunctionAttributes()
+  }
+  class CallChain {
+    +CallChain()
+  }
+  class SecuritySemanticContext {
+    +SecuritySemanticContext()
+  }
+  class ValidationPoint {
+    +ValidationPoint()
+  }
+  class SanitizationPoint {
+    +SanitizationPoint()
+  }
+  class AuthenticationCheck {
+    +AuthenticationCheck()
+  }
+  class AuthorizationCheck {
+    +AuthorizationCheck()
+  }
+  class ErrorHandlingPattern {
+    +ErrorHandlingPattern()
+  }
+  class SecurityBoundary {
+    +SecurityBoundary()
+  }
+  class TrustLevelChange {
+    +TrustLevelChange()
+  }
+  class TypeContext {
+    +TypeContext()
+  }
+  class TypeInfo {
+    +TypeInfo()
+  }
+  class TypeConstraint {
+    +TypeConstraint()
+  }
+  class PatternContext {
+    +PatternContext()
+  }
+  class CodePattern {
+    +CodePattern()
+  }
+  class AntiPattern {
+    +AntiPattern()
+  }
+  class CodeIdiom {
+    +CodeIdiom()
+  }
+  class SemanticContextAnalyzer {
+    +SemanticContextAnalyzer()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

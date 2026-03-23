@@ -1,0 +1,196 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/sql_injection_detector.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/sql_injection_detector.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 29</li>
+<li><strong>Structures:</strong> 5</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 63</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  initialize_sql_patterns"initialize_sql_patterns (fn)"]
+  initialize_rust_sql_patterns"initialize_rust_sql_patterns (fn)"]
+  initialize_javascript_sql_patterns"initialize_javascript_sql_patterns (fn)"]
+  initialize_python_sql_patterns"initialize_python_sql_patterns (fn)"]
+  initialize_c_sql_patterns"initialize_c_sql_patterns (fn)"]
+  initialize_go_sql_patterns"initialize_go_sql_patterns (fn)"]
+  initialize_generic_sql_patterns"initialize_generic_sql_patterns (fn)"]
+  detect"detect (fn)"]
+  analyze_sql_injection_flow"analyze_sql_injection_flow (fn)"]
+  detect_direct_sql_patterns"detect_direct_sql_patterns (fn)"]
+  traverse_for_sql_patterns"traverse_for_sql_patterns (fn)"]
+  check_node_for_sql_injection"check_node_for_sql_injection (fn)"]
+  analyze_sql_query_pattern"analyze_sql_query_pattern (fn)"]
+  determine_injection_type"determine_injection_type (fn)"]
+  calculate_confidence"calculate_confidence (fn)"]
+  determine_severity"determine_severity (fn)"]
+  generate_remediation"generate_remediation (fn)"]
+  is_string_concatenation"is_string_concatenation (fn)"]
+  is_format_operation"is_format_operation (fn)"]
+  is_template_literal"is_template_literal (fn)"]
+  extract_sql_from_concatenation"extract_sql_from_concatenation (fn)"]
+  extract_format_string"extract_format_string (fn)"]
+  extract_template_content"extract_template_content (fn)"]
+  contains_sql_keywords"contains_sql_keywords (fn)"]
+  create_direct_vulnerability"create_direct_vulnerability (fn)"]
+  test_sql_injection_detector_creation"test_sql_injection_detector_creation (fn)"]
+  test_sql_keywords_detection"test_sql_keywords_detection (fn)"]
+  test_injection_type_determination"test_injection_type_determination (fn)"]
+  initialize_c_sql_patterns --> initialize_javascript_sql_patterns
+  initialize_c_sql_patterns --> initialize_generic_sql_patterns
+  initialize_c_sql_patterns --> detect
+  initialize_c_sql_patterns --> analyze_sql_injection_flow
+  initialize_c_sql_patterns --> detect_direct_sql_patterns
+  initialize_c_sql_patterns --> check_node_for_sql_injection
+  initialize_c_sql_patterns --> determine_injection_type
+  initialize_c_sql_patterns --> calculate_confidence
+  initialize_c_sql_patterns --> is_string_concatenation
+  initialize_c_sql_patterns --> extract_sql_from_concatenation
+  initialize_c_sql_patterns --> extract_format_string
+  initialize_c_sql_patterns --> extract_template_content
+  initialize_c_sql_patterns --> contains_sql_keywords
+  initialize_c_sql_patterns --> create_direct_vulnerability
+  initialize_c_sql_patterns --> test_sql_injection_detector_creation
+  initialize_c_sql_patterns --> test_sql_keywords_detection
+  initialize_c_sql_patterns --> test_injection_type_determination
+  detect --> test_sql_injection_detector_creation
+  detect --> test_sql_keywords_detection
+  detect_direct_sql_patterns --> test_sql_injection_detector_creation
+  detect_direct_sql_patterns --> test_sql_keywords_detection
+  traverse_for_sql_patterns --> is_format_operation
+  traverse_for_sql_patterns --> extract_format_string
+  check_node_for_sql_injection --> is_format_operation
+  check_node_for_sql_injection --> extract_format_string
+  analyze_sql_query_pattern --> initialize_sql_patterns
+  analyze_sql_query_pattern --> initialize_rust_sql_patterns
+  analyze_sql_query_pattern --> initialize_javascript_sql_patterns
+  analyze_sql_query_pattern --> initialize_python_sql_patterns
+  analyze_sql_query_pattern --> initialize_c_sql_patterns
+  analyze_sql_query_pattern --> initialize_go_sql_patterns
+  analyze_sql_query_pattern --> initialize_generic_sql_patterns
+  analyze_sql_query_pattern --> detect_direct_sql_patterns
+  analyze_sql_query_pattern --> traverse_for_sql_patterns
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  sqlinjectionvulnerability["SqlInjectionVulnerability"]
+  Start --> sqlinjectionvulnerability
+  sqlquerypattern["SqlQueryPattern"]
+  Start --> sqlquerypattern
+  sqlinjectionremediation["SqlInjectionRemediation"]
+  Start --> sqlinjectionremediation
+  securecodeexample["SecureCodeExample"]
+  Start --> securecodeexample
+  sqlinjectiondetector["SqlInjectionDetector"]
+  Start --> sqlinjectiondetector
+  new["new"Fn]
+  initialize_sql_patterns["initialize_sql_patterns"Fn]
+  initialize_rust_sql_patterns["initialize_rust_sql_patterns"Fn]
+  initialize_javascript_sql_patterns["initialize_javascript_sql_patterns"Fn]
+  initialize_python_sql_patterns["initialize_python_sql_patterns"Fn]
+  initialize_c_sql_patterns["initialize_c_sql_patterns"Fn]
+  initialize_go_sql_patterns["initialize_go_sql_patterns"Fn]
+  initialize_generic_sql_patterns["initialize_generic_sql_patterns"Fn]
+  detect["detect"Fn]
+  analyze_sql_injection_flow["analyze_sql_injection_flow"Fn]
+  detect_direct_sql_patterns["detect_direct_sql_patterns"Fn]
+  traverse_for_sql_patterns["traverse_for_sql_patterns"Fn]
+  check_node_for_sql_injection["check_node_for_sql_injection"Fn]
+  analyze_sql_query_pattern["analyze_sql_query_pattern"Fn]
+  determine_injection_type["determine_injection_type"Fn]
+  calculate_confidence["calculate_confidence"Fn]
+  determine_severity["determine_severity"Fn]
+  generate_remediation["generate_remediation"Fn]
+  is_string_concatenation["is_string_concatenation"Fn]
+  is_format_operation["is_format_operation"Fn]
+  is_template_literal["is_template_literal"Fn]
+  extract_sql_from_concatenation["extract_sql_from_concatenation"Fn]
+  extract_format_string["extract_format_string"Fn]
+  extract_template_content["extract_template_content"Fn]
+  contains_sql_keywords["contains_sql_keywords"Fn]
+  create_direct_vulnerability["create_direct_vulnerability"Fn]
+  test_sql_injection_detector_creation["test_sql_injection_detector_creation"Fn]
+  test_sql_keywords_detection["test_sql_keywords_detection"Fn]
+  test_injection_type_determination["test_injection_type_determination"Fn]
+  sqlinjectionvulnerability --> new
+  new --> initialize_sql_patterns
+  initialize_sql_patterns --> initialize_rust_sql_patterns
+  initialize_rust_sql_patterns --> initialize_javascript_sql_patterns
+  initialize_javascript_sql_patterns --> initialize_python_sql_patterns
+  initialize_python_sql_patterns --> initialize_c_sql_patterns
+  initialize_c_sql_patterns --> initialize_go_sql_patterns
+  initialize_go_sql_patterns --> initialize_generic_sql_patterns
+  initialize_generic_sql_patterns --> detect
+  detect --> analyze_sql_injection_flow
+  analyze_sql_injection_flow --> detect_direct_sql_patterns
+  detect_direct_sql_patterns --> traverse_for_sql_patterns
+  traverse_for_sql_patterns --> check_node_for_sql_injection
+  check_node_for_sql_injection --> analyze_sql_query_pattern
+  analyze_sql_query_pattern --> determine_injection_type
+  determine_injection_type --> calculate_confidence
+  calculate_confidence --> determine_severity
+  determine_severity --> generate_remediation
+  generate_remediation --> is_string_concatenation
+  is_string_concatenation --> is_format_operation
+  is_format_operation --> is_template_literal
+  is_template_literal --> extract_sql_from_concatenation
+  extract_sql_from_concatenation --> extract_format_string
+  extract_format_string --> extract_template_content
+  extract_template_content --> contains_sql_keywords
+  contains_sql_keywords --> create_direct_vulnerability
+  create_direct_vulnerability --> test_sql_injection_detector_creation
+  test_sql_injection_detector_creation --> test_sql_keywords_detection
+  test_sql_keywords_detection --> test_injection_type_determination
+  test_injection_type_determination --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class SqlInjectionVulnerability {
+    +SqlInjectionVulnerability()
+  }
+  class SqlQueryPattern {
+    +SqlQueryPattern()
+  }
+  class SqlInjectionRemediation {
+    +SqlInjectionRemediation()
+  }
+  class SecureCodeExample {
+    +SecureCodeExample()
+  }
+  class SqlInjectionDetector {
+    +SqlInjectionDetector()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

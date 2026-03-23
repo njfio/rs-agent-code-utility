@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/infrastructure/config.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/infrastructure/config.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 14</li>
+<li><strong>Structures:</strong> 10</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 42</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  load"load (fn)"]
+  config"config (fn)"]
+  get_config_file_path"get_config_file_path (fn)"]
+  validate_config"validate_config (fn)"]
+  create_sample_config"create_sample_config (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  appconfig["AppConfig"]
+  Start --> appconfig
+  databaseconfig["DatabaseConfig"]
+  Start --> databaseconfig
+  apiconfig["ApiConfig"]
+  Start --> apiconfig
+  nvdconfig["NvdConfig"]
+  Start --> nvdconfig
+  osvconfig["OsvConfig"]
+  Start --> osvconfig
+  githubconfig["GitHubConfig"]
+  Start --> githubconfig
+  analysisconfig["AnalysisConfig"]
+  Start --> analysisconfig
+  loggingconfig["LoggingConfig"]
+  Start --> loggingconfig
+  cacheconfig["CacheConfig"]
+  Start --> cacheconfig
+  configmanager["ConfigManager"]
+  Start --> configmanager
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  load["load"Fn]
+  config["config"Fn]
+  get_config_file_path["get_config_file_path"Fn]
+  validate_config["validate_config"Fn]
+  create_sample_config["create_sample_config"Fn]
+  appconfig --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> load
+  load --> config
+  config --> get_config_file_path
+  get_config_file_path --> validate_config
+  validate_config --> create_sample_config
+  create_sample_config --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AppConfig {
+    +AppConfig()
+  }
+  class DatabaseConfig {
+    +DatabaseConfig()
+  }
+  class ApiConfig {
+    +ApiConfig()
+  }
+  class NvdConfig {
+    +NvdConfig()
+  }
+  class OsvConfig {
+    +OsvConfig()
+  }
+  class GitHubConfig {
+    +GitHubConfig()
+  }
+  class AnalysisConfig {
+    +AnalysisConfig()
+  }
+  class LoggingConfig {
+    +LoggingConfig()
+  }
+  class CacheConfig {
+    +CacheConfig()
+  }
+  class ConfigManager {
+    +ConfigManager()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

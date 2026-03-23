@@ -1,0 +1,238 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/cpp.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/cpp.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 39</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 106</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+is_function_definition"is_function_definition (fn)"]
+  is_function_declaration"is_function_declaration (fn)"]
+  has_function_declarator"has_function_declarator (fn)"]
+  is_class_declaration"is_class_declaration (fn)"]
+  is_struct_declaration"is_struct_declaration (fn)"]
+  is_namespace_declaration"is_namespace_declaration (fn)"]
+  is_template_declaration"is_template_declaration (fn)"]
+  is_constructor_definition"is_constructor_definition (fn)"]
+  is_destructor_definition"is_destructor_definition (fn)"]
+  is_operator_overload"is_operator_overload (fn)"]
+  function_name"function_name (fn)"]
+  class_name"class_name (fn)"]
+  namespace_name"namespace_name (fn)"]
+  class_base_classes"class_base_classes (fn)"]
+  is_public_member"is_public_member (fn)"]
+  is_virtual_function"is_virtual_function (fn)"]
+  is_static_function"is_static_function (fn)"]
+  is_inline_function"is_inline_function (fn)"]
+  is_const_function"is_const_function (fn)"]
+  template_parameters"template_parameters (fn)"]
+  find_functions"find_functions (fn)"]
+  find_classes"find_classes (fn)"]
+  find_structs"find_structs (fn)"]
+  find_namespaces"find_namespaces (fn)"]
+  find_templates"find_templates (fn)"]
+  functions_query"functions_query (fn)"]
+  classes_query"classes_query (fn)"]
+  namespaces_query"namespaces_query (fn)"]
+  templates_query"templates_query (fn)"]
+  detect_cpp_features"detect_cpp_features (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  test_cpp_function_detection"test_cpp_function_detection (fn)"]
+  test_cpp_class_detection"test_cpp_class_detection (fn)"]
+  test_cpp_namespace_detection"test_cpp_namespace_detection (fn)"]
+  test_cpp_template_detection"test_cpp_template_detection (fn)"]
+  test_cpp_inheritance"test_cpp_inheritance (fn)"]
+  test_cpp_features_detection"test_cpp_features_detection (fn)"]
+  test_function_properties"test_function_properties (fn)"]
+  test_template_parameters"test_template_parameters (fn)"]
+  is_function_definition --> find_functions
+  is_function_definition --> functions_query
+  is_function_declaration --> find_functions
+  is_function_declaration --> functions_query
+  has_function_declarator --> find_functions
+  has_function_declarator --> functions_query
+  is_class_declaration --> class_base_classes
+  is_class_declaration --> find_classes
+  is_class_declaration --> classes_query
+  is_struct_declaration --> is_constructor_definition
+  is_struct_declaration --> is_destructor_definition
+  is_struct_declaration --> find_structs
+  is_namespace_declaration --> find_namespaces
+  is_namespace_declaration --> namespaces_query
+  is_template_declaration --> find_templates
+  is_template_declaration --> templates_query
+  function_name --> is_namespace_declaration
+  function_name --> namespace_name
+  function_name --> find_functions
+  function_name --> find_namespaces
+  function_name --> functions_query
+  function_name --> namespaces_query
+  function_name --> test_cpp_namespace_detection
+  class_name --> is_namespace_declaration
+  class_name --> namespace_name
+  class_name --> class_base_classes
+  class_name --> find_classes
+  class_name --> find_namespaces
+  class_name --> classes_query
+  class_name --> namespaces_query
+  class_name --> test_cpp_namespace_detection
+  namespace_name --> is_namespace_declaration
+  namespace_name --> find_namespaces
+  namespace_name --> namespaces_query
+  namespace_name --> test_cpp_namespace_detection
+  class_base_classes --> find_classes
+  class_base_classes --> classes_query
+  is_virtual_function --> find_functions
+  is_virtual_function --> functions_query
+  is_static_function --> find_functions
+  is_static_function --> functions_query
+  is_inline_function --> find_functions
+  is_inline_function --> functions_query
+  is_const_function --> is_constructor_definition
+  is_const_function --> find_functions
+  is_const_function --> functions_query
+  template_parameters --> find_templates
+  template_parameters --> templates_query
+  detect_cpp_features --> test_cpp_function_detection
+  detect_cpp_features --> test_cpp_class_detection
+  detect_cpp_features --> test_cpp_namespace_detection
+  detect_cpp_features --> test_cpp_template_detection
+  detect_cpp_features --> test_cpp_features_detection
+  test_cpp_function_detection --> find_functions
+  test_cpp_function_detection --> functions_query
+  test_cpp_class_detection --> class_base_classes
+  test_cpp_class_detection --> find_classes
+  test_cpp_class_detection --> classes_query
+  test_cpp_namespace_detection --> find_namespaces
+  test_cpp_namespace_detection --> namespaces_query
+  test_cpp_template_detection --> find_templates
+  test_cpp_template_detection --> templates_query
+  test_function_properties --> find_functions
+  test_function_properties --> functions_query
+  test_template_parameters --> find_templates
+  test_template_parameters --> templates_query
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  cppsyntax["CppSyntax"]
+  Start --> cppsyntax
+  is_function_definition["is_function_definition"Fn]
+  is_function_declaration["is_function_declaration"Fn]
+  has_function_declarator["has_function_declarator"Fn]
+  is_class_declaration["is_class_declaration"Fn]
+  is_struct_declaration["is_struct_declaration"Fn]
+  is_namespace_declaration["is_namespace_declaration"Fn]
+  is_template_declaration["is_template_declaration"Fn]
+  is_constructor_definition["is_constructor_definition"Fn]
+  is_destructor_definition["is_destructor_definition"Fn]
+  is_operator_overload["is_operator_overload"Fn]
+  function_name["function_name"Fn]
+  class_name["class_name"Fn]
+  namespace_name["namespace_name"Fn]
+  class_base_classes["class_base_classes"Fn]
+  is_public_member["is_public_member"Fn]
+  is_virtual_function["is_virtual_function"Fn]
+  is_static_function["is_static_function"Fn]
+  is_inline_function["is_inline_function"Fn]
+  is_const_function["is_const_function"Fn]
+  template_parameters["template_parameters"Fn]
+  find_functions["find_functions"Fn]
+  find_classes["find_classes"Fn]
+  find_structs["find_structs"Fn]
+  find_namespaces["find_namespaces"Fn]
+  find_templates["find_templates"Fn]
+  functions_query["functions_query"Fn]
+  classes_query["classes_query"Fn]
+  namespaces_query["namespaces_query"Fn]
+  templates_query["templates_query"Fn]
+  detect_cpp_features["detect_cpp_features"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  test_cpp_function_detection["test_cpp_function_detection"Fn]
+  test_cpp_class_detection["test_cpp_class_detection"Fn]
+  test_cpp_namespace_detection["test_cpp_namespace_detection"Fn]
+  test_cpp_template_detection["test_cpp_template_detection"Fn]
+  test_cpp_inheritance["test_cpp_inheritance"Fn]
+  test_cpp_features_detection["test_cpp_features_detection"Fn]
+  test_function_properties["test_function_properties"Fn]
+  test_template_parameters["test_template_parameters"Fn]
+  cppsyntax --> is_function_definition
+  is_function_definition --> is_function_declaration
+  is_function_declaration --> has_function_declarator
+  has_function_declarator --> is_class_declaration
+  is_class_declaration --> is_struct_declaration
+  is_struct_declaration --> is_namespace_declaration
+  is_namespace_declaration --> is_template_declaration
+  is_template_declaration --> is_constructor_definition
+  is_constructor_definition --> is_destructor_definition
+  is_destructor_definition --> is_operator_overload
+  is_operator_overload --> function_name
+  function_name --> class_name
+  class_name --> namespace_name
+  namespace_name --> class_base_classes
+  class_base_classes --> is_public_member
+  is_public_member --> is_virtual_function
+  is_virtual_function --> is_static_function
+  is_static_function --> is_inline_function
+  is_inline_function --> is_const_function
+  is_const_function --> template_parameters
+  template_parameters --> find_functions
+  find_functions --> find_classes
+  find_classes --> find_structs
+  find_structs --> find_namespaces
+  find_namespaces --> find_templates
+  find_templates --> functions_query
+  functions_query --> classes_query
+  classes_query --> namespaces_query
+  namespaces_query --> templates_query
+  templates_query --> detect_cpp_features
+  detect_cpp_features --> analyze_complexity
+  analyze_complexity --> test_cpp_function_detection
+  test_cpp_function_detection --> test_cpp_class_detection
+  test_cpp_class_detection --> test_cpp_namespace_detection
+  test_cpp_namespace_detection --> test_cpp_template_detection
+  test_cpp_template_detection --> test_cpp_inheritance
+  test_cpp_inheritance --> test_cpp_features_detection
+  test_cpp_features_detection --> test_function_properties
+  test_function_properties --> test_template_parameters
+  test_template_parameters --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class CppSyntax {
+    +CppSyntax()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

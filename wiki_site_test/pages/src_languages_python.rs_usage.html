@@ -1,0 +1,322 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/python.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/python.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 55</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 177</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+is_function_definition"is_function_definition (fn)"]
+  is_async_function_definition"is_async_function_definition (fn)"]
+  is_class_definition"is_class_definition (fn)"]
+  is_method_definition"is_method_definition (fn)"]
+  is_lambda"is_lambda (fn)"]
+  is_import_statement"is_import_statement (fn)"]
+  is_decorator"is_decorator (fn)"]
+  is_global_statement"is_global_statement (fn)"]
+  is_nonlocal_statement"is_nonlocal_statement (fn)"]
+  function_name"function_name (fn)"]
+  class_name"class_name (fn)"]
+  function_parameters"function_parameters (fn)"]
+  class_bases"class_bases (fn)"]
+  get_decorators"get_decorators (fn)"]
+  is_special_method"is_special_method (fn)"]
+  is_property"is_property (fn)"]
+  is_static_method"is_static_method (fn)"]
+  is_class_method"is_class_method (fn)"]
+  get_docstring"get_docstring (fn)"]
+  find_functions"find_functions (fn)"]
+  find_classes"find_classes (fn)"]
+  find_imports"find_imports (fn)"]
+  find_global_variables"find_global_variables (fn)"]
+  functions_query"functions_query (fn)"]
+  classes_query"classes_query (fn)"]
+  methods_query"methods_query (fn)"]
+  imports_query"imports_query (fn)"]
+  decorators_query"decorators_query (fn)"]
+  async_functions_query"async_functions_query (fn)"]
+  detect_python_features"detect_python_features (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  check_naming_conventions"check_naming_conventions (fn)"]
+  is_snake_case"is_snake_case (fn)"]
+  is_pascal_case"is_pascal_case (fn)"]
+  is_special_method_name"is_special_method_name (fn)"]
+  get_method_resolution_order"get_method_resolution_order (fn)"]
+  find_class_methods"find_class_methods (fn)"]
+  has_type_hints"has_type_hints (fn)"]
+  extract_docstring"extract_docstring (fn)"]
+  find_methods"find_methods (fn)"]
+  find_async_functions"find_async_functions (fn)"]
+  find_context_managers"find_context_managers (fn)"]
+  find_metaclasses"find_metaclasses (fn)"]
+  find_dataclasses"find_dataclasses (fn)"]
+  find_typed_functions"find_typed_functions (fn)"]
+  find_property_decorators"find_property_decorators (fn)"]
+  find_lambda_functions"find_lambda_functions (fn)"]
+  test_python_function_detection"test_python_function_detection (fn)"]
+  test_python_class_detection"test_python_class_detection (fn)"]
+  test_python_decorators"test_python_decorators (fn)"]
+  test_python_features_detection"test_python_features_detection (fn)"]
+  test_function_parameters"test_function_parameters (fn)"]
+  test_class_inheritance"test_class_inheritance (fn)"]
+  test_naming_conventions"test_naming_conventions (fn)"]
+  test_special_methods"test_special_methods (fn)"]
+  is_function_definition --> find_functions
+  is_function_definition --> functions_query
+  is_function_definition --> async_functions_query
+  is_function_definition --> find_async_functions
+  is_function_definition --> find_typed_functions
+  is_function_definition --> find_lambda_functions
+  is_async_function_definition --> find_functions
+  is_async_function_definition --> functions_query
+  is_async_function_definition --> async_functions_query
+  is_async_function_definition --> find_async_functions
+  is_async_function_definition --> find_typed_functions
+  is_async_function_definition --> find_lambda_functions
+  is_class_definition --> find_classes
+  is_class_definition --> classes_query
+  is_class_definition --> find_metaclasses
+  is_class_definition --> find_dataclasses
+  is_method_definition --> methods_query
+  is_method_definition --> find_class_methods
+  is_method_definition --> find_methods
+  is_method_definition --> test_special_methods
+  is_import_statement --> find_imports
+  is_import_statement --> imports_query
+  is_decorator --> get_decorators
+  is_decorator --> decorators_query
+  is_decorator --> find_property_decorators
+  is_decorator --> test_python_decorators
+  function_name --> find_functions
+  function_name --> functions_query
+  function_name --> async_functions_query
+  function_name --> find_async_functions
+  function_name --> find_typed_functions
+  function_name --> find_lambda_functions
+  class_name --> find_classes
+  class_name --> classes_query
+  class_name --> find_metaclasses
+  class_name --> find_dataclasses
+  function_parameters --> find_functions
+  function_parameters --> functions_query
+  function_parameters --> async_functions_query
+  function_parameters --> find_async_functions
+  function_parameters --> find_typed_functions
+  function_parameters --> find_lambda_functions
+  class_bases --> find_classes
+  class_bases --> classes_query
+  class_bases --> find_metaclasses
+  class_bases --> find_dataclasses
+  is_special_method --> methods_query
+  is_special_method --> find_class_methods
+  is_special_method --> find_methods
+  is_special_method --> test_special_methods
+  is_static_method --> methods_query
+  is_static_method --> find_class_methods
+  is_static_method --> find_methods
+  is_static_method --> test_special_methods
+  is_class_method --> find_classes
+  is_class_method --> classes_query
+  is_class_method --> methods_query
+  is_class_method --> find_class_methods
+  is_class_method --> find_methods
+  is_class_method --> find_metaclasses
+  is_class_method --> find_dataclasses
+  is_class_method --> test_special_methods
+  find_classes --> find_metaclasses
+  find_classes --> find_dataclasses
+  classes_query --> find_metaclasses
+  classes_query --> find_dataclasses
+  detect_python_features --> test_python_function_detection
+  detect_python_features --> test_python_class_detection
+  detect_python_features --> test_python_features_detection
+  is_special_method_name --> methods_query
+  is_special_method_name --> find_class_methods
+  is_special_method_name --> find_methods
+  is_special_method_name --> test_special_methods
+  get_method_resolution_order --> methods_query
+  get_method_resolution_order --> find_class_methods
+  get_method_resolution_order --> find_methods
+  get_method_resolution_order --> test_special_methods
+  find_class_methods --> find_classes
+  find_class_methods --> classes_query
+  find_class_methods --> find_metaclasses
+  find_class_methods --> find_dataclasses
+  has_type_hints --> find_typed_functions
+  test_python_function_detection --> find_functions
+  test_python_function_detection --> functions_query
+  test_python_function_detection --> async_functions_query
+  test_python_function_detection --> find_async_functions
+  test_python_function_detection --> find_typed_functions
+  test_python_function_detection --> find_lambda_functions
+  test_python_class_detection --> find_classes
+  test_python_class_detection --> classes_query
+  test_python_class_detection --> find_metaclasses
+  test_python_class_detection --> find_dataclasses
+  test_function_parameters --> find_functions
+  test_function_parameters --> functions_query
+  test_function_parameters --> async_functions_query
+  test_function_parameters --> find_async_functions
+  test_function_parameters --> find_typed_functions
+  test_function_parameters --> find_lambda_functions
+  test_class_inheritance --> find_classes
+  test_class_inheritance --> classes_query
+  test_class_inheritance --> find_metaclasses
+  test_class_inheritance --> find_dataclasses
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  pythonsyntax["PythonSyntax"]
+  Start --> pythonsyntax
+  is_function_definition["is_function_definition"Fn]
+  is_async_function_definition["is_async_function_definition"Fn]
+  is_class_definition["is_class_definition"Fn]
+  is_method_definition["is_method_definition"Fn]
+  is_lambda["is_lambda"Fn]
+  is_import_statement["is_import_statement"Fn]
+  is_decorator["is_decorator"Fn]
+  is_global_statement["is_global_statement"Fn]
+  is_nonlocal_statement["is_nonlocal_statement"Fn]
+  function_name["function_name"Fn]
+  class_name["class_name"Fn]
+  function_parameters["function_parameters"Fn]
+  class_bases["class_bases"Fn]
+  get_decorators["get_decorators"Fn]
+  is_special_method["is_special_method"Fn]
+  is_property["is_property"Fn]
+  is_static_method["is_static_method"Fn]
+  is_class_method["is_class_method"Fn]
+  get_docstring["get_docstring"Fn]
+  find_functions["find_functions"Fn]
+  find_classes["find_classes"Fn]
+  find_imports["find_imports"Fn]
+  find_global_variables["find_global_variables"Fn]
+  functions_query["functions_query"Fn]
+  classes_query["classes_query"Fn]
+  methods_query["methods_query"Fn]
+  imports_query["imports_query"Fn]
+  decorators_query["decorators_query"Fn]
+  async_functions_query["async_functions_query"Fn]
+  detect_python_features["detect_python_features"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  check_naming_conventions["check_naming_conventions"Fn]
+  is_snake_case["is_snake_case"Fn]
+  is_pascal_case["is_pascal_case"Fn]
+  is_special_method_name["is_special_method_name"Fn]
+  get_method_resolution_order["get_method_resolution_order"Fn]
+  find_class_methods["find_class_methods"Fn]
+  has_type_hints["has_type_hints"Fn]
+  extract_docstring["extract_docstring"Fn]
+  find_methods["find_methods"Fn]
+  find_async_functions["find_async_functions"Fn]
+  find_context_managers["find_context_managers"Fn]
+  find_metaclasses["find_metaclasses"Fn]
+  find_dataclasses["find_dataclasses"Fn]
+  find_typed_functions["find_typed_functions"Fn]
+  find_property_decorators["find_property_decorators"Fn]
+  find_lambda_functions["find_lambda_functions"Fn]
+  test_python_function_detection["test_python_function_detection"Fn]
+  test_python_class_detection["test_python_class_detection"Fn]
+  test_python_decorators["test_python_decorators"Fn]
+  test_python_features_detection["test_python_features_detection"Fn]
+  test_function_parameters["test_function_parameters"Fn]
+  test_class_inheritance["test_class_inheritance"Fn]
+  test_naming_conventions["test_naming_conventions"Fn]
+  test_special_methods["test_special_methods"Fn]
+  pythonsyntax --> is_function_definition
+  is_function_definition --> is_async_function_definition
+  is_async_function_definition --> is_class_definition
+  is_class_definition --> is_method_definition
+  is_method_definition --> is_lambda
+  is_lambda --> is_import_statement
+  is_import_statement --> is_decorator
+  is_decorator --> is_global_statement
+  is_global_statement --> is_nonlocal_statement
+  is_nonlocal_statement --> function_name
+  function_name --> class_name
+  class_name --> function_parameters
+  function_parameters --> class_bases
+  class_bases --> get_decorators
+  get_decorators --> is_special_method
+  is_special_method --> is_property
+  is_property --> is_static_method
+  is_static_method --> is_class_method
+  is_class_method --> get_docstring
+  get_docstring --> find_functions
+  find_functions --> find_classes
+  find_classes --> find_imports
+  find_imports --> find_global_variables
+  find_global_variables --> functions_query
+  functions_query --> classes_query
+  classes_query --> methods_query
+  methods_query --> imports_query
+  imports_query --> decorators_query
+  decorators_query --> async_functions_query
+  async_functions_query --> detect_python_features
+  detect_python_features --> analyze_complexity
+  analyze_complexity --> check_naming_conventions
+  check_naming_conventions --> is_snake_case
+  is_snake_case --> is_pascal_case
+  is_pascal_case --> is_special_method_name
+  is_special_method_name --> get_method_resolution_order
+  get_method_resolution_order --> find_class_methods
+  find_class_methods --> has_type_hints
+  has_type_hints --> extract_docstring
+  extract_docstring --> find_methods
+  find_methods --> find_async_functions
+  find_async_functions --> find_context_managers
+  find_context_managers --> find_metaclasses
+  find_metaclasses --> find_dataclasses
+  find_dataclasses --> find_typed_functions
+  find_typed_functions --> find_property_decorators
+  find_property_decorators --> find_lambda_functions
+  find_lambda_functions --> test_python_function_detection
+  test_python_function_detection --> test_python_class_detection
+  test_python_class_detection --> test_python_decorators
+  test_python_decorators --> test_python_features_detection
+  test_python_features_detection --> test_function_parameters
+  test_function_parameters --> test_class_inheritance
+  test_class_inheritance --> test_naming_conventions
+  test_naming_conventions --> test_special_methods
+  test_special_methods --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class PythonSyntax {
+    +PythonSyntax()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

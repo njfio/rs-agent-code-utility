@@ -1,0 +1,206 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/semantic_graph.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/semantic_graph.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 33</li>
+<li><strong>Structures:</strong> 9</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 131</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  create_graph_node"create_graph_node (fn)"]
+  create_graph_edge"create_graph_edge (fn)"]
+  build_from_analysis"build_from_analysis (fn)"]
+  find_by_type"find_by_type (fn)"]
+  find_by_name"find_by_name (fn)"]
+  traverse_relationships"traverse_relationships (fn)"]
+  find_similar"find_similar (fn)"]
+  get_statistics"get_statistics (fn)"]
+  add_file_nodes"add_file_nodes (fn)"]
+  symbol_to_node_type"symbol_to_node_type (fn)"]
+  build_relationships"build_relationships (fn)"]
+  build_file_relationships"build_file_relationships (fn)"]
+  calculate_node_degrees"calculate_node_degrees (fn)"]
+  calculate_similarity"calculate_similarity (fn)"]
+  string_similarity"string_similarity (fn)"]
+  rebuild_index"rebuild_index (fn)"]
+  new"new (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  create_test_analysis_result"create_test_analysis_result (fn)"]
+  test_semantic_graph_creation"test_semantic_graph_creation (fn)"]
+  test_build_graph_from_analysis"test_build_graph_from_analysis (fn)"]
+  test_find_by_type"test_find_by_type (fn)"]
+  test_find_by_name"test_find_by_name (fn)"]
+  test_symbol_to_node_type_conversion"test_symbol_to_node_type_conversion (fn)"]
+  test_string_similarity"test_string_similarity (fn)"]
+  test_get_statistics"test_get_statistics (fn)"]
+  test_query_config_default"test_query_config_default (fn)"]
+  test_node_properties_default"test_node_properties_default (fn)"]
+  create_graph_node --> add_file_nodes
+  build_from_analysis --> rebuild_index
+  find_similar --> calculate_similarity
+  find_similar --> string_similarity
+  find_similar --> test_string_similarity
+  symbol_to_node_type --> add_file_nodes
+  build_relationships --> rebuild_index
+  build_file_relationships --> rebuild_index
+  calculate_node_degrees --> add_file_nodes
+  test_build_graph_from_analysis --> rebuild_index
+  test_symbol_to_node_type_conversion --> add_file_nodes
+  test_node_properties_default --> add_file_nodes
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  semanticgraphquery["SemanticGraphQuery"]
+  Start --> semanticgraphquery
+  graphnode["GraphNode"]
+  Start --> graphnode
+  graphedge["GraphEdge"]
+  Start --> graphedge
+  nodeproperties["NodeProperties"]
+  Start --> nodeproperties
+  graphindex["GraphIndex"]
+  Start --> graphindex
+  queryresult["QueryResult"]
+  Start --> queryresult
+  querymetadata["QueryMetadata"]
+  Start --> querymetadata
+  queryconfig["QueryConfig"]
+  Start --> queryconfig
+  graphstatistics["GraphStatistics"]
+  Start --> graphstatistics
+  default["default"Fn]
+  new["new"Fn]
+  create_graph_node["create_graph_node"Fn]
+  create_graph_edge["create_graph_edge"Fn]
+  build_from_analysis["build_from_analysis"Fn]
+  find_by_type["find_by_type"Fn]
+  find_by_name["find_by_name"Fn]
+  traverse_relationships["traverse_relationships"Fn]
+  find_similar["find_similar"Fn]
+  get_statistics["get_statistics"Fn]
+  add_file_nodes["add_file_nodes"Fn]
+  symbol_to_node_type["symbol_to_node_type"Fn]
+  build_relationships["build_relationships"Fn]
+  build_file_relationships["build_file_relationships"Fn]
+  calculate_node_degrees["calculate_node_degrees"Fn]
+  calculate_similarity["calculate_similarity"Fn]
+  string_similarity["string_similarity"Fn]
+  rebuild_index["rebuild_index"Fn]
+  new["new"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  create_test_analysis_result["create_test_analysis_result"Fn]
+  test_semantic_graph_creation["test_semantic_graph_creation"Fn]
+  test_build_graph_from_analysis["test_build_graph_from_analysis"Fn]
+  test_find_by_type["test_find_by_type"Fn]
+  test_find_by_name["test_find_by_name"Fn]
+  test_symbol_to_node_type_conversion["test_symbol_to_node_type_conversion"Fn]
+  test_string_similarity["test_string_similarity"Fn]
+  test_get_statistics["test_get_statistics"Fn]
+  test_query_config_default["test_query_config_default"Fn]
+  test_node_properties_default["test_node_properties_default"Fn]
+  semanticgraphquery --> default
+  default --> new
+  new --> create_graph_node
+  create_graph_node --> create_graph_edge
+  create_graph_edge --> build_from_analysis
+  build_from_analysis --> find_by_type
+  find_by_type --> find_by_name
+  find_by_name --> traverse_relationships
+  traverse_relationships --> find_similar
+  find_similar --> get_statistics
+  get_statistics --> add_file_nodes
+  add_file_nodes --> symbol_to_node_type
+  symbol_to_node_type --> build_relationships
+  build_relationships --> build_file_relationships
+  build_file_relationships --> calculate_node_degrees
+  calculate_node_degrees --> calculate_similarity
+  calculate_similarity --> string_similarity
+  string_similarity --> rebuild_index
+  rebuild_index --> new
+  new --> default
+  default --> default
+  default --> fmt
+  fmt --> fmt
+  fmt --> create_test_analysis_result
+  create_test_analysis_result --> test_semantic_graph_creation
+  test_semantic_graph_creation --> test_build_graph_from_analysis
+  test_build_graph_from_analysis --> test_find_by_type
+  test_find_by_type --> test_find_by_name
+  test_find_by_name --> test_symbol_to_node_type_conversion
+  test_symbol_to_node_type_conversion --> test_string_similarity
+  test_string_similarity --> test_get_statistics
+  test_get_statistics --> test_query_config_default
+  test_query_config_default --> test_node_properties_default
+  test_node_properties_default --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class SemanticGraphQuery {
+    +SemanticGraphQuery()
+  }
+  class GraphNode {
+    +GraphNode()
+  }
+  class GraphEdge {
+    +GraphEdge()
+  }
+  class NodeProperties {
+    +NodeProperties()
+  }
+  class GraphIndex {
+    +GraphIndex()
+  }
+  class QueryResult {
+    +QueryResult()
+  }
+  class QueryMetadata {
+    +QueryMetadata()
+  }
+  class QueryConfig {
+    +QueryConfig()
+  }
+  class GraphStatistics {
+    +GraphStatistics()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

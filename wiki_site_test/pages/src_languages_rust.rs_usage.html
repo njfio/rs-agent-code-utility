@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/rust.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/rust.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 27</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 90</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+is_function"is_function (fn)"]
+  is_struct"is_struct (fn)"]
+  is_enum"is_enum (fn)"]
+  is_impl"is_impl (fn)"]
+  is_trait"is_trait (fn)"]
+  is_module"is_module (fn)"]
+  is_use_statement"is_use_statement (fn)"]
+  function_name"function_name (fn)"]
+  struct_name"struct_name (fn)"]
+  enum_name"enum_name (fn)"]
+  trait_name"trait_name (fn)"]
+  module_name"module_name (fn)"]
+  find_functions"find_functions (fn)"]
+  find_structs"find_structs (fn)"]
+  public_functions_query"public_functions_query (fn)"]
+  structs_query"structs_query (fn)"]
+  impl_blocks_query"impl_blocks_query (fn)"]
+  is_public_function"is_public_function (fn)"]
+  is_public_struct"is_public_struct (fn)"]
+  extract_doc_comment"extract_doc_comment (fn)"]
+  find_traits"find_traits (fn)"]
+  find_impl_blocks"find_impl_blocks (fn)"]
+  find_macros"find_macros (fn)"]
+  find_lifetimes"find_lifetimes (fn)"]
+  find_associated_types"find_associated_types (fn)"]
+  find_const_generics"find_const_generics (fn)"]
+  test_rust_syntax_detection"test_rust_syntax_detection (fn)"]
+  is_function --> find_functions
+  is_function --> public_functions_query
+  is_struct --> find_structs
+  is_struct --> structs_query
+  is_trait --> find_traits
+  function_name --> find_functions
+  function_name --> public_functions_query
+  struct_name --> find_structs
+  struct_name --> structs_query
+  trait_name --> find_traits
+  is_public_function --> find_functions
+  is_public_function --> public_functions_query
+  is_public_struct --> find_structs
+  is_public_struct --> structs_query
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  rustsyntax["RustSyntax"]
+  Start --> rustsyntax
+  is_function["is_function"Fn]
+  is_struct["is_struct"Fn]
+  is_enum["is_enum"Fn]
+  is_impl["is_impl"Fn]
+  is_trait["is_trait"Fn]
+  is_module["is_module"Fn]
+  is_use_statement["is_use_statement"Fn]
+  function_name["function_name"Fn]
+  struct_name["struct_name"Fn]
+  enum_name["enum_name"Fn]
+  trait_name["trait_name"Fn]
+  module_name["module_name"Fn]
+  find_functions["find_functions"Fn]
+  find_structs["find_structs"Fn]
+  public_functions_query["public_functions_query"Fn]
+  structs_query["structs_query"Fn]
+  impl_blocks_query["impl_blocks_query"Fn]
+  is_public_function["is_public_function"Fn]
+  is_public_struct["is_public_struct"Fn]
+  extract_doc_comment["extract_doc_comment"Fn]
+  find_traits["find_traits"Fn]
+  find_impl_blocks["find_impl_blocks"Fn]
+  find_macros["find_macros"Fn]
+  find_lifetimes["find_lifetimes"Fn]
+  find_associated_types["find_associated_types"Fn]
+  find_const_generics["find_const_generics"Fn]
+  test_rust_syntax_detection["test_rust_syntax_detection"Fn]
+  rustsyntax --> is_function
+  is_function --> is_struct
+  is_struct --> is_enum
+  is_enum --> is_impl
+  is_impl --> is_trait
+  is_trait --> is_module
+  is_module --> is_use_statement
+  is_use_statement --> function_name
+  function_name --> struct_name
+  struct_name --> enum_name
+  enum_name --> trait_name
+  trait_name --> module_name
+  module_name --> find_functions
+  find_functions --> find_structs
+  find_structs --> public_functions_query
+  public_functions_query --> structs_query
+  structs_query --> impl_blocks_query
+  impl_blocks_query --> is_public_function
+  is_public_function --> is_public_struct
+  is_public_struct --> extract_doc_comment
+  extract_doc_comment --> find_traits
+  find_traits --> find_impl_blocks
+  find_impl_blocks --> find_macros
+  find_macros --> find_lifetimes
+  find_lifetimes --> find_associated_types
+  find_associated_types --> find_const_generics
+  find_const_generics --> test_rust_syntax_detection
+  test_rust_syntax_detection --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class RustSyntax {
+    +RustSyntax()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

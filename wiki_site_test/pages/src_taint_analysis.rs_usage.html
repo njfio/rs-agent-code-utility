@@ -1,0 +1,392 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/taint_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/taint_analysis.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 62</li>
+<li><strong>Structures:</strong> 9</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 172</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  initialize_language_rules"initialize_language_rules (fn)"]
+  initialize_rust_rules"initialize_rust_rules (fn)"]
+  initialize_javascript_rules"initialize_javascript_rules (fn)"]
+  initialize_python_rules"initialize_python_rules (fn)"]
+  initialize_c_rules"initialize_c_rules (fn)"]
+  initialize_go_rules"initialize_go_rules (fn)"]
+  initialize_generic_rules"initialize_generic_rules (fn)"]
+  analyze"analyze (fn)"]
+  build_program_structure"build_program_structure (fn)"]
+  traverse_for_structure"traverse_for_structure (fn)"]
+  extract_function_definition"extract_function_definition (fn)"]
+  extract_function_parameters"extract_function_parameters (fn)"]
+  extract_parameter_names"extract_parameter_names (fn)"]
+  is_assignment"is_assignment (fn)"]
+  extract_assignment"extract_assignment (fn)"]
+  extract_assignment_parts"extract_assignment_parts (fn)"]
+  extract_assignment_source"extract_assignment_source (fn)"]
+  find_taint_sources"find_taint_sources (fn)"]
+  find_taint_sinks"find_taint_sinks (fn)"]
+  traverse_for_sources"traverse_for_sources (fn)"]
+  traverse_for_sinks"traverse_for_sinks (fn)"]
+  identify_taint_source"identify_taint_source (fn)"]
+  identify_taint_sink"identify_taint_sink (fn)"]
+  is_function_call"is_function_call (fn)"]
+  is_identifier"is_identifier (fn)"]
+  is_function_definition"is_function_definition (fn)"]
+  extract_function_call_name"extract_function_call_name (fn)"]
+  extract_function_name"extract_function_name (fn)"]
+  is_likely_user_input_variable"is_likely_user_input_variable (fn)"]
+  trace_enhanced_taint_flows"trace_enhanced_taint_flows (fn)"]
+  find_data_flow_path"find_data_flow_path (fn)"]
+  build_taint_path"build_taint_path (fn)"]
+  trace_inter_procedural_flow"trace_inter_procedural_flow (fn)"]
+  can_reach_function"can_reach_function (fn)"]
+  trace_taint_flows"trace_taint_flows (fn)"]
+  has_potential_flow"has_potential_flow (fn)"]
+  assignment_propagates_to_tainted"assignment_propagates_to_tainted (fn)"]
+  assignment_propagates_taint"assignment_propagates_taint (fn)"]
+  is_sanitizer_assignment"is_sanitizer_assignment (fn)"]
+  get_sanitizer_method"get_sanitizer_method (fn)"]
+  is_sanitizer_function"is_sanitizer_function (fn)"]
+  calculate_path_confidence"calculate_path_confidence (fn)"]
+  check_path_sanitization"check_path_sanitization (fn)"]
+  is_parameter_list"is_parameter_list (fn)"]
+  is_assignment_operator"is_assignment_operator (fn)"]
+  is_string_literal"is_string_literal (fn)"]
+  is_number_literal"is_number_literal (fn)"]
+  is_concatenation"is_concatenation (fn)"]
+  extract_function_arguments"extract_function_arguments (fn)"]
+  is_argument_list"is_argument_list (fn)"]
+  extract_argument_names"extract_argument_names (fn)"]
+  extract_concatenation_parts"extract_concatenation_parts (fn)"]
+  extract_function_call"extract_function_call (fn)"]
+  test_taint_analyzer_creation"test_taint_analyzer_creation (fn)"]
+  test_javascript_taint_sources"test_javascript_taint_sources (fn)"]
+  test_python_taint_analysis"test_python_taint_analysis (fn)"]
+  test_assignment_source_types"test_assignment_source_types (fn)"]
+  test_function_definition_creation"test_function_definition_creation (fn)"]
+  test_taint_step_types"test_taint_step_types (fn)"]
+  test_assignment_propagation_logic"test_assignment_propagation_logic (fn)"]
+  test_sanitizer_detection"test_sanitizer_detection (fn)"]
+  initialize_c_rules --> initialize_javascript_rules
+  initialize_c_rules --> initialize_generic_rules
+  initialize_c_rules --> build_program_structure
+  initialize_c_rules --> traverse_for_structure
+  initialize_c_rules --> extract_function_definition
+  initialize_c_rules --> extract_function_parameters
+  initialize_c_rules --> extract_parameter_names
+  initialize_c_rules --> extract_assignment
+  initialize_c_rules --> extract_assignment_parts
+  initialize_c_rules --> extract_assignment_source
+  initialize_c_rules --> find_taint_sources
+  initialize_c_rules --> traverse_for_sources
+  initialize_c_rules --> identify_taint_source
+  initialize_c_rules --> is_function_call
+  initialize_c_rules --> is_function_definition
+  initialize_c_rules --> extract_function_call_name
+  initialize_c_rules --> extract_function_name
+  initialize_c_rules --> trace_enhanced_taint_flows
+  initialize_c_rules --> trace_inter_procedural_flow
+  initialize_c_rules --> can_reach_function
+  initialize_c_rules --> trace_taint_flows
+  initialize_c_rules --> is_sanitizer_function
+  initialize_c_rules --> calculate_path_confidence
+  initialize_c_rules --> check_path_sanitization
+  initialize_c_rules --> is_concatenation
+  initialize_c_rules --> extract_function_arguments
+  initialize_c_rules --> extract_argument_names
+  initialize_c_rules --> extract_concatenation_parts
+  initialize_c_rules --> extract_function_call
+  initialize_c_rules --> test_taint_analyzer_creation
+  initialize_c_rules --> test_javascript_taint_sources
+  initialize_c_rules --> test_assignment_source_types
+  initialize_c_rules --> test_function_definition_creation
+  initialize_c_rules --> test_assignment_propagation_logic
+  initialize_c_rules --> test_sanitizer_detection
+  analyze --> test_taint_analyzer_creation
+  extract_parameter_names --> extract_function_parameters
+  is_assignment --> is_parameter_list
+  is_assignment --> is_argument_list
+  is_assignment --> test_python_taint_analysis
+  extract_assignment_source --> find_taint_sources
+  extract_assignment_source --> traverse_for_sources
+  extract_assignment_source --> test_javascript_taint_sources
+  find_taint_sources --> assignment_propagates_to_tainted
+  find_taint_sinks --> assignment_propagates_to_tainted
+  identify_taint_source --> find_taint_sources
+  identify_taint_source --> traverse_for_sources
+  identify_taint_source --> assignment_propagates_to_tainted
+  identify_taint_source --> test_javascript_taint_sources
+  identify_taint_sink --> find_taint_sinks
+  identify_taint_sink --> traverse_for_sinks
+  identify_taint_sink --> assignment_propagates_to_tainted
+  is_function_call --> is_parameter_list
+  is_function_call --> is_argument_list
+  is_function_call --> test_python_taint_analysis
+  is_identifier --> is_parameter_list
+  is_identifier --> is_argument_list
+  is_identifier --> test_python_taint_analysis
+  is_function_definition --> is_parameter_list
+  is_function_definition --> is_argument_list
+  is_function_definition --> test_python_taint_analysis
+  extract_function_call_name --> extract_parameter_names
+  extract_function_call_name --> extract_argument_names
+  extract_function_name --> extract_parameter_names
+  extract_function_name --> extract_argument_names
+  is_likely_user_input_variable --> is_parameter_list
+  is_likely_user_input_variable --> is_argument_list
+  is_likely_user_input_variable --> test_python_taint_analysis
+  trace_enhanced_taint_flows --> assignment_propagates_to_tainted
+  find_data_flow_path --> trace_enhanced_taint_flows
+  find_data_flow_path --> trace_taint_flows
+  build_taint_path --> assignment_propagates_to_tainted
+  trace_inter_procedural_flow --> trace_enhanced_taint_flows
+  trace_inter_procedural_flow --> trace_taint_flows
+  trace_taint_flows --> assignment_propagates_to_tainted
+  has_potential_flow --> trace_enhanced_taint_flows
+  has_potential_flow --> trace_taint_flows
+  assignment_propagates_to_tainted --> is_assignment_operator
+  assignment_propagates_taint --> assignment_propagates_to_tainted
+  is_sanitizer_assignment --> is_parameter_list
+  is_sanitizer_assignment --> is_argument_list
+  is_sanitizer_assignment --> test_python_taint_analysis
+  is_sanitizer_function --> is_parameter_list
+  is_sanitizer_function --> is_argument_list
+  is_sanitizer_function --> test_python_taint_analysis
+  is_parameter_list --> extract_function_parameters
+  is_parameter_list --> is_argument_list
+  is_parameter_list --> test_python_taint_analysis
+  is_assignment_operator --> is_parameter_list
+  is_assignment_operator --> is_argument_list
+  is_assignment_operator --> test_python_taint_analysis
+  is_string_literal --> is_parameter_list
+  is_string_literal --> is_argument_list
+  is_string_literal --> test_python_taint_analysis
+  is_number_literal --> is_parameter_list
+  is_number_literal --> is_argument_list
+  is_number_literal --> test_python_taint_analysis
+  is_concatenation --> is_parameter_list
+  is_concatenation --> is_argument_list
+  is_concatenation --> test_python_taint_analysis
+  is_argument_list --> is_parameter_list
+  is_argument_list --> extract_function_arguments
+  is_argument_list --> test_python_taint_analysis
+  extract_argument_names --> extract_function_arguments
+  test_taint_analyzer_creation --> assignment_propagates_to_tainted
+  test_javascript_taint_sources --> assignment_propagates_to_tainted
+  test_python_taint_analysis --> assignment_propagates_to_tainted
+  test_assignment_source_types --> find_taint_sources
+  test_assignment_source_types --> traverse_for_sources
+  test_assignment_source_types --> test_javascript_taint_sources
+  test_taint_step_types --> assignment_propagates_to_tainted
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  taintsource["TaintSource"]
+  Start --> taintsource
+  taintsink["TaintSink"]
+  Start --> taintsink
+  taintlocation["TaintLocation"]
+  Start --> taintlocation
+  taintflow["TaintFlow"]
+  Start --> taintflow
+  taintstep["TaintStep"]
+  Start --> taintstep
+  taintanalyzer["TaintAnalyzer"]
+  Start --> taintanalyzer
+  variableassignment["VariableAssignment"]
+  Start --> variableassignment
+  functiondefinition["FunctionDefinition"]
+  Start --> functiondefinition
+  functioncall["FunctionCall"]
+  Start --> functioncall
+  new["new"Fn]
+  initialize_language_rules["initialize_language_rules"Fn]
+  initialize_rust_rules["initialize_rust_rules"Fn]
+  initialize_javascript_rules["initialize_javascript_rules"Fn]
+  initialize_python_rules["initialize_python_rules"Fn]
+  initialize_c_rules["initialize_c_rules"Fn]
+  initialize_go_rules["initialize_go_rules"Fn]
+  initialize_generic_rules["initialize_generic_rules"Fn]
+  analyze["analyze"Fn]
+  build_program_structure["build_program_structure"Fn]
+  traverse_for_structure["traverse_for_structure"Fn]
+  extract_function_definition["extract_function_definition"Fn]
+  extract_function_parameters["extract_function_parameters"Fn]
+  extract_parameter_names["extract_parameter_names"Fn]
+  is_assignment["is_assignment"Fn]
+  extract_assignment["extract_assignment"Fn]
+  extract_assignment_parts["extract_assignment_parts"Fn]
+  extract_assignment_source["extract_assignment_source"Fn]
+  find_taint_sources["find_taint_sources"Fn]
+  find_taint_sinks["find_taint_sinks"Fn]
+  traverse_for_sources["traverse_for_sources"Fn]
+  traverse_for_sinks["traverse_for_sinks"Fn]
+  identify_taint_source["identify_taint_source"Fn]
+  identify_taint_sink["identify_taint_sink"Fn]
+  is_function_call["is_function_call"Fn]
+  is_identifier["is_identifier"Fn]
+  is_function_definition["is_function_definition"Fn]
+  extract_function_call_name["extract_function_call_name"Fn]
+  extract_function_name["extract_function_name"Fn]
+  is_likely_user_input_variable["is_likely_user_input_variable"Fn]
+  trace_enhanced_taint_flows["trace_enhanced_taint_flows"Fn]
+  find_data_flow_path["find_data_flow_path"Fn]
+  build_taint_path["build_taint_path"Fn]
+  trace_inter_procedural_flow["trace_inter_procedural_flow"Fn]
+  can_reach_function["can_reach_function"Fn]
+  trace_taint_flows["trace_taint_flows"Fn]
+  has_potential_flow["has_potential_flow"Fn]
+  assignment_propagates_to_tainted["assignment_propagates_to_tainted"Fn]
+  assignment_propagates_taint["assignment_propagates_taint"Fn]
+  is_sanitizer_assignment["is_sanitizer_assignment"Fn]
+  get_sanitizer_method["get_sanitizer_method"Fn]
+  is_sanitizer_function["is_sanitizer_function"Fn]
+  calculate_path_confidence["calculate_path_confidence"Fn]
+  check_path_sanitization["check_path_sanitization"Fn]
+  is_parameter_list["is_parameter_list"Fn]
+  is_assignment_operator["is_assignment_operator"Fn]
+  is_string_literal["is_string_literal"Fn]
+  is_number_literal["is_number_literal"Fn]
+  is_concatenation["is_concatenation"Fn]
+  extract_function_arguments["extract_function_arguments"Fn]
+  is_argument_list["is_argument_list"Fn]
+  extract_argument_names["extract_argument_names"Fn]
+  extract_concatenation_parts["extract_concatenation_parts"Fn]
+  extract_function_call["extract_function_call"Fn]
+  test_taint_analyzer_creation["test_taint_analyzer_creation"Fn]
+  test_javascript_taint_sources["test_javascript_taint_sources"Fn]
+  test_python_taint_analysis["test_python_taint_analysis"Fn]
+  test_assignment_source_types["test_assignment_source_types"Fn]
+  test_function_definition_creation["test_function_definition_creation"Fn]
+  test_taint_step_types["test_taint_step_types"Fn]
+  test_assignment_propagation_logic["test_assignment_propagation_logic"Fn]
+  test_sanitizer_detection["test_sanitizer_detection"Fn]
+  taintsource --> new
+  new --> initialize_language_rules
+  initialize_language_rules --> initialize_rust_rules
+  initialize_rust_rules --> initialize_javascript_rules
+  initialize_javascript_rules --> initialize_python_rules
+  initialize_python_rules --> initialize_c_rules
+  initialize_c_rules --> initialize_go_rules
+  initialize_go_rules --> initialize_generic_rules
+  initialize_generic_rules --> analyze
+  analyze --> build_program_structure
+  build_program_structure --> traverse_for_structure
+  traverse_for_structure --> extract_function_definition
+  extract_function_definition --> extract_function_parameters
+  extract_function_parameters --> extract_parameter_names
+  extract_parameter_names --> is_assignment
+  is_assignment --> extract_assignment
+  extract_assignment --> extract_assignment_parts
+  extract_assignment_parts --> extract_assignment_source
+  extract_assignment_source --> find_taint_sources
+  find_taint_sources --> find_taint_sinks
+  find_taint_sinks --> traverse_for_sources
+  traverse_for_sources --> traverse_for_sinks
+  traverse_for_sinks --> identify_taint_source
+  identify_taint_source --> identify_taint_sink
+  identify_taint_sink --> is_function_call
+  is_function_call --> is_identifier
+  is_identifier --> is_function_definition
+  is_function_definition --> extract_function_call_name
+  extract_function_call_name --> extract_function_name
+  extract_function_name --> is_likely_user_input_variable
+  is_likely_user_input_variable --> trace_enhanced_taint_flows
+  trace_enhanced_taint_flows --> find_data_flow_path
+  find_data_flow_path --> build_taint_path
+  build_taint_path --> trace_inter_procedural_flow
+  trace_inter_procedural_flow --> can_reach_function
+  can_reach_function --> trace_taint_flows
+  trace_taint_flows --> has_potential_flow
+  has_potential_flow --> assignment_propagates_to_tainted
+  assignment_propagates_to_tainted --> assignment_propagates_taint
+  assignment_propagates_taint --> is_sanitizer_assignment
+  is_sanitizer_assignment --> get_sanitizer_method
+  get_sanitizer_method --> is_sanitizer_function
+  is_sanitizer_function --> calculate_path_confidence
+  calculate_path_confidence --> check_path_sanitization
+  check_path_sanitization --> is_parameter_list
+  is_parameter_list --> is_assignment_operator
+  is_assignment_operator --> is_string_literal
+  is_string_literal --> is_number_literal
+  is_number_literal --> is_concatenation
+  is_concatenation --> extract_function_arguments
+  extract_function_arguments --> is_argument_list
+  is_argument_list --> extract_argument_names
+  extract_argument_names --> extract_concatenation_parts
+  extract_concatenation_parts --> extract_function_call
+  extract_function_call --> test_taint_analyzer_creation
+  test_taint_analyzer_creation --> test_javascript_taint_sources
+  test_javascript_taint_sources --> test_python_taint_analysis
+  test_python_taint_analysis --> test_assignment_source_types
+  test_assignment_source_types --> test_function_definition_creation
+  test_function_definition_creation --> test_taint_step_types
+  test_taint_step_types --> test_assignment_propagation_logic
+  test_assignment_propagation_logic --> test_sanitizer_detection
+  test_sanitizer_detection --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class TaintSource {
+    +TaintSource()
+  }
+  class TaintSink {
+    +TaintSink()
+  }
+  class TaintLocation {
+    +TaintLocation()
+  }
+  class TaintFlow {
+    +TaintFlow()
+  }
+  class TaintStep {
+    +TaintStep()
+  }
+  class TaintAnalyzer {
+    +TaintAnalyzer()
+  }
+  class VariableAssignment {
+    +VariableAssignment()
+  }
+  class FunctionDefinition {
+    +FunctionDefinition()
+  }
+  class FunctionCall {
+    +FunctionCall()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

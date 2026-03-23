@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/error_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/error_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 16</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 38</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+test_language_error"test_language_error (fn)"]
+  test_language_error_with_cause"test_language_error_with_cause (fn)"]
+  test_parse_error"test_parse_error (fn)"]
+  test_parse_error_with_location"test_parse_error_with_location (fn)"]
+  test_query_error"test_query_error (fn)"]
+  test_query_error_with_position"test_query_error_with_position (fn)"]
+  test_tree_error"test_tree_error (fn)"]
+  test_tree_error_with_context"test_tree_error_with_context (fn)"]
+  test_invalid_input_error"test_invalid_input_error (fn)"]
+  test_invalid_input_with_suggestion"test_invalid_input_with_suggestion (fn)"]
+  test_not_supported_error"test_not_supported_error (fn)"]
+  test_not_supported_with_alternative"test_not_supported_with_alternative (fn)"]
+  test_internal_error"test_internal_error (fn)"]
+  test_internal_error_with_context"test_internal_error_with_context (fn)"]
+  test_io_error_conversion"test_io_error_conversion (fn)"]
+  test_utf8_error_conversion"test_utf8_error_conversion (fn)"]
+  test_io_error_conversion --> test_parse_error_with_location
+  test_io_error_conversion --> test_query_error_with_position
+  test_io_error_conversion --> test_invalid_input_with_suggestion
+  test_io_error_conversion --> test_utf8_error_conversion
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  test_language_error["test_language_error"Fn]
+  test_language_error_with_cause["test_language_error_with_cause"Fn]
+  test_parse_error["test_parse_error"Fn]
+  test_parse_error_with_location["test_parse_error_with_location"Fn]
+  test_query_error["test_query_error"Fn]
+  test_query_error_with_position["test_query_error_with_position"Fn]
+  test_tree_error["test_tree_error"Fn]
+  test_tree_error_with_context["test_tree_error_with_context"Fn]
+  test_invalid_input_error["test_invalid_input_error"Fn]
+  test_invalid_input_with_suggestion["test_invalid_input_with_suggestion"Fn]
+  test_not_supported_error["test_not_supported_error"Fn]
+  test_not_supported_with_alternative["test_not_supported_with_alternative"Fn]
+  test_internal_error["test_internal_error"Fn]
+  test_internal_error_with_context["test_internal_error_with_context"Fn]
+  test_io_error_conversion["test_io_error_conversion"Fn]
+  test_utf8_error_conversion["test_utf8_error_conversion"Fn]
+  Start --> test_language_error
+  test_language_error --> test_language_error_with_cause
+  test_language_error_with_cause --> test_parse_error
+  test_parse_error --> test_parse_error_with_location
+  test_parse_error_with_location --> test_query_error
+  test_query_error --> test_query_error_with_position
+  test_query_error_with_position --> test_tree_error
+  test_tree_error --> test_tree_error_with_context
+  test_tree_error_with_context --> test_invalid_input_error
+  test_invalid_input_error --> test_invalid_input_with_suggestion
+  test_invalid_input_with_suggestion --> test_not_supported_error
+  test_not_supported_error --> test_not_supported_with_alternative
+  test_not_supported_with_alternative --> test_internal_error
+  test_internal_error --> test_internal_error_with_context
+  test_internal_error_with_context --> test_io_error_conversion
+  test_io_error_conversion --> test_utf8_error_conversion
+  test_utf8_error_conversion --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

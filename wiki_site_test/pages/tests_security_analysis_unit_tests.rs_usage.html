@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/security_analysis_unit_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/security_analysis_unit_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 12</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 68</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+create_analysis_result_with_fs"create_analysis_result_with_fs (fn)"]
+  test_security_scanner_creation"test_security_scanner_creation (fn)"]
+  test_sql_injection_detection"test_sql_injection_detection (fn)"]
+  test_command_injection_detection"test_command_injection_detection (fn)"]
+  test_hardcoded_secrets_detection"test_hardcoded_secrets_detection (fn)"]
+  test_path_traversal_detection"test_path_traversal_detection (fn)"]
+  test_xss_detection"test_xss_detection (fn)"]
+  test_insecure_random_detection"test_insecure_random_detection (fn)"]
+  test_safe_code_no_vulnerabilities"test_safe_code_no_vulnerabilities (fn)"]
+  test_multiple_files_analysis"test_multiple_files_analysis (fn)"]
+  test_security_score_calculation"test_security_score_calculation (fn)"]
+  test_vulnerability_severity_classification"test_vulnerability_severity_classification (fn)"]
+  test_safe_code_no_vulnerabilities --> test_hardcoded_secrets_detection
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  create_analysis_result_with_fs["create_analysis_result_with_fs"Fn]
+  test_security_scanner_creation["test_security_scanner_creation"Fn]
+  test_sql_injection_detection["test_sql_injection_detection"Fn]
+  test_command_injection_detection["test_command_injection_detection"Fn]
+  test_hardcoded_secrets_detection["test_hardcoded_secrets_detection"Fn]
+  test_path_traversal_detection["test_path_traversal_detection"Fn]
+  test_xss_detection["test_xss_detection"Fn]
+  test_insecure_random_detection["test_insecure_random_detection"Fn]
+  test_safe_code_no_vulnerabilities["test_safe_code_no_vulnerabilities"Fn]
+  test_multiple_files_analysis["test_multiple_files_analysis"Fn]
+  test_security_score_calculation["test_security_score_calculation"Fn]
+  test_vulnerability_severity_classification["test_vulnerability_severity_classification"Fn]
+  Start --> create_analysis_result_with_fs
+  create_analysis_result_with_fs --> test_security_scanner_creation
+  test_security_scanner_creation --> test_sql_injection_detection
+  test_sql_injection_detection --> test_command_injection_detection
+  test_command_injection_detection --> test_hardcoded_secrets_detection
+  test_hardcoded_secrets_detection --> test_path_traversal_detection
+  test_path_traversal_detection --> test_xss_detection
+  test_xss_detection --> test_insecure_random_detection
+  test_insecure_random_detection --> test_safe_code_no_vulnerabilities
+  test_safe_code_no_vulnerabilities --> test_multiple_files_analysis
+  test_multiple_files_analysis --> test_security_score_calculation
+  test_security_score_calculation --> test_vulnerability_severity_classification
+  test_vulnerability_severity_classification --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

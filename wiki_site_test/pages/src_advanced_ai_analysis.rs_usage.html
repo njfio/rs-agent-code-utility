@@ -1,0 +1,298 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/advanced_ai_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/advanced_ai_analysis.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 37</li>
+<li><strong>Structures:</strong> 26</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 194</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze"analyze (fn)"]
+  perform_semantic_analysis"perform_semantic_analysis (fn)"]
+  identify_semantic_concepts"identify_semantic_concepts (fn)"]
+  analyze_code_abstractions"analyze_code_abstractions (fn)"]
+  calculate_abstraction_level"calculate_abstraction_level (fn)"]
+  create_semantic_clusters"create_semantic_clusters (fn)"]
+  generate_domain_insights"generate_domain_insights (fn)"]
+  calculate_semantic_complexity"calculate_semantic_complexity (fn)"]
+  detect_architecture_patterns"detect_architecture_patterns (fn)"]
+  detect_mvc_pattern"detect_mvc_pattern (fn)"]
+  detect_repository_pattern"detect_repository_pattern (fn)"]
+  detect_factory_pattern"detect_factory_pattern (fn)"]
+  assess_code_quality"assess_code_quality (fn)"]
+  calculate_maintainability_metrics"calculate_maintainability_metrics (fn)"]
+  assess_readability"assess_readability (fn)"]
+  evaluate_design_quality"evaluate_design_quality (fn)"]
+  analyze_technical_debt"analyze_technical_debt (fn)"]
+  detect_code_smells"detect_code_smells (fn)"]
+  calculate_overall_quality_score"calculate_overall_quality_score (fn)"]
+  generate_learning_paths"generate_learning_paths (fn)"]
+  analyze_relationships"analyze_relationships (fn)"]
+  generate_documentation_insights"generate_documentation_insights (fn)"]
+  infer_module_purpose"infer_module_purpose (fn)"]
+  infer_function_purpose"infer_function_purpose (fn)"]
+  generate_ai_recommendations"generate_ai_recommendations (fn)"]
+  calculate_intelligence_score"calculate_intelligence_score (fn)"]
+  calculate_real_average_complexity"calculate_real_average_complexity (fn)"]
+  calculate_real_average_function_length"calculate_real_average_function_length (fn)"]
+  calculate_file_complexity_ast"calculate_file_complexity_ast (fn)"]
+  calculate_cyclomatic_complexity_ast"calculate_cyclomatic_complexity_ast (fn)"]
+  calculate_smell_debt_weight"calculate_smell_debt_weight (fn)"]
+  calculate_debt_effort_impact"calculate_debt_effort_impact (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  calculate_abstraction_level --> analyze_code_abstractions
+  detect_mvc_pattern --> detect_architecture_patterns
+  detect_repository_pattern --> detect_architecture_patterns
+  detect_factory_pattern --> detect_architecture_patterns
+  generate_ai_recommendations --> generate_domain_insights
+  generate_ai_recommendations --> calculate_maintainability_metrics
+  calculate_smell_debt_weight --> detect_code_smells
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  advancedaianalyzer["AdvancedAIAnalyzer"]
+  Start --> advancedaianalyzer
+  advancedaiconfig["AdvancedAIConfig"]
+  Start --> advancedaiconfig
+  advancedairesult["AdvancedAIResult"]
+  Start --> advancedairesult
+  semanticanalysis["SemanticAnalysis"]
+  Start --> semanticanalysis
+  semanticconcept["SemanticConcept"]
+  Start --> semanticconcept
+  codeabstraction["CodeAbstraction"]
+  Start --> codeabstraction
+  abstractionquality["AbstractionQuality"]
+  Start --> abstractionquality
+  semanticcluster["SemanticCluster"]
+  Start --> semanticcluster
+  domaininsight["DomainInsight"]
+  Start --> domaininsight
+  architecturepattern["ArchitecturePattern"]
+  Start --> architecturepattern
+  patterncomponent["PatternComponent"]
+  Start --> patterncomponent
+  patternquality["PatternQuality"]
+  Start --> patternquality
+  qualityassessment["QualityAssessment"]
+  Start --> qualityassessment
+  maintainabilitymetrics["MaintainabilityMetrics"]
+  Start --> maintainabilitymetrics
+  readabilityassessment["ReadabilityAssessment"]
+  Start --> readabilityassessment
+  designquality["DesignQuality"]
+  Start --> designquality
+  technicaldebtanalysis["TechnicalDebtAnalysis"]
+  Start --> technicaldebtanalysis
+  debtitem["DebtItem"]
+  Start --> debtitem
+  debttrends["DebtTrends"]
+  Start --> debttrends
+  codesmell["CodeSmell"]
+  Start --> codesmell
+  learningpath["LearningPath"]
+  Start --> learningpath
+  learningstep["LearningStep"]
+  Start --> learningstep
+  learningresource["LearningResource"]
+  Start --> learningresource
+  coderelationship["CodeRelationship"]
+  Start --> coderelationship
+  documentationinsight["DocumentationInsight"]
+  Start --> documentationinsight
+  airecommendation["AIRecommendation"]
+  Start --> airecommendation
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze["analyze"Fn]
+  perform_semantic_analysis["perform_semantic_analysis"Fn]
+  identify_semantic_concepts["identify_semantic_concepts"Fn]
+  analyze_code_abstractions["analyze_code_abstractions"Fn]
+  calculate_abstraction_level["calculate_abstraction_level"Fn]
+  create_semantic_clusters["create_semantic_clusters"Fn]
+  generate_domain_insights["generate_domain_insights"Fn]
+  calculate_semantic_complexity["calculate_semantic_complexity"Fn]
+  detect_architecture_patterns["detect_architecture_patterns"Fn]
+  detect_mvc_pattern["detect_mvc_pattern"Fn]
+  detect_repository_pattern["detect_repository_pattern"Fn]
+  detect_factory_pattern["detect_factory_pattern"Fn]
+  assess_code_quality["assess_code_quality"Fn]
+  calculate_maintainability_metrics["calculate_maintainability_metrics"Fn]
+  assess_readability["assess_readability"Fn]
+  evaluate_design_quality["evaluate_design_quality"Fn]
+  analyze_technical_debt["analyze_technical_debt"Fn]
+  detect_code_smells["detect_code_smells"Fn]
+  calculate_overall_quality_score["calculate_overall_quality_score"Fn]
+  generate_learning_paths["generate_learning_paths"Fn]
+  analyze_relationships["analyze_relationships"Fn]
+  generate_documentation_insights["generate_documentation_insights"Fn]
+  infer_module_purpose["infer_module_purpose"Fn]
+  infer_function_purpose["infer_function_purpose"Fn]
+  generate_ai_recommendations["generate_ai_recommendations"Fn]
+  calculate_intelligence_score["calculate_intelligence_score"Fn]
+  calculate_real_average_complexity["calculate_real_average_complexity"Fn]
+  calculate_real_average_function_length["calculate_real_average_function_length"Fn]
+  calculate_file_complexity_ast["calculate_file_complexity_ast"Fn]
+  calculate_cyclomatic_complexity_ast["calculate_cyclomatic_complexity_ast"Fn]
+  calculate_smell_debt_weight["calculate_smell_debt_weight"Fn]
+  calculate_debt_effort_impact["calculate_debt_effort_impact"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  advancedaianalyzer --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze
+  analyze --> perform_semantic_analysis
+  perform_semantic_analysis --> identify_semantic_concepts
+  identify_semantic_concepts --> analyze_code_abstractions
+  analyze_code_abstractions --> calculate_abstraction_level
+  calculate_abstraction_level --> create_semantic_clusters
+  create_semantic_clusters --> generate_domain_insights
+  generate_domain_insights --> calculate_semantic_complexity
+  calculate_semantic_complexity --> detect_architecture_patterns
+  detect_architecture_patterns --> detect_mvc_pattern
+  detect_mvc_pattern --> detect_repository_pattern
+  detect_repository_pattern --> detect_factory_pattern
+  detect_factory_pattern --> assess_code_quality
+  assess_code_quality --> calculate_maintainability_metrics
+  calculate_maintainability_metrics --> assess_readability
+  assess_readability --> evaluate_design_quality
+  evaluate_design_quality --> analyze_technical_debt
+  analyze_technical_debt --> detect_code_smells
+  detect_code_smells --> calculate_overall_quality_score
+  calculate_overall_quality_score --> generate_learning_paths
+  generate_learning_paths --> analyze_relationships
+  analyze_relationships --> generate_documentation_insights
+  generate_documentation_insights --> infer_module_purpose
+  infer_module_purpose --> infer_function_purpose
+  infer_function_purpose --> generate_ai_recommendations
+  generate_ai_recommendations --> calculate_intelligence_score
+  calculate_intelligence_score --> calculate_real_average_complexity
+  calculate_real_average_complexity --> calculate_real_average_function_length
+  calculate_real_average_function_length --> calculate_file_complexity_ast
+  calculate_file_complexity_ast --> calculate_cyclomatic_complexity_ast
+  calculate_cyclomatic_complexity_ast --> calculate_smell_debt_weight
+  calculate_smell_debt_weight --> calculate_debt_effort_impact
+  calculate_debt_effort_impact --> default
+  default --> default
+  default --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AdvancedAIAnalyzer {
+    +AdvancedAIAnalyzer()
+  }
+  class AdvancedAIConfig {
+    +AdvancedAIConfig()
+  }
+  class AdvancedAIResult {
+    +AdvancedAIResult()
+  }
+  class SemanticAnalysis {
+    +SemanticAnalysis()
+  }
+  class SemanticConcept {
+    +SemanticConcept()
+  }
+  class CodeAbstraction {
+    +CodeAbstraction()
+  }
+  class AbstractionQuality {
+    +AbstractionQuality()
+  }
+  class SemanticCluster {
+    +SemanticCluster()
+  }
+  class DomainInsight {
+    +DomainInsight()
+  }
+  class ArchitecturePattern {
+    +ArchitecturePattern()
+  }
+  class PatternComponent {
+    +PatternComponent()
+  }
+  class PatternQuality {
+    +PatternQuality()
+  }
+  class QualityAssessment {
+    +QualityAssessment()
+  }
+  class MaintainabilityMetrics {
+    +MaintainabilityMetrics()
+  }
+  class ReadabilityAssessment {
+    +ReadabilityAssessment()
+  }
+  class DesignQuality {
+    +DesignQuality()
+  }
+  class TechnicalDebtAnalysis {
+    +TechnicalDebtAnalysis()
+  }
+  class DebtItem {
+    +DebtItem()
+  }
+  class DebtTrends {
+    +DebtTrends()
+  }
+  class CodeSmell {
+    +CodeSmell()
+  }
+  class LearningPath {
+    +LearningPath()
+  }
+  class LearningStep {
+    +LearningStep()
+  }
+  class LearningResource {
+    +LearningResource()
+  }
+  class CodeRelationship {
+    +CodeRelationship()
+  }
+  class DocumentationInsight {
+    +DocumentationInsight()
+  }
+  class AIRecommendation {
+    +AIRecommendation()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

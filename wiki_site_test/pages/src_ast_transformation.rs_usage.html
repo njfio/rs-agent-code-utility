@@ -1,0 +1,1031 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/ast_transformation.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/ast_transformation.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 92</li>
+<li><strong>Structures:</strong> 32</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 317</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  apply_transformation"apply_transformation (fn)"]
+  apply_transformations"apply_transformations (fn)"]
+  create_default_transformation_rules"create_default_transformation_rules (fn)"]
+  apply_single_transformation"apply_single_transformation (fn)"]
+  apply_replace_transformation"apply_replace_transformation (fn)"]
+  apply_insert_transformation"apply_insert_transformation (fn)"]
+  apply_delete_transformation"apply_delete_transformation (fn)"]
+  calculate_tree_hash"calculate_tree_hash (fn)"]
+  extract_method_name_from_metadata"extract_method_name_from_metadata (fn)"]
+  sanitize_method_name"sanitize_method_name (fn)"]
+  is_valid_method_name"is_valid_method_name (fn)"]
+  generate_default_method_name"generate_default_method_name (fn)"]
+  analyze_extracted_code_variables"analyze_extracted_code_variables (fn)"]
+  generate_method_signature"generate_method_signature (fn)"]
+  generate_method_call"generate_method_call (fn)"]
+  apply_rename_transformation"apply_rename_transformation (fn)"]
+  apply_extract_method_transformation"apply_extract_method_transformation (fn)"]
+  apply_inline_transformation"apply_inline_transformation (fn)"]
+  apply_move_transformation"apply_move_transformation (fn)"]
+  apply_reorder_transformation"apply_reorder_transformation (fn)"]
+  apply_wrap_transformation"apply_wrap_transformation (fn)"]
+  apply_unwrap_transformation"apply_unwrap_transformation (fn)"]
+  is_valid_identifier"is_valid_identifier (fn)"]
+  is_rust_keyword"is_rust_keyword (fn)"]
+  is_python_keyword"is_python_keyword (fn)"]
+  is_javascript_keyword"is_javascript_keyword (fn)"]
+  find_variable_occurrences"find_variable_occurrences (fn)"]
+  find_containing_scope"find_containing_scope (fn)"]
+  is_scope_defining_node"is_scope_defining_node (fn)"]
+  find_identifiers_in_scope"find_identifiers_in_scope (fn)"]
+  has_naming_conflict"has_naming_conflict (fn)"]
+  identifier_exists_in_scope"identifier_exists_in_scope (fn)"]
+  apply_rename_to_occurrences"apply_rename_to_occurrences (fn)"]
+  node_to_location"node_to_location (fn)"]
+  determine_inline_type"determine_inline_type (fn)"]
+  apply_inline_variable_transformation"apply_inline_variable_transformation (fn)"]
+  apply_inline_method_transformation"apply_inline_method_transformation (fn)"]
+  find_variable_declaration"find_variable_declaration (fn)"]
+  find_variable_declaration_node"find_variable_declaration_node (fn)"]
+  extract_variable_value"extract_variable_value (fn)"]
+  find_variable_usages"find_variable_usages (fn)"]
+  find_variable_usages_in_node"find_variable_usages_in_node (fn)"]
+  is_safe_to_inline_variable"is_safe_to_inline_variable (fn)"]
+  find_method_definition"find_method_definition (fn)"]
+  find_method_definition_node"find_method_definition_node (fn)"]
+  extract_method_body"extract_method_body (fn)"]
+  find_method_calls"find_method_calls (fn)"]
+  find_method_calls_in_node"find_method_calls_in_node (fn)"]
+  is_safe_to_inline_method"is_safe_to_inline_method (fn)"]
+  adapt_method_body_for_call"adapt_method_body_for_call (fn)"]
+  collect_variables_in_node"collect_variables_in_node (fn)"]
+  collect_local_declarations"collect_local_declarations (fn)"]
+  analyze_variable_usage"analyze_variable_usage (fn)"]
+  is_variable_declaration_node"is_variable_declaration_node (fn)"]
+  extract_declared_variable_name"extract_declared_variable_name (fn)"]
+  is_language_keyword"is_language_keyword (fn)"]
+  is_builtin_function"is_builtin_function (fn)"]
+  infer_variable_type"infer_variable_type (fn)"]
+  infer_type_from_expression"infer_type_from_expression (fn)"]
+  infer_return_type_from_function_name"infer_return_type_from_function_name (fn)"]
+  is_variable_mutable"is_variable_mutable (fn)"]
+  determine_variable_usage_context"determine_variable_usage_context (fn)"]
+  node_contains_identifier"node_contains_identifier (fn)"]
+  find_method_insertion_point"find_method_insertion_point (fn)"]
+  find_containing_class_or_impl"find_containing_class_or_impl (fn)"]
+  find_insertion_point_before_closing_brace"find_insertion_point_before_closing_brace (fn)"]
+  find_good_insertion_point_after_function"find_good_insertion_point_after_function (fn)"]
+  find_default_insertion_point"find_default_insertion_point (fn)"]
+  is_function_like_node"is_function_like_node (fn)"]
+  build_method_definition"build_method_definition (fn)"]
+  generate_method_documentation"generate_method_documentation (fn)"]
+  process_extracted_body"process_extracted_body (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  validate_transformation"validate_transformation (fn)"]
+  perform_scope_analysis"perform_scope_analysis (fn)"]
+  perform_type_analysis"perform_type_analysis (fn)"]
+  perform_control_flow_analysis"perform_control_flow_analysis (fn)"]
+  perform_data_flow_analysis"perform_data_flow_analysis (fn)"]
+  find_node_at_position"find_node_at_position (fn)"]
+  extract_variables_in_scope"extract_variables_in_scope (fn)"]
+  extract_functions_in_scope"extract_functions_in_scope (fn)"]
+  detect_scope_conflicts"detect_scope_conflicts (fn)"]
+  is_variable_declaration"is_variable_declaration (fn)"]
+  is_function_declaration"is_function_declaration (fn)"]
+  extract_variable_info"extract_variable_info (fn)"]
+  extract_function_info"extract_function_info (fn)"]
+  node_to_location"node_to_location (fn)"]
+  apply_transformation --> apply_transformations
+  create_default_transformation_rules --> apply_transformations
+  apply_single_transformation --> apply_transformations
+  apply_replace_transformation --> apply_transformations
+  apply_insert_transformation --> apply_transformations
+  apply_insert_transformation --> find_method_insertion_point
+  apply_insert_transformation --> find_insertion_point_before_closing_brace
+  apply_insert_transformation --> find_good_insertion_point_after_function
+  apply_insert_transformation --> find_default_insertion_point
+  apply_delete_transformation --> apply_transformations
+  extract_method_name_from_metadata --> analyze_extracted_code_variables
+  extract_method_name_from_metadata --> apply_rename_transformation
+  extract_method_name_from_metadata --> apply_rename_to_occurrences
+  extract_method_name_from_metadata --> process_extracted_body
+  sanitize_method_name --> apply_rename_transformation
+  sanitize_method_name --> apply_rename_to_occurrences
+  is_valid_method_name --> apply_rename_transformation
+  is_valid_method_name --> identifier_exists_in_scope
+  is_valid_method_name --> apply_rename_to_occurrences
+  is_valid_method_name --> validate_transformation
+  is_valid_method_name --> perform_scope_analysis
+  is_valid_method_name --> perform_type_analysis
+  is_valid_method_name --> perform_control_flow_analysis
+  is_valid_method_name --> perform_data_flow_analysis
+  generate_default_method_name --> apply_rename_transformation
+  generate_default_method_name --> apply_rename_to_occurrences
+  generate_method_call --> find_method_calls
+  generate_method_call --> find_method_calls_in_node
+  apply_rename_transformation --> apply_transformations
+  apply_extract_method_transformation --> apply_transformations
+  apply_extract_method_transformation --> analyze_extracted_code_variables
+  apply_extract_method_transformation --> process_extracted_body
+  apply_inline_transformation --> apply_transformations
+  apply_move_transformation --> apply_transformations
+  apply_reorder_transformation --> apply_transformations
+  apply_wrap_transformation --> apply_transformations
+  apply_wrap_transformation --> apply_unwrap_transformation
+  apply_unwrap_transformation --> apply_transformations
+  is_valid_identifier --> find_identifiers_in_scope
+  is_valid_identifier --> identifier_exists_in_scope
+  is_valid_identifier --> validate_transformation
+  is_valid_identifier --> perform_scope_analysis
+  is_valid_identifier --> perform_type_analysis
+  is_valid_identifier --> perform_control_flow_analysis
+  is_valid_identifier --> perform_data_flow_analysis
+  is_rust_keyword --> identifier_exists_in_scope
+  is_rust_keyword --> perform_scope_analysis
+  is_rust_keyword --> perform_type_analysis
+  is_rust_keyword --> perform_control_flow_analysis
+  is_rust_keyword --> perform_data_flow_analysis
+  is_python_keyword --> identifier_exists_in_scope
+  is_python_keyword --> perform_scope_analysis
+  is_python_keyword --> perform_type_analysis
+  is_python_keyword --> perform_control_flow_analysis
+  is_python_keyword --> perform_data_flow_analysis
+  is_javascript_keyword --> identifier_exists_in_scope
+  is_javascript_keyword --> perform_scope_analysis
+  is_javascript_keyword --> perform_type_analysis
+  is_javascript_keyword --> perform_control_flow_analysis
+  is_javascript_keyword --> perform_data_flow_analysis
+  find_variable_occurrences --> analyze_extracted_code_variables
+  find_variable_occurrences --> collect_variables_in_node
+  find_variable_occurrences --> extract_variables_in_scope
+  is_scope_defining_node --> identifier_exists_in_scope
+  is_scope_defining_node --> perform_scope_analysis
+  is_scope_defining_node --> perform_type_analysis
+  is_scope_defining_node --> perform_control_flow_analysis
+  is_scope_defining_node --> perform_data_flow_analysis
+  find_identifiers_in_scope --> apply_single_transformation
+  find_identifiers_in_scope --> apply_insert_transformation
+  find_identifiers_in_scope --> apply_inline_transformation
+  find_identifiers_in_scope --> find_variable_occurrences
+  find_identifiers_in_scope --> find_containing_scope
+  find_identifiers_in_scope --> is_scope_defining_node
+  find_identifiers_in_scope --> has_naming_conflict
+  find_identifiers_in_scope --> determine_inline_type
+  find_identifiers_in_scope --> apply_inline_variable_transformation
+  find_identifiers_in_scope --> apply_inline_method_transformation
+  find_identifiers_in_scope --> find_variable_declaration
+  find_identifiers_in_scope --> find_variable_declaration_node
+  find_identifiers_in_scope --> find_variable_usages
+  find_identifiers_in_scope --> find_variable_usages_in_node
+  find_identifiers_in_scope --> is_safe_to_inline_variable
+  find_identifiers_in_scope --> find_method_definition
+  find_identifiers_in_scope --> find_method_definition_node
+  find_identifiers_in_scope --> find_method_calls
+  find_identifiers_in_scope --> find_method_calls_in_node
+  find_identifiers_in_scope --> is_safe_to_inline_method
+  find_identifiers_in_scope --> is_builtin_function
+  find_identifiers_in_scope --> infer_variable_type
+  find_identifiers_in_scope --> infer_type_from_expression
+  find_identifiers_in_scope --> infer_return_type_from_function_name
+  find_identifiers_in_scope --> determine_variable_usage_context
+  find_identifiers_in_scope --> node_contains_identifier
+  find_identifiers_in_scope --> find_method_insertion_point
+  find_identifiers_in_scope --> find_containing_class_or_impl
+  find_identifiers_in_scope --> find_insertion_point_before_closing_brace
+  find_identifiers_in_scope --> find_good_insertion_point_after_function
+  find_identifiers_in_scope --> find_default_insertion_point
+  find_identifiers_in_scope --> build_method_definition
+  find_identifiers_in_scope --> find_node_at_position
+  find_identifiers_in_scope --> extract_variable_info
+  find_identifiers_in_scope --> extract_function_info
+  has_naming_conflict --> calculate_tree_hash
+  has_naming_conflict --> detect_scope_conflicts
+  identifier_exists_in_scope --> apply_single_transformation
+  identifier_exists_in_scope --> apply_insert_transformation
+  identifier_exists_in_scope --> apply_inline_transformation
+  identifier_exists_in_scope --> find_variable_occurrences
+  identifier_exists_in_scope --> find_containing_scope
+  identifier_exists_in_scope --> is_scope_defining_node
+  identifier_exists_in_scope --> find_identifiers_in_scope
+  identifier_exists_in_scope --> has_naming_conflict
+  identifier_exists_in_scope --> determine_inline_type
+  identifier_exists_in_scope --> apply_inline_variable_transformation
+  identifier_exists_in_scope --> apply_inline_method_transformation
+  identifier_exists_in_scope --> find_variable_declaration
+  identifier_exists_in_scope --> find_variable_declaration_node
+  identifier_exists_in_scope --> find_variable_usages
+  identifier_exists_in_scope --> find_variable_usages_in_node
+  identifier_exists_in_scope --> is_safe_to_inline_variable
+  identifier_exists_in_scope --> find_method_definition
+  identifier_exists_in_scope --> find_method_definition_node
+  identifier_exists_in_scope --> find_method_calls
+  identifier_exists_in_scope --> find_method_calls_in_node
+  identifier_exists_in_scope --> is_safe_to_inline_method
+  identifier_exists_in_scope --> is_builtin_function
+  identifier_exists_in_scope --> infer_variable_type
+  identifier_exists_in_scope --> infer_type_from_expression
+  identifier_exists_in_scope --> infer_return_type_from_function_name
+  identifier_exists_in_scope --> determine_variable_usage_context
+  identifier_exists_in_scope --> node_contains_identifier
+  identifier_exists_in_scope --> find_method_insertion_point
+  identifier_exists_in_scope --> find_containing_class_or_impl
+  identifier_exists_in_scope --> find_insertion_point_before_closing_brace
+  identifier_exists_in_scope --> find_good_insertion_point_after_function
+  identifier_exists_in_scope --> find_default_insertion_point
+  identifier_exists_in_scope --> build_method_definition
+  identifier_exists_in_scope --> find_node_at_position
+  identifier_exists_in_scope --> extract_variable_info
+  identifier_exists_in_scope --> extract_function_info
+  apply_inline_variable_transformation --> apply_transformations
+  apply_inline_variable_transformation --> analyze_extracted_code_variables
+  apply_inline_variable_transformation --> collect_variables_in_node
+  apply_inline_variable_transformation --> extract_variables_in_scope
+  apply_inline_method_transformation --> apply_transformations
+  find_variable_declaration --> analyze_extracted_code_variables
+  find_variable_declaration --> collect_variables_in_node
+  find_variable_declaration --> collect_local_declarations
+  find_variable_declaration --> extract_variables_in_scope
+  find_variable_declaration_node --> analyze_extracted_code_variables
+  find_variable_declaration_node --> collect_variables_in_node
+  find_variable_declaration_node --> collect_local_declarations
+  find_variable_declaration_node --> extract_variables_in_scope
+  extract_variable_value --> analyze_extracted_code_variables
+  extract_variable_value --> collect_variables_in_node
+  extract_variable_value --> process_extracted_body
+  extract_variable_value --> extract_variables_in_scope
+  find_variable_usages --> analyze_extracted_code_variables
+  find_variable_usages --> collect_variables_in_node
+  find_variable_usages --> extract_variables_in_scope
+  find_variable_usages_in_node --> apply_single_transformation
+  find_variable_usages_in_node --> apply_insert_transformation
+  find_variable_usages_in_node --> analyze_extracted_code_variables
+  find_variable_usages_in_node --> apply_inline_transformation
+  find_variable_usages_in_node --> find_variable_occurrences
+  find_variable_usages_in_node --> find_containing_scope
+  find_variable_usages_in_node --> is_scope_defining_node
+  find_variable_usages_in_node --> find_identifiers_in_scope
+  find_variable_usages_in_node --> has_naming_conflict
+  find_variable_usages_in_node --> determine_inline_type
+  find_variable_usages_in_node --> apply_inline_variable_transformation
+  find_variable_usages_in_node --> apply_inline_method_transformation
+  find_variable_usages_in_node --> find_variable_declaration
+  find_variable_usages_in_node --> find_variable_declaration_node
+  find_variable_usages_in_node --> find_variable_usages
+  find_variable_usages_in_node --> is_safe_to_inline_variable
+  find_variable_usages_in_node --> find_method_definition
+  find_variable_usages_in_node --> find_method_definition_node
+  find_variable_usages_in_node --> find_method_calls
+  find_variable_usages_in_node --> find_method_calls_in_node
+  find_variable_usages_in_node --> is_safe_to_inline_method
+  find_variable_usages_in_node --> collect_variables_in_node
+  find_variable_usages_in_node --> is_builtin_function
+  find_variable_usages_in_node --> infer_variable_type
+  find_variable_usages_in_node --> infer_type_from_expression
+  find_variable_usages_in_node --> infer_return_type_from_function_name
+  find_variable_usages_in_node --> determine_variable_usage_context
+  find_variable_usages_in_node --> node_contains_identifier
+  find_variable_usages_in_node --> find_method_insertion_point
+  find_variable_usages_in_node --> find_containing_class_or_impl
+  find_variable_usages_in_node --> find_insertion_point_before_closing_brace
+  find_variable_usages_in_node --> find_good_insertion_point_after_function
+  find_variable_usages_in_node --> find_default_insertion_point
+  find_variable_usages_in_node --> build_method_definition
+  find_variable_usages_in_node --> find_node_at_position
+  find_variable_usages_in_node --> extract_variables_in_scope
+  find_variable_usages_in_node --> extract_variable_info
+  find_variable_usages_in_node --> extract_function_info
+  is_safe_to_inline_variable --> analyze_extracted_code_variables
+  is_safe_to_inline_variable --> identifier_exists_in_scope
+  is_safe_to_inline_variable --> collect_variables_in_node
+  is_safe_to_inline_variable --> perform_scope_analysis
+  is_safe_to_inline_variable --> perform_type_analysis
+  is_safe_to_inline_variable --> perform_control_flow_analysis
+  is_safe_to_inline_variable --> perform_data_flow_analysis
+  is_safe_to_inline_variable --> extract_variables_in_scope
+  extract_method_body --> analyze_extracted_code_variables
+  extract_method_body --> process_extracted_body
+  find_method_calls_in_node --> apply_single_transformation
+  find_method_calls_in_node --> apply_insert_transformation
+  find_method_calls_in_node --> apply_inline_transformation
+  find_method_calls_in_node --> find_variable_occurrences
+  find_method_calls_in_node --> find_containing_scope
+  find_method_calls_in_node --> is_scope_defining_node
+  find_method_calls_in_node --> find_identifiers_in_scope
+  find_method_calls_in_node --> has_naming_conflict
+  find_method_calls_in_node --> determine_inline_type
+  find_method_calls_in_node --> apply_inline_variable_transformation
+  find_method_calls_in_node --> apply_inline_method_transformation
+  find_method_calls_in_node --> find_variable_declaration
+  find_method_calls_in_node --> find_variable_declaration_node
+  find_method_calls_in_node --> find_variable_usages
+  find_method_calls_in_node --> find_variable_usages_in_node
+  find_method_calls_in_node --> is_safe_to_inline_variable
+  find_method_calls_in_node --> find_method_definition
+  find_method_calls_in_node --> find_method_definition_node
+  find_method_calls_in_node --> find_method_calls
+  find_method_calls_in_node --> is_safe_to_inline_method
+  find_method_calls_in_node --> is_builtin_function
+  find_method_calls_in_node --> infer_variable_type
+  find_method_calls_in_node --> infer_type_from_expression
+  find_method_calls_in_node --> infer_return_type_from_function_name
+  find_method_calls_in_node --> determine_variable_usage_context
+  find_method_calls_in_node --> node_contains_identifier
+  find_method_calls_in_node --> find_method_insertion_point
+  find_method_calls_in_node --> find_containing_class_or_impl
+  find_method_calls_in_node --> find_insertion_point_before_closing_brace
+  find_method_calls_in_node --> find_good_insertion_point_after_function
+  find_method_calls_in_node --> find_default_insertion_point
+  find_method_calls_in_node --> build_method_definition
+  find_method_calls_in_node --> find_node_at_position
+  find_method_calls_in_node --> extract_variable_info
+  find_method_calls_in_node --> extract_function_info
+  is_safe_to_inline_method --> identifier_exists_in_scope
+  is_safe_to_inline_method --> perform_scope_analysis
+  is_safe_to_inline_method --> perform_type_analysis
+  is_safe_to_inline_method --> perform_control_flow_analysis
+  is_safe_to_inline_method --> perform_data_flow_analysis
+  adapt_method_body_for_call --> apply_transformation
+  adapt_method_body_for_call --> apply_transformations
+  adapt_method_body_for_call --> create_default_transformation_rules
+  adapt_method_body_for_call --> apply_single_transformation
+  adapt_method_body_for_call --> apply_replace_transformation
+  adapt_method_body_for_call --> apply_insert_transformation
+  adapt_method_body_for_call --> apply_delete_transformation
+  adapt_method_body_for_call --> apply_rename_transformation
+  adapt_method_body_for_call --> apply_extract_method_transformation
+  adapt_method_body_for_call --> apply_inline_transformation
+  adapt_method_body_for_call --> apply_move_transformation
+  adapt_method_body_for_call --> apply_reorder_transformation
+  adapt_method_body_for_call --> apply_wrap_transformation
+  adapt_method_body_for_call --> apply_unwrap_transformation
+  adapt_method_body_for_call --> apply_inline_variable_transformation
+  adapt_method_body_for_call --> apply_inline_method_transformation
+  adapt_method_body_for_call --> find_method_calls
+  adapt_method_body_for_call --> find_method_calls_in_node
+  adapt_method_body_for_call --> find_insertion_point_before_closing_brace
+  adapt_method_body_for_call --> validate_transformation
+  adapt_method_body_for_call --> perform_scope_analysis
+  adapt_method_body_for_call --> perform_type_analysis
+  adapt_method_body_for_call --> perform_control_flow_analysis
+  adapt_method_body_for_call --> perform_data_flow_analysis
+  collect_variables_in_node --> apply_single_transformation
+  collect_variables_in_node --> apply_insert_transformation
+  collect_variables_in_node --> apply_inline_transformation
+  collect_variables_in_node --> find_variable_occurrences
+  collect_variables_in_node --> find_containing_scope
+  collect_variables_in_node --> is_scope_defining_node
+  collect_variables_in_node --> find_identifiers_in_scope
+  collect_variables_in_node --> has_naming_conflict
+  collect_variables_in_node --> determine_inline_type
+  collect_variables_in_node --> apply_inline_variable_transformation
+  collect_variables_in_node --> apply_inline_method_transformation
+  collect_variables_in_node --> find_variable_declaration
+  collect_variables_in_node --> find_variable_declaration_node
+  collect_variables_in_node --> find_variable_usages
+  collect_variables_in_node --> find_variable_usages_in_node
+  collect_variables_in_node --> is_safe_to_inline_variable
+  collect_variables_in_node --> find_method_definition
+  collect_variables_in_node --> find_method_definition_node
+  collect_variables_in_node --> find_method_calls
+  collect_variables_in_node --> find_method_calls_in_node
+  collect_variables_in_node --> is_safe_to_inline_method
+  collect_variables_in_node --> is_builtin_function
+  collect_variables_in_node --> infer_variable_type
+  collect_variables_in_node --> infer_type_from_expression
+  collect_variables_in_node --> infer_return_type_from_function_name
+  collect_variables_in_node --> determine_variable_usage_context
+  collect_variables_in_node --> node_contains_identifier
+  collect_variables_in_node --> find_method_insertion_point
+  collect_variables_in_node --> find_containing_class_or_impl
+  collect_variables_in_node --> find_insertion_point_before_closing_brace
+  collect_variables_in_node --> find_good_insertion_point_after_function
+  collect_variables_in_node --> find_default_insertion_point
+  collect_variables_in_node --> build_method_definition
+  collect_variables_in_node --> find_node_at_position
+  collect_variables_in_node --> extract_variable_info
+  collect_variables_in_node --> extract_function_info
+  analyze_variable_usage --> analyze_extracted_code_variables
+  analyze_variable_usage --> find_variable_usages
+  analyze_variable_usage --> find_variable_usages_in_node
+  analyze_variable_usage --> collect_variables_in_node
+  analyze_variable_usage --> extract_variables_in_scope
+  is_variable_declaration_node --> analyze_extracted_code_variables
+  is_variable_declaration_node --> identifier_exists_in_scope
+  is_variable_declaration_node --> collect_variables_in_node
+  is_variable_declaration_node --> collect_local_declarations
+  is_variable_declaration_node --> perform_scope_analysis
+  is_variable_declaration_node --> perform_type_analysis
+  is_variable_declaration_node --> perform_control_flow_analysis
+  is_variable_declaration_node --> perform_data_flow_analysis
+  is_variable_declaration_node --> extract_variables_in_scope
+  extract_declared_variable_name --> analyze_extracted_code_variables
+  extract_declared_variable_name --> apply_rename_transformation
+  extract_declared_variable_name --> apply_rename_to_occurrences
+  extract_declared_variable_name --> collect_variables_in_node
+  extract_declared_variable_name --> process_extracted_body
+  extract_declared_variable_name --> extract_variables_in_scope
+  is_language_keyword --> identifier_exists_in_scope
+  is_language_keyword --> perform_scope_analysis
+  is_language_keyword --> perform_type_analysis
+  is_language_keyword --> perform_control_flow_analysis
+  is_language_keyword --> perform_data_flow_analysis
+  is_builtin_function --> identifier_exists_in_scope
+  is_builtin_function --> perform_scope_analysis
+  is_builtin_function --> perform_type_analysis
+  is_builtin_function --> perform_control_flow_analysis
+  is_builtin_function --> perform_data_flow_analysis
+  is_builtin_function --> extract_functions_in_scope
+  infer_variable_type --> analyze_extracted_code_variables
+  infer_variable_type --> collect_variables_in_node
+  infer_variable_type --> extract_variables_in_scope
+  infer_return_type_from_function_name --> apply_rename_transformation
+  infer_return_type_from_function_name --> apply_rename_to_occurrences
+  infer_return_type_from_function_name --> extract_functions_in_scope
+  is_variable_mutable --> analyze_extracted_code_variables
+  is_variable_mutable --> identifier_exists_in_scope
+  is_variable_mutable --> collect_variables_in_node
+  is_variable_mutable --> perform_scope_analysis
+  is_variable_mutable --> perform_type_analysis
+  is_variable_mutable --> perform_control_flow_analysis
+  is_variable_mutable --> perform_data_flow_analysis
+  is_variable_mutable --> extract_variables_in_scope
+  determine_variable_usage_context --> analyze_extracted_code_variables
+  determine_variable_usage_context --> find_variable_usages
+  determine_variable_usage_context --> find_variable_usages_in_node
+  determine_variable_usage_context --> collect_variables_in_node
+  determine_variable_usage_context --> extract_variables_in_scope
+  node_contains_identifier --> find_identifiers_in_scope
+  find_containing_class_or_impl --> apply_transformation
+  find_containing_class_or_impl --> apply_transformations
+  find_containing_class_or_impl --> create_default_transformation_rules
+  find_containing_class_or_impl --> apply_single_transformation
+  find_containing_class_or_impl --> apply_replace_transformation
+  find_containing_class_or_impl --> apply_insert_transformation
+  find_containing_class_or_impl --> apply_delete_transformation
+  find_containing_class_or_impl --> apply_rename_transformation
+  find_containing_class_or_impl --> apply_extract_method_transformation
+  find_containing_class_or_impl --> apply_inline_transformation
+  find_containing_class_or_impl --> apply_move_transformation
+  find_containing_class_or_impl --> apply_reorder_transformation
+  find_containing_class_or_impl --> apply_wrap_transformation
+  find_containing_class_or_impl --> apply_unwrap_transformation
+  find_containing_class_or_impl --> is_rust_keyword
+  find_containing_class_or_impl --> is_python_keyword
+  find_containing_class_or_impl --> is_javascript_keyword
+  find_containing_class_or_impl --> apply_inline_variable_transformation
+  find_containing_class_or_impl --> apply_inline_method_transformation
+  find_containing_class_or_impl --> adapt_method_body_for_call
+  find_containing_class_or_impl --> is_language_keyword
+  find_containing_class_or_impl --> find_insertion_point_before_closing_brace
+  find_containing_class_or_impl --> validate_transformation
+  find_containing_class_or_impl --> perform_scope_analysis
+  find_containing_class_or_impl --> perform_type_analysis
+  find_containing_class_or_impl --> perform_control_flow_analysis
+  find_containing_class_or_impl --> perform_data_flow_analysis
+  find_good_insertion_point_after_function --> extract_functions_in_scope
+  is_function_like_node --> identifier_exists_in_scope
+  is_function_like_node --> perform_scope_analysis
+  is_function_like_node --> perform_type_analysis
+  is_function_like_node --> perform_control_flow_analysis
+  is_function_like_node --> perform_data_flow_analysis
+  is_function_like_node --> extract_functions_in_scope
+  validate_transformation --> apply_transformations
+  perform_data_flow_analysis --> extract_method_name_from_metadata
+  find_node_at_position --> apply_transformation
+  find_node_at_position --> apply_transformations
+  find_node_at_position --> create_default_transformation_rules
+  find_node_at_position --> apply_single_transformation
+  find_node_at_position --> apply_replace_transformation
+  find_node_at_position --> apply_insert_transformation
+  find_node_at_position --> apply_delete_transformation
+  find_node_at_position --> calculate_tree_hash
+  find_node_at_position --> extract_method_name_from_metadata
+  find_node_at_position --> generate_default_method_name
+  find_node_at_position --> generate_method_signature
+  find_node_at_position --> generate_method_call
+  find_node_at_position --> apply_rename_transformation
+  find_node_at_position --> apply_extract_method_transformation
+  find_node_at_position --> apply_inline_transformation
+  find_node_at_position --> apply_move_transformation
+  find_node_at_position --> apply_reorder_transformation
+  find_node_at_position --> apply_wrap_transformation
+  find_node_at_position --> apply_unwrap_transformation
+  find_node_at_position --> node_to_location
+  find_node_at_position --> apply_inline_variable_transformation
+  find_node_at_position --> apply_inline_method_transformation
+  find_node_at_position --> find_variable_declaration
+  find_node_at_position --> find_variable_declaration_node
+  find_node_at_position --> collect_local_declarations
+  find_node_at_position --> is_variable_declaration_node
+  find_node_at_position --> generate_method_documentation
+  find_node_at_position --> validate_transformation
+  find_node_at_position --> perform_data_flow_analysis
+  find_node_at_position --> is_variable_declaration
+  find_node_at_position --> is_function_declaration
+  find_node_at_position --> node_to_location
+  extract_variables_in_scope --> apply_single_transformation
+  extract_variables_in_scope --> apply_insert_transformation
+  extract_variables_in_scope --> analyze_extracted_code_variables
+  extract_variables_in_scope --> apply_inline_transformation
+  extract_variables_in_scope --> find_variable_occurrences
+  extract_variables_in_scope --> find_containing_scope
+  extract_variables_in_scope --> is_scope_defining_node
+  extract_variables_in_scope --> find_identifiers_in_scope
+  extract_variables_in_scope --> has_naming_conflict
+  extract_variables_in_scope --> determine_inline_type
+  extract_variables_in_scope --> apply_inline_variable_transformation
+  extract_variables_in_scope --> apply_inline_method_transformation
+  extract_variables_in_scope --> find_variable_declaration
+  extract_variables_in_scope --> find_variable_declaration_node
+  extract_variables_in_scope --> find_variable_usages
+  extract_variables_in_scope --> find_variable_usages_in_node
+  extract_variables_in_scope --> is_safe_to_inline_variable
+  extract_variables_in_scope --> find_method_definition
+  extract_variables_in_scope --> find_method_definition_node
+  extract_variables_in_scope --> find_method_calls
+  extract_variables_in_scope --> find_method_calls_in_node
+  extract_variables_in_scope --> is_safe_to_inline_method
+  extract_variables_in_scope --> is_builtin_function
+  extract_variables_in_scope --> infer_variable_type
+  extract_variables_in_scope --> infer_type_from_expression
+  extract_variables_in_scope --> infer_return_type_from_function_name
+  extract_variables_in_scope --> determine_variable_usage_context
+  extract_variables_in_scope --> node_contains_identifier
+  extract_variables_in_scope --> find_method_insertion_point
+  extract_variables_in_scope --> find_containing_class_or_impl
+  extract_variables_in_scope --> find_insertion_point_before_closing_brace
+  extract_variables_in_scope --> find_good_insertion_point_after_function
+  extract_variables_in_scope --> find_default_insertion_point
+  extract_variables_in_scope --> build_method_definition
+  extract_variables_in_scope --> process_extracted_body
+  extract_variables_in_scope --> find_node_at_position
+  extract_variables_in_scope --> extract_variable_info
+  extract_variables_in_scope --> extract_function_info
+  extract_functions_in_scope --> apply_single_transformation
+  extract_functions_in_scope --> apply_insert_transformation
+  extract_functions_in_scope --> analyze_extracted_code_variables
+  extract_functions_in_scope --> apply_inline_transformation
+  extract_functions_in_scope --> find_variable_occurrences
+  extract_functions_in_scope --> find_containing_scope
+  extract_functions_in_scope --> is_scope_defining_node
+  extract_functions_in_scope --> find_identifiers_in_scope
+  extract_functions_in_scope --> has_naming_conflict
+  extract_functions_in_scope --> determine_inline_type
+  extract_functions_in_scope --> apply_inline_variable_transformation
+  extract_functions_in_scope --> apply_inline_method_transformation
+  extract_functions_in_scope --> find_variable_declaration
+  extract_functions_in_scope --> find_variable_declaration_node
+  extract_functions_in_scope --> find_variable_usages
+  extract_functions_in_scope --> find_variable_usages_in_node
+  extract_functions_in_scope --> is_safe_to_inline_variable
+  extract_functions_in_scope --> find_method_definition
+  extract_functions_in_scope --> find_method_definition_node
+  extract_functions_in_scope --> find_method_calls
+  extract_functions_in_scope --> find_method_calls_in_node
+  extract_functions_in_scope --> is_safe_to_inline_method
+  extract_functions_in_scope --> is_builtin_function
+  extract_functions_in_scope --> infer_variable_type
+  extract_functions_in_scope --> infer_type_from_expression
+  extract_functions_in_scope --> infer_return_type_from_function_name
+  extract_functions_in_scope --> determine_variable_usage_context
+  extract_functions_in_scope --> node_contains_identifier
+  extract_functions_in_scope --> find_method_insertion_point
+  extract_functions_in_scope --> find_containing_class_or_impl
+  extract_functions_in_scope --> find_insertion_point_before_closing_brace
+  extract_functions_in_scope --> find_good_insertion_point_after_function
+  extract_functions_in_scope --> find_default_insertion_point
+  extract_functions_in_scope --> build_method_definition
+  extract_functions_in_scope --> process_extracted_body
+  extract_functions_in_scope --> find_node_at_position
+  extract_functions_in_scope --> extract_variable_info
+  extract_functions_in_scope --> extract_function_info
+  is_variable_declaration --> analyze_extracted_code_variables
+  is_variable_declaration --> identifier_exists_in_scope
+  is_variable_declaration --> collect_variables_in_node
+  is_variable_declaration --> collect_local_declarations
+  is_variable_declaration --> perform_scope_analysis
+  is_variable_declaration --> perform_type_analysis
+  is_variable_declaration --> perform_control_flow_analysis
+  is_variable_declaration --> perform_data_flow_analysis
+  is_variable_declaration --> extract_variables_in_scope
+  is_function_declaration --> identifier_exists_in_scope
+  is_function_declaration --> collect_local_declarations
+  is_function_declaration --> perform_scope_analysis
+  is_function_declaration --> perform_type_analysis
+  is_function_declaration --> perform_control_flow_analysis
+  is_function_declaration --> perform_data_flow_analysis
+  is_function_declaration --> extract_functions_in_scope
+  extract_variable_info --> analyze_extracted_code_variables
+  extract_variable_info --> collect_variables_in_node
+  extract_variable_info --> process_extracted_body
+  extract_variable_info --> extract_variables_in_scope
+  extract_function_info --> analyze_extracted_code_variables
+  extract_function_info --> process_extracted_body
+  extract_function_info --> extract_functions_in_scope
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  asttransformationengine["AstTransformationEngine"]
+  Start --> asttransformationengine
+  transformationconfig["TransformationConfig"]
+  Start --> transformationconfig
+  languagetransformationrules["LanguageTransformationRules"]
+  Start --> languagetransformationrules
+  validationrule["ValidationRule"]
+  Start --> validationrule
+  semanticvalidator["SemanticValidator"]
+  Start --> semanticvalidator
+  validationconfig["ValidationConfig"]
+  Start --> validationconfig
+  validationresult["ValidationResult"]
+  Start --> validationresult
+  validationerror["ValidationError"]
+  Start --> validationerror
+  validationwarning["ValidationWarning"]
+  Start --> validationwarning
+  validationanalysis["ValidationAnalysis"]
+  Start --> validationanalysis
+  transformationlocation["TransformationLocation"]
+  Start --> transformationlocation
+  position["Position"]
+  Start --> position
+  scopeanalysisresult["ScopeAnalysisResult"]
+  Start --> scopeanalysisresult
+  typeanalysisresult["TypeAnalysisResult"]
+  Start --> typeanalysisresult
+  controlflowanalysisresult["ControlFlowAnalysisResult"]
+  Start --> controlflowanalysisresult
+  dataflowanalysisresult["DataFlowAnalysisResult"]
+  Start --> dataflowanalysisresult
+  variableinfo["VariableInfo"]
+  Start --> variableinfo
+  functioninfo["FunctionInfo"]
+  Start --> functioninfo
+  scopeconflict["ScopeConflict"]
+  Start --> scopeconflict
+  typeconflict["TypeConflict"]
+  Start --> typeconflict
+  controlpath["ControlPath"]
+  Start --> controlpath
+  datadependency["DataDependency"]
+  Start --> datadependency
+  dataflowissue["DataFlowIssue"]
+  Start --> dataflowissue
+  extractedvariableanalysis["ExtractedVariableAnalysis"]
+  Start --> extractedvariableanalysis
+  variableoccurrence["VariableOccurrence"]
+  Start --> variableoccurrence
+  transformation["Transformation"]
+  Start --> transformation
+  transformationmetadata["TransformationMetadata"]
+  Start --> transformationmetadata
+  transformationimpact["TransformationImpact"]
+  Start --> transformationimpact
+  rollbackinfo["RollbackInfo"]
+  Start --> rollbackinfo
+  transformationresult["TransformationResult"]
+  Start --> transformationresult
+  failedtransformation["FailedTransformation"]
+  Start --> failedtransformation
+  validationsummary["ValidationSummary"]
+  Start --> validationsummary
+  default["default"Fn]
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  apply_transformation["apply_transformation"Fn]
+  apply_transformations["apply_transformations"Fn]
+  create_default_transformation_rules["create_default_transformation_rules"Fn]
+  apply_single_transformation["apply_single_transformation"Fn]
+  apply_replace_transformation["apply_replace_transformation"Fn]
+  apply_insert_transformation["apply_insert_transformation"Fn]
+  apply_delete_transformation["apply_delete_transformation"Fn]
+  calculate_tree_hash["calculate_tree_hash"Fn]
+  extract_method_name_from_metadata["extract_method_name_from_metadata"Fn]
+  sanitize_method_name["sanitize_method_name"Fn]
+  is_valid_method_name["is_valid_method_name"Fn]
+  generate_default_method_name["generate_default_method_name"Fn]
+  analyze_extracted_code_variables["analyze_extracted_code_variables"Fn]
+  generate_method_signature["generate_method_signature"Fn]
+  generate_method_call["generate_method_call"Fn]
+  apply_rename_transformation["apply_rename_transformation"Fn]
+  apply_extract_method_transformation["apply_extract_method_transformation"Fn]
+  apply_inline_transformation["apply_inline_transformation"Fn]
+  apply_move_transformation["apply_move_transformation"Fn]
+  apply_reorder_transformation["apply_reorder_transformation"Fn]
+  apply_wrap_transformation["apply_wrap_transformation"Fn]
+  apply_unwrap_transformation["apply_unwrap_transformation"Fn]
+  is_valid_identifier["is_valid_identifier"Fn]
+  is_rust_keyword["is_rust_keyword"Fn]
+  is_python_keyword["is_python_keyword"Fn]
+  is_javascript_keyword["is_javascript_keyword"Fn]
+  find_variable_occurrences["find_variable_occurrences"Fn]
+  find_containing_scope["find_containing_scope"Fn]
+  is_scope_defining_node["is_scope_defining_node"Fn]
+  find_identifiers_in_scope["find_identifiers_in_scope"Fn]
+  has_naming_conflict["has_naming_conflict"Fn]
+  identifier_exists_in_scope["identifier_exists_in_scope"Fn]
+  apply_rename_to_occurrences["apply_rename_to_occurrences"Fn]
+  node_to_location["node_to_location"Fn]
+  determine_inline_type["determine_inline_type"Fn]
+  apply_inline_variable_transformation["apply_inline_variable_transformation"Fn]
+  apply_inline_method_transformation["apply_inline_method_transformation"Fn]
+  find_variable_declaration["find_variable_declaration"Fn]
+  find_variable_declaration_node["find_variable_declaration_node"Fn]
+  extract_variable_value["extract_variable_value"Fn]
+  find_variable_usages["find_variable_usages"Fn]
+  find_variable_usages_in_node["find_variable_usages_in_node"Fn]
+  is_safe_to_inline_variable["is_safe_to_inline_variable"Fn]
+  find_method_definition["find_method_definition"Fn]
+  find_method_definition_node["find_method_definition_node"Fn]
+  extract_method_body["extract_method_body"Fn]
+  find_method_calls["find_method_calls"Fn]
+  find_method_calls_in_node["find_method_calls_in_node"Fn]
+  is_safe_to_inline_method["is_safe_to_inline_method"Fn]
+  adapt_method_body_for_call["adapt_method_body_for_call"Fn]
+  collect_variables_in_node["collect_variables_in_node"Fn]
+  collect_local_declarations["collect_local_declarations"Fn]
+  analyze_variable_usage["analyze_variable_usage"Fn]
+  is_variable_declaration_node["is_variable_declaration_node"Fn]
+  extract_declared_variable_name["extract_declared_variable_name"Fn]
+  is_language_keyword["is_language_keyword"Fn]
+  is_builtin_function["is_builtin_function"Fn]
+  infer_variable_type["infer_variable_type"Fn]
+  infer_type_from_expression["infer_type_from_expression"Fn]
+  infer_return_type_from_function_name["infer_return_type_from_function_name"Fn]
+  is_variable_mutable["is_variable_mutable"Fn]
+  determine_variable_usage_context["determine_variable_usage_context"Fn]
+  node_contains_identifier["node_contains_identifier"Fn]
+  find_method_insertion_point["find_method_insertion_point"Fn]
+  find_containing_class_or_impl["find_containing_class_or_impl"Fn]
+  find_insertion_point_before_closing_brace["find_insertion_point_before_closing_brace"Fn]
+  find_good_insertion_point_after_function["find_good_insertion_point_after_function"Fn]
+  find_default_insertion_point["find_default_insertion_point"Fn]
+  is_function_like_node["is_function_like_node"Fn]
+  build_method_definition["build_method_definition"Fn]
+  generate_method_documentation["generate_method_documentation"Fn]
+  process_extracted_body["process_extracted_body"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  validate_transformation["validate_transformation"Fn]
+  perform_scope_analysis["perform_scope_analysis"Fn]
+  perform_type_analysis["perform_type_analysis"Fn]
+  perform_control_flow_analysis["perform_control_flow_analysis"Fn]
+  perform_data_flow_analysis["perform_data_flow_analysis"Fn]
+  find_node_at_position["find_node_at_position"Fn]
+  extract_variables_in_scope["extract_variables_in_scope"Fn]
+  extract_functions_in_scope["extract_functions_in_scope"Fn]
+  detect_scope_conflicts["detect_scope_conflicts"Fn]
+  is_variable_declaration["is_variable_declaration"Fn]
+  is_function_declaration["is_function_declaration"Fn]
+  extract_variable_info["extract_variable_info"Fn]
+  extract_function_info["extract_function_info"Fn]
+  node_to_location["node_to_location"Fn]
+  asttransformationengine --> default
+  default --> default
+  default --> new
+  new --> with_config
+  with_config --> apply_transformation
+  apply_transformation --> apply_transformations
+  apply_transformations --> create_default_transformation_rules
+  create_default_transformation_rules --> apply_single_transformation
+  apply_single_transformation --> apply_replace_transformation
+  apply_replace_transformation --> apply_insert_transformation
+  apply_insert_transformation --> apply_delete_transformation
+  apply_delete_transformation --> calculate_tree_hash
+  calculate_tree_hash --> extract_method_name_from_metadata
+  extract_method_name_from_metadata --> sanitize_method_name
+  sanitize_method_name --> is_valid_method_name
+  is_valid_method_name --> generate_default_method_name
+  generate_default_method_name --> analyze_extracted_code_variables
+  analyze_extracted_code_variables --> generate_method_signature
+  generate_method_signature --> generate_method_call
+  generate_method_call --> apply_rename_transformation
+  apply_rename_transformation --> apply_extract_method_transformation
+  apply_extract_method_transformation --> apply_inline_transformation
+  apply_inline_transformation --> apply_move_transformation
+  apply_move_transformation --> apply_reorder_transformation
+  apply_reorder_transformation --> apply_wrap_transformation
+  apply_wrap_transformation --> apply_unwrap_transformation
+  apply_unwrap_transformation --> is_valid_identifier
+  is_valid_identifier --> is_rust_keyword
+  is_rust_keyword --> is_python_keyword
+  is_python_keyword --> is_javascript_keyword
+  is_javascript_keyword --> find_variable_occurrences
+  find_variable_occurrences --> find_containing_scope
+  find_containing_scope --> is_scope_defining_node
+  is_scope_defining_node --> find_identifiers_in_scope
+  find_identifiers_in_scope --> has_naming_conflict
+  has_naming_conflict --> identifier_exists_in_scope
+  identifier_exists_in_scope --> apply_rename_to_occurrences
+  apply_rename_to_occurrences --> node_to_location
+  node_to_location --> determine_inline_type
+  determine_inline_type --> apply_inline_variable_transformation
+  apply_inline_variable_transformation --> apply_inline_method_transformation
+  apply_inline_method_transformation --> find_variable_declaration
+  find_variable_declaration --> find_variable_declaration_node
+  find_variable_declaration_node --> extract_variable_value
+  extract_variable_value --> find_variable_usages
+  find_variable_usages --> find_variable_usages_in_node
+  find_variable_usages_in_node --> is_safe_to_inline_variable
+  is_safe_to_inline_variable --> find_method_definition
+  find_method_definition --> find_method_definition_node
+  find_method_definition_node --> extract_method_body
+  extract_method_body --> find_method_calls
+  find_method_calls --> find_method_calls_in_node
+  find_method_calls_in_node --> is_safe_to_inline_method
+  is_safe_to_inline_method --> adapt_method_body_for_call
+  adapt_method_body_for_call --> collect_variables_in_node
+  collect_variables_in_node --> collect_local_declarations
+  collect_local_declarations --> analyze_variable_usage
+  analyze_variable_usage --> is_variable_declaration_node
+  is_variable_declaration_node --> extract_declared_variable_name
+  extract_declared_variable_name --> is_language_keyword
+  is_language_keyword --> is_builtin_function
+  is_builtin_function --> infer_variable_type
+  infer_variable_type --> infer_type_from_expression
+  infer_type_from_expression --> infer_return_type_from_function_name
+  infer_return_type_from_function_name --> is_variable_mutable
+  is_variable_mutable --> determine_variable_usage_context
+  determine_variable_usage_context --> node_contains_identifier
+  node_contains_identifier --> find_method_insertion_point
+  find_method_insertion_point --> find_containing_class_or_impl
+  find_containing_class_or_impl --> find_insertion_point_before_closing_brace
+  find_insertion_point_before_closing_brace --> find_good_insertion_point_after_function
+  find_good_insertion_point_after_function --> find_default_insertion_point
+  find_default_insertion_point --> is_function_like_node
+  is_function_like_node --> build_method_definition
+  build_method_definition --> generate_method_documentation
+  generate_method_documentation --> process_extracted_body
+  process_extracted_body --> new
+  new --> with_config
+  with_config --> validate_transformation
+  validate_transformation --> perform_scope_analysis
+  perform_scope_analysis --> perform_type_analysis
+  perform_type_analysis --> perform_control_flow_analysis
+  perform_control_flow_analysis --> perform_data_flow_analysis
+  perform_data_flow_analysis --> find_node_at_position
+  find_node_at_position --> extract_variables_in_scope
+  extract_variables_in_scope --> extract_functions_in_scope
+  extract_functions_in_scope --> detect_scope_conflicts
+  detect_scope_conflicts --> is_variable_declaration
+  is_variable_declaration --> is_function_declaration
+  is_function_declaration --> extract_variable_info
+  extract_variable_info --> extract_function_info
+  extract_function_info --> node_to_location
+  node_to_location --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AstTransformationEngine {
+    +AstTransformationEngine()
+  }
+  class TransformationConfig {
+    +TransformationConfig()
+  }
+  class LanguageTransformationRules {
+    +LanguageTransformationRules()
+  }
+  class ValidationRule {
+    +ValidationRule()
+  }
+  class SemanticValidator {
+    +SemanticValidator()
+  }
+  class ValidationConfig {
+    +ValidationConfig()
+  }
+  class ValidationResult {
+    +ValidationResult()
+  }
+  class ValidationError {
+    +ValidationError()
+  }
+  class ValidationWarning {
+    +ValidationWarning()
+  }
+  class ValidationAnalysis {
+    +ValidationAnalysis()
+  }
+  class TransformationLocation {
+    +TransformationLocation()
+  }
+  class Position {
+    +Position()
+  }
+  class ScopeAnalysisResult {
+    +ScopeAnalysisResult()
+  }
+  class TypeAnalysisResult {
+    +TypeAnalysisResult()
+  }
+  class ControlFlowAnalysisResult {
+    +ControlFlowAnalysisResult()
+  }
+  class DataFlowAnalysisResult {
+    +DataFlowAnalysisResult()
+  }
+  class VariableInfo {
+    +VariableInfo()
+  }
+  class FunctionInfo {
+    +FunctionInfo()
+  }
+  class ScopeConflict {
+    +ScopeConflict()
+  }
+  class TypeConflict {
+    +TypeConflict()
+  }
+  class ControlPath {
+    +ControlPath()
+  }
+  class DataDependency {
+    +DataDependency()
+  }
+  class DataFlowIssue {
+    +DataFlowIssue()
+  }
+  class ExtractedVariableAnalysis {
+    +ExtractedVariableAnalysis()
+  }
+  class VariableOccurrence {
+    +VariableOccurrence()
+  }
+  class Transformation {
+    +Transformation()
+  }
+  class TransformationMetadata {
+    +TransformationMetadata()
+  }
+  class TransformationImpact {
+    +TransformationImpact()
+  }
+  class RollbackInfo {
+    +RollbackInfo()
+  }
+  class TransformationResult {
+    +TransformationResult()
+  }
+  class FailedTransformation {
+    +FailedTransformation()
+  }
+  class ValidationSummary {
+    +ValidationSummary()
+  }
+  apply_transformation ..> Transformation : uses
+  apply_transformations ..> Transformation : uses
+  create_default_transformation_rules ..> Transformation : uses
+  apply_single_transformation ..> Transformation : uses
+  apply_replace_transformation ..> Transformation : uses
+  apply_insert_transformation ..> Transformation : uses
+  apply_delete_transformation ..> Transformation : uses
+  apply_rename_transformation ..> Transformation : uses
+  apply_extract_method_transformation ..> Transformation : uses
+  apply_inline_transformation ..> Transformation : uses
+  apply_move_transformation ..> Transformation : uses
+  apply_reorder_transformation ..> Transformation : uses
+  apply_wrap_transformation ..> Transformation : uses
+  apply_unwrap_transformation ..> Transformation : uses
+  apply_inline_variable_transformation ..> Transformation : uses
+  apply_inline_method_transformation ..> Transformation : uses
+  validate_transformation ..> Transformation : uses
+  find_node_at_position ..> Position : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/dependency_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/dependency_analysis.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 39</li>
+<li><strong>Structures:</strong> 16</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 193</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+fmt"fmt (fn)"]
+  clone"clone (fn)"]
+  default"default (fn)"]
+  enrich"enrich (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  with_provider"with_provider (fn)"]
+  create_dependency"create_dependency (fn)"]
+  analyze"analyze (fn)"]
+  detect_package_managers"detect_package_managers (fn)"]
+  extract_dependencies"extract_dependencies (fn)"]
+  extract_cargo_dependencies"extract_cargo_dependencies (fn)"]
+  parse_cargo_dependency_spec"parse_cargo_dependency_spec (fn)"]
+  extract_npm_dependencies"extract_npm_dependencies (fn)"]
+  extract_source_imports"extract_source_imports (fn)"]
+  scan_rust_imports"scan_rust_imports (fn)"]
+  scan_js_imports"scan_js_imports (fn)"]
+  normalize_js_pkg"normalize_js_pkg (fn)"]
+  scan_python_imports"scan_python_imports (fn)"]
+  extract_python_dependencies"extract_python_dependencies (fn)"]
+  parse_pip_requirement"parse_pip_requirement (fn)"]
+  extract_go_dependencies"extract_go_dependencies (fn)"]
+  parse_go_require_line"parse_go_require_line (fn)"]
+  analyze_vulnerabilities"analyze_vulnerabilities (fn)"]
+  analyze_licenses"analyze_licenses (fn)"]
+  is_copyleft_license"is_copyleft_license (fn)"]
+  detect_outdated_dependencies"detect_outdated_dependencies (fn)"]
+  is_major_version_difference"is_major_version_difference (fn)"]
+  analyze_dependency_graph"analyze_dependency_graph (fn)"]
+  generate_security_recommendations"generate_security_recommendations (fn)"]
+  parse_poetry_dependencies"parse_poetry_dependencies (fn)"]
+  parse_pipfile_dependencies"parse_pipfile_dependencies (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  parse_pip_requirement --> parse_pipfile_dependencies
+  extract_go_dependencies --> extract_cargo_dependencies
+  extract_go_dependencies --> parse_cargo_dependency_spec
+  parse_go_require_line --> extract_cargo_dependencies
+  parse_go_require_line --> parse_cargo_dependency_spec
+  parse_go_require_line --> parse_pip_requirement
+  is_copyleft_license --> analyze_licenses
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  dependencyanalyzer["DependencyAnalyzer"]
+  Start --> dependencyanalyzer
+  dependencyconfig["DependencyConfig"]
+  Start --> dependencyconfig
+  dependencyanalysisresult["DependencyAnalysisResult"]
+  Start --> dependencyanalysisresult
+  dependency["Dependency"]
+  Start --> dependency
+  packagemanagerinfo["PackageManagerInfo"]
+  Start --> packagemanagerinfo
+  dependencyvulnerability["DependencyVulnerability"]
+  Start --> dependencyvulnerability
+  licenseanalysis["LicenseAnalysis"]
+  Start --> licenseanalysis
+  licenseissue["LicenseIssue"]
+  Start --> licenseissue
+  outdateddependency["OutdatedDependency"]
+  Start --> outdateddependency
+  dependencygraphanalysis["DependencyGraphAnalysis"]
+  Start --> dependencygraphanalysis
+  circulardependency["CircularDependency"]
+  Start --> circulardependency
+  populardependency["PopularDependency"]
+  Start --> populardependency
+  dependencycluster["DependencyCluster"]
+  Start --> dependencycluster
+  graphmetrics["GraphMetrics"]
+  Start --> graphmetrics
+  securityrecommendation["SecurityRecommendation"]
+  Start --> securityrecommendation
+  noopvulnprovider["NoopVulnProvider"]
+  Start --> noopvulnprovider
+  fmt["fmt"Fn]
+  clone["clone"Fn]
+  default["default"Fn]
+  enrich["enrich"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  with_provider["with_provider"Fn]
+  create_dependency["create_dependency"Fn]
+  analyze["analyze"Fn]
+  detect_package_managers["detect_package_managers"Fn]
+  extract_dependencies["extract_dependencies"Fn]
+  extract_cargo_dependencies["extract_cargo_dependencies"Fn]
+  parse_cargo_dependency_spec["parse_cargo_dependency_spec"Fn]
+  extract_npm_dependencies["extract_npm_dependencies"Fn]
+  extract_source_imports["extract_source_imports"Fn]
+  scan_rust_imports["scan_rust_imports"Fn]
+  scan_js_imports["scan_js_imports"Fn]
+  normalize_js_pkg["normalize_js_pkg"Fn]
+  scan_python_imports["scan_python_imports"Fn]
+  extract_python_dependencies["extract_python_dependencies"Fn]
+  parse_pip_requirement["parse_pip_requirement"Fn]
+  extract_go_dependencies["extract_go_dependencies"Fn]
+  parse_go_require_line["parse_go_require_line"Fn]
+  analyze_vulnerabilities["analyze_vulnerabilities"Fn]
+  analyze_licenses["analyze_licenses"Fn]
+  is_copyleft_license["is_copyleft_license"Fn]
+  detect_outdated_dependencies["detect_outdated_dependencies"Fn]
+  is_major_version_difference["is_major_version_difference"Fn]
+  analyze_dependency_graph["analyze_dependency_graph"Fn]
+  generate_security_recommendations["generate_security_recommendations"Fn]
+  parse_poetry_dependencies["parse_poetry_dependencies"Fn]
+  parse_pipfile_dependencies["parse_pipfile_dependencies"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  dependencyanalyzer --> fmt
+  fmt --> clone
+  clone --> default
+  default --> enrich
+  enrich --> new
+  new --> with_config
+  with_config --> with_provider
+  with_provider --> create_dependency
+  create_dependency --> analyze
+  analyze --> detect_package_managers
+  detect_package_managers --> extract_dependencies
+  extract_dependencies --> extract_cargo_dependencies
+  extract_cargo_dependencies --> parse_cargo_dependency_spec
+  parse_cargo_dependency_spec --> extract_npm_dependencies
+  extract_npm_dependencies --> extract_source_imports
+  extract_source_imports --> scan_rust_imports
+  scan_rust_imports --> scan_js_imports
+  scan_js_imports --> normalize_js_pkg
+  normalize_js_pkg --> scan_python_imports
+  scan_python_imports --> extract_python_dependencies
+  extract_python_dependencies --> parse_pip_requirement
+  parse_pip_requirement --> extract_go_dependencies
+  extract_go_dependencies --> parse_go_require_line
+  parse_go_require_line --> analyze_vulnerabilities
+  analyze_vulnerabilities --> analyze_licenses
+  analyze_licenses --> is_copyleft_license
+  is_copyleft_license --> detect_outdated_dependencies
+  detect_outdated_dependencies --> is_major_version_difference
+  is_major_version_difference --> analyze_dependency_graph
+  analyze_dependency_graph --> generate_security_recommendations
+  generate_security_recommendations --> parse_poetry_dependencies
+  parse_poetry_dependencies --> parse_pipfile_dependencies
+  parse_pipfile_dependencies --> default
+  default --> default
+  default --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class DependencyAnalyzer {
+    +DependencyAnalyzer()
+  }
+  class DependencyConfig {
+    +DependencyConfig()
+  }
+  class DependencyAnalysisResult {
+    +DependencyAnalysisResult()
+  }
+  class Dependency {
+    +Dependency()
+  }
+  class PackageManagerInfo {
+    +PackageManagerInfo()
+  }
+  class DependencyVulnerability {
+    +DependencyVulnerability()
+  }
+  class LicenseAnalysis {
+    +LicenseAnalysis()
+  }
+  class LicenseIssue {
+    +LicenseIssue()
+  }
+  class OutdatedDependency {
+    +OutdatedDependency()
+  }
+  class DependencyGraphAnalysis {
+    +DependencyGraphAnalysis()
+  }
+  class CircularDependency {
+    +CircularDependency()
+  }
+  class PopularDependency {
+    +PopularDependency()
+  }
+  class DependencyCluster {
+    +DependencyCluster()
+  }
+  class GraphMetrics {
+    +GraphMetrics()
+  }
+  class SecurityRecommendation {
+    +SecurityRecommendation()
+  }
+  class NoopVulnProvider {
+    +NoopVulnProvider()
+  }
+  create_dependency ..> Dependency : uses
+  parse_cargo_dependency_spec ..> Dependency : uses
+  analyze_dependency_graph ..> Dependency : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/cli/output.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/cli/output.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 6</li>
+<li><strong>Structures:</strong> 3</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 22</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+format_size"format_size (fn)"]
+  from_str"from_str (fn)"]
+  print_header"print_header (fn)"]
+  print_summary"print_summary (fn)"]
+  save_to_file"save_to_file (fn)"]
+  print_analysis_table"print_analysis_table (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  filerow["FileRow"]
+  Start --> filerow
+  symbolrow["SymbolRow"]
+  Start --> symbolrow
+  languagerow["LanguageRow"]
+  Start --> languagerow
+  format_size["format_size"Fn]
+  from_str["from_str"Fn]
+  print_header["print_header"Fn]
+  print_summary["print_summary"Fn]
+  save_to_file["save_to_file"Fn]
+  print_analysis_table["print_analysis_table"Fn]
+  filerow --> format_size
+  format_size --> from_str
+  from_str --> print_header
+  print_header --> print_summary
+  print_summary --> save_to_file
+  save_to_file --> print_analysis_table
+  print_analysis_table --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class FileRow {
+    +FileRow()
+  }
+  class SymbolRow {
+    +SymbolRow()
+  }
+  class LanguageRow {
+    +LanguageRow()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

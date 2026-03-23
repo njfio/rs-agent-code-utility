@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/cli/sarif.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/cli/sarif.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 4</li>
+<li><strong>Structures:</strong> 10</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 26</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+map_severity"map_severity (fn)"]
+  owasp_to_str"owasp_to_str (fn)"]
+  to_sarif"to_sarif (fn)"]
+  sarif_conversion_includes_one_result_per_vulnerability"sarif_conversion_includes_one_result_per_vulnerability (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  sariflog["SarifLog"]
+  Start --> sariflog
+  run["Run"]
+  Start --> run
+  tool["Tool"]
+  Start --> tool
+  driver["Driver"]
+  Start --> driver
+  resultitem["ResultItem"]
+  Start --> resultitem
+  message["Message"]
+  Start --> message
+  location["Location"]
+  Start --> location
+  physicallocation["PhysicalLocation"]
+  Start --> physicallocation
+  artifactlocation["ArtifactLocation"]
+  Start --> artifactlocation
+  region["Region"]
+  Start --> region
+  map_severity["map_severity"Fn]
+  owasp_to_str["owasp_to_str"Fn]
+  to_sarif["to_sarif"Fn]
+  sarif_conversion_includes_one_result_per_vulnerability["sarif_conversion_includes_one_result_per_vulnerability"Fn]
+  sariflog --> map_severity
+  map_severity --> owasp_to_str
+  owasp_to_str --> to_sarif
+  to_sarif --> sarif_conversion_includes_one_result_per_vulnerability
+  sarif_conversion_includes_one_result_per_vulnerability --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class SarifLog {
+    +SarifLog()
+  }
+  class Run {
+    +Run()
+  }
+  class Tool {
+    +Tool()
+  }
+  class Driver {
+    +Driver()
+  }
+  class ResultItem {
+    +ResultItem()
+  }
+  class Message {
+    +Message()
+  }
+  class Location {
+    +Location()
+  }
+  class PhysicalLocation {
+    +PhysicalLocation()
+  }
+  class ArtifactLocation {
+    +ArtifactLocation()
+  }
+  class Region {
+    +Region()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

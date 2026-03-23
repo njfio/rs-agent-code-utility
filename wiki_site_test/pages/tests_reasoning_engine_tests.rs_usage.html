@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/reasoning_engine_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/reasoning_engine_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 18</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 79</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+create_sample_analysis_result"create_sample_analysis_result (fn)"]
+  create_sample_fact"create_sample_fact (fn)"]
+  create_sample_rule"create_sample_rule (fn)"]
+  test_reasoning_engine_creation"test_reasoning_engine_creation (fn)"]
+  test_reasoning_engine_with_config"test_reasoning_engine_with_config (fn)"]
+  test_add_fact"test_add_fact (fn)"]
+  test_add_rule"test_add_rule (fn)"]
+  test_add_constraint_variable"test_add_constraint_variable (fn)"]
+  test_add_constraint"test_add_constraint (fn)"]
+  test_add_axiom"test_add_axiom (fn)"]
+  test_fact_extraction_from_analysis"test_fact_extraction_from_analysis (fn)"]
+  test_reasoning_result_structure"test_reasoning_result_structure (fn)"]
+  test_inductive_reasoning"test_inductive_reasoning (fn)"]
+  test_insight_generation"test_insight_generation (fn)"]
+  test_term_matching"test_term_matching (fn)"]
+  test_literal_matching"test_literal_matching (fn)"]
+  test_reasoning_metrics"test_reasoning_metrics (fn)"]
+  test_configuration_effects"test_configuration_effects (fn)"]
+  test_reasoning_engine_with_config --> test_configuration_effects
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  create_sample_analysis_result["create_sample_analysis_result"Fn]
+  create_sample_fact["create_sample_fact"Fn]
+  create_sample_rule["create_sample_rule"Fn]
+  test_reasoning_engine_creation["test_reasoning_engine_creation"Fn]
+  test_reasoning_engine_with_config["test_reasoning_engine_with_config"Fn]
+  test_add_fact["test_add_fact"Fn]
+  test_add_rule["test_add_rule"Fn]
+  test_add_constraint_variable["test_add_constraint_variable"Fn]
+  test_add_constraint["test_add_constraint"Fn]
+  test_add_axiom["test_add_axiom"Fn]
+  test_fact_extraction_from_analysis["test_fact_extraction_from_analysis"Fn]
+  test_reasoning_result_structure["test_reasoning_result_structure"Fn]
+  test_inductive_reasoning["test_inductive_reasoning"Fn]
+  test_insight_generation["test_insight_generation"Fn]
+  test_term_matching["test_term_matching"Fn]
+  test_literal_matching["test_literal_matching"Fn]
+  test_reasoning_metrics["test_reasoning_metrics"Fn]
+  test_configuration_effects["test_configuration_effects"Fn]
+  Start --> create_sample_analysis_result
+  create_sample_analysis_result --> create_sample_fact
+  create_sample_fact --> create_sample_rule
+  create_sample_rule --> test_reasoning_engine_creation
+  test_reasoning_engine_creation --> test_reasoning_engine_with_config
+  test_reasoning_engine_with_config --> test_add_fact
+  test_add_fact --> test_add_rule
+  test_add_rule --> test_add_constraint_variable
+  test_add_constraint_variable --> test_add_constraint
+  test_add_constraint --> test_add_axiom
+  test_add_axiom --> test_fact_extraction_from_analysis
+  test_fact_extraction_from_analysis --> test_reasoning_result_structure
+  test_reasoning_result_structure --> test_inductive_reasoning
+  test_inductive_reasoning --> test_insight_generation
+  test_insight_generation --> test_term_matching
+  test_term_matching --> test_literal_matching
+  test_literal_matching --> test_reasoning_metrics
+  test_reasoning_metrics --> test_configuration_effects
+  test_configuration_effects --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

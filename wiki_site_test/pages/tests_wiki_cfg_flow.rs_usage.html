@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/wiki_cfg_flow.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/wiki_cfg_flow.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 5</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 24</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+write_rs"write_rs (fn)"]
+  project_with_if_else"project_with_if_else (fn)"]
+  project_with_for_loop"project_with_for_loop (fn)"]
+  flowchart_contains_branch_nodes_for_if_else"flowchart_contains_branch_nodes_for_if_else (fn)"]
+  flowchart_contains_loop_backedge_node"flowchart_contains_loop_backedge_node (fn)"]
+  flowchart_contains_loop_backedge_node --> flowchart_contains_branch_nodes_for_if_else
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  write_rs["write_rs"Fn]
+  project_with_if_else["project_with_if_else"Fn]
+  project_with_for_loop["project_with_for_loop"Fn]
+  flowchart_contains_branch_nodes_for_if_else["flowchart_contains_branch_nodes_for_if_else"Fn]
+  flowchart_contains_loop_backedge_node["flowchart_contains_loop_backedge_node"Fn]
+  Start --> write_rs
+  write_rs --> project_with_if_else
+  project_with_if_else --> project_with_for_loop
+  project_with_for_loop --> flowchart_contains_branch_nodes_for_if_else
+  flowchart_contains_branch_nodes_for_if_else --> flowchart_contains_loop_backedge_node
+  flowchart_contains_loop_backedge_node --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

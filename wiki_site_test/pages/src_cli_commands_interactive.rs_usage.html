@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/cli/commands/interactive.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/cli/commands/interactive.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 11</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 33</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+execute"execute (fn)"]
+  display_help"display_help (fn)"]
+  display_statistics"display_statistics (fn)"]
+  display_files"display_files (fn)"]
+  display_symbols"display_symbols (fn)"]
+  display_insights"display_insights (fn)"]
+  display_explanation"display_explanation (fn)"]
+  display_security_summary"display_security_summary (fn)"]
+  display_dependencies"display_dependencies (fn)"]
+  find_symbols"find_symbols (fn)"]
+  explain_symbol"explain_symbol (fn)"]
+  explain_symbol --> display_symbols
+  explain_symbol --> find_symbols
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  execute["execute"Fn]
+  display_help["display_help"Fn]
+  display_statistics["display_statistics"Fn]
+  display_files["display_files"Fn]
+  display_symbols["display_symbols"Fn]
+  display_insights["display_insights"Fn]
+  display_explanation["display_explanation"Fn]
+  display_security_summary["display_security_summary"Fn]
+  display_dependencies["display_dependencies"Fn]
+  find_symbols["find_symbols"Fn]
+  explain_symbol["explain_symbol"Fn]
+  Start --> execute
+  execute --> display_help
+  display_help --> display_statistics
+  display_statistics --> display_files
+  display_files --> display_symbols
+  display_symbols --> display_insights
+  display_insights --> display_explanation
+  display_explanation --> display_security_summary
+  display_security_summary --> display_dependencies
+  display_dependencies --> find_symbols
+  find_symbols --> explain_symbol
+  explain_symbol --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

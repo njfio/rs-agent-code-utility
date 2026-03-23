@@ -1,0 +1,279 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/languages/javascript.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/languages/javascript.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 44</li>
+<li><strong>Structures:</strong> 1</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 121</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+is_function_declaration"is_function_declaration (fn)"]
+  is_function_expression"is_function_expression (fn)"]
+  is_arrow_function"is_arrow_function (fn)"]
+  is_function"is_function (fn)"]
+  is_generator_function_declaration"is_generator_function_declaration (fn)"]
+  is_generator_function_expression"is_generator_function_expression (fn)"]
+  is_async_function"is_async_function (fn)"]
+  is_class_declaration"is_class_declaration (fn)"]
+  is_class_expression"is_class_expression (fn)"]
+  is_class"is_class (fn)"]
+  is_method_definition"is_method_definition (fn)"]
+  is_variable_declaration"is_variable_declaration (fn)"]
+  is_import_statement"is_import_statement (fn)"]
+  is_export_statement"is_export_statement (fn)"]
+  is_object_expression"is_object_expression (fn)"]
+  function_name"function_name (fn)"]
+  class_name"class_name (fn)"]
+  method_name"method_name (fn)"]
+  variable_names"variable_names (fn)"]
+  is_generator_function"is_generator_function (fn)"]
+  function_parameters"function_parameters (fn)"]
+  find_functions"find_functions (fn)"]
+  find_classes"find_classes (fn)"]
+  find_imports"find_imports (fn)"]
+  find_exports"find_exports (fn)"]
+  find_generators"find_generators (fn)"]
+  find_async_functions"find_async_functions (fn)"]
+  find_closures"find_closures (fn)"]
+  find_destructuring_patterns"find_destructuring_patterns (fn)"]
+  find_classes_with_private_fields"find_classes_with_private_fields (fn)"]
+  functions_query"functions_query (fn)"]
+  classes_query"classes_query (fn)"]
+  methods_query"methods_query (fn)"]
+  variables_query"variables_query (fn)"]
+  imports_query"imports_query (fn)"]
+  exports_query"exports_query (fn)"]
+  jsx_elements_query"jsx_elements_query (fn)"]
+  async_functions_query"async_functions_query (fn)"]
+  detect_modern_features"detect_modern_features (fn)"]
+  analyze_complexity"analyze_complexity (fn)"]
+  test_javascript_function_detection"test_javascript_function_detection (fn)"]
+  test_javascript_class_detection"test_javascript_class_detection (fn)"]
+  test_modern_features_detection"test_modern_features_detection (fn)"]
+  test_complexity_analysis"test_complexity_analysis (fn)"]
+  is_function_declaration --> find_functions
+  is_function_declaration --> find_async_functions
+  is_function_declaration --> functions_query
+  is_function_declaration --> async_functions_query
+  is_function_declaration --> test_complexity_analysis
+  is_function_expression --> find_functions
+  is_function_expression --> find_async_functions
+  is_function_expression --> functions_query
+  is_function_expression --> async_functions_query
+  is_function_expression --> test_complexity_analysis
+  is_arrow_function --> find_functions
+  is_arrow_function --> find_async_functions
+  is_arrow_function --> functions_query
+  is_arrow_function --> async_functions_query
+  is_arrow_function --> test_complexity_analysis
+  is_function --> find_functions
+  is_function --> find_async_functions
+  is_function --> functions_query
+  is_function --> async_functions_query
+  is_function --> test_complexity_analysis
+  is_generator_function_declaration --> find_functions
+  is_generator_function_declaration --> find_generators
+  is_generator_function_declaration --> find_async_functions
+  is_generator_function_declaration --> functions_query
+  is_generator_function_declaration --> async_functions_query
+  is_generator_function_declaration --> test_complexity_analysis
+  is_generator_function_expression --> find_functions
+  is_generator_function_expression --> find_generators
+  is_generator_function_expression --> find_async_functions
+  is_generator_function_expression --> functions_query
+  is_generator_function_expression --> async_functions_query
+  is_generator_function_expression --> test_complexity_analysis
+  is_async_function --> find_functions
+  is_async_function --> find_async_functions
+  is_async_function --> functions_query
+  is_async_function --> async_functions_query
+  is_async_function --> test_complexity_analysis
+  is_class_declaration --> find_classes
+  is_class_declaration --> find_classes_with_private_fields
+  is_class_declaration --> classes_query
+  is_class_declaration --> test_complexity_analysis
+  is_class_expression --> find_classes
+  is_class_expression --> find_classes_with_private_fields
+  is_class_expression --> classes_query
+  is_class_expression --> test_complexity_analysis
+  is_class --> find_classes
+  is_class --> find_classes_with_private_fields
+  is_class --> classes_query
+  is_class --> test_complexity_analysis
+  is_method_definition --> methods_query
+  is_method_definition --> test_complexity_analysis
+  is_variable_declaration --> variables_query
+  is_variable_declaration --> test_complexity_analysis
+  is_import_statement --> find_imports
+  is_import_statement --> imports_query
+  is_import_statement --> test_complexity_analysis
+  is_export_statement --> find_exports
+  is_export_statement --> exports_query
+  is_export_statement --> test_complexity_analysis
+  is_object_expression --> test_complexity_analysis
+  function_name --> variable_names
+  function_name --> find_functions
+  function_name --> find_async_functions
+  function_name --> functions_query
+  function_name --> async_functions_query
+  class_name --> variable_names
+  class_name --> find_classes
+  class_name --> find_classes_with_private_fields
+  class_name --> classes_query
+  method_name --> variable_names
+  method_name --> methods_query
+  variable_names --> variables_query
+  is_generator_function --> find_functions
+  is_generator_function --> find_generators
+  is_generator_function --> find_async_functions
+  is_generator_function --> functions_query
+  is_generator_function --> async_functions_query
+  is_generator_function --> test_complexity_analysis
+  function_parameters --> find_functions
+  function_parameters --> find_async_functions
+  function_parameters --> functions_query
+  function_parameters --> async_functions_query
+  detect_modern_features --> test_javascript_function_detection
+  detect_modern_features --> test_javascript_class_detection
+  detect_modern_features --> test_modern_features_detection
+  test_javascript_function_detection --> find_functions
+  test_javascript_function_detection --> find_async_functions
+  test_javascript_function_detection --> functions_query
+  test_javascript_function_detection --> async_functions_query
+  test_javascript_class_detection --> find_classes
+  test_javascript_class_detection --> find_classes_with_private_fields
+  test_javascript_class_detection --> classes_query
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  javascriptsyntax["JavaScriptSyntax"]
+  Start --> javascriptsyntax
+  is_function_declaration["is_function_declaration"Fn]
+  is_function_expression["is_function_expression"Fn]
+  is_arrow_function["is_arrow_function"Fn]
+  is_function["is_function"Fn]
+  is_generator_function_declaration["is_generator_function_declaration"Fn]
+  is_generator_function_expression["is_generator_function_expression"Fn]
+  is_async_function["is_async_function"Fn]
+  is_class_declaration["is_class_declaration"Fn]
+  is_class_expression["is_class_expression"Fn]
+  is_class["is_class"Fn]
+  is_method_definition["is_method_definition"Fn]
+  is_variable_declaration["is_variable_declaration"Fn]
+  is_import_statement["is_import_statement"Fn]
+  is_export_statement["is_export_statement"Fn]
+  is_object_expression["is_object_expression"Fn]
+  function_name["function_name"Fn]
+  class_name["class_name"Fn]
+  method_name["method_name"Fn]
+  variable_names["variable_names"Fn]
+  is_generator_function["is_generator_function"Fn]
+  function_parameters["function_parameters"Fn]
+  find_functions["find_functions"Fn]
+  find_classes["find_classes"Fn]
+  find_imports["find_imports"Fn]
+  find_exports["find_exports"Fn]
+  find_generators["find_generators"Fn]
+  find_async_functions["find_async_functions"Fn]
+  find_closures["find_closures"Fn]
+  find_destructuring_patterns["find_destructuring_patterns"Fn]
+  find_classes_with_private_fields["find_classes_with_private_fields"Fn]
+  functions_query["functions_query"Fn]
+  classes_query["classes_query"Fn]
+  methods_query["methods_query"Fn]
+  variables_query["variables_query"Fn]
+  imports_query["imports_query"Fn]
+  exports_query["exports_query"Fn]
+  jsx_elements_query["jsx_elements_query"Fn]
+  async_functions_query["async_functions_query"Fn]
+  detect_modern_features["detect_modern_features"Fn]
+  analyze_complexity["analyze_complexity"Fn]
+  test_javascript_function_detection["test_javascript_function_detection"Fn]
+  test_javascript_class_detection["test_javascript_class_detection"Fn]
+  test_modern_features_detection["test_modern_features_detection"Fn]
+  test_complexity_analysis["test_complexity_analysis"Fn]
+  javascriptsyntax --> is_function_declaration
+  is_function_declaration --> is_function_expression
+  is_function_expression --> is_arrow_function
+  is_arrow_function --> is_function
+  is_function --> is_generator_function_declaration
+  is_generator_function_declaration --> is_generator_function_expression
+  is_generator_function_expression --> is_async_function
+  is_async_function --> is_class_declaration
+  is_class_declaration --> is_class_expression
+  is_class_expression --> is_class
+  is_class --> is_method_definition
+  is_method_definition --> is_variable_declaration
+  is_variable_declaration --> is_import_statement
+  is_import_statement --> is_export_statement
+  is_export_statement --> is_object_expression
+  is_object_expression --> function_name
+  function_name --> class_name
+  class_name --> method_name
+  method_name --> variable_names
+  variable_names --> is_generator_function
+  is_generator_function --> function_parameters
+  function_parameters --> find_functions
+  find_functions --> find_classes
+  find_classes --> find_imports
+  find_imports --> find_exports
+  find_exports --> find_generators
+  find_generators --> find_async_functions
+  find_async_functions --> find_closures
+  find_closures --> find_destructuring_patterns
+  find_destructuring_patterns --> find_classes_with_private_fields
+  find_classes_with_private_fields --> functions_query
+  functions_query --> classes_query
+  classes_query --> methods_query
+  methods_query --> variables_query
+  variables_query --> imports_query
+  imports_query --> exports_query
+  exports_query --> jsx_elements_query
+  jsx_elements_query --> async_functions_query
+  async_functions_query --> detect_modern_features
+  detect_modern_features --> analyze_complexity
+  analyze_complexity --> test_javascript_function_detection
+  test_javascript_function_detection --> test_javascript_class_detection
+  test_javascript_class_detection --> test_modern_features_detection
+  test_modern_features_detection --> test_complexity_analysis
+  test_complexity_analysis --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class JavaScriptSyntax {
+    +JavaScriptSyntax()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

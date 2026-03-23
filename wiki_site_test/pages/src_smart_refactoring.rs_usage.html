@@ -1,0 +1,311 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/smart_refactoring.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/smart_refactoring.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 36</li>
+<li><strong>Structures:</strong> 24</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 173</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze"analyze (fn)"]
+  detect_code_smell_fixes"detect_code_smell_fixes (fn)"]
+  detect_large_classes"detect_large_classes (fn)"]
+  detect_duplicate_code"detect_duplicate_code (fn)"]
+  detect_long_parameter_lists"detect_long_parameter_lists (fn)"]
+  is_function_or_method"is_function_or_method (fn)"]
+  create_parameter_list_fix"create_parameter_list_fix (fn)"]
+  create_refactoring_location"create_refactoring_location (fn)"]
+  get_parameter_list_benefits"get_parameter_list_benefits (fn)"]
+  get_parameter_list_risks"get_parameter_list_risks (fn)"]
+  detect_complex_conditionals"detect_complex_conditionals (fn)"]
+  calculate_method_complexity_score"calculate_method_complexity_score (fn)"]
+  generate_method_refactoring_suggestion"generate_method_refactoring_suggestion (fn)"]
+  generate_class_refactoring_suggestion"generate_class_refactoring_suggestion (fn)"]
+  calculate_function_similarity"calculate_function_similarity (fn)"]
+  generate_duplicate_code_refactoring"generate_duplicate_code_refactoring (fn)"]
+  estimate_parameter_count"estimate_parameter_count (fn)"]
+  generate_parameter_object_refactoring"generate_parameter_object_refactoring (fn)"]
+  generate_conditional_refactoring"generate_conditional_refactoring (fn)"]
+  limit_fixes_per_category"limit_fixes_per_category (fn)"]
+  detect_long_methods"detect_long_methods (fn)"]
+  generate_pattern_recommendations"generate_pattern_recommendations (fn)"]
+  generate_performance_optimizations"generate_performance_optimizations (fn)"]
+  detect_string_concatenation_issues"detect_string_concatenation_issues (fn)"]
+  detect_vector_reallocation_issues"detect_vector_reallocation_issues (fn)"]
+  detect_nested_loop_issues"detect_nested_loop_issues (fn)"]
+  generate_modernization_suggestions"generate_modernization_suggestions (fn)"]
+  generate_architectural_improvements"generate_architectural_improvements (fn)"]
+  create_refactoring_roadmap"create_refactoring_roadmap (fn)"]
+  analyze_impact"analyze_impact (fn)"]
+  calculate_refactoring_score"calculate_refactoring_score (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  is_function_or_method --> detect_long_parameter_lists
+  is_function_or_method --> create_parameter_list_fix
+  is_function_or_method --> create_refactoring_location
+  is_function_or_method --> get_parameter_list_benefits
+  is_function_or_method --> get_parameter_list_risks
+  is_function_or_method --> calculate_method_complexity_score
+  is_function_or_method --> generate_method_refactoring_suggestion
+  is_function_or_method --> generate_class_refactoring_suggestion
+  is_function_or_method --> generate_duplicate_code_refactoring
+  is_function_or_method --> generate_parameter_object_refactoring
+  is_function_or_method --> generate_conditional_refactoring
+  is_function_or_method --> limit_fixes_per_category
+  is_function_or_method --> detect_long_methods
+  is_function_or_method --> generate_performance_optimizations
+  is_function_or_method --> detect_string_concatenation_issues
+  is_function_or_method --> detect_vector_reallocation_issues
+  is_function_or_method --> detect_nested_loop_issues
+  is_function_or_method --> create_refactoring_roadmap
+  is_function_or_method --> calculate_refactoring_score
+  create_parameter_list_fix --> detect_code_smell_fixes
+  create_parameter_list_fix --> detect_long_parameter_lists
+  create_parameter_list_fix --> limit_fixes_per_category
+  create_refactoring_location --> detect_vector_reallocation_issues
+  get_parameter_list_benefits --> detect_long_parameter_lists
+  get_parameter_list_risks --> detect_long_parameter_lists
+  detect_complex_conditionals --> calculate_method_complexity_score
+  calculate_method_complexity_score --> detect_long_methods
+  generate_method_refactoring_suggestion --> detect_long_methods
+  generate_method_refactoring_suggestion --> generate_modernization_suggestions
+  generate_class_refactoring_suggestion --> detect_large_classes
+  generate_class_refactoring_suggestion --> generate_modernization_suggestions
+  generate_conditional_refactoring --> detect_complex_conditionals
+  limit_fixes_per_category --> generate_performance_optimizations
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  smartrefactoringengine["SmartRefactoringEngine"]
+  Start --> smartrefactoringengine
+  smartrefactoringconfig["SmartRefactoringConfig"]
+  Start --> smartrefactoringconfig
+  smartrefactoringresult["SmartRefactoringResult"]
+  Start --> smartrefactoringresult
+  codesmellfix["CodeSmellFix"]
+  Start --> codesmellfix
+  refactoringlocation["RefactoringLocation"]
+  Start --> refactoringlocation
+  patternrecommendation["PatternRecommendation"]
+  Start --> patternrecommendation
+  implementationstep["ImplementationStep"]
+  Start --> implementationstep
+  codechange["CodeChange"]
+  Start --> codechange
+  performanceoptimization["PerformanceOptimization"]
+  Start --> performanceoptimization
+  performancegain["PerformanceGain"]
+  Start --> performancegain
+  modernizationsuggestion["ModernizationSuggestion"]
+  Start --> modernizationsuggestion
+  architecturalimprovement["ArchitecturalImprovement"]
+  Start --> architecturalimprovement
+  implementationphase["ImplementationPhase"]
+  Start --> implementationphase
+  refactoringroadmap["RefactoringRoadmap"]
+  Start --> refactoringroadmap
+  refactoringphase["RefactoringPhase"]
+  Start --> refactoringphase
+  refactoringitem["RefactoringItem"]
+  Start --> refactoringitem
+  prioritymatrix["PriorityMatrix"]
+  Start --> prioritymatrix
+  successmetric["SuccessMetric"]
+  Start --> successmetric
+  impactanalysis["ImpactAnalysis"]
+  Start --> impactanalysis
+  qualityimpact["QualityImpact"]
+  Start --> qualityimpact
+  performanceimpact["PerformanceImpact"]
+  Start --> performanceimpact
+  maintainabilityimpact["MaintainabilityImpact"]
+  Start --> maintainabilityimpact
+  riskassessment["RiskAssessment"]
+  Start --> riskassessment
+  refactoringrisk["RefactoringRisk"]
+  Start --> refactoringrisk
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze["analyze"Fn]
+  detect_code_smell_fixes["detect_code_smell_fixes"Fn]
+  detect_large_classes["detect_large_classes"Fn]
+  detect_duplicate_code["detect_duplicate_code"Fn]
+  detect_long_parameter_lists["detect_long_parameter_lists"Fn]
+  is_function_or_method["is_function_or_method"Fn]
+  create_parameter_list_fix["create_parameter_list_fix"Fn]
+  create_refactoring_location["create_refactoring_location"Fn]
+  get_parameter_list_benefits["get_parameter_list_benefits"Fn]
+  get_parameter_list_risks["get_parameter_list_risks"Fn]
+  detect_complex_conditionals["detect_complex_conditionals"Fn]
+  calculate_method_complexity_score["calculate_method_complexity_score"Fn]
+  generate_method_refactoring_suggestion["generate_method_refactoring_suggestion"Fn]
+  generate_class_refactoring_suggestion["generate_class_refactoring_suggestion"Fn]
+  calculate_function_similarity["calculate_function_similarity"Fn]
+  generate_duplicate_code_refactoring["generate_duplicate_code_refactoring"Fn]
+  estimate_parameter_count["estimate_parameter_count"Fn]
+  generate_parameter_object_refactoring["generate_parameter_object_refactoring"Fn]
+  generate_conditional_refactoring["generate_conditional_refactoring"Fn]
+  limit_fixes_per_category["limit_fixes_per_category"Fn]
+  detect_long_methods["detect_long_methods"Fn]
+  generate_pattern_recommendations["generate_pattern_recommendations"Fn]
+  generate_performance_optimizations["generate_performance_optimizations"Fn]
+  detect_string_concatenation_issues["detect_string_concatenation_issues"Fn]
+  detect_vector_reallocation_issues["detect_vector_reallocation_issues"Fn]
+  detect_nested_loop_issues["detect_nested_loop_issues"Fn]
+  generate_modernization_suggestions["generate_modernization_suggestions"Fn]
+  generate_architectural_improvements["generate_architectural_improvements"Fn]
+  create_refactoring_roadmap["create_refactoring_roadmap"Fn]
+  analyze_impact["analyze_impact"Fn]
+  calculate_refactoring_score["calculate_refactoring_score"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  smartrefactoringengine --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze
+  analyze --> detect_code_smell_fixes
+  detect_code_smell_fixes --> detect_large_classes
+  detect_large_classes --> detect_duplicate_code
+  detect_duplicate_code --> detect_long_parameter_lists
+  detect_long_parameter_lists --> is_function_or_method
+  is_function_or_method --> create_parameter_list_fix
+  create_parameter_list_fix --> create_refactoring_location
+  create_refactoring_location --> get_parameter_list_benefits
+  get_parameter_list_benefits --> get_parameter_list_risks
+  get_parameter_list_risks --> detect_complex_conditionals
+  detect_complex_conditionals --> calculate_method_complexity_score
+  calculate_method_complexity_score --> generate_method_refactoring_suggestion
+  generate_method_refactoring_suggestion --> generate_class_refactoring_suggestion
+  generate_class_refactoring_suggestion --> calculate_function_similarity
+  calculate_function_similarity --> generate_duplicate_code_refactoring
+  generate_duplicate_code_refactoring --> estimate_parameter_count
+  estimate_parameter_count --> generate_parameter_object_refactoring
+  generate_parameter_object_refactoring --> generate_conditional_refactoring
+  generate_conditional_refactoring --> limit_fixes_per_category
+  limit_fixes_per_category --> detect_long_methods
+  detect_long_methods --> generate_pattern_recommendations
+  generate_pattern_recommendations --> generate_performance_optimizations
+  generate_performance_optimizations --> detect_string_concatenation_issues
+  detect_string_concatenation_issues --> detect_vector_reallocation_issues
+  detect_vector_reallocation_issues --> detect_nested_loop_issues
+  detect_nested_loop_issues --> generate_modernization_suggestions
+  generate_modernization_suggestions --> generate_architectural_improvements
+  generate_architectural_improvements --> create_refactoring_roadmap
+  create_refactoring_roadmap --> analyze_impact
+  analyze_impact --> calculate_refactoring_score
+  calculate_refactoring_score --> fmt
+  fmt --> fmt
+  fmt --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class SmartRefactoringEngine {
+    +SmartRefactoringEngine()
+  }
+  class SmartRefactoringConfig {
+    +SmartRefactoringConfig()
+  }
+  class SmartRefactoringResult {
+    +SmartRefactoringResult()
+  }
+  class CodeSmellFix {
+    +CodeSmellFix()
+  }
+  class RefactoringLocation {
+    +RefactoringLocation()
+  }
+  class PatternRecommendation {
+    +PatternRecommendation()
+  }
+  class ImplementationStep {
+    +ImplementationStep()
+  }
+  class CodeChange {
+    +CodeChange()
+  }
+  class PerformanceOptimization {
+    +PerformanceOptimization()
+  }
+  class PerformanceGain {
+    +PerformanceGain()
+  }
+  class ModernizationSuggestion {
+    +ModernizationSuggestion()
+  }
+  class ArchitecturalImprovement {
+    +ArchitecturalImprovement()
+  }
+  class ImplementationPhase {
+    +ImplementationPhase()
+  }
+  class RefactoringRoadmap {
+    +RefactoringRoadmap()
+  }
+  class RefactoringPhase {
+    +RefactoringPhase()
+  }
+  class RefactoringItem {
+    +RefactoringItem()
+  }
+  class PriorityMatrix {
+    +PriorityMatrix()
+  }
+  class SuccessMetric {
+    +SuccessMetric()
+  }
+  class ImpactAnalysis {
+    +ImpactAnalysis()
+  }
+  class QualityImpact {
+    +QualityImpact()
+  }
+  class PerformanceImpact {
+    +PerformanceImpact()
+  }
+  class MaintainabilityImpact {
+    +MaintainabilityImpact()
+  }
+  class RiskAssessment {
+    +RiskAssessment()
+  }
+  class RefactoringRisk {
+    +RefactoringRisk()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

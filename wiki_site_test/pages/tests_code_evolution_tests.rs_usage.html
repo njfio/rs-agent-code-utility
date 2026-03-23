@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/code_evolution_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/code_evolution_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 11</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 46</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+create_test_git_repo"create_test_git_repo (fn)"]
+  test_code_evolution_tracker_creation"test_code_evolution_tracker_creation (fn)"]
+  test_code_evolution_tracker_invalid_repo"test_code_evolution_tracker_invalid_repo (fn)"]
+  test_evolution_analysis"test_evolution_analysis (fn)"]
+  test_evolution_analysis_with_config"test_evolution_analysis_with_config (fn)"]
+  test_file_specific_analysis"test_file_specific_analysis (fn)"]
+  test_change_type_classification"test_change_type_classification (fn)"]
+  test_pattern_detection"test_pattern_detection (fn)"]
+  test_file_insight_generation"test_file_insight_generation (fn)"]
+  test_recommendations_generation"test_recommendations_generation (fn)"]
+  test_metrics_calculation"test_metrics_calculation (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  create_test_git_repo["create_test_git_repo"Fn]
+  test_code_evolution_tracker_creation["test_code_evolution_tracker_creation"Fn]
+  test_code_evolution_tracker_invalid_repo["test_code_evolution_tracker_invalid_repo"Fn]
+  test_evolution_analysis["test_evolution_analysis"Fn]
+  test_evolution_analysis_with_config["test_evolution_analysis_with_config"Fn]
+  test_file_specific_analysis["test_file_specific_analysis"Fn]
+  test_change_type_classification["test_change_type_classification"Fn]
+  test_pattern_detection["test_pattern_detection"Fn]
+  test_file_insight_generation["test_file_insight_generation"Fn]
+  test_recommendations_generation["test_recommendations_generation"Fn]
+  test_metrics_calculation["test_metrics_calculation"Fn]
+  Start --> create_test_git_repo
+  create_test_git_repo --> test_code_evolution_tracker_creation
+  test_code_evolution_tracker_creation --> test_code_evolution_tracker_invalid_repo
+  test_code_evolution_tracker_invalid_repo --> test_evolution_analysis
+  test_evolution_analysis --> test_evolution_analysis_with_config
+  test_evolution_analysis_with_config --> test_file_specific_analysis
+  test_file_specific_analysis --> test_change_type_classification
+  test_change_type_classification --> test_pattern_detection
+  test_pattern_detection --> test_file_insight_generation
+  test_file_insight_generation --> test_recommendations_generation
+  test_recommendations_generation --> test_metrics_calculation
+  test_metrics_calculation --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>src/dependency_analysis.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script type="module" src="../assets/search.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>src/dependency_analysis.rs</h1></header>
+<main>
+<nav>
+<input class="search" id="q" type="search" placeholder="Search..." />
+<h4>Filters</h4>
+<select id="language-filter" class="search"><option value="">All Languages</option></select>
+<select id="file-type-filter" class="search"><option value="">All File Types</option></select>
+<select id="security-level-filter" class="search"><option value="">All Security Levels</option></select>
+<h4>Results</h4>
+<ul id="results"></ul>
+<a href="examples_ai_code_reviewer.rs.html" style="color: var(--accent);">examples/ai_code_reviewer.rs</a>
+<a href="examples_ai_powered_cli.rs.html" style="color: var(--accent);">examples/ai_powered_cli.rs</a>
+<a href="examples_ai_service_demo.rs.html" style="color: var(--accent);">examples/ai_service_demo.rs</a>
+<a href="examples_ai_showcase.rs.html" style="color: var(--accent);">examples/ai_showcase.rs</a>
+<a href="examples_analyze_codebase.rs.html" style="color: var(--accent);">examples/analyze_codebase.rs</a>
+<a href="examples_ast_transformation_demo.rs.html" style="color: var(--accent);">examples/ast_transformation_demo.rs</a>
+<a href="examples_basic_analysis.rs.html" style="color: var(--accent);">examples/basic_analysis.rs</a>
+<a href="examples_basic_usage.rs.html" style="color: var(--accent);">examples/basic_usage.rs</a>
+<a href="examples_code_map.rs.html" style="color: var(--accent);">examples/code_map.rs</a>
+<a href="examples_code_migration_assistant.rs.html" style="color: var(--accent);">examples/code_migration_assistant.rs</a>
+<a href="examples_comprehensive_demo.rs.html" style="color: var(--accent);">examples/comprehensive_demo.rs</a>
+<a href="examples_debug_response.rs.html" style="color: var(--accent);">examples/debug_response.rs</a>
+<a href="examples_direct_anthropic_test.rs.html" style="color: var(--accent);">examples/direct_anthropic_test.rs</a>
+<a href="examples_direct_openai_test.rs.html" style="color: var(--accent);">examples/direct_openai_test.rs</a>
+<a href="examples_gpt4o_advanced_demo.rs.html" style="color: var(--accent);">examples/gpt4o_advanced_demo.rs</a>
+<a href="examples_gpt4o_simple_test.rs.html" style="color: var(--accent);">examples/gpt4o_simple_test.rs</a>
+<a href="examples_gpt5_real_analysis.rs.html" style="color: var(--accent);">examples/gpt5_real_analysis.rs</a>
+<a href="examples_gpt5_ultimate_demo.rs.html" style="color: var(--accent);">examples/gpt5_ultimate_demo.rs</a>
+<a href="examples_improvements_demo.rs.html" style="color: var(--accent);">examples/improvements_demo.rs</a>
+<a href="examples_incremental_parsing.rs.html" style="color: var(--accent);">examples/incremental_parsing.rs</a>
+<a href="examples_intelligent_architect.rs.html" style="color: var(--accent);">examples/intelligent_architect.rs</a>
+<a href="examples_provider_comparison.rs.html" style="color: var(--accent);">examples/provider_comparison.rs</a>
+<a href="examples_real_ai_demo.rs.html" style="color: var(--accent);">examples/real_ai_demo.rs</a>
+<a href="examples_real_api_validation.rs.html" style="color: var(--accent);">examples/real_api_validation.rs</a>
+<a href="examples_real_code_analysis.rs.html" style="color: var(--accent);">examples/real_code_analysis.rs</a>
+<a href="examples_real_file_analysis.rs.html" style="color: var(--accent);">examples/real_file_analysis.rs</a>
+<a href="examples_real_openai_demo.rs.html" style="color: var(--accent);">examples/real_openai_demo.rs</a>
+<a href="examples_reasoning_engine_demo.rs.html" style="color: var(--accent);">examples/reasoning_engine_demo.rs</a>
+<a href="examples_security_analysis.rs.html" style="color: var(--accent);">examples/security_analysis.rs</a>
+<a href="examples_simple_ai_demo.rs.html" style="color: var(--accent);">examples/simple_ai_demo.rs</a>
+<a href="examples_simple_validation.rs.html" style="color: var(--accent);">examples/simple_validation.rs</a>
+<a href="examples_tdd_minimal.rs.html" style="color: var(--accent);">examples/tdd_minimal.rs</a>
+<a href="site_assets_search.js.html" style="color: var(--accent);">site/assets/search.js</a>
+<a href="src_advanced_ai_analysis.rs.html" style="color: var(--accent);">src/advanced_ai_analysis.rs</a>
+<a href="src_advanced_security.rs.html" style="color: var(--accent);">src/advanced_security.rs</a>
+<a href="src_ai_cache.rs.html" style="color: var(--accent);">src/ai/cache.rs</a>
+<a href="src_ai_config.rs.html" style="color: var(--accent);">src/ai/config.rs</a>
+<a href="src_ai_error.rs.html" style="color: var(--accent);">src/ai/error.rs</a>
+<a href="src_ai_mod.rs.html" style="color: var(--accent);">src/ai/mod.rs</a>
+<a href="src_ai_providers_anthropic.rs.html" style="color: var(--accent);">src/ai/providers/anthropic.rs</a>
+<a href="src_ai_providers_azure.rs.html" style="color: var(--accent);">src/ai/providers/azure.rs</a>
+<a href="src_ai_providers_google.rs.html" style="color: var(--accent);">src/ai/providers/google.rs</a>
+<a href="src_ai_providers_local.rs.html" style="color: var(--accent);">src/ai/providers/local.rs</a>
+<a href="src_ai_providers_mod.rs.html" style="color: var(--accent);">src/ai/providers/mod.rs</a>
+<a href="src_ai_providers_ollama.rs.html" style="color: var(--accent);">src/ai/providers/ollama.rs</a>
+<a href="src_ai_providers_openai.rs.html" style="color: var(--accent);">src/ai/providers/openai.rs</a>
+<a href="src_ai_service.rs.html" style="color: var(--accent);">src/ai/service.rs</a>
+<a href="src_ai_types.rs.html" style="color: var(--accent);">src/ai/types.rs</a>
+<a href="src_ai_analysis.rs.html" style="color: var(--accent);">src/ai_analysis.rs</a>
+<a href="src_analysis_common.rs.html" style="color: var(--accent);">src/analysis_common.rs</a>
+<a href="src_analysis_utils.rs.html" style="color: var(--accent);">src/analysis_utils.rs</a>
+<a href="src_analyzer.rs.html" style="color: var(--accent);">src/analyzer.rs</a>
+<a href="src_ast_transformation.rs.html" style="color: var(--accent);">src/ast_transformation.rs</a>
+<a href="src_bin_main.rs.html" style="color: var(--accent);">src/bin/main.rs</a>
+<a href="src_bin_rts.rs.html" style="color: var(--accent);">src/bin/rts.rs</a>
+<a href="src_cli_commands_analyze.rs.html" style="color: var(--accent);">src/cli/commands/analyze.rs</a>
+<a href="src_cli_commands_dependencies.rs.html" style="color: var(--accent);">src/cli/commands/dependencies.rs</a>
+<a href="src_cli_commands_explain.rs.html" style="color: var(--accent);">src/cli/commands/explain.rs</a>
+<a href="src_cli_commands_find.rs.html" style="color: var(--accent);">src/cli/commands/find.rs</a>
+<a href="src_cli_commands_insights.rs.html" style="color: var(--accent);">src/cli/commands/insights.rs</a>
+<a href="src_cli_commands_interactive.rs.html" style="color: var(--accent);">src/cli/commands/interactive.rs</a>
+<a href="src_cli_commands_languages.rs.html" style="color: var(--accent);">src/cli/commands/languages.rs</a>
+<a href="src_cli_commands_map.rs.html" style="color: var(--accent);">src/cli/commands/map.rs</a>
+<a href="src_cli_commands_mod.rs.html" style="color: var(--accent);">src/cli/commands/mod.rs</a>
+<a href="src_cli_commands_query.rs.html" style="color: var(--accent);">src/cli/commands/query.rs</a>
+<a href="src_cli_commands_refactor.rs.html" style="color: var(--accent);">src/cli/commands/refactor.rs</a>
+<a href="src_cli_commands_security.rs.html" style="color: var(--accent);">src/cli/commands/security.rs</a>
+<a href="src_cli_commands_stats.rs.html" style="color: var(--accent);">src/cli/commands/stats.rs</a>
+<a href="src_cli_commands_symbols.rs.html" style="color: var(--accent);">src/cli/commands/symbols.rs</a>
+<a href="src_cli_commands_watch.rs.html" style="color: var(--accent);">src/cli/commands/watch.rs</a>
+<a href="src_cli_commands_wiki.rs.html" style="color: var(--accent);">src/cli/commands/wiki.rs</a>
+<a href="src_cli_error.rs.html" style="color: var(--accent);">src/cli/error.rs</a>
+<a href="src_cli_mod.rs.html" style="color: var(--accent);">src/cli/mod.rs</a>
+<a href="src_cli_output.rs.html" style="color: var(--accent);">src/cli/output.rs</a>
+<a href="src_cli_sarif.rs.html" style="color: var(--accent);">src/cli/sarif.rs</a>
+<a href="src_cli_sbom.rs.html" style="color: var(--accent);">src/cli/sbom.rs</a>
+<a href="src_cli_schemas.rs.html" style="color: var(--accent);">src/cli/schemas.rs</a>
+<a href="src_cli_utils.rs.html" style="color: var(--accent);">src/cli/utils.rs</a>
+<a href="src_code_evolution.rs.html" style="color: var(--accent);">src/code_evolution.rs</a>
+<a href="src_code_map.rs.html" style="color: var(--accent);">src/code_map.rs</a>
+<a href="src_command_injection_detector.rs.html" style="color: var(--accent);">src/command_injection_detector.rs</a>
+<a href="src_complexity_analysis.rs.html" style="color: var(--accent);">src/complexity_analysis.rs</a>
+<a href="src_constants.rs.html" style="color: var(--accent);">src/constants.rs</a>
+<a href="src_control_flow.rs.html" style="color: var(--accent);">src/control_flow.rs</a>
+<a href="src_dependency_analysis.rs.html" style="color: var(--accent);">src/dependency_analysis.rs</a>
+<a href="src_embeddings.rs.html" style="color: var(--accent);">src/embeddings.rs</a>
+<a href="src_enhanced_security.rs.html" style="color: var(--accent);">src/enhanced_security.rs</a>
+<a href="src_error.rs.html" style="color: var(--accent);">src/error.rs</a>
+<a href="src_file_cache.rs.html" style="color: var(--accent);">src/file_cache.rs</a>
+<a href="src_infrastructure_cache.rs.html" style="color: var(--accent);">src/infrastructure/cache.rs</a>
+<a href="src_infrastructure_config.rs.html" style="color: var(--accent);">src/infrastructure/config.rs</a>
+<a href="src_infrastructure_database.rs.html" style="color: var(--accent);">src/infrastructure/database.rs</a>
+<a href="src_infrastructure_http_client.rs.html" style="color: var(--accent);">src/infrastructure/http_client.rs</a>
+<a href="src_infrastructure_mod.rs.html" style="color: var(--accent);">src/infrastructure/mod.rs</a>
+<a href="src_infrastructure_rate_limiter.rs.html" style="color: var(--accent);">src/infrastructure/rate_limiter.rs</a>
+<a href="src_intent_mapping.rs.html" style="color: var(--accent);">src/intent_mapping.rs</a>
+<a href="src_intent_mapping_stub.rs.html" style="color: var(--accent);">src/intent_mapping_stub.rs</a>
+<a href="src_languages_c.rs.html" style="color: var(--accent);">src/languages/c.rs</a>
+<a href="src_languages_cpp.rs.html" style="color: var(--accent);">src/languages/cpp.rs</a>
+<a href="src_languages_go.rs.html" style="color: var(--accent);">src/languages/go.rs</a>
+<a href="src_languages_javascript.rs.html" style="color: var(--accent);">src/languages/javascript.rs</a>
+<a href="src_languages_mod.rs.html" style="color: var(--accent);">src/languages/mod.rs</a>
+<a href="src_languages_python.rs.html" style="color: var(--accent);">src/languages/python.rs</a>
+<a href="src_languages_rust.rs.html" style="color: var(--accent);">src/languages/rust.rs</a>
+<a href="src_languages_typescript.rs.html" style="color: var(--accent);">src/languages/typescript.rs</a>
+<a href="src_lib.rs.html" style="color: var(--accent);">src/lib.rs</a>
+<a href="src_main.rs.html" style="color: var(--accent);">src/main.rs</a>
+<a href="src_memory_tracker.rs.html" style="color: var(--accent);">src/memory_tracker.rs</a>
+<a href="src_parser.rs.html" style="color: var(--accent);">src/parser.rs</a>
+<a href="src_performance_analysis.rs.html" style="color: var(--accent);">src/performance_analysis.rs</a>
+<a href="src_query.rs.html" style="color: var(--accent);">src/query.rs</a>
+<a href="src_reasoning_engine.rs.html" style="color: var(--accent);">src/reasoning_engine.rs</a>
+<a href="src_refactoring.rs.html" style="color: var(--accent);">src/refactoring.rs</a>
+<a href="src_security_mod.rs.html" style="color: var(--accent);">src/security/mod.rs</a>
+<a href="src_security_owasp_detector.rs.html" style="color: var(--accent);">src/security/owasp_detector.rs</a>
+<a href="src_security_secrets_detector.rs.html" style="color: var(--accent);">src/security/secrets_detector.rs</a>
+<a href="src_security_vulnerability_db.rs.html" style="color: var(--accent);">src/security/vulnerability_db.rs</a>
+<a href="src_semantic_context.rs.html" style="color: var(--accent);">src/semantic_context.rs</a>
+<a href="src_semantic_graph.rs.html" style="color: var(--accent);">src/semantic_graph.rs</a>
+<a href="src_smart_refactoring.rs.html" style="color: var(--accent);">src/smart_refactoring.rs</a>
+<a href="src_sql_injection_detector.rs.html" style="color: var(--accent);">src/sql_injection_detector.rs</a>
+<a href="src_symbol_table.rs.html" style="color: var(--accent);">src/symbol_table.rs</a>
+<a href="src_taint_analysis.rs.html" style="color: var(--accent);">src/taint_analysis.rs</a>
+<a href="src_test_coverage.rs.html" style="color: var(--accent);">src/test_coverage.rs</a>
+<a href="src_tree.rs.html" style="color: var(--accent);">src/tree.rs</a>
+<a href="src_wiki_mod.rs.html" style="color: var(--accent);">src/wiki/mod.rs</a>
+<a href="src_wiki_security_enhancements.rs.html" style="color: var(--accent);">src/wiki/security_enhancements.rs</a>
+<a href="test_cli.rs.html" style="color: var(--accent);">test_cli.rs</a>
+<a href="test_code_map.rs.html" style="color: var(--accent);">test_code_map.rs</a>
+<a href="test_files_phase2_demo.rs.html" style="color: var(--accent);">test_files/phase2_demo.rs</a>
+<a href="test_files_sample.go.html" style="color: var(--accent);">test_files/sample.go</a>
+<a href="test_files_sample.ts.html" style="color: var(--accent);">test_files/sample.ts</a>
+<a href="test_rate_limiter.rs.html" style="color: var(--accent);">test_rate_limiter.rs</a>
+<a href="test_wiki_assets_search.js.html" style="color: var(--accent);">test_wiki/assets/search.js</a>
+<a href="tests_ai_service_tests.rs.html" style="color: var(--accent);">tests/ai_service_tests.rs</a>
+<a href="tests_analyzer_cache_tests.rs.html" style="color: var(--accent);">tests/analyzer_cache_tests.rs</a>
+<a href="tests_analyzer_depth.rs.html" style="color: var(--accent);">tests/analyzer_depth.rs</a>
+<a href="tests_ast_transformation.rs.html" style="color: var(--accent);">tests/ast_transformation.rs</a>
+<a href="tests_ast_transformation_tests.rs.html" style="color: var(--accent);">tests/ast_transformation_tests.rs</a>
+<a href="tests_basic_integration_tests.rs.html" style="color: var(--accent);">tests/basic_integration_tests.rs</a>
+<a href="tests_cli_determinism.rs.html" style="color: var(--accent);">tests/cli_determinism.rs</a>
+<a href="tests_cli_enable_security_flag.rs.html" style="color: var(--accent);">tests/cli_enable_security_flag.rs</a>
+<a href="tests_cli_sbom_tests.rs.html" style="color: var(--accent);">tests/cli_sbom_tests.rs</a>
+<a href="tests_code_evolution_tests.rs.html" style="color: var(--accent);">tests/code_evolution_tests.rs</a>
+<a href="tests_code_map.rs.html" style="color: var(--accent);">tests/code_map.rs</a>
+<a href="tests_complexity_analysis_unit_tests.rs.html" style="color: var(--accent);">tests/complexity_analysis_unit_tests.rs</a>
+<a href="tests_comprehensive_integration_tests.rs.html" style="color: var(--accent);">tests/comprehensive_integration_tests.rs</a>
+<a href="tests_dependency_analysis.rs.html" style="color: var(--accent);">tests/dependency_analysis.rs</a>
+<a href="tests_dependency_analysis_unit_tests.rs.html" style="color: var(--accent);">tests/dependency_analysis_unit_tests.rs</a>
+<a href="tests_documentation_validation.rs.html" style="color: var(--accent);">tests/documentation_validation.rs</a>
+<a href="tests_enhanced_security_analysis.rs.html" style="color: var(--accent);">tests/enhanced_security_analysis.rs</a>
+<a href="tests_error_tests.rs.html" style="color: var(--accent);">tests/error_tests.rs</a>
+<a href="tests_file_cache_tests.rs.html" style="color: var(--accent);">tests/file_cache_tests.rs</a>
+<a href="tests_integration_tests.rs.html" style="color: var(--accent);">tests/integration_tests.rs</a>
+<a href="tests_intent_mapping_tests.rs.html" style="color: var(--accent);">tests/intent_mapping_tests.rs</a>
+<a href="tests_memory_tracker_tests.rs.html" style="color: var(--accent);">tests/memory_tracker_tests.rs</a>
+<a href="tests_missing_language_features_tests.rs.html" style="color: var(--accent);">tests/missing_language_features_tests.rs</a>
+<a href="tests_parser_comprehensive_tests.rs.html" style="color: var(--accent);">tests/parser_comprehensive_tests.rs</a>
+<a href="tests_performance_analysis.rs.html" style="color: var(--accent);">tests/performance_analysis.rs</a>
+<a href="tests_performance_optimization_tests.rs.html" style="color: var(--accent);">tests/performance_optimization_tests.rs</a>
+<a href="tests_performance_optimizations_tests.rs.html" style="color: var(--accent);">tests/performance_optimizations_tests.rs</a>
+<a href="tests_public_api_validation.rs.html" style="color: var(--accent);">tests/public_api_validation.rs</a>
+<a href="tests_reasoning_engine_tests.rs.html" style="color: var(--accent);">tests/reasoning_engine_tests.rs</a>
+<a href="tests_sarif_output_tests.rs.html" style="color: var(--accent);">tests/sarif_output_tests.rs</a>
+<a href="tests_secrets_detector.rs.html" style="color: var(--accent);">tests/secrets_detector.rs</a>
+<a href="tests_security_analysis_unit_tests.rs.html" style="color: var(--accent);">tests/security_analysis_unit_tests.rs</a>
+<a href="tests_security_cli.rs.html" style="color: var(--accent);">tests/security_cli.rs</a>
+<a href="tests_security_scanning.rs.html" style="color: var(--accent);">tests/security_scanning.rs</a>
+<a href="tests_security_vuln_db.rs.html" style="color: var(--accent);">tests/security_vuln_db.rs</a>
+<a href="tests_semantic_graph_tests.rs.html" style="color: var(--accent);">tests/semantic_graph_tests.rs</a>
+<a href="tests_simple_memory_test.rs.html" style="color: var(--accent);">tests/simple_memory_test.rs</a>
+<a href="tests_smart_refactoring.rs.html" style="color: var(--accent);">tests/smart_refactoring.rs</a>
+<a href="tests_symbol_listing.rs.html" style="color: var(--accent);">tests/symbol_listing.rs</a>
+<a href="tests_symbols_cli.rs.html" style="color: var(--accent);">tests/symbols_cli.rs</a>
+<a href="tests_test_coverage_analysis.rs.html" style="color: var(--accent);">tests/test_coverage_analysis.rs</a>
+<a href="tests_wiki_ai_mock.rs.html" style="color: var(--accent);">tests/wiki_ai_mock.rs</a>
+<a href="tests_wiki_cfg_flow.rs.html" style="color: var(--accent);">tests/wiki_cfg_flow.rs</a>
+<a href="tests_wiki_cfg_true_false.rs.html" style="color: var(--accent);">tests/wiki_cfg_true_false.rs</a>
+<a href="tests_wiki_generator.rs.html" style="color: var(--accent);">tests/wiki_generator.rs</a>
+<a href="tests_wiki_generator_phase2.rs.html" style="color: var(--accent);">tests/wiki_generator_phase2.rs</a>
+<a href="tests_wiki_sequence_calls.rs.html" style="color: var(--accent);">tests/wiki_sequence_calls.rs</a>
+<a href="tests_wiki_sequence_methods.rs.html" style="color: var(--accent);">tests/wiki_sequence_methods.rs</a>
+<a href="wiki_site_assets_search.js.html" style="color: var(--accent);">wiki_site/assets/search.js</a>
+<a href="wiki_site_test_assets_search.js.html" style="color: var(--accent);">wiki_site_test/assets/search.js</a>
+
+
+</nav>
+<section class="article">
+<div class="card"><p><a href="../index.html">Home</a> > <strong>src/dependency_analysis.rs</strong></p></div>
+<div class="card"><h2>File Overview</h2><p>193 symbols, 1667 lines</p></div>
+
+<div class="card">
+<h3>Module Overview</h3>
+<p><em>Large module (39 functions) - showing simplified view</em></p>
+<div class="card">
+<h4>Key Components</h4>
+<ul>
+
+</ul>
+</div>
+</div>
+<div class="card"><h3>Symbols in this file</h3><p>Click symbol names to jump to their definition, or 📚 to go back to main index.</p>
+<ul>
+<li id="symbol-fmt"><a href="#symbol-fmt"><code>fmt</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-clone"><a href="#symbol-clone"><code>clone</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-default"><a href="#symbol-default"><code>default</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-enrich"><a href="#symbol-enrich"><code>enrich</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-new"><a href="#symbol-new"><code>new</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-with_config"><a href="#symbol-with_config"><code>with_config</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-with_provider"><a href="#symbol-with_provider"><code>with_provider</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-create_dependency"><a href="#symbol-create_dependency"><code>create_dependency</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-analyze"><a href="#symbol-analyze"><code>analyze</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-detect_package_managers"><a href="#symbol-detect_package_managers"><code>detect_package_managers</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-extract_dependencies"><a href="#symbol-extract_dependencies"><code>extract_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-extract_cargo_dependencies"><a href="#symbol-extract_cargo_dependencies"><code>extract_cargo_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-parse_cargo_dependency_spec"><a href="#symbol-parse_cargo_dependency_spec"><code>parse_cargo_dependency_spec</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-extract_npm_dependencies"><a href="#symbol-extract_npm_dependencies"><code>extract_npm_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-extract_source_imports"><a href="#symbol-extract_source_imports"><code>extract_source_imports</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-scan_rust_imports"><a href="#symbol-scan_rust_imports"><code>scan_rust_imports</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-scan_js_imports"><a href="#symbol-scan_js_imports"><code>scan_js_imports</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-normalize_js_pkg"><a href="#symbol-normalize_js_pkg"><code>normalize_js_pkg</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-scan_python_imports"><a href="#symbol-scan_python_imports"><code>scan_python_imports</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-extract_python_dependencies"><a href="#symbol-extract_python_dependencies"><code>extract_python_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-parse_pip_requirement"><a href="#symbol-parse_pip_requirement"><code>parse_pip_requirement</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-extract_go_dependencies"><a href="#symbol-extract_go_dependencies"><code>extract_go_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-parse_go_require_line"><a href="#symbol-parse_go_require_line"><code>parse_go_require_line</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-analyze_vulnerabilities"><a href="#symbol-analyze_vulnerabilities"><code>analyze_vulnerabilities</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-analyze_licenses"><a href="#symbol-analyze_licenses"><code>analyze_licenses</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-is_copyleft_license"><a href="#symbol-is_copyleft_license"><code>is_copyleft_license</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-detect_outdated_dependencies"><a href="#symbol-detect_outdated_dependencies"><code>detect_outdated_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-is_major_version_difference"><a href="#symbol-is_major_version_difference"><code>is_major_version_difference</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-analyze_dependency_graph"><a href="#symbol-analyze_dependency_graph"><code>analyze_dependency_graph</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-generate_security_recommendations"><a href="#symbol-generate_security_recommendations"><code>generate_security_recommendations</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-parse_poetry_dependencies"><a href="#symbol-parse_poetry_dependencies"><code>parse_poetry_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-parse_pipfile_dependencies"><a href="#symbol-parse_pipfile_dependencies"><code>parse_pipfile_dependencies</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-default"><a href="#symbol-default"><code>default</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-default"><a href="#symbol-default"><code>default</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-fmt"><a href="#symbol-fmt"><code>fmt</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-fmt"><a href="#symbol-fmt"><code>fmt</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-fmt"><a href="#symbol-fmt"><code>fmt</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-fmt"><a href="#symbol-fmt"><code>fmt</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-fmt"><a href="#symbol-fmt"><code>fmt</code></a> <small>function</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyanalyzer"><a href="#symbol-dependencyanalyzer"><code>DependencyAnalyzer</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyconfig"><a href="#symbol-dependencyconfig"><code>DependencyConfig</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyanalysisresult"><a href="#symbol-dependencyanalysisresult"><code>DependencyAnalysisResult</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependency"><a href="#symbol-dependency"><code>Dependency</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-packagemanagerinfo"><a href="#symbol-packagemanagerinfo"><code>PackageManagerInfo</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyvulnerability"><a href="#symbol-dependencyvulnerability"><code>DependencyVulnerability</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-licenseanalysis"><a href="#symbol-licenseanalysis"><code>LicenseAnalysis</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-licenseissue"><a href="#symbol-licenseissue"><code>LicenseIssue</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-outdateddependency"><a href="#symbol-outdateddependency"><code>OutdatedDependency</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencygraphanalysis"><a href="#symbol-dependencygraphanalysis"><code>DependencyGraphAnalysis</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-circulardependency"><a href="#symbol-circulardependency"><code>CircularDependency</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-populardependency"><a href="#symbol-populardependency"><code>PopularDependency</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencycluster"><a href="#symbol-dependencycluster"><code>DependencyCluster</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-graphmetrics"><a href="#symbol-graphmetrics"><code>GraphMetrics</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-securityrecommendation"><a href="#symbol-securityrecommendation"><code>SecurityRecommendation</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-noopvulnprovider"><a href="#symbol-noopvulnprovider"><code>NoopVulnProvider</code></a> <small>struct</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-packagemanager"><a href="#symbol-packagemanager"><code>PackageManager</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencytype"><a href="#symbol-dependencytype"><code>DependencyType</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-vulnerabilityseverity"><a href="#symbol-vulnerabilityseverity"><code>VulnerabilitySeverity</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-licenseissuetype"><a href="#symbol-licenseissuetype"><code>LicenseIssueType</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-compliancestatus"><a href="#symbol-compliancestatus"><code>ComplianceStatus</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-updateurgency"><a href="#symbol-updateurgency"><code>UpdateUrgency</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-circulardependencyimpact"><a href="#symbol-circulardependencyimpact"><code>CircularDependencyImpact</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-recommendationpriority"><a href="#symbol-recommendationpriority"><code>RecommendationPriority</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-implementationdifficulty"><a href="#symbol-implementationdifficulty"><code>ImplementationDifficulty</code></a> <small>enum</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyanalyzer"><a href="#symbol-dependencyanalyzer"><code>DependencyAnalyzer</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyanalyzer"><a href="#symbol-dependencyanalyzer"><code>DependencyAnalyzer</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyconfig"><a href="#symbol-dependencyconfig"><code>DependencyConfig</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-noopvulnprovider"><a href="#symbol-noopvulnprovider"><code>NoopVulnProvider</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencyanalyzer"><a href="#symbol-dependencyanalyzer"><code>DependencyAnalyzer</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-licenseanalysis"><a href="#symbol-licenseanalysis"><code>LicenseAnalysis</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencygraphanalysis"><a href="#symbol-dependencygraphanalysis"><code>DependencyGraphAnalysis</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-packagemanager"><a href="#symbol-packagemanager"><code>PackageManager</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-vulnerabilityseverity"><a href="#symbol-vulnerabilityseverity"><code>VulnerabilitySeverity</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-licenseissuetype"><a href="#symbol-licenseissuetype"><code>LicenseIssueType</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-updateurgency"><a href="#symbol-updateurgency"><code>UpdateUrgency</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-recommendationpriority"><a href="#symbol-recommendationpriority"><code>RecommendationPriority</code></a> <small>impl</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-root_path"><a href="#symbol-root_path"><code>root_path</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-package_managers"><a href="#symbol-package_managers"><code>package_managers</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-all_dependencies"><a href="#symbol-all_dependencies"><code>all_dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencies_by_manager"><a href="#symbol-dependencies_by_manager"><code>dependencies_by_manager</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-deps"><a href="#symbol-deps"><code>deps</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-count"><a href="#symbol-count"><code>count</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-inferred"><a href="#symbol-inferred"><code>inferred</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-vulnerabilities"><a href="#symbol-vulnerabilities"><code>vulnerabilities</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-license_analysis"><a href="#symbol-license_analysis"><code>license_analysis</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-outdated_dependencies"><a href="#symbol-outdated_dependencies"><code>outdated_dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-graph_analysis"><a href="#symbol-graph_analysis"><code>graph_analysis</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-security_recommendations"><a href="#symbol-security_recommendations"><code>security_recommendations</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-direct_deps"><a href="#symbol-direct_deps"><code>direct_deps</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-transitive_deps"><a href="#symbol-transitive_deps"><code>transitive_deps</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-package_managers"><a href="#symbol-package_managers"><code>package_managers</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-cargo_toml"><a href="#symbol-cargo_toml"><code>cargo_toml</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-lock_file"><a href="#symbol-lock_file"><code>lock_file</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-package_json"><a href="#symbol-package_json"><code>package_json</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-lock_file"><a href="#symbol-lock_file"><code>lock_file</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-yarn_lock"><a href="#symbol-yarn_lock"><code>yarn_lock</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-manager"><a href="#symbol-manager"><code>manager</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-requirements_txt"><a href="#symbol-requirements_txt"><code>requirements_txt</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-pyproject_toml"><a href="#symbol-pyproject_toml"><code>pyproject_toml</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-pipfile"><a href="#symbol-pipfile"><code>pipfile</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-go_mod"><a href="#symbol-go_mod"><code>go_mod</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-content"><a href="#symbol-content"><code>content</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencies"><a href="#symbol-dependencies"><code>dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-toml_value"><a href="#symbol-toml_value"><code>toml_value</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependency_type"><a href="#symbol-dependency_type"><code>dependency_type</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-content"><a href="#symbol-content"><code>content</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencies"><a href="#symbol-dependencies"><code>dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-package_json"><a href="#symbol-package_json"><code>package_json</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version_str"><a href="#symbol-version_str"><code>version_str</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version_str"><a href="#symbol-version_str"><code>version_str</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version_str"><a href="#symbol-version_str"><code>version_str</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version_str"><a href="#symbol-version_str"><code>version_str</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-deps"><a href="#symbol-deps"><code>deps</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-seen"><a href="#symbol-seen"><code>seen</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-full"><a href="#symbol-full"><code>full</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-ok"><a href="#symbol-ok"><code>Ok</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-key"><a href="#symbol-key"><code>key</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-key"><a href="#symbol-key"><code>key</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-key"><a href="#symbol-key"><code>key</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-names"><a href="#symbol-names"><code>names</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-l"><a href="#symbol-l"><code>l</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-after"><a href="#symbol-after"><code>after</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-first"><a href="#symbol-first"><code>first</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-after"><a href="#symbol-after"><code>after</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-name"><a href="#symbol-name"><code>name</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-names"><a href="#symbol-names"><code>names</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-l"><a href="#symbol-l"><code>l</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-spec"><a href="#symbol-spec"><code>spec</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-spec"><a href="#symbol-spec"><code>spec</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-spec"><a href="#symbol-spec"><code>spec</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-s"><a href="#symbol-s"><code>s</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-spec"><a href="#symbol-spec"><code>spec</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-s"><a href="#symbol-s"><code>s</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-rest"><a href="#symbol-rest"><code>rest</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-inside"><a href="#symbol-inside"><code>inside</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-inside"><a href="#symbol-inside"><code>inside</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-rest"><a href="#symbol-rest"><code>rest</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-inside"><a href="#symbol-inside"><code>inside</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-inside"><a href="#symbol-inside"><code>inside</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-spec"><a href="#symbol-spec"><code>spec</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-spec"><a href="#symbol-spec"><code>spec</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-iter"><a href="#symbol-iter"><code>iter</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-scope"><a href="#symbol-scope"><code>scope</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-pkg"><a href="#symbol-pkg"><code>pkg</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-names"><a href="#symbol-names"><code>names</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-l"><a href="#symbol-l"><code>l</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-after"><a href="#symbol-after"><code>after</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-first"><a href="#symbol-first"><code>first</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-after"><a href="#symbol-after"><code>after</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-module"><a href="#symbol-module"><code>module</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-content"><a href="#symbol-content"><code>content</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencies"><a href="#symbol-dependencies"><code>dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-line"><a href="#symbol-line"><code>line</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-name"><a href="#symbol-name"><code>name</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-name"><a href="#symbol-name"><code>name</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-content"><a href="#symbol-content"><code>content</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependencies"><a href="#symbol-dependencies"><code>dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-in_require"><a href="#symbol-in_require"><code>in_require</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-line"><a href="#symbol-line"><code>line</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-parts"><a href="#symbol-parts"><code>parts</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-vulnerabilities"><a href="#symbol-vulnerabilities"><code>vulnerabilities</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-license_distribution"><a href="#symbol-license_distribution"><code>license_distribution</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-compliance_issues"><a href="#symbol-compliance_issues"><code>compliance_issues</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-unknown_licenses"><a href="#symbol-unknown_licenses"><code>unknown_licenses</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-compatible_licenses"><a href="#symbol-compatible_licenses"><code>compatible_licenses</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-incompatible_licenses"><a href="#symbol-incompatible_licenses"><code>incompatible_licenses</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-compliance_status"><a href="#symbol-compliance_status"><code>compliance_status</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-outdated"><a href="#symbol-outdated"><code>outdated</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-urgency"><a href="#symbol-urgency"><code>urgency</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-current_major"><a href="#symbol-current_major"><code>current_major</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-latest_major"><a href="#symbol-latest_major"><code>latest_major</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-total_nodes"><a href="#symbol-total_nodes"><code>total_nodes</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-total_edges"><a href="#symbol-total_edges"><code>total_edges</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-circular_dependencies"><a href="#symbol-circular_dependencies"><code>circular_dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependency_counts"><a href="#symbol-dependency_counts"><code>dependency_counts</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-popular_dependencies"><a href="#symbol-popular_dependencies"><code>popular_dependencies</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-clusters"><a href="#symbol-clusters"><code>clusters</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-metrics"><a href="#symbol-metrics"><code>metrics</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-recommendations"><a href="#symbol-recommendations"><code>recommendations</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-critical_updates"><a href="#symbol-critical_updates"><code>critical_updates</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-toml_value"><a href="#symbol-toml_value"><code>toml_value</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-dependency_type"><a href="#symbol-dependency_type"><code>dependency_type</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-toml_value"><a href="#symbol-toml_value"><code>toml_value</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+<li id="symbol-version"><a href="#symbol-version"><code>version</code></a> <small>variable</small> <a href="../index.html" title="Back to Index" style="color: var(--accent); text-decoration: none;">📚</a></li>
+
+</ul>
+</div>
+
+
+</section>
+</main>
+</body>
+</html>

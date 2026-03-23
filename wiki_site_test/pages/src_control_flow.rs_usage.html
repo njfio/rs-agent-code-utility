@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/control_flow.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/control_flow.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 25</li>
+<li><strong>Structures:</strong> 2</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 94</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  build_cfg"build_cfg (fn)"]
+  find_functions"find_functions (fn)"]
+  traverse_for_functions"traverse_for_functions (fn)"]
+  build_cfg_for_function"build_cfg_for_function (fn)"]
+  find_function_body"find_function_body (fn)"]
+  build_cfg_for_node"build_cfg_for_node (fn)"]
+  traverse_and_build_cfg"traverse_and_build_cfg (fn)"]
+  is_conditional"is_conditional (fn)"]
+  is_loop"is_loop (fn)"]
+  is_call"is_call (fn)"]
+  extract_call_details_with_tree"extract_call_details_with_tree (fn)"]
+  is_return"is_return (fn)"]
+  build_conditional_cfg"build_conditional_cfg (fn)"]
+  build_loop_cfg"build_loop_cfg (fn)"]
+  build_return_cfg"build_return_cfg (fn)"]
+  build_sequential_cfg"build_sequential_cfg (fn)"]
+  is_control_flow_node"is_control_flow_node (fn)"]
+  cyclomatic_complexity"cyclomatic_complexity (fn)"]
+  decision_points"decision_points (fn)"]
+  npath_complexity"npath_complexity (fn)"]
+  call_sequence"call_sequence (fn)"]
+  test_cfg_construction_rust"test_cfg_construction_rust (fn)"]
+  test_cfg_cyclomatic_complexity"test_cfg_cyclomatic_complexity (fn)"]
+  test_cfg_decision_points"test_cfg_decision_points (fn)"]
+  build_cfg_for_function --> find_functions
+  build_cfg_for_function --> traverse_for_functions
+  find_function_body --> find_functions
+  find_function_body --> traverse_for_functions
+  is_conditional --> decision_points
+  is_conditional --> test_cfg_decision_points
+  is_loop --> decision_points
+  is_loop --> test_cfg_decision_points
+  is_call --> decision_points
+  is_call --> test_cfg_decision_points
+  is_return --> decision_points
+  is_return --> test_cfg_decision_points
+  is_control_flow_node --> decision_points
+  is_control_flow_node --> test_cfg_decision_points
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  controlflowgraph["ControlFlowGraph"]
+  Start --> controlflowgraph
+  cfgbuilder["CfgBuilder"]
+  Start --> cfgbuilder
+  new["new"Fn]
+  build_cfg["build_cfg"Fn]
+  find_functions["find_functions"Fn]
+  traverse_for_functions["traverse_for_functions"Fn]
+  build_cfg_for_function["build_cfg_for_function"Fn]
+  find_function_body["find_function_body"Fn]
+  build_cfg_for_node["build_cfg_for_node"Fn]
+  traverse_and_build_cfg["traverse_and_build_cfg"Fn]
+  is_conditional["is_conditional"Fn]
+  is_loop["is_loop"Fn]
+  is_call["is_call"Fn]
+  extract_call_details_with_tree["extract_call_details_with_tree"Fn]
+  is_return["is_return"Fn]
+  build_conditional_cfg["build_conditional_cfg"Fn]
+  build_loop_cfg["build_loop_cfg"Fn]
+  build_return_cfg["build_return_cfg"Fn]
+  build_sequential_cfg["build_sequential_cfg"Fn]
+  is_control_flow_node["is_control_flow_node"Fn]
+  cyclomatic_complexity["cyclomatic_complexity"Fn]
+  decision_points["decision_points"Fn]
+  npath_complexity["npath_complexity"Fn]
+  call_sequence["call_sequence"Fn]
+  test_cfg_construction_rust["test_cfg_construction_rust"Fn]
+  test_cfg_cyclomatic_complexity["test_cfg_cyclomatic_complexity"Fn]
+  test_cfg_decision_points["test_cfg_decision_points"Fn]
+  controlflowgraph --> new
+  new --> build_cfg
+  build_cfg --> find_functions
+  find_functions --> traverse_for_functions
+  traverse_for_functions --> build_cfg_for_function
+  build_cfg_for_function --> find_function_body
+  find_function_body --> build_cfg_for_node
+  build_cfg_for_node --> traverse_and_build_cfg
+  traverse_and_build_cfg --> is_conditional
+  is_conditional --> is_loop
+  is_loop --> is_call
+  is_call --> extract_call_details_with_tree
+  extract_call_details_with_tree --> is_return
+  is_return --> build_conditional_cfg
+  build_conditional_cfg --> build_loop_cfg
+  build_loop_cfg --> build_return_cfg
+  build_return_cfg --> build_sequential_cfg
+  build_sequential_cfg --> is_control_flow_node
+  is_control_flow_node --> cyclomatic_complexity
+  cyclomatic_complexity --> decision_points
+  decision_points --> npath_complexity
+  npath_complexity --> call_sequence
+  call_sequence --> test_cfg_construction_rust
+  test_cfg_construction_rust --> test_cfg_cyclomatic_complexity
+  test_cfg_cyclomatic_complexity --> test_cfg_decision_points
+  test_cfg_decision_points --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class ControlFlowGraph {
+    +ControlFlowGraph()
+  }
+  class CfgBuilder {
+    +CfgBuilder()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

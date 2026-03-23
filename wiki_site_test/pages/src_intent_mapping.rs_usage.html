@@ -1,0 +1,1290 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/intent_mapping.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/intent_mapping.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 179</li>
+<li><strong>Structures:</strong> 20</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 616</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  add_node"add_node (fn)"]
+  add_edge"add_edge (fn)"]
+  get_node"get_node (fn)"]
+  get_edge"get_edge (fn)"]
+  get_node_edges"get_node_edges (fn)"]
+  get_outgoing_edges"get_outgoing_edges (fn)"]
+  get_incoming_edges"get_incoming_edges (fn)"]
+  find_shortest_path"find_shortest_path (fn)"]
+  calculate_metrics"calculate_metrics (fn)"]
+  count_connected_components"count_connected_components (fn)"]
+  dfs_visit"dfs_visit (fn)"]
+  calculate_diameter"calculate_diameter (fn)"]
+  calculate_clustering_coefficient"calculate_clustering_coefficient (fn)"]
+  get_neighbors"get_neighbors (fn)"]
+  count_edges_between_neighbors"count_edges_between_neighbors (fn)"]
+  has_edge"has_edge (fn)"]
+  calculate_coverage_metrics"calculate_coverage_metrics (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  initialize_embeddings"initialize_embeddings (fn)"]
+  has_embeddings"has_embeddings (fn)"]
+  create_intent_mapping"create_intent_mapping (fn)"]
+  add_requirement"add_requirement (fn)"]
+  add_requirements"add_requirements (fn)"]
+  extract_implementations"extract_implementations (fn)"]
+  analyze_mappings"analyze_mappings (fn)"]
+  validate_mappings"validate_mappings (fn)"]
+  get_traceability_report"get_traceability_report (fn)"]
+  create_implementation_from_file"create_implementation_from_file (fn)"]
+  infer_implementation_type"infer_implementation_type (fn)"]
+  generate_automatic_mappings"generate_automatic_mappings (fn)"]
+  generate_keyword_mappings"generate_keyword_mappings (fn)"]
+  generate_semantic_mappings"generate_semantic_mappings (fn)"]
+  generate_pattern_mappings"generate_pattern_mappings (fn)"]
+  build_traceability_matrix"build_traceability_matrix (fn)"]
+  identify_gaps"identify_gaps (fn)"]
+  generate_recommendations"generate_recommendations (fn)"]
+  validate_mapping"validate_mapping (fn)"]
+  extract_keywords"extract_keywords (fn)"]
+  extract_implementation_keywords"extract_implementation_keywords (fn)"]
+  calculate_keyword_similarity"calculate_keyword_similarity (fn)"]
+  calculate_semantic_similarity"calculate_semantic_similarity (fn)"]
+  calculate_hybrid_similarity"calculate_hybrid_similarity (fn)"]
+  calculate_structural_similarity"calculate_structural_similarity (fn)"]
+  calculate_type_similarity"calculate_type_similarity (fn)"]
+  calculate_complexity_alignment"calculate_complexity_alignment (fn)"]
+  estimate_requirement_complexity"estimate_requirement_complexity (fn)"]
+  estimate_implementation_complexity"estimate_implementation_complexity (fn)"]
+  calculate_pattern_similarity"calculate_pattern_similarity (fn)"]
+  extract_requirement_patterns"extract_requirement_patterns (fn)"]
+  extract_implementation_patterns"extract_implementation_patterns (fn)"]
+  calculate_pattern_string_match"calculate_pattern_string_match (fn)"]
+  calculate_dependency_similarity"calculate_dependency_similarity (fn)"]
+  calculate_technology_alignment"calculate_technology_alignment (fn)"]
+  calculate_integration_alignment"calculate_integration_alignment (fn)"]
+  calculate_context_similarity"calculate_context_similarity (fn)"]
+  calculate_priority_alignment"calculate_priority_alignment (fn)"]
+  calculate_category_alignment"calculate_category_alignment (fn)"]
+  extract_domain_from_requirement"extract_domain_from_requirement (fn)"]
+  extract_domain_from_implementation"extract_domain_from_implementation (fn)"]
+  generate_requirement_embeddings"generate_requirement_embeddings (fn)"]
+  generate_implementation_embeddings"generate_implementation_embeddings (fn)"]
+  calculate_embedding_similarity"calculate_embedding_similarity (fn)"]
+  find_similar_implementations"find_similar_implementations (fn)"]
+  find_similar_requirements"find_similar_requirements (fn)"]
+  analyze_requirement_clusters"analyze_requirement_clusters (fn)"]
+  get_embedding_stats"get_embedding_stats (fn)"]
+  get_implementation_description"get_implementation_description (fn)"]
+  calculate_pattern_match_score"calculate_pattern_match_score (fn)"]
+  is_stop_word"is_stop_word (fn)"]
+  requirements"requirements (fn)"]
+  implementations"implementations (fn)"]
+  mappings"mappings (fn)"]
+  config"config (fn)"]
+  traceability"traceability (fn)"]
+  add_implementation"add_implementation (fn)"]
+  add_mapping"add_mapping (fn)"]
+  build_traceability_matrix_public"build_traceability_matrix_public (fn)"]
+  identify_gaps_public"identify_gaps_public (fn)"]
+  generate_recommendations_public"generate_recommendations_public (fn)"]
+  validate_mapping_public"validate_mapping_public (fn)"]
+  extract_keywords_public"extract_keywords_public (fn)"]
+  calculate_keyword_similarity_public"calculate_keyword_similarity_public (fn)"]
+  extract_implementation_keywords_public"extract_implementation_keywords_public (fn)"]
+  calculate_pattern_match_public"calculate_pattern_match_public (fn)"]
+  calculate_confidence_score"calculate_confidence_score (fn)"]
+  calculate_quality_confidence"calculate_quality_confidence (fn)"]
+  calculate_type_alignment_confidence"calculate_type_alignment_confidence (fn)"]
+  calculate_priority_confidence"calculate_priority_confidence (fn)"]
+  calculate_documentation_confidence"calculate_documentation_confidence (fn)"]
+  calculate_status_confidence"calculate_status_confidence (fn)"]
+  calculate_test_confidence"calculate_test_confidence (fn)"]
+  apply_confidence_adjustments"apply_confidence_adjustments (fn)"]
+  determine_validation_status"determine_validation_status (fn)"]
+  get_confidence_level"get_confidence_level (fn)"]
+  build_relationship_graph"build_relationship_graph (fn)"]
+  extract_requirement_metadata"extract_requirement_metadata (fn)"]
+  extract_requirement_attributes"extract_requirement_attributes (fn)"]
+  extract_implementation_metadata"extract_implementation_metadata (fn)"]
+  extract_implementation_attributes"extract_implementation_attributes (fn)"]
+  extract_mapping_metadata"extract_mapping_metadata (fn)"]
+  extract_mapping_attributes"extract_mapping_attributes (fn)"]
+  mapping_type_to_edge_type"mapping_type_to_edge_type (fn)"]
+  add_derived_relationships"add_derived_relationships (fn)"]
+  add_semantic_relationships"add_semantic_relationships (fn)"]
+  priority_to_weight"priority_to_weight (fn)"]
+  calculate_criteria_completeness"calculate_criteria_completeness (fn)"]
+  calculate_overall_quality_score"calculate_overall_quality_score (fn)"]
+  calculate_documentation_score"calculate_documentation_score (fn)"]
+  calculate_mapping_age_days"calculate_mapping_age_days (fn)"]
+  validation_status_to_score"validation_status_to_score (fn)"]
+  calculate_dependency_score"calculate_dependency_score (fn)"]
+  calculate_requirement_similarity"calculate_requirement_similarity (fn)"]
+  calculate_implementation_similarity"calculate_implementation_similarity (fn)"]
+  calculate_text_similarity"calculate_text_similarity (fn)"]
+  calculate_path_similarity"calculate_path_similarity (fn)"]
+  calculate_code_element_similarity"calculate_code_element_similarity (fn)"]
+  extract_code_element_metadata"extract_code_element_metadata (fn)"]
+  extract_code_element_attributes"extract_code_element_attributes (fn)"]
+  new"new (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  test_intent_mapping_system_creation"test_intent_mapping_system_creation (fn)"]
+  test_intent_mapping_system_with_config"test_intent_mapping_system_with_config (fn)"]
+  test_mapping_config_default"test_mapping_config_default (fn)"]
+  test_requirement_creation"test_requirement_creation (fn)"]
+  test_requirement_type_variants"test_requirement_type_variants (fn)"]
+  test_priority_ordering"test_priority_ordering (fn)"]
+  test_requirement_status_variants"test_requirement_status_variants (fn)"]
+  test_implementation_creation"test_implementation_creation (fn)"]
+  test_implementation_type_variants"test_implementation_type_variants (fn)"]
+  test_code_element_creation"test_code_element_creation (fn)"]
+  test_implementation_status_variants"test_implementation_status_variants (fn)"]
+  test_quality_metrics_creation"test_quality_metrics_creation (fn)"]
+  test_quality_metrics_default"test_quality_metrics_default (fn)"]
+  test_intent_mapping_creation"test_intent_mapping_creation (fn)"]
+  test_mapping_type_variants"test_mapping_type_variants (fn)"]
+  test_validation_status_variants"test_validation_status_variants (fn)"]
+  test_traceability_matrix_creation"test_traceability_matrix_creation (fn)"]
+  test_coverage_metrics_creation"test_coverage_metrics_creation (fn)"]
+  create_test_requirement"create_test_requirement (fn)"]
+  create_test_implementation"create_test_implementation (fn)"]
+  test_add_requirement"test_add_requirement (fn)"]
+  test_add_multiple_requirements"test_add_multiple_requirements (fn)"]
+  test_add_implementation"test_add_implementation (fn)"]
+  test_extract_keywords"test_extract_keywords (fn)"]
+  test_calculate_keyword_similarity"test_calculate_keyword_similarity (fn)"]
+  test_extract_implementation_keywords"test_extract_implementation_keywords (fn)"]
+  test_build_traceability_matrix"test_build_traceability_matrix (fn)"]
+  test_identify_gaps"test_identify_gaps (fn)"]
+  test_generate_recommendations"test_generate_recommendations (fn)"]
+  test_display_implementations"test_display_implementations (fn)"]
+  test_embedding_stats_creation"test_embedding_stats_creation (fn)"]
+  test_semantic_similarity_without_embeddings"test_semantic_similarity_without_embeddings (fn)"]
+  test_has_embeddings_initially_false"test_has_embeddings_initially_false (fn)"]
+  test_embedding_stats_structure"test_embedding_stats_structure (fn)"]
+  test_semantic_similarity_edge_cases"test_semantic_similarity_edge_cases (fn)"]
+  test_hybrid_similarity_scoring"test_hybrid_similarity_scoring (fn)"]
+  test_structural_similarity"test_structural_similarity (fn)"]
+  test_type_similarity"test_type_similarity (fn)"]
+  test_complexity_alignment"test_complexity_alignment (fn)"]
+  test_pattern_similarity"test_pattern_similarity (fn)"]
+  test_confidence_scoring_algorithm"test_confidence_scoring_algorithm (fn)"]
+  test_confidence_scoring_low_quality"test_confidence_scoring_low_quality (fn)"]
+  test_validation_status_determination"test_validation_status_determination (fn)"]
+  test_quality_confidence_calculation"test_quality_confidence_calculation (fn)"]
+  test_relationship_graph_creation"test_relationship_graph_creation (fn)"]
+  test_graph_metrics_calculation"test_graph_metrics_calculation (fn)"]
+  test_shortest_path_finding"test_shortest_path_finding (fn)"]
+  test_find_similar_implementations_empty"test_find_similar_implementations_empty (fn)"]
+  test_find_similar_requirements_empty"test_find_similar_requirements_empty (fn)"]
+  test_analyze_requirement_clusters_empty"test_analyze_requirement_clusters_empty (fn)"]
+  add_edge --> get_node_edges
+  add_edge --> get_outgoing_edges
+  add_edge --> get_incoming_edges
+  add_edge --> count_edges_between_neighbors
+  get_edge --> get_node_edges
+  get_edge --> get_outgoing_edges
+  get_edge --> get_incoming_edges
+  get_edge --> count_edges_between_neighbors
+  find_shortest_path --> test_shortest_path_finding
+  has_edge --> get_node_edges
+  has_edge --> get_outgoing_edges
+  has_edge --> get_incoming_edges
+  has_edge --> count_edges_between_neighbors
+  with_config --> test_semantic_similarity_without_embeddings
+  create_intent_mapping --> analyze_mappings
+  create_intent_mapping --> validate_mappings
+  create_intent_mapping --> generate_automatic_mappings
+  create_intent_mapping --> generate_keyword_mappings
+  create_intent_mapping --> generate_semantic_mappings
+  create_intent_mapping --> generate_pattern_mappings
+  create_intent_mapping --> mappings
+  add_requirement --> add_requirements
+  add_requirement --> find_similar_requirements
+  add_requirement --> requirements
+  add_requirement --> test_add_multiple_requirements
+  add_requirement --> test_find_similar_requirements_empty
+  create_implementation_from_file --> extract_implementations
+  create_implementation_from_file --> find_similar_implementations
+  create_implementation_from_file --> implementations
+  create_implementation_from_file --> test_display_implementations
+  create_implementation_from_file --> test_find_similar_implementations_empty
+  infer_implementation_type --> extract_implementations
+  infer_implementation_type --> find_similar_implementations
+  infer_implementation_type --> implementations
+  infer_implementation_type --> test_display_implementations
+  infer_implementation_type --> test_find_similar_implementations_empty
+  generate_keyword_mappings --> extract_keywords
+  generate_keyword_mappings --> extract_implementation_keywords
+  generate_keyword_mappings --> extract_keywords_public
+  generate_keyword_mappings --> extract_implementation_keywords_public
+  generate_keyword_mappings --> test_extract_keywords
+  generate_keyword_mappings --> test_extract_implementation_keywords
+  generate_pattern_mappings --> extract_requirement_patterns
+  generate_pattern_mappings --> extract_implementation_patterns
+  validate_mapping --> analyze_mappings
+  validate_mapping --> validate_mappings
+  validate_mapping --> generate_automatic_mappings
+  validate_mapping --> generate_keyword_mappings
+  validate_mapping --> generate_semantic_mappings
+  validate_mapping --> generate_pattern_mappings
+  validate_mapping --> mappings
+  extract_implementation_keywords --> extract_implementations
+  extract_implementation_keywords --> find_similar_implementations
+  extract_implementation_keywords --> implementations
+  extract_implementation_keywords --> test_display_implementations
+  extract_implementation_keywords --> test_find_similar_implementations_empty
+  calculate_keyword_similarity --> extract_keywords
+  calculate_keyword_similarity --> extract_implementation_keywords
+  calculate_keyword_similarity --> extract_keywords_public
+  calculate_keyword_similarity --> extract_implementation_keywords_public
+  calculate_keyword_similarity --> test_extract_keywords
+  calculate_keyword_similarity --> test_extract_implementation_keywords
+  estimate_requirement_complexity --> add_requirements
+  estimate_requirement_complexity --> find_similar_requirements
+  estimate_requirement_complexity --> requirements
+  estimate_requirement_complexity --> test_add_multiple_requirements
+  estimate_requirement_complexity --> test_find_similar_requirements_empty
+  estimate_implementation_complexity --> extract_implementations
+  estimate_implementation_complexity --> find_similar_implementations
+  estimate_implementation_complexity --> implementations
+  estimate_implementation_complexity --> test_display_implementations
+  estimate_implementation_complexity --> test_find_similar_implementations_empty
+  calculate_pattern_similarity --> extract_requirement_patterns
+  calculate_pattern_similarity --> extract_implementation_patterns
+  extract_requirement_patterns --> add_requirements
+  extract_requirement_patterns --> find_similar_requirements
+  extract_requirement_patterns --> requirements
+  extract_requirement_patterns --> test_add_multiple_requirements
+  extract_requirement_patterns --> test_find_similar_requirements_empty
+  extract_implementation_patterns --> extract_implementations
+  extract_implementation_patterns --> find_similar_implementations
+  extract_implementation_patterns --> implementations
+  extract_implementation_patterns --> test_display_implementations
+  extract_implementation_patterns --> test_find_similar_implementations_empty
+  calculate_pattern_string_match --> extract_requirement_patterns
+  calculate_pattern_string_match --> extract_implementation_patterns
+  extract_domain_from_requirement --> add_requirements
+  extract_domain_from_requirement --> find_similar_requirements
+  extract_domain_from_requirement --> requirements
+  extract_domain_from_requirement --> test_add_multiple_requirements
+  extract_domain_from_requirement --> test_find_similar_requirements_empty
+  extract_domain_from_implementation --> extract_implementations
+  extract_domain_from_implementation --> find_similar_implementations
+  extract_domain_from_implementation --> implementations
+  extract_domain_from_implementation --> test_display_implementations
+  extract_domain_from_implementation --> test_find_similar_implementations_empty
+  generate_requirement_embeddings --> add_requirements
+  generate_requirement_embeddings --> find_similar_requirements
+  generate_requirement_embeddings --> requirements
+  generate_requirement_embeddings --> test_add_multiple_requirements
+  generate_requirement_embeddings --> test_find_similar_requirements_empty
+  generate_implementation_embeddings --> extract_implementations
+  generate_implementation_embeddings --> find_similar_implementations
+  generate_implementation_embeddings --> implementations
+  generate_implementation_embeddings --> test_display_implementations
+  generate_implementation_embeddings --> test_find_similar_implementations_empty
+  calculate_embedding_similarity --> initialize_embeddings
+  calculate_embedding_similarity --> has_embeddings
+  calculate_embedding_similarity --> generate_requirement_embeddings
+  calculate_embedding_similarity --> generate_implementation_embeddings
+  calculate_embedding_similarity --> test_semantic_similarity_without_embeddings
+  calculate_embedding_similarity --> test_has_embeddings_initially_false
+  find_similar_implementations --> calculate_keyword_similarity
+  find_similar_implementations --> calculate_semantic_similarity
+  find_similar_implementations --> calculate_hybrid_similarity
+  find_similar_implementations --> calculate_structural_similarity
+  find_similar_implementations --> calculate_type_similarity
+  find_similar_implementations --> calculate_pattern_similarity
+  find_similar_implementations --> calculate_dependency_similarity
+  find_similar_implementations --> calculate_context_similarity
+  find_similar_implementations --> calculate_embedding_similarity
+  find_similar_implementations --> calculate_keyword_similarity_public
+  find_similar_implementations --> calculate_requirement_similarity
+  find_similar_implementations --> calculate_implementation_similarity
+  find_similar_implementations --> calculate_text_similarity
+  find_similar_implementations --> calculate_path_similarity
+  find_similar_implementations --> calculate_code_element_similarity
+  find_similar_implementations --> test_calculate_keyword_similarity
+  find_similar_implementations --> test_semantic_similarity_without_embeddings
+  find_similar_implementations --> test_semantic_similarity_edge_cases
+  find_similar_implementations --> test_hybrid_similarity_scoring
+  find_similar_implementations --> test_structural_similarity
+  find_similar_implementations --> test_type_similarity
+  find_similar_implementations --> test_pattern_similarity
+  find_similar_implementations --> test_shortest_path_finding
+  find_similar_requirements --> calculate_keyword_similarity
+  find_similar_requirements --> calculate_semantic_similarity
+  find_similar_requirements --> calculate_hybrid_similarity
+  find_similar_requirements --> calculate_structural_similarity
+  find_similar_requirements --> calculate_type_similarity
+  find_similar_requirements --> calculate_pattern_similarity
+  find_similar_requirements --> calculate_dependency_similarity
+  find_similar_requirements --> calculate_context_similarity
+  find_similar_requirements --> calculate_embedding_similarity
+  find_similar_requirements --> calculate_keyword_similarity_public
+  find_similar_requirements --> calculate_requirement_similarity
+  find_similar_requirements --> calculate_implementation_similarity
+  find_similar_requirements --> calculate_text_similarity
+  find_similar_requirements --> calculate_path_similarity
+  find_similar_requirements --> calculate_code_element_similarity
+  find_similar_requirements --> test_calculate_keyword_similarity
+  find_similar_requirements --> test_semantic_similarity_without_embeddings
+  find_similar_requirements --> test_semantic_similarity_edge_cases
+  find_similar_requirements --> test_hybrid_similarity_scoring
+  find_similar_requirements --> test_structural_similarity
+  find_similar_requirements --> test_type_similarity
+  find_similar_requirements --> test_pattern_similarity
+  find_similar_requirements --> test_shortest_path_finding
+  analyze_requirement_clusters --> add_requirements
+  analyze_requirement_clusters --> find_similar_requirements
+  analyze_requirement_clusters --> requirements
+  analyze_requirement_clusters --> test_add_multiple_requirements
+  analyze_requirement_clusters --> test_find_similar_requirements_empty
+  get_embedding_stats --> initialize_embeddings
+  get_embedding_stats --> has_embeddings
+  get_embedding_stats --> generate_requirement_embeddings
+  get_embedding_stats --> generate_implementation_embeddings
+  get_embedding_stats --> test_semantic_similarity_without_embeddings
+  get_embedding_stats --> test_has_embeddings_initially_false
+  get_implementation_description --> extract_implementations
+  get_implementation_description --> find_similar_implementations
+  get_implementation_description --> implementations
+  get_implementation_description --> test_display_implementations
+  get_implementation_description --> test_find_similar_implementations_empty
+  calculate_pattern_match_score --> extract_requirement_patterns
+  calculate_pattern_match_score --> extract_implementation_patterns
+  is_stop_word --> dfs_visit
+  is_stop_word --> generate_keyword_mappings
+  is_stop_word --> extract_keywords
+  is_stop_word --> extract_implementation_keywords
+  is_stop_word --> calculate_keyword_similarity
+  is_stop_word --> extract_keywords_public
+  is_stop_word --> calculate_keyword_similarity_public
+  is_stop_word --> extract_implementation_keywords_public
+  is_stop_word --> test_extract_keywords
+  is_stop_word --> test_calculate_keyword_similarity
+  is_stop_word --> test_extract_implementation_keywords
+  is_stop_word --> test_display_implementations
+  add_implementation --> extract_implementations
+  add_implementation --> find_similar_implementations
+  add_implementation --> implementations
+  add_implementation --> test_display_implementations
+  add_implementation --> test_find_similar_implementations_empty
+  add_mapping --> analyze_mappings
+  add_mapping --> validate_mappings
+  add_mapping --> generate_automatic_mappings
+  add_mapping --> generate_keyword_mappings
+  add_mapping --> generate_semantic_mappings
+  add_mapping --> generate_pattern_mappings
+  add_mapping --> mappings
+  validate_mapping_public --> analyze_mappings
+  validate_mapping_public --> validate_mappings
+  validate_mapping_public --> generate_automatic_mappings
+  validate_mapping_public --> generate_keyword_mappings
+  validate_mapping_public --> generate_semantic_mappings
+  validate_mapping_public --> generate_pattern_mappings
+  validate_mapping_public --> mappings
+  calculate_keyword_similarity_public --> extract_keywords
+  calculate_keyword_similarity_public --> extract_implementation_keywords
+  calculate_keyword_similarity_public --> extract_keywords_public
+  calculate_keyword_similarity_public --> extract_implementation_keywords_public
+  calculate_keyword_similarity_public --> test_extract_keywords
+  calculate_keyword_similarity_public --> test_extract_implementation_keywords
+  extract_implementation_keywords_public --> extract_implementations
+  extract_implementation_keywords_public --> find_similar_implementations
+  extract_implementation_keywords_public --> implementations
+  extract_implementation_keywords_public --> test_display_implementations
+  extract_implementation_keywords_public --> test_find_similar_implementations_empty
+  calculate_pattern_match_public --> extract_requirement_patterns
+  calculate_pattern_match_public --> extract_implementation_patterns
+  calculate_test_confidence --> find_shortest_path
+  calculate_test_confidence --> test_shortest_path_finding
+  build_relationship_graph --> add_derived_relationships
+  build_relationship_graph --> add_semantic_relationships
+  extract_requirement_metadata --> add_requirements
+  extract_requirement_metadata --> find_similar_requirements
+  extract_requirement_metadata --> requirements
+  extract_requirement_metadata --> test_add_multiple_requirements
+  extract_requirement_metadata --> test_find_similar_requirements_empty
+  extract_requirement_attributes --> add_requirements
+  extract_requirement_attributes --> find_similar_requirements
+  extract_requirement_attributes --> requirements
+  extract_requirement_attributes --> test_add_multiple_requirements
+  extract_requirement_attributes --> test_find_similar_requirements_empty
+  extract_implementation_metadata --> extract_implementations
+  extract_implementation_metadata --> find_similar_implementations
+  extract_implementation_metadata --> implementations
+  extract_implementation_metadata --> test_display_implementations
+  extract_implementation_metadata --> test_find_similar_implementations_empty
+  extract_implementation_attributes --> extract_implementations
+  extract_implementation_attributes --> find_similar_implementations
+  extract_implementation_attributes --> implementations
+  extract_implementation_attributes --> test_display_implementations
+  extract_implementation_attributes --> test_find_similar_implementations_empty
+  extract_mapping_metadata --> analyze_mappings
+  extract_mapping_metadata --> validate_mappings
+  extract_mapping_metadata --> generate_automatic_mappings
+  extract_mapping_metadata --> generate_keyword_mappings
+  extract_mapping_metadata --> generate_semantic_mappings
+  extract_mapping_metadata --> generate_pattern_mappings
+  extract_mapping_metadata --> mappings
+  extract_mapping_attributes --> analyze_mappings
+  extract_mapping_attributes --> validate_mappings
+  extract_mapping_attributes --> generate_automatic_mappings
+  extract_mapping_attributes --> generate_keyword_mappings
+  extract_mapping_attributes --> generate_semantic_mappings
+  extract_mapping_attributes --> generate_pattern_mappings
+  extract_mapping_attributes --> mappings
+  mapping_type_to_edge_type --> get_node_edges
+  mapping_type_to_edge_type --> get_outgoing_edges
+  mapping_type_to_edge_type --> get_incoming_edges
+  mapping_type_to_edge_type --> count_edges_between_neighbors
+  mapping_type_to_edge_type --> analyze_mappings
+  mapping_type_to_edge_type --> validate_mappings
+  mapping_type_to_edge_type --> generate_automatic_mappings
+  mapping_type_to_edge_type --> generate_keyword_mappings
+  mapping_type_to_edge_type --> generate_semantic_mappings
+  mapping_type_to_edge_type --> generate_pattern_mappings
+  mapping_type_to_edge_type --> is_stop_word
+  mapping_type_to_edge_type --> mappings
+  priority_to_weight --> generate_automatic_mappings
+  priority_to_weight --> is_stop_word
+  calculate_mapping_age_days --> calculate_coverage_metrics
+  calculate_mapping_age_days --> analyze_mappings
+  calculate_mapping_age_days --> validate_mappings
+  calculate_mapping_age_days --> generate_automatic_mappings
+  calculate_mapping_age_days --> generate_keyword_mappings
+  calculate_mapping_age_days --> generate_semantic_mappings
+  calculate_mapping_age_days --> generate_pattern_mappings
+  calculate_mapping_age_days --> mappings
+  calculate_mapping_age_days --> test_coverage_metrics_creation
+  validation_status_to_score --> generate_automatic_mappings
+  validation_status_to_score --> is_stop_word
+  calculate_requirement_similarity --> add_requirements
+  calculate_requirement_similarity --> find_similar_requirements
+  calculate_requirement_similarity --> requirements
+  calculate_requirement_similarity --> test_add_multiple_requirements
+  calculate_requirement_similarity --> test_find_similar_requirements_empty
+  calculate_implementation_similarity --> extract_implementations
+  calculate_implementation_similarity --> find_similar_implementations
+  calculate_implementation_similarity --> implementations
+  calculate_implementation_similarity --> test_display_implementations
+  calculate_implementation_similarity --> test_find_similar_implementations_empty
+  calculate_text_similarity --> calculate_context_similarity
+  test_intent_mapping_system_creation --> find_shortest_path
+  test_intent_mapping_system_creation --> analyze_mappings
+  test_intent_mapping_system_creation --> validate_mappings
+  test_intent_mapping_system_creation --> generate_automatic_mappings
+  test_intent_mapping_system_creation --> generate_keyword_mappings
+  test_intent_mapping_system_creation --> generate_semantic_mappings
+  test_intent_mapping_system_creation --> generate_pattern_mappings
+  test_intent_mapping_system_creation --> mappings
+  test_intent_mapping_system_creation --> test_shortest_path_finding
+  test_intent_mapping_system_with_config --> find_shortest_path
+  test_intent_mapping_system_with_config --> analyze_mappings
+  test_intent_mapping_system_with_config --> validate_mappings
+  test_intent_mapping_system_with_config --> generate_automatic_mappings
+  test_intent_mapping_system_with_config --> generate_keyword_mappings
+  test_intent_mapping_system_with_config --> generate_semantic_mappings
+  test_intent_mapping_system_with_config --> generate_pattern_mappings
+  test_intent_mapping_system_with_config --> mappings
+  test_intent_mapping_system_with_config --> test_semantic_similarity_without_embeddings
+  test_intent_mapping_system_with_config --> test_shortest_path_finding
+  test_mapping_config_default --> find_shortest_path
+  test_mapping_config_default --> analyze_mappings
+  test_mapping_config_default --> validate_mappings
+  test_mapping_config_default --> generate_automatic_mappings
+  test_mapping_config_default --> generate_keyword_mappings
+  test_mapping_config_default --> generate_semantic_mappings
+  test_mapping_config_default --> generate_pattern_mappings
+  test_mapping_config_default --> mappings
+  test_mapping_config_default --> test_shortest_path_finding
+  test_requirement_creation --> find_shortest_path
+  test_requirement_creation --> add_requirements
+  test_requirement_creation --> find_similar_requirements
+  test_requirement_creation --> requirements
+  test_requirement_creation --> test_add_multiple_requirements
+  test_requirement_creation --> test_shortest_path_finding
+  test_requirement_creation --> test_find_similar_requirements_empty
+  test_requirement_type_variants --> find_shortest_path
+  test_requirement_type_variants --> add_requirements
+  test_requirement_type_variants --> find_similar_requirements
+  test_requirement_type_variants --> requirements
+  test_requirement_type_variants --> test_add_multiple_requirements
+  test_requirement_type_variants --> test_shortest_path_finding
+  test_requirement_type_variants --> test_find_similar_requirements_empty
+  test_priority_ordering --> find_shortest_path
+  test_priority_ordering --> test_shortest_path_finding
+  test_requirement_status_variants --> find_shortest_path
+  test_requirement_status_variants --> add_requirements
+  test_requirement_status_variants --> find_similar_requirements
+  test_requirement_status_variants --> requirements
+  test_requirement_status_variants --> test_add_multiple_requirements
+  test_requirement_status_variants --> test_shortest_path_finding
+  test_requirement_status_variants --> test_find_similar_requirements_empty
+  test_implementation_creation --> find_shortest_path
+  test_implementation_creation --> extract_implementations
+  test_implementation_creation --> find_similar_implementations
+  test_implementation_creation --> implementations
+  test_implementation_creation --> test_display_implementations
+  test_implementation_creation --> test_shortest_path_finding
+  test_implementation_creation --> test_find_similar_implementations_empty
+  test_implementation_type_variants --> find_shortest_path
+  test_implementation_type_variants --> extract_implementations
+  test_implementation_type_variants --> find_similar_implementations
+  test_implementation_type_variants --> implementations
+  test_implementation_type_variants --> test_display_implementations
+  test_implementation_type_variants --> test_shortest_path_finding
+  test_implementation_type_variants --> test_find_similar_implementations_empty
+  test_code_element_creation --> find_shortest_path
+  test_code_element_creation --> test_shortest_path_finding
+  test_implementation_status_variants --> find_shortest_path
+  test_implementation_status_variants --> extract_implementations
+  test_implementation_status_variants --> find_similar_implementations
+  test_implementation_status_variants --> implementations
+  test_implementation_status_variants --> test_display_implementations
+  test_implementation_status_variants --> test_shortest_path_finding
+  test_implementation_status_variants --> test_find_similar_implementations_empty
+  test_quality_metrics_creation --> find_shortest_path
+  test_quality_metrics_creation --> test_shortest_path_finding
+  test_quality_metrics_default --> find_shortest_path
+  test_quality_metrics_default --> test_shortest_path_finding
+  test_intent_mapping_creation --> find_shortest_path
+  test_intent_mapping_creation --> analyze_mappings
+  test_intent_mapping_creation --> validate_mappings
+  test_intent_mapping_creation --> generate_automatic_mappings
+  test_intent_mapping_creation --> generate_keyword_mappings
+  test_intent_mapping_creation --> generate_semantic_mappings
+  test_intent_mapping_creation --> generate_pattern_mappings
+  test_intent_mapping_creation --> mappings
+  test_intent_mapping_creation --> test_shortest_path_finding
+  test_mapping_type_variants --> find_shortest_path
+  test_mapping_type_variants --> analyze_mappings
+  test_mapping_type_variants --> validate_mappings
+  test_mapping_type_variants --> generate_automatic_mappings
+  test_mapping_type_variants --> generate_keyword_mappings
+  test_mapping_type_variants --> generate_semantic_mappings
+  test_mapping_type_variants --> generate_pattern_mappings
+  test_mapping_type_variants --> mappings
+  test_mapping_type_variants --> test_shortest_path_finding
+  test_validation_status_variants --> find_shortest_path
+  test_validation_status_variants --> test_shortest_path_finding
+  test_traceability_matrix_creation --> find_shortest_path
+  test_traceability_matrix_creation --> test_shortest_path_finding
+  test_coverage_metrics_creation --> find_shortest_path
+  test_coverage_metrics_creation --> test_shortest_path_finding
+  create_test_requirement --> find_shortest_path
+  create_test_requirement --> add_requirements
+  create_test_requirement --> find_similar_requirements
+  create_test_requirement --> requirements
+  create_test_requirement --> test_add_multiple_requirements
+  create_test_requirement --> test_shortest_path_finding
+  create_test_requirement --> test_find_similar_requirements_empty
+  create_test_implementation --> find_shortest_path
+  create_test_implementation --> extract_implementations
+  create_test_implementation --> find_similar_implementations
+  create_test_implementation --> implementations
+  create_test_implementation --> test_display_implementations
+  create_test_implementation --> test_shortest_path_finding
+  create_test_implementation --> test_find_similar_implementations_empty
+  test_add_requirement --> find_shortest_path
+  test_add_requirement --> add_requirements
+  test_add_requirement --> find_similar_requirements
+  test_add_requirement --> requirements
+  test_add_requirement --> test_add_multiple_requirements
+  test_add_requirement --> test_shortest_path_finding
+  test_add_requirement --> test_find_similar_requirements_empty
+  test_add_multiple_requirements --> find_shortest_path
+  test_add_multiple_requirements --> test_shortest_path_finding
+  test_add_implementation --> find_shortest_path
+  test_add_implementation --> extract_implementations
+  test_add_implementation --> find_similar_implementations
+  test_add_implementation --> implementations
+  test_add_implementation --> test_display_implementations
+  test_add_implementation --> test_shortest_path_finding
+  test_add_implementation --> test_find_similar_implementations_empty
+  test_extract_keywords --> find_shortest_path
+  test_extract_keywords --> test_shortest_path_finding
+  test_calculate_keyword_similarity --> find_shortest_path
+  test_calculate_keyword_similarity --> extract_keywords
+  test_calculate_keyword_similarity --> extract_implementation_keywords
+  test_calculate_keyword_similarity --> extract_keywords_public
+  test_calculate_keyword_similarity --> extract_implementation_keywords_public
+  test_calculate_keyword_similarity --> test_extract_keywords
+  test_calculate_keyword_similarity --> test_extract_implementation_keywords
+  test_calculate_keyword_similarity --> test_shortest_path_finding
+  test_extract_implementation_keywords --> find_shortest_path
+  test_extract_implementation_keywords --> extract_implementations
+  test_extract_implementation_keywords --> find_similar_implementations
+  test_extract_implementation_keywords --> implementations
+  test_extract_implementation_keywords --> test_display_implementations
+  test_extract_implementation_keywords --> test_shortest_path_finding
+  test_extract_implementation_keywords --> test_find_similar_implementations_empty
+  test_build_traceability_matrix --> find_shortest_path
+  test_build_traceability_matrix --> test_shortest_path_finding
+  test_identify_gaps --> find_shortest_path
+  test_identify_gaps --> test_shortest_path_finding
+  test_generate_recommendations --> find_shortest_path
+  test_generate_recommendations --> test_shortest_path_finding
+  test_display_implementations --> find_shortest_path
+  test_display_implementations --> test_shortest_path_finding
+  test_embedding_stats_creation --> find_shortest_path
+  test_embedding_stats_creation --> initialize_embeddings
+  test_embedding_stats_creation --> has_embeddings
+  test_embedding_stats_creation --> generate_requirement_embeddings
+  test_embedding_stats_creation --> generate_implementation_embeddings
+  test_embedding_stats_creation --> test_semantic_similarity_without_embeddings
+  test_embedding_stats_creation --> test_has_embeddings_initially_false
+  test_embedding_stats_creation --> test_shortest_path_finding
+  test_semantic_similarity_without_embeddings --> find_shortest_path
+  test_semantic_similarity_without_embeddings --> test_shortest_path_finding
+  test_has_embeddings_initially_false --> find_shortest_path
+  test_has_embeddings_initially_false --> test_shortest_path_finding
+  test_embedding_stats_structure --> find_shortest_path
+  test_embedding_stats_structure --> initialize_embeddings
+  test_embedding_stats_structure --> has_embeddings
+  test_embedding_stats_structure --> generate_requirement_embeddings
+  test_embedding_stats_structure --> generate_implementation_embeddings
+  test_embedding_stats_structure --> test_semantic_similarity_without_embeddings
+  test_embedding_stats_structure --> test_has_embeddings_initially_false
+  test_embedding_stats_structure --> test_shortest_path_finding
+  test_semantic_similarity_edge_cases --> get_node_edges
+  test_semantic_similarity_edge_cases --> get_outgoing_edges
+  test_semantic_similarity_edge_cases --> get_incoming_edges
+  test_semantic_similarity_edge_cases --> find_shortest_path
+  test_semantic_similarity_edge_cases --> count_edges_between_neighbors
+  test_semantic_similarity_edge_cases --> test_shortest_path_finding
+  test_hybrid_similarity_scoring --> find_shortest_path
+  test_hybrid_similarity_scoring --> test_shortest_path_finding
+  test_structural_similarity --> find_shortest_path
+  test_structural_similarity --> test_shortest_path_finding
+  test_type_similarity --> find_shortest_path
+  test_type_similarity --> test_shortest_path_finding
+  test_complexity_alignment --> find_shortest_path
+  test_complexity_alignment --> test_shortest_path_finding
+  test_pattern_similarity --> find_shortest_path
+  test_pattern_similarity --> extract_requirement_patterns
+  test_pattern_similarity --> extract_implementation_patterns
+  test_pattern_similarity --> test_shortest_path_finding
+  test_confidence_scoring_algorithm --> find_shortest_path
+  test_confidence_scoring_algorithm --> test_shortest_path_finding
+  test_confidence_scoring_low_quality --> find_shortest_path
+  test_confidence_scoring_low_quality --> test_shortest_path_finding
+  test_validation_status_determination --> find_shortest_path
+  test_validation_status_determination --> test_shortest_path_finding
+  test_quality_confidence_calculation --> find_shortest_path
+  test_quality_confidence_calculation --> test_shortest_path_finding
+  test_relationship_graph_creation --> find_shortest_path
+  test_relationship_graph_creation --> add_derived_relationships
+  test_relationship_graph_creation --> add_semantic_relationships
+  test_relationship_graph_creation --> test_shortest_path_finding
+  test_graph_metrics_calculation --> find_shortest_path
+  test_graph_metrics_calculation --> test_shortest_path_finding
+  test_shortest_path_finding --> find_shortest_path
+  test_find_similar_implementations_empty --> find_shortest_path
+  test_find_similar_implementations_empty --> calculate_keyword_similarity
+  test_find_similar_implementations_empty --> calculate_semantic_similarity
+  test_find_similar_implementations_empty --> calculate_hybrid_similarity
+  test_find_similar_implementations_empty --> calculate_structural_similarity
+  test_find_similar_implementations_empty --> calculate_type_similarity
+  test_find_similar_implementations_empty --> calculate_pattern_similarity
+  test_find_similar_implementations_empty --> calculate_dependency_similarity
+  test_find_similar_implementations_empty --> calculate_context_similarity
+  test_find_similar_implementations_empty --> calculate_embedding_similarity
+  test_find_similar_implementations_empty --> calculate_keyword_similarity_public
+  test_find_similar_implementations_empty --> calculate_requirement_similarity
+  test_find_similar_implementations_empty --> calculate_implementation_similarity
+  test_find_similar_implementations_empty --> calculate_text_similarity
+  test_find_similar_implementations_empty --> calculate_path_similarity
+  test_find_similar_implementations_empty --> calculate_code_element_similarity
+  test_find_similar_implementations_empty --> test_calculate_keyword_similarity
+  test_find_similar_implementations_empty --> test_semantic_similarity_without_embeddings
+  test_find_similar_implementations_empty --> test_semantic_similarity_edge_cases
+  test_find_similar_implementations_empty --> test_hybrid_similarity_scoring
+  test_find_similar_implementations_empty --> test_structural_similarity
+  test_find_similar_implementations_empty --> test_type_similarity
+  test_find_similar_implementations_empty --> test_pattern_similarity
+  test_find_similar_implementations_empty --> test_shortest_path_finding
+  test_find_similar_requirements_empty --> find_shortest_path
+  test_find_similar_requirements_empty --> calculate_keyword_similarity
+  test_find_similar_requirements_empty --> calculate_semantic_similarity
+  test_find_similar_requirements_empty --> calculate_hybrid_similarity
+  test_find_similar_requirements_empty --> calculate_structural_similarity
+  test_find_similar_requirements_empty --> calculate_type_similarity
+  test_find_similar_requirements_empty --> calculate_pattern_similarity
+  test_find_similar_requirements_empty --> calculate_dependency_similarity
+  test_find_similar_requirements_empty --> calculate_context_similarity
+  test_find_similar_requirements_empty --> calculate_embedding_similarity
+  test_find_similar_requirements_empty --> calculate_keyword_similarity_public
+  test_find_similar_requirements_empty --> calculate_requirement_similarity
+  test_find_similar_requirements_empty --> calculate_implementation_similarity
+  test_find_similar_requirements_empty --> calculate_text_similarity
+  test_find_similar_requirements_empty --> calculate_path_similarity
+  test_find_similar_requirements_empty --> calculate_code_element_similarity
+  test_find_similar_requirements_empty --> test_calculate_keyword_similarity
+  test_find_similar_requirements_empty --> test_semantic_similarity_without_embeddings
+  test_find_similar_requirements_empty --> test_semantic_similarity_edge_cases
+  test_find_similar_requirements_empty --> test_hybrid_similarity_scoring
+  test_find_similar_requirements_empty --> test_structural_similarity
+  test_find_similar_requirements_empty --> test_type_similarity
+  test_find_similar_requirements_empty --> test_pattern_similarity
+  test_find_similar_requirements_empty --> test_shortest_path_finding
+  test_analyze_requirement_clusters_empty --> find_shortest_path
+  test_analyze_requirement_clusters_empty --> add_requirements
+  test_analyze_requirement_clusters_empty --> find_similar_requirements
+  test_analyze_requirement_clusters_empty --> requirements
+  test_analyze_requirement_clusters_empty --> test_add_multiple_requirements
+  test_analyze_requirement_clusters_empty --> test_shortest_path_finding
+  test_analyze_requirement_clusters_empty --> test_find_similar_requirements_empty
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  confidencethresholds["ConfidenceThresholds"]
+  Start --> confidencethresholds
+  relationshipgraph["RelationshipGraph"]
+  Start --> relationshipgraph
+  relationshipnode["RelationshipNode"]
+  Start --> relationshipnode
+  relationshipedge["RelationshipEdge"]
+  Start --> relationshipedge
+  graphmetrics["GraphMetrics"]
+  Start --> graphmetrics
+  graphcoveragemetrics["GraphCoverageMetrics"]
+  Start --> graphcoveragemetrics
+  intentmappingsystem["IntentMappingSystem"]
+  Start --> intentmappingsystem
+  requirement["Requirement"]
+  Start --> requirement
+  implementation["Implementation"]
+  Start --> implementation
+  codeelement["CodeElement"]
+  Start --> codeelement
+  qualitymetrics["QualityMetrics"]
+  Start --> qualitymetrics
+  intentmapping["IntentMapping"]
+  Start --> intentmapping
+  traceabilitymatrix["TraceabilityMatrix"]
+  Start --> traceabilitymatrix
+  coveragemetrics["CoverageMetrics"]
+  Start --> coveragemetrics
+  mappingconfig["MappingConfig"]
+  Start --> mappingconfig
+  mappinganalysisresult["MappingAnalysisResult"]
+  Start --> mappinganalysisresult
+  mappinggap["MappingGap"]
+  Start --> mappinggap
+  mappingrecommendation["MappingRecommendation"]
+  Start --> mappingrecommendation
+  embeddingstats["EmbeddingStats"]
+  Start --> embeddingstats
+  traceabilityreport["TraceabilityReport"]
+  Start --> traceabilityreport
+  default["default"Fn]
+  new["new"Fn]
+  add_node["add_node"Fn]
+  add_edge["add_edge"Fn]
+  get_node["get_node"Fn]
+  get_edge["get_edge"Fn]
+  get_node_edges["get_node_edges"Fn]
+  get_outgoing_edges["get_outgoing_edges"Fn]
+  get_incoming_edges["get_incoming_edges"Fn]
+  find_shortest_path["find_shortest_path"Fn]
+  calculate_metrics["calculate_metrics"Fn]
+  count_connected_components["count_connected_components"Fn]
+  dfs_visit["dfs_visit"Fn]
+  calculate_diameter["calculate_diameter"Fn]
+  calculate_clustering_coefficient["calculate_clustering_coefficient"Fn]
+  get_neighbors["get_neighbors"Fn]
+  count_edges_between_neighbors["count_edges_between_neighbors"Fn]
+  has_edge["has_edge"Fn]
+  calculate_coverage_metrics["calculate_coverage_metrics"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  initialize_embeddings["initialize_embeddings"Fn]
+  has_embeddings["has_embeddings"Fn]
+  create_intent_mapping["create_intent_mapping"Fn]
+  add_requirement["add_requirement"Fn]
+  add_requirements["add_requirements"Fn]
+  extract_implementations["extract_implementations"Fn]
+  analyze_mappings["analyze_mappings"Fn]
+  validate_mappings["validate_mappings"Fn]
+  get_traceability_report["get_traceability_report"Fn]
+  create_implementation_from_file["create_implementation_from_file"Fn]
+  infer_implementation_type["infer_implementation_type"Fn]
+  generate_automatic_mappings["generate_automatic_mappings"Fn]
+  generate_keyword_mappings["generate_keyword_mappings"Fn]
+  generate_semantic_mappings["generate_semantic_mappings"Fn]
+  generate_pattern_mappings["generate_pattern_mappings"Fn]
+  build_traceability_matrix["build_traceability_matrix"Fn]
+  identify_gaps["identify_gaps"Fn]
+  generate_recommendations["generate_recommendations"Fn]
+  validate_mapping["validate_mapping"Fn]
+  extract_keywords["extract_keywords"Fn]
+  extract_implementation_keywords["extract_implementation_keywords"Fn]
+  calculate_keyword_similarity["calculate_keyword_similarity"Fn]
+  calculate_semantic_similarity["calculate_semantic_similarity"Fn]
+  calculate_hybrid_similarity["calculate_hybrid_similarity"Fn]
+  calculate_structural_similarity["calculate_structural_similarity"Fn]
+  calculate_type_similarity["calculate_type_similarity"Fn]
+  calculate_complexity_alignment["calculate_complexity_alignment"Fn]
+  estimate_requirement_complexity["estimate_requirement_complexity"Fn]
+  estimate_implementation_complexity["estimate_implementation_complexity"Fn]
+  calculate_pattern_similarity["calculate_pattern_similarity"Fn]
+  extract_requirement_patterns["extract_requirement_patterns"Fn]
+  extract_implementation_patterns["extract_implementation_patterns"Fn]
+  calculate_pattern_string_match["calculate_pattern_string_match"Fn]
+  calculate_dependency_similarity["calculate_dependency_similarity"Fn]
+  calculate_technology_alignment["calculate_technology_alignment"Fn]
+  calculate_integration_alignment["calculate_integration_alignment"Fn]
+  calculate_context_similarity["calculate_context_similarity"Fn]
+  calculate_priority_alignment["calculate_priority_alignment"Fn]
+  calculate_category_alignment["calculate_category_alignment"Fn]
+  extract_domain_from_requirement["extract_domain_from_requirement"Fn]
+  extract_domain_from_implementation["extract_domain_from_implementation"Fn]
+  generate_requirement_embeddings["generate_requirement_embeddings"Fn]
+  generate_implementation_embeddings["generate_implementation_embeddings"Fn]
+  calculate_embedding_similarity["calculate_embedding_similarity"Fn]
+  find_similar_implementations["find_similar_implementations"Fn]
+  find_similar_requirements["find_similar_requirements"Fn]
+  analyze_requirement_clusters["analyze_requirement_clusters"Fn]
+  get_embedding_stats["get_embedding_stats"Fn]
+  get_implementation_description["get_implementation_description"Fn]
+  calculate_pattern_match_score["calculate_pattern_match_score"Fn]
+  is_stop_word["is_stop_word"Fn]
+  requirements["requirements"Fn]
+  implementations["implementations"Fn]
+  mappings["mappings"Fn]
+  config["config"Fn]
+  traceability["traceability"Fn]
+  add_implementation["add_implementation"Fn]
+  add_mapping["add_mapping"Fn]
+  build_traceability_matrix_public["build_traceability_matrix_public"Fn]
+  identify_gaps_public["identify_gaps_public"Fn]
+  generate_recommendations_public["generate_recommendations_public"Fn]
+  validate_mapping_public["validate_mapping_public"Fn]
+  extract_keywords_public["extract_keywords_public"Fn]
+  calculate_keyword_similarity_public["calculate_keyword_similarity_public"Fn]
+  extract_implementation_keywords_public["extract_implementation_keywords_public"Fn]
+  calculate_pattern_match_public["calculate_pattern_match_public"Fn]
+  calculate_confidence_score["calculate_confidence_score"Fn]
+  calculate_quality_confidence["calculate_quality_confidence"Fn]
+  calculate_type_alignment_confidence["calculate_type_alignment_confidence"Fn]
+  calculate_priority_confidence["calculate_priority_confidence"Fn]
+  calculate_documentation_confidence["calculate_documentation_confidence"Fn]
+  calculate_status_confidence["calculate_status_confidence"Fn]
+  calculate_test_confidence["calculate_test_confidence"Fn]
+  apply_confidence_adjustments["apply_confidence_adjustments"Fn]
+  determine_validation_status["determine_validation_status"Fn]
+  get_confidence_level["get_confidence_level"Fn]
+  build_relationship_graph["build_relationship_graph"Fn]
+  extract_requirement_metadata["extract_requirement_metadata"Fn]
+  extract_requirement_attributes["extract_requirement_attributes"Fn]
+  extract_implementation_metadata["extract_implementation_metadata"Fn]
+  extract_implementation_attributes["extract_implementation_attributes"Fn]
+  extract_mapping_metadata["extract_mapping_metadata"Fn]
+  extract_mapping_attributes["extract_mapping_attributes"Fn]
+  mapping_type_to_edge_type["mapping_type_to_edge_type"Fn]
+  add_derived_relationships["add_derived_relationships"Fn]
+  add_semantic_relationships["add_semantic_relationships"Fn]
+  priority_to_weight["priority_to_weight"Fn]
+  calculate_criteria_completeness["calculate_criteria_completeness"Fn]
+  calculate_overall_quality_score["calculate_overall_quality_score"Fn]
+  calculate_documentation_score["calculate_documentation_score"Fn]
+  calculate_mapping_age_days["calculate_mapping_age_days"Fn]
+  validation_status_to_score["validation_status_to_score"Fn]
+  calculate_dependency_score["calculate_dependency_score"Fn]
+  calculate_requirement_similarity["calculate_requirement_similarity"Fn]
+  calculate_implementation_similarity["calculate_implementation_similarity"Fn]
+  calculate_text_similarity["calculate_text_similarity"Fn]
+  calculate_path_similarity["calculate_path_similarity"Fn]
+  calculate_code_element_similarity["calculate_code_element_similarity"Fn]
+  extract_code_element_metadata["extract_code_element_metadata"Fn]
+  extract_code_element_attributes["extract_code_element_attributes"Fn]
+  new["new"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  test_intent_mapping_system_creation["test_intent_mapping_system_creation"Fn]
+  test_intent_mapping_system_with_config["test_intent_mapping_system_with_config"Fn]
+  test_mapping_config_default["test_mapping_config_default"Fn]
+  test_requirement_creation["test_requirement_creation"Fn]
+  test_requirement_type_variants["test_requirement_type_variants"Fn]
+  test_priority_ordering["test_priority_ordering"Fn]
+  test_requirement_status_variants["test_requirement_status_variants"Fn]
+  test_implementation_creation["test_implementation_creation"Fn]
+  test_implementation_type_variants["test_implementation_type_variants"Fn]
+  test_code_element_creation["test_code_element_creation"Fn]
+  test_implementation_status_variants["test_implementation_status_variants"Fn]
+  test_quality_metrics_creation["test_quality_metrics_creation"Fn]
+  test_quality_metrics_default["test_quality_metrics_default"Fn]
+  test_intent_mapping_creation["test_intent_mapping_creation"Fn]
+  test_mapping_type_variants["test_mapping_type_variants"Fn]
+  test_validation_status_variants["test_validation_status_variants"Fn]
+  test_traceability_matrix_creation["test_traceability_matrix_creation"Fn]
+  test_coverage_metrics_creation["test_coverage_metrics_creation"Fn]
+  create_test_requirement["create_test_requirement"Fn]
+  create_test_implementation["create_test_implementation"Fn]
+  test_add_requirement["test_add_requirement"Fn]
+  test_add_multiple_requirements["test_add_multiple_requirements"Fn]
+  test_add_implementation["test_add_implementation"Fn]
+  test_extract_keywords["test_extract_keywords"Fn]
+  test_calculate_keyword_similarity["test_calculate_keyword_similarity"Fn]
+  test_extract_implementation_keywords["test_extract_implementation_keywords"Fn]
+  test_build_traceability_matrix["test_build_traceability_matrix"Fn]
+  test_identify_gaps["test_identify_gaps"Fn]
+  test_generate_recommendations["test_generate_recommendations"Fn]
+  test_display_implementations["test_display_implementations"Fn]
+  test_embedding_stats_creation["test_embedding_stats_creation"Fn]
+  test_semantic_similarity_without_embeddings["test_semantic_similarity_without_embeddings"Fn]
+  test_has_embeddings_initially_false["test_has_embeddings_initially_false"Fn]
+  test_embedding_stats_structure["test_embedding_stats_structure"Fn]
+  test_semantic_similarity_edge_cases["test_semantic_similarity_edge_cases"Fn]
+  test_hybrid_similarity_scoring["test_hybrid_similarity_scoring"Fn]
+  test_structural_similarity["test_structural_similarity"Fn]
+  test_type_similarity["test_type_similarity"Fn]
+  test_complexity_alignment["test_complexity_alignment"Fn]
+  test_pattern_similarity["test_pattern_similarity"Fn]
+  test_confidence_scoring_algorithm["test_confidence_scoring_algorithm"Fn]
+  test_confidence_scoring_low_quality["test_confidence_scoring_low_quality"Fn]
+  test_validation_status_determination["test_validation_status_determination"Fn]
+  test_quality_confidence_calculation["test_quality_confidence_calculation"Fn]
+  test_relationship_graph_creation["test_relationship_graph_creation"Fn]
+  test_graph_metrics_calculation["test_graph_metrics_calculation"Fn]
+  test_shortest_path_finding["test_shortest_path_finding"Fn]
+  test_find_similar_implementations_empty["test_find_similar_implementations_empty"Fn]
+  test_find_similar_requirements_empty["test_find_similar_requirements_empty"Fn]
+  test_analyze_requirement_clusters_empty["test_analyze_requirement_clusters_empty"Fn]
+  confidencethresholds --> default
+  default --> new
+  new --> add_node
+  add_node --> add_edge
+  add_edge --> get_node
+  get_node --> get_edge
+  get_edge --> get_node_edges
+  get_node_edges --> get_outgoing_edges
+  get_outgoing_edges --> get_incoming_edges
+  get_incoming_edges --> find_shortest_path
+  find_shortest_path --> calculate_metrics
+  calculate_metrics --> count_connected_components
+  count_connected_components --> dfs_visit
+  dfs_visit --> calculate_diameter
+  calculate_diameter --> calculate_clustering_coefficient
+  calculate_clustering_coefficient --> get_neighbors
+  get_neighbors --> count_edges_between_neighbors
+  count_edges_between_neighbors --> has_edge
+  has_edge --> calculate_coverage_metrics
+  calculate_coverage_metrics --> default
+  default --> default
+  default --> new
+  new --> with_config
+  with_config --> initialize_embeddings
+  initialize_embeddings --> has_embeddings
+  has_embeddings --> create_intent_mapping
+  create_intent_mapping --> add_requirement
+  add_requirement --> add_requirements
+  add_requirements --> extract_implementations
+  extract_implementations --> analyze_mappings
+  analyze_mappings --> validate_mappings
+  validate_mappings --> get_traceability_report
+  get_traceability_report --> create_implementation_from_file
+  create_implementation_from_file --> infer_implementation_type
+  infer_implementation_type --> generate_automatic_mappings
+  generate_automatic_mappings --> generate_keyword_mappings
+  generate_keyword_mappings --> generate_semantic_mappings
+  generate_semantic_mappings --> generate_pattern_mappings
+  generate_pattern_mappings --> build_traceability_matrix
+  build_traceability_matrix --> identify_gaps
+  identify_gaps --> generate_recommendations
+  generate_recommendations --> validate_mapping
+  validate_mapping --> extract_keywords
+  extract_keywords --> extract_implementation_keywords
+  extract_implementation_keywords --> calculate_keyword_similarity
+  calculate_keyword_similarity --> calculate_semantic_similarity
+  calculate_semantic_similarity --> calculate_hybrid_similarity
+  calculate_hybrid_similarity --> calculate_structural_similarity
+  calculate_structural_similarity --> calculate_type_similarity
+  calculate_type_similarity --> calculate_complexity_alignment
+  calculate_complexity_alignment --> estimate_requirement_complexity
+  estimate_requirement_complexity --> estimate_implementation_complexity
+  estimate_implementation_complexity --> calculate_pattern_similarity
+  calculate_pattern_similarity --> extract_requirement_patterns
+  extract_requirement_patterns --> extract_implementation_patterns
+  extract_implementation_patterns --> calculate_pattern_string_match
+  calculate_pattern_string_match --> calculate_dependency_similarity
+  calculate_dependency_similarity --> calculate_technology_alignment
+  calculate_technology_alignment --> calculate_integration_alignment
+  calculate_integration_alignment --> calculate_context_similarity
+  calculate_context_similarity --> calculate_priority_alignment
+  calculate_priority_alignment --> calculate_category_alignment
+  calculate_category_alignment --> extract_domain_from_requirement
+  extract_domain_from_requirement --> extract_domain_from_implementation
+  extract_domain_from_implementation --> generate_requirement_embeddings
+  generate_requirement_embeddings --> generate_implementation_embeddings
+  generate_implementation_embeddings --> calculate_embedding_similarity
+  calculate_embedding_similarity --> find_similar_implementations
+  find_similar_implementations --> find_similar_requirements
+  find_similar_requirements --> analyze_requirement_clusters
+  analyze_requirement_clusters --> get_embedding_stats
+  get_embedding_stats --> get_implementation_description
+  get_implementation_description --> calculate_pattern_match_score
+  calculate_pattern_match_score --> is_stop_word
+  is_stop_word --> requirements
+  requirements --> implementations
+  implementations --> mappings
+  mappings --> config
+  config --> traceability
+  traceability --> add_implementation
+  add_implementation --> add_mapping
+  add_mapping --> build_traceability_matrix_public
+  build_traceability_matrix_public --> identify_gaps_public
+  identify_gaps_public --> generate_recommendations_public
+  generate_recommendations_public --> validate_mapping_public
+  validate_mapping_public --> extract_keywords_public
+  extract_keywords_public --> calculate_keyword_similarity_public
+  calculate_keyword_similarity_public --> extract_implementation_keywords_public
+  extract_implementation_keywords_public --> calculate_pattern_match_public
+  calculate_pattern_match_public --> calculate_confidence_score
+  calculate_confidence_score --> calculate_quality_confidence
+  calculate_quality_confidence --> calculate_type_alignment_confidence
+  calculate_type_alignment_confidence --> calculate_priority_confidence
+  calculate_priority_confidence --> calculate_documentation_confidence
+  calculate_documentation_confidence --> calculate_status_confidence
+  calculate_status_confidence --> calculate_test_confidence
+  calculate_test_confidence --> apply_confidence_adjustments
+  apply_confidence_adjustments --> determine_validation_status
+  determine_validation_status --> get_confidence_level
+  get_confidence_level --> build_relationship_graph
+  build_relationship_graph --> extract_requirement_metadata
+  extract_requirement_metadata --> extract_requirement_attributes
+  extract_requirement_attributes --> extract_implementation_metadata
+  extract_implementation_metadata --> extract_implementation_attributes
+  extract_implementation_attributes --> extract_mapping_metadata
+  extract_mapping_metadata --> extract_mapping_attributes
+  extract_mapping_attributes --> mapping_type_to_edge_type
+  mapping_type_to_edge_type --> add_derived_relationships
+  add_derived_relationships --> add_semantic_relationships
+  add_semantic_relationships --> priority_to_weight
+  priority_to_weight --> calculate_criteria_completeness
+  calculate_criteria_completeness --> calculate_overall_quality_score
+  calculate_overall_quality_score --> calculate_documentation_score
+  calculate_documentation_score --> calculate_mapping_age_days
+  calculate_mapping_age_days --> validation_status_to_score
+  validation_status_to_score --> calculate_dependency_score
+  calculate_dependency_score --> calculate_requirement_similarity
+  calculate_requirement_similarity --> calculate_implementation_similarity
+  calculate_implementation_similarity --> calculate_text_similarity
+  calculate_text_similarity --> calculate_path_similarity
+  calculate_path_similarity --> calculate_code_element_similarity
+  calculate_code_element_similarity --> extract_code_element_metadata
+  extract_code_element_metadata --> extract_code_element_attributes
+  extract_code_element_attributes --> new
+  new --> default
+  default --> default
+  default --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> test_intent_mapping_system_creation
+  test_intent_mapping_system_creation --> test_intent_mapping_system_with_config
+  test_intent_mapping_system_with_config --> test_mapping_config_default
+  test_mapping_config_default --> test_requirement_creation
+  test_requirement_creation --> test_requirement_type_variants
+  test_requirement_type_variants --> test_priority_ordering
+  test_priority_ordering --> test_requirement_status_variants
+  test_requirement_status_variants --> test_implementation_creation
+  test_implementation_creation --> test_implementation_type_variants
+  test_implementation_type_variants --> test_code_element_creation
+  test_code_element_creation --> test_implementation_status_variants
+  test_implementation_status_variants --> test_quality_metrics_creation
+  test_quality_metrics_creation --> test_quality_metrics_default
+  test_quality_metrics_default --> test_intent_mapping_creation
+  test_intent_mapping_creation --> test_mapping_type_variants
+  test_mapping_type_variants --> test_validation_status_variants
+  test_validation_status_variants --> test_traceability_matrix_creation
+  test_traceability_matrix_creation --> test_coverage_metrics_creation
+  test_coverage_metrics_creation --> create_test_requirement
+  create_test_requirement --> create_test_implementation
+  create_test_implementation --> test_add_requirement
+  test_add_requirement --> test_add_multiple_requirements
+  test_add_multiple_requirements --> test_add_implementation
+  test_add_implementation --> test_extract_keywords
+  test_extract_keywords --> test_calculate_keyword_similarity
+  test_calculate_keyword_similarity --> test_extract_implementation_keywords
+  test_extract_implementation_keywords --> test_build_traceability_matrix
+  test_build_traceability_matrix --> test_identify_gaps
+  test_identify_gaps --> test_generate_recommendations
+  test_generate_recommendations --> test_display_implementations
+  test_display_implementations --> test_embedding_stats_creation
+  test_embedding_stats_creation --> test_semantic_similarity_without_embeddings
+  test_semantic_similarity_without_embeddings --> test_has_embeddings_initially_false
+  test_has_embeddings_initially_false --> test_embedding_stats_structure
+  test_embedding_stats_structure --> test_semantic_similarity_edge_cases
+  test_semantic_similarity_edge_cases --> test_hybrid_similarity_scoring
+  test_hybrid_similarity_scoring --> test_structural_similarity
+  test_structural_similarity --> test_type_similarity
+  test_type_similarity --> test_complexity_alignment
+  test_complexity_alignment --> test_pattern_similarity
+  test_pattern_similarity --> test_confidence_scoring_algorithm
+  test_confidence_scoring_algorithm --> test_confidence_scoring_low_quality
+  test_confidence_scoring_low_quality --> test_validation_status_determination
+  test_validation_status_determination --> test_quality_confidence_calculation
+  test_quality_confidence_calculation --> test_relationship_graph_creation
+  test_relationship_graph_creation --> test_graph_metrics_calculation
+  test_graph_metrics_calculation --> test_shortest_path_finding
+  test_shortest_path_finding --> test_find_similar_implementations_empty
+  test_find_similar_implementations_empty --> test_find_similar_requirements_empty
+  test_find_similar_requirements_empty --> test_analyze_requirement_clusters_empty
+  test_analyze_requirement_clusters_empty --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class ConfidenceThresholds {
+    +ConfidenceThresholds()
+  }
+  class RelationshipGraph {
+    +RelationshipGraph()
+  }
+  class RelationshipNode {
+    +RelationshipNode()
+  }
+  class RelationshipEdge {
+    +RelationshipEdge()
+  }
+  class GraphMetrics {
+    +GraphMetrics()
+  }
+  class GraphCoverageMetrics {
+    +GraphCoverageMetrics()
+  }
+  class IntentMappingSystem {
+    +IntentMappingSystem()
+  }
+  class Requirement {
+    +Requirement()
+  }
+  class Implementation {
+    +Implementation()
+  }
+  class CodeElement {
+    +CodeElement()
+  }
+  class QualityMetrics {
+    +QualityMetrics()
+  }
+  class IntentMapping {
+    +IntentMapping()
+  }
+  class TraceabilityMatrix {
+    +TraceabilityMatrix()
+  }
+  class CoverageMetrics {
+    +CoverageMetrics()
+  }
+  class MappingConfig {
+    +MappingConfig()
+  }
+  class MappingAnalysisResult {
+    +MappingAnalysisResult()
+  }
+  class MappingGap {
+    +MappingGap()
+  }
+  class MappingRecommendation {
+    +MappingRecommendation()
+  }
+  class EmbeddingStats {
+    +EmbeddingStats()
+  }
+  class TraceabilityReport {
+    +TraceabilityReport()
+  }
+  add_requirement ..> Requirement : uses
+  add_requirements ..> Requirement : uses
+  extract_implementations ..> Implementation : uses
+  create_implementation_from_file ..> Implementation : uses
+  infer_implementation_type ..> Implementation : uses
+  extract_implementation_keywords ..> Implementation : uses
+  estimate_requirement_complexity ..> Requirement : uses
+  estimate_implementation_complexity ..> Implementation : uses
+  extract_requirement_patterns ..> Requirement : uses
+  extract_implementation_patterns ..> Implementation : uses
+  extract_domain_from_requirement ..> Requirement : uses
+  extract_domain_from_implementation ..> Implementation : uses
+  generate_requirement_embeddings ..> Requirement : uses
+  generate_implementation_embeddings ..> Implementation : uses
+  find_similar_implementations ..> Implementation : uses
+  find_similar_requirements ..> Requirement : uses
+  analyze_requirement_clusters ..> Requirement : uses
+  get_implementation_description ..> Implementation : uses
+  requirements ..> Requirement : uses
+  implementations ..> Implementation : uses
+  add_implementation ..> Implementation : uses
+  extract_implementation_keywords_public ..> Implementation : uses
+  extract_requirement_metadata ..> Requirement : uses
+  extract_requirement_attributes ..> Requirement : uses
+  extract_implementation_metadata ..> Implementation : uses
+  extract_implementation_attributes ..> Implementation : uses
+  calculate_requirement_similarity ..> Requirement : uses
+  calculate_implementation_similarity ..> Implementation : uses
+  test_requirement_creation ..> Requirement : uses
+  test_requirement_type_variants ..> Requirement : uses
+  test_requirement_status_variants ..> Requirement : uses
+  test_implementation_creation ..> Implementation : uses
+  test_implementation_type_variants ..> Implementation : uses
+  test_implementation_status_variants ..> Implementation : uses
+  create_test_requirement ..> Requirement : uses
+  create_test_implementation ..> Implementation : uses
+  test_add_requirement ..> Requirement : uses
+  test_add_multiple_requirements ..> Requirement : uses
+  test_add_implementation ..> Implementation : uses
+  test_extract_implementation_keywords ..> Implementation : uses
+  test_display_implementations ..> Implementation : uses
+  test_find_similar_implementations_empty ..> Implementation : uses
+  test_find_similar_requirements_empty ..> Requirement : uses
+  test_analyze_requirement_clusters_empty ..> Requirement : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

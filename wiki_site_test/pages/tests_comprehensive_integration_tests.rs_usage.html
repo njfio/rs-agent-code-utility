@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/comprehensive_integration_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/comprehensive_integration_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 9</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 70</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+create_test_project"create_test_project (fn)"]
+  test_complete_codebase_analysis_workflow"test_complete_codebase_analysis_workflow (fn)"]
+  test_security_analysis_integration"test_security_analysis_integration (fn)"]
+  test_complexity_analysis_integration"test_complexity_analysis_integration (fn)"]
+  test_dependency_analysis_integration"test_dependency_analysis_integration (fn)"]
+  test_performance_analysis_integration"test_performance_analysis_integration (fn)"]
+  test_refactoring_analysis_integration"test_refactoring_analysis_integration (fn)"]
+  test_test_coverage_analysis_integration"test_test_coverage_analysis_integration (fn)"]
+  test_multi_language_analysis_workflow"test_multi_language_analysis_workflow (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  create_test_project["create_test_project"Fn]
+  test_complete_codebase_analysis_workflow["test_complete_codebase_analysis_workflow"Fn]
+  test_security_analysis_integration["test_security_analysis_integration"Fn]
+  test_complexity_analysis_integration["test_complexity_analysis_integration"Fn]
+  test_dependency_analysis_integration["test_dependency_analysis_integration"Fn]
+  test_performance_analysis_integration["test_performance_analysis_integration"Fn]
+  test_refactoring_analysis_integration["test_refactoring_analysis_integration"Fn]
+  test_test_coverage_analysis_integration["test_test_coverage_analysis_integration"Fn]
+  test_multi_language_analysis_workflow["test_multi_language_analysis_workflow"Fn]
+  Start --> create_test_project
+  create_test_project --> test_complete_codebase_analysis_workflow
+  test_complete_codebase_analysis_workflow --> test_security_analysis_integration
+  test_security_analysis_integration --> test_complexity_analysis_integration
+  test_complexity_analysis_integration --> test_dependency_analysis_integration
+  test_dependency_analysis_integration --> test_performance_analysis_integration
+  test_performance_analysis_integration --> test_refactoring_analysis_integration
+  test_refactoring_analysis_integration --> test_test_coverage_analysis_integration
+  test_test_coverage_analysis_integration --> test_multi_language_analysis_workflow
+  test_multi_language_analysis_workflow --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

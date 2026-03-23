@@ -57,6 +57,8 @@ pub struct WikiConfig {
     pub refactoring_hints_enabled: bool,
     /// Enable diagram annotations
     pub diagram_annotations_enabled: bool,
+    /// Enable performance analysis (placeholder for future implementation)
+    pub performance_analysis_enabled: bool,
     /// AI provider to use for enhancement
     pub ai_provider: Option<String>,
     /// Request AI in JSON mode and render via schema
@@ -76,7 +78,7 @@ impl WikiConfig {
     }
 }
 
-/// Builder for WikiConfig (builder pattern)
+    /// Builder for WikiConfig (builder pattern)
 #[derive(Debug, Default, Clone)]
 pub struct WikiConfigBuilder {
     site_title: Option<String>,
@@ -91,6 +93,7 @@ pub struct WikiConfigBuilder {
     security_insights_enabled: bool,
     refactoring_hints_enabled: bool,
     diagram_annotations_enabled: bool,
+    performance_analysis_enabled: bool,
     ai_provider: Option<String>,
     ai_json_mode: bool,
     search_max_results: Option<usize>,
@@ -192,6 +195,12 @@ impl WikiConfigBuilder {
         self
     }
 
+    /// Enable performance analysis
+    pub fn with_performance_analysis(mut self, yes: bool) -> Self {
+        self.performance_analysis_enabled = yes;
+        self
+    }
+
     /// Build final config
     pub fn build(self) -> Result<WikiConfig> {
         Ok(WikiConfig {
@@ -216,6 +225,7 @@ impl WikiConfigBuilder {
             security_insights_enabled: self.security_insights_enabled,
             refactoring_hints_enabled: self.refactoring_hints_enabled,
             diagram_annotations_enabled: self.diagram_annotations_enabled,
+            performance_analysis_enabled: self.performance_analysis_enabled,
             ai_provider: self.ai_provider,
             ai_json_mode: self.ai_json_mode,
             search_max_results: self.search_max_results.unwrap_or(200),
@@ -230,6 +240,17 @@ impl WikiConfigBuilder {
 pub struct WikiGenerationResult {
     /// Number of pages generated
     pub pages: usize,
+}
+
+#[derive(serde::Serialize)]
+struct SearchEntry {
+    title: String,
+    path: String,
+    description: String,
+    symbols: Vec<String>,
+    language: String,
+    file_type: String,
+    security_level: String,
 }
 
 /// Wiki site generator
@@ -426,6 +447,14 @@ impl WikiGenerator {
         // Provide main page behavior JS
         self.write_main_js_impl(&assets.join("main.js"))?;
 
+        // Initialize AI enhancer placeholder - to be implemented when enhanced AI module is ready
+        let ai_enhancer: Option<String> = if self.config.enhanced_ai_enabled {
+            Some("enhanced_ai_enabled".to_string())
+        } else {
+            None
+        };
+        // For now, use simple heuristics for AI enhancement
+
         // Initialize security analysis if enabled
         let security_analysis = if self.config.security_insights_enabled {
             // Create security wiki generator
@@ -442,6 +471,12 @@ impl WikiGenerator {
         } else {
             None
         };
+
+        // Generate AI-enhanced relationship map across all files
+        let relationship_map = self.generate_relationship_map_simple(analysis);
+
+        // Performance analysis placeholder - to be implemented when performance_analysis module is available
+        let _performance_analysis_enabled = self.config.performance_analysis_enabled;
 
         // Pages and search index
         let mut page_count = 0usize;
@@ -477,8 +512,29 @@ impl WikiGenerator {
                     .iter()
                     .filter(|h| h.location.file == file.path)
                     .cloned()
-                    .collect();
+                    .collect()
+            } else {
+                Vec::new()
+            };
 
+            // Determine additional fields for search filters
+            let language = file.language.clone();
+            let file_type = file.path.extension()
+                .and_then(|ext| ext.to_str())
+                .unwrap_or("file")
+                .to_string();
+            let security_level = if file_hotspots.is_empty() {
+                "low".to_string()
+            } else if file_hotspots.iter().any(|h| h.severity == crate::advanced_security::SecuritySeverity::Critical) {
+                "critical".to_string()
+            } else if file_hotspots.iter().any(|h| h.severity == crate::advanced_security::SecuritySeverity::High) {
+                "high".to_string()
+            } else {
+                "medium".to_string()
+            };
+
+            // Generate security enhancements for this file if enabled
+            let security_block = if let Some(ref security) = security_analysis {
                 // Generate OWASP recommendations for this file
                 let owasp_rec = if self.config.security_insights_enabled {
                     let temp_generator = SecurityWikiGenerator::new()?;
@@ -826,7 +882,48 @@ nav{width:270px}
   if (vulnOnly) vulnOnly.addEventListener('change', update);
   update();
 }
-window.addEventListener('DOMContentLoaded', runSearch);"#;
+
+function render(items){ list.innerHTML=''; items.forEach(it=>{ const li=document.createElement('li'); const a=document.createElement('a'); a.href=it.path; a.textContent=it.title; li.appendChild(a); list.appendChild(li); }); }
+
+// Populate filter options
+function populateFilters() {
+if (!languageFilter || !fileTypeFilter || !securityLevelFilter) return;
+
+const languages = getUniqueValues('language');
+const fileTypes = getUniqueValues('file_type');
+const securityLevels = getUniqueValues('security_level');
+
+// Clear existing options except "All"
+const clearOptions = (select, addOptions) => {
+  while (select.options.length > 0) { select.options.remove(0); }
+  const allOption = new Option('All', '');
+  select.appendChild(allOption);
+  addOptions.forEach(val => select.appendChild(new Option(val, val)));
+};
+
+clearOptions(languageFilter, languages);
+clearOptions(fileTypeFilter, fileTypes);
+clearOptions(securityLevelFilter, securityLevels);
+}
+
+function updateSearch() {
+const term = q.value.toLowerCase();
+const filters = getFilterValues();
+let items = idx.filter(it=> it.title.toLowerCase().includes(term) || it.description.toLowerCase().includes(term) || it.symbols.some(s=>s.toLowerCase().includes(term)) );
+items = filterItems(items, filters);
+render(items);
+}
+
+q.addEventListener('input', updateSearch);
+if (languageFilter) languageFilter.addEventListener('change', updateSearch);
+if (fileTypeFilter) fileTypeFilter.addEventListener('change', updateSearch);
+if (securityLevelFilter) securityLevelFilter.addEventListener('change', updateSearch);
+
+window.addEventListener('DOMContentLoaded', () => {
+populateFilters();
+updateSearch();
+});
+}"#;
         fs::write(path, js).map_err(|e| e.into())
     }
 
@@ -1002,6 +1099,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
                         file = html_escape(&f.path.display().to_string()),
                     );
                 }
+                if idx >= node_limit { break; }
             }
             let content = format!(
                 r#"<!doctype html>
@@ -1028,6 +1126,29 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
             fs::write(out.join("symbols.html"), content).map_err(|e| e.into())
         }
         */
+
+    fn generate_ai_insights_sync(analysis: &AnalysisResult, use_mock: bool, _cfg_path: Option<&PathBuf>) -> Result<String> {
+        // Create a placeholder implementation - comprehensive AI insights for the entire repository
+        let mut summary = String::new();
+        use std::fmt::Write as _;
+        let _ = writeln!(&mut summary, "Project Overview:");
+        for f in analysis.files.iter().take(5) {
+            let _ = writeln!(&mut summary, "- {} ({:} symbols)",
+                           f.path.display(), f.symbols.len());
+        }
+        let insights = format!(
+            "<div class=\"card\"><h3>AI Insights</h3>\
+            <p>Project analysis shows {total_files} files with {total_symbols} symbols: {summary}</p>\
+            <p><strong>Recommendations:</strong></p>\
+            <ul><li>Consider modularization for files with >50 functions</li>\
+            <li>Add comprehensive error handling patterns</li>\
+            <li>Optimize imports and dependencies</li></ul></div>",
+            total_files = analysis.total_files,
+            total_symbols = analysis.files.iter().map(|f| f.symbols.len()).sum::<usize>(),
+            summary = if summary.len() > 200 { &summary[..200] } else { &summary }
+        );
+        Ok(insights)
+    }
 
     fn generate_file_ai_insights_sync(&self, file: &crate::analyzer::FileInfo) -> Result<String> {
         use crate::ai::types::{AIFeature, AIRequest};
@@ -1344,6 +1465,77 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
     }
     */
     // write_search_index moved to search.rs
+
+    /// Generate a simple relationship map for enhanced wiki features
+    fn generate_relationship_map_simple(&self, analysis: &AnalysisResult) -> HashMap<String, Vec<String>> {
+        let mut relationships = HashMap::new();
+
+        for file in &analysis.files {
+            let mut file_relationships = Vec::new();
+
+            // Add related symbols within this file
+            for symbol in &file.symbols {
+                file_relationships.push(format!("symbol:{}:{}", symbol.name, symbol.kind));
+            }
+
+            // Add cross-file relationships based on naming patterns
+            for other_file in &analysis.files {
+                if other_file.path != file.path {
+                    // Check for naming similarities that might indicate relationships
+                    let file_name = file.path.file_stem()
+                        .and_then(|stem| stem.to_str())
+                        .unwrap_or("");
+                    let other_file_name = other_file.path.file_stem()
+                        .and_then(|stem| stem.to_str())
+                        .unwrap_or("");
+
+                    // Simple relationship detection: files with similar names or common patterns
+                    if file_name.contains(other_file_name) || other_file_name.contains(file_name) {
+                        file_relationships.push(format!("cross_file:{}", other_file.path.display()));
+                    }
+
+                    // Relationship via shared symbol names (potential interfaces/utilities)
+                    for symbol in &file.symbols {
+                        for other_symbol in &other_file.symbols {
+                            if symbol.name.to_lowercase() == other_symbol.name.to_lowercase() &&
+                               symbol.kind != other_symbol.kind {
+                                file_relationships.push(format!("shared_symbol:{}@{}", symbol.name, other_file.path.display()));
+                            }
+                        }
+                    }
+                }
+            }
+
+            relationships.insert(
+                file.path.display().to_string(),
+                file_relationships
+            );
+        }
+
+        // Add global relationships (files that might be entry points or main files)
+        let mut global_relationships = Vec::new();
+
+        // Identify potential main files or entry points
+        for file in &analysis.files {
+            if let Some(file_name) = file.path.file_name().and_then(|name| name.to_str()) {
+                if file_name.contains("main") || file_name.contains("entry") ||
+                   file_name.contains("app") || file_name.contains("server") {
+                    global_relationships.push(format!("entry_point:{}", file.path.display()));
+                }
+            }
+        }
+
+        // Identify large files with high symbol counts (potential core modules)
+        for file in &analysis.files {
+            if file.symbols.len() > analysis.files.iter().map(|f| f.symbols.len()).max().unwrap_or(0) / 2 {
+                global_relationships.push(format!("core_module:{}", file.path.display()));
+            }
+        }
+
+        relationships.insert("_global_".to_string(), global_relationships);
+
+        relationships
+    }
 
     /// Write a security overview page
     /* moved to templates.rs
@@ -1732,6 +1924,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#;
         let _ = writeln!(&mut block, "</div>");
         block
     }
+
 }
 
 // SearchEntry moved to search.rs
@@ -1814,7 +2007,6 @@ impl WikiGenerator {
         );
         Ok(html)
     }
-}
 
 /// Much simpler implementation that works around tree-sitter API issues
 impl WikiGenerator {

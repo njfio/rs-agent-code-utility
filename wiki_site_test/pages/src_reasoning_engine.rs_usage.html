@@ -1,0 +1,477 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/reasoning_engine.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/reasoning_engine.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 72</li>
+<li><strong>Structures:</strong> 24</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 198</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze_code"analyze_code (fn)"]
+  add_fact"add_fact (fn)"]
+  add_rule"add_rule (fn)"]
+  add_axiom"add_axiom (fn)"]
+  add_constraint"add_constraint (fn)"]
+  add_variable"add_variable (fn)"]
+  extract_facts_from_analysis"extract_facts_from_analysis (fn)"]
+  extract_facts_from_file"extract_facts_from_file (fn)"]
+  perform_inference"perform_inference (fn)"]
+  perform_deductive_inference"perform_deductive_inference (fn)"]
+  apply_deductive_rule"apply_deductive_rule (fn)"]
+  is_condition_satisfied"is_condition_satisfied (fn)"]
+  terms_match"terms_match (fn)"]
+  term_matches"term_matches (fn)"]
+  literals_match"literals_match (fn)"]
+  perform_inductive_inference"perform_inductive_inference (fn)"]
+  perform_abductive_inference"perform_abductive_inference (fn)"]
+  get_function_complexity"get_function_complexity (fn)"]
+  get_function_dependency_count"get_function_dependency_count (fn)"]
+  solve_constraints"solve_constraints (fn)"]
+  solve_single_constraint"solve_single_constraint (fn)"]
+  solve_equality_constraint"solve_equality_constraint (fn)"]
+  solve_inequality_constraint"solve_inequality_constraint (fn)"]
+  solve_linear_constraint"solve_linear_constraint (fn)"]
+  solve_nonlinear_constraint"solve_nonlinear_constraint (fn)"]
+  solve_logic_constraint"solve_logic_constraint (fn)"]
+  solve_resource_constraint"solve_resource_constraint (fn)"]
+  solve_temporal_constraint"solve_temporal_constraint (fn)"]
+  prove_theorems"prove_theorems (fn)"]
+  prove_axiom"prove_axiom (fn)"]
+  generate_insights"generate_insights (fn)"]
+  knowledge_base"knowledge_base (fn)"]
+  config"config (fn)"]
+  constraint_solver"constraint_solver (fn)"]
+  theorem_prover"theorem_prover (fn)"]
+  term_matches_public"term_matches_public (fn)"]
+  literals_match_public"literals_match_public (fn)"]
+  calculate_memory_usage"calculate_memory_usage (fn)"]
+  estimate_term_size"estimate_term_size (fn)"]
+  create_test_analysis_result"create_test_analysis_result (fn)"]
+  test_reasoning_engine_creation"test_reasoning_engine_creation (fn)"]
+  test_reasoning_engine_with_config"test_reasoning_engine_with_config (fn)"]
+  test_add_fact"test_add_fact (fn)"]
+  test_add_rule"test_add_rule (fn)"]
+  test_analyze_code"test_analyze_code (fn)"]
+  test_term_matching"test_term_matching (fn)"]
+  test_literal_matching"test_literal_matching (fn)"]
+  test_reasoning_config_default"test_reasoning_config_default (fn)"]
+  test_memory_usage_calculation"test_memory_usage_calculation (fn)"]
+  new"new (fn)"]
+  facts"facts (fn)"]
+  rules"rules (fn)"]
+  new"new (fn)"]
+  variables"variables (fn)"]
+  constraints"constraints (fn)"]
+  new"new (fn)"]
+  axioms"axioms (fn)"]
+  default"default (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  add_fact --> extract_facts_from_analysis
+  add_fact --> extract_facts_from_file
+  add_fact --> facts
+  add_rule --> rules
+  add_axiom --> axioms
+  add_constraint --> solve_constraints
+  add_constraint --> constraints
+  add_variable --> variables
+  apply_deductive_rule --> rules
+  is_condition_satisfied --> extract_facts_from_analysis
+  is_condition_satisfied --> create_test_analysis_result
+  terms_match --> term_matches
+  terms_match --> term_matches_public
+  terms_match --> test_term_matching
+  terms_match --> test_literal_matching
+  term_matches --> terms_match
+  literals_match --> term_matches
+  literals_match --> term_matches_public
+  literals_match --> test_term_matching
+  literals_match --> test_literal_matching
+  solve_constraints --> constraint_solver
+  solve_single_constraint --> solve_constraints
+  solve_single_constraint --> constraint_solver
+  solve_single_constraint --> constraints
+  solve_equality_constraint --> solve_constraints
+  solve_equality_constraint --> solve_inequality_constraint
+  solve_equality_constraint --> constraint_solver
+  solve_equality_constraint --> constraints
+  solve_inequality_constraint --> solve_constraints
+  solve_inequality_constraint --> constraint_solver
+  solve_inequality_constraint --> constraints
+  solve_linear_constraint --> solve_constraints
+  solve_linear_constraint --> solve_nonlinear_constraint
+  solve_linear_constraint --> constraint_solver
+  solve_linear_constraint --> constraints
+  solve_nonlinear_constraint --> solve_constraints
+  solve_nonlinear_constraint --> constraint_solver
+  solve_nonlinear_constraint --> constraints
+  solve_logic_constraint --> solve_constraints
+  solve_logic_constraint --> constraint_solver
+  solve_logic_constraint --> constraints
+  solve_resource_constraint --> solve_constraints
+  solve_resource_constraint --> constraint_solver
+  solve_resource_constraint --> constraints
+  solve_temporal_constraint --> solve_constraints
+  solve_temporal_constraint --> constraint_solver
+  solve_temporal_constraint --> constraints
+  prove_theorems --> theorem_prover
+  prove_axiom --> theorem_prover
+  prove_axiom --> axioms
+  constraint_solver --> solve_constraints
+  constraint_solver --> constraints
+  theorem_prover --> prove_theorems
+  term_matches_public --> terms_match
+  literals_match_public --> term_matches
+  literals_match_public --> term_matches_public
+  literals_match_public --> test_term_matching
+  literals_match_public --> test_literal_matching
+  estimate_term_size --> terms_match
+  test_add_fact --> extract_facts_from_analysis
+  test_add_fact --> extract_facts_from_file
+  test_add_fact --> facts
+  test_add_rule --> rules
+  test_term_matching --> terms_match
+  test_literal_matching --> literals_match
+  test_literal_matching --> literals_match_public
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  automatedreasoningengine["AutomatedReasoningEngine"]
+  Start --> automatedreasoningengine
+  knowledgebase["KnowledgeBase"]
+  Start --> knowledgebase
+  fact["Fact"]
+  Start --> fact
+  rule["Rule"]
+  Start --> rule
+  condition["Condition"]
+  Start --> condition
+  conclusion["Conclusion"]
+  Start --> conclusion
+  typedefinition["TypeDefinition"]
+  Start --> typedefinition
+  typeconstraint["TypeConstraint"]
+  Start --> typeconstraint
+  functionsignature["FunctionSignature"]
+  Start --> functionsignature
+  inferenceengine["InferenceEngine"]
+  Start --> inferenceengine
+  constraintsolver["ConstraintSolver"]
+  Start --> constraintsolver
+  constraintvariable["ConstraintVariable"]
+  Start --> constraintvariable
+  constraint["Constraint"]
+  Start --> constraint
+  solverconfig["SolverConfig"]
+  Start --> solverconfig
+  theoremprover["TheoremProver"]
+  Start --> theoremprover
+  axiom["Axiom"]
+  Start --> axiom
+  proofresult["ProofResult"]
+  Start --> proofresult
+  proofstep["ProofStep"]
+  Start --> proofstep
+  counterexample["Counterexample"]
+  Start --> counterexample
+  reasoningconfig["ReasoningConfig"]
+  Start --> reasoningconfig
+  reasoningresult["ReasoningResult"]
+  Start --> reasoningresult
+  reasoninginsight["ReasoningInsight"]
+  Start --> reasoninginsight
+  codelocation["CodeLocation"]
+  Start --> codelocation
+  reasoningmetrics["ReasoningMetrics"]
+  Start --> reasoningmetrics
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze_code["analyze_code"Fn]
+  add_fact["add_fact"Fn]
+  add_rule["add_rule"Fn]
+  add_axiom["add_axiom"Fn]
+  add_constraint["add_constraint"Fn]
+  add_variable["add_variable"Fn]
+  extract_facts_from_analysis["extract_facts_from_analysis"Fn]
+  extract_facts_from_file["extract_facts_from_file"Fn]
+  perform_inference["perform_inference"Fn]
+  perform_deductive_inference["perform_deductive_inference"Fn]
+  apply_deductive_rule["apply_deductive_rule"Fn]
+  is_condition_satisfied["is_condition_satisfied"Fn]
+  terms_match["terms_match"Fn]
+  term_matches["term_matches"Fn]
+  literals_match["literals_match"Fn]
+  perform_inductive_inference["perform_inductive_inference"Fn]
+  perform_abductive_inference["perform_abductive_inference"Fn]
+  get_function_complexity["get_function_complexity"Fn]
+  get_function_dependency_count["get_function_dependency_count"Fn]
+  solve_constraints["solve_constraints"Fn]
+  solve_single_constraint["solve_single_constraint"Fn]
+  solve_equality_constraint["solve_equality_constraint"Fn]
+  solve_inequality_constraint["solve_inequality_constraint"Fn]
+  solve_linear_constraint["solve_linear_constraint"Fn]
+  solve_nonlinear_constraint["solve_nonlinear_constraint"Fn]
+  solve_logic_constraint["solve_logic_constraint"Fn]
+  solve_resource_constraint["solve_resource_constraint"Fn]
+  solve_temporal_constraint["solve_temporal_constraint"Fn]
+  prove_theorems["prove_theorems"Fn]
+  prove_axiom["prove_axiom"Fn]
+  generate_insights["generate_insights"Fn]
+  knowledge_base["knowledge_base"Fn]
+  config["config"Fn]
+  constraint_solver["constraint_solver"Fn]
+  theorem_prover["theorem_prover"Fn]
+  term_matches_public["term_matches_public"Fn]
+  literals_match_public["literals_match_public"Fn]
+  calculate_memory_usage["calculate_memory_usage"Fn]
+  estimate_term_size["estimate_term_size"Fn]
+  create_test_analysis_result["create_test_analysis_result"Fn]
+  test_reasoning_engine_creation["test_reasoning_engine_creation"Fn]
+  test_reasoning_engine_with_config["test_reasoning_engine_with_config"Fn]
+  test_add_fact["test_add_fact"Fn]
+  test_add_rule["test_add_rule"Fn]
+  test_analyze_code["test_analyze_code"Fn]
+  test_term_matching["test_term_matching"Fn]
+  test_literal_matching["test_literal_matching"Fn]
+  test_reasoning_config_default["test_reasoning_config_default"Fn]
+  test_memory_usage_calculation["test_memory_usage_calculation"Fn]
+  new["new"Fn]
+  facts["facts"Fn]
+  rules["rules"Fn]
+  new["new"Fn]
+  variables["variables"Fn]
+  constraints["constraints"Fn]
+  new["new"Fn]
+  axioms["axioms"Fn]
+  default["default"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  automatedreasoningengine --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze_code
+  analyze_code --> add_fact
+  add_fact --> add_rule
+  add_rule --> add_axiom
+  add_axiom --> add_constraint
+  add_constraint --> add_variable
+  add_variable --> extract_facts_from_analysis
+  extract_facts_from_analysis --> extract_facts_from_file
+  extract_facts_from_file --> perform_inference
+  perform_inference --> perform_deductive_inference
+  perform_deductive_inference --> apply_deductive_rule
+  apply_deductive_rule --> is_condition_satisfied
+  is_condition_satisfied --> terms_match
+  terms_match --> term_matches
+  term_matches --> literals_match
+  literals_match --> perform_inductive_inference
+  perform_inductive_inference --> perform_abductive_inference
+  perform_abductive_inference --> get_function_complexity
+  get_function_complexity --> get_function_dependency_count
+  get_function_dependency_count --> solve_constraints
+  solve_constraints --> solve_single_constraint
+  solve_single_constraint --> solve_equality_constraint
+  solve_equality_constraint --> solve_inequality_constraint
+  solve_inequality_constraint --> solve_linear_constraint
+  solve_linear_constraint --> solve_nonlinear_constraint
+  solve_nonlinear_constraint --> solve_logic_constraint
+  solve_logic_constraint --> solve_resource_constraint
+  solve_resource_constraint --> solve_temporal_constraint
+  solve_temporal_constraint --> prove_theorems
+  prove_theorems --> prove_axiom
+  prove_axiom --> generate_insights
+  generate_insights --> knowledge_base
+  knowledge_base --> config
+  config --> constraint_solver
+  constraint_solver --> theorem_prover
+  theorem_prover --> term_matches_public
+  term_matches_public --> literals_match_public
+  literals_match_public --> calculate_memory_usage
+  calculate_memory_usage --> estimate_term_size
+  estimate_term_size --> create_test_analysis_result
+  create_test_analysis_result --> test_reasoning_engine_creation
+  test_reasoning_engine_creation --> test_reasoning_engine_with_config
+  test_reasoning_engine_with_config --> test_add_fact
+  test_add_fact --> test_add_rule
+  test_add_rule --> test_analyze_code
+  test_analyze_code --> test_term_matching
+  test_term_matching --> test_literal_matching
+  test_literal_matching --> test_reasoning_config_default
+  test_reasoning_config_default --> test_memory_usage_calculation
+  test_memory_usage_calculation --> new
+  new --> facts
+  facts --> rules
+  rules --> new
+  new --> variables
+  variables --> constraints
+  constraints --> new
+  new --> axioms
+  axioms --> default
+  default --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AutomatedReasoningEngine {
+    +AutomatedReasoningEngine()
+  }
+  class KnowledgeBase {
+    +KnowledgeBase()
+  }
+  class Fact {
+    +Fact()
+  }
+  class Rule {
+    +Rule()
+  }
+  class Condition {
+    +Condition()
+  }
+  class Conclusion {
+    +Conclusion()
+  }
+  class TypeDefinition {
+    +TypeDefinition()
+  }
+  class TypeConstraint {
+    +TypeConstraint()
+  }
+  class FunctionSignature {
+    +FunctionSignature()
+  }
+  class InferenceEngine {
+    +InferenceEngine()
+  }
+  class ConstraintSolver {
+    +ConstraintSolver()
+  }
+  class ConstraintVariable {
+    +ConstraintVariable()
+  }
+  class Constraint {
+    +Constraint()
+  }
+  class SolverConfig {
+    +SolverConfig()
+  }
+  class TheoremProver {
+    +TheoremProver()
+  }
+  class Axiom {
+    +Axiom()
+  }
+  class ProofResult {
+    +ProofResult()
+  }
+  class ProofStep {
+    +ProofStep()
+  }
+  class Counterexample {
+    +Counterexample()
+  }
+  class ReasoningConfig {
+    +ReasoningConfig()
+  }
+  class ReasoningResult {
+    +ReasoningResult()
+  }
+  class ReasoningInsight {
+    +ReasoningInsight()
+  }
+  class CodeLocation {
+    +CodeLocation()
+  }
+  class ReasoningMetrics {
+    +ReasoningMetrics()
+  }
+  add_fact ..> Fact : uses
+  add_rule ..> Rule : uses
+  add_axiom ..> Axiom : uses
+  add_constraint ..> Constraint : uses
+  extract_facts_from_analysis ..> Fact : uses
+  extract_facts_from_file ..> Fact : uses
+  apply_deductive_rule ..> Rule : uses
+  is_condition_satisfied ..> Condition : uses
+  solve_constraints ..> Constraint : uses
+  solve_single_constraint ..> Constraint : uses
+  solve_equality_constraint ..> Constraint : uses
+  solve_inequality_constraint ..> Constraint : uses
+  solve_linear_constraint ..> Constraint : uses
+  solve_nonlinear_constraint ..> Constraint : uses
+  solve_logic_constraint ..> Constraint : uses
+  solve_resource_constraint ..> Constraint : uses
+  solve_temporal_constraint ..> Constraint : uses
+  prove_axiom ..> Axiom : uses
+  constraint_solver ..> Constraint : uses
+  test_add_fact ..> Fact : uses
+  test_add_rule ..> Rule : uses
+  facts ..> Fact : uses
+  rules ..> Rule : uses
+  constraints ..> Constraint : uses
+  axioms ..> Axiom : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/error.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/error.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 51</li>
+<li><strong>Structures:</strong> 5</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 76</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+language_error"language_error (fn)"]
+  language_error_with_cause"language_error_with_cause (fn)"]
+  parse_error"parse_error (fn)"]
+  parse_error_with_location"parse_error_with_location (fn)"]
+  query_error"query_error (fn)"]
+  query_error_with_position"query_error_with_position (fn)"]
+  tree_error"tree_error (fn)"]
+  tree_error_with_context"tree_error_with_context (fn)"]
+  invalid_input_error"invalid_input_error (fn)"]
+  invalid_input_with_suggestion"invalid_input_with_suggestion (fn)"]
+  not_supported_error"not_supported_error (fn)"]
+  not_supported_with_alternative"not_supported_with_alternative (fn)"]
+  internal_error"internal_error (fn)"]
+  internal_error_with_context"internal_error_with_context (fn)"]
+  cli_error"cli_error (fn)"]
+  cli_error_with_suggestion"cli_error_with_suggestion (fn)"]
+  language"language (fn)"]
+  parse"parse (fn)"]
+  query"query (fn)"]
+  tree"tree (fn)"]
+  invalid_input"invalid_input (fn)"]
+  not_supported"not_supported (fn)"]
+  internal"internal (fn)"]
+  config_error"config_error (fn)"]
+  config_error_with_context"config_error_with_context (fn)"]
+  network_error"network_error (fn)"]
+  network_error_with_details"network_error_with_details (fn)"]
+  auth_error"auth_error (fn)"]
+  auth_error_with_provider"auth_error_with_provider (fn)"]
+  rate_limit_error"rate_limit_error (fn)"]
+  rate_limit_error_with_retry"rate_limit_error_with_retry (fn)"]
+  timeout_error"timeout_error (fn)"]
+  resource_exhausted"resource_exhausted (fn)"]
+  resource_exhausted_with_details"resource_exhausted_with_details (fn)"]
+  validation_error"validation_error (fn)"]
+  validation_error_with_context"validation_error_with_context (fn)"]
+  dependency_error"dependency_error (fn)"]
+  dependency_error_with_versions"dependency_error_with_versions (fn)"]
+  security_error"security_error (fn)"]
+  security_error_with_details"security_error_with_details (fn)"]
+  analysis_error"analysis_error (fn)"]
+  analysis_error_with_context"analysis_error_with_context (fn)"]
+  from"from (fn)"]
+  from"from (fn)"]
+  test_structured_error_creation"test_structured_error_creation (fn)"]
+  test_error_with_context"test_error_with_context (fn)"]
+  test_invalid_input_with_suggestion"test_invalid_input_with_suggestion (fn)"]
+  test_not_supported_with_alternative"test_not_supported_with_alternative (fn)"]
+  test_internal_error_with_context"test_internal_error_with_context (fn)"]
+  test_error_conversion"test_error_conversion (fn)"]
+  test_backward_compatibility"test_backward_compatibility (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  languageerrordetails["LanguageErrorDetails"]
+  Start --> languageerrordetails
+  parseerrordetails["ParseErrorDetails"]
+  Start --> parseerrordetails
+  queryerrordetails["QueryErrorDetails"]
+  Start --> queryerrordetails
+  treeerrordetails["TreeErrorDetails"]
+  Start --> treeerrordetails
+  invalidinputdetails["InvalidInputDetails"]
+  Start --> invalidinputdetails
+  language_error["language_error"Fn]
+  language_error_with_cause["language_error_with_cause"Fn]
+  parse_error["parse_error"Fn]
+  parse_error_with_location["parse_error_with_location"Fn]
+  query_error["query_error"Fn]
+  query_error_with_position["query_error_with_position"Fn]
+  tree_error["tree_error"Fn]
+  tree_error_with_context["tree_error_with_context"Fn]
+  invalid_input_error["invalid_input_error"Fn]
+  invalid_input_with_suggestion["invalid_input_with_suggestion"Fn]
+  not_supported_error["not_supported_error"Fn]
+  not_supported_with_alternative["not_supported_with_alternative"Fn]
+  internal_error["internal_error"Fn]
+  internal_error_with_context["internal_error_with_context"Fn]
+  cli_error["cli_error"Fn]
+  cli_error_with_suggestion["cli_error_with_suggestion"Fn]
+  language["language"Fn]
+  parse["parse"Fn]
+  query["query"Fn]
+  tree["tree"Fn]
+  invalid_input["invalid_input"Fn]
+  not_supported["not_supported"Fn]
+  internal["internal"Fn]
+  config_error["config_error"Fn]
+  config_error_with_context["config_error_with_context"Fn]
+  network_error["network_error"Fn]
+  network_error_with_details["network_error_with_details"Fn]
+  auth_error["auth_error"Fn]
+  auth_error_with_provider["auth_error_with_provider"Fn]
+  rate_limit_error["rate_limit_error"Fn]
+  rate_limit_error_with_retry["rate_limit_error_with_retry"Fn]
+  timeout_error["timeout_error"Fn]
+  resource_exhausted["resource_exhausted"Fn]
+  resource_exhausted_with_details["resource_exhausted_with_details"Fn]
+  validation_error["validation_error"Fn]
+  validation_error_with_context["validation_error_with_context"Fn]
+  dependency_error["dependency_error"Fn]
+  dependency_error_with_versions["dependency_error_with_versions"Fn]
+  security_error["security_error"Fn]
+  security_error_with_details["security_error_with_details"Fn]
+  analysis_error["analysis_error"Fn]
+  analysis_error_with_context["analysis_error_with_context"Fn]
+  from["from"Fn]
+  from["from"Fn]
+  test_structured_error_creation["test_structured_error_creation"Fn]
+  test_error_with_context["test_error_with_context"Fn]
+  test_invalid_input_with_suggestion["test_invalid_input_with_suggestion"Fn]
+  test_not_supported_with_alternative["test_not_supported_with_alternative"Fn]
+  test_internal_error_with_context["test_internal_error_with_context"Fn]
+  test_error_conversion["test_error_conversion"Fn]
+  test_backward_compatibility["test_backward_compatibility"Fn]
+  languageerrordetails --> language_error
+  language_error --> language_error_with_cause
+  language_error_with_cause --> parse_error
+  parse_error --> parse_error_with_location
+  parse_error_with_location --> query_error
+  query_error --> query_error_with_position
+  query_error_with_position --> tree_error
+  tree_error --> tree_error_with_context
+  tree_error_with_context --> invalid_input_error
+  invalid_input_error --> invalid_input_with_suggestion
+  invalid_input_with_suggestion --> not_supported_error
+  not_supported_error --> not_supported_with_alternative
+  not_supported_with_alternative --> internal_error
+  internal_error --> internal_error_with_context
+  internal_error_with_context --> cli_error
+  cli_error --> cli_error_with_suggestion
+  cli_error_with_suggestion --> language
+  language --> parse
+  parse --> query
+  query --> tree
+  tree --> invalid_input
+  invalid_input --> not_supported
+  not_supported --> internal
+  internal --> config_error
+  config_error --> config_error_with_context
+  config_error_with_context --> network_error
+  network_error --> network_error_with_details
+  network_error_with_details --> auth_error
+  auth_error --> auth_error_with_provider
+  auth_error_with_provider --> rate_limit_error
+  rate_limit_error --> rate_limit_error_with_retry
+  rate_limit_error_with_retry --> timeout_error
+  timeout_error --> resource_exhausted
+  resource_exhausted --> resource_exhausted_with_details
+  resource_exhausted_with_details --> validation_error
+  validation_error --> validation_error_with_context
+  validation_error_with_context --> dependency_error
+  dependency_error --> dependency_error_with_versions
+  dependency_error_with_versions --> security_error
+  security_error --> security_error_with_details
+  security_error_with_details --> analysis_error
+  analysis_error --> analysis_error_with_context
+  analysis_error_with_context --> from
+  from --> from
+  from --> test_structured_error_creation
+  test_structured_error_creation --> test_error_with_context
+  test_error_with_context --> test_invalid_input_with_suggestion
+  test_invalid_input_with_suggestion --> test_not_supported_with_alternative
+  test_not_supported_with_alternative --> test_internal_error_with_context
+  test_internal_error_with_context --> test_error_conversion
+  test_error_conversion --> test_backward_compatibility
+  test_backward_compatibility --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class LanguageErrorDetails {
+    +LanguageErrorDetails()
+  }
+  class ParseErrorDetails {
+    +ParseErrorDetails()
+  }
+  class QueryErrorDetails {
+    +QueryErrorDetails()
+  }
+  class TreeErrorDetails {
+    +TreeErrorDetails()
+  }
+  class InvalidInputDetails {
+    +InvalidInputDetails()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

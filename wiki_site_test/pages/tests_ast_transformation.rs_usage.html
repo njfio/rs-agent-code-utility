@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/ast_transformation.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/ast_transformation.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 15</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 68</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+test_ast_transformation_engine_creation"test_ast_transformation_engine_creation (fn)"]
+  test_ast_transformation_engine_with_config"test_ast_transformation_engine_with_config (fn)"]
+  test_semantic_validator_creation"test_semantic_validator_creation (fn)"]
+  test_semantic_validator_with_config"test_semantic_validator_with_config (fn)"]
+  test_simple_replace_transformation"test_simple_replace_transformation (fn)"]
+  test_simple_insert_transformation"test_simple_insert_transformation (fn)"]
+  test_simple_delete_transformation"test_simple_delete_transformation (fn)"]
+  test_multiple_transformations"test_multiple_transformations (fn)"]
+  test_transformation_with_syntax_error"test_transformation_with_syntax_error (fn)"]
+  test_validation_with_strict_mode"test_validation_with_strict_mode (fn)"]
+  test_extract_method_transformation"test_extract_method_transformation (fn)"]
+  test_rename_variable_transformation"test_rename_variable_transformation (fn)"]
+  test_inline_variable_transformation"test_inline_variable_transformation (fn)"]
+  test_invalid_identifier_rename"test_invalid_identifier_rename (fn)"]
+  test_keyword_rename_conflict"test_keyword_rename_conflict (fn)"]
+  test_ast_transformation_engine_creation --> test_multiple_transformations
+  test_ast_transformation_engine_with_config --> test_multiple_transformations
+  test_simple_replace_transformation --> test_multiple_transformations
+  test_simple_insert_transformation --> test_multiple_transformations
+  test_simple_delete_transformation --> test_multiple_transformations
+  test_transformation_with_syntax_error --> test_multiple_transformations
+  test_extract_method_transformation --> test_multiple_transformations
+  test_rename_variable_transformation --> test_multiple_transformations
+  test_inline_variable_transformation --> test_multiple_transformations
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  test_ast_transformation_engine_creation["test_ast_transformation_engine_creation"Fn]
+  test_ast_transformation_engine_with_config["test_ast_transformation_engine_with_config"Fn]
+  test_semantic_validator_creation["test_semantic_validator_creation"Fn]
+  test_semantic_validator_with_config["test_semantic_validator_with_config"Fn]
+  test_simple_replace_transformation["test_simple_replace_transformation"Fn]
+  test_simple_insert_transformation["test_simple_insert_transformation"Fn]
+  test_simple_delete_transformation["test_simple_delete_transformation"Fn]
+  test_multiple_transformations["test_multiple_transformations"Fn]
+  test_transformation_with_syntax_error["test_transformation_with_syntax_error"Fn]
+  test_validation_with_strict_mode["test_validation_with_strict_mode"Fn]
+  test_extract_method_transformation["test_extract_method_transformation"Fn]
+  test_rename_variable_transformation["test_rename_variable_transformation"Fn]
+  test_inline_variable_transformation["test_inline_variable_transformation"Fn]
+  test_invalid_identifier_rename["test_invalid_identifier_rename"Fn]
+  test_keyword_rename_conflict["test_keyword_rename_conflict"Fn]
+  Start --> test_ast_transformation_engine_creation
+  test_ast_transformation_engine_creation --> test_ast_transformation_engine_with_config
+  test_ast_transformation_engine_with_config --> test_semantic_validator_creation
+  test_semantic_validator_creation --> test_semantic_validator_with_config
+  test_semantic_validator_with_config --> test_simple_replace_transformation
+  test_simple_replace_transformation --> test_simple_insert_transformation
+  test_simple_insert_transformation --> test_simple_delete_transformation
+  test_simple_delete_transformation --> test_multiple_transformations
+  test_multiple_transformations --> test_transformation_with_syntax_error
+  test_transformation_with_syntax_error --> test_validation_with_strict_mode
+  test_validation_with_strict_mode --> test_extract_method_transformation
+  test_extract_method_transformation --> test_rename_variable_transformation
+  test_rename_variable_transformation --> test_inline_variable_transformation
+  test_inline_variable_transformation --> test_invalid_identifier_rename
+  test_invalid_identifier_rename --> test_keyword_rename_conflict
+  test_keyword_rename_conflict --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - test_files/phase2_demo.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>test_files/phase2_demo.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 15</li>
+<li><strong>Structures:</strong> 4</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 32</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  authenticate_user"authenticate_user (fn)"]
+  generate_user_report"generate_user_report (fn)"]
+  create_admin_user"create_admin_user (fn)"]
+  create_regular_user"create_regular_user (fn)"]
+  find_user_by_query"find_user_by_query (fn)"]
+  hash_password"hash_password (fn)"]
+  hash_static"hash_static (fn)"]
+  create_user"create_user (fn)"]
+  new"new (fn)"]
+  add_listener"add_listener (fn)"]
+  notify_user_created"notify_user_created (fn)"]
+  process_user_data"process_user_data (fn)"]
+  collect_user_ids"collect_user_ids (fn)"]
+  test_user_creation"test_user_creation (fn)"]
+  create_admin_user --> notify_user_created
+  create_regular_user --> notify_user_created
+  create_user --> notify_user_created
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  userservice["UserService"]
+  Start --> userservice
+  user["User"]
+  Start --> user
+  userfactory["UserFactory"]
+  Start --> userfactory
+  usereventmanager["UserEventManager"]
+  Start --> usereventmanager
+  new["new"Fn]
+  authenticate_user["authenticate_user"Fn]
+  generate_user_report["generate_user_report"Fn]
+  create_admin_user["create_admin_user"Fn]
+  create_regular_user["create_regular_user"Fn]
+  find_user_by_query["find_user_by_query"Fn]
+  hash_password["hash_password"Fn]
+  hash_static["hash_static"Fn]
+  create_user["create_user"Fn]
+  new["new"Fn]
+  add_listener["add_listener"Fn]
+  notify_user_created["notify_user_created"Fn]
+  process_user_data["process_user_data"Fn]
+  collect_user_ids["collect_user_ids"Fn]
+  test_user_creation["test_user_creation"Fn]
+  userservice --> new
+  new --> authenticate_user
+  authenticate_user --> generate_user_report
+  generate_user_report --> create_admin_user
+  create_admin_user --> create_regular_user
+  create_regular_user --> find_user_by_query
+  find_user_by_query --> hash_password
+  hash_password --> hash_static
+  hash_static --> create_user
+  create_user --> new
+  new --> add_listener
+  add_listener --> notify_user_created
+  notify_user_created --> process_user_data
+  process_user_data --> collect_user_ids
+  collect_user_ids --> test_user_creation
+  test_user_creation --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class UserService {
+    +UserService()
+  }
+  class User {
+    +User()
+  }
+  class UserFactory {
+    +UserFactory()
+  }
+  class UserEventManager {
+    +UserEventManager()
+  }
+  authenticate_user ..> User : uses
+  generate_user_report ..> User : uses
+  create_admin_user ..> User : uses
+  create_regular_user ..> User : uses
+  find_user_by_query ..> User : uses
+  create_user ..> User : uses
+  notify_user_created ..> User : uses
+  process_user_data ..> User : uses
+  collect_user_ids ..> User : uses
+  test_user_creation ..> User : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

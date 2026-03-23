@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/test_coverage.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/test_coverage.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 30</li>
+<li><strong>Structures:</strong> 15</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 132</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_config"with_config (fn)"]
+  analyze"analyze (fn)"]
+  identify_test_files"identify_test_files (fn)"]
+  is_test_file"is_test_file (fn)"]
+  matches_pattern"matches_pattern (fn)"]
+  analyze_test_file"analyze_test_file (fn)"]
+  is_test_function"is_test_function (fn)"]
+  identify_test_types"identify_test_types (fn)"]
+  identify_test_patterns"identify_test_patterns (fn)"]
+  identify_test_issues"identify_test_issues (fn)"]
+  calculate_test_file_quality_score"calculate_test_file_quality_score (fn)"]
+  analyze_file_coverage"analyze_file_coverage (fn)"]
+  estimate_file_coverage"estimate_file_coverage (fn)"]
+  detect_missing_tests"detect_missing_tests (fn)"]
+  function_has_test"function_has_test (fn)"]
+  assess_function_complexity"assess_function_complexity (fn)"]
+  determine_test_priority"determine_test_priority (fn)"]
+  calculate_quality_metrics"calculate_quality_metrics (fn)"]
+  analyze_test_organization"analyze_test_organization (fn)"]
+  generate_recommendations"generate_recommendations (fn)"]
+  count_testable_functions"count_testable_functions (fn)"]
+  calculate_estimated_coverage"calculate_estimated_coverage (fn)"]
+  calculate_coverage_score"calculate_coverage_score (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  fmt"fmt (fn)"]
+  identify_test_files --> detect_missing_tests
+  identify_test_files --> count_testable_functions
+  is_test_file --> identify_test_files
+  is_test_file --> identify_test_issues
+  is_test_file --> detect_missing_tests
+  is_test_file --> count_testable_functions
+  matches_pattern --> identify_test_patterns
+  analyze_test_file --> identify_test_files
+  analyze_test_file --> detect_missing_tests
+  analyze_test_file --> count_testable_functions
+  is_test_function --> identify_test_issues
+  is_test_function --> detect_missing_tests
+  is_test_function --> count_testable_functions
+  identify_test_types --> detect_missing_tests
+  identify_test_types --> count_testable_functions
+  identify_test_patterns --> detect_missing_tests
+  identify_test_patterns --> count_testable_functions
+  identify_test_issues --> detect_missing_tests
+  identify_test_issues --> count_testable_functions
+  calculate_test_file_quality_score --> identify_test_files
+  calculate_test_file_quality_score --> detect_missing_tests
+  calculate_test_file_quality_score --> count_testable_functions
+  analyze_file_coverage --> identify_test_files
+  estimate_file_coverage --> identify_test_files
+  estimate_file_coverage --> calculate_estimated_coverage
+  function_has_test --> detect_missing_tests
+  function_has_test --> count_testable_functions
+  assess_function_complexity --> count_testable_functions
+  determine_test_priority --> detect_missing_tests
+  determine_test_priority --> count_testable_functions
+  analyze_test_organization --> detect_missing_tests
+  analyze_test_organization --> count_testable_functions
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  testcoverageanalyzer["TestCoverageAnalyzer"]
+  Start --> testcoverageanalyzer
+  testcoverageconfig["TestCoverageConfig"]
+  Start --> testcoverageconfig
+  testcoverageresult["TestCoverageResult"]
+  Start --> testcoverageresult
+  testfileanalysis["TestFileAnalysis"]
+  Start --> testfileanalysis
+  testissue["TestIssue"]
+  Start --> testissue
+  testlocation["TestLocation"]
+  Start --> testlocation
+  filecoverage["FileCoverage"]
+  Start --> filecoverage
+  missingtest["MissingTest"]
+  Start --> missingtest
+  testqualitymetrics["TestQualityMetrics"]
+  Start --> testqualitymetrics
+  testreliabilitymetrics["TestReliabilityMetrics"]
+  Start --> testreliabilitymetrics
+  testorganizationanalysis["TestOrganizationAnalysis"]
+  Start --> testorganizationanalysis
+  testcategorization["TestCategorization"]
+  Start --> testcategorization
+  testsuiteorganization["TestSuiteOrganization"]
+  Start --> testsuiteorganization
+  testsuite["TestSuite"]
+  Start --> testsuite
+  testingrecommendation["TestingRecommendation"]
+  Start --> testingrecommendation
+  default["default"Fn]
+  new["new"Fn]
+  with_config["with_config"Fn]
+  analyze["analyze"Fn]
+  identify_test_files["identify_test_files"Fn]
+  is_test_file["is_test_file"Fn]
+  matches_pattern["matches_pattern"Fn]
+  analyze_test_file["analyze_test_file"Fn]
+  is_test_function["is_test_function"Fn]
+  identify_test_types["identify_test_types"Fn]
+  identify_test_patterns["identify_test_patterns"Fn]
+  identify_test_issues["identify_test_issues"Fn]
+  calculate_test_file_quality_score["calculate_test_file_quality_score"Fn]
+  analyze_file_coverage["analyze_file_coverage"Fn]
+  estimate_file_coverage["estimate_file_coverage"Fn]
+  detect_missing_tests["detect_missing_tests"Fn]
+  function_has_test["function_has_test"Fn]
+  assess_function_complexity["assess_function_complexity"Fn]
+  determine_test_priority["determine_test_priority"Fn]
+  calculate_quality_metrics["calculate_quality_metrics"Fn]
+  analyze_test_organization["analyze_test_organization"Fn]
+  generate_recommendations["generate_recommendations"Fn]
+  count_testable_functions["count_testable_functions"Fn]
+  calculate_estimated_coverage["calculate_estimated_coverage"Fn]
+  calculate_coverage_score["calculate_coverage_score"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  fmt["fmt"Fn]
+  testcoverageanalyzer --> default
+  default --> new
+  new --> with_config
+  with_config --> analyze
+  analyze --> identify_test_files
+  identify_test_files --> is_test_file
+  is_test_file --> matches_pattern
+  matches_pattern --> analyze_test_file
+  analyze_test_file --> is_test_function
+  is_test_function --> identify_test_types
+  identify_test_types --> identify_test_patterns
+  identify_test_patterns --> identify_test_issues
+  identify_test_issues --> calculate_test_file_quality_score
+  calculate_test_file_quality_score --> analyze_file_coverage
+  analyze_file_coverage --> estimate_file_coverage
+  estimate_file_coverage --> detect_missing_tests
+  detect_missing_tests --> function_has_test
+  function_has_test --> assess_function_complexity
+  assess_function_complexity --> determine_test_priority
+  determine_test_priority --> calculate_quality_metrics
+  calculate_quality_metrics --> analyze_test_organization
+  analyze_test_organization --> generate_recommendations
+  generate_recommendations --> count_testable_functions
+  count_testable_functions --> calculate_estimated_coverage
+  calculate_estimated_coverage --> calculate_coverage_score
+  calculate_coverage_score --> default
+  default --> default
+  default --> fmt
+  fmt --> fmt
+  fmt --> fmt
+  fmt --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class TestCoverageAnalyzer {
+    +TestCoverageAnalyzer()
+  }
+  class TestCoverageConfig {
+    +TestCoverageConfig()
+  }
+  class TestCoverageResult {
+    +TestCoverageResult()
+  }
+  class TestFileAnalysis {
+    +TestFileAnalysis()
+  }
+  class TestIssue {
+    +TestIssue()
+  }
+  class TestLocation {
+    +TestLocation()
+  }
+  class FileCoverage {
+    +FileCoverage()
+  }
+  class MissingTest {
+    +MissingTest()
+  }
+  class TestQualityMetrics {
+    +TestQualityMetrics()
+  }
+  class TestReliabilityMetrics {
+    +TestReliabilityMetrics()
+  }
+  class TestOrganizationAnalysis {
+    +TestOrganizationAnalysis()
+  }
+  class TestCategorization {
+    +TestCategorization()
+  }
+  class TestSuiteOrganization {
+    +TestSuiteOrganization()
+  }
+  class TestSuite {
+    +TestSuite()
+  }
+  class TestingRecommendation {
+    +TestingRecommendation()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

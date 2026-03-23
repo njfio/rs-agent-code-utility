@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/embeddings.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/embeddings.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 22</li>
+<li><strong>Structures:</strong> 3</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 98</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  new"new (fn)"]
+  with_metadata"with_metadata (fn)"]
+  dimension"dimension (fn)"]
+  cosine_similarity"cosine_similarity (fn)"]
+  fmt"fmt (fn)"]
+  new"new (fn)"]
+  initialize"initialize (fn)"]
+  embed_batch"embed_batch (fn)"]
+  embed"embed (fn)"]
+  process_batch"process_batch (fn)"]
+  mean_pooling"mean_pooling (fn)"]
+  calculate_similarity"calculate_similarity (fn)"]
+  find_most_similar"find_most_similar (fn)"]
+  test_embedding_creation"test_embedding_creation (fn)"]
+  test_cosine_similarity"test_cosine_similarity (fn)"]
+  test_embedding_config_default"test_embedding_config_default (fn)"]
+  test_embedding_with_metadata"test_embedding_with_metadata (fn)"]
+  test_cosine_similarity_edge_cases"test_cosine_similarity_edge_cases (fn)"]
+  test_embedding_engine_creation"test_embedding_engine_creation (fn)"]
+  test_semantic_similarity_examples"test_semantic_similarity_examples (fn)"]
+  test_dissimilar_texts"test_dissimilar_texts (fn)"]
+  embed_batch --> test_embedding_creation
+  embed_batch --> test_embedding_config_default
+  embed_batch --> test_embedding_with_metadata
+  embed_batch --> test_embedding_engine_creation
+  embed --> test_embedding_creation
+  embed --> test_embedding_config_default
+  embed --> test_embedding_with_metadata
+  embed --> test_embedding_engine_creation
+  find_most_similar --> cosine_similarity
+  find_most_similar --> calculate_similarity
+  find_most_similar --> test_cosine_similarity
+  find_most_similar --> test_cosine_similarity_edge_cases
+  find_most_similar --> test_semantic_similarity_examples
+  find_most_similar --> test_dissimilar_texts
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  embeddingconfig["EmbeddingConfig"]
+  Start --> embeddingconfig
+  embedding["Embedding"]
+  Start --> embedding
+  embeddingengine["EmbeddingEngine"]
+  Start --> embeddingengine
+  default["default"Fn]
+  new["new"Fn]
+  with_metadata["with_metadata"Fn]
+  dimension["dimension"Fn]
+  cosine_similarity["cosine_similarity"Fn]
+  fmt["fmt"Fn]
+  new["new"Fn]
+  initialize["initialize"Fn]
+  embed_batch["embed_batch"Fn]
+  embed["embed"Fn]
+  process_batch["process_batch"Fn]
+  mean_pooling["mean_pooling"Fn]
+  calculate_similarity["calculate_similarity"Fn]
+  find_most_similar["find_most_similar"Fn]
+  test_embedding_creation["test_embedding_creation"Fn]
+  test_cosine_similarity["test_cosine_similarity"Fn]
+  test_embedding_config_default["test_embedding_config_default"Fn]
+  test_embedding_with_metadata["test_embedding_with_metadata"Fn]
+  test_cosine_similarity_edge_cases["test_cosine_similarity_edge_cases"Fn]
+  test_embedding_engine_creation["test_embedding_engine_creation"Fn]
+  test_semantic_similarity_examples["test_semantic_similarity_examples"Fn]
+  test_dissimilar_texts["test_dissimilar_texts"Fn]
+  embeddingconfig --> default
+  default --> new
+  new --> with_metadata
+  with_metadata --> dimension
+  dimension --> cosine_similarity
+  cosine_similarity --> fmt
+  fmt --> new
+  new --> initialize
+  initialize --> embed_batch
+  embed_batch --> embed
+  embed --> process_batch
+  process_batch --> mean_pooling
+  mean_pooling --> calculate_similarity
+  calculate_similarity --> find_most_similar
+  find_most_similar --> test_embedding_creation
+  test_embedding_creation --> test_cosine_similarity
+  test_cosine_similarity --> test_embedding_config_default
+  test_embedding_config_default --> test_embedding_with_metadata
+  test_embedding_with_metadata --> test_cosine_similarity_edge_cases
+  test_cosine_similarity_edge_cases --> test_embedding_engine_creation
+  test_embedding_engine_creation --> test_semantic_similarity_examples
+  test_semantic_similarity_examples --> test_dissimilar_texts
+  test_dissimilar_texts --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class EmbeddingConfig {
+    +EmbeddingConfig()
+  }
+  class Embedding {
+    +Embedding()
+  }
+  class EmbeddingEngine {
+    +EmbeddingEngine()
+  }
+  test_embedding_creation ..> Embedding : uses
+  test_embedding_config_default ..> Embedding : uses
+  test_embedding_with_metadata ..> Embedding : uses
+  test_embedding_engine_creation ..> Embedding : uses
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

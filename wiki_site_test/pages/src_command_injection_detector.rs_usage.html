@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/command_injection_detector.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/command_injection_detector.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 37</li>
+<li><strong>Structures:</strong> 6</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 85</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+new"new (fn)"]
+  initialize_command_patterns"initialize_command_patterns (fn)"]
+  initialize_rust_command_patterns"initialize_rust_command_patterns (fn)"]
+  initialize_javascript_command_patterns"initialize_javascript_command_patterns (fn)"]
+  initialize_python_command_patterns"initialize_python_command_patterns (fn)"]
+  initialize_c_command_patterns"initialize_c_command_patterns (fn)"]
+  initialize_go_command_patterns"initialize_go_command_patterns (fn)"]
+  initialize_php_command_patterns"initialize_php_command_patterns (fn)"]
+  initialize_generic_command_patterns"initialize_generic_command_patterns (fn)"]
+  detect"detect (fn)"]
+  analyze_command_injection_flow"analyze_command_injection_flow (fn)"]
+  detect_direct_command_patterns"detect_direct_command_patterns (fn)"]
+  traverse_for_command_patterns"traverse_for_command_patterns (fn)"]
+  check_node_for_command_injection"check_node_for_command_injection (fn)"]
+  analyze_command_execution_pattern"analyze_command_execution_pattern (fn)"]
+  determine_injection_type"determine_injection_type (fn)"]
+  calculate_confidence"calculate_confidence (fn)"]
+  determine_severity"determine_severity (fn)"]
+  generate_remediation"generate_remediation (fn)"]
+  is_function_call"is_function_call (fn)"]
+  extract_function_call_name"extract_function_call_name (fn)"]
+  extract_command_argument"extract_command_argument (fn)"]
+  contains_dangerous_patterns"contains_dangerous_patterns (fn)"]
+  is_string_concatenation"is_string_concatenation (fn)"]
+  has_string_concatenation"has_string_concatenation (fn)"]
+  extract_concatenation_content"extract_concatenation_content (fn)"]
+  is_template_literal"is_template_literal (fn)"]
+  extract_template_content"extract_template_content (fn)"]
+  contains_shell_metacharacters"contains_shell_metacharacters (fn)"]
+  contains_command_patterns"contains_command_patterns (fn)"]
+  create_direct_vulnerability"create_direct_vulnerability (fn)"]
+  test_command_injection_detector_creation"test_command_injection_detector_creation (fn)"]
+  test_shell_metacharacters_detection"test_shell_metacharacters_detection (fn)"]
+  test_dangerous_patterns_detection"test_dangerous_patterns_detection (fn)"]
+  test_command_functions_initialization"test_command_functions_initialization (fn)"]
+  test_injection_type_determination"test_injection_type_determination (fn)"]
+  test_confidence_calculation"test_confidence_calculation (fn)"]
+  initialize_c_command_patterns --> initialize_command_patterns
+  initialize_c_command_patterns --> initialize_rust_command_patterns
+  initialize_c_command_patterns --> initialize_javascript_command_patterns
+  initialize_c_command_patterns --> initialize_python_command_patterns
+  initialize_c_command_patterns --> initialize_go_command_patterns
+  initialize_c_command_patterns --> initialize_php_command_patterns
+  initialize_c_command_patterns --> initialize_generic_command_patterns
+  initialize_c_command_patterns --> detect
+  initialize_c_command_patterns --> analyze_command_injection_flow
+  initialize_c_command_patterns --> detect_direct_command_patterns
+  initialize_c_command_patterns --> traverse_for_command_patterns
+  initialize_c_command_patterns --> check_node_for_command_injection
+  initialize_c_command_patterns --> analyze_command_execution_pattern
+  initialize_c_command_patterns --> determine_injection_type
+  initialize_c_command_patterns --> calculate_confidence
+  initialize_c_command_patterns --> is_function_call
+  initialize_c_command_patterns --> extract_function_call_name
+  initialize_c_command_patterns --> extract_command_argument
+  initialize_c_command_patterns --> contains_dangerous_patterns
+  initialize_c_command_patterns --> is_string_concatenation
+  initialize_c_command_patterns --> has_string_concatenation
+  initialize_c_command_patterns --> extract_concatenation_content
+  initialize_c_command_patterns --> extract_template_content
+  initialize_c_command_patterns --> contains_shell_metacharacters
+  initialize_c_command_patterns --> contains_command_patterns
+  initialize_c_command_patterns --> create_direct_vulnerability
+  initialize_c_command_patterns --> test_command_injection_detector_creation
+  initialize_c_command_patterns --> test_shell_metacharacters_detection
+  initialize_c_command_patterns --> test_dangerous_patterns_detection
+  initialize_c_command_patterns --> test_command_functions_initialization
+  initialize_c_command_patterns --> test_injection_type_determination
+  initialize_c_command_patterns --> test_confidence_calculation
+  detect --> test_command_injection_detector_creation
+  detect --> test_shell_metacharacters_detection
+  detect --> test_dangerous_patterns_detection
+  detect_direct_command_patterns --> test_command_injection_detector_creation
+  detect_direct_command_patterns --> test_shell_metacharacters_detection
+  detect_direct_command_patterns --> test_dangerous_patterns_detection
+  analyze_command_execution_pattern --> initialize_command_patterns
+  analyze_command_execution_pattern --> initialize_rust_command_patterns
+  analyze_command_execution_pattern --> initialize_javascript_command_patterns
+  analyze_command_execution_pattern --> initialize_python_command_patterns
+  analyze_command_execution_pattern --> initialize_c_command_patterns
+  analyze_command_execution_pattern --> initialize_go_command_patterns
+  analyze_command_execution_pattern --> initialize_php_command_patterns
+  analyze_command_execution_pattern --> initialize_generic_command_patterns
+  analyze_command_execution_pattern --> detect_direct_command_patterns
+  analyze_command_execution_pattern --> traverse_for_command_patterns
+  analyze_command_execution_pattern --> contains_dangerous_patterns
+  analyze_command_execution_pattern --> contains_command_patterns
+  analyze_command_execution_pattern --> test_dangerous_patterns_detection
+  is_function_call --> test_command_functions_initialization
+  extract_function_call_name --> test_command_functions_initialization
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  commandinjectionvulnerability["CommandInjectionVulnerability"]
+  Start --> commandinjectionvulnerability
+  commandexecutionpattern["CommandExecutionPattern"]
+  Start --> commandexecutionpattern
+  commandinjectionremediation["CommandInjectionRemediation"]
+  Start --> commandinjectionremediation
+  securecommandexample["SecureCommandExample"]
+  Start --> securecommandexample
+  commandinjectiondetector["CommandInjectionDetector"]
+  Start --> commandinjectiondetector
+  commandexecutioninfo["CommandExecutionInfo"]
+  Start --> commandexecutioninfo
+  new["new"Fn]
+  initialize_command_patterns["initialize_command_patterns"Fn]
+  initialize_rust_command_patterns["initialize_rust_command_patterns"Fn]
+  initialize_javascript_command_patterns["initialize_javascript_command_patterns"Fn]
+  initialize_python_command_patterns["initialize_python_command_patterns"Fn]
+  initialize_c_command_patterns["initialize_c_command_patterns"Fn]
+  initialize_go_command_patterns["initialize_go_command_patterns"Fn]
+  initialize_php_command_patterns["initialize_php_command_patterns"Fn]
+  initialize_generic_command_patterns["initialize_generic_command_patterns"Fn]
+  detect["detect"Fn]
+  analyze_command_injection_flow["analyze_command_injection_flow"Fn]
+  detect_direct_command_patterns["detect_direct_command_patterns"Fn]
+  traverse_for_command_patterns["traverse_for_command_patterns"Fn]
+  check_node_for_command_injection["check_node_for_command_injection"Fn]
+  analyze_command_execution_pattern["analyze_command_execution_pattern"Fn]
+  determine_injection_type["determine_injection_type"Fn]
+  calculate_confidence["calculate_confidence"Fn]
+  determine_severity["determine_severity"Fn]
+  generate_remediation["generate_remediation"Fn]
+  is_function_call["is_function_call"Fn]
+  extract_function_call_name["extract_function_call_name"Fn]
+  extract_command_argument["extract_command_argument"Fn]
+  contains_dangerous_patterns["contains_dangerous_patterns"Fn]
+  is_string_concatenation["is_string_concatenation"Fn]
+  has_string_concatenation["has_string_concatenation"Fn]
+  extract_concatenation_content["extract_concatenation_content"Fn]
+  is_template_literal["is_template_literal"Fn]
+  extract_template_content["extract_template_content"Fn]
+  contains_shell_metacharacters["contains_shell_metacharacters"Fn]
+  contains_command_patterns["contains_command_patterns"Fn]
+  create_direct_vulnerability["create_direct_vulnerability"Fn]
+  test_command_injection_detector_creation["test_command_injection_detector_creation"Fn]
+  test_shell_metacharacters_detection["test_shell_metacharacters_detection"Fn]
+  test_dangerous_patterns_detection["test_dangerous_patterns_detection"Fn]
+  test_command_functions_initialization["test_command_functions_initialization"Fn]
+  test_injection_type_determination["test_injection_type_determination"Fn]
+  test_confidence_calculation["test_confidence_calculation"Fn]
+  commandinjectionvulnerability --> new
+  new --> initialize_command_patterns
+  initialize_command_patterns --> initialize_rust_command_patterns
+  initialize_rust_command_patterns --> initialize_javascript_command_patterns
+  initialize_javascript_command_patterns --> initialize_python_command_patterns
+  initialize_python_command_patterns --> initialize_c_command_patterns
+  initialize_c_command_patterns --> initialize_go_command_patterns
+  initialize_go_command_patterns --> initialize_php_command_patterns
+  initialize_php_command_patterns --> initialize_generic_command_patterns
+  initialize_generic_command_patterns --> detect
+  detect --> analyze_command_injection_flow
+  analyze_command_injection_flow --> detect_direct_command_patterns
+  detect_direct_command_patterns --> traverse_for_command_patterns
+  traverse_for_command_patterns --> check_node_for_command_injection
+  check_node_for_command_injection --> analyze_command_execution_pattern
+  analyze_command_execution_pattern --> determine_injection_type
+  determine_injection_type --> calculate_confidence
+  calculate_confidence --> determine_severity
+  determine_severity --> generate_remediation
+  generate_remediation --> is_function_call
+  is_function_call --> extract_function_call_name
+  extract_function_call_name --> extract_command_argument
+  extract_command_argument --> contains_dangerous_patterns
+  contains_dangerous_patterns --> is_string_concatenation
+  is_string_concatenation --> has_string_concatenation
+  has_string_concatenation --> extract_concatenation_content
+  extract_concatenation_content --> is_template_literal
+  is_template_literal --> extract_template_content
+  extract_template_content --> contains_shell_metacharacters
+  contains_shell_metacharacters --> contains_command_patterns
+  contains_command_patterns --> create_direct_vulnerability
+  create_direct_vulnerability --> test_command_injection_detector_creation
+  test_command_injection_detector_creation --> test_shell_metacharacters_detection
+  test_shell_metacharacters_detection --> test_dangerous_patterns_detection
+  test_dangerous_patterns_detection --> test_command_functions_initialization
+  test_command_functions_initialization --> test_injection_type_determination
+  test_injection_type_determination --> test_confidence_calculation
+  test_confidence_calculation --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class CommandInjectionVulnerability {
+    +CommandInjectionVulnerability()
+  }
+  class CommandExecutionPattern {
+    +CommandExecutionPattern()
+  }
+  class CommandInjectionRemediation {
+    +CommandInjectionRemediation()
+  }
+  class SecureCommandExample {
+    +SecureCommandExample()
+  }
+  class CommandInjectionDetector {
+    +CommandInjectionDetector()
+  }
+  class CommandExecutionInfo {
+    +CommandExecutionInfo()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

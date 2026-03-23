@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/ai/config.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/ai/config.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 14</li>
+<li><strong>Structures:</strong> 9</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 37</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  default"default (fn)"]
+  from_file"from_file (fn)"]
+  from_json"from_json (fn)"]
+  from_yaml"from_yaml (fn)"]
+  with_env_overrides"with_env_overrides (fn)"]
+  validate"validate (fn)"]
+  from_str"from_str (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  aiconfig["AIConfig"]
+  Start --> aiconfig
+  providerconfig["ProviderConfig"]
+  Start --> providerconfig
+  modelconfig["ModelConfig"]
+  Start --> modelconfig
+  featureconfig["FeatureConfig"]
+  Start --> featureconfig
+  featuresettings["FeatureSettings"]
+  Start --> featuresettings
+  globalconfig["GlobalConfig"]
+  Start --> globalconfig
+  cacheconfig["CacheConfig"]
+  Start --> cacheconfig
+  ratelimitconfig["RateLimitConfig"]
+  Start --> ratelimitconfig
+  retryconfig["RetryConfig"]
+  Start --> retryconfig
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  default["default"Fn]
+  from_file["from_file"Fn]
+  from_json["from_json"Fn]
+  from_yaml["from_yaml"Fn]
+  with_env_overrides["with_env_overrides"Fn]
+  validate["validate"Fn]
+  from_str["from_str"Fn]
+  aiconfig --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> default
+  default --> from_file
+  from_file --> from_json
+  from_json --> from_yaml
+  from_yaml --> with_env_overrides
+  with_env_overrides --> validate
+  validate --> from_str
+  from_str --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class AIConfig {
+    +AIConfig()
+  }
+  class ProviderConfig {
+    +ProviderConfig()
+  }
+  class ModelConfig {
+    +ModelConfig()
+  }
+  class FeatureConfig {
+    +FeatureConfig()
+  }
+  class FeatureSettings {
+    +FeatureSettings()
+  }
+  class GlobalConfig {
+    +GlobalConfig()
+  }
+  class CacheConfig {
+    +CacheConfig()
+  }
+  class RateLimitConfig {
+    +RateLimitConfig()
+  }
+  class RetryConfig {
+    +RetryConfig()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

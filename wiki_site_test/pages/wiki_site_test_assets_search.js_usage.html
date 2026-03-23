@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - wiki_site_test/assets/search.js</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>wiki_site_test/assets/search.js</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 7</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 7</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+runsearch"runSearch (fn)"]
+  getuniquevalues"getUniqueValues (fn)"]
+  getfiltervalues"getFilterValues (fn)"]
+  filteritems"filterItems (fn)"]
+  render"render (fn)"]
+  populatefilters"populateFilters (fn)"]
+  updatesearch"updateSearch (fn)"]
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  runsearch["runSearch"Fn]
+  getuniquevalues["getUniqueValues"Fn]
+  getfiltervalues["getFilterValues"Fn]
+  filteritems["filterItems"Fn]
+  render["render"Fn]
+  populatefilters["populateFilters"Fn]
+  updatesearch["updateSearch"Fn]
+  Start --> runsearch
+  runsearch --> getuniquevalues
+  getuniquevalues --> getfiltervalues
+  getfiltervalues --> filteritems
+  filteritems --> render
+  render --> populatefilters
+  populatefilters --> updatesearch
+  updatesearch --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

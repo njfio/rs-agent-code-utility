@@ -1,0 +1,266 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - src/wiki/mod.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>src/wiki/mod.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 53</li>
+<li><strong>Structures:</strong> 5</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 372</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+builder"builder (fn)"]
+  new"new (fn)"]
+  with_site_title"with_site_title (fn)"]
+  with_output_dir"with_output_dir (fn)"]
+  include_api_docs"include_api_docs (fn)"]
+  include_examples"include_examples (fn)"]
+  with_ai_enabled"with_ai_enabled (fn)"]
+  with_ai_mock"with_ai_mock (fn)"]
+  with_ai_config_path"with_ai_config_path (fn)"]
+  with_enhanced_ai"with_enhanced_ai (fn)"]
+  with_function_enhancement"with_function_enhancement (fn)"]
+  with_security_insights"with_security_insights (fn)"]
+  with_refactoring_hints"with_refactoring_hints (fn)"]
+  with_diagram_annotations"with_diagram_annotations (fn)"]
+  with_ai_provider"with_ai_provider (fn)"]
+  with_performance_analysis"with_performance_analysis (fn)"]
+  build"build (fn)"]
+  new"new (fn)"]
+  generate_from_path"generate_from_path (fn)"]
+  analyze"analyze (fn)"]
+  generate_site"generate_site (fn)"]
+  write_style_css"write_style_css (fn)"]
+  write_search_js"write_search_js (fn)"]
+  write_index_html"write_index_html (fn)"]
+  write_global_symbols"write_global_symbols (fn)"]
+  file_has_branching"file_has_branching (fn)"]
+  build_sequence_diagram"build_sequence_diagram (fn)"]
+  build_control_flow"build_control_flow (fn)"]
+  build_sequence_or_flow_blocks"build_sequence_or_flow_blocks (fn)"]
+  generate_ai_insights_sync"generate_ai_insights_sync (fn)"]
+  generate_file_ai_insights_sync"generate_file_ai_insights_sync (fn)"]
+  anchorize"anchorize (fn)"]
+  safe_ident"safe_ident (fn)"]
+  build_nav"build_nav (fn)"]
+  build_nav_for_pages"build_nav_for_pages (fn)"]
+  write_search_index"write_search_index (fn)"]
+  generate_relationship_map_simple"generate_relationship_map_simple (fn)"]
+  write_security_overview_page"write_security_overview_page (fn)"]
+  write_security_hotspots_page"write_security_hotspots_page (fn)"]
+  generate_security_overview_block"generate_security_overview_block (fn)"]
+  write_file_page"write_file_page (fn)"]
+  generate_file_security_block"generate_file_security_block (fn)"]
+  write_usage_pattern_page"write_usage_pattern_page (fn)"]
+  build_call_graph_diagram"build_call_graph_diagram (fn)"]
+  build_usage_flow_diagram"build_usage_flow_diagram (fn)"]
+  build_dependency_map"build_dependency_map (fn)"]
+  sanitize_filename"sanitize_filename (fn)"]
+  html_escape"html_escape (fn)"]
+  build_simple_dependency_graph"build_simple_dependency_graph (fn)"]
+  build_simple_flow"build_simple_flow (fn)"]
+  walk_tree_for_calls"walk_tree_for_calls (fn)"]
+  extract_calls_from_text"extract_calls_from_text (fn)"]
+  traverse_tree_for_text"traverse_tree_for_text (fn)"]
+  build --> builder
+  file_has_branching --> sanitize_filename
+  build_sequence_diagram --> builder
+  build_control_flow --> builder
+  build_sequence_or_flow_blocks --> builder
+  build_sequence_or_flow_blocks --> with_refactoring_hints
+  build_sequence_or_flow_blocks --> with_performance_analysis
+  build_sequence_or_flow_blocks --> anchorize
+  build_sequence_or_flow_blocks --> build_nav_for_pages
+  build_sequence_or_flow_blocks --> walk_tree_for_calls
+  build_sequence_or_flow_blocks --> traverse_tree_for_text
+  generate_file_ai_insights_sync --> sanitize_filename
+  build_nav --> builder
+  build_nav_for_pages --> builder
+  build_nav_for_pages --> with_performance_analysis
+  write_security_overview_page --> build_nav_for_pages
+  write_security_hotspots_page --> build_nav_for_pages
+  generate_security_overview_block --> build_sequence_or_flow_blocks
+  write_file_page --> build_nav_for_pages
+  write_file_page --> sanitize_filename
+  generate_file_security_block --> build_sequence_or_flow_blocks
+  generate_file_security_block --> sanitize_filename
+  write_usage_pattern_page --> build_nav_for_pages
+  build_call_graph_diagram --> builder
+  build_call_graph_diagram --> walk_tree_for_calls
+  build_call_graph_diagram --> extract_calls_from_text
+  build_usage_flow_diagram --> builder
+  build_dependency_map --> builder
+  build_simple_dependency_graph --> builder
+  build_simple_flow --> builder
+  walk_tree_for_calls --> with_performance_analysis
+  traverse_tree_for_text --> with_performance_analysis
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  wikiconfig["WikiConfig"]
+  Start --> wikiconfig
+  wikiconfigbuilder["WikiConfigBuilder"]
+  Start --> wikiconfigbuilder
+  wikigenerationresult["WikiGenerationResult"]
+  Start --> wikigenerationresult
+  searchentry["SearchEntry"]
+  Start --> searchentry
+  wikigenerator["WikiGenerator"]
+  Start --> wikigenerator
+  builder["builder"Fn]
+  new["new"Fn]
+  with_site_title["with_site_title"Fn]
+  with_output_dir["with_output_dir"Fn]
+  include_api_docs["include_api_docs"Fn]
+  include_examples["include_examples"Fn]
+  with_ai_enabled["with_ai_enabled"Fn]
+  with_ai_mock["with_ai_mock"Fn]
+  with_ai_config_path["with_ai_config_path"Fn]
+  with_enhanced_ai["with_enhanced_ai"Fn]
+  with_function_enhancement["with_function_enhancement"Fn]
+  with_security_insights["with_security_insights"Fn]
+  with_refactoring_hints["with_refactoring_hints"Fn]
+  with_diagram_annotations["with_diagram_annotations"Fn]
+  with_ai_provider["with_ai_provider"Fn]
+  with_performance_analysis["with_performance_analysis"Fn]
+  build["build"Fn]
+  new["new"Fn]
+  generate_from_path["generate_from_path"Fn]
+  analyze["analyze"Fn]
+  generate_site["generate_site"Fn]
+  write_style_css["write_style_css"Fn]
+  write_search_js["write_search_js"Fn]
+  write_index_html["write_index_html"Fn]
+  write_global_symbols["write_global_symbols"Fn]
+  file_has_branching["file_has_branching"Fn]
+  build_sequence_diagram["build_sequence_diagram"Fn]
+  build_control_flow["build_control_flow"Fn]
+  build_sequence_or_flow_blocks["build_sequence_or_flow_blocks"Fn]
+  generate_ai_insights_sync["generate_ai_insights_sync"Fn]
+  generate_file_ai_insights_sync["generate_file_ai_insights_sync"Fn]
+  anchorize["anchorize"Fn]
+  safe_ident["safe_ident"Fn]
+  build_nav["build_nav"Fn]
+  build_nav_for_pages["build_nav_for_pages"Fn]
+  write_search_index["write_search_index"Fn]
+  generate_relationship_map_simple["generate_relationship_map_simple"Fn]
+  write_security_overview_page["write_security_overview_page"Fn]
+  write_security_hotspots_page["write_security_hotspots_page"Fn]
+  generate_security_overview_block["generate_security_overview_block"Fn]
+  write_file_page["write_file_page"Fn]
+  generate_file_security_block["generate_file_security_block"Fn]
+  write_usage_pattern_page["write_usage_pattern_page"Fn]
+  build_call_graph_diagram["build_call_graph_diagram"Fn]
+  build_usage_flow_diagram["build_usage_flow_diagram"Fn]
+  build_dependency_map["build_dependency_map"Fn]
+  sanitize_filename["sanitize_filename"Fn]
+  html_escape["html_escape"Fn]
+  build_simple_dependency_graph["build_simple_dependency_graph"Fn]
+  build_simple_flow["build_simple_flow"Fn]
+  walk_tree_for_calls["walk_tree_for_calls"Fn]
+  extract_calls_from_text["extract_calls_from_text"Fn]
+  traverse_tree_for_text["traverse_tree_for_text"Fn]
+  wikiconfig --> builder
+  builder --> new
+  new --> with_site_title
+  with_site_title --> with_output_dir
+  with_output_dir --> include_api_docs
+  include_api_docs --> include_examples
+  include_examples --> with_ai_enabled
+  with_ai_enabled --> with_ai_mock
+  with_ai_mock --> with_ai_config_path
+  with_ai_config_path --> with_enhanced_ai
+  with_enhanced_ai --> with_function_enhancement
+  with_function_enhancement --> with_security_insights
+  with_security_insights --> with_refactoring_hints
+  with_refactoring_hints --> with_diagram_annotations
+  with_diagram_annotations --> with_ai_provider
+  with_ai_provider --> with_performance_analysis
+  with_performance_analysis --> build
+  build --> new
+  new --> generate_from_path
+  generate_from_path --> analyze
+  analyze --> generate_site
+  generate_site --> write_style_css
+  write_style_css --> write_search_js
+  write_search_js --> write_index_html
+  write_index_html --> write_global_symbols
+  write_global_symbols --> file_has_branching
+  file_has_branching --> build_sequence_diagram
+  build_sequence_diagram --> build_control_flow
+  build_control_flow --> build_sequence_or_flow_blocks
+  build_sequence_or_flow_blocks --> generate_ai_insights_sync
+  generate_ai_insights_sync --> generate_file_ai_insights_sync
+  generate_file_ai_insights_sync --> anchorize
+  anchorize --> safe_ident
+  safe_ident --> build_nav
+  build_nav --> build_nav_for_pages
+  build_nav_for_pages --> write_search_index
+  write_search_index --> generate_relationship_map_simple
+  generate_relationship_map_simple --> write_security_overview_page
+  write_security_overview_page --> write_security_hotspots_page
+  write_security_hotspots_page --> generate_security_overview_block
+  generate_security_overview_block --> write_file_page
+  write_file_page --> generate_file_security_block
+  generate_file_security_block --> write_usage_pattern_page
+  write_usage_pattern_page --> build_call_graph_diagram
+  build_call_graph_diagram --> build_usage_flow_diagram
+  build_usage_flow_diagram --> build_dependency_map
+  build_dependency_map --> sanitize_filename
+  sanitize_filename --> html_escape
+  html_escape --> build_simple_dependency_graph
+  build_simple_dependency_graph --> build_simple_flow
+  build_simple_flow --> walk_tree_for_calls
+  walk_tree_for_calls --> extract_calls_from_text
+  extract_calls_from_text --> traverse_tree_for_text
+  traverse_tree_for_text --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+class WikiConfig {
+    +WikiConfig()
+  }
+  class WikiConfigBuilder {
+    +WikiConfigBuilder()
+  }
+  class WikiGenerationResult {
+    +WikiGenerationResult()
+  }
+  class SearchEntry {
+    +SearchEntry()
+  }
+  class WikiGenerator {
+    +WikiGenerator()
+  }
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

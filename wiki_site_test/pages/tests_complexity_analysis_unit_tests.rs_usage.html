@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/complexity_analysis_unit_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/complexity_analysis_unit_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 17</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 99</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+test_complexity_analyzer_creation"test_complexity_analyzer_creation (fn)"]
+  test_basic_cyclomatic_complexity"test_basic_cyclomatic_complexity (fn)"]
+  test_if_statement_complexity"test_if_statement_complexity (fn)"]
+  test_nested_control_flow_complexity"test_nested_control_flow_complexity (fn)"]
+  test_match_expression_complexity"test_match_expression_complexity (fn)"]
+  test_loop_complexity"test_loop_complexity (fn)"]
+  test_halstead_metrics"test_halstead_metrics (fn)"]
+  test_empty_function_complexity"test_empty_function_complexity (fn)"]
+  test_multiple_functions_complexity"test_multiple_functions_complexity (fn)"]
+  test_error_handling_complexity"test_error_handling_complexity (fn)"]
+  test_javascript_complexity"test_javascript_complexity (fn)"]
+  test_python_complexity"test_python_complexity (fn)"]
+  test_complexity_metrics_consistency"test_complexity_metrics_consistency (fn)"]
+  test_npath_complexity_logical_operators"test_npath_complexity_logical_operators (fn)"]
+  test_npath_complexity_nested_functions"test_npath_complexity_nested_functions (fn)"]
+  test_npath_complexity_try_catch"test_npath_complexity_try_catch (fn)"]
+  test_npath_complexity_complex_match"test_npath_complexity_complex_match (fn)"]
+  test_empty_function_complexity --> test_multiple_functions_complexity
+  test_empty_function_complexity --> test_npath_complexity_nested_functions
+  test_npath_complexity_complex_match --> test_complexity_analyzer_creation
+  test_npath_complexity_complex_match --> test_basic_cyclomatic_complexity
+  test_npath_complexity_complex_match --> test_if_statement_complexity
+  test_npath_complexity_complex_match --> test_nested_control_flow_complexity
+  test_npath_complexity_complex_match --> test_match_expression_complexity
+  test_npath_complexity_complex_match --> test_loop_complexity
+  test_npath_complexity_complex_match --> test_empty_function_complexity
+  test_npath_complexity_complex_match --> test_multiple_functions_complexity
+  test_npath_complexity_complex_match --> test_error_handling_complexity
+  test_npath_complexity_complex_match --> test_javascript_complexity
+  test_npath_complexity_complex_match --> test_python_complexity
+  test_npath_complexity_complex_match --> test_complexity_metrics_consistency
+  test_npath_complexity_complex_match --> test_npath_complexity_logical_operators
+  test_npath_complexity_complex_match --> test_npath_complexity_nested_functions
+  test_npath_complexity_complex_match --> test_npath_complexity_try_catch
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  test_complexity_analyzer_creation["test_complexity_analyzer_creation"Fn]
+  test_basic_cyclomatic_complexity["test_basic_cyclomatic_complexity"Fn]
+  test_if_statement_complexity["test_if_statement_complexity"Fn]
+  test_nested_control_flow_complexity["test_nested_control_flow_complexity"Fn]
+  test_match_expression_complexity["test_match_expression_complexity"Fn]
+  test_loop_complexity["test_loop_complexity"Fn]
+  test_halstead_metrics["test_halstead_metrics"Fn]
+  test_empty_function_complexity["test_empty_function_complexity"Fn]
+  test_multiple_functions_complexity["test_multiple_functions_complexity"Fn]
+  test_error_handling_complexity["test_error_handling_complexity"Fn]
+  test_javascript_complexity["test_javascript_complexity"Fn]
+  test_python_complexity["test_python_complexity"Fn]
+  test_complexity_metrics_consistency["test_complexity_metrics_consistency"Fn]
+  test_npath_complexity_logical_operators["test_npath_complexity_logical_operators"Fn]
+  test_npath_complexity_nested_functions["test_npath_complexity_nested_functions"Fn]
+  test_npath_complexity_try_catch["test_npath_complexity_try_catch"Fn]
+  test_npath_complexity_complex_match["test_npath_complexity_complex_match"Fn]
+  Start --> test_complexity_analyzer_creation
+  test_complexity_analyzer_creation --> test_basic_cyclomatic_complexity
+  test_basic_cyclomatic_complexity --> test_if_statement_complexity
+  test_if_statement_complexity --> test_nested_control_flow_complexity
+  test_nested_control_flow_complexity --> test_match_expression_complexity
+  test_match_expression_complexity --> test_loop_complexity
+  test_loop_complexity --> test_halstead_metrics
+  test_halstead_metrics --> test_empty_function_complexity
+  test_empty_function_complexity --> test_multiple_functions_complexity
+  test_multiple_functions_complexity --> test_error_handling_complexity
+  test_error_handling_complexity --> test_javascript_complexity
+  test_javascript_complexity --> test_python_complexity
+  test_python_complexity --> test_complexity_metrics_consistency
+  test_complexity_metrics_consistency --> test_npath_complexity_logical_operators
+  test_npath_complexity_logical_operators --> test_npath_complexity_nested_functions
+  test_npath_complexity_nested_functions --> test_npath_complexity_try_catch
+  test_npath_complexity_try_catch --> test_npath_complexity_complex_match
+  test_npath_complexity_complex_match --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

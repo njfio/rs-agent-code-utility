@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Patterns - tests/file_cache_tests.rs</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+<header><h1>Usage Patterns</h1><h2>tests/file_cache_tests.rs</h2></header>
+<main>
+<section class="article">
+<div class="card">
+<h2>Module Statistics</h2>
+<ul>
+<li><strong>Functions:</strong> 11</li>
+<li><strong>Structures:</strong> 0</li>
+<li><strong>Interfaces/Traits:</strong> 0</li>
+<li><strong>Total Symbols:</strong> 57</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Call Graph</h2>
+<p>This diagram shows function call relationships within this module.</p>
+<div class="mermaid">graph LR
+test_file_cache_creation"test_file_cache_creation (fn)"]
+  test_file_cache_with_capacity"test_file_cache_with_capacity (fn)"]
+  test_read_to_string_and_caching"test_read_to_string_and_caching (fn)"]
+  test_cache_statistics"test_cache_statistics (fn)"]
+  test_hit_ratio"test_hit_ratio (fn)"]
+  test_cache_clear"test_cache_clear (fn)"]
+  test_multiple_files"test_multiple_files (fn)"]
+  test_cache_efficiency"test_cache_efficiency (fn)"]
+  test_average_file_size"test_average_file_size (fn)"]
+  test_nonexistent_file"test_nonexistent_file (fn)"]
+  test_is_empty"test_is_empty (fn)"]
+  test_file_cache_creation --> test_multiple_files
+  test_file_cache_with_capacity --> test_multiple_files
+  test_average_file_size --> test_multiple_files
+  test_nonexistent_file --> test_multiple_files
+  test_is_empty --> test_cache_statistics
+  test_is_empty --> test_nonexistent_file
+</div>
+</div>
+
+<div class="card">
+<h2>Usage Flow</h2>
+<p>This flowchart shows how this module's functionality flows through the application.</p>
+<div class="mermaid">flowchart TD
+Start(["User Input"])
+  End(["Result"])
+  test_file_cache_creation["test_file_cache_creation"Fn]
+  test_file_cache_with_capacity["test_file_cache_with_capacity"Fn]
+  test_read_to_string_and_caching["test_read_to_string_and_caching"Fn]
+  test_cache_statistics["test_cache_statistics"Fn]
+  test_hit_ratio["test_hit_ratio"Fn]
+  test_cache_clear["test_cache_clear"Fn]
+  test_multiple_files["test_multiple_files"Fn]
+  test_cache_efficiency["test_cache_efficiency"Fn]
+  test_average_file_size["test_average_file_size"Fn]
+  test_nonexistent_file["test_nonexistent_file"Fn]
+  test_is_empty["test_is_empty"Fn]
+  Start --> test_file_cache_creation
+  test_file_cache_creation --> test_file_cache_with_capacity
+  test_file_cache_with_capacity --> test_read_to_string_and_caching
+  test_read_to_string_and_caching --> test_cache_statistics
+  test_cache_statistics --> test_hit_ratio
+  test_hit_ratio --> test_cache_clear
+  test_cache_clear --> test_multiple_files
+  test_multiple_files --> test_cache_efficiency
+  test_cache_efficiency --> test_average_file_size
+  test_average_file_size --> test_nonexistent_file
+  test_nonexistent_file --> test_is_empty
+  test_is_empty --> End
+</div>
+</div>
+
+<div class="card">
+<h2>Dependency Map</h2>
+<p>This diagram illustrates dependencies and relationships within this module.</p>
+<div class="mermaid">classDiagram
+
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>
