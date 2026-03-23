@@ -91,8 +91,10 @@
 //! ### AI-Powered Analysis
 //!
 //! ```rust,no_run
+//! # #[cfg(feature = "net")]
 //! use rust_tree_sitter::ai::{AIServiceBuilder, AIFeature, AIRequest};
 //!
+//! # #[cfg(feature = "net")]
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Initialize AI service with OpenAI
 //! let ai_service = AIServiceBuilder::new()
@@ -158,6 +160,7 @@ pub mod advanced_parallel;
 pub mod advanced_security;
 /// AI service layer and provider integrations
 #[allow(clippy::unwrap_used, clippy::expect_used)]
+#[cfg(feature = "net")]
 pub mod ai;
 /// AI-powered code explanation and insights
 #[allow(clippy::unwrap_used, clippy::expect_used)]
@@ -174,6 +177,7 @@ pub mod analyzer;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod ast_transformation;
 /// Command-line interface implementation
+#[cfg(feature = "cli")]
 pub mod cli;
 /// Code evolution tracking and analysis
 #[allow(clippy::unwrap_used, clippy::expect_used)]
@@ -270,6 +274,7 @@ pub mod test_coverage;
 pub mod tree;
 /// Wiki website generator
 #[allow(clippy::unwrap_used, clippy::expect_used)]
+#[cfg(feature = "wiki")]
 pub mod wiki;
 
 // Integration testing framework
@@ -322,6 +327,7 @@ pub use security::{AIFalsePositiveFilter, AIFilterConfig, AIFilterResult, AIFilt
 pub use security::{SecretsDetector, VulnerabilityDatabase};
 
 // AI service layer
+#[cfg(feature = "net")]
 pub use ai::{
     AIConfig as AIServiceConfig, AIError, AIFeature, AIProvider, AIRequest, AIResponse, AIResult,
     AIService, AIServiceBuilder,

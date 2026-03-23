@@ -1,3 +1,5 @@
+#![cfg(feature = "cli")]
+
 // snapshot tests for markdown renderers
 
 #[test]

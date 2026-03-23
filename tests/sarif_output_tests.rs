@@ -1,3 +1,5 @@
+#![cfg(feature = "cli")]
+
 use rust_tree_sitter::advanced_security::{
     CodeExample, ConfidenceLevel, ImpactLevel, OwaspCategory, RemediationEffort,
     RemediationGuidance, SecurityImpact, SecuritySeverity, SecurityVulnerability,

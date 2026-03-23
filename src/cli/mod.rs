@@ -495,6 +495,7 @@ pub enum Commands {
     },
 
     /// Wiki website generator
+    #[cfg(feature = "wiki")]
     Wiki {
         /// Directory to generate wiki for
         #[arg(value_name = "PATH")]

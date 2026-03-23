@@ -1,3 +1,5 @@
+#![cfg(any(feature = "net", feature = "db"))]
+
 use rust_tree_sitter::infrastructure::{DatabaseConfig, DatabaseManager};
 use rust_tree_sitter::security::SecretsDetector;
 

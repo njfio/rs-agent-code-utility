@@ -26,12 +26,12 @@ tree-sitter-kotlin = "0.2.11"
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-clap = { version = "4.0", features = ["derive"] }
-colored = "2.0"
-indicatif = "0.17"
+clap = { version = "4.0", features = ["derive"], optional = true }
+colored = { version = "2.0", optional = true }
+indicatif = { version = "0.17", optional = true }
 serde_json = "1.0"
 toml = "0.8"
-tabled = "0.15"
+tabled = { version = "0.15", optional = true }
 regex = "1.10"
 sha2 = "0.10"
 rand = "0.8"
@@ -39,7 +39,7 @@ rayon = "1.8"
 petgraph = "0.6"
 ignore = "0.4"
 crc32fast = "1.4"
-pulldown-cmark = "0.10"
+pulldown-cmark = { version = "0.10", optional = true }
 flate2 = "1.0"
 crossbeam-channel = "0.5"
 parking_lot = "0.12"
@@ -48,8 +48,8 @@ walkdir = "2.4"
 base64 = "0.21"
 
 # Enhanced interactive mode dependencies
-rustyline = "12.0"
-syntect = "5.0"
+rustyline = { version = "12.0", optional = true }
+syntect = { version = "5.0", optional = true }
 
 # Security fixes - ring will be updated via dependency resolution when conflicts are resolved
 
@@ -62,11 +62,11 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 async-trait = "0.1"
 config = "0.14"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 anyhow = "1.0"
 dashmap = "5.5"
-governor = "0.6"
-tower = { version = "0.4", features = ["timeout", "retry"] }
+governor = { version = "0.6", optional = true }
+tower = { version = "0.4", features = ["timeout", "retry"], optional = true }
 # backoff = "0.4"  # Replaced with exponential-backoff due to maintenance issues
 exponential-backoff = "2.0"
 dirs = "5.0"
@@ -86,10 +86,12 @@ wiremock = "0.5"
 criterion = "0.5"
 assert_cmd = "2.0"
 predicates = "3.0"
+tokio = { version = "1.0", features = ["full"] }
 
 [features]
-default = ["std", "ml", "net", "db"]
+default = ["std", "serde"]
 std = []
+serde = []
 wasm = []
 
 # Demo feature gates all examples
@@ -99,6 +101,15 @@ wasm = []
 demo = []
 
 # Optional capability flags
+cli = [
+    "dep:clap",
+    "dep:colored",
+    "dep:indicatif",
+    "dep:rustyline",
+    "dep:syntect",
+    "dep:tabled",
+    "dep:tracing-subscriber",
+]
 ml = [
     "dep:candle-core",
     "dep:candle-nn",
@@ -109,10 +120,17 @@ ml = [
 net = [
     "dep:reqwest",
     "dep:tokio",
+    "dep:governor",
+    "dep:tower",
 ]
 db = [
     "dep:sqlx",
 ]
+wiki = [
+    "dep:pulldown-cmark",
+    "net",
+]
+full = ["std", "serde", "ml", "net", "db", "cli", "wiki"]
 
 # Gate all examples behind the optional "demo" feature
 [[example]]
@@ -280,6 +298,31 @@ name = "tdd_minimal"
 path = "examples/tdd_minimal.rs"
 required-features = ["demo"]
 
+[[example]]
+name = "accessibility_demo"
+path = "examples/accessibility_demo.rs"
+required-features = ["demo", "cli"]
+
+[[example]]
+name = "accessibility_tutorial"
+path = "examples/accessibility_tutorial.rs"
+required-features = ["demo", "cli"]
+
+[[example]]
+name = "ai_security_filter_demo"
+path = "examples/ai_security_filter_demo.rs"
+required-features = ["demo", "net"]
+
+[[example]]
+name = "ast_security_demo"
+path = "examples/ast_security_demo.rs"
+required-features = ["demo", "net"]
+
+[[example]]
+name = "test_embedded_filter"
+path = "examples/test_embedded_filter.rs"
+required-features = ["demo"]
+
 [lib]
 name = "rust_tree_sitter"
 path = "src/lib.rs"
@@ -287,7 +330,9 @@ path = "src/lib.rs"
 [[bin]]
 name = "tree-sitter-cli"
 path = "src/bin/main.rs"
+required-features = ["cli"]
 
 [[bin]]
 name = "rts-cli"
 path = "src/bin/rts.rs"
+required-features = ["cli"]

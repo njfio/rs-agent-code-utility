@@ -1,3 +1,5 @@
+#![cfg(feature = "cli")]
+
 use assert_cmd::prelude::*;
 #[allow(unused_imports)]
 use predicates::prelude::*;

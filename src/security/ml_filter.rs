@@ -607,6 +607,7 @@ impl Default for MLFalsePositiveFilter {
 }
 
 #[cfg(test)]
+#[cfg(feature = "net")]
 mod tests {
     use super::*;
 

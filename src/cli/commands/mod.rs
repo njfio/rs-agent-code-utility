@@ -17,6 +17,7 @@ pub mod security;
 pub mod stats;
 pub mod symbols;
 pub mod watch;
+#[cfg(feature = "wiki")]
 pub mod wiki;
 
 use super::error::{CliError, CliResult};
@@ -329,6 +330,7 @@ impl Execute for Commands {
                 max_iterations,
                 depth,
             } => watch::execute(path, *interval, *max_iterations, depth),
+            #[cfg(feature = "wiki")]
             Commands::Wiki {
                 path,
                 output,

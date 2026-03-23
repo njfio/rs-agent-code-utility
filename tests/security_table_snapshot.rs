@@ -1,3 +1,5 @@
+#![cfg(feature = "cli")]
+
 use assert_cmd::prelude::*;
 use std::process::Command;
 use tempfile::TempDir;

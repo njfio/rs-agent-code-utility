@@ -1,3 +1,5 @@
+#![cfg(feature = "net")]
+
 //! AI Service Tests
 //!
 //! Tests for the AI service layer functionality

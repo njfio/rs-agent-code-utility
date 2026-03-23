@@ -1,3 +1,5 @@
+#![cfg(feature = "wiki")]
+
 use rust_tree_sitter::wiki::{WikiConfig, WikiConfigBuilder, WikiGenerator};
 use rust_tree_sitter::Result;
 use std::fs;
