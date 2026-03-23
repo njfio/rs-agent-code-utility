@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +23,7 @@ pub struct DependencyAnalyzer {
     pub config: DependencyConfig,
     /// Optional external vulnerability provider (e.g., OSV/CVE). Scaffold only.
     #[serde(skip)]
-    provider: Option<Box<dyn VulnerabilityProvider + Send + Sync>>,
+    provider: Option<Arc<dyn VulnerabilityProvider + Send + Sync>>,
 }
 
 impl std::fmt::Debug for DependencyAnalyzer {
@@ -41,7 +42,7 @@ impl Clone for DependencyAnalyzer {
     fn clone(&self) -> Self {
         Self {
             config: self.config.clone(),
-            provider: None, // Cannot clone trait objects, so we set to None
+            provider: self.provider.as_ref().map(Arc::clone),
         }
     }
 }
@@ -452,7 +453,7 @@ impl DependencyAnalyzer {
 
     /// Attach an external vulnerability provider (scaffold; may be a stub)
     pub fn with_provider(mut self, provider: Box<dyn VulnerabilityProvider + Send + Sync>) -> Self {
-        self.provider = Some(provider);
+        self.provider = Some(provider.into());
         self
     }
 
@@ -479,27 +480,68 @@ impl DependencyAnalyzer {
         }
     }
 
+    fn dependency_identity(manager: &PackageManager, name: &str) -> (PackageManager, String) {
+        let normalized_name = match manager {
+            // Rust imports use `_` where Cargo package names often use `-`.
+            PackageManager::Cargo => name.replace('_', "-"),
+            _ => name.to_string(),
+        };
+
+        (manager.clone(), normalized_name)
+    }
+
+    fn merge_inferred_dependencies(
+        &self,
+        all_dependencies: &mut Vec<Dependency>,
+        inferred_dependencies: Vec<Dependency>,
+        package_managers: &[PackageManagerInfo],
+    ) {
+        let manifest_managers: HashSet<PackageManager> = package_managers
+            .iter()
+            .map(|pm| pm.manager.clone())
+            .collect();
+        let mut seen_dependencies: HashSet<(PackageManager, String)> = all_dependencies
+            .iter()
+            .map(|dep| Self::dependency_identity(&dep.manager, &dep.name))
+            .collect();
+
+        for mut dependency in inferred_dependencies {
+            let dependency_identity =
+                Self::dependency_identity(&dependency.manager, &dependency.name);
+            if !seen_dependencies.insert(dependency_identity) {
+                continue;
+            }
+
+            if manifest_managers.contains(&dependency.manager) {
+                dependency.dependency_type = DependencyType::Transitive;
+            }
+
+            all_dependencies.push(dependency);
+        }
+    }
+
     /// Analyze dependencies in a codebase
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<DependencyAnalysisResult> {
         let root_path = &analysis_result.root_path;
 
         // Detect package managers
-        let package_managers = self.detect_package_managers(root_path)?;
+        let mut package_managers = self.detect_package_managers(root_path)?;
 
         // Extract dependencies from each package manager
         let mut all_dependencies = Vec::new();
         let mut dependencies_by_manager = HashMap::new();
 
-        for pm_info in &package_managers {
+        for pm_info in &mut package_managers {
             let deps = self.extract_dependencies(pm_info)?;
             let count = deps.len();
+            pm_info.dependency_count = count;
             all_dependencies.extend(deps);
             dependencies_by_manager.insert(pm_info.manager.clone(), count);
         }
 
         // Also scan source files for imports to infer dependencies
         let inferred = self.extract_source_imports(root_path, &analysis_result.files)?;
-        all_dependencies.extend(inferred);
+        self.merge_inferred_dependencies(&mut all_dependencies, inferred, &package_managers);
 
         // Analyze vulnerabilities
         let vulnerabilities = if self.config.vulnerability_scanning {

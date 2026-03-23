@@ -3,6 +3,10 @@
 //! These tests verify the accuracy and reliability of dependency detection
 //! and analysis across different package managers and programming languages.
 
+use rust_tree_sitter::dependency_analysis::{
+    DependencyType, DependencyVulnerability, NoopVulnProvider, PackageManager,
+    VulnerabilityProvider, VulnerabilitySeverity,
+};
 use rust_tree_sitter::{AnalysisResult, DependencyAnalyzer, FileInfo, Result};
 use std::collections::HashMap;
 use std::fs;
@@ -512,6 +516,117 @@ import lodash from 'lodash';
 
     assert!(has_rust_deps, "Should detect Rust dependencies");
     assert!(has_js_deps, "Should detect JavaScript dependencies");
+
+    Ok(())
+}
+
+struct TestVulnerabilityProvider;
+
+impl VulnerabilityProvider for TestVulnerabilityProvider {
+    fn enrich(
+        &self,
+        dependencies: &[rust_tree_sitter::dependency_analysis::Dependency],
+    ) -> Vec<DependencyVulnerability> {
+        dependencies
+            .iter()
+            .filter(|dependency| dependency.name == "serde")
+            .map(|dependency| DependencyVulnerability {
+                id: "TEST-001".to_string(),
+                dependency: dependency.name.clone(),
+                affected_versions: dependency.version.clone(),
+                title: "Test vulnerability".to_string(),
+                description: "Injected by the test provider".to_string(),
+                severity: VulnerabilitySeverity::Low,
+                cvss_score: Some(1.0),
+                cve: None,
+                fix_available: false,
+                recommended_action: "None".to_string(),
+                references: Vec::new(),
+            })
+            .collect()
+    }
+}
+
+#[test]
+fn test_clone_preserves_vulnerability_provider() -> Result<()> {
+    let analyzer = DependencyAnalyzer::new().with_provider(Box::new(TestVulnerabilityProvider));
+    let cloned_analyzer = analyzer.clone();
+
+    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![(
+        "Cargo.toml",
+        "[dependencies]\nserde = \"1.0\"\n",
+        "toml",
+    )]);
+
+    let original_result = analyzer.analyze(&analysis_result)?;
+    let cloned_result = cloned_analyzer.analyze(&analysis_result)?;
+
+    assert_eq!(original_result.vulnerabilities.len(), 1);
+    assert_eq!(cloned_result.vulnerabilities.len(), 1);
+    assert_eq!(cloned_result.vulnerabilities[0].id, "TEST-001");
+
+    Ok(())
+}
+
+#[test]
+fn test_manifest_dependencies_are_not_duplicated_by_source_imports() -> Result<()> {
+    let analyzer = DependencyAnalyzer::new().with_provider(Box::new(NoopVulnProvider));
+
+    let cargo_toml = r#"
+[dependencies]
+serde = "1.0"
+tracing-subscriber = "0.3"
+    "#;
+
+    let rust_source = r#"
+use serde::Serialize;
+use tracing_subscriber::fmt;
+    "#;
+
+    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
+        ("Cargo.toml", cargo_toml, "toml"),
+        ("src/main.rs", rust_source, "Rust"),
+    ]);
+
+    let dependency_result = analyzer.analyze(&analysis_result)?;
+
+    let serde_count = dependency_result
+        .dependencies
+        .iter()
+        .filter(|dependency| dependency.name == "serde")
+        .count();
+    let tracing_subscriber_count = dependency_result
+        .dependencies
+        .iter()
+        .filter(|dependency| dependency.name == "tracing-subscriber")
+        .count();
+
+    assert_eq!(
+        serde_count, 1,
+        "Manifest dependencies should not be duplicated"
+    );
+    assert_eq!(
+        tracing_subscriber_count, 1,
+        "Cargo import normalization should merge underscore imports with hyphenated package names",
+    );
+    assert_eq!(
+        dependency_result.direct_dependencies, 2,
+        "Only manifest dependencies should count as direct when a Cargo manifest is present",
+    );
+    assert!(dependency_result
+        .dependencies
+        .iter()
+        .all(|dependency| dependency.manager == PackageManager::Cargo),);
+    assert!(
+        dependency_result
+            .dependencies
+            .iter()
+            .all(|dependency| matches!(
+                dependency.dependency_type,
+                DependencyType::Direct | DependencyType::Optional
+            )),
+        "Inferred duplicates should be merged away instead of changing manifest dependency types",
+    );
 
     Ok(())
 }

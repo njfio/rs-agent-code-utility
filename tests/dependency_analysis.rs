@@ -1,6 +1,9 @@
-use rust_tree_sitter::dependency_analysis::{DependencyAnalyzer, DependencyConfig, PackageManager};
+use rust_tree_sitter::dependency_analysis::{
+    DependencyAnalyzer, DependencyConfig, DependencyType, PackageManager,
+};
 use rust_tree_sitter::CodebaseAnalyzer;
 use std::fs;
+use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Test basic dependency analysis functionality
@@ -133,6 +136,12 @@ fn test_npm_dependency_parsing() -> Result<(), Box<dyn std::error::Error>> {
   "devDependencies": {
     "jest": "^28.0.0",
     "eslint": "8.15.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.3.3"
   }
 }
 "#;
@@ -145,25 +154,27 @@ fn test_npm_dependency_parsing() -> Result<(), Box<dyn std::error::Error>> {
     let dependency_analyzer = DependencyAnalyzer::new();
     let dependency_result = dependency_analyzer.analyze(&analysis_result)?;
 
-    // Should find npm dependencies (relaxed expectations)
-    println!(
-        "Found {} npm dependencies",
-        dependency_result.total_dependencies
-    );
+    let express_found = dependency_result
+        .dependencies
+        .iter()
+        .any(|d| d.name == "express" && d.dependency_type == DependencyType::Direct);
+    let jest_found = dependency_result
+        .dependencies
+        .iter()
+        .any(|d| d.name == "jest" && d.dependency_type == DependencyType::Development);
+    let react_found = dependency_result
+        .dependencies
+        .iter()
+        .any(|d| d.name == "react" && d.dependency_type == DependencyType::Peer);
+    let fsevents_found = dependency_result
+        .dependencies
+        .iter()
+        .any(|d| d.name == "fsevents" && d.dependency_type == DependencyType::Optional);
 
-    // Check for specific dependencies if any are found
-    if !dependency_result.dependencies.is_empty() {
-        let dependency_names: Vec<_> = dependency_result
-            .dependencies
-            .iter()
-            .map(|d| &d.name)
-            .collect();
-
-        println!("Found dependencies: {:?}", dependency_names);
-        // Note: Actual dependency parsing may vary based on implementation
-    }
-
-    // The analysis should complete successfully
+    assert!(express_found, "Should detect direct npm dependencies");
+    assert!(jest_found, "Should detect dev npm dependencies");
+    assert!(react_found, "Should detect peer npm dependencies");
+    assert!(fsevents_found, "Should detect optional npm dependencies");
 
     Ok(())
 }
@@ -257,6 +268,87 @@ tokio = "1.0"
 
     // Check that analysis components are present (even if empty due to simplified implementation)
     // Just verify the analysis completes successfully without errors
+
+    Ok(())
+}
+
+#[test]
+fn test_repository_dependency_analysis_matches_manifest() -> Result<(), Box<dyn std::error::Error>>
+{
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let cargo_toml = fs::read_to_string(repo_root.join("Cargo.toml"))?;
+    let cargo_manifest: toml::Value = toml::from_str(&cargo_toml)?;
+    let expected_dependency_count = cargo_manifest
+        .get("dependencies")
+        .and_then(|deps| deps.as_table())
+        .map(|deps| deps.len())
+        .unwrap_or(0);
+    let expected_build_dependency_count = cargo_manifest
+        .get("build-dependencies")
+        .and_then(|deps| deps.as_table())
+        .map(|deps| deps.len())
+        .unwrap_or(0);
+
+    let config = DependencyConfig {
+        vulnerability_scanning: false,
+        license_compliance: false,
+        outdated_detection: false,
+        graph_analysis: false,
+        include_dev_dependencies: false,
+        max_dependency_depth: 5,
+    };
+
+    let mut analyzer = CodebaseAnalyzer::new()?;
+    let analysis_result = analyzer.analyze_directory(&repo_root)?;
+    let dependency_analyzer = DependencyAnalyzer::with_config(config);
+    let dependency_result = dependency_analyzer.analyze(&analysis_result)?;
+
+    let cargo_manifest_dependencies: Vec<_> = dependency_result
+        .dependencies
+        .iter()
+        .filter(|dep| {
+            dep.manager == PackageManager::Cargo
+                && matches!(
+                    dep.dependency_type,
+                    DependencyType::Direct | DependencyType::Optional
+                )
+        })
+        .collect();
+
+    let cargo_package_manager = dependency_result
+        .package_managers
+        .iter()
+        .find(|pm| pm.manager == PackageManager::Cargo)
+        .expect("Cargo package manager should be detected");
+
+    assert_eq!(
+        cargo_package_manager.dependency_count,
+        expected_dependency_count + expected_build_dependency_count,
+        "Cargo package manager dependency count should match the manifest sections the analyzer extracts",
+    );
+    assert_eq!(
+        cargo_manifest_dependencies.len(),
+        expected_dependency_count,
+        "Dependency analysis should extract every dependency declared in this repo's Cargo.toml",
+    );
+    assert!(
+        cargo_manifest_dependencies
+            .iter()
+            .any(|dep| dep.name == "tree-sitter"),
+        "Expected to find tree-sitter in this repo's Cargo dependencies",
+    );
+    assert!(
+        cargo_manifest_dependencies
+            .iter()
+            .any(|dep| dep.name == "serde"),
+        "Expected to find serde in this repo's Cargo dependencies",
+    );
+    assert!(
+        cargo_manifest_dependencies
+            .iter()
+            .any(|dep| dep.name == "reqwest"),
+        "Expected to find reqwest in this repo's Cargo dependencies",
+    );
 
     Ok(())
 }
