@@ -26,10 +26,7 @@ pub fn filter_vulnerabilities<'a>(
     vulns: &'a [SecurityVulnerability],
     mode: FilterMode,
 ) -> Vec<&'a SecurityVulnerability> {
-    vulns
-        .iter()
-        .filter(|v| keep(v, mode))
-        .collect()
+    vulns.iter().filter(|v| keep(v, mode)).collect()
 }
 
 fn keep(v: &SecurityVulnerability, mode: FilterMode) -> bool {
@@ -47,9 +44,14 @@ fn keep(v: &SecurityVulnerability, mode: FilterMode) -> bool {
         || file.contains("/specs/")
         || file.ends_with("_test.rs")
         || file.contains("test_");
-    let is_example = file.contains("/examples/") || file.contains("/example/") || file.contains("/demo/");
-    let is_fixture = file.contains("fixture") || file.contains("mock") || file.contains("stub")
-        || file.contains("snapshots") || file.contains("__snapshots__") || file.contains("test_files");
+    let is_example =
+        file.contains("/examples/") || file.contains("/example/") || file.contains("/demo/");
+    let is_fixture = file.contains("fixture")
+        || file.contains("mock")
+        || file.contains("stub")
+        || file.contains("snapshots")
+        || file.contains("__snapshots__")
+        || file.contains("test_files");
 
     let looks_like_example = code.contains("example")
         || code.contains("demo")
@@ -70,7 +72,14 @@ fn keep(v: &SecurityVulnerability, mode: FilterMode) -> bool {
 
     match mode {
         FilterMode::Strict => {
-            if is_docs || is_example || is_fixture || looks_like_example || is_test || comment_only || lacks_code_tokens {
+            if is_docs
+                || is_example
+                || is_fixture
+                || looks_like_example
+                || is_test
+                || comment_only
+                || lacks_code_tokens
+            {
                 return false;
             }
             // Also drop low/medium in config/constants files
@@ -87,7 +96,9 @@ fn keep(v: &SecurityVulnerability, mode: FilterMode) -> bool {
                 return false;
             }
             // Drop any severity if snippet is clearly documentation/comment-only
-            if comment_only || (lacks_code_tokens && (is_docs || is_example || is_fixture || is_test)) {
+            if comment_only
+                || (lacks_code_tokens && (is_docs || is_example || is_fixture || is_test))
+            {
                 return false;
             }
             // Drop anything that looks like documentation example regardless of sev if Info

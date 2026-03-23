@@ -79,7 +79,14 @@ fn security_includes_tests_when_flag_set() -> Result<(), Box<dyn std::error::Err
     let stdout = String::from_utf8_lossy(&output.stdout);
     let v: Value = serde_json::from_str(&stdout)?;
     // with include-tests, vulnerabilities should have at least one entry
-    let vuln_len = v["vulnerabilities"].as_array().map(|a| a.len()).unwrap_or(0);
-    assert!(vuln_len >= 1, "Expected at least 1 vulnerability, got {}", vuln_len);
+    let vuln_len = v["vulnerabilities"]
+        .as_array()
+        .map(|a| a.len())
+        .unwrap_or(0);
+    assert!(
+        vuln_len >= 1,
+        "Expected at least 1 vulnerability, got {}",
+        vuln_len
+    );
     Ok(())
 }

@@ -3,8 +3,8 @@
 //! This module provides intelligent filtering of security findings to reduce false positives
 //! using machine learning techniques and pattern recognition.
 
-use crate::Result;
 use crate::security::deterministic_filter::FilterMode;
+use crate::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -237,10 +237,13 @@ impl MLFalsePositiveFilter {
         match mode {
             FilterMode::Strict => {
                 // Raise thresholds to be more aggressive in filtering
-                self.confidence_thresholds.insert("HardcodedSecret".into(), 0.75);
+                self.confidence_thresholds
+                    .insert("HardcodedSecret".into(), 0.75);
                 self.confidence_thresholds.insert("Injection".into(), 0.6);
-                self.confidence_thresholds.insert("WeakAuthentication".into(), 0.8);
-                self.confidence_thresholds.insert("InsecureDesign".into(), 0.5);
+                self.confidence_thresholds
+                    .insert("WeakAuthentication".into(), 0.8);
+                self.confidence_thresholds
+                    .insert("InsecureDesign".into(), 0.5);
                 // Boost probabilities for docs/tests indicators
                 for p in &mut self.false_positive_patterns {
                     if p.name.contains("Test") || p.name.contains("Documentation") {
@@ -250,17 +253,23 @@ impl MLFalsePositiveFilter {
             }
             FilterMode::Balanced => {
                 // Defaults already tuned for balanced; ensure defaults
-                self.confidence_thresholds.insert("HardcodedSecret".into(), 0.6);
+                self.confidence_thresholds
+                    .insert("HardcodedSecret".into(), 0.6);
                 self.confidence_thresholds.insert("Injection".into(), 0.5);
-                self.confidence_thresholds.insert("WeakAuthentication".into(), 0.7);
-                self.confidence_thresholds.insert("InsecureDesign".into(), 0.4);
+                self.confidence_thresholds
+                    .insert("WeakAuthentication".into(), 0.7);
+                self.confidence_thresholds
+                    .insert("InsecureDesign".into(), 0.4);
             }
             FilterMode::Permissive => {
                 // Lower thresholds to keep more findings
-                self.confidence_thresholds.insert("HardcodedSecret".into(), 0.45);
+                self.confidence_thresholds
+                    .insert("HardcodedSecret".into(), 0.45);
                 self.confidence_thresholds.insert("Injection".into(), 0.4);
-                self.confidence_thresholds.insert("WeakAuthentication".into(), 0.6);
-                self.confidence_thresholds.insert("InsecureDesign".into(), 0.3);
+                self.confidence_thresholds
+                    .insert("WeakAuthentication".into(), 0.6);
+                self.confidence_thresholds
+                    .insert("InsecureDesign".into(), 0.3);
                 for p in &mut self.false_positive_patterns {
                     // Slightly reduce pattern probability impact
                     p.probability = (p.probability - 0.1).max(0.4);

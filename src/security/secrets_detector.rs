@@ -5,13 +5,13 @@
 
 use crate::infrastructure::DatabaseManager;
 use anyhow::Result;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 use tracing::{debug, warn};
 use uuid;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
 /// Static regex patterns for secret extraction
 static QUOTE_REGEX: OnceLock<Regex> = OnceLock::new();
@@ -404,10 +404,7 @@ impl SecretsDetector {
             }
 
             // Path-based allowlisting (fixtures, mocks, snapshots)
-            if self
-                .context_analyzer
-                .is_allowlisted_path(file_path)
-            {
+            if self.context_analyzer.is_allowlisted_path(file_path) {
                 confidence_multiplier *= 0.1;
                 is_false_positive = true;
             }
@@ -458,14 +455,22 @@ impl SecretsDetector {
             // Pair-based adjustments for AWS keys
             match finding.secret_type {
                 SecretType::AwsAccessKey => {
-                    if self.has_nearby_aws_secret_key(content, finding.line_number.saturating_sub(1), 50) {
+                    if self.has_nearby_aws_secret_key(
+                        content,
+                        finding.line_number.saturating_sub(1),
+                        50,
+                    ) {
                         confidence_multiplier *= 1.4;
                     } else {
                         confidence_multiplier *= 0.8;
                     }
                 }
                 SecretType::AwsSecretKey => {
-                    if self.has_nearby_aws_access_key(content, finding.line_number.saturating_sub(1), 50) {
+                    if self.has_nearby_aws_access_key(
+                        content,
+                        finding.line_number.saturating_sub(1),
+                        50,
+                    ) {
                         confidence_multiplier *= 1.4;
                     } else {
                         confidence_multiplier *= 0.8;
@@ -534,7 +539,10 @@ impl SecretsDetector {
         }
 
         // Logging on same line indicates illustrative code
-        if current_line.contains("println") || current_line.contains("log") || current_line.contains("debug") {
+        if current_line.contains("println")
+            || current_line.contains("log")
+            || current_line.contains("debug")
+        {
             return true;
         }
 
@@ -592,9 +600,11 @@ impl SecretsDetector {
                 // Slightly different window based on typical formats
                 entropy < 3.8 || entropy > 7.0
             }
-            SecretType::TwilioAccountSid | SecretType::TwilioApiKey | SecretType::SendgridApiKey | SecretType::AzureStorageKey | SecretType::AzureClientSecret => {
-                entropy < 3.2 || entropy > 7.2
-            }
+            SecretType::TwilioAccountSid
+            | SecretType::TwilioApiKey
+            | SecretType::SendgridApiKey
+            | SecretType::AzureStorageKey
+            | SecretType::AzureClientSecret => entropy < 3.2 || entropy > 7.2,
             SecretType::Password => {
                 // Passwords can have variable entropy
                 entropy < 2.5
@@ -619,12 +629,18 @@ impl SecretsDetector {
         line_num: usize,
     ) -> bool {
         match secret_type {
-            SecretType::AwsAccessKey => self.validate_aws_access_key(matched_text, content, line_num),
-            SecretType::AwsSecretKey => self.validate_aws_secret_key(matched_text, content, line_num),
+            SecretType::AwsAccessKey => {
+                self.validate_aws_access_key(matched_text, content, line_num)
+            }
+            SecretType::AwsSecretKey => {
+                self.validate_aws_secret_key(matched_text, content, line_num)
+            }
             SecretType::GitHubToken => self.validate_github_token(matched_text),
             SecretType::JwtToken => self.validate_jwt_token(matched_text),
             SecretType::GoogleApiKey => self.validate_google_api_key(matched_text),
-            SecretType::StripeSecretKey => self.validate_stripe_secret_key(matched_text, content, line_num),
+            SecretType::StripeSecretKey => {
+                self.validate_stripe_secret_key(matched_text, content, line_num)
+            }
             SecretType::SlackToken => self.validate_slack_token(matched_text),
             _ => true,
         }
@@ -636,7 +652,10 @@ impl SecretsDetector {
         if akid.len() != 20 || !valid_prefixes.iter().any(|p| akid.starts_with(p)) {
             return false;
         }
-        if !akid.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) {
+        if !akid
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        {
             return false;
         }
         // Pair validation handled later as confidence adjustment
@@ -645,14 +664,21 @@ impl SecretsDetector {
 
     fn validate_aws_secret_key(&self, sk: &str, _content: &str, _line_num: usize) -> bool {
         // Basic structure: 40 base64-like chars
-        let ok = sk.len() == 40 && sk.chars().all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=');
-        if !ok { return false; }
+        let ok = sk.len() == 40
+            && sk
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=');
+        if !ok {
+            return false;
+        }
         // Pair validation handled later as confidence adjustment
         true
     }
 
     fn has_nearby_aws_secret_key(&self, content: &str, line_num: usize, window: usize) -> bool {
-        let re = Regex::new(r"(?i)(aws_.*secret.*key|secret.*access.*key)\s*[:=]\s*([0-9a-zA-Z/+]{40})").unwrap();
+        let re =
+            Regex::new(r"(?i)(aws_.*secret.*key|secret.*access.*key)\s*[:=]\s*([0-9a-zA-Z/+]{40})")
+                .unwrap();
         self.search_nearby_lines(content, line_num, window, &re)
     }
 
@@ -661,7 +687,13 @@ impl SecretsDetector {
         self.search_nearby_lines(content, line_num, window, &re)
     }
 
-    fn search_nearby_lines(&self, content: &str, line_num: usize, window: usize, re: &Regex) -> bool {
+    fn search_nearby_lines(
+        &self,
+        content: &str,
+        line_num: usize,
+        window: usize,
+        re: &Regex,
+    ) -> bool {
         let start = line_num.saturating_sub(window);
         let end = (line_num + window + 1).min(content.lines().count());
         content
@@ -674,25 +706,57 @@ impl SecretsDetector {
 
     fn validate_github_token(&self, token: &str) -> bool {
         // ghp_ + 36 base62
-        token.len() == 40 && token.starts_with("ghp_") && token[4..].chars().all(|c| c.is_ascii_alphanumeric())
+        token.len() == 40
+            && token.starts_with("ghp_")
+            && token[4..].chars().all(|c| c.is_ascii_alphanumeric())
     }
 
     fn validate_jwt_token(&self, token: &str) -> bool {
         // Basic JWT sanity: three parts, header/payload decode, JSON parse, typical fields
         let parts: Vec<&str> = token.split('.').collect();
-        if parts.len() != 3 { return false; }
+        if parts.len() != 3 {
+            return false;
+        }
         let (h, p, _sig) = (parts[0], parts[1], parts[2]);
-        let header = match URL_SAFE_NO_PAD.decode(h) { Ok(b) => b, Err(_) => return false };
-        let payload = match URL_SAFE_NO_PAD.decode(p) { Ok(b) => b, Err(_) => return false };
-        let header_json: serde_json::Value = match serde_json::from_slice(&header) { Ok(v) => v, Err(_) => return false };
-        let payload_json: serde_json::Value = match serde_json::from_slice(&payload) { Ok(v) => v, Err(_) => return false };
+        let header = match URL_SAFE_NO_PAD.decode(h) {
+            Ok(b) => b,
+            Err(_) => return false,
+        };
+        let payload = match URL_SAFE_NO_PAD.decode(p) {
+            Ok(b) => b,
+            Err(_) => return false,
+        };
+        let header_json: serde_json::Value = match serde_json::from_slice(&header) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        let payload_json: serde_json::Value = match serde_json::from_slice(&payload) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
         // Must have alg and typ in header
-        if !header_json.get("alg").is_some() { return false; }
-        if let Some(t) = header_json.get("typ") { if t != "JWT" { return false; } }
+        if !header_json.get("alg").is_some() {
+            return false;
+        }
+        if let Some(t) = header_json.get("typ") {
+            if t != "JWT" {
+                return false;
+            }
+        }
         // Ignore obvious placeholders/examples in payload
         let payload_str = payload_json.to_string().to_lowercase();
-        let bad = ["example", "test", "fake", "dummy", "placeholder", "your_", "replace_with"];
-        if bad.iter().any(|k| payload_str.contains(k)) { return false; }
+        let bad = [
+            "example",
+            "test",
+            "fake",
+            "dummy",
+            "placeholder",
+            "your_",
+            "replace_with",
+        ];
+        if bad.iter().any(|k| payload_str.contains(k)) {
+            return false;
+        }
         true
     }
 
@@ -701,7 +765,9 @@ impl SecretsDetector {
         if !(key.len() == 39 && key.starts_with("AIza")) {
             return false;
         }
-        key[4..].chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        key[4..]
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     }
 
     fn validate_stripe_secret_key(&self, key: &str, _content: &str, _line_num: usize) -> bool {
@@ -757,7 +823,16 @@ impl SecretsDetector {
             SecretType::AwsAccessKey | SecretType::GitHubToken | SecretType::DatabaseUrl => {
                 SecretSeverity::High
             }
-            SecretType::ApiKey | SecretType::JwtToken | SecretType::GoogleApiKey | SecretType::StripeSecretKey | SecretType::SlackToken | SecretType::TwilioAccountSid | SecretType::TwilioApiKey | SecretType::SendgridApiKey | SecretType::AzureStorageKey | SecretType::AzureClientSecret => SecretSeverity::Medium,
+            SecretType::ApiKey
+            | SecretType::JwtToken
+            | SecretType::GoogleApiKey
+            | SecretType::StripeSecretKey
+            | SecretType::SlackToken
+            | SecretType::TwilioAccountSid
+            | SecretType::TwilioApiKey
+            | SecretType::SendgridApiKey
+            | SecretType::AzureStorageKey
+            | SecretType::AzureClientSecret => SecretSeverity::Medium,
             SecretType::Password => SecretSeverity::Medium,
             SecretType::HighEntropy => {
                 if entropy > 6.0 {
@@ -861,13 +936,38 @@ impl SecretsDetector {
             ("AWS Secret Key", r"[0-9a-zA-Z/+]{40}", Some(4.5), 0.8),
             ("GitHub Token", r"ghp_[0-9a-zA-Z]{36}", None, 0.95),
             ("Google API Key", r"AIza[0-9A-Za-z\-_]{35}", Some(4.0), 0.8),
-            ("Stripe Secret Key", r"sk_(live|test)_[0-9A-Za-z]{24,}", Some(4.2), 0.8),
-            ("Slack Token", r"xox[baprs]-\d{10,}-\d{12,}-[0-9A-Za-z]{24,}", Some(3.8), 0.75),
+            (
+                "Stripe Secret Key",
+                r"sk_(live|test)_[0-9A-Za-z]{24,}",
+                Some(4.2),
+                0.8,
+            ),
+            (
+                "Slack Token",
+                r"xox[baprs]-\d{10,}-\d{12,}-[0-9A-Za-z]{24,}",
+                Some(3.8),
+                0.75,
+            ),
             ("Twilio Account SID", r"AC[0-9a-fA-F]{32}", Some(3.5), 0.75),
             ("Twilio API Key", r"SK[0-9a-fA-F]{32}", Some(3.5), 0.75),
-            ("Sendgrid API Key", r"SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}", Some(4.0), 0.85),
-            ("Azure Storage Key", r"(?i)AccountKey=([A-Za-z0-9+/=]{40,})", Some(4.0), 0.8),
-            ("Azure Client Secret", r"(?i)client_secret\s*[:=]\s*([A-Za-z0-9\-_/+=]{16,})", Some(3.5), 0.7),
+            (
+                "Sendgrid API Key",
+                r"SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}",
+                Some(4.0),
+                0.85,
+            ),
+            (
+                "Azure Storage Key",
+                r"(?i)AccountKey=([A-Za-z0-9+/=]{40,})",
+                Some(4.0),
+                0.8,
+            ),
+            (
+                "Azure Client Secret",
+                r"(?i)client_secret\s*[:=]\s*([A-Za-z0-9\-_/+=]{16,})",
+                Some(3.5),
+                0.7,
+            ),
             ("API Key", r"api[_]?key.*[0-9a-zA-Z]{32,45}", Some(4.0), 0.7),
             (
                 "JWT Token",
@@ -998,16 +1098,24 @@ impl ContextAnalyzer {
             || fp.contains("/docs/")
             || fp.contains("\\docs\\")
             || fp.contains("readme");
-        if !is_docs { return false; }
+        if !is_docs {
+            return false;
+        }
 
         let mut in_fence = false;
         let mut fence_marker: Option<String> = None;
         for (idx, line) in content.lines().enumerate() {
-            if idx > line_index { break; }
+            if idx > line_index {
+                break;
+            }
             let trimmed = line.trim_start();
             // match ``` or ~~~ fences
             if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
-                let marker = if trimmed.starts_with("```") { "```" } else { "~~~" };
+                let marker = if trimmed.starts_with("```") {
+                    "```"
+                } else {
+                    "~~~"
+                };
                 if in_fence {
                     // closing fence must match the opening marker
                     if fence_marker.as_deref() == Some(marker) {
@@ -1019,7 +1127,9 @@ impl ContextAnalyzer {
                     fence_marker = Some(marker.to_string());
                 }
             }
-            if idx == line_index { break; }
+            if idx == line_index {
+                break;
+            }
         }
         in_fence
     }
@@ -1037,8 +1147,16 @@ impl ContextAnalyzer {
     fn is_allowlisted_path(&self, file_path: &str) -> bool {
         let fp = file_path.to_lowercase();
         let allow = [
-            "fixture", "fixtures", "mock", "mocks", "stub", "stubs", "snapshot", "snapshots",
-            "__snapshots__", "test_files"
+            "fixture",
+            "fixtures",
+            "mock",
+            "mocks",
+            "stub",
+            "stubs",
+            "snapshot",
+            "snapshots",
+            "__snapshots__",
+            "test_files",
         ];
         allow.iter().any(|k| fp.contains(k))
     }
@@ -1117,9 +1235,7 @@ impl FalsePositiveFilter {
         );
         known_false_positives.insert(
             "SlackToken".to_string(),
-            vec![
-                "xoxb-0000000000-000000000000-AAAAAAAAAAAAAAAAAAAAAAAA".to_string(),
-            ],
+            vec!["xoxb-0000000000-000000000000-AAAAAAAAAAAAAAAAAAAAAAAA".to_string()],
         );
 
         let placeholder_patterns = vec![

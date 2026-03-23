@@ -27,8 +27,8 @@ use crate::languages::detect_language_from_path;
 use crate::parser::Parser;
 #[cfg(feature = "net")]
 use crate::security::ai_false_positive_filter::{AIFalsePositiveFilter, AIFilterConfig};
-use crate::security::deterministic_filter::FilterMode;
 use crate::security::ast_analyzer::AstSecurityAnalyzer;
+use crate::security::deterministic_filter::FilterMode;
 use crate::security::ml_filter::MLFalsePositiveFilter;
 use crate::tree::{Node, SyntaxTree};
 use crate::{AnalysisResult, Error, FileInfo, Result};
@@ -73,8 +73,7 @@ impl std::fmt::Debug for AdvancedSecurityAnalyzer {
 }
 
 /// Configuration for advanced security analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvancedSecurityConfig {
     /// Enable OWASP Top 10 vulnerability detection
     pub owasp_analysis: bool,
@@ -112,8 +111,7 @@ struct SecurityContext {
 }
 
 /// Results of advanced security analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvancedSecurityResult {
     /// Overall security score (0-100)
     pub security_score: u8,
@@ -140,8 +138,7 @@ pub struct AdvancedSecurityResult {
 }
 
 /// Security vulnerability severity levels
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SecuritySeverity {
     Critical,
     High,
@@ -151,8 +148,7 @@ pub enum SecuritySeverity {
 }
 
 /// OWASP Top 10 categories
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OwaspCategory {
     /// A01:2021 – Broken Access Control
     BrokenAccessControl,
@@ -177,8 +173,7 @@ pub enum OwaspCategory {
 }
 
 /// A detected security vulnerability
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityVulnerability {
     /// Vulnerability ID
     pub id: String,
@@ -205,8 +200,7 @@ pub struct SecurityVulnerability {
 }
 
 /// Location of a vulnerability
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VulnerabilityLocation {
     /// File path
     pub file: PathBuf,
@@ -221,8 +215,7 @@ pub struct VulnerabilityLocation {
 }
 
 /// Security impact assessment
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityImpact {
     /// Confidentiality impact
     pub confidentiality: ImpactLevel,
@@ -235,8 +228,7 @@ pub struct SecurityImpact {
 }
 
 /// Impact levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImpactLevel {
     None,
     Low,
@@ -246,8 +238,7 @@ pub enum ImpactLevel {
 }
 
 /// Remediation guidance
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RemediationGuidance {
     /// Short remediation summary
     pub summary: String,
@@ -262,8 +253,7 @@ pub struct RemediationGuidance {
 }
 
 /// Code example for remediation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeExample {
     /// Description of the example
     pub description: String,
@@ -276,8 +266,7 @@ pub struct CodeExample {
 }
 
 /// Remediation effort levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RemediationEffort {
     Trivial,
     Low,
@@ -287,8 +276,7 @@ pub enum RemediationEffort {
 }
 
 /// Confidence level of vulnerability detection
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum ConfidenceLevel {
     Low,
     Medium,
@@ -296,8 +284,7 @@ pub enum ConfidenceLevel {
 }
 
 /// Detected secret or sensitive data
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetectedSecret {
     /// Secret type
     pub secret_type: SecretType,
@@ -314,8 +301,7 @@ pub struct DetectedSecret {
 }
 
 /// Types of secrets
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecretType {
     ApiKey,
     Password,
@@ -327,8 +313,7 @@ pub enum SecretType {
 }
 
 /// Input validation issue
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InputValidationIssue {
     /// Issue type
     pub issue_type: InputValidationType,
@@ -343,8 +328,7 @@ pub struct InputValidationIssue {
 }
 
 /// Types of input validation issues
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum InputValidationType {
     MissingValidation,
     InsufficientValidation,
@@ -353,8 +337,7 @@ pub enum InputValidationType {
 }
 
 /// Injection vulnerability
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InjectionVulnerability {
     /// Injection type
     pub injection_type: InjectionType,
@@ -369,8 +352,7 @@ pub struct InjectionVulnerability {
 }
 
 /// Types of injection vulnerabilities
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum InjectionType {
     SqlInjection,
     CommandInjection,
@@ -381,8 +363,7 @@ pub enum InjectionType {
 }
 
 /// Security best practice violation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BestPracticeViolation {
     /// Practice category
     pub category: BestPracticeCategory,
@@ -397,8 +378,7 @@ pub struct BestPracticeViolation {
 }
 
 /// Best practice categories
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BestPracticeCategory {
     Cryptography,
     Authentication,
@@ -410,8 +390,7 @@ pub enum BestPracticeCategory {
 }
 
 /// Security recommendation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityRecommendation {
     /// Recommendation category
     pub category: String,
@@ -428,8 +407,7 @@ pub struct SecurityRecommendation {
 }
 
 /// Recommendation priority levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RecommendationPriority {
     Critical,
     High,
@@ -438,8 +416,7 @@ pub enum RecommendationPriority {
 }
 
 /// Compliance assessment
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceAssessment {
     /// OWASP Top 10 compliance score
     pub owasp_score: u8,
@@ -452,8 +429,7 @@ pub struct ComplianceAssessment {
 }
 
 /// Compliance status levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ComplianceStatus {
     Compliant,
     PartiallyCompliant,
@@ -462,8 +438,7 @@ pub enum ComplianceStatus {
 }
 
 /// Custom security rule
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomSecurityRule {
     /// Rule name
     pub name: String,
@@ -522,11 +497,12 @@ impl AdvancedSecurityAnalyzer {
         ai_min_confidence: f64,
         mode: FilterMode,
     ) -> Result<Self> {
-        let (ai_context_enabled, semantic_enabled, feedback_enabled, cache_ttl, max_reqs) = match mode {
-            FilterMode::Strict => (true, true, true, 7200, 8),
-            FilterMode::Balanced => (true, true, true, 3600, 5),
-            FilterMode::Permissive => (false, false, false, 1800, 2),
-        };
+        let (ai_context_enabled, semantic_enabled, feedback_enabled, cache_ttl, max_reqs) =
+            match mode {
+                FilterMode::Strict => (true, true, true, 7200, 8),
+                FilterMode::Balanced => (true, true, true, 3600, 5),
+                FilterMode::Permissive => (false, false, false, 1800, 2),
+            };
         let ai_config = AIFilterConfig {
             ai_context_enabled,
             semantic_analysis_enabled: semantic_enabled,
@@ -2219,11 +2195,11 @@ impl AdvancedSecurityAnalyzer {
         let user_input_functions = [
             // Web/HTTP input
             "request", // generic
-            "req", // Node/Express
+            "req",     // Node/Express
             "req.params",
             "req.query",
             "req.body",
-            "request.args",   // Flask
+            "request.args", // Flask
             "request.form",
             "input",
             "param",
@@ -3684,7 +3660,12 @@ impl AdvancedSecurityAnalyzer {
                                 let (severity, impact, summary) = if context.has_user_input {
                                     (
                                         SecuritySeverity::Critical,
-                                        SecurityImpact { confidentiality: ImpactLevel::Critical, integrity: ImpactLevel::Critical, availability: ImpactLevel::Critical, overall_score: 9.5 },
+                                        SecurityImpact {
+                                            confidentiality: ImpactLevel::Critical,
+                                            integrity: ImpactLevel::Critical,
+                                            availability: ImpactLevel::Critical,
+                                            overall_score: 9.5,
+                                        },
                                         "User-controlled input flows into command execution",
                                     )
                                 } else {

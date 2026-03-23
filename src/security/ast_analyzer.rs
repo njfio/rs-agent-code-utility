@@ -359,7 +359,7 @@ impl AstSecurityAnalyzer {
         Ok(Self {
             language_analyzers,
             context_classifier: ContextClassifier::new(),
-            
+
             ml_filter: crate::security::ml_filter::MLFalsePositiveFilter::new(),
         })
     }

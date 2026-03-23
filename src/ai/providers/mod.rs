@@ -75,22 +75,18 @@ pub async fn create_provider(
             Ok(Box::new(provider))
         }
         #[cfg(not(feature = "net"))]
-        AIProvider::OpenAI => {
-            Err(AIError::configuration(
-                "OpenAI provider requires the 'net' feature".to_string(),
-            ))
-        }
+        AIProvider::OpenAI => Err(AIError::configuration(
+            "OpenAI provider requires the 'net' feature".to_string(),
+        )),
         #[cfg(feature = "net")]
         AIProvider::Anthropic => {
             let provider = anthropic::AnthropicProvider::new(config).await?;
             Ok(Box::new(provider))
         }
         #[cfg(not(feature = "net"))]
-        AIProvider::Anthropic => {
-            Err(AIError::configuration(
-                "Anthropic provider requires the 'net' feature".to_string(),
-            ))
-        }
+        AIProvider::Anthropic => Err(AIError::configuration(
+            "Anthropic provider requires the 'net' feature".to_string(),
+        )),
         AIProvider::Google => {
             let provider = google::GoogleProvider::new(config).await?;
             Ok(Box::new(provider))
@@ -113,11 +109,9 @@ pub async fn create_provider(
             Ok(Box::new(provider))
         }
         #[cfg(not(feature = "net"))]
-        AIProvider::Groq => {
-            Err(AIError::configuration(
-                "Groq provider requires the 'net' feature".to_string(),
-            ))
-        }
+        AIProvider::Groq => Err(AIError::configuration(
+            "Groq provider requires the 'net' feature".to_string(),
+        )),
     }
 }
 

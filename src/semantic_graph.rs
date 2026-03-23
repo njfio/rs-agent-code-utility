@@ -21,8 +21,7 @@ pub struct SemanticGraphQuery {
 }
 
 /// A node in the semantic graph representing a code entity
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphNode {
     /// Unique identifier
     pub id: String,
@@ -41,8 +40,7 @@ pub struct GraphNode {
 }
 
 /// An edge in the semantic graph representing a relationship
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphEdge {
     /// Source node ID
     pub from: String,
@@ -57,8 +55,7 @@ pub struct GraphEdge {
 }
 
 /// Types of nodes in the semantic graph
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NodeType {
     Function,
     Class,
@@ -74,8 +71,7 @@ pub enum NodeType {
 }
 
 /// Types of relationships between nodes
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RelationshipType {
     /// Function calls another function
     Calls,
@@ -98,8 +94,7 @@ pub enum RelationshipType {
 }
 
 /// Properties of a graph node
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeProperties {
     /// Complexity score
     pub complexity: f64,
@@ -125,8 +120,7 @@ struct GraphIndex {
 }
 
 /// Query result containing matching nodes and relationships
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryResult {
     /// Matching nodes
     pub nodes: Vec<GraphNode>,
@@ -137,8 +131,7 @@ pub struct QueryResult {
 }
 
 /// Metadata about query execution
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryMetadata {
     /// Number of nodes examined
     pub nodes_examined: usize,
@@ -663,8 +656,7 @@ impl SemanticGraphQuery {
 }
 
 /// Graph statistics for analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphStatistics {
     /// Total number of nodes
     pub total_nodes: usize,

@@ -28,8 +28,7 @@ pub struct CodeEvolutionTracker {
 }
 
 /// A single file change record
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileChange {
     /// Commit hash
     pub commit_hash: String,
@@ -50,8 +49,7 @@ pub struct FileChange {
 }
 
 /// Type of code change
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChangeType {
     /// New feature addition
     Feature,
@@ -74,8 +72,7 @@ pub enum ChangeType {
 }
 
 /// Detected change pattern
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChangePattern {
     /// Pattern type
     pub pattern_type: PatternType,
@@ -92,8 +89,7 @@ pub struct ChangePattern {
 }
 
 /// Types of evolution patterns
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PatternType {
     /// Files frequently changed together
     CoupledChanges,
@@ -114,8 +110,7 @@ pub enum PatternType {
 }
 
 /// Evolution metrics and statistics
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionMetrics {
     /// Total commits analyzed
     pub total_commits: usize,
@@ -138,8 +133,7 @@ pub struct EvolutionMetrics {
 }
 
 /// Trend direction indicator
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TrendDirection {
     Improving,
     Stable,
@@ -176,8 +170,7 @@ impl Default for EvolutionConfig {
 }
 
 /// Result of evolution analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionAnalysisResult {
     /// Evolution metrics
     pub metrics: EvolutionMetrics,
@@ -192,8 +185,7 @@ pub struct EvolutionAnalysisResult {
 }
 
 /// Insights for a specific file
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileInsight {
     /// Change frequency
     pub change_frequency: f64,
@@ -212,8 +204,7 @@ pub struct FileInsight {
 // RiskLevel is now imported from crate::constants::common
 
 /// Evolution-based recommendation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvolutionRecommendation {
     /// Recommendation type
     pub recommendation_type: RecommendationType,
@@ -230,8 +221,7 @@ pub struct EvolutionRecommendation {
 }
 
 /// Types of recommendations
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecommendationType {
     Refactor,
     AddTests,

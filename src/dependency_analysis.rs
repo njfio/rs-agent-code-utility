@@ -47,8 +47,7 @@ impl Clone for DependencyAnalyzer {
 }
 
 /// Configuration for dependency analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependencyConfig {
     /// Enable vulnerability scanning
     pub vulnerability_scanning: bool,
@@ -65,8 +64,7 @@ pub struct DependencyConfig {
 }
 
 /// Results of dependency analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependencyAnalysisResult {
     /// Total number of dependencies found
     pub total_dependencies: usize,
@@ -93,8 +91,7 @@ pub struct DependencyAnalysisResult {
 }
 
 /// A software dependency
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dependency {
     /// Dependency name
     pub name: String,
@@ -123,8 +120,7 @@ pub struct Dependency {
 }
 
 /// Package manager types
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PackageManager {
     /// Rust Cargo
     Cargo,
@@ -143,8 +139,7 @@ pub enum PackageManager {
 }
 
 /// Package manager information
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackageManagerInfo {
     /// Package manager type
     pub manager: PackageManager,
@@ -159,8 +154,7 @@ pub struct PackageManagerInfo {
 }
 
 /// Dependency type classification
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DependencyType {
     /// Direct dependency
     Direct,
@@ -177,8 +171,7 @@ pub enum DependencyType {
 }
 
 /// Dependency vulnerability information
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependencyVulnerability {
     /// Vulnerability ID
     pub id: String,
@@ -205,8 +198,7 @@ pub struct DependencyVulnerability {
 }
 
 /// Vulnerability severity levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VulnerabilitySeverity {
     Critical,
     High,
@@ -216,8 +208,7 @@ pub enum VulnerabilitySeverity {
 }
 
 /// License compliance analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LicenseAnalysis {
     /// Total licenses found
     pub total_licenses: usize,
@@ -236,8 +227,7 @@ pub struct LicenseAnalysis {
 }
 
 /// License compliance issue
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LicenseIssue {
     /// Dependency with license issue
     pub dependency: String,
@@ -252,8 +242,7 @@ pub struct LicenseIssue {
 }
 
 /// Types of license issues
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LicenseIssueType {
     /// Incompatible license
     Incompatible,
@@ -266,8 +255,7 @@ pub enum LicenseIssueType {
 }
 
 /// Compliance status
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ComplianceStatus {
     Compliant,
     Warning,
@@ -275,8 +263,7 @@ pub enum ComplianceStatus {
 }
 
 /// Outdated dependency information
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutdatedDependency {
     /// Dependency name
     pub name: String,
@@ -297,8 +284,7 @@ pub struct OutdatedDependency {
 }
 
 /// Update urgency levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UpdateUrgency {
     Critical,
     High,
@@ -307,8 +293,7 @@ pub enum UpdateUrgency {
 }
 
 /// Dependency graph analysis results
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependencyGraphAnalysis {
     /// Total nodes in dependency graph
     pub total_nodes: usize,
@@ -327,8 +312,7 @@ pub struct DependencyGraphAnalysis {
 }
 
 /// Circular dependency information
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CircularDependency {
     /// Dependencies involved in the cycle
     pub cycle: Vec<String>,
@@ -339,8 +323,7 @@ pub struct CircularDependency {
 }
 
 /// Impact of circular dependencies
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CircularDependencyImpact {
     High,
     Medium,
@@ -348,8 +331,7 @@ pub enum CircularDependencyImpact {
 }
 
 /// Popular dependency information
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PopularDependency {
     /// Dependency name
     pub name: String,
@@ -360,8 +342,7 @@ pub struct PopularDependency {
 }
 
 /// Dependency cluster information
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependencyCluster {
     /// Cluster name/identifier
     pub name: String,
@@ -372,8 +353,7 @@ pub struct DependencyCluster {
 }
 
 /// Graph analysis metrics
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphMetrics {
     /// Average dependency depth
     pub average_depth: f64,
@@ -386,8 +366,7 @@ pub struct GraphMetrics {
 }
 
 /// Security recommendation for dependencies
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityRecommendation {
     /// Recommendation category
     pub category: String,
@@ -402,8 +381,7 @@ pub struct SecurityRecommendation {
 }
 
 /// Recommendation priority levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecommendationPriority {
     Critical,
     High,
@@ -412,8 +390,7 @@ pub enum RecommendationPriority {
 }
 
 /// Implementation difficulty levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImplementationDifficulty {
     Easy,
     Medium,

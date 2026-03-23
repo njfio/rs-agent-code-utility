@@ -22,4 +22,3 @@ fn security_json_snapshot_basic_fields() {
     assert!(json.contains("security_score"));
     assert!(json.contains("total_vulnerabilities"));
 }
-

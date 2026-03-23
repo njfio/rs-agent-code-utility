@@ -34,7 +34,12 @@ fn render_security_markdown_wrapper(
     filtered: &[&rust_tree_sitter::SecurityVulnerability],
 ) -> String {
     // Call the internal render to snapshot markdown
-    rust_tree_sitter::cli::commands::security::render_security_markdown(res, summary_only, compliance, filtered)
+    rust_tree_sitter::cli::commands::security::render_security_markdown(
+        res,
+        summary_only,
+        compliance,
+        filtered,
+    )
 }
 
 #[test]
@@ -51,5 +56,10 @@ fn render_ast_security_markdown_wrapper(
     analyzed: usize,
     failed: usize,
 ) -> String {
-    rust_tree_sitter::cli::commands::ast_security::render_ast_security_markdown(findings, summary_only, analyzed, failed)
+    rust_tree_sitter::cli::commands::ast_security::render_ast_security_markdown(
+        findings,
+        summary_only,
+        analyzed,
+        failed,
+    )
 }

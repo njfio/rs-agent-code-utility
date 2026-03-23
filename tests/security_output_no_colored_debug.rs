@@ -45,4 +45,3 @@ fn security_output_no_color_has_no_ansi_codes() -> Result<(), Box<dyn std::error
     );
     Ok(())
 }
-

@@ -10,9 +10,9 @@ use crate::cli::utils::{
     create_analysis_config, create_progress_bar, parse_severity, print_success,
     severity_meets_threshold, validate_output_path,
 };
+use crate::security::deterministic_filter::{filter_vulnerabilities, FilterMode};
 #[cfg(feature = "net")]
 use crate::security::{AstSecurityAnalyzer, MLFalsePositiveFilter};
-use crate::security::deterministic_filter::{filter_vulnerabilities, FilterMode};
 use crate::{CodebaseAnalyzer, SecurityScanner};
 use colored::*;
 use std::collections::HashSet;
@@ -57,7 +57,8 @@ pub async fn execute(
     let pb = create_progress_bar("Running security scan...");
 
     // Configure analyzer
-    let mut config = create_analysis_config(1024, 20, depth, false, None, None, None, enable_security)?;
+    let mut config =
+        create_analysis_config(1024, 20, depth, false, None, None, None, enable_security)?;
 
     // Epic 2: Source scoping and defaults (security-focused)
     // Exclude non-code and ancillary directories by default
@@ -128,25 +129,31 @@ pub async fn execute(
                     .with_mock_providers(true)
                     .build()
                     .await
-                    .map_err(|e| CliError::Security(format!("Failed to initialize AI service: {}", e)))?,
+                    .map_err(|e| {
+                        CliError::Security(format!("Failed to initialize AI service: {}", e))
+                    })?,
             );
             let ml_filter = Arc::new(MLFalsePositiveFilter::with_mode(det_mode));
-            let ast_analyzer = Arc::new(
-                AstSecurityAnalyzer::new()
-                    .map_err(|e| CliError::Security(format!("Failed to create AST analyzer: {}", e)))?,
-            );
+            let ast_analyzer = Arc::new(AstSecurityAnalyzer::new().map_err(|e| {
+                CliError::Security(format!("Failed to create AST analyzer: {}", e))
+            })?);
             // Adjust AI config based on filter mode
             let ai_min_conf = match det_mode {
                 FilterMode::Strict => 0.8,
                 FilterMode::Balanced => 0.6,
                 FilterMode::Permissive => 0.4,
             };
-            SecurityScanner::with_ai_filtering(ai_service, ml_filter, ast_analyzer, ai_min_conf, det_mode)
-                .await
-                .map_err(|e| CliError::Security(format!(
-                    "Failed to create AI security scanner: {}",
-                    e
-                )))?
+            SecurityScanner::with_ai_filtering(
+                ai_service,
+                ml_filter,
+                ast_analyzer,
+                ai_min_conf,
+                det_mode,
+            )
+            .await
+            .map_err(|e| {
+                CliError::Security(format!("Failed to create AI security scanner: {}", e))
+            })?
         }
         #[cfg(not(feature = "net"))]
         {
@@ -171,7 +178,9 @@ pub async fn execute(
     let mut filtered_vulnerabilities: Vec<_> = det_filtered
         .iter()
         .filter(|vuln| severity_meets_threshold(&severity_threshold, &vuln.severity))
-        .filter(|vuln| crate::cli::utils::confidence_meets_threshold(&confidence_threshold, &vuln.confidence))
+        .filter(|vuln| {
+            crate::cli::utils::confidence_meets_threshold(&confidence_threshold, &vuln.confidence)
+        })
         .copied()
         .collect();
 
@@ -182,7 +191,8 @@ pub async fn execute(
         baseline_set = Some(base.clone());
         filtered_vulnerabilities.retain(|v| !base.contains(&fingerprint_vuln(v)));
         if update_baseline {
-            let current: HashSet<String> = det_filtered.iter().map(|v| fingerprint_vuln(v)).collect();
+            let current: HashSet<String> =
+                det_filtered.iter().map(|v| fingerprint_vuln(v)).collect();
             save_baseline_vuln(baseline_path, &current)?;
             baseline_set = Some(current);
         }
@@ -198,21 +208,29 @@ pub async fn execute(
             struct FilteredJsonReport<'a> {
                 security_score: u8,
                 total_vulnerabilities: usize,
-                vulnerabilities_by_severity: std::collections::BTreeMap<crate::SecuritySeverity, usize>,
+                vulnerabilities_by_severity:
+                    std::collections::BTreeMap<crate::SecuritySeverity, usize>,
                 vulnerabilities: Vec<&'a crate::SecurityVulnerability>,
                 compliance: &'a crate::advanced_security::ComplianceAssessment,
                 // Optional diagnostics to compare filtered vs raw
                 raw_total_vulnerabilities: usize,
-                raw_vulnerabilities_by_severity: std::collections::BTreeMap<crate::SecuritySeverity, usize>,
+                raw_vulnerabilities_by_severity:
+                    std::collections::BTreeMap<crate::SecuritySeverity, usize>,
             }
 
             // Build severity counts from filtered list
-            let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> = Default::default();
-            for v in &filtered_vulnerabilities { *sev_counts.entry(v.severity.clone()).or_insert(0) += 1; }
+            let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
+                Default::default();
+            for v in &filtered_vulnerabilities {
+                *sev_counts.entry(v.severity.clone()).or_insert(0) += 1;
+            }
 
             // Convert raw severity counts to BTreeMap for stable ordering
-            let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> = Default::default();
-            for (k, v) in &security_result.vulnerabilities_by_severity { raw_counts.insert(k.clone(), *v); }
+            let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
+                Default::default();
+            for (k, v) in &security_result.vulnerabilities_by_severity {
+                raw_counts.insert(k.clone(), *v);
+            }
 
             let report = FilteredJsonReport {
                 security_score: security_result.security_score,
@@ -251,12 +269,25 @@ pub async fn execute(
                 );
                 if diagnostics {
                     use std::fmt::Write as _;
-                    let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> = Default::default();
-                    for (k, v) in &security_result.vulnerabilities_by_severity { raw_counts.insert(k.clone(), *v); }
+                    let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
+                        Default::default();
+                    for (k, v) in &security_result.vulnerabilities_by_severity {
+                        raw_counts.insert(k.clone(), *v);
+                    }
                     let _ = writeln!(&mut markdown, "\n## 🧪 Diagnostics\n");
-                    let _ = writeln!(&mut markdown, "- Raw Total Vulnerabilities: {}", security_result.total_vulnerabilities);
+                    let _ = writeln!(
+                        &mut markdown,
+                        "- Raw Total Vulnerabilities: {}",
+                        security_result.total_vulnerabilities
+                    );
                     let _ = writeln!(&mut markdown, "- Raw by Severity:");
-                    for sev in [crate::SecuritySeverity::Critical, crate::SecuritySeverity::High, crate::SecuritySeverity::Medium, crate::SecuritySeverity::Low, crate::SecuritySeverity::Info] {
+                    for sev in [
+                        crate::SecuritySeverity::Critical,
+                        crate::SecuritySeverity::High,
+                        crate::SecuritySeverity::Medium,
+                        crate::SecuritySeverity::Low,
+                        crate::SecuritySeverity::Info,
+                    ] {
                         let c = raw_counts.get(&sev).cloned().unwrap_or(0);
                         let _ = writeln!(&mut markdown, "  - {:?}: {}", sev, c);
                     }
@@ -269,12 +300,24 @@ pub async fn execute(
             }
             if diagnostics && output.is_none() {
                 // Print diagnostics to stdout after the main report
-                let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> = Default::default();
-                for (k, v) in &security_result.vulnerabilities_by_severity { raw_counts.insert(k.clone(), *v); }
+                let mut raw_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
+                    Default::default();
+                for (k, v) in &security_result.vulnerabilities_by_severity {
+                    raw_counts.insert(k.clone(), *v);
+                }
                 println!("\n## 🧪 Diagnostics\n");
-                println!("- Raw Total Vulnerabilities: {}", security_result.total_vulnerabilities);
+                println!(
+                    "- Raw Total Vulnerabilities: {}",
+                    security_result.total_vulnerabilities
+                );
                 println!("- Raw by Severity:");
-                for sev in [crate::SecuritySeverity::Critical, crate::SecuritySeverity::High, crate::SecuritySeverity::Medium, crate::SecuritySeverity::Low, crate::SecuritySeverity::Info] {
+                for sev in [
+                    crate::SecuritySeverity::Critical,
+                    crate::SecuritySeverity::High,
+                    crate::SecuritySeverity::Medium,
+                    crate::SecuritySeverity::Low,
+                    crate::SecuritySeverity::Info,
+                ] {
                     let c = raw_counts.get(&sev).cloned().unwrap_or(0);
                     println!("  - {:?}: {}", sev, c);
                 }
@@ -337,7 +380,7 @@ fn generate_security_sarif_report(
     filtered_vulns: &[&crate::SecurityVulnerability],
     root_path: &PathBuf,
     baseline: Option<&HashSet<String>>,
-    ) -> CliResult<String> {
+) -> CliResult<String> {
     use serde_json::json;
 
     let rules: Vec<serde_json::Value> = filtered_vulns
@@ -436,7 +479,11 @@ fn load_baseline_vuln(path: &PathBuf) -> CliResult<HashSet<String>> {
 }
 
 fn save_baseline_vuln(path: &PathBuf, entries: &HashSet<String>) -> CliResult<()> {
-    if let Some(parent) = path.parent() { if !parent.exists() { fs::create_dir_all(parent).map_err(CliError::Io)?; } }
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent).map_err(CliError::Io)?;
+        }
+    }
     let mut v: Vec<String> = entries.iter().cloned().collect();
     v.sort();
     let data = serde_json::to_string_pretty(&v).map_err(CliError::Json)?;
@@ -505,8 +552,8 @@ fn filter_analysis_result(
             }
             // Exclude common binary/media assets to avoid noise
             let non_code_exts = [
-                "png", "jpg", "jpeg", "gif", "bmp", "svg", "webp", "ico", "pdf", "zip",
-                "gz", "tgz", "tar", "xz", "7z", "rar",
+                "png", "jpg", "jpeg", "gif", "bmp", "svg", "webp", "ico", "pdf", "zip", "gz",
+                "tgz", "tar", "xz", "7z", "rar",
             ];
             if non_code_exts.iter().any(|e| *e == ext) {
                 continue;
@@ -565,8 +612,11 @@ fn print_security_table(
 
     // Show vulnerabilities by severity (derived from filtered list)
     println!("\n{}", "🚨 BY SEVERITY".bright_yellow().bold());
-    let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> = Default::default();
-    for v in filtered_vulnerabilities { *sev_counts.entry(v.severity.clone()).or_insert(0) += 1; }
+    let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
+        Default::default();
+    for v in filtered_vulnerabilities {
+        *sev_counts.entry(v.severity.clone()).or_insert(0) += 1;
+    }
     for sev in [
         crate::SecuritySeverity::Critical,
         crate::SecuritySeverity::High,
@@ -582,7 +632,11 @@ fn print_security_table(
             crate::SecuritySeverity::Low => "blue",
             crate::SecuritySeverity::Info => "bright_black",
         };
-        println!("  {}: {}", format!("{:?}", sev), count.to_string().color(color));
+        println!(
+            "  {}: {}",
+            format!("{:?}", sev),
+            count.to_string().color(color)
+        );
     }
 
     if !summary_only && !filtered_vulnerabilities.is_empty() {
@@ -595,11 +649,7 @@ fn print_security_table(
             );
             let sev = format!("{:?}", vuln.severity).bright_red();
             let conf = format!("{:?}", vuln.confidence).bright_yellow();
-            println!(
-                "   Severity: {} | Confidence: {}",
-                sev,
-                conf
-            );
+            println!("   Severity: {} | Confidence: {}", sev, conf);
             println!(
                 "   Location: {}:{}",
                 vuln.location.file.display().to_string().bright_blue(),
@@ -655,8 +705,11 @@ fn print_security_markdown(
     );
 
     println!("\n### Vulnerabilities by Severity\n");
-    let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> = Default::default();
-    for v in filtered_vulnerabilities { *sev_counts.entry(v.severity.clone()).or_insert(0) += 1; }
+    let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
+        Default::default();
+    for v in filtered_vulnerabilities {
+        *sev_counts.entry(v.severity.clone()).or_insert(0) += 1;
+    }
     for sev in &[
         crate::SecuritySeverity::Critical,
         crate::SecuritySeverity::High,
@@ -721,8 +774,11 @@ pub fn render_security_markdown(
     .unwrap();
 
     writeln!(out, "\n### Vulnerabilities by Severity\n").unwrap();
-    let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> = Default::default();
-    for v in filtered_vulnerabilities { *sev_counts.entry(v.severity.clone()).or_insert(0) += 1; }
+    let mut sev_counts: std::collections::BTreeMap<crate::SecuritySeverity, usize> =
+        Default::default();
+    for v in filtered_vulnerabilities {
+        *sev_counts.entry(v.severity.clone()).or_insert(0) += 1;
+    }
     for sev in [
         crate::SecuritySeverity::Critical,
         crate::SecuritySeverity::High,
@@ -780,28 +836,23 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-    let result = execute(
-        &path,
-        "table",
-        "low",
-        None,
-        false, // summary_only
-        false, // compliance
-        false, // diagnostics
-        "full",
-        false, // enable_security
-        false, // include_tests
-        false, // include_examples
-        false, // include_non_code
-        "low", // min_confidence
-        None,   // fail_on
-        false,  // no_ai_filter
-        "balanced", // filter_mode
-        None, // baseline
-        false, // update_baseline
-        1024,
-    )
-    .await;
+        let result = execute(
+            &path, "table", "low", None, false, // summary_only
+            false, // compliance
+            false, // diagnostics
+            "full", false,      // enable_security
+            false,      // include_tests
+            false,      // include_examples
+            false,      // include_non_code
+            "low",      // min_confidence
+            None,       // fail_on
+            false,      // no_ai_filter
+            "balanced", // filter_mode
+            None,       // baseline
+            false,      // update_baseline
+            1024,
+        )
+        .await;
         assert!(result.is_ok());
     }
 
@@ -810,28 +861,28 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-    let result = execute(
-        &path,
-        "table",
-        "invalid_severity",
-        None,
-        false, // summary_only
-        false, // compliance
-        false, // diagnostics
-        "full",
-        false, // enable_security
-        false, // include_tests
-        false, // include_examples
-        false, // include_non_code
-        "low", // min_confidence
-        None,   // fail_on
-        false,  // no_ai_filter
-        "balanced", // filter_mode
-        None, // baseline
-        false, // update_baseline
-        1024,
-    )
-    .await;
+        let result = execute(
+            &path,
+            "table",
+            "invalid_severity",
+            None,
+            false, // summary_only
+            false, // compliance
+            false, // diagnostics
+            "full",
+            false,      // enable_security
+            false,      // include_tests
+            false,      // include_examples
+            false,      // include_non_code
+            "low",      // min_confidence
+            None,       // fail_on
+            false,      // no_ai_filter
+            "balanced", // filter_mode
+            None,       // baseline
+            false,      // update_baseline
+            1024,
+        )
+        .await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
     }

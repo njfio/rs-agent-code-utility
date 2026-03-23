@@ -79,7 +79,7 @@ impl WikiConfig {
     }
 }
 
-    /// Builder for WikiConfig (builder pattern)
+/// Builder for WikiConfig (builder pattern)
 #[derive(Debug, Default, Clone)]
 pub struct WikiConfigBuilder {
     site_title: Option<String>,
@@ -522,15 +522,23 @@ impl WikiGenerator {
 
             // Determine additional fields for search filters
             let language = file.language.clone();
-            let file_type = file.path.extension()
+            let file_type = file
+                .path
+                .extension()
                 .and_then(|ext| ext.to_str())
                 .unwrap_or("file")
                 .to_string();
             let security_level = if file_hotspots.is_empty() {
                 "low".to_string()
-            } else if file_hotspots.iter().any(|h| h.severity == crate::advanced_security::SecuritySeverity::Critical) {
+            } else if file_hotspots
+                .iter()
+                .any(|h| h.severity == crate::advanced_security::SecuritySeverity::Critical)
+            {
                 "critical".to_string()
-            } else if file_hotspots.iter().any(|h| h.severity == crate::advanced_security::SecuritySeverity::High) {
+            } else if file_hotspots
+                .iter()
+                .any(|h| h.severity == crate::advanced_security::SecuritySeverity::High)
+            {
                 "high".to_string()
             } else {
                 "medium".to_string()
@@ -1460,7 +1468,10 @@ updateSearch();
     // write_search_index moved to search.rs
 
     /// Generate a simple relationship map for enhanced wiki features
-    fn generate_relationship_map_simple(&self, analysis: &AnalysisResult) -> HashMap<String, Vec<String>> {
+    fn generate_relationship_map_simple(
+        &self,
+        analysis: &AnalysisResult,
+    ) -> HashMap<String, Vec<String>> {
         let mut relationships = HashMap::new();
 
         for file in &analysis.files {
@@ -1475,34 +1486,41 @@ updateSearch();
             for other_file in &analysis.files {
                 if other_file.path != file.path {
                     // Check for naming similarities that might indicate relationships
-                    let file_name = file.path.file_stem()
+                    let file_name = file
+                        .path
+                        .file_stem()
                         .and_then(|stem| stem.to_str())
                         .unwrap_or("");
-                    let other_file_name = other_file.path.file_stem()
+                    let other_file_name = other_file
+                        .path
+                        .file_stem()
                         .and_then(|stem| stem.to_str())
                         .unwrap_or("");
 
                     // Simple relationship detection: files with similar names or common patterns
                     if file_name.contains(other_file_name) || other_file_name.contains(file_name) {
-                        file_relationships.push(format!("cross_file:{}", other_file.path.display()));
+                        file_relationships
+                            .push(format!("cross_file:{}", other_file.path.display()));
                     }
 
                     // Relationship via shared symbol names (potential interfaces/utilities)
                     for symbol in &file.symbols {
                         for other_symbol in &other_file.symbols {
-                            if symbol.name.to_lowercase() == other_symbol.name.to_lowercase() &&
-                               symbol.kind != other_symbol.kind {
-                                file_relationships.push(format!("shared_symbol:{}@{}", symbol.name, other_file.path.display()));
+                            if symbol.name.to_lowercase() == other_symbol.name.to_lowercase()
+                                && symbol.kind != other_symbol.kind
+                            {
+                                file_relationships.push(format!(
+                                    "shared_symbol:{}@{}",
+                                    symbol.name,
+                                    other_file.path.display()
+                                ));
                             }
                         }
                     }
                 }
             }
 
-            relationships.insert(
-                file.path.display().to_string(),
-                file_relationships
-            );
+            relationships.insert(file.path.display().to_string(), file_relationships);
         }
 
         // Add global relationships (files that might be entry points or main files)
@@ -1511,8 +1529,11 @@ updateSearch();
         // Identify potential main files or entry points
         for file in &analysis.files {
             if let Some(file_name) = file.path.file_name().and_then(|name| name.to_str()) {
-                if file_name.contains("main") || file_name.contains("entry") ||
-                   file_name.contains("app") || file_name.contains("server") {
+                if file_name.contains("main")
+                    || file_name.contains("entry")
+                    || file_name.contains("app")
+                    || file_name.contains("server")
+                {
                     global_relationships.push(format!("entry_point:{}", file.path.display()));
                 }
             }
@@ -1520,7 +1541,15 @@ updateSearch();
 
         // Identify large files with high symbol counts (potential core modules)
         for file in &analysis.files {
-            if file.symbols.len() > analysis.files.iter().map(|f| f.symbols.len()).max().unwrap_or(0) / 2 {
+            if file.symbols.len()
+                > analysis
+                    .files
+                    .iter()
+                    .map(|f| f.symbols.len())
+                    .max()
+                    .unwrap_or(0)
+                    / 2
+            {
                 global_relationships.push(format!("core_module:{}", file.path.display()));
             }
         }
@@ -1917,7 +1946,6 @@ updateSearch();
         let _ = writeln!(&mut block, "</div>");
         block
     }
-
 }
 
 // SearchEntry moved to search.rs

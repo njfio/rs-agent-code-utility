@@ -39,8 +39,7 @@ pub struct KnowledgeBase {
 }
 
 /// A fact in the knowledge base
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fact {
     /// Fact identifier
     pub id: String,
@@ -55,8 +54,7 @@ pub struct Fact {
 }
 
 /// Source of a fact
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FactSource {
     /// Extracted from code analysis
     CodeAnalysis,
@@ -69,8 +67,7 @@ pub enum FactSource {
 }
 
 /// An inference rule
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rule {
     /// Rule identifier
     pub id: String,
@@ -87,8 +84,7 @@ pub struct Rule {
 }
 
 /// Types of reasoning rules
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RuleType {
     /// Deductive reasoning rule
     Deductive,
@@ -105,8 +101,7 @@ pub enum RuleType {
 }
 
 /// A condition in a rule premise
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Condition {
     /// Predicate name
     pub predicate: String,
@@ -117,8 +112,7 @@ pub struct Condition {
 }
 
 /// Rule conclusion
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conclusion {
     /// Predicate name
     pub predicate: String,
@@ -129,8 +123,7 @@ pub struct Conclusion {
 }
 
 /// Term in logical expressions
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Term {
     /// Variable
     Variable(String),
@@ -143,8 +136,7 @@ pub enum Term {
 }
 
 /// Literal values
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LiteralValue {
     String(String),
     Integer(i64),
@@ -153,8 +145,7 @@ pub enum LiteralValue {
 }
 
 /// Type definition
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypeDefinition {
     /// Type name
     pub name: String,
@@ -167,8 +158,7 @@ pub struct TypeDefinition {
 }
 
 /// Types of types
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TypeKind {
     Primitive,
     Struct,
@@ -179,8 +169,7 @@ pub enum TypeKind {
 }
 
 /// Type constraint
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypeConstraint {
     /// Constraint type
     pub constraint_type: ConstraintType,
@@ -191,8 +180,7 @@ pub struct TypeConstraint {
 }
 
 /// Function signature
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FunctionSignature {
     /// Function name
     pub name: String,
@@ -231,8 +219,7 @@ pub struct ConstraintSolver {
 }
 
 /// Constraint variable
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstraintVariable {
     /// Variable name
     pub name: String,
@@ -245,8 +232,7 @@ pub struct ConstraintVariable {
 }
 
 /// Variable types for constraints
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VariableType {
     Integer,
     Real,
@@ -256,8 +242,7 @@ pub enum VariableType {
 }
 
 /// Domain of constraint variables
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Domain {
     /// Integer range
     IntegerRange(i64, i64),
@@ -272,8 +257,7 @@ pub enum Domain {
 }
 
 /// Constraint value
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConstraintValue {
     Integer(i64),
     Real(f64),
@@ -283,8 +267,7 @@ pub enum ConstraintValue {
 }
 
 /// Constraint definition
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Constraint {
     /// Constraint identifier
     pub id: String,
@@ -299,8 +282,7 @@ pub struct Constraint {
 }
 
 /// Types of constraints
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConstraintType {
     /// Equality constraint
     Equality,
@@ -319,8 +301,7 @@ pub enum ConstraintType {
 }
 
 /// Constraint expression
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConstraintExpression {
     /// Variable reference
     Variable(String),
@@ -339,8 +320,7 @@ pub enum ConstraintExpression {
 }
 
 /// Binary operators
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BinaryOperator {
     Add,
     Sub,
@@ -359,8 +339,7 @@ pub enum BinaryOperator {
 }
 
 /// Unary operators
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UnaryOperator {
     Not,
     Neg,
@@ -388,8 +367,7 @@ pub struct TheoremProver {
 }
 
 /// Axiom in the theorem prover
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Axiom {
     /// Axiom identifier
     pub id: String,
@@ -400,8 +378,7 @@ pub struct Axiom {
 }
 
 /// Categories of axioms
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AxiomCategory {
     /// Mathematical axioms
     Mathematical,
@@ -416,8 +393,7 @@ pub enum AxiomCategory {
 }
 
 /// Logical formula
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogicalFormula {
     /// Atomic proposition
     Atom(String, Vec<Term>),
@@ -449,8 +425,7 @@ pub enum ProofStrategy {
 }
 
 /// Result of theorem proving
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofResult {
     /// Whether the theorem was proved
     pub proved: bool,
@@ -463,8 +438,7 @@ pub struct ProofResult {
 }
 
 /// Step in a proof
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofStep {
     /// Step number
     pub step: usize,
@@ -477,8 +451,7 @@ pub struct ProofStep {
 }
 
 /// Counterexample for disproved theorems
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Counterexample {
     /// Variable assignments
     pub assignments: HashMap<String, ConstraintValue>,
@@ -520,8 +493,7 @@ impl Default for ReasoningConfig {
 }
 
 /// Result of automated reasoning
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReasoningResult {
     /// Derived facts
     pub derived_facts: Vec<Fact>,
@@ -538,8 +510,7 @@ pub struct ReasoningResult {
 }
 
 /// Insight from reasoning
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReasoningInsight {
     /// Insight type
     pub insight_type: InsightType,
@@ -554,8 +525,7 @@ pub struct ReasoningInsight {
 }
 
 /// Types of reasoning insights
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InsightType {
     /// Potential bug
     Bug,
@@ -574,8 +544,7 @@ pub enum InsightType {
 }
 
 /// Code location reference
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeLocation {
     /// File path
     pub file: PathBuf,
@@ -588,8 +557,7 @@ pub struct CodeLocation {
 }
 
 /// Performance metrics for reasoning
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReasoningMetrics {
     /// Total reasoning time in milliseconds
     pub total_time_ms: u64,

@@ -62,7 +62,13 @@ pub async fn execute(
 
     // Discover files to analyze
     pb.set_message("Discovering source files...");
-    let files_to_analyze = discover_files(path, language_filter, include_tests, include_examples, max_file_kb)?;
+    let files_to_analyze = discover_files(
+        path,
+        language_filter,
+        include_tests,
+        include_examples,
+        max_file_kb,
+    )?;
 
     if files_to_analyze.is_empty() {
         pb.finish_with_message("No files found to analyze");
@@ -120,7 +126,8 @@ pub async fn execute(
         baseline_set = Some(base.clone());
         all_findings.retain(|f| !base.contains(&fingerprint_ast(f)));
         if update_baseline {
-            let current: std::collections::HashSet<String> = all_findings.iter().map(|f| fingerprint_ast(f)).collect();
+            let current: std::collections::HashSet<String> =
+                all_findings.iter().map(|f| fingerprint_ast(f)).collect();
             save_baseline_ast(baseline_path, &current)?;
             baseline_set = Some(current); // reflect updated baseline if needed
         }
@@ -207,17 +214,16 @@ pub async fn execute(
 fn fingerprint_ast(f: &crate::security::ast_analyzer::SecurityFinding) -> String {
     format!(
         "{}:{}:{}:{:?}",
-        f.file_path,
-        f.line_number,
-        f.title,
-        f.severity
+        f.file_path, f.line_number, f.title, f.severity
     )
 }
 
 fn load_baseline_ast(path: &PathBuf) -> CliResult<std::collections::HashSet<String>> {
-    use std::fs;
     use std::collections::HashSet;
-    if !path.exists() { return Ok(HashSet::new()); }
+    use std::fs;
+    if !path.exists() {
+        return Ok(HashSet::new());
+    }
     let content = fs::read_to_string(path).map_err(CliError::Io)?;
     let list: Vec<String> = serde_json::from_str(&content).map_err(CliError::Json)?;
     Ok(list.into_iter().collect())
@@ -225,7 +231,11 @@ fn load_baseline_ast(path: &PathBuf) -> CliResult<std::collections::HashSet<Stri
 
 fn save_baseline_ast(path: &PathBuf, entries: &std::collections::HashSet<String>) -> CliResult<()> {
     use std::fs;
-    if let Some(parent) = path.parent() { if !parent.exists() { fs::create_dir_all(parent).map_err(CliError::Io)?; } }
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent).map_err(CliError::Io)?;
+        }
+    }
     let mut v: Vec<String> = entries.iter().cloned().collect();
     v.sort();
     let data = serde_json::to_string_pretty(&v).map_err(CliError::Json)?;
@@ -292,7 +302,11 @@ fn discover_files(
         // Skip large files by size budget
         if let Ok(md) = entry.metadata() {
             if md.len() > (max_file_kb as u64) * 1024 {
-                warn!("Skipping large file {} (>{} KB)", entry.path().display(), max_file_kb);
+                warn!(
+                    "Skipping large file {} (>{} KB)",
+                    entry.path().display(),
+                    max_file_kb
+                );
                 continue;
             }
         }
@@ -710,7 +724,10 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-    let result = execute(&path, "table", "low", None, false, None, false, false, 0.0, None, None, false, 1024).await;
+        let result = execute(
+            &path, "table", "low", None, false, None, false, false, 0.0, None, None, false, 1024,
+        )
+        .await;
         assert!(result.is_ok());
     }
 
@@ -719,22 +736,22 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-          let result = execute(
-              &path,
-              "table",
-              "invalid_severity",
-              None,
-              false,
-              None,
-              false,
-              false,
-              0.0,
-              None,
-              None,
-              false,
-              1024,
-          )
-          .await;
+        let result = execute(
+            &path,
+            "table",
+            "invalid_severity",
+            None,
+            false,
+            None,
+            false,
+            false,
+            0.0,
+            None,
+            None,
+            false,
+            1024,
+        )
+        .await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
     }
@@ -744,22 +761,22 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let path = temp_dir.path().to_path_buf();
 
-          let result = execute(
-              &path,
-              "table",
-              "low",
-              None,
-              false,
-              Some("invalid_language"),
-              false,
-              false,
-              0.0,
-              None,
-              None,
-              false,
-              1024,
-          )
-          .await;
+        let result = execute(
+            &path,
+            "table",
+            "low",
+            None,
+            false,
+            Some("invalid_language"),
+            false,
+            false,
+            0.0,
+            None,
+            None,
+            false,
+            1024,
+        )
+        .await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
     }

@@ -24,4 +24,3 @@ fn security_table_snapshot_basic_headers() -> Result<(), Box<dyn std::error::Err
     assert!(stdout.contains("🚨 BY SEVERITY"));
     Ok(())
 }
-

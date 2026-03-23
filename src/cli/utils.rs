@@ -241,9 +241,18 @@ mod tests {
 
     #[test]
     fn test_parse_confidence_level() {
-        assert!(matches!(parse_confidence_level("low").unwrap(), crate::advanced_security::ConfidenceLevel::Low));
-        assert!(matches!(parse_confidence_level("medium").unwrap(), crate::advanced_security::ConfidenceLevel::Medium));
-        assert!(matches!(parse_confidence_level("high").unwrap(), crate::advanced_security::ConfidenceLevel::High));
+        assert!(matches!(
+            parse_confidence_level("low").unwrap(),
+            crate::advanced_security::ConfidenceLevel::Low
+        ));
+        assert!(matches!(
+            parse_confidence_level("medium").unwrap(),
+            crate::advanced_security::ConfidenceLevel::Medium
+        ));
+        assert!(matches!(
+            parse_confidence_level("high").unwrap(),
+            crate::advanced_security::ConfidenceLevel::High
+        ));
         assert!(parse_confidence_level("nope").is_err());
     }
 

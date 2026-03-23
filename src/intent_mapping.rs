@@ -42,8 +42,7 @@ impl Default for ConfidenceThresholds {
 }
 
 /// Graph-based relationship mapping between requirements and implementations
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelationshipGraph {
     /// Graph nodes (requirements and implementations)
     pub nodes: HashMap<String, RelationshipNode>,
@@ -54,8 +53,7 @@ pub struct RelationshipGraph {
 }
 
 /// Node in the relationship graph
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelationshipNode {
     /// Unique node identifier
     pub id: String,
@@ -68,8 +66,7 @@ pub struct RelationshipNode {
 }
 
 /// Types of nodes in the relationship graph
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RelationshipNodeType {
     /// Requirement node
     Requirement,
@@ -84,8 +81,7 @@ pub enum RelationshipNodeType {
 }
 
 /// Edge in the relationship graph
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelationshipEdge {
     /// Unique edge identifier
     pub id: String,
@@ -104,8 +100,7 @@ pub struct RelationshipEdge {
 }
 
 /// Types of edges in the relationship graph
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RelationshipEdgeType {
     /// Direct mapping
     DirectMapping,
@@ -130,8 +125,7 @@ pub enum RelationshipEdgeType {
 }
 
 /// Graph metrics and statistics
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphMetrics {
     /// Total number of nodes
     pub node_count: usize,
@@ -152,8 +146,7 @@ pub struct GraphMetrics {
 }
 
 /// Coverage metrics for the relationship graph
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphCoverageMetrics {
     /// Percentage of requirements with implementations
     pub requirement_coverage: f64,
@@ -563,8 +556,7 @@ pub struct IntentMappingSystem {
 }
 
 /// A requirement or intent specification
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Requirement {
     /// Unique identifier
     pub id: String,
@@ -585,8 +577,7 @@ pub struct Requirement {
 }
 
 /// Types of requirements
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RequirementType {
     /// Functional requirement
     Functional,
@@ -614,8 +605,7 @@ pub enum RequirementType {
 pub use crate::constants::common::Priority;
 
 /// Requirement status
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RequirementStatus {
     Draft,
     Approved,
@@ -627,8 +617,7 @@ pub enum RequirementStatus {
 }
 
 /// Implementation artifact
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Implementation {
     /// Unique identifier
     pub id: String,
@@ -647,8 +636,7 @@ pub struct Implementation {
 }
 
 /// Types of implementation artifacts
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ImplementationType {
     Function,
     Class,
@@ -663,8 +651,7 @@ pub enum ImplementationType {
 }
 
 /// Code element within an implementation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeElement {
     /// Element name
     pub name: String,
@@ -679,8 +666,7 @@ pub struct CodeElement {
 }
 
 /// Implementation status
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImplementationStatus {
     NotStarted,
     InProgress,
@@ -691,8 +677,7 @@ pub enum ImplementationStatus {
 }
 
 /// Quality metrics for implementations
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityMetrics {
     /// Code coverage percentage
     pub coverage: f64,
@@ -707,8 +692,7 @@ pub struct QualityMetrics {
 }
 
 /// Mapping between intent and implementation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntentMapping {
     /// Mapping identifier
     pub id: String,
@@ -729,8 +713,7 @@ pub struct IntentMapping {
 }
 
 /// Types of mappings
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MappingType {
     /// Direct one-to-one mapping
     Direct,
@@ -747,8 +730,7 @@ pub enum MappingType {
 }
 
 /// Validation status of mappings
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ValidationStatus {
     NotValidated,
     Valid,
@@ -758,8 +740,7 @@ pub enum ValidationStatus {
 }
 
 /// Traceability matrix for requirements
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceabilityMatrix {
     /// Forward traceability (requirement -> implementation)
     pub forward_trace: HashMap<String, Vec<String>>,
@@ -770,8 +751,7 @@ pub struct TraceabilityMatrix {
 }
 
 /// Coverage metrics for traceability
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageMetrics {
     /// Percentage of requirements with implementations
     pub requirement_coverage: f64,
@@ -811,8 +791,7 @@ impl Default for MappingConfig {
 }
 
 /// Result of intent mapping analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MappingAnalysisResult {
     /// Total requirements analyzed
     pub total_requirements: usize,
@@ -831,8 +810,7 @@ pub struct MappingAnalysisResult {
 }
 
 /// Gap in requirement-implementation mapping
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MappingGap {
     /// Gap type
     pub gap_type: GapType,
@@ -847,8 +825,7 @@ pub struct MappingGap {
 }
 
 /// Types of mapping gaps
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GapType {
     /// Requirement without implementation
     MissingImplementation,
@@ -865,8 +842,7 @@ pub enum GapType {
 }
 
 /// Recommendation for improving mappings
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MappingRecommendation {
     /// Recommendation type
     pub recommendation_type: RecommendationType,
@@ -883,8 +859,7 @@ pub struct MappingRecommendation {
 }
 
 /// Types of recommendations
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecommendationType {
     CreateImplementation,
     CreateRequirement,
@@ -897,8 +872,7 @@ pub enum RecommendationType {
 }
 
 /// Effort estimation levels
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EffortLevel {
     Small,  // < 1 day
     Medium, // 1-3 days
@@ -907,8 +881,7 @@ pub enum EffortLevel {
 }
 
 /// Statistics about semantic embeddings
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingStats {
     /// Number of requirement embeddings generated
     pub total_requirement_embeddings: usize,
@@ -3547,8 +3520,7 @@ impl IntentMappingSystem {
 }
 
 /// Traceability report
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceabilityReport {
     /// Forward coverage percentage
     pub forward_coverage: f64,

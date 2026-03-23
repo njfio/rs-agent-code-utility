@@ -18,7 +18,11 @@ async fn inline_suppression_ignores_finding() {
     // Suppression on same line
     let content = "let key = \"AKIA5C38F4W0HTH09SN4\"; // secret-scan:ignore example";
     let results = detector.detect_secrets(content, "src/lib.rs").unwrap();
-    assert!(results.is_empty(), "Suppressed findings should be dropped: {:?}", results);
+    assert!(
+        results.is_empty(),
+        "Suppressed findings should be dropped: {:?}",
+        results
+    );
 }
 
 #[tokio::test]
@@ -45,7 +49,11 @@ const KEY = "AKIA5C38F4W0HTH09SN4";
 This should not be flagged when scanning docs.
 "#;
     let results = detector.detect_secrets(content, "docs/README.md").unwrap();
-    assert!(results.is_empty(), "Code fences in docs should be ignored: {:?}", results);
+    assert!(
+        results.is_empty(),
+        "Code fences in docs should be ignored: {:?}",
+        results
+    );
 }
 
 #[tokio::test]
@@ -73,17 +81,29 @@ AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 
     let solo_conf = solo_findings
         .iter()
-        .filter(|f| matches!(f.secret_type, rust_tree_sitter::security::SecretType::AwsAccessKey))
+        .filter(|f| {
+            matches!(
+                f.secret_type,
+                rust_tree_sitter::security::SecretType::AwsAccessKey
+            )
+        })
         .map(|f| f.confidence)
         .next();
     let pair_conf = paired_findings
         .iter()
-        .filter(|f| matches!(f.secret_type, rust_tree_sitter::security::SecretType::AwsAccessKey))
+        .filter(|f| {
+            matches!(
+                f.secret_type,
+                rust_tree_sitter::security::SecretType::AwsAccessKey
+            )
+        })
         .map(|f| f.confidence)
         .next();
 
     if let (Some(s), Some(p)) = (solo_conf, pair_conf) {
-        assert!(p >= s, "Expected paired confidence >= solo: solo={s}, pair={p}");
+        assert!(
+            p >= s,
+            "Expected paired confidence >= solo: solo={s}, pair={p}"
+        );
     }
 }
-

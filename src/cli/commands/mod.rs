@@ -93,8 +93,9 @@ impl Execute for Commands {
                 #[cfg(feature = "net")]
                 {
                     // Convert the async CLI call to sync execution
-                    let rt = tokio::runtime::Runtime::new()
-                        .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
+                    let rt = tokio::runtime::Runtime::new().map_err(|e| {
+                        CliError::Internal(format!("Failed to create runtime: {}", e))
+                    })?;
 
                     rt.block_on(ast_security::execute(
                         path,
@@ -114,7 +115,9 @@ impl Execute for Commands {
                 }
                 #[cfg(not(feature = "net"))]
                 {
-                    Err(CliError::Internal("ast-security command requires the 'net' feature".to_string()))
+                    Err(CliError::Internal(
+                        "ast-security command requires the 'net' feature".to_string(),
+                    ))
                 }
             }
             Commands::Query {
@@ -251,8 +254,9 @@ impl Execute for Commands {
                 #[cfg(feature = "net")]
                 {
                     // Convert the async CLI call to sync execution
-                    let rt = tokio::runtime::Runtime::new()
-                        .map_err(|e| CliError::Internal(format!("Failed to create runtime: {}", e)))?;
+                    let rt = tokio::runtime::Runtime::new().map_err(|e| {
+                        CliError::Internal(format!("Failed to create runtime: {}", e))
+                    })?;
 
                     rt.block_on(security::execute(
                         path,
@@ -278,7 +282,9 @@ impl Execute for Commands {
                 }
                 #[cfg(not(feature = "net"))]
                 {
-                    Err(CliError::Internal("security command requires the 'net' feature".to_string()))
+                    Err(CliError::Internal(
+                        "security command requires the 'net' feature".to_string(),
+                    ))
                 }
             }
             Commands::Refactor {

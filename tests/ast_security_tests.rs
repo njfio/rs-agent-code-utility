@@ -3,6 +3,8 @@
 //! These tests verify the accuracy, performance, and reliability of the
 //! AST-based security analyzer and its language-specific implementations.
 
+#[allow(unused_imports)]
+use rust_tree_sitter::tree::SyntaxTree;
 use rust_tree_sitter::{
     languages::Language,
     parser::Parser,
@@ -11,8 +13,6 @@ use rust_tree_sitter::{
         SecurityFindingType, SecuritySeverity, SemanticInfo,
     },
 };
-#[allow(unused_imports)]
-use rust_tree_sitter::tree::SyntaxTree;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
