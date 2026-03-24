@@ -27,7 +27,7 @@ fn analyze_codebase_taint(
         &files,
         analyzer
             .semantic_graph()
-            .expect("semantic graph should be available"),
+            .ok_or_else(|| std::io::Error::other("semantic graph should be available"))?,
     )?)
 }
 
@@ -84,7 +84,7 @@ pub fn run_query(user_input: String) {
                 && flow.sink.file_path == PathBuf::from("src/db.rs")
                 && flow.sink.name == "sqlx::query"
         })
-        .expect("expected a cross-file Rust taint flow");
+        .ok_or_else(|| std::io::Error::other("expected a cross-file Rust taint flow"))?;
 
     assert!(flow.path.iter().any(|step| {
         step.step_type == TaintStepType::FunctionCall && step.name == "build_query"
@@ -150,7 +150,7 @@ export function runQuery(userInput) {
                 && flow.sink.file_path == PathBuf::from("db.js")
                 && flow.sink.name == "mysql.query"
         })
-        .expect("expected a cross-file JavaScript taint flow");
+        .ok_or_else(|| std::io::Error::other("expected a cross-file JavaScript taint flow"))?;
 
     assert!(flow.path.iter().any(|step| {
         step.step_type == TaintStepType::FunctionCall && step.name == "buildQuery"
@@ -220,7 +220,9 @@ pub fn run_query(query: String) {
                 && flow.sink.file_path == PathBuf::from("src/db.rs")
                 && flow.sink.name == "sqlx::query"
         })
-        .expect("expected a cross-file Rust taint flow through a return value");
+        .ok_or_else(|| {
+            std::io::Error::other("expected a cross-file Rust taint flow through a return value")
+        })?;
 
     assert!(flow.path.iter().any(|step| {
         step.step_type == TaintStepType::Return && step.location.file == "src/service.rs"
@@ -288,7 +290,11 @@ export function runQuery(query) {
                 && flow.sink.file_path == PathBuf::from("db.js")
                 && flow.sink.name == "mysql.query"
         })
-        .expect("expected a cross-file JavaScript taint flow through a return value");
+        .ok_or_else(|| {
+            std::io::Error::other(
+                "expected a cross-file JavaScript taint flow through a return value",
+            )
+        })?;
 
     assert!(flow.path.iter().any(|step| {
         step.step_type == TaintStepType::Return && step.location.file == "service.js"

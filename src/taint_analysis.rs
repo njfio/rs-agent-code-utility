@@ -808,12 +808,9 @@ impl TaintAnalyzer {
         node: Node,
         file_path: &Path,
     ) -> Result<Option<FunctionDefinition>> {
-        let function_name = self.extract_function_name(node);
-        if function_name.is_none() {
+        let Some(name) = self.extract_function_name(node) else {
             return Ok(None);
-        }
-
-        let name = function_name.unwrap();
+        };
         let parameters = self.extract_function_parameters(node);
         let return_source = self.extract_function_return_source(node);
         let return_variable = match &return_source {
@@ -985,16 +982,13 @@ impl TaintAnalyzer {
         current_function: Option<&str>,
         file_path: &Path,
     ) -> Result<Option<VariableAssignment>> {
-        let (target, source) = self.extract_assignment_parts(node)?;
-        if target.is_none() || source.is_none() {
+        let (Some(target), Some(source_value)) = self.extract_assignment_parts(node)? else {
             return Ok(None);
-        }
-
-        let source_value = source.unwrap();
+        };
         let propagates_taint = self.assignment_propagates_taint(&source_value);
 
         Ok(Some(VariableAssignment {
-            target: target.unwrap(),
+            target,
             source: source_value,
             location: Self::taint_location(node, current_function, file_path),
             propagates_taint,
@@ -1948,12 +1942,9 @@ impl TaintAnalyzer {
         current_function: Option<&str>,
         file_path: &Path,
     ) -> Result<Option<FunctionCall>> {
-        let function_name = self.extract_function_call_name(node);
-        if function_name.is_none() {
+        let Some(name) = self.extract_function_call_name(node) else {
             return Ok(None);
-        }
-
-        let name = function_name.unwrap();
+        };
         let arguments = self.extract_function_arguments(node);
 
         Ok(Some(FunctionCall {
@@ -2111,7 +2102,10 @@ mod tests {
 
         assert_eq!(function_call_step.step_type, TaintStepType::FunctionCall);
         assert!(function_call_step.is_sanitizer);
-        assert_eq!(function_call_step.sanitizer_method.unwrap(), "html_escape");
+        assert_eq!(
+            function_call_step.sanitizer_method.as_deref(),
+            Some("html_escape")
+        );
     }
 
     #[test]
@@ -2163,22 +2157,21 @@ mod tests {
         assert_eq!(
             analyzer
                 .get_sanitizer_method(&sanitizer_assignment)
-                .unwrap(),
-            "html_escape::encode_text"
+                .as_deref(),
+            Some("html_escape::encode_text")
         );
     }
 
     #[test]
-    fn test_taint_sources_and_sinks_capture_explicit_file_paths() {
-        let parser = Parser::new(Language::JavaScript).unwrap();
-        let tree = parser
-            .parse("const value = req.query;\nmysql.query(value);\n", None)
-            .unwrap();
+    fn test_taint_sources_and_sinks_capture_explicit_file_paths(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let parser = Parser::new(Language::JavaScript)?;
+        let tree = parser.parse("const value = req.query;\nmysql.query(value);\n", None)?;
         let mut analyzer = TaintAnalyzer::new("javascript");
         let file_path = Path::new("src/app.js");
 
-        let sources = analyzer.find_taint_sources(&tree, file_path).unwrap();
-        let sinks = analyzer.find_taint_sinks(&tree, file_path).unwrap();
+        let sources = analyzer.find_taint_sources(&tree, file_path)?;
+        let sinks = analyzer.find_taint_sinks(&tree, file_path)?;
 
         assert!(!sources.is_empty(), "expected taint sources to be detected");
         assert!(!sinks.is_empty(), "expected taint sinks to be detected");
@@ -2192,5 +2185,7 @@ mod tests {
             .iter()
             .all(|source| source.location.file == "src/app.js"));
         assert!(sinks.iter().all(|sink| sink.location.file == "src/app.js"));
+
+        Ok(())
     }
 }

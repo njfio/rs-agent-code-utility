@@ -218,7 +218,6 @@ pub mod sql_injection_detector;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod symbol_table;
 /// Taint analysis for security vulnerability detection
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod taint_analysis;
 #[cfg(not(feature = "ml"))]
 pub use intent_mapping_stub as intent_mapping;
