@@ -40,8 +40,8 @@ fn fibonacci(n: u32) -> u32 {
 }
 "#;
 
-    println!("\n🔍 Testing Code Explanation with Anthropic");
-    println!("----------------------------------------");
+    println!("\n🔍 Testing Code Explanation with Configured Provider");
+    println!("---------------------------------------------------");
     let start = Instant::now();
 
     let explanation_request = AIRequest::new(AIFeature::CodeExplanation, test_code.to_string());
@@ -49,7 +49,7 @@ fn fibonacci(n: u32) -> u32 {
     match service.process_request(explanation_request).await {
         Ok(response) => {
             let duration = start.elapsed();
-            println!("✅ Anthropic Response received in {:?}", duration);
+            println!("✅ Provider response received in {:?}", duration);
             println!("📝 Explanation: {}", response.content);
             println!("🏷️  Model: {}", response.metadata.model_used);
             println!(
@@ -75,7 +75,7 @@ fn fibonacci(n: u32) -> u32 {
             }
         }
         Err(e) => {
-            println!("❌ Anthropic request failed: {}", e);
+            println!("❌ Provider request failed: {}", e);
             return Err(e);
         }
     }
@@ -146,7 +146,7 @@ fn fibonacci(n: u32) -> u32 {
     println!("\n📊 Final Validation Summary");
     println!("============================");
     println!("✅ Real API integration working");
-    println!("✅ Anthropic provider functional");
+    println!("✅ Configured provider functional");
     println!("✅ Multiple AI features tested");
     println!("✅ Error handling working");
     println!("✅ Cache system operational");

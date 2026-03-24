@@ -49,23 +49,23 @@ fn bubble_sort(arr: &mut [i32]) {
         }
     }
 
-    // Test Anthropic
-    println!("\n🧠 Testing Anthropic Provider");
-    println!("------------------------------");
+    // Test Groq
+    println!("\n⚡ Testing Groq Provider");
+    println!("------------------------");
 
-    let anthropic_service = AIServiceBuilder::new()
+    let groq_service = AIServiceBuilder::new()
         .with_config_file("real_ai_config.yaml")?
-        .with_default_provider(AIProvider::Anthropic)
+        .with_default_provider(AIProvider::Groq)
         .build()
         .await?;
 
     let start = Instant::now();
-    let anthropic_request = AIRequest::new(AIFeature::CodeExplanation, test_code.to_string());
+    let groq_request = AIRequest::new(AIFeature::CodeExplanation, test_code.to_string());
 
-    match anthropic_service.process_request(anthropic_request).await {
+    match groq_service.process_request(groq_request).await {
         Ok(response) => {
             let duration = start.elapsed();
-            println!("✅ Anthropic Response ({:?}):", duration);
+            println!("✅ Groq Response ({:?}):", duration);
             println!(
                 "   Content: {}",
                 response.content.chars().take(200).collect::<String>()
@@ -75,7 +75,7 @@ fn bubble_sort(arr: &mut [i32]) {
             }
         }
         Err(e) => {
-            println!("❌ Anthropic failed: {}", e);
+            println!("❌ Groq failed: {}", e);
         }
     }
 

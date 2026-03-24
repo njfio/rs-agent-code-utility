@@ -8,11 +8,6 @@ use std::time::{Duration, SystemTime};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AIProvider {
     OpenAI,
-    Anthropic,
-    Google,
-    AzureOpenAI,
-    Local,
-    Ollama,
     Groq,
 }
 

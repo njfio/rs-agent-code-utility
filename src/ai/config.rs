@@ -345,7 +345,7 @@ impl AIConfig {
 
         // Validate each provider configuration
         for (provider, config) in &self.providers {
-            if config.enabled && config.api_key.is_none() && *provider != AIProvider::Local {
+            if config.enabled && config.api_key.is_none() {
                 return Err(AIError::configuration(format!(
                     "Provider {:?} is enabled but has no API key",
                     provider
@@ -378,12 +378,29 @@ impl std::str::FromStr for AIProvider {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "openai" => Ok(AIProvider::OpenAI),
-            "anthropic" => Ok(AIProvider::Anthropic),
-            "google" => Ok(AIProvider::Google),
-            "azure" | "azureopenai" => Ok(AIProvider::AzureOpenAI),
-            "local" => Ok(AIProvider::Local),
-            "ollama" => Ok(AIProvider::Ollama),
+            "groq" => Ok(AIProvider::Groq),
             _ => Err(AIError::configuration(format!("Unknown provider: {}", s))),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ai_provider_from_str_supports_openai_and_groq() {
+        assert!(matches!(
+            "openai".parse::<AIProvider>(),
+            Ok(AIProvider::OpenAI)
+        ));
+        assert!(matches!("groq".parse::<AIProvider>(), Ok(AIProvider::Groq)));
+    }
+
+    #[test]
+    fn ai_provider_from_str_rejects_removed_variants() {
+        for provider in ["anthropic", "google", "azure", "local", "ollama"] {
+            assert!(provider.parse::<AIProvider>().is_err());
         }
     }
 }

@@ -7,13 +7,7 @@ use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
 #[cfg(feature = "net")]
-pub mod anthropic;
-pub mod azure;
-pub mod google;
-#[cfg(feature = "net")]
 pub mod groq;
-pub mod local;
-pub mod ollama;
 #[cfg(feature = "net")]
 pub mod openai;
 
@@ -78,31 +72,6 @@ pub async fn create_provider(
         AIProvider::OpenAI => Err(AIError::configuration(
             "OpenAI provider requires the 'net' feature".to_string(),
         )),
-        #[cfg(feature = "net")]
-        AIProvider::Anthropic => {
-            let provider = anthropic::AnthropicProvider::new(config).await?;
-            Ok(Box::new(provider))
-        }
-        #[cfg(not(feature = "net"))]
-        AIProvider::Anthropic => Err(AIError::configuration(
-            "Anthropic provider requires the 'net' feature".to_string(),
-        )),
-        AIProvider::Google => {
-            let provider = google::GoogleProvider::new(config).await?;
-            Ok(Box::new(provider))
-        }
-        AIProvider::AzureOpenAI => {
-            let provider = azure::AzureProvider::new(config).await?;
-            Ok(Box::new(provider))
-        }
-        AIProvider::Local => {
-            let provider = local::LocalProvider::new(config).await?;
-            Ok(Box::new(provider))
-        }
-        AIProvider::Ollama => {
-            let provider = ollama::OllamaProvider::new(config).await?;
-            Ok(Box::new(provider))
-        }
         #[cfg(feature = "net")]
         AIProvider::Groq => {
             let provider = groq::GroqProvider::new(config).await?;

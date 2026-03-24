@@ -534,14 +534,14 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 ##### Task 3.1: Delete Placeholder AI Code
 
-- [ ] Delete stub provider implementations:
+- [x] Delete stub provider implementations:
   - `src/ai/providers/azure.rs`
   - `src/ai/providers/google.rs`
   - `src/ai/providers/local.rs`
   - `src/ai/providers/ollama.rs`
   - `src/ai/providers/anthropic.rs` (confirmed: "Placeholder implementation" at line 121)
-- [ ] Keep `src/ai/providers/openai.rs` and `src/ai/providers/groq.rs` (have substantive code)
-- [ ] Remove deleted variants from `AIProvider` enum
+- [x] Keep `src/ai/providers/openai.rs` and `src/ai/providers/groq.rs` (have substantive code)
+- [x] Remove deleted variants from `AIProvider` enum
 - [ ] Delete `src/advanced_ai_analysis.rs` (~2,281 lines, self-documented as "MOSTLY PLACEHOLDER CODE")
 - [ ] Delete `src/ai_analysis.rs` (no real AI calls)
 - [ ] Delete `src/smart_refactoring.rs` (generic, not actionable suggestions)

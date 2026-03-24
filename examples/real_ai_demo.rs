@@ -4,9 +4,9 @@ use rust_tree_sitter::ai::{AIFeature, AIRequest, AIResult, AIServiceBuilder};
 async fn main() -> AIResult<()> {
     println!("🤖 REAL AI Integration Demo");
     println!("===========================");
-    println!("Using Anthropic Claude API with real analysis");
+    println!("Using the configured AI provider with real analysis");
 
-    // Initialize AI service with real Anthropic provider
+    // Initialize AI service with the configured provider
     let ai_service = AIServiceBuilder::new()
         .with_config_file("ai_config.yaml")?
         .build()
@@ -97,8 +97,8 @@ pub fn concurrent_access_example() {
     println!("Contains multiple security vulnerabilities and code quality issues");
 
     // 1. REAL SECURITY ANALYSIS
-    println!("\n🔒 REAL Security Analysis with Claude");
-    println!("=====================================");
+    println!("\n🔒 REAL Security Analysis");
+    println!("=========================");
 
     let security_request = AIRequest::new(
         AIFeature::SecurityAnalysis,
@@ -119,7 +119,7 @@ pub fn concurrent_access_example() {
 
     match ai_service.process_request(security_request).await {
         Ok(response) => {
-            println!("🛡️  Claude's Security Analysis:");
+            println!("🛡️  Provider Security Analysis:");
             println!("Model: {}", response.metadata.model_used);
             println!(
                 "Tokens: {} (${:.4} estimated cost)",
@@ -138,8 +138,8 @@ pub fn concurrent_access_example() {
     }
 
     // 2. REAL CODE EXPLANATION
-    println!("\n📚 REAL Code Explanation with Claude");
-    println!("====================================");
+    println!("\n📚 REAL Code Explanation");
+    println!("========================");
 
     let explanation_request = AIRequest::new(
         AIFeature::CodeExplanation,
@@ -158,7 +158,7 @@ pub fn concurrent_access_example() {
 
     match ai_service.process_request(explanation_request).await {
         Ok(response) => {
-            println!("📖 Claude's Code Explanation:");
+            println!("📖 Provider Code Explanation:");
             println!("Model: {}", response.metadata.model_used);
             println!(
                 "Tokens: {} (${:.4} estimated cost)",
@@ -176,8 +176,8 @@ pub fn concurrent_access_example() {
     }
 
     // 3. REAL REFACTORING SUGGESTIONS
-    println!("\n🔧 REAL Refactoring Suggestions with Claude");
-    println!("===========================================");
+    println!("\n🔧 REAL Refactoring Suggestions");
+    println!("===============================");
 
     let refactor_request = AIRequest::new(
         AIFeature::RefactoringSuggestions,
@@ -197,7 +197,7 @@ pub fn concurrent_access_example() {
 
     match ai_service.process_request(refactor_request).await {
         Ok(response) => {
-            println!("🔄 Claude's Refactoring Suggestions:");
+            println!("🔄 Provider Refactoring Suggestions:");
             println!("Model: {}", response.metadata.model_used);
             println!(
                 "Tokens: {} (${:.4} estimated cost)",
