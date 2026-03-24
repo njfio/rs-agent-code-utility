@@ -914,7 +914,7 @@ def allocation_tracker(items):
     #[cfg(feature = "extended-languages")]
     let expected_files = ["rust_names.rs", "js_names.js", "py_names.py"];
     #[cfg(not(feature = "extended-languages"))]
-    let expected_files = ["rust_names.rs", "js_names.js"];
+    let expected_files = ["rust_names.rs"];
 
     for file_name in expected_files {
         assert!(

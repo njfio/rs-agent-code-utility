@@ -71,6 +71,7 @@ fn test_rust_specific_parsing() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "extended-languages")]
 #[test]
 fn test_javascript_parsing() -> Result<(), Box<dyn std::error::Error>> {
     let parser = Parser::new(Language::JavaScript)?;
@@ -267,10 +268,7 @@ fn test_incremental_parsing() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_language_detection() {
     assert_eq!(detect_language_from_extension("rs"), Some(Language::Rust));
-    assert_eq!(
-        detect_language_from_extension("js"),
-        Some(Language::JavaScript)
-    );
+    assert_eq!(detect_language_from_extension("js"), None);
     assert_eq!(detect_language_from_extension("py"), None);
     assert_eq!(detect_language_from_extension("ts"), None);
     assert_eq!(detect_language_from_extension("unknown"), None);
@@ -281,11 +279,8 @@ fn test_language_detection() {
         detect_language_from_path("src/main.rs"),
         Some(Language::Rust)
     );
+    assert_eq!(detect_language_from_path("app.js"), None);
     assert_eq!(detect_language_from_path("script.py"), None);
-    assert_eq!(
-        detect_language_from_path("app.js"),
-        Some(Language::JavaScript)
-    );
     assert_eq!(detect_language_from_path("example.py"), None);
     assert_eq!(detect_language_from_path("example.ts"), None);
     assert_eq!(detect_language_from_path("example.c"), None);
@@ -297,8 +292,14 @@ fn test_language_detection() {
 #[cfg(feature = "extended-languages")]
 #[test]
 fn test_feature_aware_language_detection() {
+    assert_eq!(detect_language_from_extension("js"), None);
     assert_eq!(detect_language_from_extension("py"), None);
+    assert_eq!(detect_language_from_path("app.js"), None);
     assert_eq!(detect_language_from_path("script.py"), None);
+    assert_eq!(
+        detect_feature_language_from_path("app.js"),
+        Some(Language::JavaScript)
+    );
     assert_eq!(
         detect_feature_language_from_path("script.py"),
         Some(Language::Python)
@@ -321,7 +322,9 @@ fn test_supported_languages() {
     let has_cpp = languages.iter().any(|lang| lang.name == "C++");
     let has_c = languages.iter().any(|lang| lang.name == "C");
     let has_typescript = languages.iter().any(|lang| lang.name == "TypeScript");
+    let has_javascript = languages.iter().any(|lang| lang.name == "JavaScript");
     let has_python = languages.iter().any(|lang| lang.name == "Python");
+    assert!(!has_javascript);
     assert!(!has_python);
     assert!(!has_typescript);
     assert!(!has_c);

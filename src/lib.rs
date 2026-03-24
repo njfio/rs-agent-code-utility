@@ -8,7 +8,7 @@
 //! ## Features
 //!
 //! ### Core Parsing
-//! - **Multi-language support**: Parse Rust, JavaScript, and more
+//! - **Multi-language support**: Parse Rust and additional feature-gated languages
 //! - **Incremental parsing**: Efficient re-parsing of modified code sections
 //! - **Query system**: Powerful pattern matching with Tree-sitter queries
 //! - **Error recovery**: Robust parsing with detailed error reporting and recovery
@@ -511,25 +511,17 @@ pub struct LanguageInfo {
 
 /// Get information about all supported languages
 pub fn supported_languages() -> Vec<LanguageInfo> {
-    vec![
-        LanguageInfo {
-            name: "Rust",
-            version: "0.21.0",
-            file_extensions: &["rs"],
-        },
-        LanguageInfo {
-            name: "JavaScript",
-            version: "0.21.0",
-            file_extensions: &["js", "mjs", "jsx"],
-        },
-    ]
+    vec![LanguageInfo {
+        name: "Rust",
+        version: "0.21.0",
+        file_extensions: &["rs"],
+    }]
 }
 
 /// Detect language from file extension
 pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
     match extension.to_lowercase().as_str() {
         "rs" => Some(Language::Rust),
-        "js" | "mjs" | "jsx" => Some(Language::JavaScript),
         _ => None,
     }
 }
@@ -549,10 +541,7 @@ mod tests {
     #[test]
     fn test_language_detection() {
         assert_eq!(detect_language_from_extension("rs"), Some(Language::Rust));
-        assert_eq!(
-            detect_language_from_extension("js"),
-            Some(Language::JavaScript)
-        );
+        assert_eq!(detect_language_from_extension("js"), None);
         assert_eq!(detect_language_from_extension("py"), None);
         assert_eq!(detect_language_from_extension("ts"), None);
         assert_eq!(detect_language_from_extension("c"), None);
@@ -566,6 +555,7 @@ mod tests {
             detect_language_from_path("src/lib.rs"),
             Some(Language::Rust)
         );
+        assert_eq!(detect_language_from_path("app.js"), None);
         assert_eq!(detect_language_from_path("script.py"), None);
         assert_eq!(detect_language_from_path("component.ts"), None);
         assert_eq!(detect_language_from_path("header.h"), None);
@@ -577,6 +567,7 @@ mod tests {
         let languages = supported_languages();
         assert!(!languages.is_empty());
         assert!(languages.iter().any(|lang| lang.name == "Rust"));
+        assert!(!languages.iter().any(|lang| lang.name == "JavaScript"));
         assert!(!languages.iter().any(|lang| lang.name == "Python"));
         assert!(!languages.iter().any(|lang| lang.name == "TypeScript"));
         assert!(!languages.iter().any(|lang| lang.name == "C"));

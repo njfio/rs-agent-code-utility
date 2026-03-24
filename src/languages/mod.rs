@@ -58,7 +58,16 @@ impl Language {
     pub fn tree_sitter_language(&self) -> Result<tree_sitter::Language> {
         match self {
             Language::Rust => Ok(tree_sitter_rust::language()),
-            Language::JavaScript => Ok(tree_sitter_javascript::language()),
+            Language::JavaScript => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_javascript::language())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
             Language::TypeScript => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -225,7 +234,16 @@ impl Language {
     pub fn highlights_query(&self) -> Option<&'static str> {
         match self {
             Language::Rust => Some(tree_sitter_rust::HIGHLIGHT_QUERY),
-            Language::JavaScript => Some(tree_sitter_javascript::HIGHLIGHT_QUERY),
+            Language::JavaScript => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_javascript::HIGHLIGHT_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::TypeScript => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -324,7 +342,16 @@ impl Language {
     pub fn injections_query(&self) -> Option<&'static str> {
         match self {
             Language::Rust => tree_sitter_rust::INJECTIONS_QUERY.into(),
-            Language::JavaScript => tree_sitter_javascript::INJECTION_QUERY.into(),
+            Language::JavaScript => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    tree_sitter_javascript::INJECTION_QUERY.into()
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::TypeScript => None, // TypeScript injections query not available
             Language::Python => None,     // Python doesn't have injections query
             Language::C => None,          // C doesn't have injections query
@@ -342,7 +369,16 @@ impl Language {
     pub fn locals_query(&self) -> Option<&'static str> {
         match self {
             Language::Rust => None, // Rust doesn't have locals query in this version
-            Language::JavaScript => tree_sitter_javascript::LOCALS_QUERY.into(),
+            Language::JavaScript => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    tree_sitter_javascript::LOCALS_QUERY.into()
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::TypeScript => None, // TypeScript locals query not available
             Language::Python => None,     // Python doesn't have locals query
             Language::C => None,          // C doesn't have locals query
@@ -358,11 +394,12 @@ impl Language {
 
     /// Get all available languages
     pub fn all() -> Vec<Language> {
-        let core_languages = vec![Language::Rust, Language::JavaScript];
+        let core_languages = vec![Language::Rust];
         #[cfg(feature = "extended-languages")]
         {
             let mut languages = core_languages;
             languages.extend([
+                Language::JavaScript,
                 Language::Python,
                 Language::TypeScript,
                 Language::C,
@@ -483,6 +520,7 @@ mod tests {
     #[test]
     fn test_extended_languages_require_feature() {
         for lang in [
+            Language::JavaScript,
             Language::Python,
             Language::TypeScript,
             Language::C,
@@ -496,6 +534,7 @@ mod tests {
         ] {
             assert!(lang.tree_sitter_language().is_err());
         }
+        assert_eq!(detect_language_from_path("example.js"), None);
         assert_eq!(detect_language_from_path("example.py"), None);
         assert_eq!(detect_language_from_path("example.ts"), None);
         assert_eq!(detect_language_from_path("example.c"), None);
