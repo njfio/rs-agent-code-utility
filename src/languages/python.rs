@@ -968,6 +968,14 @@ mod tests {
     use super::*;
     use crate::Parser;
 
+    fn parse_source(source: &str) -> crate::SyntaxTree {
+        let parser = Parser::new(crate::Language::Python)
+            .unwrap_or_else(|error| panic!("failed to create Python parser for test: {error}"));
+        parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse Python source for test: {error}"))
+    }
+
     #[test]
     fn test_python_function_detection() {
         let source = r#"
@@ -1012,8 +1020,7 @@ class InheritedClass(MyClass):
         pass
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let classes = PythonSyntax::find_classes(&tree, source);
         assert_eq!(classes.len(), 2);
@@ -1039,8 +1046,7 @@ def class_method(cls):
     return cls()
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_definition");
         assert_eq!(function_nodes.len(), 3);
@@ -1075,8 +1081,7 @@ with open("file.txt") as f:
 lambda_func = lambda x: x * 2
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let features = PythonSyntax::detect_python_features(&tree);
         assert!(features.contains(&"Async/Await".to_string()));
@@ -1097,8 +1102,7 @@ def complex_function(a, b, c=None, *args, **kwargs):
     return a + b
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_definition");
         assert!(!function_nodes.is_empty());
@@ -1123,8 +1127,7 @@ class MultipleInheritance(Parent, object):
     pass
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let class_nodes = tree.find_nodes_by_kind("class_definition");
         assert_eq!(class_nodes.len(), 3);
@@ -1156,8 +1159,7 @@ class bad_class_name:  # Should be PascalCase
     pass
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let violations = PythonSyntax::check_naming_conventions(&tree, source);
         assert_eq!(violations.len(), 2);
@@ -1179,8 +1181,7 @@ class MyClass:
         pass
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let class_nodes = tree.find_nodes_by_kind("class_definition");
         assert!(!class_nodes.is_empty());

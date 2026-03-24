@@ -659,6 +659,14 @@ mod tests {
     use super::*;
     use crate::Parser;
 
+    fn parse_source(source: &str) -> crate::SyntaxTree {
+        let parser = Parser::new(crate::Language::Cpp)
+            .unwrap_or_else(|error| panic!("failed to create C++ parser for test: {error}"));
+        parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse C++ source for test: {error}"))
+    }
+
     #[test]
     fn test_cpp_function_detection() {
         let source = r#"
@@ -678,8 +686,7 @@ namespace MyNamespace {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let functions = CppSyntax::find_functions(&tree, source);
         println!("Found {} functions: {:?}", functions.len(), functions);
@@ -729,8 +736,7 @@ struct SimpleStruct {
 };
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let classes = CppSyntax::find_classes(&tree, source);
         assert_eq!(classes.len(), 2);
@@ -760,11 +766,7 @@ namespace MyProject {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp)
-            .expect("Failed to create C++ parser: Language::Cpp should be valid");
-        let tree = parser
-            .parse(source, None)
-            .expect("Failed to parse C++ source: test source code should be syntactically valid");
+        let tree = parse_source(source);
 
         let namespaces = CppSyntax::find_namespaces(&tree, source);
         // Relaxed assertion - parser may not detect namespaces correctly
@@ -800,8 +802,7 @@ T max(T a, T b) {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let templates = CppSyntax::find_templates(&tree, source);
         assert_eq!(templates.len(), 3);
@@ -828,8 +829,7 @@ public:
 };
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let class_nodes = tree.find_nodes_by_kind("class_specifier");
         assert_eq!(class_nodes.len(), 2);
@@ -880,8 +880,7 @@ int main() {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let features = CppSyntax::detect_cpp_features(&tree);
         // Check for some basic features - parser may not detect all advanced features
@@ -907,8 +906,7 @@ public:
 };
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_definition");
         // Relaxed assertion - parser may not detect all function types
@@ -925,8 +923,7 @@ class MyContainer {
 };
         "#;
 
-        let parser = Parser::new(crate::Language::Cpp).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let template_nodes = tree.find_nodes_by_kind("template_declaration");
         assert!(!template_nodes.is_empty());

@@ -1064,6 +1064,14 @@ mod tests {
     use super::*;
     use crate::Parser;
 
+    fn parse_source(source: &str) -> crate::SyntaxTree {
+        let parser = Parser::new(crate::Language::C)
+            .unwrap_or_else(|error| panic!("failed to create C parser for test: {error}"));
+        parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse C source for test: {error}"))
+    }
+
     #[test]
     fn test_c_function_detection() {
         let source = r#"
@@ -1080,8 +1088,7 @@ inline int calculate(int a, int b) {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let functions = CSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
@@ -1112,8 +1119,7 @@ typedef struct {
 } Person;
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let structs = CSyntax::find_structs(&tree, source);
         assert_eq!(structs.len(), 2); // Named structs only
@@ -1135,8 +1141,7 @@ typedef struct {
 } Anonymous;
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let typedefs = CSyntax::find_typedefs(&tree, source);
         assert!(typedefs.len() >= 3); // At least Integer, String, Point_t
@@ -1162,8 +1167,7 @@ enum Status {
 };
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let enums = CSyntax::find_enums(&tree, source);
         assert_eq!(enums.len(), 2);
@@ -1181,8 +1185,7 @@ enum Status {
 #define DEBUG_PRINT(x) printf("Debug: %s\n", x)
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let macros = CSyntax::find_macros(&tree, source);
 
@@ -1202,8 +1205,7 @@ int process_data(int count, char *buffer, size_t size) {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_definition");
         assert!(!function_nodes.is_empty());
@@ -1227,19 +1229,20 @@ void* allocate_memory(size_t size) {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_definition");
         assert_eq!(function_nodes.len(), 2);
 
         let return_type1 = CSyntax::function_return_type(&function_nodes[0], source);
-        assert!(return_type1.is_some());
-        assert!(return_type1.unwrap().contains("int"));
+        assert!(return_type1
+            .as_deref()
+            .is_some_and(|return_type| return_type.contains("int")));
 
         let return_type2 = CSyntax::function_return_type(&function_nodes[1], source);
-        assert!(return_type2.is_some());
-        assert!(return_type2.unwrap().contains("void"));
+        assert!(return_type2
+            .as_deref()
+            .is_some_and(|return_type| return_type.contains("void")));
     }
 
     #[test]
@@ -1252,8 +1255,7 @@ struct Person {
 };
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let struct_nodes = tree.find_nodes_by_kind("struct_specifier");
         assert!(!struct_nodes.is_empty());
@@ -1294,8 +1296,7 @@ int main() {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let features = CSyntax::detect_c_features(&tree);
         assert!(features.contains(&"Pointers".to_string()));
@@ -1324,8 +1325,7 @@ int main() {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::C).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let issues = CSyntax::check_memory_patterns(&tree, source);
         assert!(!issues.is_empty());

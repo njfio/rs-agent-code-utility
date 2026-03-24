@@ -221,7 +221,6 @@ pub use intent_mapping_stub as intent_mapping;
 #[cfg(feature = "ml")]
 pub mod embeddings;
 /// Programming language support and parsers
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod languages;
 /// Memory allocation tracking and analysis
 #[allow(clippy::unwrap_used, clippy::expect_used)]
