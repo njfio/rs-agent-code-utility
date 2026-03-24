@@ -152,7 +152,6 @@ pub mod advanced_parallel;
 /// Advanced security analysis with OWASP compliance
 pub mod advanced_security;
 /// AI service layer and provider integrations
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "net")]
 pub mod ai;
 /// Common analysis functionality and helpers
@@ -194,7 +193,6 @@ pub mod infrastructure;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "ml")]
 pub mod intent_mapping;
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(not(feature = "ml"))]
 pub mod intent_mapping_stub;
 /// Semantic context analysis and data flow

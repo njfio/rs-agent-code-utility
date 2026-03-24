@@ -19,7 +19,7 @@ This document breaks the remaining modules into reviewable follow-up PR batches.
 ## Current State
 
 - Crate root already enforces `#![deny(clippy::unwrap_used, clippy::expect_used)]` in [src/lib.rs](../../src/lib.rs)
-- 5 module declarations still carry explicit local `#[allow(...)]` escapes
+- 3 module declarations still carry explicit local `#[allow(...)]` escapes
 - Remaining work should remove those escapes batch-by-batch, not as one large refactor
 
 ## Batch Plan
@@ -129,6 +129,17 @@ Verification:
 - `cargo clippy --lib --tests -- -A warnings -W clippy::unwrap_used -W clippy::expect_used`
 
 ### Batch 6: Feature-Gated AI/ML Surface
+
+Status: in progress on 2026-03-24
+
+- Complete:
+  - `ai`
+  - `intent_mapping_stub`
+
+- Remaining:
+  - `intent_mapping`
+  - `embeddings`
+  - `wiki`
 
 - `ai`
 - `intent_mapping`

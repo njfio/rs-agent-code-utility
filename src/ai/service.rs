@@ -299,7 +299,7 @@ impl AIService {
                     "security_context_{}",
                     SystemTime::now()
                         .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
+                        .unwrap_or_else(|_| Duration::from_secs(0))
                         .as_nanos()
                 ),
                 timestamp: SystemTime::now(),
