@@ -2,6 +2,7 @@
 //!
 //! Provides comprehensive codebase analysis with standardized output formats.
 #![allow(clippy::too_many_arguments)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use crate::cli::error::{validate_path, CliError, CliResult};
 use crate::cli::output::{OutputFormat, OutputHandler};
@@ -164,15 +165,14 @@ pub fn execute(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
     use tempfile::TempDir;
 
     #[test]
-    fn test_analyze_command_validation() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_analyze_command_validation() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         // Test valid inputs
@@ -182,6 +182,7 @@ mod tests {
             false, // include_graph
         );
         assert!(result.is_ok());
+        Ok(())
     }
 
     #[test]
@@ -204,12 +205,12 @@ mod tests {
             false, // include_graph
         );
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CliError::InvalidPath(_)));
+        assert!(matches!(result, Err(CliError::InvalidPath(_))));
     }
 
     #[test]
-    fn test_analyze_command_invalid_format() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_analyze_command_invalid_format() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         let result = execute(
@@ -228,9 +229,7 @@ mod tests {
             false, // include_graph
         );
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            CliError::UnsupportedFormat(_)
-        ));
+        assert!(matches!(result, Err(CliError::UnsupportedFormat(_))));
+        Ok(())
     }
 }

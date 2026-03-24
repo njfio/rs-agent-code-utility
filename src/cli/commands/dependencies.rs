@@ -2,6 +2,7 @@
 //!
 //! Provides comprehensive dependency analysis with security scanning and license compliance.
 #![allow(clippy::too_many_arguments, clippy::wildcard_in_or_patterns)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
@@ -463,17 +464,17 @@ fn render_dependencies_markdown(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
 
     #[test]
-    fn test_dependencies_command_validation() {
-        let temp_dir = TempDir::new().unwrap();
+    fn test_dependencies_command_validation() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         let result = execute(&path, "table", false, false, false, false, false, None);
         assert!(result.is_ok());
+        Ok(())
     }
 }

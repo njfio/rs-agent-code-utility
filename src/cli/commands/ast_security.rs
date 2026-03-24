@@ -7,6 +7,7 @@
     clippy::too_many_arguments,
     clippy::wildcard_in_or_patterns
 )]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
@@ -1134,15 +1135,14 @@ fn print_security_summary(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::security::ast_analyzer::SecurityFindingType;
     use tempfile::TempDir;
 
     #[tokio::test]
-    async fn test_ast_security_command_validation() {
-        let temp_dir = TempDir::new().unwrap();
+    async fn test_ast_security_command_validation() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         let result = execute(
@@ -1150,11 +1150,13 @@ mod tests {
         )
         .await;
         assert!(result.is_ok());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_ast_security_command_invalid_severity() {
-        let temp_dir = TempDir::new().unwrap();
+    async fn test_ast_security_command_invalid_severity() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         let result = execute(
@@ -1174,12 +1176,14 @@ mod tests {
         )
         .await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
+        assert!(matches!(result, Err(CliError::InvalidArgs(_))));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_ast_security_command_invalid_language() {
-        let temp_dir = TempDir::new().unwrap();
+    async fn test_ast_security_command_invalid_language() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         let result = execute(
@@ -1199,42 +1203,49 @@ mod tests {
         )
         .await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
+        assert!(matches!(result, Err(CliError::InvalidArgs(_))));
+        Ok(())
     }
 
     #[test]
-    fn test_parse_inline_suppression_supports_double_slash_comments() {
+    fn test_parse_inline_suppression_supports_double_slash_comments(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let suppressions = parse_inline_suppressions(
             "// rts-ignore[sql-injection]\nlet query = format!(\"SELECT {}\", user_input);\n",
             Language::Rust,
-        )
-        .unwrap();
+        )?;
 
-        let parsed = suppressions.get(&1).unwrap();
+        let Some(parsed) = suppressions.get(&1) else {
+            panic!("expected parsed inline suppression for line 1");
+        };
         assert_eq!(parsed.len(), 1);
         assert_eq!(parsed[0].rule_id.as_deref(), Some("sql-injection"));
+        Ok(())
     }
 
     #[test]
-    fn test_parse_inline_suppression_supports_hash_comments() {
+    fn test_parse_inline_suppression_supports_hash_comments(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let suppressions = parse_inline_suppressions(
             "# rts-ignore\nquery = f\"SELECT * FROM users WHERE id = {user_id}\"\n",
             Language::Python,
-        )
-        .unwrap();
+        )?;
 
-        let parsed = suppressions.get(&1).unwrap();
+        let Some(parsed) = suppressions.get(&1) else {
+            panic!("expected parsed inline suppression for line 1");
+        };
         assert_eq!(parsed.len(), 1);
         assert_eq!(parsed[0].rule_id, None);
+        Ok(())
     }
 
     #[test]
-    fn test_rule_specific_inline_suppression_only_matches_target_rule() {
+    fn test_rule_specific_inline_suppression_only_matches_target_rule(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let suppressions = parse_inline_suppressions(
             "// rts-ignore[sql-injection]\nlet query = format!(\"SELECT {}\", user_input);\n",
             Language::Rust,
-        )
-        .unwrap();
+        )?;
 
         let sql_injection = test_security_finding(1, "Potential SQL Injection", Some("CWE-89"));
         let command_injection =
@@ -1252,15 +1263,16 @@ mod tests {
             Some("sql-injection")
         );
         assert_eq!(retained[0].cwe_id.as_deref(), Some("CWE-78"));
+        Ok(())
     }
 
     #[test]
-    fn test_all_inline_suppression_matches_any_rule_on_next_line_only() {
+    fn test_all_inline_suppression_matches_any_rule_on_next_line_only(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let suppressions = parse_inline_suppressions(
             "# rts-ignore\n\nquery = f\"SELECT * FROM users WHERE id = {user_id}\"\n",
             Language::Python,
-        )
-        .unwrap();
+        )?;
 
         let suppressed_finding =
             test_security_finding(1, "Potential SQL Injection", Some("CWE-89"));
@@ -1275,10 +1287,11 @@ mod tests {
         assert_eq!(suppressed.len(), 1);
         assert_eq!(retained.len(), 1);
         assert_eq!(retained[0].cwe_id.as_deref(), Some("CWE-78"));
+        Ok(())
     }
 
     #[test]
-    fn test_sarif_report_includes_inline_suppressions() {
+    fn test_sarif_report_includes_inline_suppressions() -> Result<(), Box<dyn std::error::Error>> {
         let root = PathBuf::from("/tmp/project");
         let finding = test_security_finding(1, "Potential SQL Injection", Some("CWE-89"));
         let report = generate_sarif_report(
@@ -1293,10 +1306,9 @@ mod tests {
             }],
             &root,
             None,
-        )
-        .unwrap();
+        )?;
 
-        let sarif: serde_json::Value = serde_json::from_str(&report).unwrap();
+        let sarif: serde_json::Value = serde_json::from_str(&report)?;
         assert_eq!(sarif["$schema"], SARIF_SCHEMA_URL);
         let result = &sarif["runs"][0]["results"][0];
         assert_eq!(result["ruleId"], "sql-injection");
@@ -1307,10 +1319,12 @@ mod tests {
             result["suppressions"][0]["justification"],
             "// rts-ignore[sql-injection]"
         );
+        Ok(())
     }
 
     #[test]
-    fn test_inline_suppression_takes_precedence_over_baseline_state() {
+    fn test_inline_suppression_takes_precedence_over_baseline_state(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let finding = test_security_finding(1, "Potential SQL Injection", Some("CWE-89"));
         let fingerprint = fingerprint_ast(&finding);
         let baseline = HashSet::from([fingerprint]);
@@ -1327,13 +1341,13 @@ mod tests {
             }],
             &PathBuf::from("/tmp/project"),
             Some(&baseline),
-        )
-        .unwrap();
+        )?;
 
-        let sarif: serde_json::Value = serde_json::from_str(&report).unwrap();
+        let sarif: serde_json::Value = serde_json::from_str(&report)?;
         let result = &sarif["runs"][0]["results"][0];
         assert!(result.get("baselineState").is_none());
         assert_eq!(result["suppressions"][0]["kind"], "inSource");
+        Ok(())
     }
 
     fn test_security_finding(

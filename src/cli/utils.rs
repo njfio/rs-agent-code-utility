@@ -6,6 +6,7 @@
     clippy::ptr_arg,
     clippy::too_many_arguments
 )]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use super::error::{CliError, CliResult};
 use crate::{AnalysisConfig, AnalysisDepth};
@@ -240,25 +241,25 @@ pub fn print_info(message: &str) {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_confidence_level() {
+    fn test_parse_confidence_level() -> Result<(), Box<dyn std::error::Error>> {
         assert!(matches!(
-            parse_confidence_level("low").unwrap(),
+            parse_confidence_level("low")?,
             crate::advanced_security::ConfidenceLevel::Low
         ));
         assert!(matches!(
-            parse_confidence_level("medium").unwrap(),
+            parse_confidence_level("medium")?,
             crate::advanced_security::ConfidenceLevel::Medium
         ));
         assert!(matches!(
-            parse_confidence_level("high").unwrap(),
+            parse_confidence_level("high")?,
             crate::advanced_security::ConfidenceLevel::High
         ));
         assert!(parse_confidence_level("nope").is_err());
+        Ok(())
     }
 
     #[test]

@@ -2,6 +2,7 @@
 //!
 //! Provides comprehensive security vulnerability scanning with configurable output formats.
 #![allow(clippy::too_many_arguments, clippy::wildcard_in_or_patterns)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 #[cfg(feature = "net")]
 use crate::ai::AIServiceBuilder;
@@ -1046,14 +1047,13 @@ pub fn render_security_markdown(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
 
     #[tokio::test]
-    async fn test_security_command_validation() {
-        let temp_dir = TempDir::new().unwrap();
+    async fn test_security_command_validation() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         let result = execute(
@@ -1074,11 +1074,12 @@ mod tests {
         )
         .await;
         assert!(result.is_ok());
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_security_command_invalid_severity() {
-        let temp_dir = TempDir::new().unwrap();
+    async fn test_security_command_invalid_severity() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
         let path = temp_dir.path().to_path_buf();
 
         let result = execute(
@@ -1104,6 +1105,7 @@ mod tests {
         )
         .await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CliError::InvalidArgs(_)));
+        assert!(matches!(result, Err(CliError::InvalidArgs(_))));
+        Ok(())
     }
 }
