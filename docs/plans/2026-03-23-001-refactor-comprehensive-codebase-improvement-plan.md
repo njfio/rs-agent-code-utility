@@ -121,13 +121,13 @@ The target architecture has three layers:
 
 ##### Task 0.1: Fix CI Pipeline
 
-- [ ] Remove duplicate "Security Analysis Validation" step in `.github/workflows/ci.yml` (lines 44 and 49-50)
-- [ ] Split single sequential CI job into parallel jobs: `fmt`, `clippy`, `test`, `build`, `mcp-test`
-- [ ] Create `.ci/security-baseline.json` with empty baseline `{}` so `security_scan.yml` stops failing
-- [ ] Fix 100+ clippy warnings (run `cargo clippy --all-targets --all-features -- -D warnings`)
-- [ ] Fix failing `cargo fmt --all -- --check`
-- [ ] Fix any failing tests on current branch
-- [ ] Set `WIKI_FETCH_ASSETS=0` in CI to prevent macOS SystemConfiguration hangs
+- [x] Remove duplicate "Security Analysis Validation" step in `.github/workflows/ci.yml` (lines 44 and 49-50)
+- [x] Split single sequential CI job into parallel jobs: `fmt`, `clippy`, `test`, `build`, `mcp-test`
+- [x] Create `.ci/security-baseline.json` with empty baseline `{}` so `security_scan.yml` stops failing
+- [x] Fix 100+ clippy warnings (run `cargo clippy --all-targets --all-features -- -D warnings`)
+- [x] Fix failing `cargo fmt --all -- --check`
+- [x] Fix any failing tests on current branch
+- [x] Set `WIKI_FETCH_ASSETS=0` in CI to prevent macOS SystemConfiguration hangs
 
 **Acceptance criteria:**
 - `cargo fmt --all -- --check` passes
