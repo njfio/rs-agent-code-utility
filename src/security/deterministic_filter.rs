@@ -2,9 +2,10 @@
 #![allow(clippy::should_implement_trait)]
 
 use crate::advanced_security::{SecuritySeverity, SecurityVulnerability};
+use serde::{Deserialize, Serialize};
 
 /// Filter mode for deterministic filtering
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FilterMode {
     Strict,
     Balanced,

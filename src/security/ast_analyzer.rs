@@ -7,7 +7,7 @@
 use crate::error::{Error, Result};
 use crate::languages::Language;
 use crate::parser::Parser;
-use crate::security::ml_filter::MLFalsePositiveFilter;
+use crate::security::heuristic_filter::HeuristicFindingFilter;
 // use crate::taint_analysis::{FunctionCall as TaintFunctionCall, TaintLocation, VariableAssignment};
 use crate::tree::SyntaxTree;
 use serde::{Deserialize, Serialize};
@@ -21,9 +21,8 @@ pub struct AstSecurityAnalyzer {
     language_analyzers: HashMap<Language, Box<dyn LanguageSpecificAnalyzer>>,
     /// Context classifier for determining code context
     context_classifier: ContextClassifier,
-    /// Semantic analysis engine
-    /// ML-based false positive filter
-    ml_filter: MLFalsePositiveFilter,
+    /// Deterministic heuristic filter
+    heuristic_filter: HeuristicFindingFilter,
 }
 
 /// Language-specific security analyzer trait
@@ -333,8 +332,7 @@ impl AstSecurityAnalyzer {
         Ok(Self {
             language_analyzers,
             context_classifier: ContextClassifier::new(),
-
-            ml_filter: crate::security::ml_filter::MLFalsePositiveFilter::new(),
+            heuristic_filter: crate::security::heuristic_filter::HeuristicFindingFilter::new(),
         })
     }
 
@@ -349,10 +347,41 @@ impl AstSecurityAnalyzer {
             file_path.display()
         );
 
-        // Parse the file into AST
-        let parser = Parser::new(language)?;
         let source = std::fs::read_to_string(file_path)?;
-        let tree = parser.parse(&source, None)?;
+        self.analyze_source(&source, file_path, language).await
+    }
+
+    /// Analyze in-memory source code and apply the heuristic false-positive filter.
+    pub async fn analyze_source(
+        &self,
+        source: &str,
+        file_path: &Path,
+        language: Language,
+    ) -> Result<Vec<SecurityFinding>> {
+        self.analyze_source_with_options(source, file_path, language, true)
+            .await
+    }
+
+    /// Analyze in-memory source code without applying the heuristic false-positive filter.
+    pub async fn analyze_source_raw(
+        &self,
+        source: &str,
+        file_path: &Path,
+        language: Language,
+    ) -> Result<Vec<SecurityFinding>> {
+        self.analyze_source_with_options(source, file_path, language, false)
+            .await
+    }
+
+    async fn analyze_source_with_options(
+        &self,
+        source: &str,
+        file_path: &Path,
+        language: Language,
+        apply_heuristic_filter: bool,
+    ) -> Result<Vec<SecurityFinding>> {
+        let parser = Parser::new(language)?;
+        let tree = parser.parse(source, None)?;
 
         // Get language-specific analyzer
         let analyzer = self.language_analyzers.get(&language).ok_or_else(|| {
@@ -368,7 +397,7 @@ impl AstSecurityAnalyzer {
         // Classify code context
         let context =
             self.context_classifier
-                .classify_context(file_path, &source, &semantic_info)?;
+                .classify_context(file_path, source, &semantic_info)?;
 
         // Create language-specific semantic engine for taint analysis
         let semantic_engine = SemanticAnalysisEngine::new().with_language(language.name());
@@ -451,51 +480,55 @@ impl AstSecurityAnalyzer {
             });
         }
 
-        // Apply ML-based false positive filtering
-        let mut filtered_findings = Vec::new();
-        for finding in findings {
-            let finding_type_str = match finding.finding_type {
-                SecurityFindingType::Injection => "Injection",
-                SecurityFindingType::BrokenAccessControl => "BrokenAccessControl",
-                SecurityFindingType::CryptographicFailure => "CryptographicFailure",
-                SecurityFindingType::InsecureDesign => "InsecureDesign",
-                SecurityFindingType::SecurityMisconfiguration => "SecurityMisconfiguration",
-                SecurityFindingType::HardcodedSecret => "HardcodedSecret",
-                SecurityFindingType::WeakAuthentication => "WeakAuthentication",
-                SecurityFindingType::InformationDisclosure => "InformationDisclosure",
-            };
+        let findings_to_return = if apply_heuristic_filter {
+            let mut filtered_findings = Vec::new();
+            for finding in findings {
+                let finding_type_str = match finding.finding_type {
+                    SecurityFindingType::Injection => "Injection",
+                    SecurityFindingType::BrokenAccessControl => "BrokenAccessControl",
+                    SecurityFindingType::CryptographicFailure => "CryptographicFailure",
+                    SecurityFindingType::InsecureDesign => "InsecureDesign",
+                    SecurityFindingType::SecurityMisconfiguration => "SecurityMisconfiguration",
+                    SecurityFindingType::HardcodedSecret => "HardcodedSecret",
+                    SecurityFindingType::WeakAuthentication => "WeakAuthentication",
+                    SecurityFindingType::InformationDisclosure => "InformationDisclosure",
+                };
 
-            let filter_result = self
-                .ml_filter
-                .filter_finding(
-                    finding_type_str,
-                    &finding.file_path,
-                    &finding.code_snippet,
-                    finding.confidence,
-                )
-                .await?;
+                let filter_result = self
+                    .heuristic_filter
+                    .filter_finding(
+                        finding_type_str,
+                        &finding.file_path,
+                        &finding.code_snippet,
+                        finding.confidence,
+                    )
+                    .await?;
 
-            if !filter_result.should_filter {
-                filtered_findings.push(finding);
-            } else {
-                debug!(
-                    "Filtered out finding {} with confidence {:.2}: {}",
-                    finding.id, filter_result.confidence, filter_result.reason
-                );
+                if !filter_result.should_filter {
+                    filtered_findings.push(finding);
+                } else {
+                    debug!(
+                        "Filtered out finding {} with confidence {:.2}: {}",
+                        finding.id, filter_result.confidence, filter_result.reason
+                    );
+                }
             }
-        }
+            filtered_findings
+        } else {
+            findings
+        };
 
-        // Enhance findings with semantic context
-        for finding in &mut filtered_findings {
+        let mut enriched_findings = findings_to_return;
+        for finding in &mut enriched_findings {
             finding.context = context.clone();
             self.enhance_finding_with_semantics(finding, &semantic_info)?;
         }
 
         debug!(
-            "Completed AST analysis with taint analysis and ML filtering, found {} findings",
-            filtered_findings.len()
+            "Completed AST analysis with semantic enrichment and heuristic filtering, found {} findings",
+            enriched_findings.len()
         );
-        Ok(filtered_findings)
+        Ok(enriched_findings)
     }
 
     /// Analyze multiple files

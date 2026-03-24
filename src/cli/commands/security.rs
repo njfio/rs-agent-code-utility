@@ -13,7 +13,7 @@ use crate::cli::utils::{
 };
 use crate::security::deterministic_filter::{filter_vulnerabilities, FilterMode};
 #[cfg(feature = "net")]
-use crate::security::{AstSecurityAnalyzer, MLFalsePositiveFilter};
+use crate::security::{AstSecurityAnalyzer, HeuristicFindingFilter};
 use crate::{CodebaseAnalyzer, SecurityScanner};
 use colored::*;
 use std::collections::HashSet;
@@ -134,7 +134,7 @@ pub async fn execute(
                         CliError::Security(format!("Failed to initialize AI service: {}", e))
                     })?,
             );
-            let ml_filter = Arc::new(MLFalsePositiveFilter::with_mode(det_mode));
+            let heuristic_filter = Arc::new(HeuristicFindingFilter::with_mode(det_mode));
             let ast_analyzer = Arc::new(AstSecurityAnalyzer::new().map_err(|e| {
                 CliError::Security(format!("Failed to create AST analyzer: {}", e))
             })?);
@@ -146,7 +146,7 @@ pub async fn execute(
             };
             SecurityScanner::with_ai_filtering(
                 ai_service,
-                ml_filter,
+                heuristic_filter,
                 ast_analyzer,
                 ai_min_conf,
                 det_mode,

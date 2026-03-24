@@ -7,8 +7,9 @@
 pub mod ai_false_positive_filter;
 pub mod ast_analyzer;
 pub mod deterministic_filter;
-pub mod ml_filter;
+pub mod heuristic_filter;
 pub mod owasp_detector;
+pub mod pipeline;
 pub mod rust_analyzer;
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod vulnerability_correlation;
@@ -27,8 +28,9 @@ pub use ast_analyzer::{
     SecuritySeverity,
 };
 pub use deterministic_filter::*;
-pub use ml_filter::*;
+pub use heuristic_filter::*;
 pub use owasp_detector::*;
+pub use pipeline::{ConfidenceSource, ScoredFinding, SecurityPipeline, SecurityPipelineConfig};
 pub use rust_analyzer::RustAnalyzer;
 #[cfg(any(feature = "net", feature = "db"))]
 pub use vulnerability_correlation::*;

@@ -28,15 +28,22 @@ use crate::languages::detect_language_from_path;
 use crate::parser::Parser;
 #[cfg(feature = "net")]
 use crate::security::ai_false_positive_filter::{AIFalsePositiveFilter, AIFilterConfig};
-use crate::security::ast_analyzer::AstSecurityAnalyzer;
 use crate::security::deterministic_filter::FilterMode;
-use crate::security::ml_filter::MLFalsePositiveFilter;
+use crate::security::{
+    ScoredFinding, SecurityFindingType, SecurityPipeline, SecurityPipelineConfig,
+};
 use crate::tree::{Node, SyntaxTree};
 use crate::{AnalysisResult, Error, FileInfo, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
 use tracing::warn;
+
+#[cfg(feature = "net")]
+use crate::security::ast_analyzer::AstSecurityAnalyzer;
+#[cfg(feature = "net")]
+use crate::security::heuristic_filter::HeuristicFindingFilter;
+#[cfg(feature = "net")]
+use std::sync::Arc;
 
 #[cfg(any(feature = "net", feature = "db"))]
 use crate::security::secrets_detector::SecretsDetector;
@@ -46,7 +53,10 @@ use serde::{Deserialize, Serialize};
 // #[cfg(any(feature = "net", feature = "db"))]
 // use crate::security::{CorrelatedVulnerability, CorrelationResult, VulnerabilityCorrelationEngine};
 
-/// Advanced security analyzer for source code vulnerability detection
+/// Compatibility facade over the canonical `security::SecurityPipeline`.
+///
+/// New code should prefer `SecurityPipeline` directly. This type remains to preserve the
+/// existing codebase-wide result shape and CLI/reporting integrations.
 #[derive(Serialize, Deserialize)]
 pub struct AdvancedSecurityAnalyzer {
     /// Configuration for advanced security analysis
@@ -493,7 +503,7 @@ impl AdvancedSecurityAnalyzer {
     #[cfg(feature = "net")]
     pub async fn with_ai_filtering(
         ai_service: Arc<AIService>,
-        ml_filter: Arc<MLFalsePositiveFilter>,
+        heuristic_filter: Arc<HeuristicFindingFilter>,
         ast_analyzer: Arc<AstSecurityAnalyzer>,
         ai_min_confidence: f64,
         mode: FilterMode,
@@ -515,7 +525,7 @@ impl AdvancedSecurityAnalyzer {
 
         let ai_filter = Some(AIFalsePositiveFilter::new(
             ai_service,
-            ml_filter,
+            heuristic_filter,
             ast_analyzer,
             ai_config,
         ));
@@ -551,9 +561,9 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Create a new advanced security analyzer with custom configuration
-    pub fn with_config(_config: AdvancedSecurityConfig) -> Result<Self> {
+    pub fn with_config(config: AdvancedSecurityConfig) -> Result<Self> {
         Ok(Self {
-            config: AdvancedSecurityConfig::default(),
+            config,
             #[cfg(any(feature = "net", feature = "db"))]
             secrets_detector: None,
             #[cfg(feature = "net")]
@@ -578,6 +588,83 @@ impl AdvancedSecurityAnalyzer {
         }
     }
 
+    fn build_security_pipeline(&self) -> Result<SecurityPipeline> {
+        SecurityPipeline::with_config(SecurityPipelineConfig {
+            min_confidence: 0.5,
+            filter_mode: FilterMode::Balanced,
+            enable_owasp: self.config.owasp_analysis,
+        })
+    }
+
+    fn severity_from_pipeline(severity: &crate::security::SecuritySeverity) -> SecuritySeverity {
+        match severity {
+            crate::security::SecuritySeverity::Info => SecuritySeverity::Info,
+            crate::security::SecuritySeverity::Low => SecuritySeverity::Low,
+            crate::security::SecuritySeverity::Medium => SecuritySeverity::Medium,
+            crate::security::SecuritySeverity::High => SecuritySeverity::High,
+            crate::security::SecuritySeverity::Critical => SecuritySeverity::Critical,
+        }
+    }
+
+    fn confidence_level_from_score(score: f64) -> ConfidenceLevel {
+        if score >= 0.8 {
+            ConfidenceLevel::High
+        } else if score >= 0.5 {
+            ConfidenceLevel::Medium
+        } else {
+            ConfidenceLevel::Low
+        }
+    }
+
+    fn owasp_category_from_finding_type(finding_type: &SecurityFindingType) -> OwaspCategory {
+        match finding_type {
+            SecurityFindingType::Injection => OwaspCategory::Injection,
+            SecurityFindingType::BrokenAccessControl => OwaspCategory::BrokenAccessControl,
+            SecurityFindingType::CryptographicFailure | SecurityFindingType::HardcodedSecret => {
+                OwaspCategory::CryptographicFailures
+            }
+            SecurityFindingType::SecurityMisconfiguration => {
+                OwaspCategory::SecurityMisconfiguration
+            }
+            SecurityFindingType::InsecureDesign
+            | SecurityFindingType::WeakAuthentication
+            | SecurityFindingType::InformationDisclosure => OwaspCategory::InsecureDesign,
+        }
+    }
+
+    fn scored_finding_to_vulnerability(finding: ScoredFinding) -> SecurityVulnerability {
+        SecurityVulnerability {
+            id: finding.id,
+            title: finding.title,
+            description: finding.description,
+            severity: Self::severity_from_pipeline(&finding.severity),
+            owasp_category: Self::owasp_category_from_finding_type(&finding.finding_type),
+            cwe_id: finding.cwe_id,
+            location: VulnerabilityLocation {
+                file: PathBuf::from(&finding.file_path),
+                function: finding.context.function_context.clone(),
+                start_line: finding.line_number,
+                end_line: finding.line_number,
+                column: finding.column_start,
+            },
+            code_snippet: finding.code_snippet,
+            impact: SecurityImpact {
+                confidentiality: ImpactLevel::Medium,
+                integrity: ImpactLevel::Medium,
+                availability: ImpactLevel::Low,
+                overall_score: 5.0,
+            },
+            remediation: RemediationGuidance {
+                summary: finding.remediation,
+                steps: Vec::new(),
+                code_examples: Vec::new(),
+                references: Vec::new(),
+                effort: RemediationEffort::Medium,
+            },
+            confidence: Self::confidence_level_from_score(finding.confidence),
+        }
+    }
+
     /// Perform comprehensive security analysis on a codebase
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<AdvancedSecurityResult> {
         let mut vulnerabilities = Vec::new();
@@ -585,6 +672,7 @@ impl AdvancedSecurityAnalyzer {
         let mut input_validation_issues = Vec::new();
         let mut injection_vulnerabilities = Vec::new();
         let mut best_practice_violations = Vec::new();
+        let pipeline = self.build_security_pipeline()?;
 
         // Analyze each file for security issues
         for file in &analysis_result.files {
@@ -602,8 +690,39 @@ impl AdvancedSecurityAnalyzer {
             };
 
             if self.config.owasp_analysis {
-                let mut file_vulnerabilities =
+                let mut file_vulnerabilities: Vec<SecurityVulnerability> = if let Some(language) =
+                    detect_language_from_path(&file_with_absolute_path.path)
+                {
+                    match pipeline.analyze_file(&file_with_absolute_path.path, language) {
+                        Ok(findings) => findings
+                            .into_iter()
+                            .map(Self::scored_finding_to_vulnerability)
+                            .collect(),
+                        Err(error) => {
+                            warn!(
+                                "Security pipeline failed for {}: {}; using legacy OWASP analysis",
+                                file_with_absolute_path.path.display(),
+                                error
+                            );
+                            Vec::new()
+                        }
+                    }
+                } else {
+                    Vec::new()
+                };
+
+                let legacy_vulnerabilities =
                     self.detect_owasp_vulnerabilities(&file_with_absolute_path)?;
+                for vulnerability in legacy_vulnerabilities {
+                    let is_duplicate = file_vulnerabilities.iter().any(|existing| {
+                        existing.location.start_line == vulnerability.location.start_line
+                            && existing.owasp_category == vulnerability.owasp_category
+                    });
+                    if !is_duplicate {
+                        file_vulnerabilities.push(vulnerability);
+                    }
+                }
+
                 // Update paths to use relative paths for consistency
                 for vuln in &mut file_vulnerabilities {
                     vuln.location.file = file.path.clone();
@@ -756,6 +875,7 @@ impl AdvancedSecurityAnalyzer {
     }
 
     /// Get file content for analysis context
+    #[cfg(feature = "net")]
     fn get_file_content(
         &self,
         file_path: &std::path::Path,

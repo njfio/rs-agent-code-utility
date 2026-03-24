@@ -7,12 +7,12 @@
 //! Features demonstrated:
 //! - AI context analysis for intelligent filtering
 //! - Semantic code understanding
-//! - Machine learning pattern recognition
+//! - Deterministic heuristic pre-filtering
 //! - Multi-factor confidence scoring
 //! - User feedback learning system
 
 use rust_tree_sitter::security::{
-    AIFilterConfig, AstSecurityAnalyzer, MLFalsePositiveFilter, SecurityFinding,
+    AIFilterConfig, AstSecurityAnalyzer, HeuristicFindingFilter, SecurityFinding,
     SecurityFindingType, SecuritySeverity,
 };
 
@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize analyzers
     println!("🔧 Setting up analyzers...");
-    let _ml_filter = MLFalsePositiveFilter::new();
+    let _heuristic_filter = HeuristicFindingFilter::new();
     let ast_analyzer = AstSecurityAnalyzer::new()?;
     println!("✅ Analyzers initialized");
     println!();
@@ -98,7 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Note: AI service would be needed for full functionality
-    // let ai_filter = AIFalsePositiveFilter::new(ai_service, ml_filter, ast_analyzer, ai_config);
+    // let ai_filter = AIFalsePositiveFilter::new(ai_service, heuristic_filter, ast_analyzer, ai_config);
     println!("✅ AI filter configuration ready");
     println!();
 

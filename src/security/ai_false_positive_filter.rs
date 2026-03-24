@@ -1,12 +1,12 @@
 //! Advanced AI-based False Positive Filter
 //!
 //! This module provides intelligent filtering of security findings using AI-powered
-//! context analysis, semantic understanding, and machine learning to drastically
+//! context analysis, semantic understanding, and heuristic pre-filtering to drastically
 //! reduce false positives while maintaining high detection accuracy.
 
 use crate::ai::AIService;
 use crate::security::ast_analyzer::{AstSecurityAnalyzer, SecurityFinding};
-use crate::security::ml_filter::MLFalsePositiveFilter;
+use crate::security::heuristic_filter::HeuristicFindingFilter;
 use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,8 +17,8 @@ use tokio::sync::RwLock;
 pub struct AIFalsePositiveFilter {
     /// AI service for context analysis
     ai_service: Arc<AIService>,
-    /// ML filter for pattern-based filtering
-    ml_filter: Arc<MLFalsePositiveFilter>,
+    /// Heuristic filter for pattern-based filtering
+    heuristic_filter: Arc<HeuristicFindingFilter>,
     /// AST analyzer for semantic understanding
     ast_analyzer: Arc<AstSecurityAnalyzer>,
     /// Feedback database
@@ -112,13 +112,13 @@ impl AIFalsePositiveFilter {
     /// Create a new AI false positive filter
     pub fn new(
         ai_service: Arc<AIService>,
-        ml_filter: Arc<MLFalsePositiveFilter>,
+        heuristic_filter: Arc<HeuristicFindingFilter>,
         ast_analyzer: Arc<AstSecurityAnalyzer>,
         config: AIFilterConfig,
     ) -> Self {
         Self {
             ai_service,
-            ml_filter,
+            heuristic_filter,
             ast_analyzer,
             feedback_db: Arc::new(RwLock::new(HashMap::new())),
             context_cache: Arc::new(RwLock::new(HashMap::new())),
@@ -139,9 +139,9 @@ impl AIFalsePositiveFilter {
         let mut total_confidence = 0.0;
         let mut confidence_count = 0;
 
-        // 1. ML-based filtering
-        let ml_result = self
-            .ml_filter
+        // 1. Heuristic filtering
+        let heuristic_result = self
+            .heuristic_filter
             .filter_finding(
                 &finding.finding_type.to_string(),
                 file_path,
@@ -150,13 +150,13 @@ impl AIFalsePositiveFilter {
             )
             .await?;
 
-        if ml_result.should_filter {
-            factors.push(format!("ML pattern: {}", ml_result.reason));
-            total_confidence += ml_result.confidence;
+        if heuristic_result.should_filter {
+            factors.push(format!("Heuristic pattern: {}", heuristic_result.reason));
+            total_confidence += heuristic_result.confidence;
             confidence_count += 1;
 
-            // Apply ML adjustments
-            for (key, value) in &ml_result.adjustments {
+            // Apply heuristic adjustments
+            for (key, value) in &heuristic_result.adjustments {
                 adjustments.insert(key.clone(), *value);
             }
         }
@@ -211,7 +211,7 @@ impl AIFalsePositiveFilter {
 
         // Determine final filtering decision
         let should_filter = overall_confidence >= self.config.min_ai_confidence
-            && (ml_result.should_filter
+            && (heuristic_result.should_filter
                 || ai_analysis.as_ref().is_some_and(|a| a.is_false_positive));
 
         // Generate comprehensive reasoning
@@ -590,7 +590,7 @@ mod tests {
     use super::*;
     use crate::ai::AIServiceBuilder;
     use crate::security::ast_analyzer::AstSecurityAnalyzer;
-    use crate::security::ml_filter::MLFalsePositiveFilter;
+    use crate::security::heuristic_filter::HeuristicFindingFilter;
 
     #[tokio::test]
     async fn test_ai_filter_creation() {
@@ -601,11 +601,11 @@ mod tests {
                 .await
                 .unwrap(),
         );
-        let ml_filter = Arc::new(MLFalsePositiveFilter::new());
+        let heuristic_filter = Arc::new(HeuristicFindingFilter::new());
         let ast_analyzer = Arc::new(AstSecurityAnalyzer::new().unwrap());
         let config = AIFilterConfig::default();
 
-        let filter = AIFalsePositiveFilter::new(ai_service, ml_filter, ast_analyzer, config);
+        let filter = AIFalsePositiveFilter::new(ai_service, heuristic_filter, ast_analyzer, config);
 
         assert!(filter.config.ai_context_enabled);
     }
@@ -619,11 +619,11 @@ mod tests {
                 .await
                 .unwrap(),
         );
-        let ml_filter = Arc::new(MLFalsePositiveFilter::new());
+        let heuristic_filter = Arc::new(HeuristicFindingFilter::new());
         let ast_analyzer = Arc::new(AstSecurityAnalyzer::new().unwrap());
         let config = AIFilterConfig::default();
 
-        let filter = AIFalsePositiveFilter::new(ai_service, ml_filter, ast_analyzer, config);
+        let filter = AIFalsePositiveFilter::new(ai_service, heuristic_filter, ast_analyzer, config);
 
         // This would need a mock SecurityFinding
         // let finding = SecurityFinding::new(...);
@@ -636,6 +636,6 @@ mod tests {
     #[tokio::test]
     async fn test_pattern_matching() {
         // Test basic functionality without accessing private methods
-        let _filter = MLFalsePositiveFilter::new();
+        let _filter = HeuristicFindingFilter::new();
     }
 }

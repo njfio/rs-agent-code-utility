@@ -323,6 +323,7 @@ pub use enhanced_security::{
 pub use security::OwaspDetector;
 #[cfg(feature = "net")]
 pub use security::{AIFalsePositiveFilter, AIFilterConfig, AIFilterResult, AIFilterStatistics};
+pub use security::{ConfidenceSource, HeuristicFindingFilter, ScoredFinding, SecurityPipeline};
 #[cfg(any(feature = "net", feature = "db"))]
 pub use security::{SecretsDetector, VulnerabilityDatabase};
 

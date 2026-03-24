@@ -1,7 +1,7 @@
-//! ML-based False Positive Filter
+//! Heuristic false positive filter.
 //!
-//! This module provides intelligent filtering of security findings to reduce false positives
-//! using machine learning techniques and pattern recognition.
+//! This module applies deterministic, context-aware rules to reduce noisy security findings
+//! without implying any learned or model-backed behavior.
 
 use crate::security::deterministic_filter::FilterMode;
 use crate::Result;
@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-/// ML-based false positive filter
+/// Deterministic heuristic filter for noisy security findings.
 #[derive(Debug)]
-pub struct MLFalsePositiveFilter {
+pub struct HeuristicFindingFilter {
     /// Historical patterns and their false positive rates
     pattern_database: Arc<RwLock<HashMap<String, PatternStats>>>,
     /// Confidence thresholds for different finding types
@@ -61,8 +61,8 @@ pub struct FilterResult {
     pub adjustments: HashMap<String, f64>,
 }
 
-impl MLFalsePositiveFilter {
-    /// Create a new ML-based false positive filter
+impl HeuristicFindingFilter {
+    /// Create a new heuristic false positive filter.
     pub fn new() -> Self {
         let mut confidence_thresholds = HashMap::new();
         confidence_thresholds.insert("HardcodedSecret".to_string(), 0.6);
@@ -600,11 +600,14 @@ pub struct FilterStatistics {
     pub average_false_positive_rate: f64,
 }
 
-impl Default for MLFalsePositiveFilter {
+impl Default for HeuristicFindingFilter {
     fn default() -> Self {
         Self::new()
     }
 }
+
+#[deprecated(note = "Use HeuristicFindingFilter instead")]
+pub type MLFalsePositiveFilter = HeuristicFindingFilter;
 
 #[cfg(test)]
 #[cfg(feature = "net")]
@@ -613,7 +616,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_filter_finding() {
-        let filter = MLFalsePositiveFilter::new();
+        let filter = HeuristicFindingFilter::new();
 
         // Test filtering a finding in a test file
         let result = filter
@@ -633,7 +636,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_pattern_stats() {
-        let filter = MLFalsePositiveFilter::new();
+        let filter = HeuristicFindingFilter::new();
 
         // Update stats for a pattern
         filter
@@ -655,7 +658,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pattern_matching() {
-        let filter = MLFalsePositiveFilter::new();
+        let filter = HeuristicFindingFilter::new();
 
         assert!(filter.simple_pattern_match("src/test_file.rs", "*test*.rs"));
         assert!(filter.simple_pattern_match("README.md", "README.md"));
