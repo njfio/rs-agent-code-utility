@@ -456,12 +456,11 @@ impl super::WikiGenerator {
                 security.security_hotspots.len()
             );
         }
-        let _ = writeln!(
-            &mut block,
-            "<div class=\"mermaid\">{}</div>",
-            super::security_enhancements::SecurityWikiGenerator::new()
-                .unwrap()
-                .generate_hotspot_diagram(
+        if let Ok(generator) = super::security_enhancements::SecurityWikiGenerator::new() {
+            let _ = writeln!(
+                &mut block,
+                "<div class=\"mermaid\">{}</div>",
+                generator.generate_hotspot_diagram(
                     &security
                         .security_hotspots
                         .iter()
@@ -469,7 +468,8 @@ impl super::WikiGenerator {
                         .cloned()
                         .collect::<Vec<_>>()
                 )
-        );
+            );
+        }
         let _ = writeln!(&mut block, "</div>");
         block
     }

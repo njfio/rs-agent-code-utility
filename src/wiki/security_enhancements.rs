@@ -434,7 +434,11 @@ impl SecurityWikiGenerator {
         // Convert to sorted vector
         let mut hotspot_vec: Vec<_> = hotspots.into_values().collect();
 
-        hotspot_vec.sort_by(|a, b| b.risk_score.partial_cmp(&a.risk_score).unwrap());
+        hotspot_vec.sort_by(|a, b| {
+            b.risk_score
+                .partial_cmp(&a.risk_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         Ok(hotspot_vec)
     }

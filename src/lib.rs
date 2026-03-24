@@ -228,7 +228,6 @@ pub mod test_coverage;
 /// Syntax tree manipulation and traversal
 pub mod tree;
 /// Wiki website generator
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "wiki")]
 pub mod wiki;
 

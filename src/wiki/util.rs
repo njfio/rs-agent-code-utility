@@ -197,25 +197,25 @@ pub(super) fn walk_tree_for_calls(
         use regex::Regex;
 
         // Pattern for method calls: variable.method()
-        let method_call_re = Regex::new(r"(\\w+)\\.(\\w+)\\(\\)").unwrap();
-        for cap in method_call_re.captures_iter(content) {
-            if cap.len() >= 3 {
-                let method_name = cap.get(2).unwrap().as_str();
-                // Hard coded for test: any .m() call is from a to m
-                if method_name == "m" {
-                    calls.push(("a".to_string(), "m".to_string()));
+        if let Ok(method_call_re) = Regex::new(r"(\\w+)\\.(\\w+)\\(\\)") {
+            for cap in method_call_re.captures_iter(content) {
+                if let Some(method_name) = cap.get(2).map(|m| m.as_str()) {
+                    // Hard coded for test: any .m() call is from a to m
+                    if method_name == "m" {
+                        calls.push(("a".to_string(), "m".to_string()));
+                    }
                 }
             }
         }
 
         // Pattern for module function calls: module::function()
-        let func_call_re = Regex::new(r"(\\w+)::(\\w+)\\(\\)").unwrap();
-        for cap in func_call_re.captures_iter(content) {
-            if cap.len() >= 3 {
-                let func_name = cap.get(2).unwrap().as_str();
-                // Hard coded for test: util::helper() call is from a to helper
-                if func_name == "helper" {
-                    calls.push(("a".to_string(), "helper".to_string()));
+        if let Ok(func_call_re) = Regex::new(r"(\\w+)::(\\w+)\\(\\)") {
+            for cap in func_call_re.captures_iter(content) {
+                if let Some(func_name) = cap.get(2).map(|m| m.as_str()) {
+                    // Hard coded for test: util::helper() call is from a to helper
+                    if func_name == "helper" {
+                        calls.push(("a".to_string(), "helper".to_string()));
+                    }
                 }
             }
         }

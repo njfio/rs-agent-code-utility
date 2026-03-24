@@ -375,11 +375,15 @@ impl WikiGenerator {
         // Initialize service once using the runtime
         if self.ai_service.borrow().is_none() {
             let builder = self.make_ai_builder();
-            let service = self
-                .ai_rt
-                .borrow()
-                .as_ref()
-                .expect("runtime just initialized")
+            let runtime = self.ai_rt.borrow();
+            let Some(runtime) = runtime.as_ref() else {
+                return Err(crate::error::Error::Internal {
+                    component: "wiki".to_string(),
+                    message: "AI runtime missing after initialization".to_string(),
+                    context: None,
+                });
+            };
+            let service = runtime
                 .block_on(async { builder.build().await })
                 .map_err(|e| crate::error::Error::Internal {
                     component: "wiki".to_string(),
@@ -399,6 +403,38 @@ impl WikiGenerator {
             message: "AI features require the 'net' feature".to_string(),
             context: None,
         })
+    }
+
+    #[cfg(feature = "net")]
+    fn ai_handles(
+        &self,
+    ) -> Result<(
+        std::cell::Ref<'_, tokio::runtime::Runtime>,
+        std::cell::Ref<'_, crate::ai::service::AIService>,
+    )> {
+        self.ensure_ai()?;
+
+        let runtime = self.ai_rt.borrow();
+        let service = self.ai_service.borrow();
+
+        if runtime.is_none() || service.is_none() {
+            return Err(crate::error::Error::Internal {
+                component: "wiki".to_string(),
+                message: "AI runtime or service missing after initialization".to_string(),
+                context: None,
+            });
+        }
+
+        let runtime = std::cell::Ref::map(runtime, |runtime| match runtime {
+            Some(runtime) => runtime,
+            None => unreachable!("runtime presence checked above"),
+        });
+        let service = std::cell::Ref::map(service, |service| match service {
+            Some(service) => service,
+            None => unreachable!("service presence checked above"),
+        });
+
+        Ok((runtime, service))
     }
 
     /// Generate the wiki site from a path (file or directory)
@@ -1146,11 +1182,7 @@ updateSearch();
         let mut html = String::new();
         use std::fmt::Write as _;
         // Ensure a single AI runtime/service
-        self.ensure_ai()?;
-        let rt = self.ai_rt.borrow();
-        let rt = rt.as_ref().expect("ai runtime initialized");
-        let service = self.ai_service.borrow();
-        let service = service.as_ref().expect("ai service initialized");
+        let (rt, service) = self.ai_handles()?;
         if self.config.ai_json_mode {
             // Ask for structured JSON output per schema
             let mut prompt = String::new();
@@ -1288,10 +1320,9 @@ updateSearch();
         }
 
         if self.config.ai_json_mode && self.ensure_ai().is_ok() {
-            let rt_b = self.ai_rt.borrow();
-            let rt = rt_b.as_ref().expect("ai runtime initialized");
-            let svc_b = self.ai_service.borrow();
-            let service = svc_b.as_ref().expect("ai service initialized");
+            let Ok((rt, service)) = self.ai_handles() else {
+                return (String::new(), vec![]);
+            };
             use std::fmt::Write as _;
             let mut prompt = String::new();
             let _ = writeln!(
@@ -2009,10 +2040,7 @@ impl WikiGenerator {
         .with_max_tokens(400);
 
         self.ensure_ai()?;
-        let rt_b = self.ai_rt.borrow();
-        let rt = rt_b.as_ref().expect("ai runtime initialized");
-        let svc_b = self.ai_service.borrow();
-        let service = svc_b.as_ref().expect("ai service initialized");
+        let (rt, service) = self.ai_handles()?;
 
         let resp = rt
             .block_on(async { service.process_request(req).await })
@@ -2044,11 +2072,7 @@ impl WikiGenerator {
     #[cfg(feature = "net")]
     fn generate_project_ai_block(&self, analysis: &AnalysisResult) -> Result<String> {
         if self.config.ai_json_mode {
-            self.ensure_ai()?;
-            let rt_b = self.ai_rt.borrow();
-            let rt = rt_b.as_ref().expect("ai runtime initialized");
-            let svc_b = self.ai_service.borrow();
-            let service = svc_b.as_ref().expect("ai service initialized");
+            let (rt, service) = self.ai_handles()?;
 
             // Prompt for structured JSON
             use std::fmt::Write as _;
