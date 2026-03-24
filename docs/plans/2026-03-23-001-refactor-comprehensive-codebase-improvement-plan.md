@@ -263,7 +263,7 @@ The target architecture has three layers:
   - `tower`, `governor` -> gate behind `net` (rate limiting only needed for AI providers)
   - `rustyline`, `syntect` -> already gated behind `cli`
   - `memmap2` -> evaluate if needed by core or only by `embeddings` (ml)
-- [ ] Update CI to test: `--no-default-features`, default features, `--all-features`
+- [x] Update CI to test: `--no-default-features`, default features, `--all-features`
 - [ ] Create dependency-to-feature mapping table (see Architecture Research Insights above) and store in `docs/FEATURE_FLAGS.md`
 
 ### Research Insights: Feature Stratification

@@ -49,6 +49,44 @@ jobs:
       # Examples are gated behind the optional "demo" feature and are not built in CI by default.
       # To build examples locally, use: cargo build --examples --features demo
 
+  feature-matrix:
+    name: Feature Matrix (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: no-default
+            cmd: cargo check --no-default-features
+          - name: net
+            cmd: cargo check --features net
+          - name: db
+            cmd: cargo check --features db
+          - name: net-db
+            cmd: cargo check --features "net db"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.name }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-cargo-
+
+      - name: Run feature check
+        run: ${{ matrix.cmd }}
+
   mcp:
     name: MCP Adapter CI
     runs-on: ubuntu-latest
