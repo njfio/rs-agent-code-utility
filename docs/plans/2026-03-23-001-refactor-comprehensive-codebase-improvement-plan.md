@@ -176,12 +176,12 @@ The target architecture has three layers:
 
 ##### Task 0.3: Remove Dead Code and Stale Artifacts
 
-- [ ] Delete `cc = "1.0"` from `[build-dependencies]` (no `build.rs` exists)
-- [ ] Delete stray `src/main.rs` (duplicates `src/bin/main.rs`)
-- [ ] Delete root-level development artifacts: `debug_cpp.rs`, `simple_embedded_test.rs`, `test_cli.rs`, `test_epic2.rs`, `test_rate_limiter.rs`, `test_ai_filtering.rs`, `test_code_map.rs`
-- [ ] Delete committed output: `security_report.json`, `comprehensive_todo_list.md.backup`
-- [ ] Add to `.gitignore`: `security_report.json`, `*.backup`
-- [ ] Delete stale planning docs at root (verify list first -- preserve `AGENTS.md`, `claude.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `CHANGELOG.md`, `INSTRUCTIONS.md`). Target for deletion:
+- [x] Delete `cc = "1.0"` from `[build-dependencies]` (no `build.rs` exists)
+- [x] Delete stray `src/main.rs` (duplicates `src/bin/main.rs`)
+- [x] Delete root-level development artifacts: `debug_cpp.rs`, `simple_embedded_test.rs`, `test_cli.rs`, `test_epic2.rs`, `test_rate_limiter.rs`, `test_ai_filtering.rs`, `test_code_map.rs`
+- [x] Delete committed output: `security_report.json`, `comprehensive_todo_list.md.backup`
+- [x] Add to `.gitignore`: `security_report.json`, `*.backup`
+- [x] Delete stale planning docs at root (verify list first -- preserve `AGENTS.md`, `claude.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `CHANGELOG.md`, `INSTRUCTIONS.md`). Target for deletion:
   - `AUDIT_EPICS_01.md`
   - `CODEX_SECURITY_SCAN_HARDENING_EPICS.md`
   - `CODEBASE_IMPROVEMENT_DOCUMENT.md`
@@ -196,13 +196,15 @@ The target architecture has three layers:
   - `TESTING_ENHANCEMENTS.md`
   - `src/CLAUDE_CODE_TASK_OFFLOADING_GUIDE.md`
   - `src/GEMINI_CLI_TASK_OFFLOADING_GUIDE.md`
-- [ ] Register missing fuzz targets in `fuzz/Cargo.toml`: `fuzz_parse_javascript`, `fuzz_parse_python`
+- [x] Retire the stale fuzz-target subtask (`fuzz/` no longer exists in the repo)
+
+**Implementation note (2026-03-24):** The originally listed dead files are already absent from the tracked repo, `.gitignore` already covers `security_report.json` and backup artifacts, and there are no stray root-level `.rs` files left. The old `fuzz/Cargo.toml` action item is obsolete because the repository no longer contains a `fuzz/` harness.
 
 **Acceptance criteria:**
 - No stale `.md` planning docs at root (except functional docs)
 - No stray `.rs` files at root
 - `.gitignore` covers output artifacts
-- `fuzz/Cargo.toml` lists all 3 fuzz targets
+- No plan steps refer to removed in-repo infrastructure like the old `fuzz/` harness
 
 ##### Task 0.4: Incremental Panic-Free Error Handling
 
@@ -226,10 +228,10 @@ The target architecture has three layers:
 
 **DISCOVERED DURING DEEPENING:** `src/security/ai_false_positive_filter.rs` and `src/security/ml_filter.rs` have unconditional `use tokio::sync::RwLock` imports. When Phase 1 removes `net` from default features, these will cause compilation failures even for the default feature set.
 
-- [ ] Wrap `use tokio::sync::RwLock` in `ai_false_positive_filter.rs` with `#[cfg(feature = "net")]`
-- [ ] Wrap `use tokio::sync::RwLock` in `ml_filter.rs` with `#[cfg(feature = "net")]`
-- [ ] Audit all other source files for unconditional imports of feature-gated dependencies (grep for `use tokio::`, `use reqwest::`, `use sqlx::`, `use candle_`, `use hf_hub::`)
-- [ ] Replace any found unconditional imports with `#[cfg(feature = "...")]` guards
+- [x] Wrap `use tokio::sync::RwLock` in `ai_false_positive_filter.rs` with `#[cfg(feature = "net")]`
+- [x] Confirm the old `ml_filter.rs` path is obsolete and no equivalent Tokio import remains in `heuristic_filter.rs`
+- [x] Audit all other source files for unconditional imports of feature-gated dependencies (grep for `use tokio::`, `use reqwest::`, `use sqlx::`, `use candle_`, `use hf_hub::`)
+- [x] Replace any found unconditional imports with `#[cfg(feature = "...")]` guards
 
 **Implementation note (2026-03-24):** The current repo no longer has `ml_filter.rs` (it was renamed to `heuristic_filter.rs`, which is sync-only). The actual feature-boundary bugs found during execution were broader module-gating issues: `enhanced_security`, `vulnerability_db`, and `vulnerability_correlation` required `net + db`, while `infrastructure::rate_limiter` required `net`. Those boundaries were tightened, and `cargo check` now passes for `--no-default-features`, `--features net`, `--features db`, and `--features "net db"`.
 
@@ -253,20 +255,22 @@ The target architecture has three layers:
 
 ##### Task 1.1: Restructure Feature Flags
 
-- [ ] Change `Cargo.toml` default features: `default = ["std", "serde"]`
-- [ ] Create new `cli` feature gating: `clap`, `colored`, `indicatif`, `tabled`, `rustyline`, `syntect`, `dialoguer`
-- [ ] Add `required-features = ["cli"]` to both `[[bin]]` entries (`tree-sitter-cli` and `rts-cli`)
-- [ ] Verify `ml` feature correctly gates: `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub`
-- [ ] Verify `net` feature correctly gates: `reqwest`, `tokio` (full runtime -- core tokio for async may stay)
-- [ ] Verify `db` feature correctly gates: `sqlx`
-- [ ] Create `full` feature alias: `full = ["std", "serde", "ml", "net", "db", "cli"]`
+- [x] Change `Cargo.toml` default features: `default = ["std", "serde"]`
+- [x] Create `cli` feature gating for the current CLI dependency set: `clap`, `colored`, `indicatif`, `tabled`, `rustyline`, `syntect`, `tracing-subscriber`
+- [x] Add `required-features = ["cli"]` to both `[[bin]]` entries (`tree-sitter-cli` and `rts-cli`)
+- [x] Verify `ml` feature correctly gates: `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub`
+- [x] Verify `net` feature correctly gates: `reqwest`, `tokio` (full runtime -- core tokio for async may stay)
+- [x] Verify `db` feature correctly gates: `sqlx`
+- [x] Create `full` feature alias: `full = ["std", "serde", "ml", "net", "db", "cli", "wiki"]`
 - [ ] Audit remaining 34 direct deps for additional gating opportunities:
   - `pulldown-cmark` -> gate behind `wiki` feature
   - `tower`, `governor` -> gate behind `net` (rate limiting only needed for AI providers)
   - `rustyline`, `syntect` -> already gated behind `cli`
   - `memmap2` -> evaluate if needed by core or only by `embeddings` (ml)
 - [x] Update CI to test: `--no-default-features`, default features, `--all-features`
-- [ ] Create dependency-to-feature mapping table (see Architecture Research Insights above) and store in `docs/FEATURE_FLAGS.md`
+- [x] Create dependency-to-feature mapping table (see Architecture Research Insights above) and store in `docs/FEATURE_FLAGS.md`
+
+**Implementation note (2026-03-24):** The feature split is already live in the repo: default features are `["std", "serde"]`, both CLI bins require `cli`, `docs/FEATURE_FLAGS.md` documents the mapping, and current builds pass for `cargo build`, `cargo build --no-default-features`, `cargo check --features ml`, `cargo check --features net`, `cargo check --features db`, and `cargo check --all-features`. The remaining open item in Task 1.1 is the next reduction pass over always-on dependencies like `memmap2`.
 
 ### Research Insights: Feature Stratification
 
