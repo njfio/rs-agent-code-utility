@@ -776,6 +776,124 @@ fn test_semantic_graph_builds_cross_file_call_edges_and_queries(
 }
 
 #[test]
+fn test_semantic_graph_resolves_transitive_reexports_for_call_edges(
+) -> Result<(), Box<dyn std::error::Error>> {
+    use rust_tree_sitter::CodebaseAnalyzer;
+
+    let temp_dir = TempDir::new()?;
+    fs::create_dir_all(temp_dir.path().join("src"))?;
+
+    fs::write(
+        temp_dir.path().join("src").join("main.rs"),
+        "mod utils;\nmod facade;\nmod api;\nuse crate::api::helper;\n\nfn run() {\n    helper();\n}\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("src").join("utils.rs"),
+        "pub fn helper() {}\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("src").join("facade.rs"),
+        "pub use crate::utils::helper;\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("src").join("api.rs"),
+        "pub use crate::facade::helper;\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("app.js"),
+        "import { helper } from \"./index.js\";\n\nfunction run() {\n  helper();\n}\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("index.js"),
+        "export { helper } from \"./facade.js\";\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("facade.js"),
+        "export { helper } from \"./helper.js\";\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("helper.js"),
+        "export function helper() {}\n",
+    )?;
+
+    let mut analyzer = CodebaseAnalyzer::new()?;
+    analyzer.enable_semantic_graph();
+    analyzer.analyze_directory(temp_dir.path())?;
+
+    let graph = analyzer
+        .semantic_graph()
+        .expect("semantic graph should exist");
+    let snapshot = graph.snapshot();
+
+    let rust_caller_id = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.file_path == PathBuf::from("src/main.rs") && node.name == "run")
+        .map(|node| node.id.clone())
+        .expect("expected Rust caller node");
+    let rust_callee_id = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.file_path == PathBuf::from("src/utils.rs") && node.name == "helper")
+        .map(|node| node.id.clone())
+        .expect("expected Rust callee node");
+    let js_caller_id = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.file_path == PathBuf::from("app.js") && node.name == "run")
+        .map(|node| node.id.clone())
+        .expect("expected JavaScript caller node");
+    let js_callee_id = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.file_path == PathBuf::from("helper.js") && node.name == "helper")
+        .map(|node| node.id.clone())
+        .expect("expected JavaScript callee node");
+
+    assert!(
+        snapshot.edges.iter().any(|edge| {
+            edge.relationship == RelationshipType::Calls
+                && edge.from == rust_caller_id
+                && edge.to == rust_callee_id
+        }),
+        "expected Rust call edge to resolve through re-exports, got edges: {:?}",
+        snapshot.edges
+    );
+    assert!(
+        snapshot.edges.iter().any(|edge| {
+            edge.relationship == RelationshipType::Calls
+                && edge.from == js_caller_id
+                && edge.to == js_callee_id
+        }),
+        "expected JS call edge to resolve through re-exports, got edges: {:?}",
+        snapshot.edges
+    );
+
+    let config = QueryConfig::default();
+    let rust_callers =
+        graph.find_callers("helper", PathBuf::from("src/utils.rs").as_path(), &config);
+    assert!(rust_callers
+        .nodes
+        .iter()
+        .any(|node| node.file_path == PathBuf::from("src/main.rs") && node.name == "run"));
+
+    let js_callers = graph.find_callers("helper", PathBuf::from("helper.js").as_path(), &config);
+    assert!(js_callers
+        .nodes
+        .iter()
+        .any(|node| node.file_path == PathBuf::from("app.js") && node.name == "run"));
+
+    Ok(())
+}
+
+#[test]
 fn test_graph_statistics() -> Result<(), Box<dyn std::error::Error>> {
     let analysis = create_test_analysis_result()?;
     let mut graph = SemanticGraphQuery::new();

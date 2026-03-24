@@ -191,6 +191,9 @@ struct ResolvedCallTarget {
     target_symbol: String,
 }
 
+type SymbolLocation = (PathBuf, String);
+type ReexportLookup = HashMap<SymbolLocation, SymbolLocation>;
+
 impl SemanticGraphQuery {
     /// Create a new semantic graph query system
     pub fn new() -> Self {
@@ -1507,6 +1510,144 @@ impl SemanticGraphQuery {
         (symbol_bindings, module_bindings)
     }
 
+    fn resolve_rust_reexport_bindings(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Vec<ImportedSymbolBinding> {
+        let mut symbol_bindings = Vec::new();
+
+        for line in content.lines() {
+            if !line.trim().starts_with("pub use ") {
+                continue;
+            }
+
+            let Some((mut segments, alias)) = Self::parse_rust_use_statement(line) else {
+                continue;
+            };
+            let Some(base_dir) = Self::resolve_rust_base_dir(current_file, &mut segments) else {
+                continue;
+            };
+            if segments.len() < 2 {
+                continue;
+            }
+
+            let target_symbol = segments.last().cloned().unwrap_or_default();
+            let target_segments = &segments[..segments.len() - 1];
+            if let Some(target_path) =
+                Self::resolve_rust_module_path(&base_dir, target_segments, known_paths)
+            {
+                let alias = alias.unwrap_or_else(|| target_symbol.clone());
+                symbol_bindings.push(ImportedSymbolBinding {
+                    alias,
+                    target_path,
+                    target_symbol,
+                });
+            }
+        }
+
+        symbol_bindings
+    }
+
+    fn resolve_js_reexport_bindings(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Vec<ImportedSymbolBinding> {
+        let mut symbol_bindings = Vec::new();
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if !(trimmed.starts_with("export {") && trimmed.contains("} from ")) {
+                continue;
+            }
+
+            let Some(open) = trimmed.find('{') else {
+                continue;
+            };
+            let Some(close) = trimmed.find('}') else {
+                continue;
+            };
+            let Some(spec) = trimmed.split(" from ").nth(1) else {
+                continue;
+            };
+            let spec = spec.trim().trim_matches(&['"', '\'', ';'][..]);
+            let Some(target_path) = Self::resolve_js_relative_spec(current_file, spec, known_paths)
+            else {
+                continue;
+            };
+
+            for binding in trimmed[open + 1..close].split(',') {
+                let binding = binding.trim();
+                if binding.is_empty() {
+                    continue;
+                }
+
+                let mut parts = binding.splitn(2, " as ");
+                let original = parts.next().unwrap_or("").trim();
+                let alias = parts.next().map(str::trim).unwrap_or(original);
+                if !original.is_empty() && !alias.is_empty() {
+                    symbol_bindings.push(ImportedSymbolBinding {
+                        alias: alias.to_string(),
+                        target_path: target_path.clone(),
+                        target_symbol: original.to_string(),
+                    });
+                }
+            }
+        }
+
+        symbol_bindings
+    }
+
+    fn build_symbol_reexport_lookup(
+        analysis: &AnalysisResult,
+        file_sources: &HashMap<PathBuf, String>,
+        known_paths: &HashSet<PathBuf>,
+    ) -> ReexportLookup {
+        let mut reexports = HashMap::new();
+
+        for file in &analysis.files {
+            let Some(content) = file_sources.get(&file.path) else {
+                continue;
+            };
+
+            let bindings = match file.language.as_str() {
+                "Rust" => Self::resolve_rust_reexport_bindings(&file.path, content, known_paths),
+                "JavaScript" | "TypeScript" => {
+                    Self::resolve_js_reexport_bindings(&file.path, content, known_paths)
+                }
+                _ => Vec::new(),
+            };
+
+            for binding in bindings {
+                reexports.insert(
+                    (file.path.clone(), binding.alias),
+                    (binding.target_path, binding.target_symbol),
+                );
+            }
+        }
+
+        reexports
+    }
+
+    fn resolve_reexport_target(
+        target_path: &Path,
+        target_symbol: &str,
+        reexports: &ReexportLookup,
+    ) -> SymbolLocation {
+        let mut resolved = (target_path.to_path_buf(), target_symbol.to_string());
+        let mut visited = HashSet::new();
+
+        while visited.insert(resolved.clone()) {
+            let Some(next) = reexports.get(&resolved) else {
+                break;
+            };
+            resolved = next.clone();
+        }
+
+        resolved
+    }
+
     fn is_non_call_keyword(name: &str) -> bool {
         matches!(
             name,
@@ -1688,6 +1829,7 @@ impl SemanticGraphQuery {
         known_paths: &HashSet<PathBuf>,
     ) -> Result<()> {
         let symbol_lookup = self.build_symbol_node_lookup();
+        let reexports = Self::build_symbol_reexport_lookup(analysis, file_sources, known_paths);
 
         for file in &analysis.files {
             let Some(content) = file_sources.get(&file.path) else {
@@ -1708,8 +1850,13 @@ impl SemanticGraphQuery {
                     continue;
                 };
                 let source_id = Self::symbol_node_id(&file.path, caller);
-                let Some(target_id) =
-                    symbol_lookup.get(&(target.target_path.clone(), target.target_symbol.clone()))
+                let (resolved_target_path, resolved_target_symbol) = Self::resolve_reexport_target(
+                    &target.target_path,
+                    &target.target_symbol,
+                    &reexports,
+                );
+                let Some(target_id) = symbol_lookup
+                    .get(&(resolved_target_path.clone(), resolved_target_symbol.clone()))
                 else {
                     continue;
                 };
@@ -1724,8 +1871,8 @@ impl SemanticGraphQuery {
                     0.9,
                     Some(&format!(
                         "{}:{}",
-                        target.target_path.display(),
-                        target.target_symbol
+                        resolved_target_path.display(),
+                        resolved_target_symbol
                     )),
                 ));
             }

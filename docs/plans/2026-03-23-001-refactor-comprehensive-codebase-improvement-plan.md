@@ -657,12 +657,12 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 **Note:** `GraphNode` already has `file_path: PathBuf`. This task focuses on cross-file edge creation, not adding the field.
 
-- [ ] Implement cross-file edge creation:
+- [x] Implement cross-file edge creation:
   - [x] Parse `use`/`import`/`require` statements to create `Imports` edges (Rust and JavaScript/TypeScript checkpoint landed on 2026-03-24)
   - [x] Match exported symbols across files to create `Calls` edges for simple Rust and JavaScript import patterns (checkpoint landed on 2026-03-24)
-  - [ ] Track re-exports for transitive resolution
+  - [x] Track re-exports for transitive resolution (checkpoint landed on 2026-03-24)
 - [ ] Build cross-file graph incrementally (parse each file, merge into unified graph)
-- [ ] Add graph query functions:
+- [x] Add graph query functions:
   - [x] `find_callers(symbol)`
   - [x] `find_callees(symbol)`
   - [x] `trace_data_flow(source_file, sink_file)`
