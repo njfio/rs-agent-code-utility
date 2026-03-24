@@ -852,8 +852,8 @@ Phase 0 (CI/deps)
 
 ### Quality Gates
 
-- [ ] All phases pass `cargo clippy --all-targets --all-features -- -D warnings`
-- [ ] All phases pass `cargo fmt --all -- --check`
+- [x] All phases pass `cargo clippy --all-targets --all-features -- -D warnings`
+- [x] All phases pass `cargo fmt --all -- --check`
 - [ ] Test coverage does not decrease (currently 667 test functions)
 - [ ] Each phase is a separate PR, reviewed before merge
 
