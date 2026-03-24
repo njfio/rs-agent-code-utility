@@ -188,6 +188,14 @@ const CORPUS_CASES: &[CorpusCase] = &[
         min_confidence: ConfidenceLevel::Low,
     },
     CorpusCase {
+        class: "command-injection",
+        relative_path:
+            "tests/fixtures/security-corpus/command-injection/python-negative-check-output-args.py",
+        cwe_id: "CWE-78",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
         class: "secrets",
         relative_path: "tests/fixtures/security-corpus/secrets/rust-positive-aws.rs",
         cwe_id: "CWE-798",
@@ -252,6 +260,13 @@ const CORPUS_CASES: &[CorpusCase] = &[
     },
     CorpusCase {
         class: "secrets",
+        relative_path: "tests/fixtures/security-corpus/secrets/javascript-positive-password.js",
+        cwe_id: "CWE-798",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "secrets",
         relative_path:
             "tests/fixtures/security-corpus/secrets/javascript-negative-password-field.js",
         cwe_id: "CWE-798",
@@ -281,6 +296,22 @@ const CORPUS_CASES: &[CorpusCase] = &[
     },
     CorpusCase {
         class: "xss",
+        relative_path:
+            "tests/fixtures/security-corpus/xss/javascript-positive-document-write-concat.js",
+        cwe_id: "CWE-79",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Medium,
+    },
+    CorpusCase {
+        class: "xss",
+        relative_path:
+            "tests/fixtures/security-corpus/xss/javascript-positive-innerhtml-template.js",
+        cwe_id: "CWE-79",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Medium,
+    },
+    CorpusCase {
+        class: "xss",
         relative_path: "tests/fixtures/security-corpus/xss/javascript-negative-textcontent.js",
         cwe_id: "CWE-79",
         expected: ExpectedOutcome::Safe,
@@ -289,6 +320,20 @@ const CORPUS_CASES: &[CorpusCase] = &[
     CorpusCase {
         class: "xss",
         relative_path: "tests/fixtures/security-corpus/xss/javascript-negative-create-text-node.js",
+        cwe_id: "CWE-79",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "xss",
+        relative_path: "tests/fixtures/security-corpus/xss/javascript-negative-innertext.js",
+        cwe_id: "CWE-79",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "xss",
+        relative_path: "tests/fixtures/security-corpus/xss/javascript-negative-append-text-node.js",
         cwe_id: "CWE-79",
         expected: ExpectedOutcome::Safe,
         min_confidence: ConfidenceLevel::Low,
@@ -302,8 +347,8 @@ fn security_corpus_meets_detection_thresholds() {
     let mut overall_metrics = AccuracyMetrics::new();
 
     assert!(
-        CORPUS_CASES.len() >= 36,
-        "expected at least 36 corpus cases, found {}",
+        CORPUS_CASES.len() >= 42,
+        "expected at least 42 corpus cases, found {}",
         CORPUS_CASES.len()
     );
 
