@@ -478,7 +478,7 @@ The target architecture has three layers:
 
 ##### Task 2.6: Self-Analyzing Dogfood CI
 
-- [ ] Add CI step to `.github/workflows/ci.yml`:
+- [x] Add CI step to `.github/workflows/ci.yml`:
   ```yaml
   dogfood:
     runs-on: ubuntu-latest
@@ -494,8 +494,8 @@ The target architecture has three layers:
           # - security findings have confidence scores
           # - no panic in output
   ```
-- [ ] Define initial quality thresholds (start permissive, tighten over time)
-- [ ] Upload self-analysis results as CI artifact for trend tracking
+- [x] Define initial quality thresholds (start permissive, tighten over time)
+- [x] Upload self-analysis results as CI artifact for trend tracking
 
 **Acceptance criteria:**
 - CI runs self-analysis on every PR

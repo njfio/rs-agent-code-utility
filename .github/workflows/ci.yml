@@ -46,7 +46,41 @@ jobs:
       - name: Build binaries (no examples)
         run: |
           cargo build --bins --all-features
-      - name: Security Analysis Validation
-        run: cargo test comprehensive_security_tests
       # Examples are gated behind the optional "demo" feature and are not built in CI by default.
       # To build examples locally, use: cargo build --examples --features demo
+
+  dogfood:
+    name: Dogfood Self-Analysis
+    runs-on: ubuntu-latest
+    needs: [rust]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run self-analysis dogfood test
+        env:
+          DOGFOOD_OUTPUT: target/dogfood/self-analysis.json
+        run: cargo test --test dogfood_ci
+
+      - name: Upload self-analysis artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-analysis
+          path: target/dogfood/self-analysis.json
+          if-no-files-found: warn

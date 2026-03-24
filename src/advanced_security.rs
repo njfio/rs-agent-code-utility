@@ -158,6 +158,30 @@ pub enum SecuritySeverity {
     Info,
 }
 
+impl PartialOrd for SecuritySeverity {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for SecuritySeverity {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.rank().cmp(&other.rank())
+    }
+}
+
+impl SecuritySeverity {
+    fn rank(&self) -> u8 {
+        match self {
+            SecuritySeverity::Info => 0,
+            SecuritySeverity::Low => 1,
+            SecuritySeverity::Medium => 2,
+            SecuritySeverity::High => 3,
+            SecuritySeverity::Critical => 4,
+        }
+    }
+}
+
 /// OWASP Top 10 categories
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OwaspCategory {

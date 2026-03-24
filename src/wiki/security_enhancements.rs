@@ -115,36 +115,6 @@ pub enum ImpactLevel {
     Critical,
 }
 
-// Implement PartialOrd for SecuritySeverity to enable comparisons
-impl PartialOrd for SecuritySeverity {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for SecuritySeverity {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Define ordering: Info < Low < Medium < High < Critical
-        let self_score = match self {
-            SecuritySeverity::Info => 0,
-            SecuritySeverity::Low => 1,
-            SecuritySeverity::Medium => 2,
-            SecuritySeverity::High => 3,
-            SecuritySeverity::Critical => 4,
-        };
-
-        let other_score = match other {
-            SecuritySeverity::Info => 0,
-            SecuritySeverity::Low => 1,
-            SecuritySeverity::Medium => 2,
-            SecuritySeverity::High => 3,
-            SecuritySeverity::Critical => 4,
-        };
-
-        self_score.cmp(&other_score)
-    }
-}
-
 /// Security hotspot with severity and location
 #[derive(Debug, Clone)]
 pub struct SecurityHotspot {
