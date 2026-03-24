@@ -10,9 +10,9 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `serde` | Compatibility marker for the default feature set | No additional dependencies |
 | `cli` | Command-line binaries and CLI-only formatting | `clap`, `colored`, `indicatif`, `rustyline`, `syntect`, `tabled`, `tracing-subscriber` |
 | `ml` | Embeddings and model-backed intent mapping | `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub` |
-| `net` | Network/runtime-backed providers and rate-limited HTTP | `reqwest`, `tokio`, `governor`, `tower` |
+| `net` | Network/runtime-backed providers and rate-limited HTTP | `reqwest`, `tokio`, `governor`, `tower`, `config` |
 | `mmap` | Real memory-mapped file support for the advanced memory manager | `memmap2` |
-| `db` | Database-backed infrastructure | `sqlx` |
+| `db` | Database-backed infrastructure | `sqlx`, `config` |
 | `wiki` | Static wiki generation with markdown + network-backed enrichment | `pulldown-cmark`, `net` |
 | `demo` | Example binaries only | No additional dependencies directly |
 | `full` | Restore the previous broad behavior surface | `std`, `serde`, `ml`, `net`, `db`, `cli`, `wiki`, `mmap` |
@@ -37,6 +37,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `tokio` | `net` | Async runtime for provider/database/wiki flows |
 | `governor` | `net` | Rate limiting |
 | `tower` | `net` | Retry/timeout middleware |
+| `config` | `net`, `db` | Environment/file-backed infrastructure configuration loading |
 | `memmap2` | `mmap` | True OS-backed memory mapping for `advanced_memory` |
 | `sqlx` | `db` | SQLite-backed persistence |
 | `pulldown-cmark` | `wiki` | Markdown rendering for wiki output |
@@ -49,7 +50,7 @@ These remain part of the core build today and still dominate the dependency foot
 - `serde`, `serde_json`, `serde_yaml`, `toml`
 - `regex`, `sha2`, `rand`, `rayon`, `petgraph`, `ignore`
 - `crc32fast`, `flate2`, `crossbeam-channel`, `parking_lot`, `walkdir`, `base64`
-- `chrono`, `uuid`, `async-trait`, `config`, `tracing`, `anyhow`, `exponential-backoff`
+- `chrono`, `uuid`, `async-trait`, `tracing`, `anyhow`, `exponential-backoff`
 
 ## Binary and Example Gating
 
@@ -61,12 +62,12 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, and swapping the cache backend off the direct `dashmap` dependency, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, and gating the external `config` crate behind infrastructure features, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `576` |
-| Default | `cargo tree | wc -l` | `576` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `505` |
+| Default | `cargo tree | wc -l` | `505` |
 | All features | `cargo tree --all-features | wc -l` | `1392` |
 
 Notes:
@@ -77,4 +78,5 @@ Notes:
 - `num_cpus` is no longer a direct core dependency; default thread sizing now uses `std::thread::available_parallelism()`.
 - `dirs` is no longer a direct core dependency; infrastructure default paths are resolved with internal std-based helpers, although `dirs` still appears transitively under `ml` through `hf-hub`.
 - `dashmap` is no longer a direct core dependency; the in-memory cache now uses `parking_lot::RwLock<HashMap<...>>`, although `dashmap` still appears transitively under `net` through `governor`.
+- `config` is no longer a direct core dependency; it now only appears when `net` or `db` infrastructure is requested.
 - The crate-count target from the plan is still not met. The next reduction pass should focus on the remaining always-on direct dependencies and the tree-sitter grammar footprint.

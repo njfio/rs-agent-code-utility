@@ -60,7 +60,7 @@ sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 async-trait = "0.1"
-config = "0.14"
+config = { version = "0.14", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 anyhow = "1.0"
@@ -120,12 +120,14 @@ net = [
     "dep:tokio",
     "dep:governor",
     "dep:tower",
+    "dep:config",
 ]
 mmap = [
     "dep:memmap2",
 ]
 db = [
     "dep:sqlx",
+    "dep:config",
 ]
 wiki = [
     "dep:pulldown-cmark",
