@@ -7,7 +7,6 @@
 use crate::infrastructure::DatabaseManager;
 use crate::{log_debug as debug, log_warn as warn};
 use anyhow::Result;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -22,6 +21,51 @@ static AWS_SECRET_KEY_NEARBY_REGEX: OnceLock<std::result::Result<Regex, regex::E
 static AWS_ACCESS_KEY_NEARBY_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> =
     OnceLock::new();
 static SLACK_TOKEN_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();
+
+fn decode_base64url_no_pad(input: &str) -> Option<Vec<u8>> {
+    if input.len() % 4 == 1 {
+        return None;
+    }
+
+    let mut output = Vec::with_capacity((input.len() * 3) / 4);
+    let mut chunk = [0u8; 4];
+    let mut chunk_len = 0;
+
+    for byte in input.bytes() {
+        let value = match byte {
+            b'A'..=b'Z' => byte - b'A',
+            b'a'..=b'z' => byte - b'a' + 26,
+            b'0'..=b'9' => byte - b'0' + 52,
+            b'-' => 62,
+            b'_' => 63,
+            _ => return None,
+        };
+
+        chunk[chunk_len] = value;
+        chunk_len += 1;
+
+        if chunk_len == 4 {
+            output.push((chunk[0] << 2) | (chunk[1] >> 4));
+            output.push((chunk[1] << 4) | (chunk[2] >> 2));
+            output.push((chunk[2] << 6) | chunk[3]);
+            chunk_len = 0;
+        }
+    }
+
+    match chunk_len {
+        0 => Some(output),
+        2 => {
+            output.push((chunk[0] << 2) | (chunk[1] >> 4));
+            Some(output)
+        }
+        3 => {
+            output.push((chunk[0] << 2) | (chunk[1] >> 4));
+            output.push((chunk[1] << 4) | (chunk[2] >> 2));
+            Some(output)
+        }
+        _ => None,
+    }
+}
 
 /// Real secrets detector with multiple detection methods
 #[derive(Debug)]
@@ -740,13 +784,13 @@ impl SecretsDetector {
             return false;
         }
         let (h, p, _sig) = (parts[0], parts[1], parts[2]);
-        let header = match URL_SAFE_NO_PAD.decode(h) {
-            Ok(b) => b,
-            Err(_) => return false,
+        let header = match decode_base64url_no_pad(h) {
+            Some(b) => b,
+            None => return false,
         };
-        let payload = match URL_SAFE_NO_PAD.decode(p) {
-            Ok(b) => b,
-            Err(_) => return false,
+        let payload = match decode_base64url_no_pad(p) {
+            Some(b) => b,
+            None => return false,
         };
         let header_json: serde_json::Value = match serde_json::from_slice(&header) {
             Ok(v) => v,

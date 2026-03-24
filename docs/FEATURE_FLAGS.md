@@ -66,7 +66,7 @@ These remain part of the core build today and still dominate the dependency foot
 - `tree-sitter` plus the core grammar set: Rust
 - `serde`, `serde_json`, `serde_yaml`, `toml`
 - `regex`, `rand`, `rayon`, `petgraph`, `ignore`
-- `parking_lot`, `base64`
+- `parking_lot`
 
 ## Binary and Example Gating
 
@@ -78,13 +78,13 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, removing the unused `sha2` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, moving `crc32fast` behind `wiki`, moving the JavaScript/Python/C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, switching `advanced_cache` disk persistence from gzip-compressed JSON to plain JSON so `flate2` is no longer always-on, replacing `walkdir` usage in declarative rule loading plus AST security file discovery with std-based recursive traversal, and replacing the `advanced_parallel` scheduler's direct `crossbeam-channel` usage with std `mpsc`, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, removing the unused `sha2` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, moving `crc32fast` behind `wiki`, moving the JavaScript/Python/C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, switching `advanced_cache` disk persistence from gzip-compressed JSON to plain JSON so `flate2` is no longer always-on, replacing `walkdir` usage in declarative rule loading plus AST security file discovery with std-based recursive traversal, replacing the `advanced_parallel` scheduler's direct `crossbeam-channel` usage with std `mpsc`, and replacing the secrets detector's direct `base64` usage with a crate-local base64url decoder for JWT validation, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `422` |
-| Default | `cargo tree | wc -l` | `422` |
-| All features | `cargo tree --all-features | wc -l` | `1388` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `421` |
+| Default | `cargo tree | wc -l` | `421` |
+| All features | `cargo tree --all-features | wc -l` | `1387` |
 
 Notes:
 
@@ -106,5 +106,6 @@ Notes:
 - `flate2` is no longer a direct core dependency; `advanced_cache` now persists plain JSON `.cache` files on disk instead of gzip-compressed JSON, `cargo tree --no-default-features | rg flate2` no longer matches anything, and `flate2` now only shows up transitively when `cli` is enabled through `syntect`.
 - `walkdir` is no longer a direct core dependency; declarative rule loading and AST security file discovery now recurse with std-based directory traversal, which keeps the reduced-build rule engine usable without the direct crate edge. `walkdir` still appears transitively in the no-default graph through always-on `ignore` and dev-only `criterion`.
 - `crossbeam-channel` is no longer a direct core dependency; the `advanced_parallel` scheduler now uses std `mpsc` channels for both its bounded worker mailbox and shared global queue, and `cargo tree --no-default-features | rg crossbeam-channel` no longer matches anything.
+- `base64` is no longer a direct core dependency; JWT validation in the secrets detector now uses a crate-local base64url decoder, and `cargo tree --no-default-features -i base64@0.21.7` now only matches the dev-only `wiremock` path. The reduced tree still shows transitive `base64` versions through that dev dependency.
 - `tree-sitter-javascript`, `tree-sitter-python`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-typescript`, `tree-sitter-go`, `tree-sitter-java`, `tree-sitter-php`, `tree-sitter-ruby`, `tree-sitter-swift`, and `tree-sitter-kotlin` are no longer direct core dependencies; they now only appear when `extended-languages` is enabled. The top-level public helper surface omits those languages from the default build, while internal feature-aware analysis paths still detect them when the feature is enabled.
 - The crate-count target from the plan is still not met. The next reduction pass would need deeper changes to the remaining always-on parser/utility stack around the Rust-only baseline and the broader utility graph.
