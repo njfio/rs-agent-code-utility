@@ -1152,7 +1152,7 @@ pub fn generate_markdown_report(result: &crate::AnalysisResult) -> String {
     md.push_str("# Codebase Analysis Report\n\n");
     md.push_str(&format!(
         "**Generated:** {}\n\n",
-        chrono::Utc::now().to_rfc3339()
+        crate::current_timestamp_rfc3339()
     ));
 
     // Summary section
@@ -1231,7 +1231,7 @@ pub fn generate_html_report(result: &crate::AnalysisResult) -> String {
     html.push_str("<h1>📊 Codebase Analysis Report</h1>\n");
     html.push_str(&format!(
         "<p><strong>Generated:</strong> {}</p>\n",
-        chrono::Utc::now().to_rfc3339()
+        crate::current_timestamp_rfc3339()
     ));
 
     // Summary cards
@@ -1775,7 +1775,7 @@ impl OutputHandler {
             }
 
             // Add timestamp
-            data.insert("timestamp".to_string(), chrono::Utc::now().to_rfc3339());
+            data.insert("timestamp".to_string(), crate::current_timestamp_rfc3339());
 
             // Add averages
             let avg_lines = if result.files.is_empty() {

@@ -12,7 +12,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `ml` | Embeddings and model-backed intent mapping | `anyhow`, `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub` |
 | `net` | Network/runtime-backed providers and rate-limited HTTP | `anyhow`, `reqwest`, `tokio`, `governor`, `tower`, `config` |
 | `mmap` | Real memory-mapped file support for the advanced memory manager | `memmap2` |
-| `db` | Database-backed infrastructure | `anyhow`, `sqlx`, `config` |
+| `db` | Database-backed infrastructure | `anyhow`, `sqlx`, `config`, `chrono` |
 | `wiki` | Static wiki generation with markdown + network-backed enrichment | `pulldown-cmark`, `net` |
 | `demo` | Example binaries only | `uuid` |
 | `full` | Restore the previous broad behavior surface | `std`, `serde`, `ml`, `net`, `db`, `cli`, `wiki`, `mmap` |
@@ -39,6 +39,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `tower` | `net` | Retry/timeout middleware |
 | `anyhow` | `ml`, `net`, `db` | Ergonomic error aggregation for feature-gated ML and infrastructure modules |
 | `config` | `net`, `db` | Environment/file-backed infrastructure configuration loading |
+| `chrono` | `db` | Typed advisory/database timestamps for SQLite-backed persistence paths |
 | `memmap2` | `mmap` | True OS-backed memory mapping for `advanced_memory` |
 | `sqlx` | `db` | SQLite-backed persistence |
 | `uuid` | `demo` | Typed UUID identifiers in the gated demo example |
@@ -52,7 +53,7 @@ These remain part of the core build today and still dominate the dependency foot
 - `serde`, `serde_json`, `serde_yaml`, `toml`
 - `regex`, `sha2`, `rand`, `rayon`, `petgraph`, `ignore`
 - `crc32fast`, `flate2`, `crossbeam-channel`, `parking_lot`, `walkdir`, `base64`
-- `chrono`, `tracing`
+- `tracing`
 
 ## Binary and Example Gating
 
@@ -64,12 +65,12 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, and moving `uuid` behind the gated demo example, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, and restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `498` |
-| Default | `cargo tree | wc -l` | `498` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `493` |
+| Default | `cargo tree | wc -l` | `493` |
 | All features | `cargo tree --all-features | wc -l` | `1386` |
 
 Notes:
@@ -85,4 +86,5 @@ Notes:
 - `async-trait` is no longer a direct core dependency; async dyn-trait surfaces now use boxed std futures, although `async-trait` still appears transitively under `net`/`db` through `config` and in dev-only `wiremock`.
 - `anyhow` is no longer a direct core dependency; it now only appears when `ml`, `net`, or `db` is enabled, although `anyhow` still appears transitively in the no-default graph through dev-only `wiremock`.
 - `uuid` is no longer a direct core dependency; runtime string IDs now use a crate-local generator, `cargo tree -i uuid --no-default-features` no longer matches anything, and the `uuid` crate now only appears when the gated `demo` example feature is enabled.
+- `chrono` is no longer a direct core dependency; security reports and CLI output now use crate-local std-based timestamp formatting, the infrastructure cache now stores epoch-millisecond metadata, `cargo tree -i chrono --no-default-features` no longer matches anything, and the `chrono` crate now only appears when `db` is enabled.
 - The crate-count target from the plan is still not met. The next reduction pass should focus on the remaining always-on direct dependencies and the tree-sitter grammar footprint.

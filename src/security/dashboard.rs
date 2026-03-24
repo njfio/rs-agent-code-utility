@@ -47,7 +47,7 @@ impl SecurityDashboard {
         analysis_duration: std::time::Duration,
         total_files: usize,
     ) -> DashboardReport {
-        let timestamp = chrono::Utc::now().to_rfc3339();
+        let timestamp = crate::current_timestamp_rfc3339();
 
         // Calculate summary statistics
         let total_findings = findings.len();

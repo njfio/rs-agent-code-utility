@@ -1,6 +1,5 @@
 // rust_tree_sitter/src/security/accuracy_metrics.rs
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Represents accuracy metrics for security analysis
@@ -103,7 +102,7 @@ impl AccuracyMetrics {
 /// Comprehensive security analysis report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityAnalysisReport {
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: String,
     pub metrics: AccuracyMetrics,
     pub findings: Vec<SecurityFinding>,
     pub summary: String,
@@ -113,7 +112,7 @@ impl SecurityAnalysisReport {
     /// Create a new report
     pub fn new(metrics: AccuracyMetrics, findings: Vec<SecurityFinding>, summary: String) -> Self {
         Self {
-            timestamp: Utc::now(),
+            timestamp: crate::current_timestamp_rfc3339(),
             metrics,
             findings,
             summary,

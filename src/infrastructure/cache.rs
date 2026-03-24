@@ -5,7 +5,6 @@
 
 use super::paths::app_cache_dir;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -34,10 +33,10 @@ pub struct Cache {
 pub struct CacheEntry {
     pub key: String,
     pub data: Vec<u8>,
-    pub created_at: DateTime<Utc>,
-    pub expires_at: DateTime<Utc>,
+    pub created_at: u64,
+    pub expires_at: u64,
     pub access_count: u64,
-    pub last_accessed: DateTime<Utc>,
+    pub last_accessed: u64,
     pub size_bytes: usize,
 }
 
@@ -112,8 +111,8 @@ impl Cache {
         ttl: Duration,
     ) -> Result<()> {
         let data = serde_json::to_vec(value)?;
-        let now = Utc::now();
-        let expires_at = now + chrono::Duration::from_std(ttl)?;
+        let now = crate::current_timestamp_millis();
+        let expires_at = now.saturating_add(crate::duration_millis_saturated(ttl));
 
         let entry = CacheEntry {
             key: key.to_string(),
@@ -245,14 +244,14 @@ impl Cache {
             self.evict_lru_entries(1).await?;
         }
 
-        entry.last_accessed = Utc::now();
+        entry.last_accessed = crate::current_timestamp_millis();
         self.memory_cache.write().insert(key.to_string(), entry);
         Ok(())
     }
 
     /// Get entry from memory cache
     async fn get_memory_entry(&self, key: &str) -> Result<Option<CacheEntry>> {
-        let now = Utc::now();
+        let now = crate::current_timestamp_millis();
         let mut cache = self.memory_cache.write();
         let mut expired = false;
         let mut result = None;
@@ -295,7 +294,7 @@ impl Cache {
                 let entry: CacheEntry = serde_json::from_slice(&data)?;
 
                 // Check if expired
-                let now = Utc::now();
+                let now = crate::current_timestamp_millis();
                 if now > entry.expires_at {
                     let _ = fs::remove_file(&file_path);
                     return Ok(None);
@@ -405,7 +404,7 @@ impl Cache {
     /// Clean up expired entries
     #[cfg(feature = "net")]
     async fn cleanup_expired_entries(&self) -> Result<()> {
-        let now = Utc::now();
+        let now = crate::current_timestamp_millis();
         let mut expired_keys: Vec<_> = self
             .memory_cache
             .read()

@@ -168,6 +168,68 @@ pub(crate) fn generated_id() -> String {
     )
 }
 
+pub(crate) fn current_timestamp_millis() -> u64 {
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+
+    if millis > u128::from(u64::MAX) {
+        u64::MAX
+    } else {
+        millis as u64
+    }
+}
+
+#[cfg(any(feature = "net", feature = "db"))]
+pub(crate) fn duration_millis_saturated(duration: std::time::Duration) -> u64 {
+    let millis = duration.as_millis();
+
+    if millis > u128::from(u64::MAX) {
+        u64::MAX
+    } else {
+        millis as u64
+    }
+}
+
+pub(crate) fn current_timestamp_rfc3339() -> String {
+    format_timestamp_millis_as_rfc3339(current_timestamp_millis())
+}
+
+fn format_timestamp_millis_as_rfc3339(timestamp_millis: u64) -> String {
+    let seconds = (timestamp_millis / 1000) as i64;
+    let millis = timestamp_millis % 1000;
+    let days = seconds.div_euclid(86_400);
+    let seconds_of_day = seconds.rem_euclid(86_400);
+    let hour = seconds_of_day / 3_600;
+    let minute = (seconds_of_day % 3_600) / 60;
+    let second = seconds_of_day % 60;
+    let (year, month, day) = civil_from_days(days);
+
+    if millis == 0 {
+        format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
+    } else {
+        format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{millis:03}Z")
+    }
+}
+
+fn civil_from_days(days_since_epoch: i64) -> (i32, u32, u32) {
+    let z = days_since_epoch + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let day_of_era = z - era * 146_097;
+    let year_of_era =
+        (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let mut year = year_of_era + era * 400;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month_parameter = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * month_parameter + 2) / 5 + 1;
+    let month = month_parameter + if month_parameter < 10 { 3 } else { -9 };
+
+    year += if month <= 2 { 1 } else { 0 };
+
+    (year as i32, month as u32, day as u32)
+}
+
 /// Advanced multi-level caching system
 pub mod advanced_cache;
 /// Advanced memory management system
@@ -484,5 +546,21 @@ mod tests {
         let languages = supported_languages();
         assert!(!languages.is_empty());
         assert!(languages.iter().any(|lang| lang.name == "Rust"));
+    }
+
+    #[test]
+    fn test_format_timestamp_epoch() {
+        assert_eq!(
+            format_timestamp_millis_as_rfc3339(0),
+            "1970-01-01T00:00:00Z"
+        );
+    }
+
+    #[test]
+    fn test_format_timestamp_preserves_milliseconds() {
+        assert_eq!(
+            format_timestamp_millis_as_rfc3339(946_684_800_123),
+            "2000-01-01T00:00:00.123Z"
+        );
     }
 }
