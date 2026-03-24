@@ -66,8 +66,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = tr
 anyhow = "1.0"
 governor = { version = "0.6", optional = true }
 tower = { version = "0.4", features = ["timeout", "retry"], optional = true }
-# backoff = "0.4"  # Replaced with exponential-backoff due to maintenance issues
-exponential-backoff = "2.0"
 
 # Machine Learning Dependencies for Intent Mapping
 candle-core = { version = "0.9.1", optional = true }
