@@ -12,14 +12,14 @@ pub mod owasp_detector;
 pub mod pipeline;
 pub mod rule_engine;
 pub mod rust_analyzer;
-#[cfg(any(feature = "net", feature = "db"))]
+#[cfg(all(feature = "net", feature = "db"))]
 pub mod vulnerability_correlation;
 
 pub mod accuracy_metrics;
 pub mod dashboard;
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod secrets_detector;
-#[cfg(any(feature = "net", feature = "db"))]
+#[cfg(all(feature = "net", feature = "db"))]
 pub mod vulnerability_db;
 
 #[cfg(feature = "net")]
@@ -34,10 +34,10 @@ pub use owasp_detector::*;
 pub use pipeline::{ConfidenceSource, ScoredFinding, SecurityPipeline, SecurityPipelineConfig};
 pub use rule_engine::{default_rules_dir, DeclarativeRuleEngine};
 pub use rust_analyzer::RustAnalyzer;
-#[cfg(any(feature = "net", feature = "db"))]
+#[cfg(all(feature = "net", feature = "db"))]
 pub use vulnerability_correlation::*;
 
 #[cfg(any(feature = "net", feature = "db"))]
 pub use secrets_detector::*;
-#[cfg(any(feature = "net", feature = "db"))]
+#[cfg(all(feature = "net", feature = "db"))]
 pub use vulnerability_db::*;

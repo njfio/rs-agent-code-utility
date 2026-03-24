@@ -229,6 +229,8 @@ The target architecture has three layers:
 - [ ] Audit all other source files for unconditional imports of feature-gated dependencies (grep for `use tokio::`, `use reqwest::`, `use sqlx::`, `use candle_`, `use hf_hub::`)
 - [ ] Replace any found unconditional imports with `#[cfg(feature = "...")]` guards
 
+**Implementation note (2026-03-24):** The current repo no longer has `ml_filter.rs` (it was renamed to `heuristic_filter.rs`, which is sync-only). The actual feature-boundary bugs found during execution were broader module-gating issues: `enhanced_security`, `vulnerability_db`, and `vulnerability_correlation` required `net + db`, while `infrastructure::rate_limiter` required `net`. Those boundaries were tightened, and `cargo check` now passes for `--no-default-features`, `--features net`, `--features db`, and `--features "net db"`.
+
 **Acceptance criteria:**
 - `cargo build --no-default-features` compiles without tokio/reqwest/sqlx/candle import errors
 - No unconditional imports of feature-gated dependencies exist outside their feature-gated modules

@@ -3,6 +3,7 @@
 //! Provides entropy-based detection, pattern matching, and ML-based
 //! classification for detecting secrets in source code.
 
+#[cfg(feature = "db")]
 use crate::infrastructure::DatabaseManager;
 use anyhow::Result;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -104,6 +105,7 @@ pub struct FalsePositiveFilter {
 
 impl SecretsDetector {
     /// Create a new secrets detector
+    #[cfg(feature = "db")]
     pub async fn new(database: &DatabaseManager) -> Result<Self> {
         Self::with_thresholds(database, None, None).await
     }
@@ -114,6 +116,7 @@ impl SecretsDetector {
     }
 
     /// Create a new secrets detector with custom thresholds
+    #[cfg(feature = "db")]
     pub async fn with_thresholds(
         database: &DatabaseManager,
         entropy_threshold: Option<f64>,
@@ -898,6 +901,7 @@ impl SecretsDetector {
     }
 
     /// Load patterns from database
+    #[cfg(feature = "db")]
     async fn load_patterns_from_database(
         database: &DatabaseManager,
     ) -> Result<Vec<CompiledPattern>> {

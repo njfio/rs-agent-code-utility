@@ -11,6 +11,7 @@ use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(feature = "net")]
 use tokio::sync::RwLock;
 
 /// Advanced AI-based false positive filter

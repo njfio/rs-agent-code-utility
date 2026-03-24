@@ -9,6 +9,7 @@ pub mod config;
 pub mod database;
 #[cfg(feature = "net")]
 pub mod http_client;
+#[cfg(feature = "net")]
 pub mod rate_limiter;
 
 pub use cache::{Cache, CacheConfig, CacheEntry, CacheStats};
@@ -20,7 +21,9 @@ pub use database::{
     AnalysisCacheEntry, DatabaseManager, DatabaseStats, SecretPattern, VulnerabilityRecord,
 };
 #[cfg(feature = "net")]
+#[cfg(feature = "net")]
 pub use http_client::{AuthConfig, HttpClient, HttpResponse, RateLimiter, RequestConfig};
+#[cfg(feature = "net")]
 pub use rate_limiter::{
     MultiServiceRateLimiter, RateLimitConfig, RateLimitResult, RateLimitStats, ServiceRateLimiter,
 };

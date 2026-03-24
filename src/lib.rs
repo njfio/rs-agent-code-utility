@@ -196,7 +196,7 @@ pub mod control_flow;
 pub mod dependency_analysis;
 /// Enhanced security analysis with compliance checking
 #[allow(clippy::unwrap_used, clippy::expect_used)]
-#[cfg(any(feature = "net", feature = "db"))]
+#[cfg(all(feature = "net", feature = "db"))]
 pub mod enhanced_security;
 /// Error types and handling
 #[allow(clippy::unwrap_used, clippy::expect_used)]
@@ -301,16 +301,18 @@ pub use advanced_security::{
     AdvancedSecurityAnalyzer as SecurityScanner, AdvancedSecurityConfig as SecurityConfig,
     AdvancedSecurityResult as SecurityScanResult, SecuritySeverity, SecurityVulnerability,
 };
-#[cfg(any(feature = "net", feature = "db"))]
+#[cfg(all(feature = "net", feature = "db"))]
 pub use enhanced_security::{
     EnhancedSecurityConfig, EnhancedSecurityResult, EnhancedSecurityScanner,
 };
 pub use security::OwaspDetector;
+#[cfg(any(feature = "net", feature = "db"))]
+pub use security::SecretsDetector;
+#[cfg(all(feature = "net", feature = "db"))]
+pub use security::VulnerabilityDatabase;
 #[cfg(feature = "net")]
 pub use security::{AIFalsePositiveFilter, AIFilterConfig, AIFilterResult, AIFilterStatistics};
 pub use security::{ConfidenceSource, HeuristicFindingFilter, ScoredFinding, SecurityPipeline};
-#[cfg(any(feature = "net", feature = "db"))]
-pub use security::{SecretsDetector, VulnerabilityDatabase};
 
 // AI service layer
 #[cfg(feature = "net")]
