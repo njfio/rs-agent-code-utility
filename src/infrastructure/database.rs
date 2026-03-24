@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::{migrate::MigrateDatabase, Sqlite, SqlitePool};
 use std::path::Path;
 use tracing::{debug, info};
-use uuid::Uuid;
 
 /// Database manager for handling all database operations
 #[derive(Clone)]
@@ -213,7 +212,7 @@ impl DatabaseManager {
         ];
 
         for (name, pattern, entropy_threshold, confidence) in patterns {
-            let id = Uuid::new_v4().to_string();
+            let id = crate::generated_id();
             let now = Utc::now();
 
             sqlx::query(

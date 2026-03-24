@@ -350,7 +350,7 @@ impl RustAnalyzer {
             let code_snippet = self.extract_code_snippet(&node, tree)?;
 
             findings.push(SecurityFinding {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: crate::generated_id(),
                 finding_type: SecurityFindingType::InsecureDesign,
                 severity: SecuritySeverity::Medium,
                 title: "Unsafe Block Usage".to_string(),
@@ -385,7 +385,7 @@ impl RustAnalyzer {
             let code_snippet = self.extract_code_snippet(&node, tree)?;
 
             findings.push(SecurityFinding {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: crate::generated_id(),
                 finding_type: SecurityFindingType::InsecureDesign,
                 severity: SecuritySeverity::High,
                 title: "Raw Pointer Usage".to_string(),
@@ -427,7 +427,7 @@ impl RustAnalyzer {
                             let code_snippet = self.extract_code_snippet(&node, tree)?;
 
                             findings.push(SecurityFinding {
-                                id: uuid::Uuid::new_v4().to_string(),
+                                id: crate::generated_id(),
                                 finding_type: SecurityFindingType::Injection,
                                 severity: SecuritySeverity::Critical,
                                 title: "Potential SQL Injection".to_string(),
@@ -472,7 +472,7 @@ impl RustAnalyzer {
                     let code_snippet = self.extract_code_snippet(&node, tree)?;
 
                     findings.push(SecurityFinding {
-                        id: uuid::Uuid::new_v4().to_string(),
+                        id: crate::generated_id(),
                         finding_type: SecurityFindingType::CryptographicFailure,
                         severity: SecuritySeverity::High,
                         title: "Weak Cryptographic Function".to_string(),
@@ -518,7 +518,7 @@ impl RustAnalyzer {
                     let code_snippet = self.extract_code_snippet(&node, tree)?;
 
                     findings.push(SecurityFinding {
-                        id: uuid::Uuid::new_v4().to_string(),
+                        id: crate::generated_id(),
                         finding_type: SecurityFindingType::HardcodedSecret,
                         severity: SecuritySeverity::High,
                         title: "Potential Hardcoded Secret".to_string(),
@@ -563,7 +563,7 @@ impl RustAnalyzer {
                     let code_snippet = self.extract_code_snippet(&node, tree)?;
 
                     findings.push(SecurityFinding {
-                        id: uuid::Uuid::new_v4().to_string(),
+                        id: crate::generated_id(),
                         finding_type: SecurityFindingType::BrokenAccessControl,
                         severity: SecuritySeverity::High,
                         title: "Missing Authorization Check".to_string(),

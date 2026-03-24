@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 use tracing::{debug, warn};
-use uuid;
 
 /// Static regex patterns for secret extraction
 static QUOTE_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();
@@ -231,7 +230,7 @@ impl SecretsDetector {
                     let severity = self.determine_severity(&secret_type, entropy);
 
                     let finding = SecretFinding {
-                        id: uuid::Uuid::new_v4().to_string(),
+                        id: crate::generated_id(),
                         secret_type: secret_type.clone(),
                         confidence: (pattern.confidence * (entropy / 8.0).clamp(0.6, 1.0)).min(1.0),
                         entropy,
@@ -293,7 +292,7 @@ impl SecretsDetector {
                         continue;
                     }
                     let finding = SecretFinding {
-                        id: uuid::Uuid::new_v4().to_string(),
+                        id: crate::generated_id(),
                         secret_type: SecretType::HighEntropy,
                         confidence: (entropy / 8.0).min(1.0) * crate::constants::security::ENTROPY_CONFIDENCE_MULTIPLIER * 1.2, // Boost confidence for entropy-only
                         entropy,

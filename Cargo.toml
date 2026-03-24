@@ -56,9 +56,9 @@ syntect = { version = "5.0", optional = true }
 # Phase A: Infrastructure Dependencies
 tokio = { version = "1.0", features = ["full"], optional = true }
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], optional = true }
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"], optional = true }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"], optional = true }
 chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"], optional = true }
 config = { version = "0.14", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
@@ -93,7 +93,7 @@ wasm = []
 # Enable with: cargo build --examples --features demo
 # or run a specific example with: cargo run --example NAME --features demo
 # This keeps CI and normal builds free from example-related breakages.
-demo = []
+demo = ["dep:uuid"]
 
 # Optional capability flags
 cli = [
@@ -237,7 +237,7 @@ required-features = ["demo"]
 [[example]]
 name = "gpt5_ultimate_demo"
 path = "examples/gpt5_ultimate_demo.rs"
-required-features = ["demo"]
+required-features = ["demo", "net"]
 
 [[example]]
 name = "improvements_demo"

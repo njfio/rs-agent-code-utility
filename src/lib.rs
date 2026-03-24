@@ -149,6 +149,25 @@ pub(crate) fn system_parallelism() -> usize {
         .unwrap_or(1)
 }
 
+pub(crate) fn generated_id() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static UNIQUE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+    let counter = UNIQUE_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+
+    format!(
+        "{:08x}-{:032x}-{:016x}",
+        std::process::id(),
+        timestamp,
+        counter
+    )
+}
+
 /// Advanced multi-level caching system
 pub mod advanced_cache;
 /// Advanced memory management system

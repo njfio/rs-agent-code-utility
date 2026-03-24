@@ -141,7 +141,7 @@ impl AIRequest {
             temperature: None,
             stream: false,
             metadata: RequestMetadata {
-                request_id: uuid::Uuid::new_v4().to_string(),
+                request_id: crate::generated_id(),
                 timestamp: SystemTime::now(),
                 user_id: None,
                 session_id: None,

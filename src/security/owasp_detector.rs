@@ -157,7 +157,7 @@ impl OwaspDetector {
                 && !line.contains("permission")
             {
                 findings.push(OwaspFinding {
-                    id: uuid::Uuid::new_v4().to_string(),
+                    id: crate::generated_id(),
                     category: OwaspCategory::A01BrokenAccessControl,
                     name: "Missing Authorization Check".to_string(),
                     description:
@@ -202,7 +202,7 @@ impl OwaspDetector {
                     };
 
                     findings.push(OwaspFinding {
-                        id: uuid::Uuid::new_v4().to_string(),
+                        id: crate::generated_id(),
                         category: OwaspCategory::A02CryptographicFailures,
                         name: "Weak Cryptographic Function".to_string(),
                         description: format!("Use of weak cryptographic function: {}", pattern),
@@ -246,7 +246,7 @@ impl OwaspDetector {
                     || line.to_lowercase().contains("delete"))
             {
                 findings.push(OwaspFinding {
-                    id: uuid::Uuid::new_v4().to_string(),
+                    id: crate::generated_id(),
                     category: OwaspCategory::A03Injection,
                     name: "SQL Injection".to_string(),
                     description: "Potential SQL injection with string concatenation".to_string(),
@@ -281,7 +281,7 @@ impl OwaspDetector {
                 && !line.trim_start().starts_with("#")
             {
                 findings.push(OwaspFinding {
-                    id: uuid::Uuid::new_v4().to_string(),
+                    id: crate::generated_id(),
                     category: OwaspCategory::A04InsecureDesign,
                     name: "Hardcoded Credentials".to_string(),
                     description: "Potential hardcoded password found in source code".to_string(),
@@ -316,7 +316,7 @@ impl OwaspDetector {
                 || (line.to_lowercase().contains("development") && line.contains("true"))
             {
                 findings.push(OwaspFinding {
-                    id: uuid::Uuid::new_v4().to_string(),
+                    id: crate::generated_id(),
                     category: OwaspCategory::A05SecurityMisconfiguration,
                     name: "Debug Mode Enabled".to_string(),
                     description: "Debug mode appears to be enabled in production code".to_string(),

@@ -14,7 +14,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `mmap` | Real memory-mapped file support for the advanced memory manager | `memmap2` |
 | `db` | Database-backed infrastructure | `anyhow`, `sqlx`, `config` |
 | `wiki` | Static wiki generation with markdown + network-backed enrichment | `pulldown-cmark`, `net` |
-| `demo` | Example binaries only | No additional dependencies directly |
+| `demo` | Example binaries only | `uuid` |
 | `full` | Restore the previous broad behavior surface | `std`, `serde`, `ml`, `net`, `db`, `cli`, `wiki`, `mmap` |
 
 ## Direct Dependency Mapping
@@ -41,6 +41,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `config` | `net`, `db` | Environment/file-backed infrastructure configuration loading |
 | `memmap2` | `mmap` | True OS-backed memory mapping for `advanced_memory` |
 | `sqlx` | `db` | SQLite-backed persistence |
+| `uuid` | `demo` | Typed UUID identifiers in the gated demo example |
 | `pulldown-cmark` | `wiki` | Markdown rendering for wiki output |
 
 ## Always-On Direct Dependencies
@@ -51,25 +52,25 @@ These remain part of the core build today and still dominate the dependency foot
 - `serde`, `serde_json`, `serde_yaml`, `toml`
 - `regex`, `sha2`, `rand`, `rayon`, `petgraph`, `ignore`
 - `crc32fast`, `flate2`, `crossbeam-channel`, `parking_lot`, `walkdir`, `base64`
-- `chrono`, `uuid`, `tracing`
+- `chrono`, `tracing`
 
 ## Binary and Example Gating
 
 - `tree-sitter-cli` requires `cli`
 - `rts-cli` requires `cli`
 - Accessibility examples require `demo,cli`
-- AI security and AST security examples require `demo,net`
+- AI security, AST security, and `gpt5_ultimate_demo` require `demo,net`
 - All other examples remain gated behind `demo`
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, and gating `anyhow` behind feature-local modules, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, and moving `uuid` behind the gated demo example, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `501` |
-| Default | `cargo tree | wc -l` | `501` |
-| All features | `cargo tree --all-features | wc -l` | `1389` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `498` |
+| Default | `cargo tree | wc -l` | `498` |
+| All features | `cargo tree --all-features | wc -l` | `1386` |
 
 Notes:
 
@@ -83,4 +84,5 @@ Notes:
 - `exponential-backoff` is no longer in the dependency graph; HTTP retry logic already uses a small internal exponential backoff implementation.
 - `async-trait` is no longer a direct core dependency; async dyn-trait surfaces now use boxed std futures, although `async-trait` still appears transitively under `net`/`db` through `config` and in dev-only `wiremock`.
 - `anyhow` is no longer a direct core dependency; it now only appears when `ml`, `net`, or `db` is enabled, although `anyhow` still appears transitively in the no-default graph through dev-only `wiremock`.
+- `uuid` is no longer a direct core dependency; runtime string IDs now use a crate-local generator, `cargo tree -i uuid --no-default-features` no longer matches anything, and the `uuid` crate now only appears when the gated `demo` example feature is enabled.
 - The crate-count target from the plan is still not met. The next reduction pass should focus on the remaining always-on direct dependencies and the tree-sitter grammar footprint.
