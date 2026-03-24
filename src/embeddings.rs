@@ -177,7 +177,11 @@ impl EmbeddingEngine {
         let vb = unsafe {
             VarBuilder::from_mmaped_safetensors(&[weights_filename], DTYPE, &self.device)?
         };
-        self.model = Some(BertModel::load(vb, self.bert_config.as_ref().unwrap())?);
+        let bert_config = self
+            .bert_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("Model config not initialized after loading config.json"))?;
+        self.model = Some(BertModel::load(vb, bert_config)?);
 
         Ok(())
     }
@@ -336,18 +340,20 @@ mod tests {
     }
 
     #[test]
-    fn test_cosine_similarity() {
+    fn test_cosine_similarity() -> Result<()> {
         let embedding1 = Embedding::new(vec![1.0, 0.0, 0.0], "text1".to_string());
         let embedding2 = Embedding::new(vec![0.0, 1.0, 0.0], "text2".to_string());
         let embedding3 = Embedding::new(vec![1.0, 0.0, 0.0], "text3".to_string());
 
         // Orthogonal vectors should have similarity 0
-        let similarity1 = embedding1.cosine_similarity(&embedding2).unwrap();
+        let similarity1 = embedding1.cosine_similarity(&embedding2)?;
         assert!((similarity1 - 0.0).abs() < 1e-6);
 
         // Identical vectors should have similarity 1
-        let similarity2 = embedding1.cosine_similarity(&embedding3).unwrap();
+        let similarity2 = embedding1.cosine_similarity(&embedding3)?;
         assert!((similarity2 - 1.0).abs() < 1e-6);
+
+        Ok(())
     }
 
     #[test]
@@ -375,20 +381,22 @@ mod tests {
     }
 
     #[test]
-    fn test_cosine_similarity_edge_cases() {
+    fn test_cosine_similarity_edge_cases() -> Result<()> {
         // Test zero vectors
         let zero1 = Embedding::new(vec![0.0, 0.0, 0.0], "zero1".to_string());
         let zero2 = Embedding::new(vec![0.0, 0.0, 0.0], "zero2".to_string());
         let normal = Embedding::new(vec![1.0, 1.0, 1.0], "normal".to_string());
 
         // Zero vectors should return 0 similarity
-        assert_eq!(zero1.cosine_similarity(&zero2).unwrap(), 0.0);
-        assert_eq!(zero1.cosine_similarity(&normal).unwrap(), 0.0);
+        assert_eq!(zero1.cosine_similarity(&zero2)?, 0.0);
+        assert_eq!(zero1.cosine_similarity(&normal)?, 0.0);
 
         // Test dimension mismatch
         let dim3 = Embedding::new(vec![1.0, 0.0, 0.0], "dim3".to_string());
         let dim4 = Embedding::new(vec![1.0, 0.0, 0.0, 0.0], "dim4".to_string());
         assert!(dim3.cosine_similarity(&dim4).is_err());
+
+        Ok(())
     }
 
     #[test]
@@ -402,7 +410,7 @@ mod tests {
     }
 
     #[test]
-    fn test_semantic_similarity_examples() {
+    fn test_semantic_similarity_examples() -> Result<()> {
         // Test semantic similarity with example texts
         let similar_texts = vec![
             ("user authentication", "login system"),
@@ -420,7 +428,7 @@ mod tests {
                 text2.to_string(),
             );
 
-            let similarity = embedding1.cosine_similarity(&embedding2).unwrap();
+            let similarity = embedding1.cosine_similarity(&embedding2)?;
             // These should be reasonably similar (mock test)
             assert!(
                 similarity > 0.5,
@@ -430,10 +438,12 @@ mod tests {
                 similarity
             );
         }
+
+        Ok(())
     }
 
     #[test]
-    fn test_dissimilar_texts() {
+    fn test_dissimilar_texts() -> Result<()> {
         // Test dissimilar texts should have low similarity
         let embedding1 = Embedding::new(
             vec![1.0, 0.0, 0.0, 0.0], // Mock dissimilar embeddings
@@ -444,10 +454,12 @@ mod tests {
             "graphics rendering".to_string(),
         );
 
-        let similarity = embedding1.cosine_similarity(&embedding2).unwrap();
+        let similarity = embedding1.cosine_similarity(&embedding2)?;
         assert_eq!(
             similarity, 0.0,
             "Expected 0 similarity for dissimilar texts"
         );
+
+        Ok(())
     }
 }

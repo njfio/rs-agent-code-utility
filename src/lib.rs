@@ -206,7 +206,6 @@ pub mod taint_analysis;
 #[cfg(not(feature = "ml"))]
 pub use intent_mapping_stub as intent_mapping;
 /// Text embeddings and semantic similarity
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "ml")]
 pub mod embeddings;
 /// Programming language support and parsers
