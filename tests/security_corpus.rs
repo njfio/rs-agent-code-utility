@@ -71,6 +71,21 @@ const CORPUS_CASES: &[CorpusCase] = &[
         min_confidence: ConfidenceLevel::Low,
     },
     CorpusCase {
+        class: "sql-injection",
+        relative_path: "tests/fixtures/security-corpus/sql-injection/rust-positive-concat.rs",
+        cwe_id: "CWE-89",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "sql-injection",
+        relative_path:
+            "tests/fixtures/security-corpus/sql-injection/rust-negative-parameterized.rs",
+        cwe_id: "CWE-89",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
         class: "command-injection",
         relative_path: "tests/fixtures/security-corpus/command-injection/rust-positive-shell-c.rs",
         cwe_id: "CWE-78",
@@ -126,6 +141,22 @@ const CORPUS_CASES: &[CorpusCase] = &[
         min_confidence: ConfidenceLevel::Low,
     },
     CorpusCase {
+        class: "command-injection",
+        relative_path:
+            "tests/fixtures/security-corpus/command-injection/python-positive-subprocess-call.py",
+        cwe_id: "CWE-78",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Medium,
+    },
+    CorpusCase {
+        class: "command-injection",
+        relative_path:
+            "tests/fixtures/security-corpus/command-injection/javascript-negative-spawn-args.js",
+        cwe_id: "CWE-78",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
         class: "secrets",
         relative_path: "tests/fixtures/security-corpus/secrets/rust-positive-aws.rs",
         cwe_id: "CWE-798",
@@ -175,6 +206,21 @@ const CORPUS_CASES: &[CorpusCase] = &[
         min_confidence: ConfidenceLevel::Low,
     },
     CorpusCase {
+        class: "secrets",
+        relative_path: "tests/fixtures/security-corpus/secrets/javascript-positive-api-key.js",
+        cwe_id: "CWE-798",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "secrets",
+        relative_path:
+            "tests/fixtures/security-corpus/secrets/javascript-negative-password-field.js",
+        cwe_id: "CWE-798",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
         class: "xss",
         relative_path: "tests/fixtures/security-corpus/xss/javascript-positive-innerhtml.js",
         cwe_id: "CWE-79",
@@ -211,8 +257,8 @@ fn security_corpus_meets_detection_thresholds() {
     let mut overall_metrics = AccuracyMetrics::new();
 
     assert!(
-        CORPUS_CASES.len() >= 24,
-        "expected at least 24 corpus cases, found {}",
+        CORPUS_CASES.len() >= 30,
+        "expected at least 30 corpus cases, found {}",
         CORPUS_CASES.len()
     );
 
