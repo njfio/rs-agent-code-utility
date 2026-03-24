@@ -959,19 +959,15 @@ impl RustAnalyzer {
                     if capture.index == 1 {
                         // macro_name capture
                         if let Ok(macro_name) = capture.node.utf8_text(tree.source().as_bytes()) {
-                            if let Ok(args_text) = capture
-                                .node
-                                .parent()
-                                .unwrap()
-                                .utf8_text(tree.source().as_bytes())
-                            {
-                                // Check for potential format string vulnerabilities
-                                if (macro_name.contains("println!")
-                                    || macro_name.contains("eprintln!"))
-                                    && args_text.contains("{}")
-                                    && args_text.contains("user_input")
-                                {
-                                    findings.push(SecurityFinding {
+                            if let Some(parent) = capture.node.parent() {
+                                if let Ok(args_text) = parent.utf8_text(tree.source().as_bytes()) {
+                                    // Check for potential format string vulnerabilities
+                                    if (macro_name.contains("println!")
+                                        || macro_name.contains("eprintln!"))
+                                        && args_text.contains("{}")
+                                        && args_text.contains("user_input")
+                                    {
+                                        findings.push(SecurityFinding {
                                             id: format!("RUST_MACRO_FMT_{}", capture.node.start_position().row + 1),
                                             finding_type: SecurityFindingType::Injection,
                                             severity: SecuritySeverity::Medium,
@@ -987,6 +983,7 @@ impl RustAnalyzer {
                                             confidence: 0.7,
                                             context: CodeContext::default(),
                                         });
+                                    }
                                 }
                             }
                         }

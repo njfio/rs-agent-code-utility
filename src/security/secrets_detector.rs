@@ -15,8 +15,14 @@ use tracing::{debug, warn};
 use uuid;
 
 /// Static regex patterns for secret extraction
-static QUOTE_REGEX: OnceLock<Regex> = OnceLock::new();
-static ASSIGNMENT_REGEX: OnceLock<Regex> = OnceLock::new();
+static QUOTE_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();
+static ASSIGNMENT_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();
+static PLACEHOLDER_VAR_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();
+static AWS_SECRET_KEY_NEARBY_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> =
+    OnceLock::new();
+static AWS_ACCESS_KEY_NEARBY_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> =
+    OnceLock::new();
+static SLACK_TOKEN_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();
 
 /// Real secrets detector with multiple detection methods
 #[derive(Debug)]
@@ -268,7 +274,7 @@ impl SecretsDetector {
                 continue;
             }
             // Look for high-entropy strings
-            let words = self.extract_potential_secrets(line);
+            let words = self.extract_potential_secrets(line)?;
 
             for word in words {
                 // Skip strings that have already been detected by pattern-based detection
@@ -333,14 +339,14 @@ impl SecretsDetector {
     }
 
     /// Extract potential secret strings from a line
-    fn extract_potential_secrets(&self, line: &str) -> Vec<PotentialSecret> {
+    fn extract_potential_secrets(&self, line: &str) -> Result<Vec<PotentialSecret>> {
         let mut secrets = Vec::new();
 
         // Look for quoted strings
-        let quote_regex = QUOTE_REGEX.get_or_init(|| {
-            Regex::new(r#"["']([^"']{16,})["']"#)
-                .expect("Failed to compile quote regex: hardcoded regex pattern should be valid")
-        });
+        let quote_regex = QUOTE_REGEX
+            .get_or_init(|| Regex::new(r#"["']([^"']{16,})["']"#))
+            .as_ref()
+            .map_err(|error| anyhow::anyhow!("failed to compile quote regex: {error}"))?;
         for mat in quote_regex.find_iter(line) {
             if let Some(captures) = quote_regex.captures(mat.as_str()) {
                 if let Some(content) = captures.get(1) {
@@ -354,11 +360,10 @@ impl SecretsDetector {
         }
 
         // Look for assignment values
-        let assignment_regex = ASSIGNMENT_REGEX.get_or_init(|| {
-            Regex::new(r"=\s*([a-zA-Z0-9+/=]{16,})").expect(
-                "Failed to compile assignment regex: hardcoded regex pattern should be valid",
-            )
-        });
+        let assignment_regex = ASSIGNMENT_REGEX
+            .get_or_init(|| Regex::new(r"=\s*([a-zA-Z0-9+/=]{16,})"))
+            .as_ref()
+            .map_err(|error| anyhow::anyhow!("failed to compile assignment regex: {error}"))?;
         for mat in assignment_regex.find_iter(line) {
             if let Some(captures) = assignment_regex.captures(mat.as_str()) {
                 if let Some(content) = captures.get(1) {
@@ -371,7 +376,7 @@ impl SecretsDetector {
             }
         }
 
-        secrets
+        Ok(secrets)
     }
 
     /// Filter false positives
@@ -524,19 +529,25 @@ impl SecretsDetector {
                 r"(?i)config\.|settings\.|env\.",
             ];
             for pattern in &doc_patterns {
-                if regex::Regex::new(pattern).unwrap().is_match(current_line) {
-                    return true;
+                if let Ok(regex) = regex::Regex::new(pattern) {
+                    if regex.is_match(current_line) {
+                        return true;
+                    }
                 }
             }
             return true;
         }
 
         // For code lines, only treat explicit placeholder-like variable names as FP
-        let placeholder_var_regex = regex::Regex::new(
-            r"(?i)\b(let|const|var)\s+(test|demo|example|sample|fake|mock|dummy|placeholder)_?\w*\s*=",
-        )
-        .unwrap();
-        if placeholder_var_regex.is_match(current_line) {
+        let placeholder_var_regex = PLACEHOLDER_VAR_REGEX
+            .get_or_init(|| {
+                Regex::new(
+                    r"(?i)\b(let|const|var)\s+(test|demo|example|sample|fake|mock|dummy|placeholder)_?\w*\s*=",
+                )
+            })
+            .as_ref()
+            .ok();
+        if placeholder_var_regex.is_some_and(|regex| regex.is_match(current_line)) {
             return true;
         }
 
@@ -678,15 +689,25 @@ impl SecretsDetector {
     }
 
     fn has_nearby_aws_secret_key(&self, content: &str, line_num: usize, window: usize) -> bool {
-        let re =
-            Regex::new(r"(?i)(aws_.*secret.*key|secret.*access.*key)\s*[:=]\s*([0-9a-zA-Z/+]{40})")
-                .unwrap();
-        self.search_nearby_lines(content, line_num, window, &re)
+        AWS_SECRET_KEY_NEARBY_REGEX
+            .get_or_init(|| {
+                Regex::new(
+                    r"(?i)(aws_.*secret.*key|secret.*access.*key)\s*[:=]\s*([0-9a-zA-Z/+]{40})",
+                )
+            })
+            .as_ref()
+            .is_ok_and(|regex| self.search_nearby_lines(content, line_num, window, regex))
     }
 
     fn has_nearby_aws_access_key(&self, content: &str, line_num: usize, window: usize) -> bool {
-        let re = Regex::new(r"(?i)(aws_.*access.*key.*id|access.*key.*id)\s*[:=]\s*(AKIA|ASIA|AGPA|AIDA|ANPA|AROA|AIPA)[0-9A-Z]{16}").unwrap();
-        self.search_nearby_lines(content, line_num, window, &re)
+        AWS_ACCESS_KEY_NEARBY_REGEX
+            .get_or_init(|| {
+                Regex::new(
+                    r"(?i)(aws_.*access.*key.*id|access.*key.*id)\s*[:=]\s*(AKIA|ASIA|AGPA|AIDA|ANPA|AROA|AIPA)[0-9A-Z]{16}",
+                )
+            })
+            .as_ref()
+            .is_ok_and(|regex| self.search_nearby_lines(content, line_num, window, regex))
     }
 
     fn search_nearby_lines(
@@ -791,8 +812,10 @@ impl SecretsDetector {
 
     fn validate_slack_token(&self, token: &str) -> bool {
         // Slack tokens: xox[baprs]-<numbers>-<numbers>-<letters>
-        let re = Regex::new(r"^xox[baprs]-\d{10,}-\d{12,}-[0-9A-Za-z]{24,}$").unwrap();
-        re.is_match(token)
+        SLACK_TOKEN_REGEX
+            .get_or_init(|| Regex::new(r"^xox[baprs]-\d{10,}-\d{12,}-[0-9A-Za-z]{24,}$"))
+            .as_ref()
+            .is_ok_and(|regex| regex.is_match(token))
     }
 
     /// Classify secret type from pattern name

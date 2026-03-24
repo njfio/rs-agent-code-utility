@@ -239,7 +239,6 @@ pub mod query;
 /// Code refactoring suggestions and analysis
 pub mod refactoring;
 /// Security analysis and vulnerability detection
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod security;
 /// Semantic graph construction and querying
 #[allow(clippy::unwrap_used, clippy::expect_used)]

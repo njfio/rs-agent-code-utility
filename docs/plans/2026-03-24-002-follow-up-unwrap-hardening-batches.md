@@ -19,7 +19,7 @@ This document breaks the remaining modules into reviewable follow-up PR batches.
 ## Current State
 
 - Crate root already enforces `#![deny(clippy::unwrap_used, clippy::expect_used)]` in [src/lib.rs](../../src/lib.rs)
-- 22 module declarations still carry explicit local `#[allow(...)]` escapes
+- 21 module declarations still carry explicit local `#[allow(...)]` escapes
 - Remaining work should remove those escapes batch-by-batch, not as one large refactor
 
 ## Batch Plan
@@ -41,7 +41,7 @@ Verification:
 
 ### Batch 2: Security Detectors
 
-Status: in progress on 2026-03-24
+Status: complete on 2026-03-24
 
 Note: module-level allow removal is landing incrementally, but the full
 `cargo clippy --all-targets --all-features -- -D warnings -W clippy::unwrap_used -W clippy::expect_used`
@@ -50,13 +50,11 @@ gate is still blocked by separate integration-test cleanup under `tests/`.
 - Complete:
   - `advanced_security`
   - `command_injection_detector`
+  - `security`
   - `sql_injection_detector`
   - `semantic_context`
   - `enhanced_security`
   - `taint_analysis`
-
-- Remaining:
-  - `security`
 
 Verification:
 - `cargo test --test security_pipeline --all-features`
