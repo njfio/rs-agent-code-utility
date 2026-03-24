@@ -3,6 +3,7 @@
 //! Provides environment-based configuration, API key management,
 //! and secure configuration handling for production use.
 
+use super::paths::{app_config_dir, app_data_dir};
 use crate::system_parallelism;
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
@@ -140,9 +141,8 @@ pub struct CacheConfig {
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
-        let data_dir = dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("rust_tree_sitter");
+        let data_dir =
+            app_data_dir("rust_tree_sitter").unwrap_or_else(|| PathBuf::from("rust_tree_sitter"));
 
         Self {
             url: format!("sqlite://{}/database.db", data_dir.display()),
@@ -272,9 +272,8 @@ impl ConfigManager {
         let possible_paths = vec![
             PathBuf::from("rust_tree_sitter.toml"),
             PathBuf::from("config/rust_tree_sitter.toml"),
-            dirs::config_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join("rust_tree_sitter")
+            app_config_dir("rust_tree_sitter")
+                .unwrap_or_else(|| PathBuf::from("rust_tree_sitter"))
                 .join("config.toml"),
         ];
 

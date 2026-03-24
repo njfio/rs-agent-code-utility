@@ -9,6 +9,7 @@ pub mod config;
 pub mod database;
 #[cfg(feature = "net")]
 pub mod http_client;
+mod paths;
 #[cfg(feature = "net")]
 pub mod rate_limiter;
 

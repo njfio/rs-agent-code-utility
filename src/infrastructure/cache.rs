@@ -3,6 +3,7 @@
 //! Provides multi-level caching for analysis results, API responses,
 //! and computed data with TTL support and automatic cleanup.
 
+use super::paths::app_cache_dir;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -12,7 +13,9 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{debug, error};
+use tracing::debug;
+#[cfg(feature = "net")]
+use tracing::error;
 
 /// Multi-level cache with memory and disk storage
 #[derive(Clone)]
@@ -381,6 +384,7 @@ impl Cache {
 
     /// Background cleanup task
     #[cfg(feature = "net")]
+    #[cfg(feature = "net")]
     async fn cleanup_task(&self, interval: Duration) {
         let mut cleanup_interval = tokio::time::interval(interval);
 
@@ -394,6 +398,7 @@ impl Cache {
     }
 
     /// Clean up expired entries
+    #[cfg(feature = "net")]
     async fn cleanup_expired_entries(&self) -> Result<()> {
         let now = Utc::now();
         let mut expired_keys = Vec::new();
@@ -444,7 +449,7 @@ impl Default for CacheConfig {
             enable_memory: true,
             enable_disk: true,
             memory_max_entries: 10000,
-            disk_cache_dir: dirs::cache_dir().map(|d| d.join("rust_tree_sitter")),
+            disk_cache_dir: app_cache_dir("rust_tree_sitter"),
             default_ttl: Duration::from_secs(3600), // 1 hour
             cleanup_interval: Duration::from_secs(300), // 5 minutes
         }

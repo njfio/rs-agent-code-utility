@@ -271,7 +271,7 @@ The target architecture has three layers:
 - [x] Create dependency-to-feature mapping table (see Architecture Research Insights above) and store in `docs/FEATURE_FLAGS.md`
 
 **Implementation note (2026-03-24):** The feature split is already live in the repo: default features are `["std", "serde"]`, both CLI bins require `cli`, `docs/FEATURE_FLAGS.md` documents the mapping, and current builds pass for `cargo build`, `cargo build --no-default-features`, `cargo check --features ml`, `cargo check --features net`, `cargo check --features db`, and `cargo check --all-features`. `memmap2` has now been moved behind a dedicated `mmap` feature while keeping `advanced_memory` available through a buffered fallback in the default build. The remaining open item in Task 1.1 is the next reduction pass over other always-on dependencies.
-**Implementation note (2026-03-24, later):** `num_cpus` has now also been removed from the direct core dependency surface. Thread-pool and analysis defaults use `std::thread::available_parallelism()` instead, so the next reduction pass should focus on heavier always-on dependencies such as `config`, `dirs`, and `dashmap`.
+**Implementation note (2026-03-24, later):** `num_cpus` and the crate's direct `dirs` usage have now been removed from the direct core dependency surface. Thread-pool and analysis defaults use `std::thread::available_parallelism()`, and infrastructure default paths now use internal std-based platform helpers. `dirs` still remains transitively under `ml` through `hf-hub`, so the next reduction pass should focus on heavier always-on direct dependencies such as `config` and `dashmap`.
 
 ### Research Insights: Feature Stratification
 
