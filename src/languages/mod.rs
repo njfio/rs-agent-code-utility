@@ -45,6 +45,15 @@ pub enum Language {
 }
 
 impl Language {
+    #[cfg(not(feature = "extended-languages"))]
+    fn extended_language_error(&self) -> Error {
+        Error::not_supported_with_alternative(
+            format!("{} grammar", self.name()),
+            "this grammar is behind the `extended-languages` feature",
+            "enable the `extended-languages` cargo feature",
+        )
+    }
+
     /// Get the tree-sitter language for this language
     pub fn tree_sitter_language(&self) -> Result<tree_sitter::Language> {
         match self {
@@ -56,10 +65,46 @@ impl Language {
             Language::Cpp => Ok(tree_sitter_cpp::language()),
             Language::Go => Ok(tree_sitter_go::language()),
             Language::Java => Ok(tree_sitter_java::language()),
-            Language::Php => Ok(tree_sitter_php::language_php()),
-            Language::Ruby => Ok(tree_sitter_ruby::language()),
-            Language::Swift => Ok(tree_sitter_swift::language()),
-            Language::Kotlin => Ok(tree_sitter_kotlin::language()),
+            Language::Php => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_php::language_php())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
+            Language::Ruby => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_ruby::language())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
+            Language::Swift => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_swift::language())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
+            Language::Kotlin => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_kotlin::language())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
         }
     }
 
@@ -119,20 +164,7 @@ impl Language {
 
     /// Check if this language supports syntax highlighting queries
     pub fn supports_highlights(&self) -> bool {
-        match self {
-            Language::Rust => true,
-            Language::JavaScript => true,
-            Language::TypeScript => true,
-            Language::Python => true,
-            Language::C => true,
-            Language::Cpp => true,
-            Language::Go => true,
-            Language::Java => true,
-            Language::Php => true,
-            Language::Ruby => true,
-            Language::Swift => true,
-            Language::Kotlin => true,
-        }
+        self.highlights_query().is_some()
     }
 
     /// Get syntax highlighting query for this language
@@ -146,9 +178,36 @@ impl Language {
             Language::Cpp => Some(tree_sitter_cpp::HIGHLIGHT_QUERY),
             Language::Go => Some(tree_sitter_go::HIGHLIGHT_QUERY),
             Language::Java => Some(tree_sitter_java::HIGHLIGHT_QUERY),
-            Language::Php => Some(tree_sitter_php::HIGHLIGHT_QUERY),
-            Language::Ruby => Some(tree_sitter_ruby::HIGHLIGHT_QUERY),
-            Language::Swift => Some(tree_sitter_swift::HIGHLIGHTS_QUERY),
+            Language::Php => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_php::HIGHLIGHT_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
+            Language::Ruby => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_ruby::HIGHLIGHT_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
+            Language::Swift => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_swift::HIGHLIGHTS_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::Kotlin => None, // HIGHLIGHTS_QUERY not available in tree-sitter-kotlin 0.2.11
         }
     }
@@ -191,7 +250,7 @@ impl Language {
 
     /// Get all available languages
     pub fn all() -> Vec<Language> {
-        vec![
+        let core_languages = vec![
             Language::Rust,
             Language::JavaScript,
             Language::TypeScript,
@@ -200,11 +259,22 @@ impl Language {
             Language::Cpp,
             Language::Go,
             Language::Java,
-            Language::Php,
-            Language::Ruby,
-            Language::Swift,
-            Language::Kotlin,
-        ]
+        ];
+        #[cfg(feature = "extended-languages")]
+        {
+            let mut languages = core_languages;
+            languages.extend([
+                Language::Php,
+                Language::Ruby,
+                Language::Swift,
+                Language::Kotlin,
+            ]);
+            languages
+        }
+        #[cfg(not(feature = "extended-languages"))]
+        {
+            core_languages
+        }
     }
 }
 
@@ -266,12 +336,18 @@ mod tests {
         assert_eq!(java.name(), "Java");
         assert_eq!(java.file_extensions(), &["java"]);
 
+        #[cfg(feature = "extended-languages")]
         let php = Language::Php;
+        #[cfg(feature = "extended-languages")]
         assert_eq!(php.name(), "PHP");
+        #[cfg(feature = "extended-languages")]
         assert_eq!(php.file_extensions(), &["php"]);
 
+        #[cfg(feature = "extended-languages")]
         let swift = Language::Swift;
+        #[cfg(feature = "extended-languages")]
         assert_eq!(swift.name(), "Swift");
+        #[cfg(feature = "extended-languages")]
         assert_eq!(swift.file_extensions(), &["swift"]);
     }
 
@@ -298,12 +374,44 @@ mod tests {
         }
     }
 
+    #[cfg(not(feature = "extended-languages"))]
+    #[test]
+    fn test_extended_languages_require_feature() {
+        for lang in [
+            Language::Php,
+            Language::Ruby,
+            Language::Swift,
+            Language::Kotlin,
+        ] {
+            assert!(lang.tree_sitter_language().is_err());
+        }
+        assert_eq!(detect_language_from_path("example.php"), None);
+        assert_eq!(detect_language_from_path("example.rb"), None);
+        assert_eq!(detect_language_from_path("example.swift"), None);
+        assert_eq!(detect_language_from_path("example.kt"), None);
+    }
+
     #[test]
     fn test_new_language_extensions() {
         assert_eq!(Language::Java.file_extensions(), &["java"]);
-        assert_eq!(Language::Php.file_extensions(), &["php"]);
+
+        #[cfg(feature = "extended-languages")]
+        let php = Language::Php;
+        #[cfg(feature = "extended-languages")]
+        assert_eq!(php.name(), "PHP");
+        #[cfg(feature = "extended-languages")]
+        assert_eq!(php.file_extensions(), &["php"]);
+
+        #[cfg(feature = "extended-languages")]
+        let swift = Language::Swift;
+        #[cfg(feature = "extended-languages")]
+        assert_eq!(swift.name(), "Swift");
+        #[cfg(feature = "extended-languages")]
+        assert_eq!(swift.file_extensions(), &["swift"]);
+
+        #[cfg(feature = "extended-languages")]
         assert_eq!(Language::Ruby.file_extensions(), &["rb"]);
-        assert_eq!(Language::Swift.file_extensions(), &["swift"]);
+        #[cfg(feature = "extended-languages")]
         assert_eq!(Language::Kotlin.file_extensions(), &["kt", "kts"]);
     }
 }
