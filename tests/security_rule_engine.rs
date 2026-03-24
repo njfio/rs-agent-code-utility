@@ -1,3 +1,5 @@
+#![cfg(feature = "extended-languages")]
+
 use rust_tree_sitter::security::{
     DeclarativeRuleEngine, SecurityFindingType, SecurityPipelineConfig,
 };
@@ -47,6 +49,42 @@ pattern_file: eval.scm
     assert_eq!(findings[0].title, "Avoid eval");
     assert_eq!(findings[0].finding_type, SecurityFindingType::Injection);
     assert_eq!(findings[0].line_number, 1);
+
+    Ok(())
+}
+
+#[test]
+fn declarative_rule_engine_recurses_into_nested_dirs() -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
+    let nested_dir = temp_dir.path().join("nested/rules");
+    fs::create_dir_all(&nested_dir)?;
+    fs::write(
+        nested_dir.join("eval.yaml"),
+        r#"
+id: js-eval
+title: Avoid eval
+description: Using eval on untrusted input can execute arbitrary code.
+finding_type: injection
+severity: critical
+confidence: 0.9
+languages:
+  - javascript
+remediation: Replace eval with a fixed dispatch or a parser.
+pattern_file: eval.scm
+"#,
+    )?;
+    fs::write(
+        nested_dir.join("eval.scm"),
+        r#"
+(call_expression
+  function: (identifier) @callee
+  arguments: (arguments (_) @input)
+  (#eq? @callee "eval")) @finding
+"#,
+    )?;
+
+    let engine = DeclarativeRuleEngine::load_from_dir(temp_dir.path())?;
+    assert_eq!(engine.rule_count(), 1);
 
     Ok(())
 }

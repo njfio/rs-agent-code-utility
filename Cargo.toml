@@ -42,7 +42,6 @@ pulldown-cmark = { version = "0.10", optional = true }
 crossbeam-channel = "0.5"
 parking_lot = "0.12"
 memmap2 = { version = "0.9", optional = true }
-walkdir = "2.4"
 base64 = "0.21"
 
 # Enhanced interactive mode dependencies

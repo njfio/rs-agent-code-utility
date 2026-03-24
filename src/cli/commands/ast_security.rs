@@ -22,6 +22,7 @@ use crate::security::ast_analyzer::{AstSecurityAnalyzer, SecurityFinding, Securi
 use crate::{log_info as info, log_warn as warn};
 use colored::*;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Execute the AST-based security command
@@ -582,24 +583,22 @@ fn discover_files(
 ) -> CliResult<Vec<(PathBuf, Language)>> {
     let mut files = Vec::new();
 
-    fn is_hidden_or_ignored(entry: &walkdir::DirEntry) -> bool {
-        entry
-            .file_name()
-            .to_str()
+    fn is_hidden_or_ignored(path: &Path) -> bool {
+        path.file_name()
+            .and_then(|name| name.to_str())
             .is_some_and(|s| s.starts_with('.'))
-            || entry.path().components().any(|c| {
+            || path.components().any(|c| {
                 c.as_os_str().to_str().is_some_and(|s| {
                     s == "target" || s == "node_modules" || s == "__pycache__" || s == ".git"
                 })
             })
     }
 
-    fn should_skip_file(
-        entry: &walkdir::DirEntry,
-        include_tests: bool,
-        include_examples: bool,
-    ) -> bool {
-        let file_name = entry.file_name().to_str().unwrap_or("");
+    fn should_skip_file(path: &Path, include_tests: bool, include_examples: bool) -> bool {
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("");
 
         // Skip test files if not requested
         if !include_tests && (file_name.contains("test") || file_name.contains("spec")) {
@@ -618,31 +617,84 @@ fn discover_files(
         false
     }
 
-    for entry in walkdir::WalkDir::new(path)
-        .into_iter()
-        .filter_entry(|e| !is_hidden_or_ignored(e))
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
-        if should_skip_file(&entry, include_tests, include_examples) {
-            continue;
+    fn collect_candidate_files(
+        path: &Path,
+        include_tests: bool,
+        include_examples: bool,
+    ) -> CliResult<Vec<PathBuf>> {
+        let mut candidates = Vec::new();
+
+        if is_hidden_or_ignored(path) {
+            return Ok(candidates);
         }
 
+        if path.is_file() {
+            if !should_skip_file(path, include_tests, include_examples) {
+                candidates.push(path.to_path_buf());
+            }
+            return Ok(candidates);
+        }
+
+        let mut pending_dirs = vec![path.to_path_buf()];
+        while let Some(current_dir) = pending_dirs.pop() {
+            for entry in fs::read_dir(&current_dir).map_err(|err| {
+                CliError::Security(format!(
+                    "Failed to read directory {}: {}",
+                    current_dir.display(),
+                    err
+                ))
+            })? {
+                let entry = entry.map_err(|err| {
+                    CliError::Security(format!(
+                        "Failed to read directory entry under {}: {}",
+                        current_dir.display(),
+                        err
+                    ))
+                })?;
+                let child_path = entry.path();
+
+                if is_hidden_or_ignored(&child_path) {
+                    continue;
+                }
+
+                let file_type = entry.file_type().map_err(|err| {
+                    CliError::Security(format!(
+                        "Failed to inspect path {}: {}",
+                        child_path.display(),
+                        err
+                    ))
+                })?;
+
+                if file_type.is_dir() {
+                    pending_dirs.push(child_path);
+                } else if file_type.is_file()
+                    && !should_skip_file(&child_path, include_tests, include_examples)
+                {
+                    candidates.push(child_path);
+                }
+            }
+        }
+
+        candidates.sort();
+        Ok(candidates)
+    }
+
+    for file_path in collect_candidate_files(path, include_tests, include_examples)? {
         // Skip large files by size budget
-        if let Ok(md) = entry.metadata() {
+        if let Ok(md) = fs::metadata(&file_path) {
             if md.len() > (max_file_kb as u64) * 1024 {
                 warn!(
                     "Skipping large file {} (>{} KB)",
-                    entry.path().display(),
+                    file_path.display(),
                     max_file_kb
                 );
                 continue;
             }
         }
 
-        if let Some(language) = detect_language_from_path(entry.path()) {
+        if let Some(language) = detect_language_from_path(&file_path) {
             if language_filter.is_none() || language_filter == Some(language) {
-                files.push((entry.path().to_path_buf(), language));
+                files.push((file_path, language));
             }
         }
     }

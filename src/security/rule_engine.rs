@@ -11,7 +11,6 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
 
 /// Declarative rule engine for loading YAML metadata plus tree-sitter query patterns.
 pub struct DeclarativeRuleEngine {
@@ -62,24 +61,14 @@ impl DeclarativeRuleEngine {
             ));
         }
 
-        let mut rule_paths = WalkDir::new(rules_dir)
-            .into_iter()
-            .filter_map(std::result::Result::ok)
-            .filter(|entry| entry.file_type().is_file())
-            .filter_map(|entry| {
-                let path = entry.into_path();
-                matches!(
-                    path.extension().and_then(|ext| ext.to_str()),
-                    Some("yaml" | "yml")
-                )
-                .then_some(path)
-            })
-            .collect::<Vec<_>>();
+        let mut rule_paths = collect_rule_paths(rules_dir)?;
         rule_paths.sort();
 
         let mut rules = Vec::new();
         for rule_path in rule_paths {
-            rules.push(Self::load_rule_file(&rule_path)?);
+            if let Some(rule) = Self::load_rule_file(&rule_path)? {
+                rules.push(rule);
+            }
         }
 
         Ok(Self {
@@ -155,7 +144,7 @@ impl DeclarativeRuleEngine {
         &self.rules_dir
     }
 
-    fn load_rule_file(rule_path: &Path) -> Result<LoadedRule> {
+    fn load_rule_file(rule_path: &Path) -> Result<Option<LoadedRule>> {
         let raw_rule = fs::read_to_string(rule_path)?;
         let rule_file: RuleFile = serde_yaml::from_str(&raw_rule).map_err(|err| {
             Error::config_error_with_context(
@@ -202,21 +191,32 @@ impl DeclarativeRuleEngine {
         let mut queries = HashMap::new();
         for language_name in &rule_file.languages {
             let language = language_name.parse::<Language>()?;
-            let query = Query::new(language, &pattern).map_err(|err| {
-                Error::config_error_with_context(
-                    format!(
-                        "failed to compile rule {} for {}",
-                        rule_file.id,
-                        language.name()
-                    ),
-                    Some(rule_path.to_path_buf()),
-                    Some(err.to_string()),
-                )
-            })?;
-            queries.insert(language, query);
+            match Query::new(language, &pattern) {
+                Ok(query) => {
+                    queries.insert(language, query);
+                }
+                Err(Error::NotSupported { .. }) => {
+                    continue;
+                }
+                Err(err) => {
+                    return Err(Error::config_error_with_context(
+                        format!(
+                            "failed to compile rule {} for {}",
+                            rule_file.id,
+                            language.name()
+                        ),
+                        Some(rule_path.to_path_buf()),
+                        Some(err.to_string()),
+                    ));
+                }
+            }
         }
 
-        Ok(LoadedRule {
+        if queries.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(LoadedRule {
             id: rule_file.id.clone(),
             title: rule_file
                 .title
@@ -229,8 +229,37 @@ impl DeclarativeRuleEngine {
             cwe_id: rule_file.cwe_id,
             taint_requirement: rule_file.taint_requirement,
             queries,
-        })
+        }))
     }
+}
+
+fn collect_rule_paths(rules_dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut pending_dirs = vec![rules_dir.to_path_buf()];
+    let mut rule_paths = Vec::new();
+
+    while let Some(current_dir) = pending_dirs.pop() {
+        for entry in fs::read_dir(&current_dir)? {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+            let path = entry.path();
+
+            if file_type.is_dir() {
+                pending_dirs.push(path);
+                continue;
+            }
+
+            if file_type.is_file()
+                && matches!(
+                    path.extension().and_then(|ext| ext.to_str()),
+                    Some("yaml" | "yml")
+                )
+            {
+                rule_paths.push(path);
+            }
+        }
+    }
+
+    Ok(rule_paths)
 }
 
 /// Default location of the checked-in security rules.

@@ -1,4 +1,4 @@
-#![cfg(feature = "cli")]
+#![cfg(all(feature = "cli", feature = "net"))]
 
 use assert_cmd::prelude::*;
 #[allow(unused_imports)]
