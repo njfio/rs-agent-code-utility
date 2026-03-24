@@ -1259,6 +1259,77 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_inline_suppression_flow_from_source_to_sarif(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
+        let root_path = temp_dir.path().join("fixture");
+        std::fs::create_dir(&root_path)?;
+        let file_path = root_path.join("suppressed.rs");
+
+        std::fs::write(
+            &file_path,
+            r#"fn run(user_id: &str, other_id: &str) {
+    // rts-ignore[sql-injection]
+    execute_query("SELECT * FROM users WHERE id = '".to_string() + user_id);
+    execute_query("SELECT * FROM users WHERE id = '".to_string() + other_id);
+}
+
+fn execute_query(_query: String) {}
+"#,
+        )?;
+
+        let suppressions = load_inline_suppressions(&file_path, Language::Rust)?;
+        let mut suppressed_candidate =
+            test_security_finding(2, "Potential SQL Injection", Some("CWE-89"));
+        suppressed_candidate.file_path = file_path.to_string_lossy().into_owned();
+        let mut unsuppressed_candidate =
+            test_security_finding(3, "Potential SQL Injection", Some("CWE-89"));
+        unsuppressed_candidate.file_path = file_path.to_string_lossy().into_owned();
+
+        let (retained, suppressed) = partition_findings_by_inline_suppression(
+            vec![suppressed_candidate, unsuppressed_candidate],
+            &suppressions,
+        );
+
+        assert_eq!(retained.len(), 1);
+        assert_eq!(suppressed.len(), 1);
+
+        let sarif = generate_sarif_report(&retained, &suppressed, &root_path, None)?;
+        let sarif: serde_json::Value = serde_json::from_str(&sarif)?;
+        let results = sarif["runs"][0]["results"]
+            .as_array()
+            .ok_or("expected SARIF results array")?;
+        let sql_results: Vec<_> = results
+            .iter()
+            .filter(|result| result["ruleId"] == "sql-injection")
+            .collect();
+
+        assert_eq!(sql_results.len(), 2);
+
+        let suppressed: Vec<_> = sql_results
+            .iter()
+            .copied()
+            .filter(|result| result.get("suppressions").is_some())
+            .collect();
+        let unsuppressed: Vec<_> = sql_results
+            .iter()
+            .copied()
+            .filter(|result| result.get("suppressions").is_none())
+            .collect();
+
+        assert_eq!(suppressed.len(), 1);
+        assert_eq!(unsuppressed.len(), 1);
+        assert_eq!(suppressed[0]["suppressions"][0]["kind"], "inSource");
+        assert_eq!(
+            suppressed[0]["suppressions"][0]["justification"],
+            "// rts-ignore[sql-injection]"
+        );
+        assert_eq!(unsuppressed[0]["baselineState"], "new");
+
+        Ok(())
+    }
+
     #[test]
     fn test_parse_inline_suppression_supports_double_slash_comments(
     ) -> Result<(), Box<dyn std::error::Error>> {

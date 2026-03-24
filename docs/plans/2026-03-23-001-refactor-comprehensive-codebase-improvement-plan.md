@@ -836,7 +836,7 @@ Phase 0 (CI/deps)
 
 - [ ] Default `cargo add rust_tree_sitter` pulls < 120 crates (down from 506; tighten threshold as measured)
 - [x] Security scanner produces confidence-scored findings with < 30% false positive rate on test corpus
-- [ ] `// rts-ignore[rule-id]` suppresses findings per spec
+- [x] `// rts-ignore[rule-id]` suppresses findings per spec
 - [ ] Performance analysis uses AST traversal, not string matching
 - [ ] Dependency analyzer returns correct results for Cargo.toml
 - [ ] 3-8 MCP tools functional and tested (start with 3, expand to 8)
