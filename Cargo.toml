@@ -39,7 +39,6 @@ petgraph = "0.6"
 ignore = "0.4"
 crc32fast = { version = "1.4", optional = true }
 pulldown-cmark = { version = "0.10", optional = true }
-crossbeam-channel = "0.5"
 parking_lot = "0.12"
 memmap2 = { version = "0.9", optional = true }
 base64 = "0.21"

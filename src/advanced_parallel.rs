@@ -11,10 +11,10 @@
 
 use crate::error::{Error, Result};
 use crate::system_parallelism;
-use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::mpsc::{channel, sync_channel, Receiver, Sender, SyncSender, TrySendError};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -132,7 +132,7 @@ struct TaskWrapper {
 struct Worker {
     _id: usize,
     handle: Option<JoinHandle<()>>,
-    task_sender: Sender<TaskWrapper>,
+    task_sender: SyncSender<TaskWrapper>,
     is_idle: Arc<AtomicBool>,
     memory_usage: Arc<AtomicUsize>,
 }
@@ -140,12 +140,12 @@ struct Worker {
 impl Worker {
     fn new(
         id: usize,
-        task_receiver: Receiver<TaskWrapper>,
+        task_receiver: Arc<Mutex<Receiver<TaskWrapper>>>,
         stats: Arc<RwLock<ThreadPoolStats>>,
         config: Arc<ThreadPoolConfig>,
         global_task_queue: Arc<Mutex<VecDeque<TaskWrapper>>>,
     ) -> Self {
-        let (task_sender, worker_receiver) = bounded(1);
+        let (task_sender, worker_receiver) = sync_channel(1);
         let is_idle = Arc::new(AtomicBool::new(true));
         let memory_usage = Arc::new(AtomicUsize::new(0));
 
@@ -179,7 +179,7 @@ impl Worker {
 
     fn run_worker_loop(
         _worker_id: usize,
-        global_receiver: Receiver<TaskWrapper>,
+        global_receiver: Arc<Mutex<Receiver<TaskWrapper>>>,
         local_receiver: Receiver<TaskWrapper>,
         is_idle: Arc<AtomicBool>,
         memory_usage: Arc<AtomicUsize>,
@@ -194,7 +194,7 @@ impl Worker {
             let task_wrapper =
                 if let Ok(task) = local_receiver.recv_timeout(Duration::from_millis(10)) {
                     task
-                } else if let Ok(task) = global_receiver.recv_timeout(Duration::from_millis(10)) {
+                } else if let Some(task) = Self::try_recv_global_task(&global_receiver) {
                     task
                 } else {
                     // Try work-stealing from global queue
@@ -263,10 +263,20 @@ impl Worker {
         }
     }
 
-    fn send_task(&self, task: TaskWrapper) -> Result<()> {
-        self.task_sender
-            .send_timeout(task, Duration::from_millis(100))
-            .map_err(|_| Error::internal_error("thread_pool", "Failed to send task to worker"))
+    fn try_recv_global_task(global_receiver: &Mutex<Receiver<TaskWrapper>>) -> Option<TaskWrapper> {
+        let receiver = match global_receiver.lock() {
+            Ok(receiver) => receiver,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+
+        receiver.try_recv().ok()
+    }
+
+    fn try_send_task(&self, task: TaskWrapper) -> std::result::Result<(), TaskWrapper> {
+        match self.task_sender.try_send(task) {
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(task) | TrySendError::Disconnected(task)) => Err(task),
+        }
     }
 }
 
@@ -275,7 +285,7 @@ pub struct AdvancedThreadPool {
     config: Arc<ThreadPoolConfig>,
     workers: Arc<RwLock<HashMap<usize, Worker>>>,
     task_sender: Sender<TaskWrapper>,
-    task_receiver: Receiver<TaskWrapper>,
+    task_receiver: Arc<Mutex<Receiver<TaskWrapper>>>,
     global_task_queue: Arc<Mutex<VecDeque<TaskWrapper>>>,
     stats: Arc<RwLock<ThreadPoolStats>>,
     next_worker_id: AtomicUsize,
@@ -286,7 +296,8 @@ pub struct AdvancedThreadPool {
 impl AdvancedThreadPool {
     pub fn new(config: ThreadPoolConfig) -> Result<Self> {
         let config = Arc::new(config);
-        let (task_sender, task_receiver) = unbounded();
+        let (task_sender, task_receiver) = channel();
+        let task_receiver = Arc::new(Mutex::new(task_receiver));
         let workers = Arc::new(RwLock::new(HashMap::new()));
         let stats = Arc::new(RwLock::new(ThreadPoolStats::default()));
         let global_task_queue = Arc::new(Mutex::new(VecDeque::new()));
@@ -320,7 +331,7 @@ impl AdvancedThreadPool {
 
         let worker = Worker::new(
             worker_id,
-            self.task_receiver.clone(),
+            Arc::clone(&self.task_receiver),
             Arc::clone(&self.stats),
             Arc::clone(&self.config),
             Arc::clone(&self.global_task_queue),
@@ -395,7 +406,7 @@ impl AdvancedThreadPool {
 
     /// Submit a task for execution
     pub fn submit<T: Task + 'static>(&self, task: T) -> Result<()> {
-        let task_wrapper = TaskWrapper {
+        let mut task_wrapper = TaskWrapper {
             task: Box::new(task),
             _submitted_at: Instant::now(),
             _priority: TaskPriority::Normal,
@@ -410,7 +421,10 @@ impl AdvancedThreadPool {
             let workers = self.workers.read();
             for worker in workers.values() {
                 if worker.is_idle.load(Ordering::Relaxed) {
-                    return worker.send_task(task_wrapper);
+                    match worker.try_send_task(task_wrapper) {
+                        Ok(()) => return Ok(()),
+                        Err(task) => task_wrapper = task,
+                    }
                 }
             }
         }
@@ -427,7 +441,7 @@ impl AdvancedThreadPool {
         task: T,
         priority: TaskPriority,
     ) -> Result<()> {
-        let task_wrapper = TaskWrapper {
+        let mut task_wrapper = TaskWrapper {
             task: Box::new(task),
             _submitted_at: Instant::now(),
             _priority: priority,
@@ -442,7 +456,10 @@ impl AdvancedThreadPool {
             let workers = self.workers.read();
             for worker in workers.values() {
                 if worker.is_idle.load(Ordering::Relaxed) {
-                    return worker.send_task(task_wrapper);
+                    match worker.try_send_task(task_wrapper) {
+                        Ok(()) => return Ok(()),
+                        Err(task) => task_wrapper = task,
+                    }
                 }
             }
         }
