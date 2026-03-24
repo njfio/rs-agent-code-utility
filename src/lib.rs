@@ -143,9 +143,6 @@
 //! ```
 #![deny(clippy::unwrap_used, clippy::expect_used)]
 
-/// Advanced AI-powered code analysis capabilities
-#[allow(clippy::unwrap_used, clippy::expect_used)]
-pub mod advanced_ai_analysis;
 /// Advanced multi-level caching system
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_cache;
@@ -334,10 +331,6 @@ pub use ai::{
     AIService, AIServiceBuilder,
 };
 
-// Advanced features
-pub use advanced_ai_analysis::{
-    AdvancedAIAnalyzer, AdvancedAIConfig, AdvancedAIResult, ArchitecturePattern, SemanticAnalysis,
-};
 pub use ast_transformation::{
     AstTransformationEngine, ExtractedVariableAnalysis, ImpactScope, Position, SemanticValidator,
     Transformation, TransformationConfig, TransformationImpact, TransformationLocation,
