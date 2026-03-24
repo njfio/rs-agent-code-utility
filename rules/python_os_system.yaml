@@ -1,0 +1,12 @@
+id: python-os-system
+title: Dynamic os.system call
+description: Passing dynamic input to os.system can enable command injection.
+finding_type: injection
+severity: critical
+confidence: 0.9
+languages:
+  - python
+remediation: Use subprocess.run with a fixed argument vector and avoid passing untrusted data to a shell.
+cwe_id: CWE-78
+pattern_file: python_os_system.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

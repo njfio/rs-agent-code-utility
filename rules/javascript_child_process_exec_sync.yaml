@@ -1,0 +1,12 @@
+id: javascript-child-process-exec-sync
+title: Shell execution with child_process.execSync
+description: Passing dynamic input to child_process.execSync can enable command injection.
+finding_type: injection
+severity: critical
+confidence: 0.91
+languages:
+  - javascript
+remediation: Prefer execFile/spawn with fixed arguments or strictly validate and escape user-controlled input before execution.
+cwe_id: CWE-78
+pattern_file: javascript_child_process_exec_sync.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

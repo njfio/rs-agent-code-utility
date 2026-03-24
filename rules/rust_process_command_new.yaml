@@ -1,0 +1,12 @@
+id: rust-process-command-new
+title: Process execution with std::process::Command::new
+description: Passing dynamic input to std::process::Command::new can enable command execution with attacker-controlled binaries or arguments.
+finding_type: injection
+severity: critical
+confidence: 0.88
+languages:
+  - rust
+remediation: Use an allowlist of executable paths and avoid constructing process invocations from untrusted input.
+cwe_id: CWE-78
+pattern_file: rust_process_command_new.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

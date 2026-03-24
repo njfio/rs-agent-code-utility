@@ -1,0 +1,11 @@
+id: rust-unsafe-block
+title: Unsafe block usage
+description: Unsafe blocks require manual review because they bypass Rust's usual memory and aliasing guarantees.
+finding_type: insecure_design
+severity: medium
+confidence: 0.72
+languages:
+  - rust
+remediation: Minimize the unsafe scope, document the invariants, and prefer safe abstractions when possible.
+cwe_id: CWE-242
+pattern_file: rust_unsafe_block.scm

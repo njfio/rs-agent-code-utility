@@ -1,0 +1,12 @@
+id: python-yaml-load
+title: Unsafe yaml.load usage
+description: Using yaml.load on untrusted data can deserialize attacker-controlled objects.
+finding_type: insecure_design
+severity: high
+confidence: 0.82
+languages:
+  - python
+remediation: Use yaml.safe_load for untrusted input and only deserialize trusted schemas.
+cwe_id: CWE-502
+pattern_file: python_yaml_load.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

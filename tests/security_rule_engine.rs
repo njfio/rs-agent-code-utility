@@ -2,6 +2,7 @@ use rust_tree_sitter::security::{
     DeclarativeRuleEngine, SecurityFindingType, SecurityPipelineConfig,
 };
 use rust_tree_sitter::{Language, Parser, SecurityPipeline};
+use std::collections::HashSet;
 use std::fs;
 use tempfile::TempDir;
 
@@ -54,9 +55,62 @@ pattern_file: eval.scm
 fn builtin_rule_directory_loads() -> Result<(), Box<dyn std::error::Error>> {
     let engine = DeclarativeRuleEngine::load_builtin()?;
     assert!(
-        engine.rule_count() >= 6,
-        "expected at least the seeded built-in declarative rules"
+        engine.rule_count() >= 12,
+        "expected the expanded built-in declarative rule set"
     );
+    Ok(())
+}
+
+#[test]
+fn builtin_rules_match_representative_shipped_patterns() -> Result<(), Box<dyn std::error::Error>> {
+    let engine = DeclarativeRuleEngine::load_builtin()?;
+
+    assert_titles(
+        &engine,
+        Language::JavaScript,
+        "src/app.js",
+        r#"
+        eval(userInput);
+        child_process.execSync(userInput);
+        "#,
+        &[
+            "Dynamic eval call",
+            "Shell execution with child_process.execSync",
+        ],
+    )?;
+
+    assert_titles(
+        &engine,
+        Language::Python,
+        "src/app.py",
+        r#"
+        import os
+        import yaml
+
+        os.system(user_input)
+        yaml.load(payload)
+        "#,
+        &["Dynamic os.system call", "Unsafe yaml.load usage"],
+    )?;
+
+    assert_titles(
+        &engine,
+        Language::Rust,
+        "src/lib.rs",
+        r#"
+        fn run(user_cmd: &str) {
+            std::process::Command::new(user_cmd);
+            unsafe {
+                std::ptr::read_volatile(0 as *const i32);
+            }
+        }
+        "#,
+        &[
+            "Process execution with std::process::Command::new",
+            "Unsafe block usage",
+        ],
+    )?;
+
     Ok(())
 }
 
@@ -105,6 +159,28 @@ pattern_file: eval.scm
             && finding.title == "Avoid eval"
             && finding.finding_type == SecurityFindingType::Injection
     }));
+
+    Ok(())
+}
+
+fn assert_titles(
+    engine: &DeclarativeRuleEngine,
+    language: Language,
+    file_path: &str,
+    source: &str,
+    expected_titles: &[&str],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(language)?;
+    let tree = parser.parse(source, None)?;
+    let findings = engine.evaluate(&tree, language, file_path.as_ref())?;
+    let titles: HashSet<_> = findings.into_iter().map(|finding| finding.title).collect();
+
+    for expected_title in expected_titles {
+        assert!(
+            titles.contains(*expected_title),
+            "missing built-in rule finding: {expected_title}; got {titles:?}"
+        );
+    }
 
     Ok(())
 }
