@@ -36,6 +36,7 @@ tree-sitter-cli analyze <PATH> [OPTIONS]
 **Options:**
 - `-f, --format <FORMAT>` - Output format: table, json, summary [default: table]
 - `-d, --detailed` - Show detailed analysis including symbol information
+- `--include-graph` - Include the semantic graph in JSON output
 - `--max-depth <DEPTH>` - Maximum directory depth to analyze
 - `--include <PATTERN>` - Include files matching pattern (can be used multiple times)
 - `--exclude <PATTERN>` - Exclude files matching pattern (can be used multiple times)
@@ -48,6 +49,9 @@ tree-sitter-cli analyze ./src
 
 # Detailed JSON output
 tree-sitter-cli analyze ./src --format json --detailed
+
+# JSON output with semantic graph context for agents
+tree-sitter-cli analyze ./src --format json --include-graph
 
 # Analyze with filters
 tree-sitter-cli analyze ./src --include "*.rs" --exclude "*/target/*" --max-depth 3

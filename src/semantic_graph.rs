@@ -443,6 +443,31 @@ impl SemanticGraphQuery {
         }
     }
 
+    /// Export a stable snapshot of the graph for serialization.
+    pub fn snapshot(&self) -> SemanticGraphSnapshot {
+        let mut nodes: Vec<_> = self.nodes.values().cloned().collect();
+        nodes.sort_by(|a, b| a.id.cmp(&b.id).then_with(|| a.name.cmp(&b.name)));
+
+        let mut edges: Vec<_> = self
+            .edges
+            .values()
+            .flat_map(|node_edges| node_edges.iter().cloned())
+            .collect();
+        edges.sort_by(|a, b| {
+            a.from
+                .cmp(&b.from)
+                .then_with(|| a.to.cmp(&b.to))
+                .then_with(|| a.relationship.to_string().cmp(&b.relationship.to_string()))
+                .then_with(|| a.context.cmp(&b.context))
+        });
+
+        SemanticGraphSnapshot {
+            nodes,
+            edges,
+            statistics: self.get_statistics(),
+        }
+    }
+
     // Private helper methods
 
     /// Add nodes from a file's symbols
@@ -667,6 +692,17 @@ pub struct GraphStatistics {
     pub node_type_distribution: HashMap<NodeType, usize>,
     /// Distribution of relationship types
     pub relationship_type_distribution: HashMap<RelationshipType, usize>,
+}
+
+/// Serializable snapshot of the semantic graph for CLI and agent consumers.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SemanticGraphSnapshot {
+    /// All graph nodes in stable order
+    pub nodes: Vec<GraphNode>,
+    /// All graph edges in stable order
+    pub edges: Vec<GraphEdge>,
+    /// Summary statistics for the graph
+    pub statistics: GraphStatistics,
 }
 
 impl GraphIndex {

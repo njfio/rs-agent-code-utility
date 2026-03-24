@@ -546,6 +546,35 @@ function createUser() {
 }
 
 #[test]
+fn test_semantic_graph_snapshot_is_stable_and_serializable(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let analysis = create_test_analysis_result()?;
+    let mut graph = SemanticGraphQuery::new();
+    graph.build_from_analysis(&analysis)?;
+
+    let snapshot = graph.snapshot();
+
+    assert_eq!(snapshot.statistics.total_nodes, snapshot.nodes.len());
+    assert_eq!(snapshot.statistics.total_edges, snapshot.edges.len());
+    assert!(snapshot
+        .nodes
+        .windows(2)
+        .all(|window| window[0].id <= window[1].id));
+    assert!(snapshot.edges.windows(2).all(|window| {
+        let left = (&window[0].from, &window[0].to);
+        let right = (&window[1].from, &window[1].to);
+        left <= right
+    }));
+
+    let json = serde_json::to_value(&snapshot)?;
+    assert!(json.get("nodes").is_some());
+    assert!(json.get("edges").is_some());
+    assert!(json.get("statistics").is_some());
+
+    Ok(())
+}
+
+#[test]
 fn test_graph_statistics() -> Result<(), Box<dyn std::error::Error>> {
     let analysis = create_test_analysis_result()?;
     let mut graph = SemanticGraphQuery::new();

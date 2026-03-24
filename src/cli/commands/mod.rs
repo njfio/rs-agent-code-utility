@@ -40,6 +40,7 @@ impl Execute for Commands {
                 detailed,
                 threads,
                 enable_security,
+                include_graph,
                 print_schema,
                 schema_version,
             } => {
@@ -71,6 +72,7 @@ impl Execute for Commands {
                     *detailed,
                     *threads,
                     *enable_security,
+                    *include_graph,
                 )
             }
             Commands::AstSecurity {

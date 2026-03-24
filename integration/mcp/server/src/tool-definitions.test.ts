@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MCP_SCHEMA_VERSION,
+  buildAnalyzeCodebaseArgs,
   toolDefinitions,
 } from "./tool-definitions.js";
 
@@ -27,5 +28,14 @@ describe("toolDefinitions", () => {
 
       expect(result.schema_version).toBe(MCP_SCHEMA_VERSION);
     }
+  });
+
+  it("maps includeGraph to the analyze CLI flag", () => {
+    expect(
+      buildAnalyzeCodebaseArgs({
+        path: "/tmp/project",
+        includeGraph: true,
+      })
+    ).toContain("--include-graph");
   });
 });

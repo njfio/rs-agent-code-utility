@@ -25,6 +25,7 @@ export const analyzeCodebaseInputSchema = z.object({
   detailed: z.boolean().optional(),
   threads: z.number().int().positive().max(128).optional(),
   enableSecurity: z.boolean().optional(),
+  includeGraph: z.boolean().optional(),
 });
 
 export const getSymbolsInputSchema = z.object({
@@ -96,6 +97,7 @@ export function buildAnalyzeCodebaseArgs(input: z.infer<typeof analyzeCodebaseIn
   if (input.detailed) args.push("--detailed");
   if (input.threads !== undefined) args.push("--threads", String(input.threads));
   if (input.enableSecurity) args.push("--enable-security");
+  if (input.includeGraph) args.push("--include-graph");
 
   return args;
 }

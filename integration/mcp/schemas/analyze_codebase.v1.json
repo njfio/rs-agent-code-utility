@@ -15,7 +15,8 @@
         "includeExts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "detailed": { "type": "boolean", "default": false },
         "threads": { "type": "integer", "minimum": 1 },
-        "enableSecurity": { "type": "boolean", "default": false }
+        "enableSecurity": { "type": "boolean", "default": false },
+        "includeGraph": { "type": "boolean", "default": false }
       },
       "required": ["path"],
       "additionalProperties": false

@@ -25,6 +25,8 @@ The initial MCP tool set is intentionally limited to CLI commands that already e
 - `scan_security` -> `tree-sitter-cli security --format json`
 - `analyze_dependencies` -> `tree-sitter-cli dependencies --format json`
 
+`analyze_codebase` supports `includeGraph: true`, which maps to `tree-sitter-cli analyze --format json --include-graph` and returns a serialized semantic graph inside the CLI report.
+
 ## Honest Limitations
 
 These planned tools are not exposed yet because the current CLI does not offer a stable dedicated JSON contract for them:

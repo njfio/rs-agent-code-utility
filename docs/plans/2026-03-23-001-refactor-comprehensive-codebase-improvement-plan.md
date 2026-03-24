@@ -627,17 +627,17 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 ##### Task 3.4: Wire Semantic Graph as Structured Context
 
-- [ ] Add `--format json --include-graph` flag to relevant CLI commands
-- [ ] Serialize semantic graph nodes and edges as JSON (node types, relationships, weights)
+- [x] Add `--format json --include-graph` flag to relevant CLI commands (`analyze` shipped first)
+- [x] Serialize semantic graph nodes and edges as JSON (node types, relationships, weights)
 - [ ] MCP `query_semantic_graph` tool returns this structured data
-- [ ] AI consumers get call graphs, import relationships, and dependency edges -- not raw source code
+- [x] AI consumers can now request structured graph context through `analyze_codebase { includeGraph: true }` instead of receiving only raw file analysis
 
 **Note:** `GraphNode.file_path: PathBuf` already exists in `semantic_graph.rs` -- no need to add it. Focus on serialization and the CLI flag.
 
 **Acceptance criteria:**
-- `rts-cli analyze --format json --include-graph` includes semantic graph in output
+- `tree-sitter-cli analyze --format json --include-graph` includes semantic graph in output
 - Graph serialization includes node types, edge types, and relationship metadata
-- MCP tool correctly exposes this data
+- MCP `analyze_codebase` now exposes this data via `includeGraph`; dedicated `query_semantic_graph` tooling remains outstanding
 
 ---
 

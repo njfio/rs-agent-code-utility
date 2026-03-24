@@ -94,6 +94,7 @@ Options:
 **Example:**
 ```bash
 tree-sitter-cli analyze ./src --format json
+tree-sitter-cli analyze ./src --format json --include-graph
 ```
 
 ### `security` - Security Vulnerability Scanning

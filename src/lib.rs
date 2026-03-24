@@ -337,7 +337,7 @@ pub use semantic_context::{
 };
 pub use semantic_graph::{
     GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
-    SemanticGraphQuery,
+    SemanticGraphQuery, SemanticGraphSnapshot,
 };
 pub use sql_injection_detector::{
     SqlInjectionDetector, SqlInjectionType, SqlInjectionVulnerability,

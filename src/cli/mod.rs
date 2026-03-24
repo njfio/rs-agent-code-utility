@@ -87,6 +87,10 @@ pub enum Commands {
         #[arg(long, default_value_t = false)]
         enable_security: bool,
 
+        /// Include the semantic graph in JSON output
+        #[arg(long, default_value_t = false)]
+        include_graph: bool,
+
         /// Print JSON schema and exit
         #[arg(long, default_value_t = false)]
         print_schema: bool,
