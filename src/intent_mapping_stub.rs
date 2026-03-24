@@ -182,17 +182,19 @@ impl IntentMappingSystem {
     ) -> Result<()> {
         // Validate that both requirement and implementation exist
         if !self.requirements.contains_key(&requirement_id) {
-            return Err(Error::invalid_input(format!(
-                "Requirement '{}' not found",
-                requirement_id
-            )));
+            return Err(Error::invalid_input_error(
+                "requirement_id",
+                "existing requirement ID",
+                requirement_id,
+            ));
         }
 
         if !self.implementations.contains_key(&implementation_id) {
-            return Err(Error::invalid_input(format!(
-                "Implementation '{}' not found",
-                implementation_id
-            )));
+            return Err(Error::invalid_input_error(
+                "implementation_id",
+                "existing implementation ID",
+                implementation_id,
+            ));
         }
 
         // Create mapping with basic confidence score
@@ -307,7 +309,11 @@ impl IntentMappingSystem {
                 return Ok(true);
             }
         }
-        Err(Error::invalid_input("Mapping not found"))
+        Err(Error::invalid_input_error(
+            "mapping",
+            "existing requirement/implementation mapping",
+            format!("{requirement_id}->{implementation_id}"),
+        ))
     }
 
     /// Auto-discover potential mappings based on text similarity
