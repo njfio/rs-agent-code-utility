@@ -269,8 +269,8 @@ fn test_language_detection() {
         Some(Language::JavaScript)
     );
     assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
-    assert_eq!(detect_language_from_extension("c"), Some(Language::C));
     assert_eq!(detect_language_from_extension("unknown"), None);
+    assert_eq!(detect_language_from_extension("c"), None);
     assert_eq!(detect_language_from_extension("cpp"), None);
 
     assert_eq!(
@@ -285,6 +285,7 @@ fn test_language_detection() {
         detect_language_from_path("app.js"),
         Some(Language::JavaScript)
     );
+    assert_eq!(detect_language_from_path("example.c"), None);
     assert_eq!(detect_language_from_path("example.cpp"), None);
 
     assert_eq!(detect_language_from_path("unknown.txt"), None);
@@ -304,6 +305,8 @@ fn test_supported_languages() {
     assert_eq!(rust_info.file_extensions, &["rs"]);
 
     let has_cpp = languages.iter().any(|lang| lang.name == "C++");
+    let has_c = languages.iter().any(|lang| lang.name == "C");
+    assert!(!has_c);
     assert!(!has_cpp);
 }
 

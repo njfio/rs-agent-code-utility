@@ -8,7 +8,7 @@
 //! ## Features
 //!
 //! ### Core Parsing
-//! - **Multi-language support**: Parse Rust, Python, JavaScript, TypeScript, C, and more
+//! - **Multi-language support**: Parse Rust, Python, JavaScript, TypeScript, and more
 //! - **Incremental parsing**: Efficient re-parsing of modified code sections
 //! - **Query system**: Powerful pattern matching with Tree-sitter queries
 //! - **Error recovery**: Robust parsing with detailed error reporting and recovery
@@ -528,11 +528,6 @@ pub fn supported_languages() -> Vec<LanguageInfo> {
             file_extensions: &["py", "pyi"],
         },
         LanguageInfo {
-            name: "C",
-            version: "0.21.0",
-            file_extensions: &["c", "h"],
-        },
-        LanguageInfo {
             name: "TypeScript",
             version: "0.21.0",
             file_extensions: &["ts", "tsx", "mts", "cts"],
@@ -547,7 +542,6 @@ pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
         "js" | "mjs" | "jsx" => Some(Language::JavaScript),
         "ts" | "tsx" | "mts" | "cts" => Some(Language::TypeScript),
         "py" | "pyi" => Some(Language::Python),
-        "c" | "h" => Some(Language::C),
         _ => None,
     }
 }
@@ -576,6 +570,7 @@ mod tests {
             Some(Language::TypeScript)
         );
         assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
+        assert_eq!(detect_language_from_extension("c"), None);
         assert_eq!(detect_language_from_extension("unknown"), None);
     }
 
@@ -590,6 +585,7 @@ mod tests {
             detect_language_from_path("script.py"),
             Some(Language::Python)
         );
+        assert_eq!(detect_language_from_path("header.h"), None);
         assert_eq!(detect_language_from_path("unknown.txt"), None);
     }
 
@@ -598,6 +594,7 @@ mod tests {
         let languages = supported_languages();
         assert!(!languages.is_empty());
         assert!(languages.iter().any(|lang| lang.name == "Rust"));
+        assert!(!languages.iter().any(|lang| lang.name == "C"));
     }
 
     #[test]
