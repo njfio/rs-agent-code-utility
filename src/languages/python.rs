@@ -525,7 +525,7 @@ impl PythonSyntax {
     /// Check if a string is in PascalCase
     fn is_pascal_case(s: &str) -> bool {
         !s.is_empty()
-            && s.chars().next().unwrap().is_uppercase()
+            && s.chars().next().is_some_and(|c| c.is_uppercase())
             && s.chars().all(|c| c.is_alphanumeric())
             && !s.contains('_')
     }
@@ -981,8 +981,11 @@ def function_with_params(a, b, c=None):
     return a + b
         "#;
 
-        let parser = Parser::new(crate::Language::Python).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let parser = Parser::new(crate::Language::Python)
+            .unwrap_or_else(|error| panic!("failed to create Python parser for test: {error}"));
+        let tree = parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse Python source for test: {error}"));
 
         let functions = PythonSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);

@@ -277,17 +277,17 @@ mod tests {
 
     #[test]
     fn test_language_parsing() {
-        assert_eq!("rust".parse::<Language>().unwrap(), Language::Rust);
+        assert_eq!("rust".parse::<Language>().ok(), Some(Language::Rust));
         assert_eq!(
-            "javascript".parse::<Language>().unwrap(),
-            Language::JavaScript
+            "javascript".parse::<Language>().ok(),
+            Some(Language::JavaScript)
         );
-        assert_eq!("python".parse::<Language>().unwrap(), Language::Python);
-        assert_eq!("java".parse::<Language>().unwrap(), Language::Java);
-        assert_eq!("php".parse::<Language>().unwrap(), Language::Php);
-        assert_eq!("ruby".parse::<Language>().unwrap(), Language::Ruby);
-        assert_eq!("swift".parse::<Language>().unwrap(), Language::Swift);
-        assert_eq!("kotlin".parse::<Language>().unwrap(), Language::Kotlin);
+        assert_eq!("python".parse::<Language>().ok(), Some(Language::Python));
+        assert_eq!("java".parse::<Language>().ok(), Some(Language::Java));
+        assert_eq!("php".parse::<Language>().ok(), Some(Language::Php));
+        assert_eq!("ruby".parse::<Language>().ok(), Some(Language::Ruby));
+        assert_eq!("swift".parse::<Language>().ok(), Some(Language::Swift));
+        assert_eq!("kotlin".parse::<Language>().ok(), Some(Language::Kotlin));
         assert!("unknown".parse::<Language>().is_err());
     }
 

@@ -559,8 +559,11 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::Rust).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let parser = Parser::new(crate::Language::Rust)
+            .unwrap_or_else(|error| panic!("failed to create Rust parser for test: {error}"));
+        let tree = parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse Rust source for test: {error}"));
         let root = tree.root_node();
 
         let mut found_function = false;
