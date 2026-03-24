@@ -3,6 +3,7 @@
 //! Provides environment-based configuration, API key management,
 //! and secure configuration handling for production use.
 
+use crate::system_parallelism;
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -193,7 +194,7 @@ impl Default for AnalysisConfig {
             max_file_size: 10 * 1024 * 1024, // 10MB
             max_files: 10000,
             enable_parallel: true,
-            worker_threads: num_cpus::get(),
+            worker_threads: system_parallelism(),
             timeout: 300, // 5 minutes
             enable_ml: false,
         }

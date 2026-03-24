@@ -70,7 +70,6 @@ tower = { version = "0.4", features = ["timeout", "retry"], optional = true }
 # backoff = "0.4"  # Replaced with exponential-backoff due to maintenance issues
 exponential-backoff = "2.0"
 dirs = "5.0"
-num_cpus = "1.0"
 
 # Machine Learning Dependencies for Intent Mapping
 candle-core = { version = "0.9.1", optional = true }

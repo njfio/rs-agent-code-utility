@@ -10,6 +10,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::error::{Error, Result};
+use crate::system_parallelism;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
@@ -90,9 +91,10 @@ pub struct ThreadPoolConfig {
 
 impl Default for ThreadPoolConfig {
     fn default() -> Self {
+        let system_parallelism = system_parallelism();
         Self {
-            min_threads: num_cpus::get(),
-            max_threads: num_cpus::get() * 2,
+            min_threads: system_parallelism,
+            max_threads: system_parallelism.saturating_mul(2),
             keep_alive: Duration::from_secs(60),
             max_queue_size: 1000,
             max_memory_per_thread: 100 * 1024 * 1024, // 100MB

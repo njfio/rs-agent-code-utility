@@ -376,7 +376,7 @@ impl PerformanceBenchmarkSuite {
         println!("⚡ Running Parallel Processing Benchmarks...");
 
         let thread_config = ThreadPoolConfig {
-            max_threads: num_cpus::get(),
+            max_threads: crate::system_parallelism(),
             ..Default::default()
         };
 

@@ -143,6 +143,12 @@
 //! ```
 #![deny(clippy::unwrap_used, clippy::expect_used)]
 
+pub(crate) fn system_parallelism() -> usize {
+    std::thread::available_parallelism()
+        .map(std::num::NonZeroUsize::get)
+        .unwrap_or(1)
+}
+
 /// Advanced multi-level caching system
 pub mod advanced_cache;
 /// Advanced memory management system

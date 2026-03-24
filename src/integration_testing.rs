@@ -544,7 +544,7 @@ pub fn create_module(id: usize, name: &str) -> Module{} {{
     /// Test parallel processing efficiency
     fn test_parallel_processing_efficiency(&self) -> Result<String> {
         let thread_config = ThreadPoolConfig {
-            max_threads: num_cpus::get().min(4),
+            max_threads: crate::system_parallelism().min(4),
             ..Default::default()
         };
 
