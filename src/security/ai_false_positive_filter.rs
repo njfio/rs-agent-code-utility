@@ -181,13 +181,12 @@ impl AIFalsePositiveFilter {
                 self.analyze_with_ai(finding, file_path, code_context, full_file_content)
                     .await?,
             );
-            if ai_analysis.as_ref().unwrap().is_false_positive {
-                factors.push(format!(
-                    "AI context: {}",
-                    ai_analysis.as_ref().unwrap().reasoning
-                ));
-                total_confidence += ai_analysis.as_ref().unwrap().confidence;
-                confidence_count += 1;
+            if let Some(ai_analysis_result) = &ai_analysis {
+                if ai_analysis_result.is_false_positive {
+                    factors.push(format!("AI context: {}", ai_analysis_result.reasoning));
+                    total_confidence += ai_analysis_result.confidence;
+                    confidence_count += 1;
+                }
             }
         }
 
@@ -594,34 +593,34 @@ mod tests {
     use crate::security::heuristic_filter::HeuristicFindingFilter;
 
     #[tokio::test]
-    async fn test_ai_filter_creation() {
+    async fn test_ai_filter_creation() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let ai_service = Arc::new(
             AIServiceBuilder::new()
                 .with_mock_providers(true)
                 .build()
-                .await
-                .unwrap(),
+                .await?,
         );
         let heuristic_filter = Arc::new(HeuristicFindingFilter::new());
-        let ast_analyzer = Arc::new(AstSecurityAnalyzer::new().unwrap());
+        let ast_analyzer = Arc::new(AstSecurityAnalyzer::new()?);
         let config = AIFilterConfig::default();
 
         let filter = AIFalsePositiveFilter::new(ai_service, heuristic_filter, ast_analyzer, config);
 
         assert!(filter.config.ai_context_enabled);
+
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_feedback_learning() {
+    async fn test_feedback_learning() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let ai_service = Arc::new(
             AIServiceBuilder::new()
                 .with_mock_providers(true)
                 .build()
-                .await
-                .unwrap(),
+                .await?,
         );
         let heuristic_filter = Arc::new(HeuristicFindingFilter::new());
-        let ast_analyzer = Arc::new(AstSecurityAnalyzer::new().unwrap());
+        let ast_analyzer = Arc::new(AstSecurityAnalyzer::new()?);
         let config = AIFilterConfig::default();
 
         let filter = AIFalsePositiveFilter::new(ai_service, heuristic_filter, ast_analyzer, config);
@@ -630,8 +629,10 @@ mod tests {
         // let finding = SecurityFinding::new(...);
         // filter.add_feedback(&finding, "test.rs", "test code", true, None).await.unwrap();
 
-        let stats = filter.get_statistics().await.unwrap();
+        let stats = filter.get_statistics().await?;
         assert_eq!(stats.total_feedback_entries, 0);
+
+        Ok(())
     }
 
     #[tokio::test]

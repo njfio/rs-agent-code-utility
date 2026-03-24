@@ -498,7 +498,10 @@ impl HeuristicFindingFilter {
         confidence: f64,
     ) -> Result<()> {
         let pattern_key = self.generate_pattern_key(finding_type, file_path, code_snippet);
-        let mut db = self.pattern_database.write().unwrap();
+        let mut db = self
+            .pattern_database
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         let stats = db.entry(pattern_key).or_insert(PatternStats {
             occurrences: 0,
@@ -522,7 +525,10 @@ impl HeuristicFindingFilter {
 
     /// Get statistics for a pattern
     fn get_pattern_stats(&self, pattern_key: &str) -> Option<PatternStats> {
-        let db = self.pattern_database.read().unwrap();
+        let db = self
+            .pattern_database
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         db.get(pattern_key).cloned()
     }
 
@@ -569,7 +575,10 @@ impl HeuristicFindingFilter {
 
     /// Get filtering statistics
     pub async fn get_statistics(&self) -> Result<FilterStatistics> {
-        let db = self.pattern_database.read().unwrap();
+        let db = self
+            .pattern_database
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let total_patterns = db.len();
         let total_occurrences: u32 = db.values().map(|stats| stats.occurrences).sum();
         let total_false_positives: u32 = db.values().map(|stats| stats.false_positives).sum();
@@ -615,7 +624,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_filter_finding() {
+    async fn test_filter_finding() -> crate::Result<()> {
         let filter = HeuristicFindingFilter::new();
 
         // Test filtering a finding in a test file
@@ -626,16 +635,17 @@ mod tests {
                 "const API_KEY = \"test_key\";",
                 0.3,
             )
-            .await
-            .unwrap();
+            .await?;
 
         assert!(result.should_filter);
         assert!(result.confidence > 0.5);
         assert!(result.reason.contains("test"));
+
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_update_pattern_stats() {
+    async fn test_update_pattern_stats() -> crate::Result<()> {
         let filter = HeuristicFindingFilter::new();
 
         // Update stats for a pattern
@@ -647,13 +657,14 @@ mod tests {
                 true,
                 0.8,
             )
-            .await
-            .unwrap();
+            .await?;
 
         // Check that stats were updated
-        let stats = filter.get_statistics().await.unwrap();
+        let stats = filter.get_statistics().await?;
         assert_eq!(stats.total_occurrences, 1);
         assert_eq!(stats.total_false_positives, 1);
+
+        Ok(())
     }
 
     #[tokio::test]

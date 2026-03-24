@@ -432,7 +432,9 @@ where
 {
     static PANIC_HOOK_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     let hook_lock = PANIC_HOOK_LOCK.get_or_init(|| Mutex::new(()));
-    let _guard = hook_lock.lock().expect("panic hook mutex poisoned");
+    let _guard = hook_lock
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
 
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(|_| {}));

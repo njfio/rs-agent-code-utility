@@ -894,7 +894,7 @@ impl AstSecurityAnalyzer {
 
             if !in_string {
                 for &quote in &string_indicators {
-                    if ch == quote.chars().next().unwrap() {
+                    if quote.starts_with(ch) {
                         in_string = true;
                         string_char = ch;
                         break;
