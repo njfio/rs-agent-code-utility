@@ -262,7 +262,7 @@ The target architecture has three layers:
 - [x] Verify `net` feature correctly gates: `reqwest`, `tokio` (full runtime -- core tokio for async may stay)
 - [x] Verify `db` feature correctly gates: `sqlx`
 - [x] Create `full` feature alias: `full = ["std", "serde", "ml", "net", "db", "cli", "wiki", "mmap", "extended-languages"]`
-- [ ] Audit remaining 34 direct deps for additional gating opportunities:
+- [x] Audit remaining direct deps for additional gating opportunities:
   - `pulldown-cmark` -> gate behind `wiki` feature
   - `tower`, `governor` -> gate behind `net` (rate limiting only needed for AI providers)
   - `rustyline`, `syntect` -> already gated behind `cli`
@@ -292,14 +292,16 @@ The target architecture has three layers:
 
 ##### Task 1.2: Fix Broken Dependency Analyzer
 
-- [ ] Investigate why `dependency_analysis.rs` returns 0 dependencies
-- [ ] Fix Cargo.toml parser to correctly extract direct dependencies
-- [ ] Fix the `Clone` impl that drops `provider` field to `None`
-- [ ] Add integration test: analyze this project's own `Cargo.toml`, verify >= 30 deps found
-- [ ] Add integration test: analyze a known `package.json`, verify deps found
+- [x] Investigate why `dependency_analysis.rs` returns 0 dependencies
+- [x] Fix Cargo.toml parser to correctly extract direct dependencies
+- [x] Fix the `Clone` impl that drops `provider` field to `None`
+- [x] Add integration test: analyze this project's own `Cargo.toml`, verify current manifest deps are found
+- [x] Add integration test: analyze a known `package.json`, verify deps found
+
+**Implementation note (2026-03-24):** The dependency analyzer no longer exhibits the original "0 dependencies" behavior. `src/dependency_analysis.rs` now extracts manifest dependencies, preserves the optional vulnerability provider across `Clone`, tracks per-package-manager counts, and deduplicates inferred source imports against manifest entries. Coverage now includes both the provider-preservation unit test and repo-level characterization in `tests/dependency_analysis.rs`, which verifies that analyzing this repository returns the current Cargo manifest dependency set instead of a hard-coded historical count.
 
 **Acceptance criteria:**
-- Running dependency analysis on `rust_tree_sitter` itself returns 34 direct deps
+- Running dependency analysis on `rust_tree_sitter` itself returns the current Cargo manifest dependency count, as verified by the repo-level characterization test
 - `DependencyAnalyzer::clone()` preserves the provider
 
 **Key files:**
@@ -307,8 +309,8 @@ The target architecture has three layers:
 
 ##### Task 1.3: Version Bump and Migration Guide
 
-- [ ] Bump version to `0.2.0` in `Cargo.toml`
-- [ ] Write `CHANGELOG.md` entry documenting:
+- [x] Bump version to `0.2.0` in `Cargo.toml`
+- [x] Write `CHANGELOG.md` entry documenting:
   - Default features changed from `["std", "serde", "ml", "net", "db"]` to `["std", "serde"]`
   - Migration: add `features = ["full"]` to restore previous behavior
   - Vulnerable deps upgraded
