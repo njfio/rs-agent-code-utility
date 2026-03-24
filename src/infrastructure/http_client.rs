@@ -278,8 +278,7 @@ impl RateLimiter {
         use std::num::NonZeroU32;
 
         let quota = Quota::per_minute(
-            NonZeroU32::new(requests_per_minute.max(1))
-                .expect("Rate limit creation failed: requests_per_minute.max(1) should always be >= 1, but NonZeroU32::new returned None")
+            NonZeroU32::new(requests_per_minute.max(1)).unwrap_or(NonZeroU32::MIN),
         );
         let limiter = GovRateLimiter::direct(quota);
 

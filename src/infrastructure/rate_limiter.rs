@@ -12,8 +12,7 @@ use governor::{
 };
 use std::collections::HashMap;
 use std::num::NonZeroU32;
-use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tracing::{debug, warn};
 
@@ -99,6 +98,15 @@ impl Default for MultiServiceRateLimiter {
     }
 }
 
+fn read_lock<T>(lock: &RwLock<T>) -> std::sync::RwLockReadGuard<'_, T> {
+    lock.read().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn write_lock<T>(lock: &RwLock<T>) -> std::sync::RwLockWriteGuard<'_, T> {
+    lock.write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 impl MultiServiceRateLimiter {
     /// Create a new multi-service rate limiter
     pub fn new() -> Self {
@@ -110,7 +118,7 @@ impl MultiServiceRateLimiter {
     /// Add a rate limiter for a specific service
     pub async fn add_service(&self, config: RateLimitConfig) -> Result<()> {
         let service_limiter = ServiceRateLimiter::new(config)?;
-        let mut limiters = self.limiters.write().unwrap();
+        let mut limiters = write_lock(&self.limiters);
         limiters.insert(service_limiter.service_name.clone(), service_limiter);
         Ok(())
     }
@@ -118,7 +126,7 @@ impl MultiServiceRateLimiter {
     /// Wait for permission to make a request to a service
     pub async fn wait_for_permit(&self, service_name: &str) -> Result<()> {
         let limiter = {
-            let limiters = self.limiters.read().unwrap();
+            let limiters = read_lock(&self.limiters);
             limiters.get(service_name).cloned()
         };
 
@@ -135,7 +143,7 @@ impl MultiServiceRateLimiter {
     /// Check if a request can be made immediately
     pub async fn check_permit(&self, service_name: &str) -> Result<RateLimitResult> {
         let limiter = {
-            let limiters = self.limiters.read().unwrap();
+            let limiters = read_lock(&self.limiters);
             limiters.get(service_name).cloned()
         };
 
@@ -151,7 +159,7 @@ impl MultiServiceRateLimiter {
 
     /// Get rate limiting statistics for a service
     pub async fn get_stats(&self, service_name: &str) -> Result<RateLimitStats> {
-        let limiters = self.limiters.read().unwrap();
+        let limiters = read_lock(&self.limiters);
         if let Some(limiter) = limiters.get(service_name) {
             Ok(limiter.get_stats())
         } else {
@@ -164,7 +172,7 @@ impl MultiServiceRateLimiter {
 
     /// Get all configured services
     pub async fn get_services(&self) -> Vec<String> {
-        let limiters = self.limiters.read().unwrap();
+        let limiters = read_lock(&self.limiters);
         limiters.keys().cloned().collect()
     }
 }
@@ -204,7 +212,7 @@ impl ServiceRateLimiter {
 
         // Update statistics
         {
-            let mut stats = self.stats.write().unwrap();
+            let mut stats = write_lock(&self.stats);
             stats.total_requests += 1;
         }
 
@@ -265,7 +273,7 @@ impl ServiceRateLimiter {
 
     /// Reset statistics (useful for periodic reporting)
     pub async fn reset_stats(&self) {
-        let mut stats = self.stats.write().unwrap();
+        let mut stats = write_lock(&self.stats);
         stats.total_requests = 0;
         stats.total_limited = 0;
         stats.last_reset = std::time::Instant::now();
@@ -278,21 +286,21 @@ impl ServiceRateLimiter {
 
     /// Record a successful request (resets backoff)
     pub async fn record_success(&self) {
-        let mut stats = self.stats.write().unwrap();
+        let mut stats = write_lock(&self.stats);
         stats.consecutive_failures = 0;
         stats.last_failure = None;
     }
 
     /// Record a failed request (increases backoff)
     pub async fn record_failure(&self) {
-        let mut stats = self.stats.write().unwrap();
+        let mut stats = write_lock(&self.stats);
         stats.consecutive_failures += 1;
         stats.last_failure = Some(std::time::Instant::now());
     }
 
     /// Calculate exponential backoff delay
     pub async fn calculate_backoff_delay(&self, config: &BackoffConfig) -> Duration {
-        let stats = self.stats.read().unwrap();
+        let stats = read_lock(&self.stats);
 
         if stats.consecutive_failures == 0 {
             return Duration::from_millis(0);
@@ -388,7 +396,7 @@ impl AdaptiveRateLimiter {
 
     /// Adjust rate based on API response
     pub async fn adjust_rate(&self, response_indicates_rate_limit: bool) {
-        let mut current_rate = self.current_rate.write().unwrap();
+        let mut current_rate = write_lock(&self.current_rate);
 
         if response_indicates_rate_limit {
             // Decrease rate
@@ -411,7 +419,7 @@ impl AdaptiveRateLimiter {
 
     /// Get current rate
     pub async fn get_current_rate(&self) -> u32 {
-        *self.current_rate.read().unwrap()
+        *read_lock(&self.current_rate)
     }
 }
 

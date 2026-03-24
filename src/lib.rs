@@ -178,7 +178,6 @@ pub mod command_injection_detector;
 /// Code complexity metrics and analysis
 pub mod complexity_analysis;
 /// Configuration constants and defaults
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod constants;
 /// Control flow graph construction and analysis
 pub mod control_flow;
@@ -189,12 +188,10 @@ pub mod dependency_analysis;
 #[cfg(all(feature = "net", feature = "db"))]
 pub mod enhanced_security;
 /// Error types and handling
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod error;
 /// File caching for performance optimization
 pub mod file_cache;
 /// Infrastructure and configuration management
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod infrastructure;
 /// Intent mapping between requirements and implementation
@@ -221,7 +218,6 @@ pub mod embeddings;
 /// Programming language support and parsers
 pub mod languages;
 /// Memory allocation tracking and analysis
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod memory_tracker;
 /// Tree-sitter parser integration
 pub mod parser;

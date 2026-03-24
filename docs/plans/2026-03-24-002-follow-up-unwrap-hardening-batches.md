@@ -19,7 +19,7 @@ This document breaks the remaining modules into reviewable follow-up PR batches.
 ## Current State
 
 - Crate root already enforces `#![deny(clippy::unwrap_used, clippy::expect_used)]` in [src/lib.rs](../../src/lib.rs)
-- 12 module declarations still carry explicit local `#[allow(...)]` escapes
+- 8 module declarations still carry explicit local `#[allow(...)]` escapes
 - Remaining work should remove those escapes batch-by-batch, not as one large refactor
 
 ## Batch Plan
@@ -86,18 +86,16 @@ Verification:
 
 ### Batch 4: Storage and Runtime Infrastructure
 
-Status: in progress on 2026-03-24
+Status: complete on 2026-03-24
 
 - Complete:
   - `advanced_cache`
   - `advanced_memory`
-  - `file_cache`
-
-- Remaining:
-  - `infrastructure`
-  - `memory_tracker`
   - `constants`
   - `error`
+  - `file_cache`
+  - `infrastructure`
+  - `memory_tracker`
 
 - `advanced_cache`
 - `advanced_memory`
