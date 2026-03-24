@@ -5,10 +5,10 @@
 
 use super::paths::{app_config_dir, app_data_dir};
 use crate::system_parallelism;
+use crate::{log_info as info, log_warn as warn};
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tracing::{info, warn};
 
 /// Main application configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

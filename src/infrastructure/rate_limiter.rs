@@ -3,6 +3,7 @@
 //! Provides token bucket and sliding window rate limiting
 //! with per-service configuration and automatic backoff.
 
+use crate::{log_debug as debug, log_warn as warn};
 use anyhow::{anyhow, Result};
 use governor::{
     clock::{Clock, DefaultClock},
@@ -14,7 +15,6 @@ use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use tracing::{debug, warn};
 
 /// Multi-service rate limiter with different limits per service
 #[derive(Clone)]

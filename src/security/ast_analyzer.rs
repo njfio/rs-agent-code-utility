@@ -10,12 +10,12 @@ use crate::parser::Parser;
 use crate::security::heuristic_filter::HeuristicFindingFilter;
 // use crate::taint_analysis::{FunctionCall as TaintFunctionCall, TaintLocation, VariableAssignment};
 use crate::tree::SyntaxTree;
+use crate::{log_debug as debug, log_warn as warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
-use tracing::debug;
 
 /// AST-based security analyzer
 pub struct AstSecurityAnalyzer {
@@ -550,7 +550,7 @@ impl AstSecurityAnalyzer {
                     all_findings.append(&mut findings);
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to analyze file {}: {}", file_path.display(), e);
+                    warn!("Failed to analyze file {}: {}", file_path.display(), e);
                 }
             }
         }

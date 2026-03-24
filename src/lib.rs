@@ -230,6 +230,71 @@ fn civil_from_days(days_since_epoch: i64) -> (i32, u32, u32) {
     (year as i32, month as u32, day as u32)
 }
 
+#[allow(unused_macros)]
+macro_rules! log_debug {
+    ($($arg:tt)*) => {{
+        #[cfg(any(feature = "cli", feature = "net", feature = "db"))]
+        {
+            tracing::debug!($($arg)*);
+        }
+        #[cfg(not(any(feature = "cli", feature = "net", feature = "db")))]
+        {
+            let _ = format_args!($($arg)*);
+        }
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! log_info {
+    ($($arg:tt)*) => {{
+        #[cfg(any(feature = "cli", feature = "net", feature = "db"))]
+        {
+            tracing::info!($($arg)*);
+        }
+        #[cfg(not(any(feature = "cli", feature = "net", feature = "db")))]
+        {
+            let _ = format_args!($($arg)*);
+        }
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! log_warn {
+    ($($arg:tt)*) => {{
+        #[cfg(any(feature = "cli", feature = "net", feature = "db"))]
+        {
+            tracing::warn!($($arg)*);
+        }
+        #[cfg(not(any(feature = "cli", feature = "net", feature = "db")))]
+        {
+            let _ = format_args!($($arg)*);
+        }
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! log_error {
+    ($($arg:tt)*) => {{
+        #[cfg(any(feature = "cli", feature = "net", feature = "db"))]
+        {
+            tracing::error!($($arg)*);
+        }
+        #[cfg(not(any(feature = "cli", feature = "net", feature = "db")))]
+        {
+            let _ = format_args!($($arg)*);
+        }
+    }};
+}
+
+#[allow(unused_imports)]
+pub(crate) use log_debug;
+#[allow(unused_imports)]
+pub(crate) use log_error;
+#[allow(unused_imports)]
+pub(crate) use log_info;
+#[allow(unused_imports)]
+pub(crate) use log_warn;
+
 /// Advanced multi-level caching system
 pub mod advanced_cache;
 /// Advanced memory management system

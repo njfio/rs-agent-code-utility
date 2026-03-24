@@ -4,6 +4,9 @@
 //! and computed data with TTL support and automatic cleanup.
 
 use super::paths::app_cache_dir;
+use crate::log_debug as debug;
+#[cfg(feature = "net")]
+use crate::log_error as error;
 use anyhow::Result;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -13,9 +16,6 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::debug;
-#[cfg(feature = "net")]
-use tracing::error;
 
 /// Multi-level cache with memory and disk storage
 #[derive(Clone)]

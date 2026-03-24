@@ -10,10 +10,10 @@ use crate::infrastructure::{
 use crate::security::{
     OwaspDetector, OwaspFinding, SecretFinding, SecretsDetector, VulnerabilityDatabase,
 };
+use crate::{log_debug as debug, log_info as info, log_warn as warn};
 use crate::{AnalysisResult, Language, Parser, Result};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tracing::{debug, info, warn};
 
 /// Enhanced security scanner with real implementations
 pub struct EnhancedSecurityScanner {

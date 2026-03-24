@@ -5,13 +5,13 @@
 
 #[cfg(feature = "db")]
 use crate::infrastructure::DatabaseManager;
+use crate::{log_debug as debug, log_warn as warn};
 use anyhow::Result;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
-use tracing::{debug, warn};
 
 /// Static regex patterns for secret extraction
 static QUOTE_REGEX: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();

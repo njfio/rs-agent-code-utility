@@ -4,11 +4,11 @@
 //! and caching with proper schema management and migrations.
 
 use crate::infrastructure::config::DatabaseConfig;
+use crate::{log_debug as debug, log_info as info};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{migrate::MigrateDatabase, Sqlite, SqlitePool};
 use std::path::Path;
-use tracing::{debug, info};
 
 /// Database manager for handling all database operations
 #[derive(Clone)]

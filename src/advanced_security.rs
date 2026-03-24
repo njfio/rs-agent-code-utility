@@ -25,6 +25,7 @@
 #[cfg(feature = "net")]
 use crate::ai::AIService;
 use crate::languages::detect_language_from_path;
+use crate::log_warn as warn;
 use crate::parser::Parser;
 #[cfg(feature = "net")]
 use crate::security::ai_false_positive_filter::{AIFalsePositiveFilter, AIFilterConfig};
@@ -36,7 +37,6 @@ use crate::tree::{Node, SyntaxTree};
 use crate::{AnalysisResult, Error, FileInfo, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tracing::warn;
 
 #[cfg(feature = "net")]
 use crate::security::ast_analyzer::AstSecurityAnalyzer;

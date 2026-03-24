@@ -1,10 +1,10 @@
 //! Real HTTP client infrastructure with proper error handling,
 //! authentication, rate limiting, and retry mechanisms.
 
+use crate::{log_debug as debug, log_error as error, log_warn as warn};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tracing::{debug, error, warn};
 // Replaced external Backoff usage with a small local exponential backoff
 use anyhow::{anyhow, Result};
 use rand::{thread_rng, Rng};

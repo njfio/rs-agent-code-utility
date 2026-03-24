@@ -19,10 +19,10 @@ use crate::cli::utils::{
 use crate::languages::Language;
 use crate::parser::Parser;
 use crate::security::ast_analyzer::{AstSecurityAnalyzer, SecurityFinding, SecuritySeverity};
+use crate::{log_info as info, log_warn as warn};
 use colored::*;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use tracing::{info, warn};
 
 /// Execute the AST-based security command
 pub async fn execute(
