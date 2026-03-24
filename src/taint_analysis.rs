@@ -204,6 +204,8 @@ pub struct FunctionDefinition {
     pub name: String,
     /// Parameter names in order
     pub parameters: Vec<String>,
+    /// Source expression for returned data, if one could be identified
+    pub return_source: Option<AssignmentSource>,
     /// Return variable (if any)
     pub return_variable: Option<String>,
     /// Location of function definition
@@ -813,13 +815,24 @@ impl TaintAnalyzer {
 
         let name = function_name.unwrap();
         let parameters = self.extract_function_parameters(node);
+        let return_source = self.extract_function_return_source(node);
+        let return_variable = match &return_source {
+            Some(AssignmentSource::Variable(name)) => Some(name.clone()),
+            Some(AssignmentSource::Access(object, _)) => Some(object.clone()),
+            _ => None,
+        };
+        let can_propagate_taint = return_source
+            .as_ref()
+            .map(|source| !matches!(source, AssignmentSource::Literal(_)))
+            .unwrap_or(false);
 
         Ok(Some(FunctionDefinition {
             name: name.clone(),
             parameters,
-            return_variable: None, // Would need more sophisticated analysis
+            return_source,
+            return_variable,
             location: Self::taint_location(node, Some(&name), file_path),
-            can_propagate_taint: true, // Conservative assumption
+            can_propagate_taint,
         }))
     }
 
@@ -894,6 +907,60 @@ impl TaintAnalyzer {
             grandparent_kind,
             "parameter" | "required_parameter" | "optional_parameter" | "self_parameter"
         )
+    }
+
+    fn extract_function_return_source(&self, node: Node) -> Option<AssignmentSource> {
+        self.find_return_source(node)
+    }
+
+    fn find_return_source(&self, node: Node) -> Option<AssignmentSource> {
+        if self.is_return_node(node.kind()) {
+            return self.extract_return_source(node);
+        }
+
+        let mut cursor = node.walk();
+        if cursor.goto_first_child() {
+            loop {
+                if let Some(source) = self.find_return_source(cursor.node()) {
+                    return Some(source);
+                }
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+        }
+
+        None
+    }
+
+    fn is_return_node(&self, node_kind: &str) -> bool {
+        match self.language.as_str() {
+            "rust" => matches!(node_kind, "return_expression"),
+            "javascript" | "typescript" => matches!(node_kind, "return_statement"),
+            "python" => matches!(node_kind, "return_statement"),
+            "c" | "cpp" | "c++" => matches!(node_kind, "return_statement"),
+            "go" => matches!(node_kind, "return_statement"),
+            _ => node_kind.contains("return"),
+        }
+    }
+
+    fn extract_return_source(&self, node: Node) -> Option<AssignmentSource> {
+        let mut cursor = node.walk();
+        if cursor.goto_first_child() {
+            loop {
+                let child = cursor.node();
+                if child.is_named() && !self.is_return_node(child.kind()) {
+                    if let Some(source) = self.extract_assignment_source(child) {
+                        return Some(source);
+                    }
+                }
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+        }
+
+        None
     }
 
     /// Check if node represents an assignment
@@ -1337,11 +1404,11 @@ impl TaintAnalyzer {
             return Ok(None);
         }
 
-        let mut base_path = Vec::new();
-        self.append_assignment_steps(current_scope, tainted_variables, &mut base_path);
+        let mut current_path = Vec::new();
+        self.append_assignment_steps(current_scope, tainted_variables, &mut current_path);
 
         if current_scope == sink_scope {
-            return Ok(Some(base_path));
+            return Ok(Some(current_path));
         }
 
         if let Some(calls) = self.call_graph.get(current_scope) {
@@ -1360,13 +1427,9 @@ impl TaintAnalyzer {
                 }
 
                 for target_scope in self.resolve_call_targets(current_scope, call) {
-                    if !self.can_reach_scope(&target_scope, sink_scope) {
-                        continue;
-                    }
-
-                    let mut branch_path = base_path.clone();
-                    let mut branch_tainted = tainted_variables.clone();
-                    branch_path.push(TaintStep {
+                    let mut call_path = current_path.clone();
+                    let mut callee_tainted = tainted_variables.clone();
+                    call_path.push(TaintStep {
                         step_type: TaintStepType::FunctionCall,
                         name: call.function_name.clone(),
                         location: call.location.clone(),
@@ -1379,8 +1442,8 @@ impl TaintAnalyzer {
                     if let Some(func_def) = self.function_definitions.get(&target_scope) {
                         for argument_index in &tainted_argument_indexes {
                             if let Some(parameter_name) = func_def.parameters.get(*argument_index) {
-                                branch_tainted.insert(parameter_name.clone());
-                                branch_path.push(TaintStep {
+                                callee_tainted.insert(parameter_name.clone());
+                                call_path.push(TaintStep {
                                     step_type: TaintStepType::Parameter,
                                     name: parameter_name.clone(),
                                     location: func_def.location.clone(),
@@ -1391,16 +1454,38 @@ impl TaintAnalyzer {
                         }
                     }
 
-                    let mut branch_visited = visited.clone();
-                    if let Some(mut downstream_path) = self.trace_scope_to_scope(
-                        &target_scope,
-                        sink_scope,
-                        &mut branch_tainted,
-                        &mut branch_visited,
-                    )? {
-                        branch_path.append(&mut downstream_path);
-                        *tainted_variables = branch_tainted;
-                        return Ok(Some(branch_path));
+                    if self.can_reach_scope(&target_scope, sink_scope) {
+                        let mut branch_visited = visited.clone();
+                        if let Some(mut downstream_path) = self.trace_scope_to_scope(
+                            &target_scope,
+                            sink_scope,
+                            &mut callee_tainted,
+                            &mut branch_visited,
+                        )? {
+                            call_path.append(&mut downstream_path);
+                            *tainted_variables = callee_tainted;
+                            return Ok(Some(call_path));
+                        }
+                    }
+
+                    if let Some(return_target) = &call.return_target {
+                        let mut return_path = call_path.clone();
+                        if self.append_return_steps(
+                            &target_scope,
+                            &mut callee_tainted,
+                            return_target,
+                            call,
+                            &mut return_path,
+                        ) {
+                            current_path = return_path;
+                            tainted_variables.insert(return_target.clone());
+                            self.append_assignment_steps(
+                                current_scope,
+                                tainted_variables,
+                                &mut current_path,
+                            );
+                            break;
+                        }
                     }
                 }
             }
@@ -1457,6 +1542,48 @@ impl TaintAnalyzer {
                 }
             }
         }
+    }
+
+    fn append_return_steps(
+        &self,
+        scope: &FunctionScope,
+        tainted_variables: &mut HashSet<String>,
+        return_target: &str,
+        call: &FunctionCall,
+        path: &mut Vec<TaintStep>,
+    ) -> bool {
+        let Some(func_def) = self.function_definitions.get(scope) else {
+            return false;
+        };
+        let Some(return_source) = &func_def.return_source else {
+            return false;
+        };
+        if !func_def.can_propagate_taint
+            || !self.assignment_source_depends_on_taint(return_source, tainted_variables)
+        {
+            return false;
+        }
+
+        self.append_assignment_steps(scope, tainted_variables, path);
+        path.push(TaintStep {
+            step_type: TaintStepType::Return,
+            name: func_def
+                .return_variable
+                .clone()
+                .unwrap_or_else(|| self.describe_assignment_source(return_source)),
+            location: func_def.location.clone(),
+            is_sanitizer: false,
+            sanitizer_method: None,
+        });
+        path.push(TaintStep {
+            step_type: TaintStepType::Assignment,
+            name: return_target.to_string(),
+            location: call.location.clone(),
+            is_sanitizer: false,
+            sanitizer_method: None,
+        });
+
+        true
     }
 
     fn direct_call_targets(&self, scope: &FunctionScope) -> Vec<FunctionScope> {
@@ -1523,6 +1650,16 @@ impl TaintAnalyzer {
         normalized_call_name == function_name
     }
 
+    fn describe_assignment_source(&self, source: &AssignmentSource) -> String {
+        match source {
+            AssignmentSource::Variable(name) => name.clone(),
+            AssignmentSource::FunctionCall(name, _) => name.clone(),
+            AssignmentSource::Literal(value) => value.clone(),
+            AssignmentSource::Concatenation(_) => "return".to_string(),
+            AssignmentSource::Access(object, _) => object.clone(),
+        }
+    }
+
     /// Trace taint flows from a source to potential sinks (legacy method for compatibility)
     #[allow(dead_code)]
     fn trace_taint_flows(
@@ -1573,7 +1710,15 @@ impl TaintAnalyzer {
         assignment: &VariableAssignment,
         tainted_vars: &HashSet<String>,
     ) -> bool {
-        match &assignment.source {
+        self.assignment_source_depends_on_taint(&assignment.source, tainted_vars)
+    }
+
+    fn assignment_source_depends_on_taint(
+        &self,
+        source: &AssignmentSource,
+        tainted_vars: &HashSet<String>,
+    ) -> bool {
+        match source {
             AssignmentSource::Variable(var) => tainted_vars.contains(var),
             AssignmentSource::FunctionCall(func, args) => {
                 // Check if any arguments are tainted or if function is a taint source
@@ -1814,9 +1959,36 @@ impl TaintAnalyzer {
         Ok(Some(FunctionCall {
             function_name: name,
             arguments,
-            return_target: None, // Would need more analysis to determine
+            return_target: self.extract_call_return_target(node),
             location: Self::taint_location(node, current_function, file_path),
         }))
+    }
+
+    fn extract_call_return_target(&self, node: Node) -> Option<String> {
+        let parent = node.parent()?;
+        if !matches!(
+            parent.kind(),
+            "let_declaration" | "variable_declarator" | "assignment_expression"
+        ) {
+            return None;
+        }
+
+        let mut cursor = parent.walk();
+        if cursor.goto_first_child() {
+            loop {
+                let child = cursor.node();
+                if child.id() != node.id() && child.kind() == "identifier" {
+                    if let Some(name) = self.node_text(child) {
+                        return Some(name);
+                    }
+                }
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+        }
+
+        None
     }
 }
 
@@ -1889,6 +2061,7 @@ mod tests {
         let func_def = FunctionDefinition {
             name: "test_function".to_string(),
             parameters: vec!["param1".to_string(), "param2".to_string()],
+            return_source: Some(AssignmentSource::Variable("result".to_string())),
             return_variable: Some("result".to_string()),
             location: TaintLocation {
                 file: "test.rs".to_string(),
