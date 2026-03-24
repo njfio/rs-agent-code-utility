@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "query_semantic_graph.v1",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "nodeType": {
+          "type": "string",
+          "enum": [
+            "function",
+            "class",
+            "module",
+            "variable",
+            "constant",
+            "interface",
+            "struct",
+            "enum",
+            "trait",
+            "namespace",
+            "package"
+          ]
+        },
+        "namePattern": { "type": "string", "minLength": 1 },
+        "filePath": { "type": "string", "minLength": 1 },
+        "startNodeId": { "type": "string", "minLength": 1 },
+        "relationshipTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "calls",
+              "inherits",
+              "imports",
+              "uses",
+              "implements",
+              "defined_in",
+              "has_type",
+              "depends_on",
+              "similar_to"
+            ]
+          }
+        },
+        "maxResults": { "type": "integer", "minimum": 1, "maximum": 500, "default": 100 },
+        "traversalDepth": { "type": "integer", "minimum": 1, "maximum": 10, "default": 3 },
+        "includeHidden": { "type": "boolean", "default": false },
+        "excludeDirs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "includeExts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "threads": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": "1" },
+        "tool": { "const": "query_semantic_graph" },
+        "command": { "const": "analyze" },
+        "path": { "type": "string" },
+        "report": {
+          "type": "object",
+          "properties": {
+            "source_command": { "const": "analyze" },
+            "graph_statistics": { "type": "object" },
+            "query": { "type": "object" },
+            "result": {
+              "type": "object",
+              "properties": {
+                "nodes": { "type": "array" },
+                "edges": { "type": "array" },
+                "metadata": { "type": "object" }
+              },
+              "required": ["nodes", "edges", "metadata"]
+            }
+          },
+          "required": ["source_command", "graph_statistics", "query", "result"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["schema_version", "tool", "command", "path", "report"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["input", "output"],
+  "additionalProperties": false
+}

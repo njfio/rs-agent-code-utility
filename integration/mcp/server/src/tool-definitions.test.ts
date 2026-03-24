@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MCP_SCHEMA_VERSION,
   buildAnalyzeCodebaseArgs,
+  buildQuerySemanticGraphArgs,
   toolDefinitions,
 } from "./tool-definitions.js";
 
@@ -13,6 +14,7 @@ describe("toolDefinitions", () => {
       "query_code",
       "scan_security",
       "analyze_dependencies",
+      "query_semantic_graph",
     ]);
   });
 
@@ -35,6 +37,15 @@ describe("toolDefinitions", () => {
       buildAnalyzeCodebaseArgs({
         path: "/tmp/project",
         includeGraph: true,
+      })
+    ).toContain("--include-graph");
+  });
+
+  it("builds semantic graph queries on top of analyze --include-graph", () => {
+    expect(
+      buildQuerySemanticGraphArgs({
+        path: "/tmp/project",
+        relationshipTypes: ["calls"],
       })
     ).toContain("--include-graph");
   });

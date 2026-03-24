@@ -578,7 +578,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
   - [x] `analyze_dependencies` -- Wrap `tree-sitter-cli dependencies --format json`
   - [ ] `parse_file` -- blocked until a dedicated stable CLI JSON contract exists
   - [ ] `analyze_complexity` -- blocked until a dedicated stable CLI JSON contract exists
-  - [ ] `query_semantic_graph` -- blocked on Phase 3.4 graph serialization work
+  - [x] `query_semantic_graph` -- Build semantic graph via `analyze --include-graph` and query it in the adapter
   - [ ] `analyze_taint` -- blocked until a dedicated stable CLI JSON contract exists
   - [ ] `analyze_performance` -- blocked until a dedicated stable CLI JSON contract exists
 - [x] Define JSON schemas for each shipped tool's input/output, including `schema_version` field
@@ -629,7 +629,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 - [x] Add `--format json --include-graph` flag to relevant CLI commands (`analyze` shipped first)
 - [x] Serialize semantic graph nodes and edges as JSON (node types, relationships, weights)
-- [ ] MCP `query_semantic_graph` tool returns this structured data
+- [x] MCP `query_semantic_graph` tool returns this structured data
 - [x] AI consumers can now request structured graph context through `analyze_codebase { includeGraph: true }` instead of receiving only raw file analysis
 
 **Note:** `GraphNode.file_path: PathBuf` already exists in `semantic_graph.rs` -- no need to add it. Focus on serialization and the CLI flag.
@@ -637,7 +637,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 **Acceptance criteria:**
 - `tree-sitter-cli analyze --format json --include-graph` includes semantic graph in output
 - Graph serialization includes node types, edge types, and relationship metadata
-- MCP `analyze_codebase` now exposes this data via `includeGraph`; dedicated `query_semantic_graph` tooling remains outstanding
+- MCP tools now expose this data through both `analyze_codebase { includeGraph: true }` and the dedicated `query_semantic_graph` tool
 
 ---
 

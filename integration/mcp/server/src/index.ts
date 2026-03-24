@@ -34,7 +34,7 @@ export function createServer(runCli: CliJsonRunner = runCliJson): McpServer {
             : "";
 
         try {
-          const report = await runCli(tool.command, tool.buildArgs(input as Record<string, unknown>));
+          const report = await tool.execute(runCli, input as Record<string, unknown>);
           const structuredContent = tool.outputSchema.parse({
             schema_version: MCP_SCHEMA_VERSION,
             tool: tool.name,

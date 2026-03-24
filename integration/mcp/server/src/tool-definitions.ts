@@ -1,4 +1,10 @@
 import { z } from "zod";
+import type { CliJsonRunner } from "./cli.js";
+import {
+  buildSemanticGraphQueryReport,
+  nodeTypeValues,
+  relationshipTypeValues,
+} from "./semantic-graph.js";
 
 export const MCP_SCHEMA_VERSION = "1" as const;
 
@@ -63,6 +69,21 @@ export const analyzeDependenciesInputSchema = z.object({
   graph: z.boolean().optional(),
 });
 
+export const querySemanticGraphInputSchema = z.object({
+  path: pathSchema,
+  nodeType: z.enum(nodeTypeValues).optional(),
+  namePattern: z.string().min(1).optional(),
+  filePath: z.string().min(1).optional(),
+  startNodeId: z.string().min(1).optional(),
+  relationshipTypes: z.array(z.enum(relationshipTypeValues)).min(1).optional(),
+  maxResults: z.number().int().positive().max(500).optional(),
+  traversalDepth: z.number().int().positive().max(10).optional(),
+  includeHidden: z.boolean().optional(),
+  excludeDirs: z.array(z.string().min(1)).optional(),
+  includeExts: z.array(z.string().min(1)).optional(),
+  threads: z.number().int().positive().max(128).optional(),
+});
+
 export const analyzeCodebaseOutputSchema = baseOutputSchema(
   "analyze_codebase",
   "analyze"
@@ -74,6 +95,10 @@ export const analyzeDependenciesOutputSchema = baseOutputSchema(
   "analyze_dependencies",
   "dependencies"
 );
+export const querySemanticGraphOutputSchema = baseOutputSchema(
+  "query_semantic_graph",
+  "analyze"
+);
 
 export type ToolDefinition = {
   name: string;
@@ -83,6 +108,7 @@ export type ToolDefinition = {
   inputSchema: z.AnyZodObject;
   outputSchema: z.AnyZodObject;
   buildArgs: (input: Record<string, unknown>) => string[];
+  execute: (runCli: CliJsonRunner, input: Record<string, unknown>) => Promise<unknown>;
 };
 
 export function buildAnalyzeCodebaseArgs(input: z.infer<typeof analyzeCodebaseInputSchema>): string[] {
@@ -154,6 +180,19 @@ export function buildAnalyzeDependenciesArgs(
   return args;
 }
 
+export function buildQuerySemanticGraphArgs(
+  input: z.infer<typeof querySemanticGraphInputSchema>
+): string[] {
+  const args = [input.path, "--format", "json", "--include-graph"];
+
+  if (input.includeHidden) args.push("--include-hidden");
+  if (input.excludeDirs?.length) args.push("--exclude-dirs", input.excludeDirs.join(","));
+  if (input.includeExts?.length) args.push("--include-exts", input.includeExts.join(","));
+  if (input.threads !== undefined) args.push("--threads", String(input.threads));
+
+  return args;
+}
+
 export const toolDefinitions: ToolDefinition[] = [
   {
     name: "analyze_codebase",
@@ -163,6 +202,10 @@ export const toolDefinitions: ToolDefinition[] = [
     command: "analyze",
     inputSchema: analyzeCodebaseInputSchema,
     outputSchema: analyzeCodebaseOutputSchema,
+    execute: async (runCli, input) => {
+      const parsed = analyzeCodebaseInputSchema.parse(input);
+      return runCli("analyze", buildAnalyzeCodebaseArgs(parsed));
+    },
     buildArgs: (input) =>
       buildAnalyzeCodebaseArgs(analyzeCodebaseInputSchema.parse(input)),
   },
@@ -174,6 +217,10 @@ export const toolDefinitions: ToolDefinition[] = [
     command: "symbols",
     inputSchema: getSymbolsInputSchema,
     outputSchema: getSymbolsOutputSchema,
+    execute: async (runCli, input) => {
+      const parsed = getSymbolsInputSchema.parse(input);
+      return runCli("symbols", buildGetSymbolsArgs(parsed));
+    },
     buildArgs: (input) => buildGetSymbolsArgs(getSymbolsInputSchema.parse(input)),
   },
   {
@@ -184,6 +231,10 @@ export const toolDefinitions: ToolDefinition[] = [
     command: "query",
     inputSchema: queryCodeInputSchema,
     outputSchema: queryCodeOutputSchema,
+    execute: async (runCli, input) => {
+      const parsed = queryCodeInputSchema.parse(input);
+      return runCli("query", buildQueryCodeArgs(parsed));
+    },
     buildArgs: (input) => buildQueryCodeArgs(queryCodeInputSchema.parse(input)),
   },
   {
@@ -194,6 +245,10 @@ export const toolDefinitions: ToolDefinition[] = [
     command: "security",
     inputSchema: scanSecurityInputSchema,
     outputSchema: scanSecurityOutputSchema,
+    execute: async (runCli, input) => {
+      const parsed = scanSecurityInputSchema.parse(input);
+      return runCli("security", buildScanSecurityArgs(parsed));
+    },
     buildArgs: (input) => buildScanSecurityArgs(scanSecurityInputSchema.parse(input)),
   },
   {
@@ -204,7 +259,27 @@ export const toolDefinitions: ToolDefinition[] = [
     command: "dependencies",
     inputSchema: analyzeDependenciesInputSchema,
     outputSchema: analyzeDependenciesOutputSchema,
+    execute: async (runCli, input) => {
+      const parsed = analyzeDependenciesInputSchema.parse(input);
+      return runCli("dependencies", buildAnalyzeDependenciesArgs(parsed));
+    },
     buildArgs: (input) =>
       buildAnalyzeDependenciesArgs(analyzeDependenciesInputSchema.parse(input)),
+  },
+  {
+    name: "query_semantic_graph",
+    title: "Query Semantic Graph",
+    description:
+      "Build the semantic graph via analyze --include-graph and return filtered graph context.",
+    command: "analyze",
+    inputSchema: querySemanticGraphInputSchema,
+    outputSchema: querySemanticGraphOutputSchema,
+    execute: async (runCli, input) => {
+      const parsed = querySemanticGraphInputSchema.parse(input);
+      const analyzeReport = await runCli("analyze", buildQuerySemanticGraphArgs(parsed));
+      return buildSemanticGraphQueryReport(analyzeReport, parsed);
+    },
+    buildArgs: (input) =>
+      buildQuerySemanticGraphArgs(querySemanticGraphInputSchema.parse(input)),
   },
 ];

@@ -46,6 +46,69 @@ const toolInputs: Record<string, Record<string, unknown>> = {
     vulnerabilities: true,
     licenses: true,
   },
+  query_semantic_graph: {
+    path: "/tmp/project",
+    startNodeId: "node-alpha",
+    relationshipTypes: ["calls"],
+    traversalDepth: 2,
+    maxResults: 10,
+  },
+};
+
+const semanticGraphReport = {
+  semantic_graph: {
+    nodes: [
+      {
+        id: "node-alpha",
+        node_type: "Function",
+        name: "alpha",
+        file_path: "/tmp/project/src/lib.rs",
+        line_number: 10,
+        metadata: {},
+        properties: {
+          complexity: 1,
+          importance: 1,
+          in_degree: 0,
+          out_degree: 1,
+          tags: [],
+        },
+      },
+      {
+        id: "node-beta",
+        node_type: "Function",
+        name: "beta",
+        file_path: "/tmp/project/src/lib.rs",
+        line_number: 20,
+        metadata: {},
+        properties: {
+          complexity: 1,
+          importance: 1,
+          in_degree: 1,
+          out_degree: 0,
+          tags: [],
+        },
+      },
+    ],
+    edges: [
+      {
+        from: "node-alpha",
+        to: "node-beta",
+        relationship: "Calls",
+        weight: 1,
+        context: "alpha()",
+      },
+    ],
+    statistics: {
+      total_nodes: 2,
+      total_edges: 1,
+      node_type_distribution: {
+        Function: 2,
+      },
+      relationship_type_distribution: {
+        Calls: 1,
+      },
+    },
+  },
 };
 
 const serversToClose = new Set<InternalServer>();
@@ -87,6 +150,9 @@ describe("createServer", () => {
     const server = getRegisteredTools(
       createServer(async (command, args) => {
         calls.push({ command, args });
+        if (command === "analyze" && args.includes("--include-graph")) {
+          return semanticGraphReport;
+        }
         return {
           ok: true,
           command,
@@ -109,17 +175,49 @@ describe("createServer", () => {
           text: `${tool.title} completed for /tmp/project`,
         },
       ]);
-      expect(result.structuredContent).toEqual({
-        schema_version: MCP_SCHEMA_VERSION,
-        tool: tool.name,
-        command: tool.command,
-        path: "/tmp/project",
-        report: {
-          ok: true,
+      if (tool.name === "query_semantic_graph") {
+        expect(result.structuredContent).toEqual({
+          schema_version: MCP_SCHEMA_VERSION,
+          tool: "query_semantic_graph",
+          command: "analyze",
+          path: "/tmp/project",
+          report: {
+            source_command: "analyze",
+            graph_statistics: semanticGraphReport.semantic_graph.statistics,
+            query: {
+              path: "/tmp/project",
+              startNodeId: "node-alpha",
+              relationshipTypes: ["calls"],
+              maxResults: 10,
+              traversalDepth: 2,
+            },
+            result: {
+              nodes: semanticGraphReport.semantic_graph.nodes,
+              edges: semanticGraphReport.semantic_graph.edges,
+              metadata: {
+                strategy: "traversal",
+                nodes_examined: 2,
+                edges_examined: 1,
+                max_results: 10,
+                traversal_depth: 2,
+                truncated: false,
+              },
+            },
+          },
+        });
+      } else {
+        expect(result.structuredContent).toEqual({
+          schema_version: MCP_SCHEMA_VERSION,
+          tool: tool.name,
           command: tool.command,
-          args: tool.buildArgs(input),
-        },
-      });
+          path: "/tmp/project",
+          report: {
+            ok: true,
+            command: tool.command,
+            args: tool.buildArgs(input),
+          },
+        });
+      }
     }
 
     expect(calls).toEqual(

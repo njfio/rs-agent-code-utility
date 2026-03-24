@@ -24,6 +24,7 @@ The initial MCP tool set is intentionally limited to CLI commands that already e
 - `query_code` -> `tree-sitter-cli query --format json`
 - `scan_security` -> `tree-sitter-cli security --format json`
 - `analyze_dependencies` -> `tree-sitter-cli dependencies --format json`
+- `query_semantic_graph` -> `tree-sitter-cli analyze --format json --include-graph` plus adapter-side graph filtering/traversal
 
 `analyze_codebase` supports `includeGraph: true`, which maps to `tree-sitter-cli analyze --format json --include-graph` and returns a serialized semantic graph inside the CLI report.
 
@@ -33,7 +34,6 @@ These planned tools are not exposed yet because the current CLI does not offer a
 
 - `parse_file`
 - `analyze_complexity`
-- `query_semantic_graph`
 - `analyze_taint`
 - `analyze_performance`
 
