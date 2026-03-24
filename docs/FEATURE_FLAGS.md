@@ -9,10 +9,10 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `std` | Baseline library surface | No additional dependencies |
 | `serde` | Compatibility marker for the default feature set | No additional dependencies |
 | `cli` | Command-line binaries and CLI-only formatting | `clap`, `colored`, `indicatif`, `rustyline`, `syntect`, `tabled`, `tracing-subscriber` |
-| `ml` | Embeddings and model-backed intent mapping | `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub` |
-| `net` | Network/runtime-backed providers and rate-limited HTTP | `reqwest`, `tokio`, `governor`, `tower`, `config` |
+| `ml` | Embeddings and model-backed intent mapping | `anyhow`, `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub` |
+| `net` | Network/runtime-backed providers and rate-limited HTTP | `anyhow`, `reqwest`, `tokio`, `governor`, `tower`, `config` |
 | `mmap` | Real memory-mapped file support for the advanced memory manager | `memmap2` |
-| `db` | Database-backed infrastructure | `sqlx`, `config` |
+| `db` | Database-backed infrastructure | `anyhow`, `sqlx`, `config` |
 | `wiki` | Static wiki generation with markdown + network-backed enrichment | `pulldown-cmark`, `net` |
 | `demo` | Example binaries only | No additional dependencies directly |
 | `full` | Restore the previous broad behavior surface | `std`, `serde`, `ml`, `net`, `db`, `cli`, `wiki`, `mmap` |
@@ -37,6 +37,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `tokio` | `net` | Async runtime for provider/database/wiki flows |
 | `governor` | `net` | Rate limiting |
 | `tower` | `net` | Retry/timeout middleware |
+| `anyhow` | `ml`, `net`, `db` | Ergonomic error aggregation for feature-gated ML and infrastructure modules |
 | `config` | `net`, `db` | Environment/file-backed infrastructure configuration loading |
 | `memmap2` | `mmap` | True OS-backed memory mapping for `advanced_memory` |
 | `sqlx` | `db` | SQLite-backed persistence |
@@ -50,7 +51,7 @@ These remain part of the core build today and still dominate the dependency foot
 - `serde`, `serde_json`, `serde_yaml`, `toml`
 - `regex`, `sha2`, `rand`, `rayon`, `petgraph`, `ignore`
 - `crc32fast`, `flate2`, `crossbeam-channel`, `parking_lot`, `walkdir`, `base64`
-- `chrono`, `uuid`, `tracing`, `anyhow`
+- `chrono`, `uuid`, `tracing`
 
 ## Binary and Example Gating
 
@@ -62,12 +63,12 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, and replacing direct `async-trait` usage with boxed std futures, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, and gating `anyhow` behind feature-local modules, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `502` |
-| Default | `cargo tree | wc -l` | `502` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `501` |
+| Default | `cargo tree | wc -l` | `501` |
 | All features | `cargo tree --all-features | wc -l` | `1389` |
 
 Notes:
@@ -81,4 +82,5 @@ Notes:
 - `config` is no longer a direct core dependency; it now only appears when `net` or `db` infrastructure is requested.
 - `exponential-backoff` is no longer in the dependency graph; HTTP retry logic already uses a small internal exponential backoff implementation.
 - `async-trait` is no longer a direct core dependency; async dyn-trait surfaces now use boxed std futures, although `async-trait` still appears transitively under `net`/`db` through `config` and in dev-only `wiremock`.
+- `anyhow` is no longer a direct core dependency; it now only appears when `ml`, `net`, or `db` is enabled, although `anyhow` still appears transitively in the no-default graph through dev-only `wiremock`.
 - The crate-count target from the plan is still not met. The next reduction pass should focus on the remaining always-on direct dependencies and the tree-sitter grammar footprint.

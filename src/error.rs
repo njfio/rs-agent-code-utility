@@ -209,7 +209,8 @@ pub enum Error {
         context: Option<String>,
     },
 
-    /// Anyhow error (for external libraries)
+    /// Anyhow error (for feature-gated external libraries)
+    #[cfg(any(feature = "ml", feature = "net", feature = "db"))]
     #[error("External error: {0}")]
     Anyhow(#[from] anyhow::Error),
 }

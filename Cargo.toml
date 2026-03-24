@@ -62,7 +62,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 config = { version = "0.14", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
-anyhow = "1.0"
+anyhow = { version = "1.0", optional = true }
 governor = { version = "0.6", optional = true }
 tower = { version = "0.4", features = ["timeout", "retry"], optional = true }
 
@@ -106,6 +106,7 @@ cli = [
     "dep:tracing-subscriber",
 ]
 ml = [
+    "dep:anyhow",
     "dep:candle-core",
     "dep:candle-nn",
     "dep:candle-transformers",
@@ -113,6 +114,7 @@ ml = [
     "dep:hf-hub",
 ]
 net = [
+    "dep:anyhow",
     "dep:reqwest",
     "dep:tokio",
     "dep:governor",
@@ -123,6 +125,7 @@ mmap = [
     "dep:memmap2",
 ]
 db = [
+    "dep:anyhow",
     "dep:sqlx",
     "dep:config",
 ]

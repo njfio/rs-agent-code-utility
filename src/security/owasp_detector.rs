@@ -3,8 +3,7 @@
 //! Implements AST-based detection for OWASP Top 10 vulnerabilities
 //! with real pattern matching and code analysis.
 
-use crate::SyntaxTree;
-use anyhow::Result;
+use crate::{Result, SyntaxTree};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
