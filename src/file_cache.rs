@@ -223,16 +223,16 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_file_cache_basic_operations() {
+    fn test_file_cache_basic_operations() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let cache = FileCache::new();
 
         // Create a temporary file
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new()?;
         let file_path = temp_dir.path().join("test.txt");
-        fs::write(&file_path, "Hello, World!").unwrap();
+        fs::write(&file_path, "Hello, World!")?;
 
         // First read should be a cache miss
-        let content1 = cache.read_to_string(&file_path).unwrap();
+        let content1 = cache.read_to_string(&file_path)?;
         assert_eq!(content1, "Hello, World!");
 
         let stats = cache.stats();
@@ -241,7 +241,7 @@ mod tests {
         assert_eq!(stats.cached_files, 1);
 
         // Second read should be a cache hit
-        let content2 = cache.read_to_string(&file_path).unwrap();
+        let content2 = cache.read_to_string(&file_path)?;
         assert_eq!(content2, "Hello, World!");
 
         let stats = cache.stats();
@@ -251,29 +251,31 @@ mod tests {
 
         // Check hit ratio
         assert_eq!(cache.hit_ratio(), 0.5);
+
+        Ok(())
     }
 
     #[test]
-    fn test_cache_capacity_and_eviction() {
+    fn test_cache_capacity_and_eviction() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let cache = FileCache::with_capacity(2);
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new()?;
 
         // Create three test files
         let file1 = temp_dir.path().join("file1.txt");
         let file2 = temp_dir.path().join("file2.txt");
         let file3 = temp_dir.path().join("file3.txt");
 
-        fs::write(&file1, "Content 1").unwrap();
-        fs::write(&file2, "Content 2").unwrap();
-        fs::write(&file3, "Content 3").unwrap();
+        fs::write(&file1, "Content 1")?;
+        fs::write(&file2, "Content 2")?;
+        fs::write(&file3, "Content 3")?;
 
         // Read first two files
-        cache.read_to_string(&file1).unwrap();
-        cache.read_to_string(&file2).unwrap();
+        cache.read_to_string(&file1)?;
+        cache.read_to_string(&file2)?;
         assert_eq!(cache.len(), 2);
 
         // Read third file should trigger eviction
-        cache.read_to_string(&file3).unwrap();
+        cache.read_to_string(&file3)?;
         assert_eq!(cache.len(), 2); // Still at capacity
 
         // One of the first two files should have been evicted, and file3 should be present
@@ -290,17 +292,19 @@ mod tests {
             file3_present,
             "file3 should always be present as it was added last"
         );
+
+        Ok(())
     }
 
     #[test]
-    fn test_cache_clear() {
+    fn test_cache_clear() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let cache = FileCache::new();
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new()?;
         let file_path = temp_dir.path().join("test.txt");
-        fs::write(&file_path, "Test content").unwrap();
+        fs::write(&file_path, "Test content")?;
 
         // Add content to cache
-        cache.read_to_string(&file_path).unwrap();
+        cache.read_to_string(&file_path)?;
         assert_eq!(cache.len(), 1);
 
         // Clear cache
@@ -311,19 +315,21 @@ mod tests {
         let stats = cache.stats();
         assert_eq!(stats.cached_files, 0);
         assert_eq!(stats.total_bytes, 0);
+
+        Ok(())
     }
 
     #[test]
-    fn test_cache_stats() {
+    fn test_cache_stats() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let cache = FileCache::new();
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new()?;
         let file_path = temp_dir.path().join("test.txt");
         let content = "Test content for stats";
-        fs::write(&file_path, content).unwrap();
+        fs::write(&file_path, content)?;
 
         // Read file twice
-        cache.read_to_string(&file_path).unwrap();
-        cache.read_to_string(&file_path).unwrap();
+        cache.read_to_string(&file_path)?;
+        cache.read_to_string(&file_path)?;
 
         let stats = cache.stats();
         assert_eq!(stats.hits, 1);
@@ -332,5 +338,7 @@ mod tests {
         assert_eq!(stats.total_bytes, content.len());
         assert_eq!(stats.efficiency(), 50.0);
         assert_eq!(stats.average_file_size(), content.len() as f64);
+
+        Ok(())
     }
 }

@@ -262,8 +262,14 @@ impl<T: Default + Clone> MemoryPool<T> {
 
     /// Get an object from the pool or create a new one
     pub fn get(&self) -> T {
-        let mut pool = self.pool.lock().unwrap();
-        let mut stats = self.stats.lock().unwrap();
+        let mut pool = self
+            .pool
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut stats = self
+            .stats
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         if let Some(obj) = pool.pop() {
             stats.hits += 1;
@@ -277,8 +283,14 @@ impl<T: Default + Clone> MemoryPool<T> {
 
     /// Return an object to the pool for reuse
     pub fn put(&self, obj: T) {
-        let mut pool = self.pool.lock().unwrap();
-        let mut stats = self.stats.lock().unwrap();
+        let mut pool = self
+            .pool
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut stats = self
+            .stats
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         if pool.len() < self.max_size {
             pool.push(obj);
@@ -289,7 +301,10 @@ impl<T: Default + Clone> MemoryPool<T> {
 
     /// Get pool statistics
     pub fn stats(&self) -> PoolStats {
-        self.stats.lock().unwrap().clone()
+        self.stats
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
     }
 }
 
@@ -314,7 +329,10 @@ impl GarbageCollector {
         let current_usage = self.memory_tracker.current_usage.load(Ordering::Relaxed);
 
         if current_usage >= self.gc_threshold_bytes {
-            let mut last_hint = self.last_gc_hint.lock().unwrap();
+            let mut last_hint = self
+                .last_gc_hint
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             let now = Instant::now();
 
             // Don't spam GC hints too frequently
@@ -339,7 +357,10 @@ impl GarbageCollector {
     pub fn force_collection(&self) -> Result<()> {
         // In a real implementation, this would trigger actual GC
         // For now, just update the hint timestamp
-        let mut last_hint = self.last_gc_hint.lock().unwrap();
+        let mut last_hint = self
+            .last_gc_hint
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         *last_hint = Instant::now();
         Ok(())
     }
@@ -625,33 +646,37 @@ mod tests {
     use tempfile::NamedTempFile;
 
     #[test]
-    fn test_memory_mapped_file() {
-        let mut temp_file = NamedTempFile::new().unwrap();
+    fn test_memory_mapped_file() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let mut temp_file = NamedTempFile::new()?;
         let test_data = b"Hello, memory mapped world!";
-        temp_file.write_all(test_data).unwrap();
-        temp_file.flush().unwrap();
+        temp_file.write_all(test_data)?;
+        temp_file.flush()?;
 
-        let mmap = MemoryMappedFile::new(temp_file.path()).unwrap();
+        let mmap = MemoryMappedFile::new(temp_file.path())?;
         assert_eq!(mmap.size(), test_data.len());
         assert_eq!(mmap.as_slice(), test_data);
+
+        Ok(())
     }
 
     #[test]
-    fn test_streaming_file_reader() {
-        let mut temp_file = NamedTempFile::new().unwrap();
+    fn test_streaming_file_reader() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let mut temp_file = NamedTempFile::new()?;
         let test_data = vec![42u8; 10000]; // 10KB of data
-        temp_file.write_all(&test_data).unwrap();
-        temp_file.flush().unwrap();
+        temp_file.write_all(&test_data)?;
+        temp_file.flush()?;
 
-        let mut reader = StreamingFileReader::new(temp_file.path(), 1024).unwrap();
+        let mut reader = StreamingFileReader::new(temp_file.path(), 1024)?;
         let mut read_data = Vec::new();
 
-        while let Some(chunk) = reader.read_chunk().unwrap() {
+        while let Some(chunk) = reader.read_chunk()? {
             read_data.extend_from_slice(chunk);
         }
 
         assert_eq!(read_data, test_data);
         assert_eq!(reader.total_read(), test_data.len());
+
+        Ok(())
     }
 
     #[test]
@@ -692,7 +717,7 @@ mod tests {
     }
 
     #[test]
-    fn test_analysis_strategy_selection() {
+    fn test_analysis_strategy_selection() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let config = MemoryConfig {
             streaming_threshold_bytes: 1000,
             enable_memory_mapping: true,
@@ -702,14 +727,16 @@ mod tests {
         let manager = AdvancedMemoryManager::new(config);
 
         // Create a small test file
-        let mut temp_file = NamedTempFile::new().unwrap();
-        temp_file.write_all(b"small file").unwrap();
-        temp_file.flush().unwrap();
+        let mut temp_file = NamedTempFile::new()?;
+        temp_file.write_all(b"small file")?;
+        temp_file.flush()?;
 
-        let strategy = manager.choose_analysis_strategy(temp_file.path()).unwrap();
+        let strategy = manager.choose_analysis_strategy(temp_file.path())?;
         match strategy {
             AnalysisStrategy::InMemory | AnalysisStrategy::MemoryMapped => {}
             AnalysisStrategy::Streaming => panic!("Small file should not use streaming"),
         }
+
+        Ok(())
     }
 }

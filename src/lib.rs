@@ -147,7 +147,6 @@
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_cache;
 /// Advanced memory management system
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_memory;
 /// Advanced parallel processing system
 #[allow(clippy::unwrap_used, clippy::expect_used)]
@@ -193,7 +192,6 @@ pub mod enhanced_security;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod error;
 /// File caching for performance optimization
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod file_cache;
 /// Infrastructure and configuration management
 #[allow(clippy::unwrap_used, clippy::expect_used)]
