@@ -6,7 +6,6 @@ pub mod analyze;
 pub mod ast_security;
 pub mod dependencies;
 pub mod find;
-pub mod insights;
 pub mod interactive;
 pub mod languages;
 pub mod map;
@@ -172,11 +171,6 @@ impl Execute for Commands {
             }
             Commands::Languages => languages::execute(),
             Commands::Interactive { path } => interactive::execute(path),
-            Commands::Insights {
-                path,
-                focus,
-                format,
-            } => insights::execute(path, focus, format),
             Commands::Map {
                 path,
                 map_type,

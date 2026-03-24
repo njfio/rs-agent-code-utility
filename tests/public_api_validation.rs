@@ -53,7 +53,6 @@ fn test_security_api_accessibility() -> std::result::Result<(), Box<dyn std::err
 fn test_advanced_ai_api_accessibility() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // Test advanced analysis types
     let _intent_mapping = IntentMappingSystem::new();
-    let _reasoning_engine = AutomatedReasoningEngine::new();
     let _memory_tracker = MemoryTracker::new();
 
     // Note: CodeEvolutionTracker requires a repository path for construction

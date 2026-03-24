@@ -246,9 +246,6 @@ pub mod parser;
 pub mod performance_analysis;
 /// Code querying and pattern matching
 pub mod query;
-/// Automated reasoning and inference engine
-#[allow(clippy::unwrap_used, clippy::expect_used)]
-pub mod reasoning_engine;
 /// Code refactoring suggestions and analysis
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod refactoring;
@@ -370,10 +367,6 @@ pub use memory_tracker::{
     AllocationPattern, AllocationType, FragmentationAnalysis, LeakType, LifetimeStatistics,
     MemoryLeakCandidate, MemorySnapshot, MemoryStatistics, MemoryTracker, MemoryTrackingConfig,
     MemoryTrackingResult, UsagePattern,
-};
-pub use reasoning_engine::{
-    AutomatedReasoningEngine, ConstraintSolver, Fact, InferenceEngine, InsightType, KnowledgeBase,
-    ReasoningConfig, ReasoningInsight, ReasoningResult, Rule, TheoremProver,
 };
 
 // Utilities

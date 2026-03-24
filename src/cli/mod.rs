@@ -186,21 +186,6 @@ pub enum Commands {
         path: PathBuf,
     },
 
-    /// Generate AI-friendly insights and recommendations
-    Insights {
-        /// Directory to analyze
-        #[arg(value_name = "PATH")]
-        path: PathBuf,
-
-        /// Focus area (architecture, quality, complexity, dependencies)
-        #[arg(long, default_value = "all")]
-        focus: String,
-
-        /// Output format (markdown, json, text)
-        #[arg(short, long, default_value = "markdown")]
-        format: String,
-    },
-
     /// Generate a visual code map of the project structure
     Map {
         /// Directory to map

@@ -270,11 +270,6 @@ path = "examples/real_openai_demo.rs"
 required-features = ["demo"]
 
 [[example]]
-name = "reasoning_engine_demo"
-path = "examples/reasoning_engine_demo.rs"
-required-features = ["demo"]
-
-[[example]]
 name = "security_analysis"
 path = "examples/security_analysis.rs"
 required-features = ["demo"]

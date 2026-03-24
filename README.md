@@ -71,7 +71,7 @@ The library includes a comprehensive AI service layer that integrates with multi
 
 ### CLI Interface
 
-- **Available Commands**: analyze, ast-security, dependencies, find, insights, interactive, languages, map, query, security, stats, symbols
+- **Available Commands**: analyze, ast-security, dependencies, find, interactive, languages, map, query, security, stats, symbols
 - **Output Formats**: JSON, table, markdown, summary
 - **Progress Tracking**: Real-time progress indicators
 - **Filtering**: Severity levels, file types, symbol types
@@ -247,18 +247,6 @@ Options:
   --show-symbols           Show symbol counts
   --languages <LANGS>      Filter by languages
   --collapse-empty         Collapse empty directories
-```
-
-### `insights` - Codebase Insights
-
-Generate insights and recommendations for the codebase.
-
-```bash
-tree-sitter-cli insights <PATH> [OPTIONS]
-
-Options:
-  --focus <AREA>           Focus area: all, architecture, quality, complexity
-  -f, --format <FORMAT>    Output format: markdown, json, text [default: markdown]
 ```
 
 ### `interactive` - Interactive Mode

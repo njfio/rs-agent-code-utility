@@ -202,30 +202,15 @@
 - **Impact Analysis**: Understand change impact
 - **Refactoring Support**: Guide safe refactoring operations
 
-### Automated Reasoning
-
-#### Logic-Based Analysis
-- **Constraint Solving**: Solve code constraints and invariants
-- **Theorem Proving**: Verify code properties
-- **Inference Engine**: Draw logical conclusions about code
-- **Fact Database**: Maintain facts about code behavior
-
-#### Code Understanding
-- **Intent Recognition**: Understand code purpose and intent
-- **Behavior Analysis**: Analyze code behavior patterns
-- **Anomaly Detection**: Identify unusual code patterns
-- **Best Practice Validation**: Check against coding standards
-
 ## CLI Interface
 
 ### Command Architecture
 
 #### Command Categories
-- **Analysis Commands**: analyze, symbols, stats
-- **Security Commands**: security, secrets, dependencies
-- **Quality Commands**: insights
-- **Search Commands**: query, find, grep
-- **Interactive Commands**: interactive, shell
+- **Analysis Commands**: analyze, map, symbols, stats
+- **Security Commands**: ast-security, security, dependencies
+- **Search Commands**: query, find
+- **Interactive Commands**: interactive
 
 #### Output Formats
 - **Table Format**: Human-readable tabular output

@@ -209,32 +209,6 @@ tree-sitter-cli map ./src --requirements requirements.json --format json
 tree-sitter-cli map ./src --gaps-only --confidence 0.8
 ```
 
-### insights - Codebase Insights
-
-Generate high-level insights and recommendations for the codebase.
-
-```bash
-tree-sitter-cli insights <PATH> [OPTIONS]
-```
-
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json, markdown [default: table]
-- `--focus <AREA>` - Focus area: security, performance, quality, architecture, all [default: all]
-- `--threshold <SCORE>` - Minimum score threshold for recommendations
-- `--detailed` - Include detailed analysis
-
-**Examples:**
-```bash
-# General insights
-tree-sitter-cli insights ./src
-
-# Security-focused insights
-tree-sitter-cli insights ./src --focus security --detailed
-
-# Performance insights with threshold
-tree-sitter-cli insights ./src --focus performance --threshold 80
-```
-
 ### stats - Codebase Statistics
 
 Generate detailed statistics about the codebase.
@@ -275,7 +249,6 @@ tree-sitter-cli interactive <PATH>
 - `files` - List analyzed files
 - `symbols` - Show extracted symbols
 - `find <name>` - Find symbols by name
-- `insights` - Generate high-level insights
 - `security` - Show the current security summary
 - `dependencies` - Show the current dependency summary
 - `clear` - Clear the screen
@@ -290,7 +263,6 @@ tree-sitter-cli interactive ./src
 # Interactive session
 > stats
 > find login
-> insights
 > security
 > quit
 ```

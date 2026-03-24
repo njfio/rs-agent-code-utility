@@ -9,7 +9,7 @@
 
 use crate::cli::error::{validate_path, CliError, CliResult};
 use crate::cli::output::AccessibilityConfig;
-use crate::{AnalysisResult, AutomatedReasoningEngine, CodebaseAnalyzer, ReasoningConfig};
+use crate::{AnalysisResult, CodebaseAnalyzer};
 use colored::Colorize;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -61,7 +61,6 @@ impl InteractiveCompleter {
             "statistics".to_string(),
             "files".to_string(),
             "symbols".to_string(),
-            "insights".to_string(),
             "security".to_string(),
             "dependencies".to_string(),
             "find".to_string(),
@@ -336,22 +335,11 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
     }
     .map_err(|e| format!("Failed to analyze path: {}", e))?;
 
-    let reasoning_config = ReasoningConfig {
-        enable_deductive: true,
-        enable_inductive: true,
-        enable_abductive: false,
-        enable_constraints: true,
-        enable_theorem_proving: false,
-        max_reasoning_time_ms: 15000,
-        confidence_threshold: 0.7,
-    };
-    let mut reasoning_engine = AutomatedReasoningEngine::with_config(reasoning_config);
-
     println!(
         "{}",
         "[OK] Analysis complete! Ready for interactive queries.".green()
     );
-    println!("Available commands: help, stats, files, symbols, find, insights, quit");
+    println!("Available commands: help, stats, files, symbols, find, quit");
     println!("Accessibility commands: accessibility, keyboard, contrast, voice, language");
     println!("[TIP] Use Tab for auto-completion and arrow keys for command history");
     println!("[TIP] Type 'accessibility' for accessibility features and keyboard shortcuts");
@@ -429,9 +417,6 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
                     "symbols" => {
                         display_symbols(&analysis_result);
                     }
-                    "insights" => {
-                        display_insights(&mut reasoning_engine, &analysis_result);
-                    }
                     "security" => {
                         display_security_summary(&analysis_result);
                     }
@@ -465,9 +450,7 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
                             "{}",
                             "[ERROR] Unknown command. Type 'help' for available commands.".red()
                         );
-                        println!(
-                            "[TIP] Available: help, stats, files, symbols, find <name>, insights, quit"
-                        );
+                        println!("[TIP] Available: help, stats, files, symbols, find <name>, quit");
                         println!("[TIP] Accessibility: accessibility, keyboard, contrast, voice, language");
                         println!("[TIP] Use Tab for auto-completion");
                     }
@@ -503,7 +486,6 @@ fn display_help() {
     println!("  {}        - Show codebase statistics", "stats".cyan());
     println!("  {}        - List analyzed files", "files".cyan());
     println!("  {}      - Show all symbols", "symbols".cyan());
-    println!("  {}     - Generate code insights", "insights".cyan());
     println!("  {}     - Show security analysis", "security".cyan());
     println!("  {} - Show dependencies", "dependencies".cyan());
     println!("  {} <name>  - Find symbols by name", "find".cyan());
@@ -644,40 +626,6 @@ fn display_symbols(result: &AnalysisResult) {
         println!("{}", "Symbol Types:".cyan().bold());
         for (kind, count) in type_counts.iter() {
             println!("  {}: {}", kind.cyan(), count);
-        }
-    }
-}
-
-fn display_insights(reasoning_engine: &mut AutomatedReasoningEngine, result: &AnalysisResult) {
-    println!("{}", "Generating Insights...".yellow());
-
-    match reasoning_engine.analyze_code(result) {
-        Ok(reasoning_result) => {
-            if reasoning_result.insights.is_empty() {
-                println!("{}", "No specific insights generated.".white().dimmed());
-            } else {
-                println!("{}", "Code Insights".yellow().bold());
-                println!("{}", "-".repeat(40).yellow());
-
-                for (i, insight) in reasoning_result.insights.iter().enumerate().take(8) {
-                    println!(
-                        "{}. {:?}: {}",
-                        i + 1,
-                        insight.insight_type.to_string().cyan().bold(),
-                        insight.description
-                    );
-                }
-
-                if reasoning_result.insights.len() > 8 {
-                    println!(
-                        "... and {} more insights",
-                        reasoning_result.insights.len() - 8
-                    );
-                }
-            }
-        }
-        Err(e) => {
-            println!("[ERROR] {}: {}", "Error generating insights".red(), e);
         }
     }
 }

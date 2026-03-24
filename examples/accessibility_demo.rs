@@ -279,7 +279,7 @@ fn demo_keyboard_navigation() {
     println!();
     println!("Command Examples:");
     println!("• 'find main' - Find symbols containing 'main'");
-    println!("• 'insights' - Generate project-level insights");
+    println!("• 'security' - Show the current security summary");
     println!("• 'stats' - Show statistics");
     println!("• 'help' - Show help");
 }

@@ -301,7 +301,6 @@ fn test_examples_exist_and_compile() {
         "examples/analyze_codebase.rs",
         "examples/security_analysis.rs",
         "examples/ast_transformation_demo.rs",
-        "examples/reasoning_engine_demo.rs",
         "examples/code_map.rs",
         "examples/incremental_parsing.rs",
     ];
