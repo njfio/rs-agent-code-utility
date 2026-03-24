@@ -64,7 +64,16 @@ impl Language {
             Language::C => Ok(tree_sitter_c::language()),
             Language::Cpp => Ok(tree_sitter_cpp::language()),
             Language::Go => Ok(tree_sitter_go::language()),
-            Language::Java => Ok(tree_sitter_java::language()),
+            Language::Java => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_java::language())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
             Language::Php => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -177,7 +186,16 @@ impl Language {
             Language::C => Some(tree_sitter_c::HIGHLIGHT_QUERY),
             Language::Cpp => Some(tree_sitter_cpp::HIGHLIGHT_QUERY),
             Language::Go => Some(tree_sitter_go::HIGHLIGHT_QUERY),
-            Language::Java => Some(tree_sitter_java::HIGHLIGHT_QUERY),
+            Language::Java => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_java::HIGHLIGHT_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::Php => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -258,12 +276,12 @@ impl Language {
             Language::C,
             Language::Cpp,
             Language::Go,
-            Language::Java,
         ];
         #[cfg(feature = "extended-languages")]
         {
             let mut languages = core_languages;
             languages.extend([
+                Language::Java,
                 Language::Php,
                 Language::Ruby,
                 Language::Swift,
@@ -378,6 +396,7 @@ mod tests {
     #[test]
     fn test_extended_languages_require_feature() {
         for lang in [
+            Language::Java,
             Language::Php,
             Language::Ruby,
             Language::Swift,
@@ -385,6 +404,7 @@ mod tests {
         ] {
             assert!(lang.tree_sitter_language().is_err());
         }
+        assert_eq!(detect_language_from_path("example.java"), None);
         assert_eq!(detect_language_from_path("example.php"), None);
         assert_eq!(detect_language_from_path("example.rb"), None);
         assert_eq!(detect_language_from_path("example.swift"), None);
