@@ -55,7 +55,7 @@ syntect = { version = "5.0", optional = true }
 
 # Phase A: Infrastructure Dependencies
 tokio = { version = "1.0", features = ["full"], optional = true }
-reqwest = { version = "0.11", features = ["json", "rustls-tls"], optional = true }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], optional = true }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"], optional = true }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
@@ -76,7 +76,7 @@ num_cpus = "1.0"
 candle-core = { version = "0.9.1", optional = true }
 candle-nn = { version = "0.9.1", optional = true }
 candle-transformers = { version = "0.9.1", optional = true }
-hf-hub = { version = "0.3", features = ["tokio"], optional = true }
+hf-hub = { version = "0.5.0", default-features = false, features = ["tokio", "rustls-tls"], optional = true }
 tokenizers = { version = "0.19", optional = true }
 
 

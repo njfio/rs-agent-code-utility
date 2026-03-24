@@ -149,10 +149,12 @@ The target architecture has three layers:
 
 - [ ] Upgrade `ring` transitively (via `reqwest`/`rustls` version bumps) to >= 0.17.12 (RUSTSEC-2025-0009)
 - [ ] Upgrade `sqlx` from 0.7.4 to 0.8.1+ (RUSTSEC-2024-0363) -- note: API breaking changes in sqlx 0.8
-- [ ] Replace unmaintained `backoff` with `exponential-backoff` (already partially done per Cargo.toml comment)
+- [x] Replace unmaintained `backoff` with `exponential-backoff`
 - [ ] Audit `instant`, `paste`, `proc-macro-error` for maintained alternatives or removal
 
 **Note:** The `ring` and `sqlx` upgrades become less critical once Phase 1 removes `net` and `db` from defaults, since they'll only affect opt-in users. However, they should still be upgraded for users who do opt in.
+
+**Implementation note (2026-03-24):** `reqwest` was bumped to `0.12` and `hf-hub` to `0.5.0` with explicit `rustls-tls`, but that alone does not clear `ring` because `sqlx 0.7.4` still brings in `rustls 0.21` and keeps `ring 0.17.9` in the graph. Attempting `sqlx 0.8.6` exposed the real blocker: `libsqlite3-sys 0.30.x` requires `cc ^1.1.6`, while the current `tree-sitter 0.20` parser stack still constrains `cc` to the old line. A straightforward parser-stack upgrade is also blocked by `tree-sitter-kotlin`, whose latest published crate still requires `tree-sitter < 0.23`. Finishing Task 0.2 likely needs either a broader tree-sitter migration strategy or a Kotlin parser replacement.
 
 ### Research Insights: sqlx 0.8 Migration
 
