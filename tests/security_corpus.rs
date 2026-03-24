@@ -56,6 +56,21 @@ const CORPUS_CASES: &[CorpusCase] = &[
         min_confidence: ConfidenceLevel::Low,
     },
     CorpusCase {
+        class: "sql-injection",
+        relative_path: "tests/fixtures/security-corpus/sql-injection/python-positive-fstring.py",
+        cwe_id: "CWE-89",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "sql-injection",
+        relative_path:
+            "tests/fixtures/security-corpus/sql-injection/python-negative-parameterized.py",
+        cwe_id: "CWE-89",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
         class: "command-injection",
         relative_path: "tests/fixtures/security-corpus/command-injection/rust-positive-shell-c.rs",
         cwe_id: "CWE-78",
@@ -89,7 +104,23 @@ const CORPUS_CASES: &[CorpusCase] = &[
     CorpusCase {
         class: "command-injection",
         relative_path:
+            "tests/fixtures/security-corpus/command-injection/python-positive-subprocess-shell.py",
+        cwe_id: "CWE-78",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Medium,
+    },
+    CorpusCase {
+        class: "command-injection",
+        relative_path:
             "tests/fixtures/security-corpus/command-injection/rust-negative-safe-args.rs",
+        cwe_id: "CWE-78",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "command-injection",
+        relative_path:
+            "tests/fixtures/security-corpus/command-injection/python-negative-safe-subprocess.py",
         cwe_id: "CWE-78",
         expected: ExpectedOutcome::Safe,
         min_confidence: ConfidenceLevel::Low,
@@ -117,6 +148,13 @@ const CORPUS_CASES: &[CorpusCase] = &[
     },
     CorpusCase {
         class: "secrets",
+        relative_path: "tests/fixtures/security-corpus/secrets/python-positive-api-key.py",
+        cwe_id: "CWE-798",
+        expected: ExpectedOutcome::Vulnerable,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "secrets",
         relative_path: "tests/fixtures/security-corpus/secrets/rust-negative-env-token.rs",
         cwe_id: "CWE-798",
         expected: ExpectedOutcome::Safe,
@@ -125,6 +163,13 @@ const CORPUS_CASES: &[CorpusCase] = &[
     CorpusCase {
         class: "secrets",
         relative_path: "tests/fixtures/security-corpus/secrets/python-negative-env-token.py",
+        cwe_id: "CWE-798",
+        expected: ExpectedOutcome::Safe,
+        min_confidence: ConfidenceLevel::Low,
+    },
+    CorpusCase {
+        class: "secrets",
+        relative_path: "tests/fixtures/security-corpus/secrets/javascript-negative-env-token.js",
         cwe_id: "CWE-798",
         expected: ExpectedOutcome::Safe,
         min_confidence: ConfidenceLevel::Low,
@@ -166,8 +211,8 @@ fn security_corpus_meets_detection_thresholds() {
     let mut overall_metrics = AccuracyMetrics::new();
 
     assert!(
-        CORPUS_CASES.len() >= 18,
-        "expected at least 18 corpus cases, found {}",
+        CORPUS_CASES.len() >= 24,
+        "expected at least 24 corpus cases, found {}",
         CORPUS_CASES.len()
     );
 
