@@ -4,10 +4,12 @@
 //! and similarity search capabilities for code semantic analysis.
 #![allow(clippy::vec_init_then_push)]
 
-use crate::{AnalysisResult, FileInfo, Result};
+use crate::{AnalysisResult, FileInfo, Result, Symbol};
+use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
@@ -169,6 +171,26 @@ impl Default for QueryConfig {
     }
 }
 
+#[derive(Debug, Clone)]
+struct ImportedSymbolBinding {
+    alias: String,
+    target_path: PathBuf,
+    target_symbol: String,
+}
+
+#[derive(Debug, Clone)]
+struct ImportedModuleBinding {
+    alias: String,
+    target_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+struct ResolvedCallTarget {
+    line_number: usize,
+    target_path: PathBuf,
+    target_symbol: String,
+}
+
 impl SemanticGraphQuery {
     /// Create a new semantic graph query system
     pub fn new() -> Self {
@@ -219,6 +241,29 @@ impl SemanticGraphQuery {
             weight,
             context: context.map(|s| s.to_string()),
         }
+    }
+
+    fn symbol_node_id(file_path: &Path, symbol: &Symbol) -> String {
+        Self::symbol_node_id_from_parts(file_path, &symbol.name, symbol.start_line)
+    }
+
+    fn symbol_node_id_from_parts(file_path: &Path, symbol_name: &str, start_line: usize) -> String {
+        format!("{}:{}:{}", file_path.display(), symbol_name, start_line)
+    }
+
+    fn is_callable_symbol_kind(symbol_kind: &str) -> bool {
+        matches!(symbol_kind.to_lowercase().as_str(), "function" | "method")
+    }
+
+    fn find_enclosing_callable_symbol(file: &FileInfo, line_number: usize) -> Option<&Symbol> {
+        file.symbols
+            .iter()
+            .filter(|symbol| {
+                Self::is_callable_symbol_kind(&symbol.kind)
+                    && symbol.start_line <= line_number
+                    && line_number <= symbol.end_line
+            })
+            .min_by_key(|symbol| symbol.end_line.saturating_sub(symbol.start_line))
     }
 
     fn add_unique_edge(&mut self, edge: GraphEdge) {
@@ -351,6 +396,102 @@ impl SemanticGraphQuery {
                 edges_traversed: edges_count,
                 execution_time_ms: execution_time,
                 truncated: is_truncated,
+            },
+        }
+    }
+
+    /// Find callable nodes that invoke the named symbol in the given file.
+    pub fn find_callers(
+        &self,
+        symbol_name: &str,
+        file_path: &Path,
+        config: &QueryConfig,
+    ) -> QueryResult {
+        let start_time = std::time::Instant::now();
+        let target_ids = self.find_symbol_node_ids(symbol_name, file_path);
+        let target_ids: HashSet<_> = target_ids.into_iter().collect();
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        let mut seen_nodes = HashSet::new();
+        let mut edges_traversed = 0;
+
+        if !target_ids.is_empty() {
+            for node_edges in self.edges.values() {
+                for edge in node_edges {
+                    edges_traversed += 1;
+                    if edge.relationship == RelationshipType::Calls && target_ids.contains(&edge.to)
+                    {
+                        edges.push(edge.clone());
+                        if let Some(node) = self.nodes.get(&edge.from) {
+                            if seen_nodes.insert(node.id.clone()) {
+                                nodes.push(node.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let truncated = nodes.len() > config.max_results;
+        if truncated {
+            nodes.truncate(config.max_results);
+        }
+
+        QueryResult {
+            nodes,
+            edges,
+            metadata: QueryMetadata {
+                nodes_examined: self.nodes.len(),
+                edges_traversed,
+                execution_time_ms: start_time.elapsed().as_millis() as u64,
+                truncated,
+            },
+        }
+    }
+
+    /// Find callable nodes invoked by the named symbol in the given file.
+    pub fn find_callees(
+        &self,
+        symbol_name: &str,
+        file_path: &Path,
+        config: &QueryConfig,
+    ) -> QueryResult {
+        let start_time = std::time::Instant::now();
+        let source_ids = self.find_symbol_node_ids(symbol_name, file_path);
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        let mut seen_nodes = HashSet::new();
+        let mut edges_traversed = 0;
+
+        for source_id in source_ids {
+            if let Some(node_edges) = self.edges.get(&source_id) {
+                for edge in node_edges {
+                    edges_traversed += 1;
+                    if edge.relationship == RelationshipType::Calls {
+                        edges.push(edge.clone());
+                        if let Some(node) = self.nodes.get(&edge.to) {
+                            if seen_nodes.insert(node.id.clone()) {
+                                nodes.push(node.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let truncated = nodes.len() > config.max_results;
+        if truncated {
+            nodes.truncate(config.max_results);
+        }
+
+        QueryResult {
+            nodes,
+            edges,
+            metadata: QueryMetadata {
+                nodes_examined: self.nodes.len(),
+                edges_traversed,
+                execution_time_ms: start_time.elapsed().as_millis() as u64,
+                truncated,
             },
         }
     }
@@ -532,30 +673,26 @@ impl SemanticGraphQuery {
         }
 
         for symbol in &file.symbols {
-            let node_id = format!(
-                "{}:{}:{}",
-                file.path.display(),
-                symbol.name,
-                symbol.start_line
-            );
+            let node_id = Self::symbol_node_id(&file.path, symbol);
             let node_type = self.symbol_to_node_type(&symbol.kind);
 
-            let node = Self::create_graph_node(
+            let mut node = Self::create_graph_node(
                 node_id.clone(),
                 node_type,
                 symbol.name.clone(),
                 file.path.clone(),
                 symbol.start_line,
             );
+            node.metadata
+                .insert("kind".to_string(), symbol.kind.clone());
+            node.metadata
+                .insert("visibility".to_string(), symbol.visibility.clone());
+            node.metadata
+                .insert("end_line".to_string(), symbol.end_line.to_string());
 
             self.nodes.insert(node_id, node);
             self.add_unique_edge(Self::create_graph_edge(
-                &format!(
-                    "{}:{}:{}",
-                    file.path.display(),
-                    symbol.name,
-                    symbol.start_line
-                ),
+                &Self::symbol_node_id(&file.path, symbol),
                 &module_id,
                 RelationshipType::DefinedIn,
                 1.0,
@@ -584,12 +721,20 @@ impl SemanticGraphQuery {
 
     /// Build relationships between nodes
     fn build_relationships(&mut self, analysis: &AnalysisResult) -> Result<()> {
+        let file_sources = Self::read_analysis_sources(analysis);
+        let known_paths: HashSet<PathBuf> = analysis
+            .files
+            .iter()
+            .map(|file| file.path.clone())
+            .collect();
+
         // Build basic file-level relationships
         for file in &analysis.files {
             self.build_file_relationships(file)?;
         }
 
-        self.build_cross_file_import_relationships(analysis)?;
+        self.build_cross_file_import_relationships(analysis, &file_sources, &known_paths)?;
+        self.build_cross_file_call_relationships(analysis, &file_sources, &known_paths)?;
 
         // Calculate node degrees
         self.calculate_node_degrees();
@@ -597,23 +742,33 @@ impl SemanticGraphQuery {
         Ok(())
     }
 
-    fn build_cross_file_import_relationships(&mut self, analysis: &AnalysisResult) -> Result<()> {
-        let known_paths: HashSet<PathBuf> = analysis
+    fn read_analysis_sources(analysis: &AnalysisResult) -> HashMap<PathBuf, String> {
+        analysis
             .files
             .iter()
-            .map(|file| file.path.clone())
-            .collect();
+            .filter_map(|file| {
+                fs::read_to_string(analysis.root_path.join(&file.path))
+                    .ok()
+                    .map(|content| (file.path.clone(), content))
+            })
+            .collect()
+    }
 
+    fn build_cross_file_import_relationships(
+        &mut self,
+        analysis: &AnalysisResult,
+        file_sources: &HashMap<PathBuf, String>,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Result<()> {
         for file in &analysis.files {
-            let content = match fs::read_to_string(analysis.root_path.join(&file.path)) {
-                Ok(content) => content,
-                Err(_) => continue,
+            let Some(content) = file_sources.get(&file.path) else {
+                continue;
             };
 
             let imported_paths = match file.language.as_str() {
-                "Rust" => Self::resolve_rust_import_targets(&file.path, &content, &known_paths),
+                "Rust" => Self::resolve_rust_import_targets(&file.path, content, known_paths),
                 "JavaScript" | "TypeScript" => {
-                    Self::resolve_js_import_targets(&file.path, &content, &known_paths)
+                    Self::resolve_js_import_targets(&file.path, content, known_paths)
                 }
                 _ => Vec::new(),
             };
@@ -640,6 +795,18 @@ impl SemanticGraphQuery {
         }
 
         Ok(())
+    }
+
+    fn build_symbol_node_lookup(&self) -> HashMap<(PathBuf, String), String> {
+        let mut lookup = HashMap::new();
+        for (node_id, node) in &self.nodes {
+            if node.node_type != NodeType::Module {
+                lookup
+                    .entry((node.file_path.clone(), node.name.clone()))
+                    .or_insert_with(|| node_id.clone());
+            }
+        }
+        lookup
     }
 
     fn rust_crate_root(current_file: &Path) -> PathBuf {
@@ -739,6 +906,34 @@ impl SemanticGraphQuery {
             if known_paths.contains(&mod_candidate) {
                 return Some(mod_candidate);
             }
+        }
+
+        None
+    }
+
+    fn resolve_exact_rust_module_path(
+        base_dir: &Path,
+        segments: &[String],
+        known_paths: &HashSet<PathBuf>,
+    ) -> Option<PathBuf> {
+        if segments.is_empty() {
+            return None;
+        }
+
+        let mut module_base = base_dir.to_path_buf();
+        for segment in segments {
+            module_base.push(segment);
+        }
+        let module_base = Self::normalize_path(module_base);
+
+        let file_candidate = module_base.with_extension("rs");
+        if known_paths.contains(&file_candidate) {
+            return Some(file_candidate);
+        }
+
+        let mod_candidate = module_base.join("mod.rs");
+        if known_paths.contains(&mod_candidate) {
+            return Some(mod_candidate);
         }
 
         None
@@ -885,6 +1080,522 @@ impl SemanticGraphQuery {
         let mut sorted: Vec<_> = targets.into_iter().collect();
         sorted.sort();
         sorted
+    }
+
+    fn find_symbol_node_ids(&self, symbol_name: &str, file_path: &Path) -> Vec<String> {
+        let mut node_ids: Vec<_> = self
+            .nodes
+            .values()
+            .filter(|node| {
+                node.node_type != NodeType::Module
+                    && node.name == symbol_name
+                    && node.file_path == file_path
+            })
+            .map(|node| node.id.clone())
+            .collect();
+        node_ids.sort();
+        node_ids
+    }
+
+    fn resolve_rust_base_dir(current_file: &Path, segments: &mut Vec<String>) -> Option<PathBuf> {
+        let current_parent = current_file.parent().unwrap_or_else(|| Path::new(""));
+        match segments.first().map(String::as_str) {
+            Some("crate") => {
+                segments.remove(0);
+                Some(Self::rust_crate_root(current_file))
+            }
+            Some("self") => {
+                segments.remove(0);
+                Some(current_parent.to_path_buf())
+            }
+            Some("super") => {
+                segments.remove(0);
+                Some(
+                    current_parent
+                        .parent()
+                        .map(Path::to_path_buf)
+                        .unwrap_or_default(),
+                )
+            }
+            Some("std" | "core" | "alloc") => None,
+            _ => Some(current_parent.to_path_buf()),
+        }
+    }
+
+    fn parse_rust_use_statement(line: &str) -> Option<(Vec<String>, Option<String>)> {
+        let trimmed = line.trim();
+        let after = trimmed
+            .strip_prefix("use ")
+            .or_else(|| trimmed.strip_prefix("pub use "))?;
+        let statement = after.split(';').next().unwrap_or("").trim();
+        if statement.is_empty() || statement.contains('{') {
+            return None;
+        }
+
+        let mut parts = statement.splitn(2, " as ");
+        let path = parts.next()?.trim();
+        let alias = parts
+            .next()
+            .map(str::trim)
+            .filter(|alias| !alias.is_empty())
+            .map(ToString::to_string);
+        let segments: Vec<String> = path
+            .split("::")
+            .filter(|segment| !segment.is_empty())
+            .map(ToString::to_string)
+            .collect();
+        if segments.is_empty() {
+            None
+        } else {
+            Some((segments, alias))
+        }
+    }
+
+    fn resolve_rust_import_bindings(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> (Vec<ImportedSymbolBinding>, Vec<ImportedModuleBinding>) {
+        let current_parent = current_file.parent().unwrap_or_else(|| Path::new(""));
+        let mut symbol_bindings = Vec::new();
+        let mut module_bindings = Vec::new();
+
+        for line in content.lines() {
+            if let Some(segments) = Self::extract_rust_mod_declaration(line) {
+                if let Some(target_path) =
+                    Self::resolve_exact_rust_module_path(current_parent, &segments, known_paths)
+                {
+                    if let Some(alias) = segments.last() {
+                        module_bindings.push(ImportedModuleBinding {
+                            alias: alias.clone(),
+                            target_path,
+                        });
+                    }
+                }
+            }
+
+            if let Some((mut segments, alias)) = Self::parse_rust_use_statement(line) {
+                let Some(base_dir) = Self::resolve_rust_base_dir(current_file, &mut segments)
+                else {
+                    continue;
+                };
+                if segments.is_empty() {
+                    continue;
+                }
+
+                if let Some(target_path) =
+                    Self::resolve_exact_rust_module_path(&base_dir, &segments, known_paths)
+                {
+                    let alias =
+                        alias.unwrap_or_else(|| segments.last().cloned().unwrap_or_default());
+                    module_bindings.push(ImportedModuleBinding { alias, target_path });
+                    continue;
+                }
+
+                if segments.len() >= 2 {
+                    let target_symbol = segments.last().cloned().unwrap_or_default();
+                    let target_segments = &segments[..segments.len() - 1];
+                    if let Some(target_path) =
+                        Self::resolve_rust_module_path(&base_dir, target_segments, known_paths)
+                    {
+                        let alias = alias.unwrap_or_else(|| target_symbol.clone());
+                        symbol_bindings.push(ImportedSymbolBinding {
+                            alias,
+                            target_path,
+                            target_symbol,
+                        });
+                    }
+                }
+            }
+        }
+
+        (symbol_bindings, module_bindings)
+    }
+
+    fn resolve_js_import_bindings(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> (Vec<ImportedSymbolBinding>, Vec<ImportedModuleBinding>) {
+        let mut symbol_bindings = Vec::new();
+        let mut module_bindings = Vec::new();
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("import {") && trimmed.contains("} from ") {
+                let Some(open) = trimmed.find('{') else {
+                    continue;
+                };
+                let Some(close) = trimmed.find('}') else {
+                    continue;
+                };
+                let Some(spec) = trimmed.split(" from ").nth(1) else {
+                    continue;
+                };
+                let spec = spec.trim().trim_matches(&['"', '\'', ';'][..]);
+                let Some(target_path) =
+                    Self::resolve_js_relative_spec(current_file, spec, known_paths)
+                else {
+                    continue;
+                };
+
+                for binding in trimmed[open + 1..close].split(',') {
+                    let binding = binding.trim();
+                    if binding.is_empty() {
+                        continue;
+                    }
+
+                    let mut parts = binding.splitn(2, " as ");
+                    let original = parts.next().unwrap_or("").trim();
+                    let alias = parts.next().map(str::trim).unwrap_or(original);
+                    if !original.is_empty() && !alias.is_empty() {
+                        symbol_bindings.push(ImportedSymbolBinding {
+                            alias: alias.to_string(),
+                            target_path: target_path.clone(),
+                            target_symbol: original.to_string(),
+                        });
+                    }
+                }
+
+                continue;
+            }
+
+            if trimmed.starts_with("import * as ") && trimmed.contains(" from ") {
+                let alias = trimmed
+                    .trim_start_matches("import * as ")
+                    .split(" from ")
+                    .next()
+                    .unwrap_or("")
+                    .trim();
+                let Some(spec) = trimmed.split(" from ").nth(1) else {
+                    continue;
+                };
+                let spec = spec.trim().trim_matches(&['"', '\'', ';'][..]);
+                if !alias.is_empty() {
+                    if let Some(target_path) =
+                        Self::resolve_js_relative_spec(current_file, spec, known_paths)
+                    {
+                        module_bindings.push(ImportedModuleBinding {
+                            alias: alias.to_string(),
+                            target_path,
+                        });
+                    }
+                }
+
+                continue;
+            }
+
+            if (trimmed.starts_with("const {")
+                || trimmed.starts_with("let {")
+                || trimmed.starts_with("var {"))
+                && trimmed.contains("= require(")
+            {
+                let Some(open) = trimmed.find('{') else {
+                    continue;
+                };
+                let Some(close) = trimmed.find('}') else {
+                    continue;
+                };
+                let Some(require_start) = trimmed.find("require(") else {
+                    continue;
+                };
+                let Some(require_end) = trimmed[require_start + 8..].find(')') else {
+                    continue;
+                };
+                let spec = trimmed[require_start + 8..require_start + 8 + require_end]
+                    .trim()
+                    .trim_matches(&['"', '\''][..]);
+                let Some(target_path) =
+                    Self::resolve_js_relative_spec(current_file, spec, known_paths)
+                else {
+                    continue;
+                };
+
+                for binding in trimmed[open + 1..close].split(',') {
+                    let binding = binding.trim();
+                    if binding.is_empty() {
+                        continue;
+                    }
+
+                    let mut parts = binding.splitn(2, ':');
+                    let original = parts.next().unwrap_or("").trim();
+                    let alias = parts.next().map(str::trim).unwrap_or(original);
+                    if !original.is_empty() && !alias.is_empty() {
+                        symbol_bindings.push(ImportedSymbolBinding {
+                            alias: alias.to_string(),
+                            target_path: target_path.clone(),
+                            target_symbol: original.to_string(),
+                        });
+                    }
+                }
+
+                continue;
+            }
+
+            if (trimmed.starts_with("const ")
+                || trimmed.starts_with("let ")
+                || trimmed.starts_with("var "))
+                && trimmed.contains("= require(")
+            {
+                let Some(eq_index) = trimmed.find('=') else {
+                    continue;
+                };
+                let alias = trimmed[..eq_index]
+                    .trim_start_matches("const ")
+                    .trim_start_matches("let ")
+                    .trim_start_matches("var ")
+                    .trim();
+                let Some(require_start) = trimmed.find("require(") else {
+                    continue;
+                };
+                let Some(require_end) = trimmed[require_start + 8..].find(')') else {
+                    continue;
+                };
+                let spec = trimmed[require_start + 8..require_start + 8 + require_end]
+                    .trim()
+                    .trim_matches(&['"', '\''][..]);
+                if !alias.is_empty() {
+                    if let Some(target_path) =
+                        Self::resolve_js_relative_spec(current_file, spec, known_paths)
+                    {
+                        module_bindings.push(ImportedModuleBinding {
+                            alias: alias.to_string(),
+                            target_path,
+                        });
+                    }
+                }
+            }
+        }
+
+        (symbol_bindings, module_bindings)
+    }
+
+    fn is_non_call_keyword(name: &str) -> bool {
+        matches!(
+            name,
+            "if" | "for"
+                | "while"
+                | "match"
+                | "loop"
+                | "fn"
+                | "function"
+                | "return"
+                | "let"
+                | "const"
+                | "var"
+                | "pub"
+                | "export"
+                | "import"
+                | "require"
+                | "class"
+                | "struct"
+                | "impl"
+                | "enum"
+        )
+    }
+
+    fn extract_simple_call_names(line: &str) -> Vec<String> {
+        static SIMPLE_CALL_RE: OnceLock<Regex> = OnceLock::new();
+        let regex = SIMPLE_CALL_RE.get_or_init(|| {
+            Regex::new(r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
+                .expect("simple call regex must compile")
+        });
+
+        regex
+            .captures_iter(line)
+            .filter_map(|captures| {
+                let name_match = captures.name("name")?;
+                let preceding = line[..name_match.start()].chars().last();
+                if matches!(preceding, Some(':') | Some('.')) {
+                    return None;
+                }
+
+                let name = name_match.as_str();
+                if Self::is_non_call_keyword(name) {
+                    None
+                } else {
+                    Some(name.to_string())
+                }
+            })
+            .collect()
+    }
+
+    fn extract_rust_qualified_calls(line: &str) -> Vec<(String, String)> {
+        static QUALIFIED_RUST_CALL_RE: OnceLock<Regex> = OnceLock::new();
+        let regex = QUALIFIED_RUST_CALL_RE.get_or_init(|| {
+            Regex::new(r"(?P<module>[A-Za-z_][A-Za-z0-9_]*)::(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
+                .expect("rust qualified call regex must compile")
+        });
+
+        regex
+            .captures_iter(line)
+            .filter_map(|captures| {
+                Some((
+                    captures.name("module")?.as_str().to_string(),
+                    captures.name("name")?.as_str().to_string(),
+                ))
+            })
+            .collect()
+    }
+
+    fn extract_js_qualified_calls(line: &str) -> Vec<(String, String)> {
+        static QUALIFIED_JS_CALL_RE: OnceLock<Regex> = OnceLock::new();
+        let regex = QUALIFIED_JS_CALL_RE.get_or_init(|| {
+            Regex::new(r"(?P<module>[A-Za-z_][A-Za-z0-9_]*)\.(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
+                .expect("js qualified call regex must compile")
+        });
+
+        regex
+            .captures_iter(line)
+            .filter_map(|captures| {
+                Some((
+                    captures.name("module")?.as_str().to_string(),
+                    captures.name("name")?.as_str().to_string(),
+                ))
+            })
+            .collect()
+    }
+
+    fn resolve_rust_call_targets(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Vec<ResolvedCallTarget> {
+        let (symbol_bindings, module_bindings) =
+            Self::resolve_rust_import_bindings(current_file, content, known_paths);
+        let symbol_bindings: HashMap<_, _> = symbol_bindings
+            .into_iter()
+            .map(|binding| (binding.alias, (binding.target_path, binding.target_symbol)))
+            .collect();
+        let module_bindings: HashMap<_, _> = module_bindings
+            .into_iter()
+            .map(|binding| (binding.alias, binding.target_path))
+            .collect();
+        let mut targets = Vec::new();
+
+        for (index, line) in content.lines().enumerate() {
+            let line_number = index + 1;
+
+            for (module_alias, symbol_name) in Self::extract_rust_qualified_calls(line) {
+                if let Some(target_path) = module_bindings.get(&module_alias) {
+                    targets.push(ResolvedCallTarget {
+                        line_number,
+                        target_path: target_path.clone(),
+                        target_symbol: symbol_name,
+                    });
+                }
+            }
+
+            for symbol_name in Self::extract_simple_call_names(line) {
+                if let Some((target_path, target_symbol)) = symbol_bindings.get(&symbol_name) {
+                    targets.push(ResolvedCallTarget {
+                        line_number,
+                        target_path: target_path.clone(),
+                        target_symbol: target_symbol.clone(),
+                    });
+                }
+            }
+        }
+
+        targets
+    }
+
+    fn resolve_js_call_targets(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Vec<ResolvedCallTarget> {
+        let (symbol_bindings, module_bindings) =
+            Self::resolve_js_import_bindings(current_file, content, known_paths);
+        let symbol_bindings: HashMap<_, _> = symbol_bindings
+            .into_iter()
+            .map(|binding| (binding.alias, (binding.target_path, binding.target_symbol)))
+            .collect();
+        let module_bindings: HashMap<_, _> = module_bindings
+            .into_iter()
+            .map(|binding| (binding.alias, binding.target_path))
+            .collect();
+        let mut targets = Vec::new();
+
+        for (index, line) in content.lines().enumerate() {
+            let line_number = index + 1;
+
+            for (module_alias, symbol_name) in Self::extract_js_qualified_calls(line) {
+                if let Some(target_path) = module_bindings.get(&module_alias) {
+                    targets.push(ResolvedCallTarget {
+                        line_number,
+                        target_path: target_path.clone(),
+                        target_symbol: symbol_name,
+                    });
+                }
+            }
+
+            for symbol_name in Self::extract_simple_call_names(line) {
+                if let Some((target_path, target_symbol)) = symbol_bindings.get(&symbol_name) {
+                    targets.push(ResolvedCallTarget {
+                        line_number,
+                        target_path: target_path.clone(),
+                        target_symbol: target_symbol.clone(),
+                    });
+                }
+            }
+        }
+
+        targets
+    }
+
+    fn build_cross_file_call_relationships(
+        &mut self,
+        analysis: &AnalysisResult,
+        file_sources: &HashMap<PathBuf, String>,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Result<()> {
+        let symbol_lookup = self.build_symbol_node_lookup();
+
+        for file in &analysis.files {
+            let Some(content) = file_sources.get(&file.path) else {
+                continue;
+            };
+
+            let targets = match file.language.as_str() {
+                "Rust" => Self::resolve_rust_call_targets(&file.path, content, known_paths),
+                "JavaScript" | "TypeScript" => {
+                    Self::resolve_js_call_targets(&file.path, content, known_paths)
+                }
+                _ => Vec::new(),
+            };
+
+            for target in targets {
+                let Some(caller) = Self::find_enclosing_callable_symbol(file, target.line_number)
+                else {
+                    continue;
+                };
+                let source_id = Self::symbol_node_id(&file.path, caller);
+                let Some(target_id) =
+                    symbol_lookup.get(&(target.target_path.clone(), target.target_symbol.clone()))
+                else {
+                    continue;
+                };
+                if source_id == *target_id {
+                    continue;
+                }
+
+                self.add_unique_edge(Self::create_graph_edge(
+                    &source_id,
+                    target_id,
+                    RelationshipType::Calls,
+                    0.9,
+                    Some(&format!(
+                        "{}:{}",
+                        target.target_path.display(),
+                        target.target_symbol
+                    )),
+                ));
+            }
+        }
+
+        Ok(())
     }
 
     /// Build relationships within a file

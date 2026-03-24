@@ -659,10 +659,13 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 - [ ] Implement cross-file edge creation:
   - [x] Parse `use`/`import`/`require` statements to create `Imports` edges (Rust and JavaScript/TypeScript checkpoint landed on 2026-03-24)
-  - [ ] Match exported symbols across files to create `Calls` edges
+  - [x] Match exported symbols across files to create `Calls` edges for simple Rust and JavaScript import patterns (checkpoint landed on 2026-03-24)
   - [ ] Track re-exports for transitive resolution
 - [ ] Build cross-file graph incrementally (parse each file, merge into unified graph)
-- [ ] Add graph query functions: `find_callers(symbol)`, `find_callees(symbol)`, `trace_data_flow(source_file, sink_file)`
+- [ ] Add graph query functions:
+  - [x] `find_callers(symbol)`
+  - [x] `find_callees(symbol)`
+  - [ ] `trace_data_flow(source_file, sink_file)`
 
 **Acceptance criteria:**
 - Semantic graph connects symbols across files
