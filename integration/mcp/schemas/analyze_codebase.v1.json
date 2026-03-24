@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analyze_codebase.v1",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "maxSizeKb": { "type": "integer", "minimum": 1, "default": 1024 },
+        "maxDepth": { "type": "integer", "minimum": 1, "default": 20 },
+        "depth": { "type": "string", "enum": ["basic", "deep", "full"], "default": "full" },
+        "includeHidden": { "type": "boolean", "default": false },
+        "excludeDirs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "includeExts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "detailed": { "type": "boolean", "default": false },
+        "threads": { "type": "integer", "minimum": 1 },
+        "enableSecurity": { "type": "boolean", "default": false }
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "const": "1" },
+        "tool": { "const": "analyze_codebase" },
+        "command": { "const": "analyze" },
+        "path": { "type": "string" },
+        "report": {}
+      },
+      "required": ["schema_version", "tool", "command", "path", "report"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["input", "output"],
+  "additionalProperties": false
+}

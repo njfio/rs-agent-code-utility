@@ -567,39 +567,43 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 ##### Task 3.2: Define MCP Tool Interface
 
-**Scope note (from simplicity review):** Consider starting with 3 core MCP tools (parse_file, analyze_complexity, scan_security) and adding more only when users request them. 8 tools is ambitious for an initial release. The existing MCP server already has 9 tool registrations -- audit which ones work before adding more.
+**Scope note (updated after audit on 2026-03-24):** The repository did not actually contain a checked-in MCP server with 9 tools. `integration/mcp/server/` only contained orphaned `node_modules/` and a `.package-lock.json` footprint. Start by recreating a small, honest adapter around CLI commands that already emit stable JSON, then expand once additional CLI contracts exist.
 
-- [ ] Audit existing 9 MCP tool registrations in `integration/mcp/server/` -- determine which work and which are stubs
-- [ ] Design MCP tool definitions for the library's working capabilities:
-  - `parse_file` -- Parse source code, return AST summary
-  - `analyze_complexity` -- Return cyclomatic/cognitive complexity for functions
-  - `scan_security` -- Run security pipeline, return scored findings
-  - `analyze_dependencies` -- Return dependency graph
-  - `query_semantic_graph` -- Query semantic relationships (calls, imports, depends-on)
-  - `analyze_taint` -- Run taint analysis, return source-to-sink flows
-  - `get_symbols` -- Extract function/class/variable symbols
-  - `analyze_performance` -- Return performance hotspots (using real AST analysis from Phase 2)
-- [ ] Define JSON schemas for each tool's input/output, including `schema_version` field
-- [ ] Document tool capabilities and limitations honestly
+- [x] Audit existing MCP footprint in `integration/mcp/server/` -- result: no checked-in server source, only orphaned package artifacts
+- [x] Design MCP tool definitions for the library's currently working JSON capabilities:
+  - [x] `analyze_codebase` -- Wrap `tree-sitter-cli analyze --format json`
+  - [x] `get_symbols` -- Wrap `tree-sitter-cli symbols --format json`
+  - [x] `query_code` -- Wrap `tree-sitter-cli query --format json`
+  - [x] `scan_security` -- Wrap `tree-sitter-cli security --format json`
+  - [x] `analyze_dependencies` -- Wrap `tree-sitter-cli dependencies --format json`
+  - [ ] `parse_file` -- blocked until a dedicated stable CLI JSON contract exists
+  - [ ] `analyze_complexity` -- blocked until a dedicated stable CLI JSON contract exists
+  - [ ] `query_semantic_graph` -- blocked on Phase 3.4 graph serialization work
+  - [ ] `analyze_taint` -- blocked until a dedicated stable CLI JSON contract exists
+  - [ ] `analyze_performance` -- blocked until a dedicated stable CLI JSON contract exists
+- [x] Define JSON schemas for each shipped tool's input/output, including `schema_version` field
+- [x] Document tool capabilities and limitations honestly in `integration/mcp/README.md`
 
 **Acceptance criteria:**
-- Each tool has a defined JSON input/output schema
-- Schemas documented in `integration/mcp/schemas/`
-- All tool outputs include `schema_version` field
+- Each shipped MCP tool has a defined JSON input/output schema
+- Shipped schemas are documented in `integration/mcp/schemas/`
+- All shipped tool outputs include `schema_version` field
 
 ##### Task 3.3: Upgrade MCP Adapter
 
 **Approach:** Keep TypeScript MCP server. Replace ad-hoc shell-out with typed JSON contract. This is option (c) from SpecFlow Q4 -- lowest risk, fastest delivery.
 
-- [ ] Upgrade `@modelcontextprotocol/sdk` from ^1.2.0 to latest
-- [ ] Define stable CLI JSON output contract (the `--format json` flag)
-- [ ] Update each MCP tool handler to:
-  - Call `rts-cli` with specific subcommand and `--format json`
-  - Parse typed JSON response
-  - Map to MCP tool result format
-- [ ] Add timeout handling per `integration/mcp/notes.md` guidance (60-120s per invocation)
-- [ ] Set `NO_COLOR=1` and `--max-file-kb` per notes.md
-- [ ] Add Vitest tests for each tool
+- [x] Recreate the missing TypeScript MCP package in `integration/mcp/server/` with checked-in source, config, and tests
+- [x] Upgrade the recovered `@modelcontextprotocol/sdk@1.18.0` footprint to a non-vulnerable release (`1.27.1`)
+- [x] Define a stable CLI JSON output contract (`schema_version`, `tool`, `command`, `path`, `report`)
+- [x] Update each shipped MCP tool handler to:
+  - [x] Call `tree-sitter-cli` with a specific subcommand and `--format json`
+  - [x] Parse typed JSON response
+  - [x] Map to MCP tool result format
+- [x] Add timeout handling (120s default) and `NO_COLOR=1`
+- [x] Add Vitest tests covering each shipped tool handler
+- [x] Add a client-facing `tools/list` smoke test for the MCP package
+- [x] Wire the MCP package into CI
 
 ### Research Insights: MCP Implementation
 
@@ -612,8 +616,8 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - Log invocations for debugging without exposing source code in logs
 
 **Acceptance criteria:**
-- All MCP tools functional via TypeScript adapter
-- Each tool has a Vitest test
+- All shipped MCP tools functional via TypeScript adapter
+- Each shipped tool has a Vitest test
 - Timeouts prevent hanging invocations
 - MCP server starts and responds to `tools/list` correctly
 
