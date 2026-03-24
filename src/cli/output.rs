@@ -11,10 +11,6 @@ use colored::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tabled::{
-    settings::{Alignment, Color, Style},
-    Table, Tabled,
-};
 
 /// Accessibility configuration for CLI output
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -759,20 +755,124 @@ pub trait EnhancedTable {
     fn to_csv(&self) -> String;
 }
 
+pub(crate) fn render_text_table(headers: &[&str], rows: &[Vec<String>]) -> String {
+    render_text_table_with_header_color(headers, rows, None)
+}
+
+fn render_text_table_with_header_color(
+    headers: &[&str],
+    rows: &[Vec<String>],
+    header_color: Option<&str>,
+) -> String {
+    if headers.is_empty() {
+        return String::new();
+    }
+
+    let widths: Vec<usize> = headers
+        .iter()
+        .enumerate()
+        .map(|(index, header)| {
+            let header_width = visible_width(header);
+            let row_width = rows
+                .iter()
+                .filter_map(|row| row.get(index))
+                .map(|value| visible_width(value))
+                .max()
+                .unwrap_or(0);
+            header_width.max(row_width)
+        })
+        .collect();
+
+    let border = format!(
+        "+{}+",
+        widths
+            .iter()
+            .map(|width| "-".repeat(width + 2))
+            .collect::<Vec<_>>()
+            .join("+")
+    );
+
+    let header_cells: Vec<String> = headers
+        .iter()
+        .map(|header| color_table_header(header, header_color))
+        .collect();
+
+    let mut lines = Vec::with_capacity(rows.len() + 4);
+    lines.push(border.clone());
+    lines.push(format_table_row(&header_cells, &widths));
+    lines.push(border.clone());
+    for row in rows {
+        lines.push(format_table_row(row, &widths));
+    }
+    lines.push(border);
+
+    lines.join("\n")
+}
+
+fn color_table_header(header: &str, header_color: Option<&str>) -> String {
+    match header_color {
+        Some("blue") => header.bright_blue().bold().to_string(),
+        Some("cyan") => header.bright_cyan().bold().to_string(),
+        Some("green") => header.bright_green().bold().to_string(),
+        Some("yellow") => header.bright_yellow().bold().to_string(),
+        Some("red") => header.bright_red().bold().to_string(),
+        Some("magenta") => header.bright_magenta().bold().to_string(),
+        _ => header.bold().to_string(),
+    }
+}
+
+fn format_table_row(cells: &[String], widths: &[usize]) -> String {
+    let rendered_cells = widths
+        .iter()
+        .enumerate()
+        .map(|(index, width)| {
+            let value = cells.get(index).cloned().unwrap_or_default();
+            let padding = width.saturating_sub(visible_width(&value));
+            format!(" {}{} ", value, " ".repeat(padding))
+        })
+        .collect::<Vec<_>>()
+        .join("|");
+
+    format!("|{}|", rendered_cells)
+}
+
+fn visible_width(value: &str) -> usize {
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    let mut width = 0;
+
+    while index < bytes.len() {
+        if bytes[index] == 0x1b {
+            index += 1;
+            if index < bytes.len() && bytes[index] == b'[' {
+                index += 1;
+                while index < bytes.len() {
+                    let byte = bytes[index];
+                    index += 1;
+                    if byte.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+            continue;
+        }
+
+        let ch = value[index..].chars().next().unwrap_or_default();
+        width += 1;
+        index += ch.len_utf8();
+    }
+
+    width
+}
+
 /// Table row for file information with enhanced formatting
-#[derive(Tabled, Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FileRow {
-    #[tabled(rename = "File")]
     pub path: String,
-    #[tabled(rename = "Language")]
     pub language: String,
-    #[tabled(rename = "Lines")]
     pub lines: String,
-    #[tabled(rename = "Size")]
     pub size: String,
-    #[tabled(rename = "Symbols")]
     pub symbols: String,
-    #[tabled(rename = "Status")]
     pub status: String,
 }
 
@@ -818,20 +918,25 @@ impl FileRow {
 
 impl EnhancedTable for Vec<FileRow> {
     fn to_colored_table(&self) -> String {
-        let mut table = Table::new(self);
-        table
-            .with(Style::modern())
-            .with(Color::BG_BLUE)
-            .with(Alignment::left());
+        let rows: Vec<Vec<String>> = self
+            .iter()
+            .map(|row| {
+                vec![
+                    row.path.clone(),
+                    row.language.clone(),
+                    row.lines.clone(),
+                    row.size.clone(),
+                    row.symbols.clone(),
+                    row.status.clone(),
+                ]
+            })
+            .collect();
 
-        // Apply color to status column
-        for row in self.iter() {
-            if row.status.contains("❌") {
-                // This would apply red color to failed rows in a real implementation
-            }
-        }
-
-        table.to_string()
+        render_text_table_with_header_color(
+            &["File", "Language", "Lines", "Size", "Symbols", "Status"],
+            &rows,
+            Some("blue"),
+        )
     }
 
     fn to_markdown_table(&self) -> String {
@@ -868,17 +973,12 @@ impl EnhancedTable for Vec<FileRow> {
 }
 
 /// Enhanced symbol table with better formatting
-#[derive(Tabled, Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SymbolRow {
-    #[tabled(rename = "Symbol")]
     pub name: String,
-    #[tabled(rename = "Type")]
     pub kind: String,
-    #[tabled(rename = "File")]
     pub file: String,
-    #[tabled(rename = "Line")]
     pub line: String,
-    #[tabled(rename = "Visibility")]
     pub visibility: String,
 }
 
@@ -912,13 +1012,24 @@ impl SymbolRow {
 
 impl EnhancedTable for Vec<SymbolRow> {
     fn to_colored_table(&self) -> String {
-        let mut table = Table::new(self);
-        table
-            .with(Style::modern())
-            .with(Color::BG_CYAN)
-            .with(Alignment::left());
+        let rows: Vec<Vec<String>> = self
+            .iter()
+            .map(|row| {
+                vec![
+                    row.name.clone(),
+                    row.kind.clone(),
+                    row.file.clone(),
+                    row.line.clone(),
+                    row.visibility.clone(),
+                ]
+            })
+            .collect();
 
-        table.to_string()
+        render_text_table_with_header_color(
+            &["Symbol", "Type", "File", "Line", "Visibility"],
+            &rows,
+            Some("cyan"),
+        )
     }
 
     fn to_markdown_table(&self) -> String {
@@ -1693,8 +1804,7 @@ impl OutputHandler {
                     })
                     .collect();
 
-                let table = Table::new(rows);
-                println!("\n{}", table);
+                println!("\n{}", rows.to_colored_table());
 
                 // Enhanced summary with symbol type breakdown
                 println!("\n{}", "SYMBOL SUMMARY".bright_yellow().bold());
@@ -1988,4 +2098,30 @@ impl TemplateEngine {
 pub fn get_template(name: &str) -> Option<OutputTemplate> {
     let engine = TemplateEngine::new();
     engine.get_template(name).cloned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn visible_width_ignores_ansi_sequences() {
+        let colored = "42KB".bright_green().to_string();
+        assert_eq!(visible_width(&colored), 4);
+    }
+
+    #[test]
+    fn render_text_table_keeps_borders_stable_with_colored_cells() {
+        let rows = vec![vec![
+            "src/lib.rs".to_string(),
+            "4KB".bright_yellow().to_string(),
+        ]];
+
+        let table = render_text_table(&["File", "Size"], &rows);
+        let lines: Vec<_> = table.lines().collect();
+
+        assert_eq!(lines.first(), lines.last());
+        assert!(table.contains("File"));
+        assert!(table.contains("src/lib.rs"));
+    }
 }

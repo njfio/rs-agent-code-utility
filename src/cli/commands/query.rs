@@ -144,29 +144,22 @@ fn output_json(results: &[QueryResult]) -> CliResult<()> {
 }
 
 fn output_table(results: &[QueryResult]) {
-    use tabled::{Table, Tabled};
-
-    #[derive(Tabled)]
-    struct TableRow {
-        #[tabled(rename = "File")]
-        file: String,
-        #[tabled(rename = "Lines")]
-        lines: String,
-        #[tabled(rename = "Match")]
-        match_text: String,
-    }
-
-    let rows: Vec<TableRow> = results
+    let rows: Vec<Vec<String>> = results
         .iter()
-        .map(|r| TableRow {
-            file: r.file_path.display().to_string(),
-            lines: format!("{}-{}", r.start_line, r.end_line),
-            match_text: r.match_text.lines().next().unwrap_or("").trim().to_string(),
+        .map(|r| {
+            vec![
+                r.file_path.display().to_string(),
+                format!("{}-{}", r.start_line, r.end_line),
+                r.match_text.lines().next().unwrap_or("").trim().to_string(),
+            ]
         })
         .collect();
 
     if !rows.is_empty() {
-        println!("{}", Table::new(rows));
+        println!(
+            "{}",
+            crate::cli::output::render_text_table(&["File", "Lines", "Match"], &rows)
+        );
     }
 }
 

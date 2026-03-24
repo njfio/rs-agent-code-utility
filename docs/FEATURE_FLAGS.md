@@ -8,7 +8,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 |---|---|---|
 | `std` | Baseline library surface | No additional dependencies |
 | `serde` | Compatibility marker for the default feature set | No additional dependencies |
-| `cli` | Command-line binaries and CLI-only formatting | `clap`, `colored`, `indicatif`, `rustyline`, `syntect`, `tabled`, `tracing`, `tracing-subscriber` |
+| `cli` | Command-line binaries and CLI-only formatting | `clap`, `colored`, `indicatif`, `rustyline`, `syntect`, `tracing`, `tracing-subscriber` |
 | `ml` | Embeddings and model-backed intent mapping | `anyhow`, `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub` |
 | `net` | Network/runtime-backed providers and rate-limited HTTP | `anyhow`, `reqwest`, `tokio`, `governor`, `tower`, `config`, `tracing` |
 | `mmap` | Real memory-mapped file support for the advanced memory manager | `memmap2` |
@@ -27,7 +27,6 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `indicatif` | `cli` | CLI progress bars |
 | `rustyline` | `cli` | Interactive CLI mode |
 | `syntect` | `cli` | Interactive syntax highlighting |
-| `tabled` | `cli` | CLI table rendering |
 | `tracing-subscriber` | `cli` | CLI log initialization |
 | `candle-core` | `ml` | ML inference/runtime |
 | `candle-nn` | `ml` | ML inference/runtime |
@@ -78,13 +77,13 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, removing the unused `sha2` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, moving `crc32fast` behind `wiki`, moving the JavaScript/Python/C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, switching `advanced_cache` disk persistence from gzip-compressed JSON to plain JSON so `flate2` is no longer always-on, replacing `walkdir` usage in declarative rule loading plus AST security file discovery with std-based recursive traversal, replacing the `advanced_parallel` scheduler's direct `crossbeam-channel` usage with std `mpsc`, replacing the secrets detector's direct `base64` usage with a crate-local base64url decoder for JWT validation, and replacing the last direct `parking_lot` locks in infrastructure caching plus advanced parallel scheduling with std `RwLock` plus poison-tolerant helpers, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, removing the unused `sha2` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, moving `crc32fast` behind `wiki`, moving the JavaScript/Python/C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, switching `advanced_cache` disk persistence from gzip-compressed JSON to plain JSON so `flate2` is no longer always-on, replacing `walkdir` usage in declarative rule loading plus AST security file discovery with std-based recursive traversal, replacing the `advanced_parallel` scheduler's direct `crossbeam-channel` usage with std `mpsc`, replacing the secrets detector's direct `base64` usage with a crate-local base64url decoder for JWT validation, replacing the last direct `parking_lot` locks in infrastructure caching plus advanced parallel scheduling with std `RwLock` plus poison-tolerant helpers, and replacing the CLI's direct `tabled` usage with a crate-local text-table renderer so `proc-macro-error` no longer rides along the `cli` feature, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
 | Core/no-default | `cargo tree --no-default-features | wc -l` | `420` |
 | Default | `cargo tree | wc -l` | `420` |
-| All features | `cargo tree --all-features | wc -l` | `1386` |
+| All features | `cargo tree --all-features | wc -l` | `1364` |
 
 Notes:
 
@@ -93,7 +92,7 @@ Notes:
 - `memmap2` is absent from `cargo tree --no-default-features` and reappears when `mmap` is enabled.
 - `num_cpus` is no longer a direct core dependency; default thread sizing now uses `std::thread::available_parallelism()`.
 - `dirs` is no longer a direct core dependency; infrastructure default paths are resolved with internal std-based helpers, although `dirs` still appears transitively under `ml` through `hf-hub`.
-- `dashmap` is no longer a direct core dependency; the in-memory cache now uses `parking_lot::RwLock<HashMap<...>>`, although `dashmap` still appears transitively under `net` through `governor`.
+- `dashmap` is no longer a direct core dependency; the in-memory cache now uses std `RwLock<HashMap<...>>` with poison-tolerant helper accessors, although `dashmap` still appears transitively under `net` through `governor`.
 - `config` is no longer a direct core dependency; it now only appears when `net` or `db` infrastructure is requested.
 - `exponential-backoff` is no longer in the dependency graph; HTTP retry logic already uses a small internal exponential backoff implementation.
 - `sha2` is no longer in the dependency graph; the direct dependency was unused and has been removed from the crate.
