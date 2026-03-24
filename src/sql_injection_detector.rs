@@ -1,5 +1,6 @@
 use crate::{Result, SyntaxTree, TaintAnalyzer, TaintFlow, VulnerabilityType};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use tree_sitter::Node;
 
 /// SQL injection vulnerability detected by AST analysis
@@ -256,10 +257,19 @@ impl SqlInjectionDetector {
 
     /// Detect SQL injection vulnerabilities in a syntax tree
     pub fn detect(&mut self, tree: &SyntaxTree) -> Result<Vec<SqlInjectionVulnerability>> {
+        self.detect_with_path(tree, Path::new("current_file"))
+    }
+
+    /// Detect SQL injection vulnerabilities with a concrete file path for taint metadata.
+    pub fn detect_with_path(
+        &mut self,
+        tree: &SyntaxTree,
+        file_path: &Path,
+    ) -> Result<Vec<SqlInjectionVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Perform enhanced taint analysis to find data flows
-        let taint_flows = self.taint_analyzer.analyze(tree)?;
+        let taint_flows = self.taint_analyzer.analyze_with_path(tree, file_path)?;
 
         // Filter flows that lead to SQL injection vulnerabilities
         for flow in taint_flows {
@@ -610,6 +620,7 @@ impl SqlInjectionDetector {
                     id: "direct".to_string(),
                     name: "direct_analysis".to_string(),
                     source_type: crate::taint_analysis::TaintSourceType::UserInput,
+                    file_path: std::path::PathBuf::from("current_file"),
                     location: crate::taint_analysis::TaintLocation {
                         file: "current_file".to_string(),
                         line: node.start_position().row + 1,
@@ -622,6 +633,7 @@ impl SqlInjectionDetector {
                     id: "direct_sink".to_string(),
                     name: "sql_query".to_string(),
                     sink_type: crate::taint_analysis::TaintSinkType::SqlQuery,
+                    file_path: std::path::PathBuf::from("current_file"),
                     location: crate::taint_analysis::TaintLocation {
                         file: "current_file".to_string(),
                         line: node.start_position().row + 1,
@@ -681,6 +693,7 @@ mod tests {
                 id: "test".to_string(),
                 name: "test".to_string(),
                 source_type: crate::taint_analysis::TaintSourceType::UserInput,
+                file_path: std::path::PathBuf::from("test.rs"),
                 location: crate::taint_analysis::TaintLocation {
                     file: "test.rs".to_string(),
                     line: 1,
@@ -693,6 +706,7 @@ mod tests {
                 id: "test_sink".to_string(),
                 name: "query".to_string(),
                 sink_type: crate::taint_analysis::TaintSinkType::SqlQuery,
+                file_path: std::path::PathBuf::from("test.rs"),
                 location: crate::taint_analysis::TaintLocation {
                     file: "test.rs".to_string(),
                     line: 5,

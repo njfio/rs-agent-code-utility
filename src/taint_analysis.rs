@@ -1,5 +1,6 @@
 use crate::{Result, SyntaxTree};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use tree_sitter::Node;
 
 /// Represents a taint source (where untrusted data enters the system)
@@ -11,6 +12,8 @@ pub struct TaintSource {
     pub name: String,
     /// Source type (user input, file, network, etc.)
     pub source_type: TaintSourceType,
+    /// File where the source was found
+    pub file_path: PathBuf,
     /// Location in source code
     pub location: TaintLocation,
     /// Confidence level of taint detection
@@ -45,6 +48,8 @@ pub struct TaintSink {
     pub name: String,
     /// Sink type (SQL query, command execution, etc.)
     pub sink_type: TaintSinkType,
+    /// File where the sink was found
+    pub file_path: PathBuf,
     /// Location in source code
     pub location: TaintLocation,
     /// Vulnerability type if tainted data reaches this sink
@@ -158,6 +163,8 @@ pub struct TaintAnalyzer {
     function_definitions: HashMap<String, FunctionDefinition>,
     /// Call graph for inter-procedural analysis
     call_graph: HashMap<String, Vec<FunctionCall>>,
+    /// Source text for the tree currently being analyzed
+    current_source: String,
 }
 
 /// Represents a variable assignment for tracking data flow
@@ -227,6 +234,7 @@ impl TaintAnalyzer {
             variable_assignments: HashMap::new(),
             function_definitions: HashMap::new(),
             call_graph: HashMap::new(),
+            current_source: String::new(),
         };
 
         analyzer.initialize_language_rules();
@@ -556,16 +564,26 @@ impl TaintAnalyzer {
 
     /// Perform enhanced taint analysis on a syntax tree with inter-procedural analysis
     pub fn analyze(&mut self, tree: &SyntaxTree) -> Result<Vec<TaintFlow>> {
+        self.analyze_with_path(tree, Path::new("current_file"))
+    }
+
+    /// Perform enhanced taint analysis with a concrete file path for source and sink metadata.
+    pub fn analyze_with_path(
+        &mut self,
+        tree: &SyntaxTree,
+        file_path: &Path,
+    ) -> Result<Vec<TaintFlow>> {
         let mut flows = Vec::new();
+        self.set_current_source(tree);
 
         // Phase 1: Build program structure (functions, assignments, call graph)
-        self.build_program_structure(tree)?;
+        self.build_program_structure(tree, file_path)?;
 
         // Phase 2: Find all taint sources in the code
-        let sources = self.find_taint_sources(tree)?;
+        let sources = self.find_taint_sources(tree, file_path)?;
 
         // Phase 3: Find all taint sinks in the code
-        let sinks = self.find_taint_sinks(tree)?;
+        let sinks = self.find_taint_sinks(tree, file_path)?;
 
         // Phase 4: Perform enhanced data flow analysis
         for source in &sources {
@@ -576,26 +594,55 @@ impl TaintAnalyzer {
         Ok(flows)
     }
 
+    fn taint_location(
+        node: Node,
+        current_function: Option<&str>,
+        file_path: &Path,
+    ) -> TaintLocation {
+        TaintLocation {
+            file: file_path.to_string_lossy().into_owned(),
+            line: node.start_position().row + 1,
+            column: node.start_position().column,
+            function: current_function.map(|s| s.to_string()),
+        }
+    }
+
+    fn set_current_source(&mut self, tree: &SyntaxTree) {
+        self.current_source.clear();
+        self.current_source.push_str(tree.source());
+    }
+
+    fn node_text(&self, node: Node) -> Option<String> {
+        node.utf8_text(self.current_source.as_bytes())
+            .ok()
+            .map(ToString::to_string)
+    }
+
     /// Build program structure for inter-procedural analysis
-    fn build_program_structure(&mut self, tree: &SyntaxTree) -> Result<()> {
+    fn build_program_structure(&mut self, tree: &SyntaxTree, file_path: &Path) -> Result<()> {
         // Clear previous analysis data
         self.variable_assignments.clear();
         self.function_definitions.clear();
         self.call_graph.clear();
 
         // Traverse AST to build structure
-        self.traverse_for_structure(tree.inner().root_node(), None)?;
+        self.traverse_for_structure(tree.inner().root_node(), None, file_path)?;
 
         Ok(())
     }
 
     /// Traverse AST to build program structure (functions, assignments, calls)
-    fn traverse_for_structure(&mut self, node: Node, current_function: Option<&str>) -> Result<()> {
+    fn traverse_for_structure(
+        &mut self,
+        node: Node,
+        current_function: Option<&str>,
+        file_path: &Path,
+    ) -> Result<()> {
         let _node_kind = node.kind();
 
         // Check for function definitions
         if self.is_function_definition(node) {
-            if let Some(func_def) = self.extract_function_definition(node)? {
+            if let Some(func_def) = self.extract_function_definition(node, file_path)? {
                 self.function_definitions
                     .insert(func_def.name.clone(), func_def.clone());
 
@@ -603,7 +650,11 @@ impl TaintAnalyzer {
                 let mut cursor = node.walk();
                 if cursor.goto_first_child() {
                     loop {
-                        self.traverse_for_structure(cursor.node(), Some(&func_def.name))?;
+                        self.traverse_for_structure(
+                            cursor.node(),
+                            Some(&func_def.name),
+                            file_path,
+                        )?;
                         if !cursor.goto_next_sibling() {
                             break;
                         }
@@ -615,7 +666,7 @@ impl TaintAnalyzer {
 
         // Check for variable assignments
         if self.is_assignment(node) {
-            if let Some(assignment) = self.extract_assignment(node, current_function)? {
+            if let Some(assignment) = self.extract_assignment(node, current_function, file_path)? {
                 let func_key = current_function.unwrap_or("global").to_string();
                 self.variable_assignments
                     .entry(func_key)
@@ -626,7 +677,7 @@ impl TaintAnalyzer {
 
         // Check for function calls
         if self.is_function_call(node.kind()) {
-            if let Some(call) = self.extract_function_call(node, current_function)? {
+            if let Some(call) = self.extract_function_call(node, current_function, file_path)? {
                 let func_key = current_function.unwrap_or("global").to_string();
                 self.call_graph.entry(func_key).or_default().push(call);
             }
@@ -636,7 +687,7 @@ impl TaintAnalyzer {
         let mut cursor = node.walk();
         if cursor.goto_first_child() {
             loop {
-                self.traverse_for_structure(cursor.node(), current_function)?;
+                self.traverse_for_structure(cursor.node(), current_function, file_path)?;
                 if !cursor.goto_next_sibling() {
                     break;
                 }
@@ -647,7 +698,11 @@ impl TaintAnalyzer {
     }
 
     /// Extract function definition information from AST node
-    fn extract_function_definition(&self, node: Node) -> Result<Option<FunctionDefinition>> {
+    fn extract_function_definition(
+        &self,
+        node: Node,
+        file_path: &Path,
+    ) -> Result<Option<FunctionDefinition>> {
         let function_name = self.extract_function_name(node);
         if function_name.is_none() {
             return Ok(None);
@@ -660,12 +715,7 @@ impl TaintAnalyzer {
             name: name.clone(),
             parameters,
             return_variable: None, // Would need more sophisticated analysis
-            location: TaintLocation {
-                file: "current_file".to_string(),
-                line: node.start_position().row + 1,
-                column: node.start_position().column,
-                function: Some(name),
-            },
+            location: Self::taint_location(node, Some(&name), file_path),
             can_propagate_taint: true, // Conservative assumption
         }))
     }
@@ -701,8 +751,8 @@ impl TaintAnalyzer {
             loop {
                 let child = cursor.node();
                 if child.kind() == "identifier" {
-                    if let Ok(name) = child.utf8_text(b"") {
-                        names.push(name.to_string());
+                    if let Some(name) = self.node_text(child) {
+                        names.push(name);
                     }
                 }
                 if !cursor.goto_next_sibling() {
@@ -734,6 +784,7 @@ impl TaintAnalyzer {
         &self,
         node: Node,
         current_function: Option<&str>,
+        file_path: &Path,
     ) -> Result<Option<VariableAssignment>> {
         let (target, source) = self.extract_assignment_parts(node)?;
         if target.is_none() || source.is_none() {
@@ -746,12 +797,7 @@ impl TaintAnalyzer {
         Ok(Some(VariableAssignment {
             target: target.unwrap(),
             source: source_value,
-            location: TaintLocation {
-                file: "current_file".to_string(),
-                line: node.start_position().row + 1,
-                column: node.start_position().column,
-                function: current_function.map(|s| s.to_string()),
-            },
+            location: Self::taint_location(node, current_function, file_path),
             propagates_taint,
         }))
     }
@@ -769,8 +815,8 @@ impl TaintAnalyzer {
             // First child is usually the target
             let target_node = cursor.node();
             if target_node.kind() == "identifier" {
-                if let Ok(name) = target_node.utf8_text(b"") {
-                    target = Some(name.to_string());
+                if let Some(name) = self.node_text(target_node) {
+                    target = Some(name);
                 }
             }
 
@@ -792,8 +838,8 @@ impl TaintAnalyzer {
         let node_kind = node.kind();
 
         if node_kind == "identifier" {
-            if let Ok(name) = node.utf8_text(b"") {
-                return Some(AssignmentSource::Variable(name.to_string()));
+            if let Some(name) = self.node_text(node) {
+                return Some(AssignmentSource::Variable(name));
             }
         } else if self.is_function_call(node_kind) {
             if let Some(func_name) = self.extract_function_call_name(node) {
@@ -801,8 +847,8 @@ impl TaintAnalyzer {
                 return Some(AssignmentSource::FunctionCall(func_name, args));
             }
         } else if self.is_string_literal(node_kind) || self.is_number_literal(node_kind) {
-            if let Ok(value) = node.utf8_text(b"") {
-                return Some(AssignmentSource::Literal(value.to_string()));
+            if let Some(value) = self.node_text(node) {
+                return Some(AssignmentSource::Literal(value));
             }
         } else if self.is_concatenation(node) {
             let parts = self.extract_concatenation_parts(node);
@@ -813,16 +859,22 @@ impl TaintAnalyzer {
     }
 
     /// Find all taint sources in the syntax tree
-    fn find_taint_sources(&self, tree: &SyntaxTree) -> Result<Vec<TaintSource>> {
+    fn find_taint_sources(
+        &mut self,
+        tree: &SyntaxTree,
+        file_path: &Path,
+    ) -> Result<Vec<TaintSource>> {
+        self.set_current_source(tree);
         let mut sources = Vec::new();
-        self.traverse_for_sources(tree.inner().root_node(), &mut sources, None)?;
+        self.traverse_for_sources(tree.inner().root_node(), &mut sources, None, file_path)?;
         Ok(sources)
     }
 
     /// Find all taint sinks in the syntax tree
-    fn find_taint_sinks(&self, tree: &SyntaxTree) -> Result<Vec<TaintSink>> {
+    fn find_taint_sinks(&mut self, tree: &SyntaxTree, file_path: &Path) -> Result<Vec<TaintSink>> {
+        self.set_current_source(tree);
         let mut sinks = Vec::new();
-        self.traverse_for_sinks(tree.inner().root_node(), &mut sinks, None)?;
+        self.traverse_for_sinks(tree.inner().root_node(), &mut sinks, None, file_path)?;
         Ok(sinks)
     }
 
@@ -832,9 +884,10 @@ impl TaintAnalyzer {
         node: Node,
         sources: &mut Vec<TaintSource>,
         current_function: Option<&str>,
+        file_path: &Path,
     ) -> Result<()> {
         // Check if this node represents a taint source
-        if let Some(source) = self.identify_taint_source(node, current_function)? {
+        if let Some(source) = self.identify_taint_source(node, current_function, file_path)? {
             sources.push(source);
         }
 
@@ -849,7 +902,12 @@ impl TaintAnalyzer {
         let mut cursor = node.walk();
         if cursor.goto_first_child() {
             loop {
-                self.traverse_for_sources(cursor.node(), sources, function_name.as_deref())?;
+                self.traverse_for_sources(
+                    cursor.node(),
+                    sources,
+                    function_name.as_deref(),
+                    file_path,
+                )?;
                 if !cursor.goto_next_sibling() {
                     break;
                 }
@@ -865,9 +923,10 @@ impl TaintAnalyzer {
         node: Node,
         sinks: &mut Vec<TaintSink>,
         current_function: Option<&str>,
+        file_path: &Path,
     ) -> Result<()> {
         // Check if this node represents a taint sink
-        if let Some(sink) = self.identify_taint_sink(node, current_function)? {
+        if let Some(sink) = self.identify_taint_sink(node, current_function, file_path)? {
             sinks.push(sink);
         }
 
@@ -882,7 +941,7 @@ impl TaintAnalyzer {
         let mut cursor = node.walk();
         if cursor.goto_first_child() {
             loop {
-                self.traverse_for_sinks(cursor.node(), sinks, function_name.as_deref())?;
+                self.traverse_for_sinks(cursor.node(), sinks, function_name.as_deref(), file_path)?;
                 if !cursor.goto_next_sibling() {
                     break;
                 }
@@ -897,6 +956,7 @@ impl TaintAnalyzer {
         &self,
         node: Node,
         current_function: Option<&str>,
+        file_path: &Path,
     ) -> Result<Option<TaintSource>> {
         let node_kind = node.kind();
 
@@ -912,12 +972,8 @@ impl TaintAnalyzer {
                         ),
                         name: function_name,
                         source_type: source_type.clone(),
-                        location: TaintLocation {
-                            file: "current_file".to_string(), // Would be passed in real implementation
-                            line: node.start_position().row + 1,
-                            column: node.start_position().column,
-                            function: current_function.map(|s| s.to_string()),
-                        },
+                        file_path: file_path.to_path_buf(),
+                        location: Self::taint_location(node, current_function, file_path),
                         confidence: 0.9,
                     }));
                 }
@@ -926,24 +982,21 @@ impl TaintAnalyzer {
 
         // Check for variable access that might be tainted
         if self.is_identifier(node_kind) {
-            let identifier = node.utf8_text(b"").unwrap_or("");
-            if self.is_likely_user_input_variable(identifier) {
-                return Ok(Some(TaintSource {
-                    id: format!(
-                        "var_{}_{}",
-                        node.start_position().row,
-                        node.start_position().column
-                    ),
-                    name: identifier.to_string(),
-                    source_type: TaintSourceType::UserInput,
-                    location: TaintLocation {
-                        file: "current_file".to_string(),
-                        line: node.start_position().row + 1,
-                        column: node.start_position().column,
-                        function: current_function.map(|s| s.to_string()),
-                    },
-                    confidence: 0.6,
-                }));
+            if let Some(identifier) = self.node_text(node) {
+                if self.is_likely_user_input_variable(&identifier) {
+                    return Ok(Some(TaintSource {
+                        id: format!(
+                            "var_{}_{}",
+                            node.start_position().row,
+                            node.start_position().column
+                        ),
+                        name: identifier,
+                        source_type: TaintSourceType::UserInput,
+                        file_path: file_path.to_path_buf(),
+                        location: Self::taint_location(node, current_function, file_path),
+                        confidence: 0.6,
+                    }));
+                }
             }
         }
 
@@ -955,6 +1008,7 @@ impl TaintAnalyzer {
         &self,
         node: Node,
         current_function: Option<&str>,
+        file_path: &Path,
     ) -> Result<Option<TaintSink>> {
         let node_kind = node.kind();
 
@@ -970,12 +1024,8 @@ impl TaintAnalyzer {
                         ),
                         name: function_name,
                         sink_type: sink_type.clone(),
-                        location: TaintLocation {
-                            file: "current_file".to_string(),
-                            line: node.start_position().row + 1,
-                            column: node.start_position().column,
-                            function: current_function.map(|s| s.to_string()),
-                        },
+                        file_path: file_path.to_path_buf(),
+                        location: Self::taint_location(node, current_function, file_path),
                         vulnerability_type: vuln_type.clone(),
                     }));
                 }
@@ -1024,8 +1074,8 @@ impl TaintAnalyzer {
         let mut cursor = node.walk();
         if cursor.goto_first_child() {
             let function_node = cursor.node();
-            if let Ok(name) = function_node.utf8_text(b"") {
-                return Some(name.to_string());
+            if let Some(name) = self.node_text(function_node) {
+                return Some(name);
             }
         }
         None
@@ -1039,8 +1089,8 @@ impl TaintAnalyzer {
             loop {
                 let child = cursor.node();
                 if child.kind() == "identifier" {
-                    if let Ok(name) = child.utf8_text(b"") {
-                        return Some(name.to_string());
+                    if let Some(name) = self.node_text(child) {
+                        return Some(name);
                     }
                 }
                 if !cursor.goto_next_sibling() {
@@ -1488,8 +1538,8 @@ impl TaintAnalyzer {
             loop {
                 let child = cursor.node();
                 if child.kind() == "identifier" {
-                    if let Ok(name) = child.utf8_text(b"") {
-                        names.push(name.to_string());
+                    if let Some(name) = self.node_text(child) {
+                        names.push(name);
                     }
                 }
                 if !cursor.goto_next_sibling() {
@@ -1510,8 +1560,8 @@ impl TaintAnalyzer {
             loop {
                 let child = cursor.node();
                 if child.kind() == "identifier" {
-                    if let Ok(name) = child.utf8_text(b"") {
-                        parts.push(name.to_string());
+                    if let Some(name) = self.node_text(child) {
+                        parts.push(name);
                     }
                 }
                 if !cursor.goto_next_sibling() {
@@ -1528,6 +1578,7 @@ impl TaintAnalyzer {
         &self,
         node: Node,
         current_function: Option<&str>,
+        file_path: &Path,
     ) -> Result<Option<FunctionCall>> {
         let function_name = self.extract_function_call_name(node);
         if function_name.is_none() {
@@ -1541,12 +1592,7 @@ impl TaintAnalyzer {
             function_name: name,
             arguments,
             return_target: None, // Would need more analysis to determine
-            location: TaintLocation {
-                file: "current_file".to_string(),
-                line: node.start_position().row + 1,
-                column: node.start_position().column,
-                function: current_function.map(|s| s.to_string()),
-            },
+            location: Self::taint_location(node, current_function, file_path),
         }))
     }
 }
@@ -1554,6 +1600,8 @@ impl TaintAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Language, Parser};
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn test_taint_analyzer_creation() {
@@ -1722,5 +1770,31 @@ mod tests {
                 .unwrap(),
             "html_escape::encode_text"
         );
+    }
+
+    #[test]
+    fn test_taint_sources_and_sinks_capture_explicit_file_paths() {
+        let parser = Parser::new(Language::JavaScript).unwrap();
+        let tree = parser
+            .parse("const value = req.query;\nmysql.query(value);\n", None)
+            .unwrap();
+        let mut analyzer = TaintAnalyzer::new("javascript");
+        let file_path = Path::new("src/app.js");
+
+        let sources = analyzer.find_taint_sources(&tree, file_path).unwrap();
+        let sinks = analyzer.find_taint_sinks(&tree, file_path).unwrap();
+
+        assert!(!sources.is_empty(), "expected taint sources to be detected");
+        assert!(!sinks.is_empty(), "expected taint sinks to be detected");
+        assert!(sources
+            .iter()
+            .all(|source| source.file_path == PathBuf::from("src/app.js")));
+        assert!(sinks
+            .iter()
+            .all(|sink| sink.file_path == PathBuf::from("src/app.js")));
+        assert!(sources
+            .iter()
+            .all(|source| source.location.file == "src/app.js"));
+        assert!(sinks.iter().all(|sink| sink.location.file == "src/app.js"));
     }
 }

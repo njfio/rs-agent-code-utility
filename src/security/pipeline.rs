@@ -192,10 +192,12 @@ impl SecurityPipeline {
             Vec::new()
         } else {
             let mut taint_analyzer = TaintAnalyzer::new(language.name());
-            catch_unwind_silently(AssertUnwindSafe(|| taint_analyzer.analyze(&tree)))
-                .ok()
-                .and_then(|result| result.ok())
-                .unwrap_or_default()
+            catch_unwind_silently(AssertUnwindSafe(|| {
+                taint_analyzer.analyze_with_path(&tree, file_path)
+            }))
+            .ok()
+            .and_then(|result| result.ok())
+            .unwrap_or_default()
         };
 
         let mut findings: Vec<_> = staged_findings

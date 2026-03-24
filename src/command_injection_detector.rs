@@ -1,5 +1,6 @@
 use crate::{Result, SyntaxTree, TaintAnalyzer, TaintFlow, VulnerabilityType};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use tree_sitter::Node;
 
 /// Command injection vulnerability detected by AST analysis
@@ -503,10 +504,19 @@ impl CommandInjectionDetector {
 
     /// Detect command injection vulnerabilities in a syntax tree
     pub fn detect(&mut self, tree: &SyntaxTree) -> Result<Vec<CommandInjectionVulnerability>> {
+        self.detect_with_path(tree, Path::new("current_file"))
+    }
+
+    /// Detect command injection vulnerabilities with a concrete file path for taint metadata.
+    pub fn detect_with_path(
+        &mut self,
+        tree: &SyntaxTree,
+        file_path: &Path,
+    ) -> Result<Vec<CommandInjectionVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
         // Perform enhanced taint analysis to find data flows
-        let taint_flows = self.taint_analyzer.analyze(tree)?;
+        let taint_flows = self.taint_analyzer.analyze_with_path(tree, file_path)?;
 
         // Filter flows that lead to command injection vulnerabilities
         for flow in taint_flows {
@@ -971,6 +981,7 @@ impl CommandInjectionDetector {
                     id: "direct".to_string(),
                     name: "direct_analysis".to_string(),
                     source_type: crate::taint_analysis::TaintSourceType::UserInput,
+                    file_path: std::path::PathBuf::from("current_file"),
                     location: crate::taint_analysis::TaintLocation {
                         file: "current_file".to_string(),
                         line: node.start_position().row + 1,
@@ -983,6 +994,7 @@ impl CommandInjectionDetector {
                     id: "direct_sink".to_string(),
                     name: "command_exec".to_string(),
                     sink_type: crate::taint_analysis::TaintSinkType::CommandExecution,
+                    file_path: std::path::PathBuf::from("current_file"),
                     location: crate::taint_analysis::TaintLocation {
                         file: "current_file".to_string(),
                         line: node.start_position().row + 1,
@@ -1065,6 +1077,7 @@ mod tests {
                 id: "test".to_string(),
                 name: "test".to_string(),
                 source_type: crate::taint_analysis::TaintSourceType::UserInput,
+                file_path: std::path::PathBuf::from("test.js"),
                 location: crate::taint_analysis::TaintLocation {
                     file: "test.js".to_string(),
                     line: 1,
@@ -1077,6 +1090,7 @@ mod tests {
                 id: "test_sink".to_string(),
                 name: "exec".to_string(),
                 sink_type: crate::taint_analysis::TaintSinkType::CommandExecution,
+                file_path: std::path::PathBuf::from("test.js"),
                 location: crate::taint_analysis::TaintLocation {
                     file: "test.js".to_string(),
                     line: 5,
@@ -1112,6 +1126,7 @@ mod tests {
                 id: "test".to_string(),
                 name: "test".to_string(),
                 source_type: crate::taint_analysis::TaintSourceType::UserInput,
+                file_path: std::path::PathBuf::from("test.php"),
                 location: crate::taint_analysis::TaintLocation {
                     file: "test.php".to_string(),
                     line: 1,
@@ -1124,6 +1139,7 @@ mod tests {
                 id: "test_sink".to_string(),
                 name: "shell_exec".to_string(),
                 sink_type: crate::taint_analysis::TaintSinkType::CommandExecution,
+                file_path: std::path::PathBuf::from("test.php"),
                 location: crate::taint_analysis::TaintLocation {
                     file: "test.php".to_string(),
                     line: 5,
