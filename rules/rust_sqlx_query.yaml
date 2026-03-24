@@ -1,0 +1,12 @@
+id: rust-sqlx-query
+title: Dynamic sqlx::query call
+description: Passing dynamic SQL to sqlx::query can enable SQL injection.
+finding_type: injection
+severity: high
+confidence: 0.87
+languages:
+  - rust
+remediation: Use parameterized query builders or bind variables instead of passing raw user input.
+cwe_id: CWE-89
+pattern_file: rust_sqlx_query.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

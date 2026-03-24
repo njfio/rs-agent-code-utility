@@ -617,6 +617,7 @@ impl AdvancedSecurityAnalyzer {
             min_confidence: 0.5,
             filter_mode: FilterMode::Balanced,
             enable_owasp: self.config.owasp_analysis,
+            ..SecurityPipelineConfig::default()
         })
     }
 

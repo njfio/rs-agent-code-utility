@@ -16,11 +16,12 @@ use crate::security::heuristic_filter::HeuristicFindingFilter;
 use crate::security::owasp_detector::{
     OwaspCategory as DetectorOwaspCategory, OwaspDetector, OwaspFinding, VulnSeverity,
 };
+use crate::security::rule_engine::DeclarativeRuleEngine;
 use crate::taint_analysis::{TaintAnalyzer, TaintFlow, VulnerabilityType};
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{Mutex, OnceLock};
 use std::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
@@ -111,6 +112,10 @@ pub struct SecurityPipelineConfig {
     pub filter_mode: FilterMode,
     /// Whether to include OWASP detector results.
     pub enable_owasp: bool,
+    /// Whether to include declarative query-backed rules.
+    pub enable_rules: bool,
+    /// Optional override for the rule directory.
+    pub rules_dir: Option<PathBuf>,
 }
 
 impl Default for SecurityPipelineConfig {
@@ -119,6 +124,8 @@ impl Default for SecurityPipelineConfig {
             min_confidence: 0.5,
             filter_mode: FilterMode::Balanced,
             enable_owasp: true,
+            enable_rules: true,
+            rules_dir: None,
         }
     }
 }
@@ -128,6 +135,7 @@ pub struct SecurityPipeline {
     ast_analyzer: AstSecurityAnalyzer,
     heuristic_filter: HeuristicFindingFilter,
     owasp_detector: OwaspDetector,
+    rule_engine: Option<DeclarativeRuleEngine>,
     config: SecurityPipelineConfig,
 }
 
@@ -139,10 +147,20 @@ impl SecurityPipeline {
 
     /// Create the pipeline with custom configuration.
     pub fn with_config(config: SecurityPipelineConfig) -> Result<Self> {
+        let rule_engine = if config.enable_rules {
+            Some(match &config.rules_dir {
+                Some(rules_dir) => DeclarativeRuleEngine::load_from_dir(rules_dir)?,
+                None => DeclarativeRuleEngine::load_builtin()?,
+            })
+        } else {
+            None
+        };
+
         Ok(Self {
             ast_analyzer: AstSecurityAnalyzer::new()?,
             heuristic_filter: HeuristicFindingFilter::with_mode(config.filter_mode),
             owasp_detector: OwaspDetector::new()?,
+            rule_engine,
             config,
         })
     }
@@ -178,6 +196,13 @@ impl SecurityPipeline {
         staged_findings.extend(ast_findings.into_iter().map(|finding| {
             ScoredFinding::from_security_finding(finding, ConfidenceSource::AstPattern)
         }));
+
+        if let Some(rule_engine) = &self.rule_engine {
+            let rule_findings = rule_engine.evaluate(&tree, language, file_path)?;
+            staged_findings.extend(rule_findings.into_iter().map(|finding| {
+                ScoredFinding::from_security_finding(finding, ConfidenceSource::AstPattern)
+            }));
+        }
 
         if self.config.enable_owasp {
             let heuristic_findings = self.owasp_detector.detect_vulnerabilities(

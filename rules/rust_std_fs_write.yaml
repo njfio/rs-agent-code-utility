@@ -1,0 +1,12 @@
+id: rust-std-fs-write
+title: Dynamic std::fs::write path
+description: Writing to a dynamic filesystem path can enable path traversal or unsafe file overwrite behavior.
+finding_type: broken_access_control
+severity: high
+confidence: 0.78
+languages:
+  - rust
+remediation: Constrain writes to an allowlisted directory and canonicalize user-controlled paths before use.
+cwe_id: CWE-22
+pattern_file: rust_std_fs_write.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

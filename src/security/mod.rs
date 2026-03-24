@@ -10,6 +10,7 @@ pub mod deterministic_filter;
 pub mod heuristic_filter;
 pub mod owasp_detector;
 pub mod pipeline;
+pub mod rule_engine;
 pub mod rust_analyzer;
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod vulnerability_correlation;
@@ -31,6 +32,7 @@ pub use deterministic_filter::*;
 pub use heuristic_filter::*;
 pub use owasp_detector::*;
 pub use pipeline::{ConfidenceSource, ScoredFinding, SecurityPipeline, SecurityPipelineConfig};
+pub use rule_engine::{default_rules_dir, DeclarativeRuleEngine};
 pub use rust_analyzer::RustAnalyzer;
 #[cfg(any(feature = "net", feature = "db"))]
 pub use vulnerability_correlation::*;

@@ -699,7 +699,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 **Approach:** Use tree-sitter's existing `.scm` query language as the pattern language. Extend with YAML metadata for severity, confidence, and taint annotations. Do NOT design a new DSL from scratch.
 
-- [ ] Define rule file format:
+- [x] Define rule file format (`*.yaml` metadata with either inline `pattern:` or external `pattern_file: *.scm`) (checkpoint landed on 2026-03-24)
   ```yaml
   id: sql-injection-concat
   severity: high
@@ -713,10 +713,10 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
       right: (identifier) @user_input)
   taint_requirement: "@user_input is tainted from ExternalInput"
   ```
-- [ ] Implement rule loader that compiles `.scm` patterns to tree-sitter queries
-- [ ] Integrate rule evaluation into `SecurityPipeline` as a stage
+- [x] Implement rule loader that compiles `.scm` patterns to tree-sitter queries
+- [x] Integrate rule evaluation into `SecurityPipeline` as a stage
 - [ ] Ship 10-20 built-in rules covering OWASP Top 5 for Rust, JS, Python
-- [ ] Store rules in `rules/` directory at repo root
+- [x] Store rules in `rules/` directory at repo root
 
 **Acceptance criteria:**
 - Rules defined as YAML + `.scm` patterns, not Rust code

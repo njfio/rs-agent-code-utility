@@ -1,0 +1,12 @@
+id: python-cursor-execute
+title: Dynamic cursor.execute query
+description: Passing dynamic SQL to cursor.execute can enable SQL injection.
+finding_type: injection
+severity: high
+confidence: 0.86
+languages:
+  - python
+remediation: Use parameterized queries instead of concatenating untrusted values into SQL strings.
+cwe_id: CWE-89
+pattern_file: python_cursor_execute.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

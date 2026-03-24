@@ -1,0 +1,12 @@
+id: javascript-document-write-xss
+title: Unsafe document.write call
+description: Writing dynamic content with document.write can enable reflected or DOM-based XSS.
+finding_type: injection
+severity: high
+confidence: 0.84
+languages:
+  - javascript
+remediation: Avoid document.write and render untrusted data with safe DOM APIs or explicit escaping.
+cwe_id: CWE-79
+pattern_file: javascript_document_write_xss.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

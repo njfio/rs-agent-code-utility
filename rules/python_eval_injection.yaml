@@ -1,0 +1,12 @@
+id: python-eval-injection
+title: Dynamic eval call
+description: Evaluating dynamic input with eval can lead to arbitrary code execution.
+finding_type: injection
+severity: critical
+confidence: 0.91
+languages:
+  - python
+remediation: Replace eval with structured parsing or a fixed dispatch table over allowed operations.
+cwe_id: CWE-95
+pattern_file: python_eval_injection.scm
+taint_requirement: "@input should come from untrusted user-controlled input"

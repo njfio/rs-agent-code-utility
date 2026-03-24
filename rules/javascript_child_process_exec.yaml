@@ -1,0 +1,12 @@
+id: javascript-child-process-exec
+title: Shell execution with child_process.exec
+description: Passing dynamic input to child_process.exec can enable command injection.
+finding_type: injection
+severity: critical
+confidence: 0.9
+languages:
+  - javascript
+remediation: Use spawn/execFile with fixed arguments or validate and escape user input before execution.
+cwe_id: CWE-78
+pattern_file: javascript_child_process_exec.scm
+taint_requirement: "@input should come from untrusted user-controlled input"
