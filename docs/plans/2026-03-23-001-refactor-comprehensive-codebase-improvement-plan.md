@@ -468,7 +468,7 @@ The target architecture has three layers:
 - [x] Add `properties.confidence` to each result (from Task 2.2)
 - [x] Add `suppressions` array support (from Task 2.3)
 - [x] Add CodeClimate JSON output as alternative format (`--format codeclimate`)
-- [ ] Test with GitHub Advanced Security SARIF upload action
+- [x] Wire `.github/workflows/security_scan.yml` to `github/codeql-action/upload-sarif` for the default-scope SARIF on pushes and same-repo pull requests
 
 ### Research Insights: SARIF Compliance
 

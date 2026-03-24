@@ -9,6 +9,11 @@ jobs:
   security-matrix:
     name: security (include-tests=${{ matrix.include_tests }})
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      security-events: write
     strategy:
       fail-fast: false
       matrix:
@@ -67,16 +72,11 @@ jobs:
           echo "notes=$LOW" >> $GITHUB_OUTPUT
 
       - name: Comment on PR (default scope)
-        if: ${{ github.event_name == 'pull_request' && matrix.include_tests == 'false' }}
+        if: ${{ github.event_name == 'pull_request' && matrix.include_tests == 'false' && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: actions/github-script@v7
         with:
           script: |
-            const total = core.getInput('total');
-            const neu = core.getInput('new');
-            const unchanged = core.getInput('unchanged');
-            const errors = core.getInput('errors');
-            const warnings = core.getInput('warnings');
-            const notes = core.getInput('notes');
+            const { total, new: neu, unchanged, errors, warnings, notes } = process.env;
             const body = `\n**Security Scan Summary (default scope)**\n\n- Total findings: ${total}\n- New: ${neu}, Unchanged: ${unchanged}\n- Severity: errors=${errors}, warnings=${warnings}, notes=${notes}\n\nArtifacts: security.sarif, security.json`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -91,6 +91,13 @@ jobs:
           errors: ${{ steps.sarif_summary.outputs.errors }}
           warnings: ${{ steps.sarif_summary.outputs.warnings }}
           notes: ${{ steps.sarif_summary.outputs.notes }}
+
+      - name: Upload SARIF to GitHub code scanning
+        if: ${{ matrix.include_tests == 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: security.sarif
+          category: tree-sitter-security/default
 
       - name: Run security scan (include tests)
         if: ${{ matrix.include_tests == 'true' }}
