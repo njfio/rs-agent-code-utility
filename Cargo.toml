@@ -37,7 +37,7 @@ rand = "0.8"
 rayon = "1.8"
 petgraph = "0.6"
 ignore = "0.4"
-crc32fast = "1.4"
+crc32fast = { version = "1.4", optional = true }
 pulldown-cmark = { version = "0.10", optional = true }
 crossbeam-channel = "0.5"
 parking_lot = "0.12"
@@ -132,6 +132,7 @@ db = [
     "dep:tracing",
 ]
 wiki = [
+    "dep:crc32fast",
     "dep:pulldown-cmark",
     "net",
 ]
