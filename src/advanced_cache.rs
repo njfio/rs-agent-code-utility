@@ -2,17 +2,15 @@
 //!
 //! This module provides a sophisticated caching architecture with three layers:
 //! - Memory: Fast in-memory LRU cache
-//! - Disk: Persistent compressed cache with TTL
+//! - Disk: Persistent cache with TTL
 //! - Network: Distributed cache coordination (optional)
 
 use std::marker::PhantomData;
 
 use crate::error::{Error, Result};
-use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -135,8 +133,6 @@ pub struct CacheConfig {
     pub default_ttl: Duration,
     /// Cleanup interval
     pub cleanup_interval: Duration,
-    /// Compression level (0-9)
-    pub compression_level: u32,
     /// Cache directory for disk storage
     pub cache_dir: PathBuf,
     /// Enable network coordination
@@ -152,7 +148,6 @@ impl Default for CacheConfig {
             max_disk_bytes: 1024 * 1024 * 1024,         // 1GB
             default_ttl: Duration::from_secs(3600),     // 1 hour
             cleanup_interval: Duration::from_secs(300), // 5 minutes
-            compression_level: 6,
             cache_dir: PathBuf::from("./cache"),
             enable_network: false,
             network_peers: Vec::new(),
@@ -362,7 +357,7 @@ where
     }
 }
 
-/// Disk cache layer - persistent compressed storage
+/// Disk cache layer - persistent storage
 pub struct DiskCache<T> {
     cache_dir: PathBuf,
     config: CacheConfig,
@@ -391,7 +386,11 @@ where
     }
 
     fn get_cache_path(&self, key: &str) -> PathBuf {
-        self.cache_dir.join(format!("{}.cache.gz", key))
+        self.cache_dir.join(format!("{}.cache", key))
+    }
+
+    fn is_cache_file(path: &Path) -> bool {
+        path.extension().and_then(|ext| ext.to_str()) == Some("cache")
     }
 
     pub fn get(&self, key: &str) -> Result<Option<T>> {
@@ -426,19 +425,10 @@ where
             return Ok(None);
         }
 
-        // Read and decompress
-        let compressed_data = fs::read(&cache_path).map_err(|e| {
+        // Read and deserialize the cache entry from plain JSON.
+        let json_data = fs::read_to_string(&cache_path).map_err(|e| {
             Error::IoError(std::io::Error::other(format!(
                 "Failed to read cache file: {}",
-                e
-            )))
-        })?;
-
-        let mut decoder = GzDecoder::new(&compressed_data[..]);
-        let mut json_data = String::new();
-        decoder.read_to_string(&mut json_data).map_err(|e| {
-            Error::IoError(std::io::Error::other(format!(
-                "Failed to decompress cache data: {}",
                 e
             )))
         })?;
@@ -480,24 +470,7 @@ where
             actual_value: None,
         })?;
 
-        // Compress and write
-        let mut encoder =
-            GzEncoder::new(Vec::new(), Compression::new(self.config.compression_level));
-        encoder.write_all(json_data.as_bytes()).map_err(|e| {
-            Error::IoError(std::io::Error::other(format!(
-                "Failed to compress cache data: {}",
-                e
-            )))
-        })?;
-
-        let compressed_data = encoder.finish().map_err(|e| {
-            Error::IoError(std::io::Error::other(format!(
-                "Failed to finish compression: {}",
-                e
-            )))
-        })?;
-
-        fs::write(&cache_path, compressed_data).map_err(|e| {
+        fs::write(&cache_path, json_data.as_bytes()).map_err(|e| {
             Error::IoError(std::io::Error::other(format!(
                 "Failed to write cache file: {}",
                 e
@@ -520,7 +493,7 @@ where
         // Find oldest files to evict
         let mut cache_files: Vec<_> = fs::read_dir(&self.cache_dir)?
             .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("gz"))
+            .filter(|entry| Self::is_cache_file(&entry.path()))
             .filter_map(|entry| {
                 let metadata = entry.metadata().ok()?;
                 let modified = metadata.modified().ok()?;
@@ -554,7 +527,7 @@ where
         let mut total_size = 0;
         for entry in fs::read_dir(&self.cache_dir)? {
             let entry = entry?;
-            if entry.path().extension().and_then(|ext| ext.to_str()) == Some("gz") {
+            if Self::is_cache_file(&entry.path()) {
                 total_size += entry.metadata()?.len() as usize;
             }
         }
@@ -568,6 +541,7 @@ where
             .write()
             .map_err(|_| Error::internal_error("cache", "Failed to acquire stats write lock"))?;
         stats.disk_usage_bytes = usage;
+        stats.compression_ratio = 1.0;
         Ok(())
     }
 
