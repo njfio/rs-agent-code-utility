@@ -575,6 +575,83 @@ fn test_semantic_graph_snapshot_is_stable_and_serializable(
 }
 
 #[test]
+fn test_semantic_graph_builds_cross_file_import_edges() -> Result<(), Box<dyn std::error::Error>> {
+    use rust_tree_sitter::{CodebaseAnalyzer, RelationshipType};
+
+    let temp_dir = TempDir::new()?;
+    fs::create_dir_all(temp_dir.path().join("src"))?;
+
+    fs::write(
+        temp_dir.path().join("src").join("main.rs"),
+        r#"
+mod utils;
+use crate::utils::helper;
+
+fn run() {
+    helper();
+}
+"#,
+    )?;
+
+    fs::write(
+        temp_dir.path().join("src").join("utils.rs"),
+        r#"
+pub fn helper() {}
+"#,
+    )?;
+
+    fs::write(
+        temp_dir.path().join("app.js"),
+        r#"
+import { helper } from "./helper.js";
+
+function run() {
+  helper();
+}
+"#,
+    )?;
+
+    fs::write(
+        temp_dir.path().join("helper.js"),
+        r#"
+export function helper() {}
+"#,
+    )?;
+
+    let mut analyzer = CodebaseAnalyzer::new()?;
+    analyzer.enable_semantic_graph();
+    analyzer.analyze_directory(temp_dir.path())?;
+
+    let graph = analyzer
+        .semantic_graph()
+        .expect("semantic graph should exist");
+    let snapshot = graph.snapshot();
+
+    assert!(
+        snapshot
+            .nodes
+            .iter()
+            .filter(|node| node.node_type == NodeType::Module)
+            .count()
+            >= 4,
+        "expected per-file module nodes to be added to the graph"
+    );
+
+    assert!(snapshot.edges.iter().any(|edge| {
+        edge.relationship == RelationshipType::Imports
+            && edge.from == "module:src/main.rs"
+            && edge.to == "module:src/utils.rs"
+    }));
+    assert!(snapshot.edges.iter().any(|edge| {
+        edge.relationship == RelationshipType::Imports
+            && edge.from == "module:app.js"
+            && edge.to == "module:helper.js"
+    }));
+
+    Ok(())
+}
+
+#[test]
 fn test_graph_statistics() -> Result<(), Box<dyn std::error::Error>> {
     let analysis = create_test_analysis_result()?;
     let mut graph = SemanticGraphQuery::new();

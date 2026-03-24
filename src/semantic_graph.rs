@@ -6,7 +6,8 @@
 
 use crate::{AnalysisResult, FileInfo, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Component, Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -218,6 +219,46 @@ impl SemanticGraphQuery {
             weight,
             context: context.map(|s| s.to_string()),
         }
+    }
+
+    fn add_unique_edge(&mut self, edge: GraphEdge) {
+        let edges = self.edges.entry(edge.from.clone()).or_default();
+        if !edges.iter().any(|existing| {
+            existing.to == edge.to
+                && existing.relationship == edge.relationship
+                && existing.context == edge.context
+        }) {
+            edges.push(edge);
+        }
+    }
+
+    fn module_node_id(file_path: &Path) -> String {
+        format!("module:{}", file_path.display())
+    }
+
+    fn module_node_name(file_path: &Path) -> String {
+        file_path
+            .file_stem()
+            .and_then(|name| name.to_str())
+            .filter(|name| !name.is_empty())
+            .map(ToString::to_string)
+            .unwrap_or_else(|| file_path.to_string_lossy().into_owned())
+    }
+
+    fn normalize_path(path: PathBuf) -> PathBuf {
+        let mut normalized = PathBuf::new();
+        for component in path.components() {
+            match component {
+                Component::CurDir => {}
+                Component::ParentDir => {
+                    normalized.pop();
+                }
+                Component::Normal(part) => normalized.push(part),
+                Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
+                Component::RootDir => normalized.push(component.as_os_str()),
+            }
+        }
+        normalized
     }
 
     /// Build the semantic graph from analysis results
@@ -472,6 +513,24 @@ impl SemanticGraphQuery {
 
     /// Add nodes from a file's symbols
     fn add_file_nodes(&mut self, file: &FileInfo) -> Result<()> {
+        let module_id = Self::module_node_id(&file.path);
+        if !self.nodes.contains_key(&module_id) {
+            let mut module_node = Self::create_graph_node(
+                module_id.clone(),
+                NodeType::Module,
+                Self::module_node_name(&file.path),
+                file.path.clone(),
+                1,
+            );
+            module_node
+                .metadata
+                .insert("language".to_string(), file.language.clone());
+            module_node
+                .metadata
+                .insert("kind".to_string(), "file".to_string());
+            self.nodes.insert(module_id.clone(), module_node);
+        }
+
         for symbol in &file.symbols {
             let node_id = format!(
                 "{}:{}:{}",
@@ -490,6 +549,18 @@ impl SemanticGraphQuery {
             );
 
             self.nodes.insert(node_id, node);
+            self.add_unique_edge(Self::create_graph_edge(
+                &format!(
+                    "{}:{}:{}",
+                    file.path.display(),
+                    symbol.name,
+                    symbol.start_line
+                ),
+                &module_id,
+                RelationshipType::DefinedIn,
+                1.0,
+                Some("file"),
+            ));
         }
         Ok(())
     }
@@ -518,10 +589,302 @@ impl SemanticGraphQuery {
             self.build_file_relationships(file)?;
         }
 
+        self.build_cross_file_import_relationships(analysis)?;
+
         // Calculate node degrees
         self.calculate_node_degrees();
 
         Ok(())
+    }
+
+    fn build_cross_file_import_relationships(&mut self, analysis: &AnalysisResult) -> Result<()> {
+        let known_paths: HashSet<PathBuf> = analysis
+            .files
+            .iter()
+            .map(|file| file.path.clone())
+            .collect();
+
+        for file in &analysis.files {
+            let content = match fs::read_to_string(analysis.root_path.join(&file.path)) {
+                Ok(content) => content,
+                Err(_) => continue,
+            };
+
+            let imported_paths = match file.language.as_str() {
+                "Rust" => Self::resolve_rust_import_targets(&file.path, &content, &known_paths),
+                "JavaScript" | "TypeScript" => {
+                    Self::resolve_js_import_targets(&file.path, &content, &known_paths)
+                }
+                _ => Vec::new(),
+            };
+
+            let source_module_id = Self::module_node_id(&file.path);
+            for target_path in imported_paths {
+                if target_path == file.path {
+                    continue;
+                }
+
+                let target_module_id = Self::module_node_id(&target_path);
+                if self.nodes.contains_key(&source_module_id)
+                    && self.nodes.contains_key(&target_module_id)
+                {
+                    self.add_unique_edge(Self::create_graph_edge(
+                        &source_module_id,
+                        &target_module_id,
+                        RelationshipType::Imports,
+                        1.0,
+                        Some(&target_path.display().to_string()),
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn rust_crate_root(current_file: &Path) -> PathBuf {
+        let mut components = current_file.components();
+        if let Some(first) = components.next() {
+            if first.as_os_str() == "src" {
+                return PathBuf::from("src");
+            }
+        }
+
+        PathBuf::new()
+    }
+
+    fn extract_rust_mod_declaration(line: &str) -> Option<Vec<String>> {
+        let trimmed = line.trim();
+        let after = trimmed
+            .strip_prefix("mod ")
+            .or_else(|| trimmed.strip_prefix("pub mod "))?;
+        let name = after
+            .split(|c: char| c == ';' || c.is_whitespace() || c == '{')
+            .next()
+            .unwrap_or("")
+            .trim();
+        if name.is_empty() {
+            None
+        } else {
+            Some(vec![name.to_string()])
+        }
+    }
+
+    fn extract_rust_use_segments(line: &str) -> Option<(PathBuf, Vec<String>)> {
+        let trimmed = line.trim();
+        let after = trimmed
+            .strip_prefix("use ")
+            .or_else(|| trimmed.strip_prefix("pub use "))?;
+        let path = after
+            .split(|c: char| c == ';' || c.is_whitespace() || c == '{')
+            .next()
+            .unwrap_or("")
+            .trim_end_matches(':')
+            .trim();
+        if path.is_empty() {
+            return None;
+        }
+
+        let mut segments: Vec<String> = path
+            .split("::")
+            .filter(|segment| !segment.is_empty())
+            .map(ToString::to_string)
+            .collect();
+        if segments.is_empty() {
+            return None;
+        }
+
+        let base_dir = match segments.first().map(String::as_str) {
+            Some("crate") => {
+                segments.remove(0);
+                PathBuf::new()
+            }
+            Some("self") => {
+                segments.remove(0);
+                PathBuf::from(".")
+            }
+            Some("super") => {
+                segments.remove(0);
+                PathBuf::from("..")
+            }
+            Some("std" | "core" | "alloc") => return None,
+            _ => PathBuf::from("."),
+        };
+
+        if segments.is_empty() {
+            None
+        } else {
+            Some((base_dir, segments))
+        }
+    }
+
+    fn resolve_rust_module_path(
+        base_dir: &Path,
+        segments: &[String],
+        known_paths: &HashSet<PathBuf>,
+    ) -> Option<PathBuf> {
+        for end in (1..=segments.len()).rev() {
+            let mut module_base = base_dir.to_path_buf();
+            for segment in &segments[..end] {
+                module_base.push(segment);
+            }
+            let module_base = Self::normalize_path(module_base);
+
+            let file_candidate = module_base.with_extension("rs");
+            if known_paths.contains(&file_candidate) {
+                return Some(file_candidate);
+            }
+
+            let mod_candidate = module_base.join("mod.rs");
+            if known_paths.contains(&mod_candidate) {
+                return Some(mod_candidate);
+            }
+        }
+
+        None
+    }
+
+    fn resolve_rust_import_targets(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Vec<PathBuf> {
+        let mut targets = HashSet::new();
+        let current_parent = current_file.parent().unwrap_or_else(|| Path::new(""));
+        let crate_root = Self::rust_crate_root(current_file);
+
+        for line in content.lines() {
+            if let Some(segments) = Self::extract_rust_mod_declaration(line) {
+                if let Some(target) =
+                    Self::resolve_rust_module_path(current_parent, &segments, known_paths)
+                {
+                    targets.insert(target);
+                }
+            }
+
+            if let Some((relative_base, segments)) = Self::extract_rust_use_segments(line) {
+                let resolved_base = if relative_base.as_os_str().is_empty() {
+                    crate_root.clone()
+                } else if relative_base == PathBuf::from("..") {
+                    current_parent
+                        .parent()
+                        .map(Path::to_path_buf)
+                        .unwrap_or_default()
+                } else {
+                    current_parent.to_path_buf()
+                };
+
+                if let Some(target) =
+                    Self::resolve_rust_module_path(&resolved_base, &segments, known_paths)
+                {
+                    targets.insert(target);
+                }
+            }
+        }
+
+        let mut sorted: Vec<_> = targets.into_iter().collect();
+        sorted.sort();
+        sorted
+    }
+
+    fn extract_js_relative_imports(content: &str) -> Vec<String> {
+        let mut specs = Vec::new();
+        for line in content.lines() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("import ") && trimmed.contains(" from ") {
+                if let Some(spec) = trimmed.split(" from ").nth(1) {
+                    let spec = spec.trim().trim_matches(&['"', '\'', ';'][..]);
+                    if spec.starts_with("./") || spec.starts_with("../") {
+                        specs.push(spec.to_string());
+                    }
+                }
+            }
+
+            if trimmed.starts_with("import ") && !trimmed.contains(" from ") {
+                if let Some(start) = trimmed.find('\'') {
+                    let spec = &trimmed[start + 1..];
+                    if let Some(end) = spec.find('\'') {
+                        let value = &spec[..end];
+                        if value.starts_with("./") || value.starts_with("../") {
+                            specs.push(value.to_string());
+                        }
+                    }
+                } else if let Some(start) = trimmed.find('"') {
+                    let spec = &trimmed[start + 1..];
+                    if let Some(end) = spec.find('"') {
+                        let value = &spec[..end];
+                        if value.starts_with("./") || value.starts_with("../") {
+                            specs.push(value.to_string());
+                        }
+                    }
+                }
+            }
+
+            if let Some(idx) = trimmed.find("require(") {
+                let rest = &trimmed[idx + 8..];
+                if let Some(end) = rest.find(')') {
+                    let inside = rest[..end].trim_matches(&['"', '\'', ' '][..]);
+                    if inside.starts_with("./") || inside.starts_with("../") {
+                        specs.push(inside.to_string());
+                    }
+                }
+            }
+
+            if trimmed.starts_with("export ") && trimmed.contains(" from ") {
+                if let Some(spec) = trimmed.split(" from ").nth(1) {
+                    let spec = spec.trim().trim_matches(&['"', '\'', ';'][..]);
+                    if spec.starts_with("./") || spec.starts_with("../") {
+                        specs.push(spec.to_string());
+                    }
+                }
+            }
+        }
+
+        specs
+    }
+
+    fn resolve_js_relative_spec(
+        current_file: &Path,
+        spec: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Option<PathBuf> {
+        let base = current_file.parent().unwrap_or_else(|| Path::new(""));
+        let joined = Self::normalize_path(base.join(spec));
+        let mut candidates = Vec::new();
+
+        if joined.extension().is_some() {
+            candidates.push(joined);
+        } else {
+            for ext in ["js", "jsx", "ts", "tsx", "mjs", "cjs"] {
+                candidates.push(joined.with_extension(ext));
+            }
+            for index_file in ["index.js", "index.jsx", "index.ts", "index.tsx"] {
+                candidates.push(joined.join(index_file));
+            }
+        }
+
+        candidates
+            .into_iter()
+            .map(Self::normalize_path)
+            .find(|candidate| known_paths.contains(candidate))
+    }
+
+    fn resolve_js_import_targets(
+        current_file: &Path,
+        content: &str,
+        known_paths: &HashSet<PathBuf>,
+    ) -> Vec<PathBuf> {
+        let mut targets = HashSet::new();
+        for spec in Self::extract_js_relative_imports(content) {
+            if let Some(target) = Self::resolve_js_relative_spec(current_file, &spec, known_paths) {
+                targets.insert(target);
+            }
+        }
+
+        let mut sorted: Vec<_> = targets.into_iter().collect();
+        sorted.sort();
+        sorted
     }
 
     /// Build relationships within a file
