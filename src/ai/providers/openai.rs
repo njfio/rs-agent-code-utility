@@ -2,11 +2,10 @@
 
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::{AIError, AIResult};
-use crate::ai::providers::{AIProviderImpl, RateLimitInfo};
+use crate::ai::providers::{AIProviderImpl, ProviderFuture, RateLimitInfo};
 use crate::ai::types::{
     AICapability, AIFeature, AIProvider, AIRequest, AIResponse, ResponseMetadata, TokenUsage,
 };
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
@@ -192,7 +191,6 @@ impl OpenAIProvider {
     }
 }
 
-#[async_trait]
 impl AIProviderImpl for OpenAIProvider {
     fn provider(&self) -> AIProvider {
         AIProvider::OpenAI
@@ -251,78 +249,81 @@ impl AIProviderImpl for OpenAIProvider {
         ]
     }
 
-    async fn validate_connection(&self) -> AIResult<()> {
-        // Create a simple test request
-        let test_request = OpenAIRequest {
-            model: self.config.default_model.clone(),
-            messages: vec![OpenAIMessage {
-                role: "user".to_string(),
-                content: "Hello".to_string(),
-            }],
-            max_tokens: Some(1),
-            temperature: Some(0.0),
-            stream: false,
-        };
+    fn validate_connection(&self) -> ProviderFuture<'_, AIResult<()>> {
+        Box::pin(async move {
+            let test_request = OpenAIRequest {
+                model: self.config.default_model.clone(),
+                messages: vec![OpenAIMessage {
+                    role: "user".to_string(),
+                    content: "Hello".to_string(),
+                }],
+                max_tokens: Some(1),
+                temperature: Some(0.0),
+                stream: false,
+            };
 
-        self.make_request(test_request).await?;
-        Ok(())
+            self.make_request(test_request).await?;
+            Ok(())
+        })
     }
 
-    async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
-        let system_prompt = self.create_system_prompt(request.feature);
+    fn process_request(&self, request: AIRequest) -> ProviderFuture<'_, AIResult<AIResponse>> {
+        Box::pin(async move {
+            let system_prompt = self.create_system_prompt(request.feature);
 
-        let openai_request = OpenAIRequest {
-            model: request
-                .model_preferences
-                .as_ref()
-                .and_then(|models| models.first())
-                .cloned()
-                .unwrap_or_else(|| self.config.default_model.clone()),
-            messages: vec![
-                OpenAIMessage {
-                    role: "system".to_string(),
-                    content: system_prompt,
+            let openai_request = OpenAIRequest {
+                model: request
+                    .model_preferences
+                    .as_ref()
+                    .and_then(|models| models.first())
+                    .cloned()
+                    .unwrap_or_else(|| self.config.default_model.clone()),
+                messages: vec![
+                    OpenAIMessage {
+                        role: "system".to_string(),
+                        content: system_prompt,
+                    },
+                    OpenAIMessage {
+                        role: "user".to_string(),
+                        content: request.content.clone(),
+                    },
+                ],
+                max_tokens: request.max_tokens,
+                temperature: request.temperature,
+                stream: request.stream,
+            };
+
+            let start_time = SystemTime::now();
+            let openai_response = self.make_request(openai_request).await?;
+            let processing_time = start_time
+                .elapsed()
+                .unwrap_or_else(|_| Duration::from_millis(0));
+
+            let choice = openai_response
+                .choices
+                .into_iter()
+                .next()
+                .ok_or_else(|| AIError::response_parsing("No choices in OpenAI response"))?;
+
+            Ok(AIResponse {
+                feature: request.feature,
+                content: choice.message.content,
+                structured_data: None,
+                confidence: Some(0.9),
+                token_usage: TokenUsage::new(
+                    openai_response.usage.prompt_tokens,
+                    openai_response.usage.completion_tokens,
+                ),
+                metadata: ResponseMetadata {
+                    request_id: request.metadata.request_id,
+                    model_used: openai_response.model,
+                    provider: AIProvider::OpenAI,
+                    processing_time,
+                    cached: false,
+                    timestamp: SystemTime::now(),
+                    rate_limit_remaining: None,
                 },
-                OpenAIMessage {
-                    role: "user".to_string(),
-                    content: request.content.clone(),
-                },
-            ],
-            max_tokens: request.max_tokens,
-            temperature: request.temperature,
-            stream: request.stream,
-        };
-
-        let start_time = SystemTime::now();
-        let openai_response = self.make_request(openai_request).await?;
-        let processing_time = start_time
-            .elapsed()
-            .unwrap_or_else(|_| Duration::from_millis(0));
-
-        let choice = openai_response
-            .choices
-            .into_iter()
-            .next()
-            .ok_or_else(|| AIError::response_parsing("No choices in OpenAI response"))?;
-
-        Ok(AIResponse {
-            feature: request.feature,
-            content: choice.message.content,
-            structured_data: None,
-            confidence: Some(0.9), // OpenAI doesn't provide confidence scores
-            token_usage: TokenUsage::new(
-                openai_response.usage.prompt_tokens,
-                openai_response.usage.completion_tokens,
-            ),
-            metadata: ResponseMetadata {
-                request_id: request.metadata.request_id,
-                model_used: openai_response.model,
-                provider: AIProvider::OpenAI,
-                processing_time,
-                cached: false,
-                timestamp: SystemTime::now(),
-                rate_limit_remaining: None, // Would need to parse from headers
-            },
+            })
         })
     }
 

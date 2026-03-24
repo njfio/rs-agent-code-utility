@@ -7,9 +7,9 @@
 use crate::error::Result;
 
 use crate::security::ast_analyzer::{
-    CodeContext, FunctionCall, FunctionInfo, LanguageSpecificAnalyzer, SecurityFinding,
-    SecurityFindingType, SecuritySeverity, SemanticInfo, StringLiteral, VariableInfo,
-    VulnerabilityPattern,
+    AnalyzerFuture, CodeContext, FunctionCall, FunctionInfo, LanguageSpecificAnalyzer,
+    SecurityFinding, SecurityFindingType, SecuritySeverity, SemanticInfo, StringLiteral,
+    VariableInfo, VulnerabilityPattern,
 };
 use crate::tree::{Node, SyntaxTree};
 
@@ -1095,10 +1095,13 @@ impl RustAnalyzer {
     }
 }
 
-#[async_trait::async_trait]
 impl LanguageSpecificAnalyzer for RustAnalyzer {
-    async fn analyze(&self, tree: &SyntaxTree, file_path: &str) -> Result<Vec<SecurityFinding>> {
-        self.analyze_rust_code(tree, file_path).await
+    fn analyze<'a>(
+        &'a self,
+        tree: &'a SyntaxTree,
+        file_path: &'a str,
+    ) -> AnalyzerFuture<'a, Result<Vec<SecurityFinding>>> {
+        Box::pin(async move { self.analyze_rust_code(tree, file_path).await })
     }
 
     fn get_vulnerability_patterns(&self) -> Vec<VulnerabilityPattern> {

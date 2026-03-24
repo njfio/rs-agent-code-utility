@@ -12,7 +12,9 @@ use crate::security::heuristic_filter::HeuristicFindingFilter;
 use crate::tree::SyntaxTree;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::future::Future;
 use std::path::Path;
+use std::pin::Pin;
 use tracing::debug;
 
 /// AST-based security analyzer
@@ -26,10 +28,13 @@ pub struct AstSecurityAnalyzer {
 }
 
 /// Language-specific security analyzer trait
-#[async_trait::async_trait]
 pub trait LanguageSpecificAnalyzer: Send + Sync {
     /// Analyze a syntax tree for security issues
-    async fn analyze(&self, tree: &SyntaxTree, file_path: &str) -> Result<Vec<SecurityFinding>>;
+    fn analyze<'a>(
+        &'a self,
+        tree: &'a SyntaxTree,
+        file_path: &'a str,
+    ) -> AnalyzerFuture<'a, Result<Vec<SecurityFinding>>>;
 
     /// Get language-specific patterns for vulnerability detection
     fn get_vulnerability_patterns(&self) -> Vec<VulnerabilityPattern>;
@@ -37,6 +42,8 @@ pub trait LanguageSpecificAnalyzer: Send + Sync {
     /// Extract semantic information from AST
     fn extract_semantic_info(&self, tree: &SyntaxTree) -> Result<SemanticInfo>;
 }
+
+pub type AnalyzerFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 /// Vulnerability pattern for AST-based detection
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -407,9 +414,8 @@ impl AstSecurityAnalyzer {
         let injection_points = semantic_engine.detect_injection_points(&semantic_info)?;
 
         // Perform AST-based analysis
-        let mut findings = analyzer
-            .analyze(&tree, &file_path.to_string_lossy())
-            .await?;
+        let file_path_string = file_path.to_string_lossy().into_owned();
+        let mut findings = analyzer.analyze(&tree, &file_path_string).await?;
 
         // Add findings from data flow analysis
         for flow in data_flows {
@@ -426,7 +432,7 @@ impl AstSecurityAnalyzer {
                         "Data flows from {} to {} without proper sanitization",
                         flow.source_variable, flow.sink_function
                     ),
-                    file_path: file_path.to_string_lossy().to_string(),
+                    file_path: file_path_string.clone(),
                     line_number: 1, // Would need more precise location tracking
                     column_start: 0,
                     column_end: 0,
@@ -465,7 +471,7 @@ impl AstSecurityAnalyzer {
                     injection.parameter_index,
                     injection.vulnerability_type
                 ),
-                file_path: file_path.to_string_lossy().to_string(),
+                file_path: file_path_string.clone(),
                 line_number: 1, // Would need more precise location tracking
                 column_start: 0,
                 column_end: 0,
@@ -1432,15 +1438,13 @@ macro_rules! placeholder_analyzer {
             }
         }
 
-        #[async_trait::async_trait]
         impl LanguageSpecificAnalyzer for $name {
-            async fn analyze(
-                &self,
-                _tree: &SyntaxTree,
-                _file_path: &str,
-            ) -> Result<Vec<SecurityFinding>> {
-                // Placeholder implementation - will be enhanced
-                Ok(Vec::new())
+            fn analyze<'a>(
+                &'a self,
+                _tree: &'a SyntaxTree,
+                _file_path: &'a str,
+            ) -> AnalyzerFuture<'a, Result<Vec<SecurityFinding>>> {
+                Box::pin(async move { Ok(Vec::new()) })
             }
 
             fn get_vulnerability_patterns(&self) -> Vec<VulnerabilityPattern> {

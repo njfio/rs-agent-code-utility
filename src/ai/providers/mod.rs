@@ -3,7 +3,8 @@
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::{AIError, AIResult};
 use crate::ai::types::{AICapability, AIProvider, AIRequest, AIResponse};
-use async_trait::async_trait;
+use std::future::Future;
+use std::pin::Pin;
 use std::time::{Duration, SystemTime};
 
 #[cfg(feature = "net")]
@@ -12,7 +13,6 @@ pub mod groq;
 pub mod openai;
 
 /// Provider implementation trait
-#[async_trait]
 pub trait AIProviderImpl: Send + Sync {
     /// Get the provider type
     fn provider(&self) -> AIProvider;
@@ -21,10 +21,10 @@ pub trait AIProviderImpl: Send + Sync {
     fn capabilities(&self) -> Vec<AICapability>;
 
     /// Validate connection and authentication
-    async fn validate_connection(&self) -> AIResult<()>;
+    fn validate_connection(&self) -> ProviderFuture<'_, AIResult<()>>;
 
     /// Process an AI request
-    async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse>;
+    fn process_request(&self, request: AIRequest) -> ProviderFuture<'_, AIResult<AIResponse>>;
 
     /// Check if a feature is supported
     fn supports_feature(&self, feature: crate::ai::types::AIFeature) -> bool {
@@ -39,6 +39,8 @@ pub trait AIProviderImpl: Send + Sync {
     /// Get rate limit information
     fn rate_limit_info(&self) -> Option<RateLimitInfo>;
 }
+
+pub type ProviderFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 /// Rate limit information
 #[derive(Debug, Clone)]
@@ -96,7 +98,6 @@ impl MockProvider {
     }
 }
 
-#[async_trait]
 impl AIProviderImpl for MockProvider {
     fn provider(&self) -> AIProvider {
         self.provider
@@ -133,55 +134,56 @@ impl AIProviderImpl for MockProvider {
         ]
     }
 
-    async fn validate_connection(&self) -> AIResult<()> {
-        // Mock validation always succeeds
-        Ok(())
+    fn validate_connection(&self) -> ProviderFuture<'_, AIResult<()>> {
+        Box::pin(async { Ok(()) })
     }
 
-    async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
-        use crate::ai::types::{ResponseMetadata, TokenUsage};
-        use std::time::{Duration, SystemTime};
+    fn process_request(&self, request: AIRequest) -> ProviderFuture<'_, AIResult<AIResponse>> {
+        Box::pin(async move {
+            use crate::ai::types::{ResponseMetadata, TokenUsage};
+            use std::time::{Duration, SystemTime};
 
-        // Simulate processing delay
-        std::thread::sleep(Duration::from_millis(100));
+            // Simulate processing delay
+            std::thread::sleep(Duration::from_millis(100));
 
-        let content = match request.feature {
-            crate::ai::types::AIFeature::CodeExplanation => {
-                format!(
-                    "Mock explanation for: {}",
-                    request.content.chars().take(50).collect::<String>()
-                )
-            }
-            crate::ai::types::AIFeature::SecurityAnalysis => {
-                format!(
-                    "Mock security analysis for: {}",
-                    request.content.chars().take(50).collect::<String>()
-                )
-            }
-            crate::ai::types::AIFeature::RefactoringSuggestions => {
-                format!(
-                    "Mock refactoring suggestions for: {}",
-                    request.content.chars().take(50).collect::<String>()
-                )
-            }
-            _ => format!("Mock response for {:?}", request.feature),
-        };
+            let content = match request.feature {
+                crate::ai::types::AIFeature::CodeExplanation => {
+                    format!(
+                        "Mock explanation for: {}",
+                        request.content.chars().take(50).collect::<String>()
+                    )
+                }
+                crate::ai::types::AIFeature::SecurityAnalysis => {
+                    format!(
+                        "Mock security analysis for: {}",
+                        request.content.chars().take(50).collect::<String>()
+                    )
+                }
+                crate::ai::types::AIFeature::RefactoringSuggestions => {
+                    format!(
+                        "Mock refactoring suggestions for: {}",
+                        request.content.chars().take(50).collect::<String>()
+                    )
+                }
+                _ => format!("Mock response for {:?}", request.feature),
+            };
 
-        Ok(AIResponse {
-            feature: request.feature,
-            content,
-            structured_data: None,
-            confidence: Some(0.8),
-            token_usage: TokenUsage::new(50, 100),
-            metadata: ResponseMetadata {
-                request_id: request.metadata.request_id,
-                model_used: self.config.default_model.clone(),
-                provider: self.provider,
-                processing_time: Duration::from_millis(100),
-                cached: false,
-                timestamp: SystemTime::now(),
-                rate_limit_remaining: Some(100),
-            },
+            Ok(AIResponse {
+                feature: request.feature,
+                content,
+                structured_data: None,
+                confidence: Some(0.8),
+                token_usage: TokenUsage::new(50, 100),
+                metadata: ResponseMetadata {
+                    request_id: request.metadata.request_id,
+                    model_used: self.config.default_model.clone(),
+                    provider: self.provider,
+                    processing_time: Duration::from_millis(100),
+                    cached: false,
+                    timestamp: SystemTime::now(),
+                    rate_limit_remaining: Some(100),
+                },
+            })
         })
     }
 

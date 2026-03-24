@@ -5,11 +5,10 @@
 
 use crate::ai::config::ProviderConfig;
 use crate::ai::error::{AIError, AIResult};
-use crate::ai::providers::AIProviderImpl;
+use crate::ai::providers::{AIProviderImpl, ProviderFuture};
 use crate::ai::types::{
     AICapability, AIProvider, AIRequest, AIResponse, ResponseMetadata, TokenUsage,
 };
-use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
@@ -216,7 +215,6 @@ impl GroqProvider {
     }
 }
 
-#[async_trait]
 impl AIProviderImpl for GroqProvider {
     fn provider(&self) -> AIProvider {
         AIProvider::Groq
@@ -257,73 +255,77 @@ impl AIProviderImpl for GroqProvider {
         ]
     }
 
-    async fn validate_connection(&self) -> AIResult<()> {
-        let api_key = self.get_api_key()?;
-        let test_request = GroqRequest {
-            messages: vec![GroqMessage {
-                role: "user".to_string(),
-                content: "Hello".to_string(),
-            }],
-            model: "openai/gpt-4o-mini".to_string(),
-            temperature: Some(0.1),
-            max_completion_tokens: Some(10),
-            top_p: Some(1.0),
-            stream: false,
-            reasoning_effort: None,
-            response_format: None,
-            stop: None,
-        };
+    fn validate_connection(&self) -> ProviderFuture<'_, AIResult<()>> {
+        Box::pin(async move {
+            let api_key = self.get_api_key()?;
+            let test_request = GroqRequest {
+                messages: vec![GroqMessage {
+                    role: "user".to_string(),
+                    content: "Hello".to_string(),
+                }],
+                model: "openai/gpt-4o-mini".to_string(),
+                temperature: Some(0.1),
+                max_completion_tokens: Some(10),
+                top_p: Some(1.0),
+                stream: false,
+                reasoning_effort: None,
+                response_format: None,
+                stop: None,
+            };
 
-        let response = self
-            .client
-            .post("https://api.groq.com/openai/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", api_key))
-            .header("Content-Type", "application/json")
-            .json(&test_request)
-            .send()
-            .await
-            .map_err(|e| AIError::network(format!("Failed to connect to Groq API: {}", e)))?;
+            let response = self
+                .client
+                .post("https://api.groq.com/openai/v1/chat/completions")
+                .header("Authorization", format!("Bearer {}", api_key))
+                .header("Content-Type", "application/json")
+                .json(&test_request)
+                .send()
+                .await
+                .map_err(|e| AIError::network(format!("Failed to connect to Groq API: {}", e)))?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(AIError::network(format!(
-                "Groq API error {}: {}",
-                status, error_text
-            )));
-        }
+            if !response.status().is_success() {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_default();
+                return Err(AIError::network(format!(
+                    "Groq API error {}: {}",
+                    status, error_text
+                )));
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 
-    async fn process_request(&self, request: AIRequest) -> AIResult<AIResponse> {
-        let api_key = self.get_api_key()?;
-        let groq_request = self.build_groq_request(&request);
+    fn process_request(&self, request: AIRequest) -> ProviderFuture<'_, AIResult<AIResponse>> {
+        Box::pin(async move {
+            let api_key = self.get_api_key()?;
+            let groq_request = self.build_groq_request(&request);
 
-        let response = self
-            .client
-            .post("https://api.groq.com/openai/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", api_key))
-            .header("Content-Type", "application/json")
-            .json(&groq_request)
-            .send()
-            .await
-            .map_err(|e| AIError::network(format!("Request failed: {}", e)))?;
+            let response = self
+                .client
+                .post("https://api.groq.com/openai/v1/chat/completions")
+                .header("Authorization", format!("Bearer {}", api_key))
+                .header("Content-Type", "application/json")
+                .json(&groq_request)
+                .send()
+                .await
+                .map_err(|e| AIError::network(format!("Request failed: {}", e)))?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(AIError::network(format!(
-                "API error {}: {}",
-                status, error_text
-            )));
-        }
+            if !response.status().is_success() {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_default();
+                return Err(AIError::network(format!(
+                    "API error {}: {}",
+                    status, error_text
+                )));
+            }
 
-        let groq_response: GroqResponse = response.json().await.map_err(|e| {
-            AIError::response_parsing(format!("Failed to parse Groq response: {}", e))
-        })?;
+            let groq_response: GroqResponse = response.json().await.map_err(|e| {
+                AIError::response_parsing(format!("Failed to parse Groq response: {}", e))
+            })?;
 
-        Ok(self.parse_response(groq_response, &request))
+            Ok(self.parse_response(groq_response, &request))
+        })
     }
 
     fn best_model_for_feature(&self, feature: crate::ai::types::AIFeature) -> Option<String> {
