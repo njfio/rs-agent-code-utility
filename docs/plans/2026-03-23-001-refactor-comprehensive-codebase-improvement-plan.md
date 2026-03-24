@@ -546,9 +546,9 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - [x] Delete `src/ai_analysis.rs` (no real AI calls)
 - [x] Delete `src/smart_refactoring.rs` (generic, not actionable suggestions)
 - [x] Delete `src/reasoning_engine.rs` (aspirational, no real inference)
-- [ ] Gate `src/intent_mapping.rs` and `src/embeddings.rs` behind `ml` feature (already partially done)
-- [ ] Update `src/lib.rs` to remove deleted module declarations
-- [ ] Update any tests that reference deleted modules
+- [x] Gate `src/intent_mapping.rs` and `src/embeddings.rs` behind `ml` feature (already partially done)
+- [x] Update `src/lib.rs` to remove deleted module declarations
+- [x] Update any tests that reference deleted modules
 
 ### Research Insights: Stub Deletion
 
