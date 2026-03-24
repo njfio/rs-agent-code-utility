@@ -450,13 +450,14 @@ The target architecture has three layers:
   - Confidence scores within expected range
 - [x] Add proptest strategies for generating syntactic variants of known vulnerable patterns
 - [x] Track precision/recall metrics and gate CI on regression (< 80% recall or < 70% precision fails)
-- [ ] Expand corpus over time as dogfooding reveals gaps (currently 50 fixtures; target 50+ by end of Phase 2)
+- [x] Expand corpus over time as dogfooding reveals gaps (currently 50 fixtures; Phase 2 target met)
 
 **Implementation note (2026-03-24):** The baseline corpus and proptest coverage now pass again in reduced builds after tightening the fallback detector path and the corpus harness. Because the default build intentionally lacks the extended JS/Python grammars, `tests/security_corpus.rs` now validates the string-based fallback for those fixtures instead of depending on AST parsing to be available. The fallback detector now catches Python `%`-formatted SQL construction, plain `exec(...)` command construction, and short quoted hardcoded API tokens, and the corpus harness now counts specialized `injection_vulnerabilities` results for CWE-backed XSS/command/sql cases instead of treating those findings as misses. Corpus expansion remains the only open Task 2.4 item.
-**Implementation note (2026-03-24, latest):** The corpus has now reached 50 fixtures by adding JavaScript insert-concatenation and Python static-query SQL cases, a Python `subprocess.Popen(..., shell=True)` command case, Rust and JavaScript JWT secret coverage, and additional XSS fixtures around `document.write`, `insertAdjacentText`, and `append(...)`. The reduced-build corpus still passes end-to-end with the current precision/recall gate at this larger size.
 **Implementation note (2026-03-24, later):** The corpus has now grown from 18 to 24 fixtures by adding Python f-string and parameterized SQL cases, Python `subprocess.run` command-injection positive/negative cases, and additional API key/env-token secret cases. The reduced-build corpus still passes end-to-end with the current precision/recall gate after these additions.
+**Implementation note (2026-03-24, later):** The corpus has now grown again from 24 to 30 fixtures by adding Rust string-concatenation and parameterized SQL cases, Python `subprocess.call` command-injection coverage, a safe JavaScript `spawn(..., [args])` command case, and JavaScript API-key/password-field secret coverage. The current reduced-build corpus still passes with the same precision/recall gate.
 **Implementation note (2026-03-24, later):** The corpus has now grown again from 30 to 36 fixtures by adding Python `.format(...)` SQL construction, a static Rust SQL negative, Python `subprocess.check_output(...)` and safe `subprocess.Popen([...])` command cases, a hardcoded Python password secret case, and a safe JavaScript `createTextNode(...)` XSS negative. The current reduced-build corpus still passes with the same precision/recall gate.
-**Implementation note (2026-03-24, latest):** The corpus has now grown from 36 to 42 fixtures by adding a safe `subprocess.check_output([...])` command case, a JavaScript hardcoded-password secret, and broader XSS coverage across `innerHTML`, `document.write`, `innerText`, and `createTextNode` patterns. The reduced-build corpus still passes end-to-end with the existing precision/recall threshold.
+**Implementation note (2026-03-24, later):** The corpus has now grown from 36 to 42 fixtures by adding a safe `subprocess.check_output([...])` command case, a JavaScript hardcoded-password secret, and broader XSS coverage across `innerHTML`, `document.write`, `innerText`, and `createTextNode` patterns. The reduced-build corpus still passes end-to-end with the existing precision/recall threshold.
+**Implementation note (2026-03-24, latest):** The corpus has now reached 50 fixtures by adding JavaScript insert-concatenation and Python static-query SQL cases, a Python `subprocess.Popen(..., shell=True)` command case, Rust and JavaScript JWT secret coverage, and additional XSS fixtures around `document.write`, `insertAdjacentText`, and `append(...)`. `tests/security_corpus.rs` now also enforces a balanced per-class floor of 12 cases with both vulnerable and safe examples per class, so the Phase 2 corpus target cannot regress silently. The current reduced-build corpus passes with zero false positives or false negatives across the canonical 50-case set.
 
 **Acceptance criteria:**
 - >= 12 test fixtures across 4 vulnerability classes
@@ -834,7 +835,7 @@ Phase 0 (CI/deps)
 ### Functional Requirements
 
 - [ ] Default `cargo add rust_tree_sitter` pulls < 120 crates (down from 506; tighten threshold as measured)
-- [ ] Security scanner produces confidence-scored findings with < 30% false positive rate on test corpus
+- [x] Security scanner produces confidence-scored findings with < 30% false positive rate on test corpus
 - [ ] `// rts-ignore[rule-id]` suppresses findings per spec
 - [ ] Performance analysis uses AST traversal, not string matching
 - [ ] Dependency analyzer returns correct results for Cargo.toml

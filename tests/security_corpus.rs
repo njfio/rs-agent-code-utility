@@ -24,6 +24,9 @@ struct CorpusCase {
     min_confidence: ConfidenceLevel,
 }
 
+const CORPUS_CLASSES: &[&str] = &["sql-injection", "command-injection", "secrets", "xss"];
+const MIN_CASES_PER_CLASS: usize = 12;
+
 const CORPUS_CASES: &[CorpusCase] = &[
     CorpusCase {
         class: "sql-injection",
@@ -411,6 +414,7 @@ fn security_corpus_meets_detection_thresholds() {
         "expected at least 50 corpus cases, found {}",
         CORPUS_CASES.len()
     );
+    assert_balanced_corpus_coverage();
 
     for case in CORPUS_CASES {
         let fixture_path = fixture_path(case.relative_path);
@@ -464,6 +468,50 @@ fn security_corpus_meets_detection_thresholds() {
         "security corpus precision regressed below threshold: {:.2}%",
         overall_metrics.precision() * 100.0
     );
+}
+
+fn assert_balanced_corpus_coverage() {
+    let mut class_counts = HashMap::new();
+    let mut vulnerable_counts = HashMap::new();
+    let mut safe_counts = HashMap::new();
+
+    for case in CORPUS_CASES {
+        *class_counts.entry(case.class).or_insert(0usize) += 1;
+        match case.expected {
+            ExpectedOutcome::Vulnerable => {
+                *vulnerable_counts.entry(case.class).or_insert(0usize) += 1;
+            }
+            ExpectedOutcome::Safe => {
+                *safe_counts.entry(case.class).or_insert(0usize) += 1;
+            }
+        }
+    }
+
+    for class in CORPUS_CLASSES {
+        let total = class_counts.get(class).copied().unwrap_or_default();
+        let vulnerable = vulnerable_counts.get(class).copied().unwrap_or_default();
+        let safe = safe_counts.get(class).copied().unwrap_or_default();
+
+        assert!(
+            total >= MIN_CASES_PER_CLASS,
+            "expected at least {} {} corpus cases, found {}",
+            MIN_CASES_PER_CLASS,
+            class,
+            total
+        );
+        assert!(
+            vulnerable >= 2,
+            "expected at least 2 vulnerable {} corpus cases, found {}",
+            class,
+            vulnerable
+        );
+        assert!(
+            safe >= 2,
+            "expected at least 2 safe {} corpus cases, found {}",
+            class,
+            safe
+        );
+    }
 }
 
 proptest! {
