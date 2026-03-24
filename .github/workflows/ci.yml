@@ -128,3 +128,96 @@ jobs:
           name: self-analysis
           path: target/dogfood/self-analysis.json
           if-no-files-found: warn
+
+  benchmark:
+    name: Benchmark Regression Gate
+    runs-on: ubuntu-latest
+    needs: [rust]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bench-
+
+      - name: Install critcmp
+        run: |
+          if ! command -v critcmp >/dev/null 2>&1; then
+            cargo install critcmp --locked
+          fi
+
+      - name: Benchmark base branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}" --depth=1
+          git worktree add "$RUNNER_TEMP/base-bench" "origin/${{ github.base_ref }}"
+          (
+            cd "$RUNNER_TEMP/base-bench"
+            CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target/bench/base" \
+              cargo bench --bench parser_bench --bench security_bench -- \
+              --warm-up-time 3 \
+              --measurement-time 1 \
+              --sample-size 20 \
+              --save-baseline base
+          )
+
+      - name: Benchmark current branch
+        run: |
+          head_baseline="main"
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            head_baseline="pr"
+          fi
+          echo "HEAD_BASELINE_NAME=${head_baseline}" >> "$GITHUB_ENV"
+          CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target/bench/head" \
+            cargo bench --bench parser_bench --bench security_bench -- \
+            --warm-up-time 3 \
+            --measurement-time 1 \
+            --sample-size 20 \
+            --save-baseline "${head_baseline}"
+
+      - name: Assemble benchmark artifacts
+        run: |
+          rm -rf benchmark_artifacts
+          mkdir -p benchmark_artifacts/target/criterion
+          if [[ -d "target/bench/base/criterion" ]]; then
+            cp -R "target/bench/base/criterion/." benchmark_artifacts/target/criterion/
+          fi
+          cp -R "target/bench/head/criterion/." benchmark_artifacts/target/criterion/
+
+      - name: Generate critcmp report
+        if: github.event_name == 'pull_request'
+        working-directory: benchmark_artifacts
+        run: |
+          critcmp base pr --list | tee critcmp.txt
+
+      - name: Check parser regression threshold
+        if: github.event_name == 'pull_request'
+        run: |
+          bash scripts/check_benchmark_regression.sh \
+            benchmark_artifacts/target/criterion \
+            base \
+            pr \
+            10 | tee benchmark_artifacts/regression-summary.txt
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: criterion-benchmarks
+          path: benchmark_artifacts
+          if-no-files-found: warn

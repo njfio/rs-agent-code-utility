@@ -729,10 +729,10 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - [x] Fix existing benchmark measurement errors first (checkpoint landed on 2026-03-24):
   - `benches/parser_bench.rs`: Move `Parser::new()` to setup, not measured iteration
   - `benches/security_bench.rs`: Use in-memory string instead of tempfile I/O per iteration
-- [ ] Wire existing Criterion benchmarks into CI
-- [ ] Use `critcmp` or `bencher` to compare PR benchmarks against base branch
-- [ ] Fail CI if parsing performance regresses by > 10% (start permissive)
-- [ ] Store benchmark results as CI artifacts for historical tracking
+- [x] Wire existing Criterion benchmarks into CI (checkpoint landed on 2026-03-24)
+- [x] Use `critcmp` or `bencher` to compare PR benchmarks against base branch
+- [x] Fail CI if parsing performance regresses by > 10% (start permissive)
+- [x] Store benchmark results as CI artifacts for historical tracking
 
 ### Research Insights: Benchmarking
 
