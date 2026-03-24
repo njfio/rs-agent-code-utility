@@ -726,7 +726,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 
 ##### Task 4.4: Differential Benchmark Regression Gate
 
-- [ ] Fix existing benchmark measurement errors first:
+- [x] Fix existing benchmark measurement errors first (checkpoint landed on 2026-03-24):
   - `benches/parser_bench.rs`: Move `Parser::new()` to setup, not measured iteration
   - `benches/security_bench.rs`: Use in-memory string instead of tempfile I/O per iteration
 - [ ] Wire existing Criterion benchmarks into CI

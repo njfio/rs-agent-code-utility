@@ -179,6 +179,14 @@ name = "basic_analysis"
 path = "examples/basic_analysis.rs"
 required-features = ["demo"]
 
+[[bench]]
+name = "parser_bench"
+harness = false
+
+[[bench]]
+name = "security_bench"
+harness = false
+
 [[example]]
 name = "code_map"
 path = "examples/code_map.rs"
