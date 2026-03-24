@@ -115,6 +115,21 @@ impl Execute for Commands {
                 }
                 #[cfg(not(feature = "net"))]
                 {
+                    let _ = (
+                        path,
+                        format,
+                        min_severity,
+                        output,
+                        summary_only,
+                        language,
+                        include_tests,
+                        include_examples,
+                        min_confidence,
+                        fail_on,
+                        baseline,
+                        update_baseline,
+                        max_file_kb,
+                    );
                     Err(CliError::Internal(
                         "ast-security command requires the 'net' feature".to_string(),
                     ))
@@ -262,6 +277,27 @@ impl Execute for Commands {
                 }
                 #[cfg(not(feature = "net"))]
                 {
+                    let _ = (
+                        path,
+                        format,
+                        min_severity,
+                        output,
+                        summary_only,
+                        compliance,
+                        depth,
+                        enable_security,
+                        include_tests,
+                        include_examples,
+                        include_non_code,
+                        diagnostics,
+                        min_confidence,
+                        fail_on,
+                        no_ai_filter,
+                        filter_mode,
+                        baseline,
+                        update_baseline,
+                        max_file_kb,
+                    );
                     Err(CliError::Internal(
                         "security command requires the 'net' feature".to_string(),
                     ))
