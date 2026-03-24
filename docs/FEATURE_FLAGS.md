@@ -64,7 +64,7 @@ These remain part of the core build today and still dominate the dependency foot
 
 - `tree-sitter` plus the core grammar set: Rust
 - `serde`, `serde_json`, `serde_yaml`, `toml`
-- `regex`, `sha2`, `rand`, `rayon`, `petgraph`, `ignore`
+- `regex`, `rand`, `rayon`, `petgraph`, `ignore`
 - `crc32fast`, `flate2`, `crossbeam-channel`, `parking_lot`, `walkdir`, `base64`
 
 ## Binary and Example Gating
@@ -77,13 +77,13 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, and moving the JavaScript/Python/C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, removing the unused `sha2` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, and moving the JavaScript/Python/C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `444` |
-| Default | `cargo tree | wc -l` | `444` |
-| All features | `cargo tree --all-features | wc -l` | `1386` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `431` |
+| Default | `cargo tree | wc -l` | `431` |
+| All features | `cargo tree --all-features | wc -l` | `1392` |
 
 Notes:
 
@@ -95,6 +95,7 @@ Notes:
 - `dashmap` is no longer a direct core dependency; the in-memory cache now uses `parking_lot::RwLock<HashMap<...>>`, although `dashmap` still appears transitively under `net` through `governor`.
 - `config` is no longer a direct core dependency; it now only appears when `net` or `db` infrastructure is requested.
 - `exponential-backoff` is no longer in the dependency graph; HTTP retry logic already uses a small internal exponential backoff implementation.
+- `sha2` is no longer in the dependency graph; the direct dependency was unused and has been removed from the crate.
 - `async-trait` is no longer a direct core dependency; async dyn-trait surfaces now use boxed std futures, although `async-trait` still appears transitively under `net`/`db` through `config` and in dev-only `wiremock`.
 - `anyhow` is no longer a direct core dependency; it now only appears when `ml`, `net`, or `db` is enabled, although `anyhow` still appears transitively in the no-default graph through dev-only `wiremock`.
 - `uuid` is no longer a direct core dependency; runtime string IDs now use a crate-local generator, `cargo tree -i uuid --no-default-features` no longer matches anything, and the `uuid` crate now only appears when the gated `demo` example feature is enabled.
