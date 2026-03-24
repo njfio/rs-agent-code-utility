@@ -51,9 +51,7 @@ fn test_security_api_accessibility() -> std::result::Result<(), Box<dyn std::err
 
 #[test]
 fn test_advanced_ai_api_accessibility() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test advanced AI analysis types
-    let _ai_analyzer = AIAnalyzer::new();
-    let _advanced_ai = AdvancedAIAnalyzer::new();
+    // Test advanced analysis types
     let _smart_refactoring = SmartRefactoringEngine::new();
     let _intent_mapping = IntentMappingSystem::new();
     let _reasoning_engine = AutomatedReasoningEngine::new();

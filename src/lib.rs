@@ -159,9 +159,6 @@ pub mod advanced_security;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "net")]
 pub mod ai;
-/// AI-powered code explanation and insights
-#[allow(clippy::unwrap_used, clippy::expect_used)]
-pub mod ai_analysis;
 /// Common analysis functionality and helpers
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod analysis_common;
@@ -291,9 +288,6 @@ pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // Basic analysis modules
-pub use ai_analysis::{
-    AIAnalysisResult, AIAnalyzer, AIConfig, CodebaseExplanation, FileExplanation, SymbolExplanation,
-};
 pub use complexity_analysis::{ComplexityAnalyzer, ComplexityMetrics, HalsteadMetrics};
 pub use dependency_analysis::{
     Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,

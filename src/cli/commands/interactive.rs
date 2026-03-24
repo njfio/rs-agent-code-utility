@@ -9,10 +9,7 @@
 
 use crate::cli::error::{validate_path, CliError, CliResult};
 use crate::cli::output::AccessibilityConfig;
-use crate::{
-    AIAnalyzer, AIConfig, AnalysisResult, AutomatedReasoningEngine, CodebaseAnalyzer,
-    ReasoningConfig,
-};
+use crate::{AnalysisResult, AutomatedReasoningEngine, CodebaseAnalyzer, ReasoningConfig};
 use colored::Colorize;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -65,7 +62,6 @@ impl InteractiveCompleter {
             "files".to_string(),
             "symbols".to_string(),
             "insights".to_string(),
-            "explain".to_string(),
             "security".to_string(),
             "dependencies".to_string(),
             "find".to_string(),
@@ -118,22 +114,19 @@ impl Completer for InteractiveCompleter {
                 let command = parts[0].to_lowercase();
                 let prefix = parts.last().unwrap_or(&"");
 
-                match command.as_str() {
-                    "find" | "explain" => {
-                        if let Some(ref result) = self.analysis_result {
-                            for file in &result.files {
-                                for symbol in &file.symbols {
-                                    if symbol.name.starts_with(prefix) {
-                                        candidates.push(Pair {
-                                            display: symbol.name.clone(),
-                                            replacement: symbol.name.clone(),
-                                        });
-                                    }
+                if command.as_str() == "find" {
+                    if let Some(ref result) = self.analysis_result {
+                        for file in &result.files {
+                            for symbol in &file.symbols {
+                                if symbol.name.starts_with(prefix) {
+                                    candidates.push(Pair {
+                                        display: symbol.name.clone(),
+                                        replacement: symbol.name.clone(),
+                                    });
                                 }
                             }
                         }
                     }
-                    _ => {}
                 }
             }
         }
@@ -343,15 +336,6 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
     }
     .map_err(|e| format!("Failed to analyze path: {}", e))?;
 
-    let ai_config = AIConfig {
-        detailed_explanations: true,
-        include_examples: true,
-        max_explanation_length: 500,
-        pattern_recognition: true,
-        architectural_insights: true,
-    };
-    let ai_analyzer = AIAnalyzer::with_config(ai_config);
-
     let reasoning_config = ReasoningConfig {
         enable_deductive: true,
         enable_inductive: true,
@@ -367,7 +351,7 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
         "{}",
         "[OK] Analysis complete! Ready for interactive queries.".green()
     );
-    println!("Available commands: help, stats, files, symbols, find, explain, insights, quit");
+    println!("Available commands: help, stats, files, symbols, find, insights, quit");
     println!("Accessibility commands: accessibility, keyboard, contrast, voice, language");
     println!("[TIP] Use Tab for auto-completion and arrow keys for command history");
     println!("[TIP] Type 'accessibility' for accessibility features and keyboard shortcuts");
@@ -448,9 +432,6 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
                     "insights" => {
                         display_insights(&mut reasoning_engine, &analysis_result);
                     }
-                    "explain" => {
-                        display_explanation(&ai_analyzer, &analysis_result);
-                    }
                     "security" => {
                         display_security_summary(&analysis_result);
                     }
@@ -479,16 +460,14 @@ pub fn execute(path: &PathBuf) -> CliResult<()> {
                         let query = command.strip_prefix("find ").unwrap_or("");
                         find_symbols(&analysis_result, query);
                     }
-                    _ if command.starts_with("explain ") => {
-                        let symbol_name = command.strip_prefix("explain ").unwrap_or("");
-                        explain_symbol(&ai_analyzer, &analysis_result, symbol_name);
-                    }
                     _ => {
                         println!(
                             "{}",
                             "[ERROR] Unknown command. Type 'help' for available commands.".red()
                         );
-                        println!("[TIP] Available: help, stats, files, symbols, find <name>, explain <symbol>, insights, quit");
+                        println!(
+                            "[TIP] Available: help, stats, files, symbols, find <name>, insights, quit"
+                        );
                         println!("[TIP] Accessibility: accessibility, keyboard, contrast, voice, language");
                         println!("[TIP] Use Tab for auto-completion");
                     }
@@ -525,14 +504,9 @@ fn display_help() {
     println!("  {}        - List analyzed files", "files".cyan());
     println!("  {}      - Show all symbols", "symbols".cyan());
     println!("  {}     - Generate code insights", "insights".cyan());
-    println!(
-        "  {}     - Get AI explanation of codebase",
-        "explain".cyan()
-    );
     println!("  {}     - Show security analysis", "security".cyan());
     println!("  {} - Show dependencies", "dependencies".cyan());
     println!("  {} <name>  - Find symbols by name", "find".cyan());
-    println!("  {} <symbol> - Explain specific symbol", "explain".cyan());
     println!("  {}        - Clear screen", "clear".cyan());
     println!("  {}        - Show command history", "history".cyan());
     println!("  {}         - Exit interactive mode", "quit".cyan());
@@ -549,7 +523,6 @@ fn display_help() {
         "  {}     - Find symbols containing 'main'",
         "find main".green()
     );
-    println!("  {}   - Explain the 'add' function", "explain add".green());
     println!("  {}         - Show codebase statistics", "stats".green());
 }
 
@@ -709,17 +682,6 @@ fn display_insights(reasoning_engine: &mut AutomatedReasoningEngine, result: &An
     }
 }
 
-fn display_explanation(ai_analyzer: &AIAnalyzer, result: &AnalysisResult) {
-    println!("{}", "[AI] Generating AI Explanation...".blue());
-
-    let ai_result = ai_analyzer.analyze(result);
-    let explanation = &ai_result.codebase_explanation;
-    println!("{}", "Codebase Overview".blue().bold());
-    println!("{}", "-".repeat(40).blue());
-    println!("Purpose: {}", explanation.purpose);
-    println!("Architecture: {}", explanation.architecture);
-}
-
 fn display_security_summary(result: &AnalysisResult) {
     println!("{}", "Security Summary".red().bold());
     println!("{}", "-".repeat(40).red());
@@ -873,65 +835,6 @@ fn find_symbols(result: &AnalysisResult, query: &str) {
         println!("[TIP] Try using a shorter or different search term.");
     } else if found_count >= 15 {
         println!("... (showing first {} matches)", found_count);
-    }
-}
-
-fn explain_symbol(_ai_analyzer: &AIAnalyzer, result: &AnalysisResult, symbol_name: &str) {
-    if symbol_name.is_empty() {
-        println!("[ERROR] Please provide a symbol name. Usage: explain <symbol_name>");
-        return;
-    }
-
-    println!("[AI] Explaining symbol '{}'", symbol_name.cyan());
-    println!("{}", "-".repeat(50));
-
-    // Find the symbol first
-    let mut found_symbol = None;
-    for file in &result.files {
-        for symbol in &file.symbols {
-            if symbol.name.to_lowercase() == symbol_name.to_lowercase() {
-                found_symbol = Some((file, symbol));
-                break;
-            }
-        }
-        if found_symbol.is_some() {
-            break;
-        }
-    }
-
-    match found_symbol {
-        Some((file, symbol)) => {
-            println!(
-                "[OK] Found: {} {} ({}:{})",
-                "Found".green().bold(),
-                symbol.name.white().bold(),
-                file.path
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .white()
-                    .dimmed(),
-                symbol.start_line.to_string().yellow()
-            );
-            println!("Type: {}", symbol.kind.cyan().bold());
-            println!("Visibility: {}", symbol.visibility);
-
-            if let Some(ref doc) = symbol.documentation {
-                println!("Documentation: {}", doc);
-            }
-
-            println!("File: {}", file.path.display());
-        }
-        None => {
-            println!(
-                "{}",
-                format!("[ERROR] Symbol '{}' not found.", symbol_name).yellow()
-            );
-            println!(
-                "[TIP] Try using 'find {}' to search for similar symbols.",
-                symbol_name
-            );
-        }
     }
 }
 

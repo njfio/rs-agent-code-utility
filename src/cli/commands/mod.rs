@@ -5,7 +5,6 @@
 pub mod analyze;
 pub mod ast_security;
 pub mod dependencies;
-pub mod explain;
 pub mod find;
 pub mod insights;
 pub mod interactive;
@@ -199,21 +198,6 @@ impl Execute for Commands {
                 languages.as_ref(),
                 *collapse_empty,
                 depth,
-            ),
-            Commands::Explain {
-                path,
-                file,
-                symbol,
-                format,
-                detailed,
-                learning,
-            } => explain::execute(
-                path,
-                file.as_ref(),
-                symbol.as_ref(),
-                format,
-                *detailed,
-                *learning,
             ),
             Commands::Security {
                 path,

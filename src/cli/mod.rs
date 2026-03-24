@@ -240,33 +240,6 @@ pub enum Commands {
         depth: String,
     },
 
-    /// AI-powered code explanations and insights
-    Explain {
-        /// Directory to analyze
-        #[arg(value_name = "PATH")]
-        path: PathBuf,
-
-        /// Focus on specific file
-        #[arg(short, long)]
-        file: Option<PathBuf>,
-
-        /// Focus on specific symbol
-        #[arg(short, long)]
-        symbol: Option<String>,
-
-        /// Output format (markdown, json, text)
-        #[arg(long, default_value = "markdown")]
-        format: String,
-
-        /// Include detailed explanations
-        #[arg(long)]
-        detailed: bool,
-
-        /// Include learning recommendations
-        #[arg(long)]
-        learning: bool,
-    },
-
     /// Security vulnerability scanning
     Security {
         /// Directory to scan
