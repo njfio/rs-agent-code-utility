@@ -1,10 +1,24 @@
 use rust_tree_sitter::performance_analysis::{
     HotspotCategory, PerformanceAnalyzer, PerformanceConfig, PerformanceSeverity,
 };
-use rust_tree_sitter::{AnalysisResult, FileInfo};
+use rust_tree_sitter::{AnalysisResult, CodebaseAnalyzer, FileInfo};
 use std::collections::HashMap;
 use std::fs;
 use tempfile::TempDir;
+
+fn analyze_directory_performance(
+    temp_dir: &TempDir,
+    config: PerformanceConfig,
+) -> Result<
+    rust_tree_sitter::performance_analysis::PerformanceAnalysisResult,
+    Box<dyn std::error::Error>,
+> {
+    let mut analyzer = CodebaseAnalyzer::new()?;
+    let analysis_result = analyzer.analyze_directory(temp_dir.path())?;
+    let performance_analyzer = PerformanceAnalyzer::with_config(config);
+
+    Ok(performance_analyzer.analyze(&analysis_result)?)
+}
 
 /// Test proper cyclomatic complexity calculation using AST analysis
 #[test]
@@ -717,6 +731,218 @@ fn recursive_inefficient(n: i32) -> i32 {
         !result.hotspots_by_severity.is_empty(),
         "Should categorize hotspots by severity"
     );
+
+    Ok(())
+}
+
+#[test]
+fn test_ast_hotspot_detection_finds_cross_language_hotspots(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
+
+    fs::write(
+        temp_dir.path().join("rust_hotspot.rs"),
+        r#"
+fn rust_hotspot(matrix: &[Vec<i32>]) -> Vec<String> {
+    let mut output = Vec::new();
+    for i in 0..matrix.len() {
+        for j in 0..matrix[i].len() {
+            let value = matrix[i][j];
+            let label = format!("item_{}", value);
+            output.push(label);
+        }
+    }
+    output
+}
+"#,
+    )?;
+
+    fs::write(
+        temp_dir.path().join("js_hotspot.js"),
+        r#"
+function jsHotspot(matrix, width) {
+    const rows = [];
+    for (let i = 0; i < matrix.length; i++) {
+        for (let j = 0; j < matrix[i].length; j++) {
+            const values = new Array(width);
+            values[j] = matrix[i][j];
+            rows.push(values[j]);
+        }
+    }
+    return rows;
+}
+"#,
+    )?;
+
+    fs::write(
+        temp_dir.path().join("py_hotspot.py"),
+        r#"
+def py_hotspot(matrix):
+    results = []
+    for i in range(len(matrix)):
+        for j in range(len(matrix[i])):
+            bucket = list()
+            bucket.append(matrix[i][j])
+            results.extend(bucket)
+    return results
+"#,
+    )?;
+
+    let result = analyze_directory_performance(
+        &temp_dir,
+        PerformanceConfig {
+            complexity_analysis: true,
+            memory_analysis: true,
+            io_analysis: false,
+            concurrency_analysis: false,
+            database_analysis: false,
+            min_complexity_threshold: 2,
+            max_function_length: 80,
+        },
+    )?;
+
+    for file_name in ["rust_hotspot.rs", "js_hotspot.js", "py_hotspot.py"] {
+        assert!(
+            result.hotspots.iter().any(|hotspot| {
+                hotspot.location.file.ends_with(file_name)
+                    && hotspot.category == HotspotCategory::AlgorithmicComplexity
+                    && hotspot
+                        .patterns
+                        .iter()
+                        .any(|pattern| pattern == "Nested Iteration")
+            }),
+            "Expected nested-loop hotspot for {file_name}, found: {:?}",
+            result
+                .hotspots
+                .iter()
+                .filter(|hotspot| hotspot.location.file.ends_with(file_name))
+                .map(|hotspot| (&hotspot.title, &hotspot.patterns))
+                .collect::<Vec<_>>()
+        );
+
+        assert!(
+            result.hotspots.iter().any(|hotspot| {
+                hotspot.location.file.ends_with(file_name)
+                    && hotspot.category == HotspotCategory::MemoryUsage
+            }),
+            "Expected memory hotspot for {file_name}, found: {:?}",
+            result
+                .hotspots
+                .iter()
+                .filter(|hotspot| hotspot.location.file.ends_with(file_name))
+                .map(|hotspot| (&hotspot.title, &hotspot.patterns))
+                .collect::<Vec<_>>()
+        );
+
+        let metrics = result
+            .file_metrics
+            .iter()
+            .find(|metric| metric.file.ends_with(file_name))
+            .expect("file metrics should exist for analyzed file");
+
+        assert!(
+            metrics.nested_loops > 0,
+            "Expected AST nested loop count for {file_name}, got {:?}",
+            metrics
+        );
+        assert!(
+            metrics.memory_allocations > 0,
+            "Expected AST allocation count for {file_name}, got {:?}",
+            metrics
+        );
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_ast_hotspot_detection_avoids_name_based_false_positives(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
+
+    fs::write(
+        temp_dir.path().join("rust_names.rs"),
+        r#"
+fn loop_handler(value: i32) -> i32 {
+    value + 1
+}
+
+fn allocation_tracker(values: &[i32]) -> usize {
+    values.len()
+}
+"#,
+    )?;
+
+    fs::write(
+        temp_dir.path().join("js_names.js"),
+        r#"
+function loop_handler(value) {
+    return value + 1;
+}
+
+function allocation_tracker(items) {
+    return items.length;
+}
+"#,
+    )?;
+
+    fs::write(
+        temp_dir.path().join("py_names.py"),
+        r#"
+def loop_handler(value):
+    return value + 1
+
+def allocation_tracker(items):
+    return len(items)
+"#,
+    )?;
+
+    let result = analyze_directory_performance(
+        &temp_dir,
+        PerformanceConfig {
+            complexity_analysis: true,
+            memory_analysis: true,
+            io_analysis: false,
+            concurrency_analysis: false,
+            database_analysis: false,
+            min_complexity_threshold: 3,
+            max_function_length: 80,
+        },
+    )?;
+
+    for file_name in ["rust_names.rs", "js_names.js", "py_names.py"] {
+        assert!(
+            !result.hotspots.iter().any(|hotspot| {
+                hotspot.location.file.ends_with(file_name)
+                    && matches!(
+                        hotspot.category,
+                        HotspotCategory::AlgorithmicComplexity | HotspotCategory::MemoryUsage
+                    )
+            }),
+            "Unexpected hotspot for {file_name}: {:?}",
+            result
+                .hotspots
+                .iter()
+                .filter(|hotspot| hotspot.location.file.ends_with(file_name))
+                .map(|hotspot| (&hotspot.title, &hotspot.patterns))
+                .collect::<Vec<_>>()
+        );
+
+        let metrics = result
+            .file_metrics
+            .iter()
+            .find(|metric| metric.file.ends_with(file_name))
+            .expect("file metrics should exist for analyzed file");
+
+        assert_eq!(
+            metrics.nested_loops, 0,
+            "Function names should not inflate nested loop count for {file_name}"
+        );
+        assert_eq!(
+            metrics.memory_allocations, 0,
+            "Function names should not inflate allocation count for {file_name}"
+        );
+    }
 
     Ok(())
 }
