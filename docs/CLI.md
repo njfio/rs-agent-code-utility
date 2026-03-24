@@ -1,324 +1,76 @@
 # CLI Documentation
 
-## Installation
+The CLI binaries are feature-gated. Build them with `--features cli`.
+
+## Install
+
+Build locally:
 
 ```bash
-# Clone the repository
-git clone https://github.com/njfio/rust-treesitter-agent-code-utility.git
-cd rust-treesitter-agent-code-utility
-
-# Build the CLI tool
-cargo build --release --bin tree-sitter-cli
-
-# Install globally (optional)
-cargo install --path . --bin tree-sitter-cli
+cargo build --bin tree-sitter-cli --features cli
 ```
 
-## Global Options
+Install from the repository checkout:
 
-All commands support these global options:
-
-- `--help, -h` - Show help information
-- `--version, -V` - Show version information
-- `--verbose, -v` - Enable verbose output
-- `--quiet, -q` - Suppress non-essential output
+```bash
+cargo install --path . --bin tree-sitter-cli --features cli
+```
 
 ## Commands
 
-### analyze - Comprehensive Codebase Analysis
+Current commands from `tree-sitter-cli --help`:
 
-Analyze directory structure, extract symbols, and generate comprehensive statistics.
+- `analyze`
+- `query`
+- `stats`
+- `find`
+- `symbols`
+- `languages`
+- `interactive`
+- `map`
+- `security`
+- `ast-security`
+- `dependencies`
+- `watch`
+
+## Common Usage
+
+Analyze a repository:
 
 ```bash
-tree-sitter-cli analyze <PATH> [OPTIONS]
-```
-
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json, summary [default: table]
-- `-d, --detailed` - Show detailed analysis including symbol information
-- `--include-graph` - Include the semantic graph in JSON output
-- `--max-depth <DEPTH>` - Maximum directory depth to analyze
-- `--include <PATTERN>` - Include files matching pattern (can be used multiple times)
-- `--exclude <PATTERN>` - Exclude files matching pattern (can be used multiple times)
-- `--max-file-size <SIZE>` - Maximum file size to analyze (e.g., 1MB, 500KB)
-
-**Examples:**
-```bash
-# Basic analysis
-tree-sitter-cli analyze ./src
-
-# Detailed JSON output
-tree-sitter-cli analyze ./src --format json --detailed
-
-# JSON output with semantic graph context for agents
+tree-sitter-cli analyze ./src --format json
 tree-sitter-cli analyze ./src --format json --include-graph
-
-# Analyze with filters
-tree-sitter-cli analyze ./src --include "*.rs" --exclude "*/target/*" --max-depth 3
 ```
 
-### security - Advanced Security Vulnerability Scanning
-
-Comprehensive security analysis with multi-layered vulnerability detection.
+Run the canonical security scan:
 
 ```bash
-tree-sitter-cli security <PATH> [OPTIONS]
+tree-sitter-cli security ./src --format json
+tree-sitter-cli ast-security ./src --format sarif
 ```
 
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json, markdown [default: table]
-- `--min-severity <SEVERITY>` - Minimum severity: critical, high, medium, low, info [default: medium]
-- `--save-report <FILE>` - Save detailed report to file
-- `--enable-secrets` - Enable secrets detection
-- `--enable-dependencies` - Enable dependency vulnerability scanning
-- `--confidence <THRESHOLD>` - Minimum confidence threshold (0.0-1.0) [default: 0.7]
-- `--max-findings <COUNT>` - Maximum findings per category [default: 50]
-
-**Examples:**
-```bash
-# Basic security scan
-tree-sitter-cli security ./src
-
-# High-severity vulnerabilities with secrets detection
-tree-sitter-cli security ./src --min-severity high --enable-secrets
-
-# Comprehensive scan with report
-tree-sitter-cli security ./src --enable-secrets --enable-dependencies --save-report security-report.json
-```
-
-### symbols - Symbol Extraction and Analysis
-
-Extract and display code symbols with detailed information.
+Inspect symbols:
 
 ```bash
-tree-sitter-cli symbols <PATH> [OPTIONS]
+tree-sitter-cli symbols ./src --format json
+tree-sitter-cli find ./src --name parser
 ```
 
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json [default: table]
-- `--type <TYPE>` - Filter by symbol type: function, class, struct, interface, etc.
-- `--visibility <VIS>` - Filter by visibility: public, private, protected
-- `--language <LANG>` - Filter by language
-
-**Examples:**
-```bash
-# All symbols
-tree-sitter-cli symbols ./src
-
-# Only public functions
-tree-sitter-cli symbols ./src --type function --visibility public
-
-# Rust symbols only
-tree-sitter-cli symbols ./src --language rust --format json
-```
-
-### dependencies - Enhanced Dependency Analysis
-
-Comprehensive dependency analysis with vulnerability scanning.
+Analyze dependencies:
 
 ```bash
-tree-sitter-cli dependencies <PATH> [OPTIONS]
+tree-sitter-cli dependencies . --format json --graph
 ```
 
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json, markdown [default: table]
-- `--check-vulnerabilities` - Check for known vulnerabilities in dependencies
-- `--license-compliance` - Analyze license compatibility
-- `--outdated` - Show outdated dependencies
-- `--tree` - Show dependency tree
+## Help
 
-**Examples:**
-```bash
-# Basic dependency analysis
-tree-sitter-cli dependencies ./
-
-# Check for vulnerabilities
-tree-sitter-cli dependencies ./ --check-vulnerabilities --format json
-
-# Full analysis with license compliance
-tree-sitter-cli dependencies ./ --check-vulnerabilities --license-compliance --outdated
-```
-
-### query - Advanced Code Querying
-
-Powerful code search and analysis using semantic queries.
+Use built-in help for the current flag set instead of relying on stale examples:
 
 ```bash
-tree-sitter-cli query <PATH> <QUERY> [OPTIONS]
+tree-sitter-cli --help
+tree-sitter-cli analyze --help
+tree-sitter-cli security --help
+tree-sitter-cli dependencies --help
 ```
 
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json [default: table]
-- `--language <LANG>` - Target specific language
-- `--context <LINES>` - Show context lines around matches [default: 3]
-- `--case-sensitive` - Case-sensitive search
-- `--regex` - Use regular expressions
-
-**Examples:**
-```bash
-# Find authentication functions
-tree-sitter-cli query ./src "function.*auth" --language rust
-
-# Case-sensitive regex search
-tree-sitter-cli query ./src "Auth.*" --case-sensitive --regex --context 5
-```
-
-### find - Semantic Code Search
-
-Find code patterns, symbols, and relationships across the codebase.
-
-```bash
-tree-sitter-cli find <PATH> <PATTERN> [OPTIONS]
-```
-
-**Options:**
-- `-t, --type <TYPE>` - Search type: symbol, pattern, reference, definition
-- `--case-sensitive` - Case-sensitive search
-- `--whole-word` - Match whole words only
-- `--language <LANG>` - Target specific language
-
-**Examples:**
-```bash
-# Find symbol references
-tree-sitter-cli find ./src "authenticate" --type reference
-
-# Find function definitions
-tree-sitter-cli find ./src "login" --type definition --language rust
-```
-
-### map - Intent-to-Implementation Mapping
-
-Map business requirements and user stories to code implementations.
-
-```bash
-tree-sitter-cli map <PATH> [OPTIONS]
-```
-
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json, markdown [default: table]
-- `--requirements <FILE>` - Requirements specification file (JSON/YAML)
-- `--confidence <THRESHOLD>` - Minimum mapping confidence threshold [default: 0.7]
-- `--coverage-report` - Generate coverage report
-- `--gaps-only` - Show only gaps and missing implementations
-
-**Examples:**
-```bash
-# Basic mapping analysis
-tree-sitter-cli map ./src
-
-# Map with requirements file
-tree-sitter-cli map ./src --requirements requirements.json --format json
-
-# Show only gaps
-tree-sitter-cli map ./src --gaps-only --confidence 0.8
-```
-
-### stats - Codebase Statistics
-
-Generate detailed statistics about the codebase.
-
-```bash
-tree-sitter-cli stats <PATH> [OPTIONS]
-```
-
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json [default: table]
-- `--by-language` - Group statistics by language
-- `--include-tests` - Include test files in statistics
-- `--detailed` - Show detailed per-file statistics
-
-**Examples:**
-```bash
-# Basic statistics
-tree-sitter-cli stats ./src
-
-# Language breakdown
-tree-sitter-cli stats ./src --by-language --format json
-
-# Detailed statistics including tests
-tree-sitter-cli stats ./src --detailed --include-tests
-```
-
-### interactive - Interactive Analysis Mode
-
-Enter interactive mode for real-time code exploration and analysis.
-
-```bash
-tree-sitter-cli interactive <PATH>
-```
-
-**Interactive Commands:**
-- `help` - Show available commands
-- `stats` - Show codebase statistics
-- `files` - List analyzed files
-- `symbols` - Show extracted symbols
-- `find <name>` - Find symbols by name
-- `security` - Show the current security summary
-- `dependencies` - Show the current dependency summary
-- `clear` - Clear the screen
-- `history` - Show command history
-- `quit` - Exit interactive mode
-
-**Examples:**
-```bash
-# Start interactive mode
-tree-sitter-cli interactive ./src
-
-# Interactive session
-> stats
-> find login
-> security
-> quit
-```
-
-## Output Formats
-
-### Table Format
-Human-readable tabular output with colors and formatting.
-
-### JSON Format
-Machine-readable JSON output for integration with other tools.
-
-### Markdown Format
-Documentation-friendly markdown output for reports.
-
-### Summary Format
-Condensed summary output for quick overview.
-
-## Configuration File
-
-Create a `.tree-sitter-cli.toml` file in your project root:
-
-```toml
-[analysis]
-max_file_size = "1MB"
-max_depth = 10
-follow_symlinks = false
-include_patterns = ["*.rs", "*.js", "*.py"]
-exclude_patterns = ["*/target/*", "*/node_modules/*"]
-
-[security]
-min_confidence = 0.7
-enable_secrets = true
-enable_dependencies = true
-max_findings_per_category = 100
-
-[performance]
-complexity_threshold = 10
-enable_hotspot_detection = true
-
-[output]
-default_format = "table"
-use_colors = true
-verbose = false
-```
-
-## Exit Codes
-
-- `0` - Success
-- `1` - General error
-- `2` - Invalid arguments
-- `3` - File not found
-- `4` - Permission denied
-- `5` - Analysis failed
-- `10` - Security vulnerabilities found (when using `--fail-on-findings`)
+This is especially important because the CLI surface is feature-gated and has changed materially during the repository cleanup work.

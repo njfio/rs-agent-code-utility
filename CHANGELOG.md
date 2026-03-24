@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Criterion parser and security benchmarks restored under `benches/`.
+- Benchmark regression gate in CI with base-vs-PR comparison, `critcmp` reporting, and parser-threshold enforcement.
+- Declarative hardcoded-secret rules for JavaScript, Python, and Rust.
+- `ARCHITECTURE.md` documenting module organization, the security pipeline, feature flags, and the MCP interface.
+
+### Changed
+- README, CLI docs, MCP docs, contributor guidance, and feature-flag measurements now reflect the current feature-gated, MCP-centered surface.
+
 ## [0.2.0] - 2026-03-23
 
 ### Added

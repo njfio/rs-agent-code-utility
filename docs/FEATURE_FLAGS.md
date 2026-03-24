@@ -59,13 +59,13 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-23 with rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 with rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `566` |
-| Default | `cargo tree | wc -l` | `566` |
-| All features | `cargo tree --all-features | wc -l` | `1309` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `589` |
+| Default | `cargo tree | wc -l` | `589` |
+| All features | `cargo tree --all-features | wc -l` | `1328` |
 
 Notes:
 

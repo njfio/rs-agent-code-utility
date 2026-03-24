@@ -887,16 +887,16 @@ Phase 0 (CI/deps)
 
 ## Documentation Plan
 
-- [ ] Update `README.md` with new feature flag documentation
-- [ ] Update `AGENTS.md` to reflect deleted AI modules
-- [ ] Create `ARCHITECTURE.md` (replaces deleted planning docs) documenting:
+- [x] Update `README.md` with new feature flag documentation (checkpoint landed on 2026-03-24)
+- [x] Update `AGENTS.md` to reflect deleted AI modules
+- [x] Create `ARCHITECTURE.md` (replaces deleted planning docs) documenting:
   - Module organization
   - Security pipeline stages
   - Feature flag hierarchy
   - MCP tool interface
-- [ ] Update `CHANGELOG.md` for 0.2.0 release
-- [ ] Update `integration/mcp/README.md` with new tool definitions
-- [ ] Create `docs/FEATURE_FLAGS.md` with dependency-to-feature mapping table
+- [x] Update `CHANGELOG.md` for 0.2.0 release
+- [x] Update `integration/mcp/README.md` with new tool definitions
+- [x] Create `docs/FEATURE_FLAGS.md` with dependency-to-feature mapping table
 
 ---
 

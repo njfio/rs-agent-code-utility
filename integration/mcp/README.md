@@ -28,6 +28,15 @@ The initial MCP tool set is intentionally limited to CLI commands that already e
 
 `analyze_codebase` supports `includeGraph: true`, which maps to `tree-sitter-cli analyze --format json --include-graph` and returns a serialized semantic graph inside the CLI report.
 
+Checked-in schemas for these tools live in `integration/mcp/schemas/`:
+
+- `analyze_codebase.v1.json`
+- `get_symbols.v1.json`
+- `query_code.v1.json`
+- `scan_security.v1.json`
+- `analyze_dependencies.v1.json`
+- `query_semantic_graph.v1.json`
+
 ## Honest Limitations
 
 These planned tools are not exposed yet because the current CLI does not offer a stable dedicated JSON contract for them:
@@ -56,7 +65,7 @@ The package lives in `integration/mcp/server/`.
 Useful commands:
 
 ```bash
-cd /Users/n/RustroverProjects/rust_tree_sitter
+cd /path/to/rust_tree_sitter
 cargo build --bin tree-sitter-cli --features cli
 cd integration/mcp/server
 npm ci
@@ -66,3 +75,5 @@ npm run dev
 ```
 
 The server expects a built CLI binary at `target/debug/tree-sitter-cli`. Override with `RTS_CLI_PATH` if needed.
+
+The adapter implementation lives in `integration/mcp/server/src/`. Tool registration currently happens in `tool-definitions.ts`, and semantic graph filtering for `query_semantic_graph` happens in `semantic-graph.ts`.
