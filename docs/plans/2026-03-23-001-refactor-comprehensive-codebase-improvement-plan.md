@@ -715,7 +715,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
   ```
 - [x] Implement rule loader that compiles `.scm` patterns to tree-sitter queries
 - [x] Integrate rule evaluation into `SecurityPipeline` as a stage
-- [ ] Ship 10-20 built-in rules covering OWASP Top 5 for Rust, JS, Python
+- [x] Ship 10-20 built-in rules covering OWASP Top 5 for Rust, JS, Python (checkpoint landed on 2026-03-24)
 - [x] Store rules in `rules/` directory at repo root
 
 **Acceptance criteria:**

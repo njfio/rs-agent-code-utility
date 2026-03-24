@@ -55,7 +55,7 @@ pattern_file: eval.scm
 fn builtin_rule_directory_loads() -> Result<(), Box<dyn std::error::Error>> {
     let engine = DeclarativeRuleEngine::load_builtin()?;
     assert!(
-        engine.rule_count() >= 12,
+        engine.rule_count() >= 15,
         "expected the expanded built-in declarative rule set"
     );
     Ok(())
@@ -70,10 +70,12 @@ fn builtin_rules_match_representative_shipped_patterns() -> Result<(), Box<dyn s
         Language::JavaScript,
         "src/app.js",
         r#"
+        const API_KEY = "secret123";
         eval(userInput);
         child_process.execSync(userInput);
         "#,
         &[
+            "Hardcoded JavaScript secret",
             "Dynamic eval call",
             "Shell execution with child_process.execSync",
         ],
@@ -87,10 +89,15 @@ fn builtin_rules_match_representative_shipped_patterns() -> Result<(), Box<dyn s
         import os
         import yaml
 
+        API_KEY = "secret123"
         os.system(user_input)
         yaml.load(payload)
         "#,
-        &["Dynamic os.system call", "Unsafe yaml.load usage"],
+        &[
+            "Hardcoded Python secret",
+            "Dynamic os.system call",
+            "Unsafe yaml.load usage",
+        ],
     )?;
 
     assert_titles(
@@ -98,6 +105,8 @@ fn builtin_rules_match_representative_shipped_patterns() -> Result<(), Box<dyn s
         Language::Rust,
         "src/lib.rs",
         r#"
+        const API_KEY: &str = "secret123";
+
         fn run(user_cmd: &str) {
             std::process::Command::new(user_cmd);
             unsafe {
@@ -106,6 +115,7 @@ fn builtin_rules_match_representative_shipped_patterns() -> Result<(), Box<dyn s
         }
         "#,
         &[
+            "Hardcoded Rust secret",
             "Process execution with std::process::Command::new",
             "Unsafe block usage",
         ],
