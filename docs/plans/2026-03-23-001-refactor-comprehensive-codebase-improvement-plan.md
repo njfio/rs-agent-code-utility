@@ -679,16 +679,16 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 ##### Task 4.2: Cross-File Taint Analysis
 
 - [x] Extend `TaintSource` and `TaintSink` with `file_path: PathBuf` field (checkpoint landed on 2026-03-24)
-- [ ] Connect taint analysis to cross-file semantic graph (Task 4.1)
+- [x] Connect taint analysis to cross-file semantic graph (Task 4.1) via `TaintAnalyzer::analyze_codebase_with_graph` and semantic-graph `Calls` edges (checkpoint landed on 2026-03-24)
 - [ ] Implement interprocedural taint propagation:
-  - When a tainted value is passed as argument to a function in another file, propagate taint to that function's parameter
+  - [x] When a tainted value is passed as argument to a function in another file, propagate taint to that function's parameter (Rust/JavaScript checkpoint landed on 2026-03-24)
   - When a tainted return value crosses a file boundary, propagate taint to the caller
-- [ ] Start with Rust and JavaScript only
-- [ ] Add test fixtures: multi-file vulnerable patterns (request handler -> service -> query builder)
+- [x] Start with Rust and JavaScript only
+- [x] Add test fixtures: multi-file vulnerable patterns (request handler -> service -> query builder)
 
 **Acceptance criteria:**
 - Taint flows tracked across at least 2 file boundaries
-- Test: Python/JS request handler passing user input to a query function in another file is detected
+- Test: Rust/JS request handler passing user input to a query function in another file is detected
 - False positive rate on cross-file flows < 30%
 
 **Key files:**

@@ -1,5 +1,5 @@
-use crate::{Result, SyntaxTree};
-use std::collections::HashMap;
+use crate::{RelationshipType, Result, SemanticGraphQuery, SyntaxTree};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use tree_sitter::Node;
 
@@ -158,11 +158,13 @@ pub struct TaintAnalyzer {
     /// Known sanitization functions
     sanitizers: HashMap<String, Vec<VulnerabilityType>>,
     /// Variable assignments and aliasing tracking
-    variable_assignments: HashMap<String, Vec<VariableAssignment>>,
+    variable_assignments: HashMap<FunctionScope, Vec<VariableAssignment>>,
     /// Function definitions and their parameters
-    function_definitions: HashMap<String, FunctionDefinition>,
+    function_definitions: HashMap<FunctionScope, FunctionDefinition>,
     /// Call graph for inter-procedural analysis
-    call_graph: HashMap<String, Vec<FunctionCall>>,
+    call_graph: HashMap<FunctionScope, Vec<FunctionCall>>,
+    /// Cross-file call edges sourced from the semantic graph
+    cross_file_call_graph: HashMap<FunctionScope, Vec<FunctionScope>>,
     /// Source text for the tree currently being analyzed
     current_source: String,
 }
@@ -223,6 +225,25 @@ pub struct FunctionCall {
     pub location: TaintLocation,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct FunctionScope {
+    file_path: PathBuf,
+    function_name: String,
+}
+
+impl FunctionScope {
+    fn new(file_path: &Path, function_name: impl Into<String>) -> Self {
+        Self {
+            file_path: file_path.to_path_buf(),
+            function_name: function_name.into(),
+        }
+    }
+
+    fn from_location(file_path: &Path, function_name: Option<&str>) -> Self {
+        Self::new(file_path, function_name.unwrap_or("global"))
+    }
+}
+
 impl TaintAnalyzer {
     /// Create a new taint analyzer for the specified language
     pub fn new(language: &str) -> Self {
@@ -234,6 +255,7 @@ impl TaintAnalyzer {
             variable_assignments: HashMap::new(),
             function_definitions: HashMap::new(),
             call_graph: HashMap::new(),
+            cross_file_call_graph: HashMap::new(),
             current_source: String::new(),
         };
 
@@ -574,7 +596,6 @@ impl TaintAnalyzer {
         file_path: &Path,
     ) -> Result<Vec<TaintFlow>> {
         let mut flows = Vec::new();
-        self.set_current_source(tree);
 
         // Phase 1: Build program structure (functions, assignments, call graph)
         self.build_program_structure(tree, file_path)?;
@@ -587,7 +608,37 @@ impl TaintAnalyzer {
 
         // Phase 4: Perform enhanced data flow analysis
         for source in &sources {
-            let source_flows = self.trace_enhanced_taint_flows(tree, source, &sinks)?;
+            let source_flows = self.trace_enhanced_taint_flows(source, &sinks)?;
+            flows.extend(source_flows);
+        }
+
+        Ok(flows)
+    }
+
+    /// Analyze a language-specific set of files and use semantic graph call edges for
+    /// cross-file taint propagation.
+    pub fn analyze_codebase_with_graph(
+        &mut self,
+        files: &[(PathBuf, SyntaxTree)],
+        semantic_graph: &SemanticGraphQuery,
+    ) -> Result<Vec<TaintFlow>> {
+        let mut flows = Vec::new();
+        let mut sources = Vec::new();
+        let mut sinks = Vec::new();
+
+        self.clear_analysis_state();
+        for (file_path, tree) in files {
+            self.index_program_structure(tree, file_path)?;
+        }
+        self.rebuild_cross_file_call_graph(semantic_graph);
+
+        for (file_path, tree) in files {
+            sources.extend(self.find_taint_sources(tree, file_path)?);
+            sinks.extend(self.find_taint_sinks(tree, file_path)?);
+        }
+
+        for source in &sources {
+            let source_flows = self.trace_enhanced_taint_flows(source, &sinks)?;
             flows.extend(source_flows);
         }
 
@@ -620,15 +671,65 @@ impl TaintAnalyzer {
 
     /// Build program structure for inter-procedural analysis
     fn build_program_structure(&mut self, tree: &SyntaxTree, file_path: &Path) -> Result<()> {
-        // Clear previous analysis data
+        self.clear_analysis_state();
+        self.index_program_structure(tree, file_path)
+    }
+
+    fn clear_analysis_state(&mut self) {
         self.variable_assignments.clear();
         self.function_definitions.clear();
         self.call_graph.clear();
+        self.cross_file_call_graph.clear();
+    }
 
-        // Traverse AST to build structure
-        self.traverse_for_structure(tree.inner().root_node(), None, file_path)?;
+    fn index_program_structure(&mut self, tree: &SyntaxTree, file_path: &Path) -> Result<()> {
+        self.set_current_source(tree);
+        self.traverse_for_structure(tree.inner().root_node(), None, file_path)
+    }
 
-        Ok(())
+    fn rebuild_cross_file_call_graph(&mut self, semantic_graph: &SemanticGraphQuery) {
+        self.cross_file_call_graph.clear();
+
+        let snapshot = semantic_graph.snapshot();
+        let nodes_by_id: HashMap<_, _> = snapshot
+            .nodes
+            .into_iter()
+            .map(|node| (node.id.clone(), node))
+            .collect();
+
+        for edge in snapshot
+            .edges
+            .into_iter()
+            .filter(|edge| edge.relationship == RelationshipType::Calls)
+        {
+            let Some(from_node) = nodes_by_id.get(&edge.from) else {
+                continue;
+            };
+            let Some(to_node) = nodes_by_id.get(&edge.to) else {
+                continue;
+            };
+
+            if from_node.file_path == to_node.file_path {
+                continue;
+            }
+
+            self.cross_file_call_graph
+                .entry(FunctionScope::new(
+                    &from_node.file_path,
+                    from_node.name.clone(),
+                ))
+                .or_default()
+                .push(FunctionScope::new(&to_node.file_path, to_node.name.clone()));
+        }
+
+        for targets in self.cross_file_call_graph.values_mut() {
+            targets.sort_by(|left, right| {
+                left.file_path
+                    .cmp(&right.file_path)
+                    .then_with(|| left.function_name.cmp(&right.function_name))
+            });
+            targets.dedup();
+        }
     }
 
     /// Traverse AST to build program structure (functions, assignments, calls)
@@ -643,8 +744,10 @@ impl TaintAnalyzer {
         // Check for function definitions
         if self.is_function_definition(node) {
             if let Some(func_def) = self.extract_function_definition(node, file_path)? {
-                self.function_definitions
-                    .insert(func_def.name.clone(), func_def.clone());
+                self.function_definitions.insert(
+                    FunctionScope::new(file_path, func_def.name.clone()),
+                    func_def.clone(),
+                );
 
                 // Traverse function body with this function as context
                 let mut cursor = node.walk();
@@ -667,7 +770,7 @@ impl TaintAnalyzer {
         // Check for variable assignments
         if self.is_assignment(node) {
             if let Some(assignment) = self.extract_assignment(node, current_function, file_path)? {
-                let func_key = current_function.unwrap_or("global").to_string();
+                let func_key = FunctionScope::from_location(file_path, current_function);
                 self.variable_assignments
                     .entry(func_key)
                     .or_default()
@@ -678,7 +781,7 @@ impl TaintAnalyzer {
         // Check for function calls
         if self.is_function_call(node.kind()) {
             if let Some(call) = self.extract_function_call(node, current_function, file_path)? {
-                let func_key = current_function.unwrap_or("global").to_string();
+                let func_key = FunctionScope::from_location(file_path, current_function);
                 self.call_graph.entry(func_key).or_default().push(call);
             }
         }
@@ -745,23 +848,52 @@ impl TaintAnalyzer {
     /// Extract parameter names from parameter list node
     fn extract_parameter_names(&self, node: Node) -> Vec<String> {
         let mut names = Vec::new();
-        let mut cursor = node.walk();
+        self.collect_parameter_names(node, &mut names);
+        names
+    }
 
+    fn collect_parameter_names(&self, node: Node, names: &mut Vec<String>) {
+        if node.kind() == "identifier" && self.is_parameter_identifier(node) {
+            if let Some(name) = self.node_text(node) {
+                names.push(name);
+            }
+        }
+
+        let mut cursor = node.walk();
         if cursor.goto_first_child() {
             loop {
-                let child = cursor.node();
-                if child.kind() == "identifier" {
-                    if let Some(name) = self.node_text(child) {
-                        names.push(name);
-                    }
-                }
+                self.collect_parameter_names(cursor.node(), names);
                 if !cursor.goto_next_sibling() {
                     break;
                 }
             }
         }
+    }
 
-        names
+    fn is_parameter_identifier(&self, node: Node) -> bool {
+        let parent_kind = node
+            .parent()
+            .map(|parent| parent.kind())
+            .unwrap_or_default();
+        let grandparent_kind = node
+            .parent()
+            .and_then(|parent| parent.parent())
+            .map(|parent| parent.kind())
+            .unwrap_or_default();
+
+        matches!(
+            parent_kind,
+            "parameters"
+                | "formal_parameters"
+                | "parameter"
+                | "required_parameter"
+                | "optional_parameter"
+                | "rest_pattern"
+                | "self_parameter"
+        ) || matches!(
+            grandparent_kind,
+            "parameter" | "required_parameter" | "optional_parameter" | "self_parameter"
+        )
     }
 
     /// Check if node represents an assignment
@@ -1127,7 +1259,6 @@ impl TaintAnalyzer {
     /// Enhanced taint flow tracing with inter-procedural analysis
     fn trace_enhanced_taint_flows(
         &self,
-        _tree: &SyntaxTree,
         source: &TaintSource,
         sinks: &[TaintSink],
     ) -> Result<Vec<TaintFlow>> {
@@ -1149,7 +1280,7 @@ impl TaintAnalyzer {
         sink: &TaintSink,
     ) -> Result<Option<TaintFlow>> {
         // Start with the source variable/function
-        let mut tainted_variables = std::collections::HashSet::new();
+        let mut tainted_variables = HashSet::new();
         tainted_variables.insert(source.name.clone());
 
         // Build path through variable assignments and function calls
@@ -1181,104 +1312,95 @@ impl TaintAnalyzer {
         &self,
         source: &TaintSource,
         sink: &TaintSink,
-        tainted_variables: &mut std::collections::HashSet<String>,
+        tainted_variables: &mut HashSet<String>,
     ) -> Result<Vec<TaintStep>> {
-        let mut path = Vec::new();
-        let source_function = source.location.function.as_deref().unwrap_or("global");
-        let sink_function = sink.location.function.as_deref().unwrap_or("global");
+        let source_scope =
+            FunctionScope::from_location(&source.file_path, source.location.function.as_deref());
+        let sink_scope =
+            FunctionScope::from_location(&sink.file_path, sink.location.function.as_deref());
 
-        // Trace within source function
-        if let Some(assignments) = self.variable_assignments.get(source_function) {
-            for assignment in assignments {
-                if self.assignment_propagates_to_tainted(assignment, tainted_variables) {
-                    tainted_variables.insert(assignment.target.clone());
-
-                    let step = TaintStep {
-                        step_type: TaintStepType::Assignment,
-                        name: assignment.target.clone(),
-                        location: assignment.location.clone(),
-                        is_sanitizer: self.is_sanitizer_assignment(assignment),
-                        sanitizer_method: self.get_sanitizer_method(assignment),
-                    };
-                    path.push(step);
-                }
-            }
-        }
-
-        // Handle inter-procedural flows
-        if source_function != sink_function {
-            if let Some(inter_path) =
-                self.trace_inter_procedural_flow(source_function, sink_function, tainted_variables)?
-            {
-                path.extend(inter_path);
-            }
-        }
-
-        // Trace within sink function if different from source
-        if source_function != sink_function {
-            if let Some(assignments) = self.variable_assignments.get(sink_function) {
-                for assignment in assignments {
-                    if self.assignment_propagates_to_tainted(assignment, tainted_variables) {
-                        tainted_variables.insert(assignment.target.clone());
-
-                        let step = TaintStep {
-                            step_type: TaintStepType::Assignment,
-                            name: assignment.target.clone(),
-                            location: assignment.location.clone(),
-                            is_sanitizer: self.is_sanitizer_assignment(assignment),
-                            sanitizer_method: self.get_sanitizer_method(assignment),
-                        };
-                        path.push(step);
-                    }
-                }
-            }
-        }
-
-        Ok(path)
+        let mut visited = HashSet::new();
+        Ok(self
+            .trace_scope_to_scope(&source_scope, &sink_scope, tainted_variables, &mut visited)?
+            .unwrap_or_default())
     }
 
     /// Trace taint flow between functions (inter-procedural analysis)
-    fn trace_inter_procedural_flow(
+    fn trace_scope_to_scope(
         &self,
-        source_func: &str,
-        sink_func: &str,
-        tainted_variables: &mut std::collections::HashSet<String>,
+        current_scope: &FunctionScope,
+        sink_scope: &FunctionScope,
+        tainted_variables: &mut HashSet<String>,
+        visited: &mut HashSet<FunctionScope>,
     ) -> Result<Option<Vec<TaintStep>>> {
-        let mut path = Vec::new();
+        if !visited.insert(current_scope.clone()) {
+            return Ok(None);
+        }
 
-        // Look for function calls from source function
-        if let Some(calls) = self.call_graph.get(source_func) {
+        let mut base_path = Vec::new();
+        self.append_assignment_steps(current_scope, tainted_variables, &mut base_path);
+
+        if current_scope == sink_scope {
+            return Ok(Some(base_path));
+        }
+
+        if let Some(calls) = self.call_graph.get(current_scope) {
             for call in calls {
-                // Check if any tainted variables are passed as arguments
-                for (i, arg) in call.arguments.iter().enumerate() {
-                    if tainted_variables.contains(arg) {
-                        // Check if called function can reach sink function
-                        if self.can_reach_function(&call.function_name, sink_func) {
-                            // Add function call step
-                            path.push(TaintStep {
-                                step_type: TaintStepType::FunctionCall,
-                                name: call.function_name.clone(),
-                                location: call.location.clone(),
-                                is_sanitizer: self.is_sanitizer_function(&call.function_name),
-                                sanitizer_method: if self.is_sanitizer_function(&call.function_name)
-                                {
-                                    Some(call.function_name.clone())
-                                } else {
-                                    None
-                                },
-                            });
+                let tainted_argument_indexes: Vec<_> = call
+                    .arguments
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, argument)| {
+                        tainted_variables.contains(argument).then_some(index)
+                    })
+                    .collect();
 
-                            // Mark function parameters as tainted
-                            if let Some(func_def) =
-                                self.function_definitions.get(&call.function_name)
-                            {
-                                if i < func_def.parameters.len() {
-                                    tainted_variables.insert(func_def.parameters[i].clone());
-                                }
+                if tainted_argument_indexes.is_empty() {
+                    continue;
+                }
+
+                for target_scope in self.resolve_call_targets(current_scope, call) {
+                    if !self.can_reach_scope(&target_scope, sink_scope) {
+                        continue;
+                    }
+
+                    let mut branch_path = base_path.clone();
+                    let mut branch_tainted = tainted_variables.clone();
+                    branch_path.push(TaintStep {
+                        step_type: TaintStepType::FunctionCall,
+                        name: call.function_name.clone(),
+                        location: call.location.clone(),
+                        is_sanitizer: self.is_sanitizer_function(&call.function_name),
+                        sanitizer_method: self
+                            .is_sanitizer_function(&call.function_name)
+                            .then(|| call.function_name.clone()),
+                    });
+
+                    if let Some(func_def) = self.function_definitions.get(&target_scope) {
+                        for argument_index in &tainted_argument_indexes {
+                            if let Some(parameter_name) = func_def.parameters.get(*argument_index) {
+                                branch_tainted.insert(parameter_name.clone());
+                                branch_path.push(TaintStep {
+                                    step_type: TaintStepType::Parameter,
+                                    name: parameter_name.clone(),
+                                    location: func_def.location.clone(),
+                                    is_sanitizer: false,
+                                    sanitizer_method: None,
+                                });
                             }
-
-                            return Ok(Some(path));
                         }
+                    }
+
+                    let mut branch_visited = visited.clone();
+                    if let Some(mut downstream_path) = self.trace_scope_to_scope(
+                        &target_scope,
+                        sink_scope,
+                        &mut branch_tainted,
+                        &mut branch_visited,
+                    )? {
+                        branch_path.append(&mut downstream_path);
+                        *tainted_variables = branch_tainted;
+                        return Ok(Some(branch_path));
                     }
                 }
             }
@@ -1288,22 +1410,117 @@ impl TaintAnalyzer {
     }
 
     /// Check if one function can reach another through call graph
-    fn can_reach_function(&self, from: &str, to: &str) -> bool {
+    fn can_reach_scope(&self, from: &FunctionScope, to: &FunctionScope) -> bool {
         if from == to {
             return true;
         }
 
-        // Simple reachability check (could be enhanced with proper graph traversal)
-        if let Some(calls) = self.call_graph.get(from) {
-            for call in calls {
-                if call.function_name == to {
+        let mut visited = HashSet::new();
+        let mut stack = vec![from.clone()];
+
+        while let Some(scope) = stack.pop() {
+            if !visited.insert(scope.clone()) {
+                continue;
+            }
+
+            for target in self.direct_call_targets(&scope) {
+                if &target == to {
                     return true;
                 }
-                // Could add recursive check here for deeper analysis
+                if !visited.contains(&target) {
+                    stack.push(target);
+                }
             }
         }
 
         false
+    }
+
+    fn append_assignment_steps(
+        &self,
+        scope: &FunctionScope,
+        tainted_variables: &mut HashSet<String>,
+        path: &mut Vec<TaintStep>,
+    ) {
+        if let Some(assignments) = self.variable_assignments.get(scope) {
+            for assignment in assignments {
+                if self.assignment_propagates_to_tainted(assignment, tainted_variables)
+                    && tainted_variables.insert(assignment.target.clone())
+                {
+                    path.push(TaintStep {
+                        step_type: TaintStepType::Assignment,
+                        name: assignment.target.clone(),
+                        location: assignment.location.clone(),
+                        is_sanitizer: self.is_sanitizer_assignment(assignment),
+                        sanitizer_method: self.get_sanitizer_method(assignment),
+                    });
+                }
+            }
+        }
+    }
+
+    fn direct_call_targets(&self, scope: &FunctionScope) -> Vec<FunctionScope> {
+        let mut targets = HashSet::new();
+
+        if let Some(calls) = self.call_graph.get(scope) {
+            for call in calls {
+                targets.extend(self.resolve_call_targets(scope, call));
+            }
+        }
+
+        let mut sorted_targets: Vec<_> = targets.into_iter().collect();
+        sorted_targets.sort_by(|left, right| {
+            left.file_path
+                .cmp(&right.file_path)
+                .then_with(|| left.function_name.cmp(&right.function_name))
+        });
+        sorted_targets
+    }
+
+    fn resolve_call_targets(
+        &self,
+        scope: &FunctionScope,
+        call: &FunctionCall,
+    ) -> Vec<FunctionScope> {
+        let mut targets = HashSet::new();
+
+        for target_scope in self.function_definitions.keys() {
+            if target_scope.file_path == scope.file_path
+                && self.call_name_matches(&call.function_name, &target_scope.function_name)
+            {
+                targets.insert(target_scope.clone());
+            }
+        }
+
+        if let Some(cross_file_targets) = self.cross_file_call_graph.get(scope) {
+            for target_scope in cross_file_targets {
+                if self.call_name_matches(&call.function_name, &target_scope.function_name) {
+                    targets.insert(target_scope.clone());
+                }
+            }
+        }
+
+        let mut sorted_targets: Vec<_> = targets.into_iter().collect();
+        sorted_targets.sort_by(|left, right| {
+            left.file_path
+                .cmp(&right.file_path)
+                .then_with(|| left.function_name.cmp(&right.function_name))
+        });
+        sorted_targets
+    }
+
+    fn call_name_matches(&self, call_name: &str, function_name: &str) -> bool {
+        if call_name == function_name {
+            return true;
+        }
+
+        let normalized_call_name = call_name.rsplit("::").next().unwrap_or(call_name);
+        let normalized_call_name = normalized_call_name
+            .rsplit('.')
+            .next()
+            .unwrap_or(normalized_call_name);
+
+        normalized_call_name == function_name
     }
 
     /// Trace taint flows from a source to potential sinks (legacy method for compatibility)
@@ -1338,9 +1555,15 @@ impl TaintAnalyzer {
 
     /// Check if there's a potential flow between source and sink
     fn has_potential_flow(&self, source: &TaintSource, sink: &TaintSink) -> bool {
-        // Simplified heuristic - same function or close proximity
-        source.location.function == sink.location.function
-            || (source.location.line as i32 - sink.location.line as i32).abs() < 50
+        let source_scope =
+            FunctionScope::from_location(&source.file_path, source.location.function.as_deref());
+        let sink_scope =
+            FunctionScope::from_location(&sink.file_path, sink.location.function.as_deref());
+
+        source_scope == sink_scope
+            || self.can_reach_scope(&source_scope, &sink_scope)
+            || (source.file_path == sink.file_path
+                && (source.location.line as i32 - sink.location.line as i32).abs() < 50)
     }
 
     /// Helper methods for enhanced analysis
@@ -1348,7 +1571,7 @@ impl TaintAnalyzer {
     fn assignment_propagates_to_tainted(
         &self,
         assignment: &VariableAssignment,
-        tainted_vars: &std::collections::HashSet<String>,
+        tainted_vars: &HashSet<String>,
     ) -> bool {
         match &assignment.source {
             AssignmentSource::Variable(var) => tainted_vars.contains(var),
