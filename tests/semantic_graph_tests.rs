@@ -652,6 +652,67 @@ export function helper() {}
 }
 
 #[test]
+fn test_semantic_graph_builds_in_parallel_mode() -> Result<(), Box<dyn std::error::Error>> {
+    use rust_tree_sitter::{AnalysisConfig, CodebaseAnalyzer, RelationshipType};
+
+    let temp_dir = TempDir::new()?;
+    fs::create_dir_all(temp_dir.path().join("src"))?;
+
+    fs::write(
+        temp_dir.path().join("src").join("main.rs"),
+        "mod utils;\nuse crate::utils::helper;\n\nfn run() {\n    helper();\n}\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("src").join("utils.rs"),
+        "pub fn helper() {}\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("app.js"),
+        "import { helper } from \"./helper.js\";\n\nfunction run() {\n  helper();\n}\n",
+    )?;
+
+    fs::write(
+        temp_dir.path().join("helper.js"),
+        "export function helper() {}\n",
+    )?;
+
+    let config = AnalysisConfig {
+        enable_parallel: true,
+        parallel_threshold: 1,
+        ..AnalysisConfig::default()
+    };
+    let mut analyzer = CodebaseAnalyzer::with_config(config)?;
+    analyzer.enable_semantic_graph();
+    let result = analyzer.analyze_directory(temp_dir.path())?;
+
+    assert_eq!(result.total_files, 4);
+
+    let graph = analyzer
+        .semantic_graph()
+        .expect("semantic graph should exist");
+    let snapshot = graph.snapshot();
+
+    assert!(
+        snapshot.statistics.total_nodes > 0,
+        "expected semantic graph nodes in parallel mode"
+    );
+    assert!(snapshot.edges.iter().any(|edge| {
+        edge.relationship == RelationshipType::Imports
+            && edge.from == "module:src/main.rs"
+            && edge.to == "module:src/utils.rs"
+    }));
+    assert!(snapshot.edges.iter().any(|edge| {
+        edge.relationship == RelationshipType::Imports
+            && edge.from == "module:app.js"
+            && edge.to == "module:helper.js"
+    }));
+
+    Ok(())
+}
+
+#[test]
 fn test_semantic_graph_builds_cross_file_call_edges_and_queries(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use rust_tree_sitter::CodebaseAnalyzer;

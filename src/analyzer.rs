@@ -460,7 +460,7 @@ impl CodebaseAnalyzer {
 
     /// Analyze directory using parallel processing
     fn analyze_directory_parallel(
-        &self,
+        &mut self,
         root_path: PathBuf,
         file_paths: Vec<PathBuf>,
     ) -> Result<AnalysisResult> {
@@ -535,13 +535,13 @@ impl CodebaseAnalyzer {
         let result = final_result.clone();
         drop(final_result); // Release the lock
 
-        // Build semantic graph if enabled (sequential for now due to complexity)
+        // Build semantic graph after parallel file analysis by merging the file-level results.
         if self.semantic_graph.is_some() {
-            // Note: Semantic graph building is kept sequential for now
-            // as it requires complex coordination between threads
-            eprintln!(
-                "Note: Semantic graph building is performed sequentially even in parallel mode"
-            );
+            if let Some(ref mut graph) = self.semantic_graph {
+                if let Err(e) = graph.build_from_analysis(&result) {
+                    eprintln!("Warning: Failed to build semantic graph: {}", e);
+                }
+            }
         }
 
         Ok(result)
