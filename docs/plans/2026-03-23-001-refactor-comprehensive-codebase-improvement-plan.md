@@ -317,13 +317,13 @@ The target architecture has three layers:
 
 ##### Task 2.1: Replace String Heuristics with AST Traversal
 
-- [ ] In `src/performance_analysis.rs`, replace all `symbol.name.contains(...)` and `text.contains(...)` heuristics with tree-sitter AST node traversals:
+- [x] In `src/performance_analysis.rs`, replace all `symbol.name.contains(...)` and `text.contains(...)` heuristics with tree-sitter AST node traversals:
   - Nested loop detection: walk AST for `for_expression`/`while_expression`/`loop_expression` nodes nested inside each other
   - Allocation hotspot detection: walk AST for function calls to `Vec::new()`, `HashMap::new()`, `String::new()`, `.clone()`, `.to_string()`, `.collect()` inside loops
   - Indexing pattern detection: walk AST for array indexing nodes inside loop bodies
-- [ ] Implement language-specific patterns using tree-sitter queries (`.scm` syntax) for: Rust, JavaScript, Python (the 3 most common)
-- [ ] Add regression tests: create test fixtures with known hotspots, verify detection
-- [ ] Add negative tests: functions named "loop_handler" or "allocation_tracker" must NOT be flagged
+- [x] Implement language-specific patterns using tree-sitter queries (`.scm` syntax) for: Rust, JavaScript, Python (the 3 most common)
+- [x] Add regression tests: create test fixtures with known hotspots, verify detection
+- [x] Add negative tests: functions named "loop_handler" or "allocation_tracker" must NOT be flagged
 
 ### Research Insights: Tree-sitter Query Patterns
 
@@ -364,21 +364,21 @@ The target architecture has three layers:
 
 **Approach:** Add a `SecurityPipeline` facade that orchestrates existing modules as stages. Do NOT merge files -- preserve the modular structure in `src/security/`.
 
-- [ ] Create `src/security/pipeline.rs` with `SecurityPipeline` struct:
+- [x] Create `src/security/pipeline.rs` with `SecurityPipeline` struct:
   ```
   Parse -> Taint Analysis -> AST Detection -> OWASP Check -> Specialized Detectors -> Filter -> Score -> Report
   ```
-- [ ] Wire taint state from `taint_analysis.rs` into the detection stages so detectors share taint context
-- [ ] Extend existing `confidence: f64` field (already on `SecurityFinding` in `ast_analyzer.rs`) to all finding types
-- [ ] Implement confidence scoring logic:
+- [x] Wire taint state from `taint_analysis.rs` into the detection stages so detectors share taint context
+- [x] Extend existing `confidence: f64` field (already on `SecurityFinding` in `ast_analyzer.rs`) to all finding types
+- [x] Implement confidence scoring logic:
   - High (0.8-1.0): Finding confirmed by taint analysis with source-to-sink path
   - Medium (0.5-0.8): AST pattern match without taint confirmation
   - Low (0.0-0.5): Heuristic-only match (string patterns, name-based)
-- [ ] Default output threshold: only show findings with confidence >= 0.5 (configurable via `--min-confidence`)
-- [ ] Replace "ML" filter (`security/ml_filter.rs`) internals with honest deterministic rules (rename to `heuristic_filter.rs`)
-- [ ] Keep the `deterministic_filter.rs` as the primary filter
-- [ ] Gate `ai_false_positive_filter.rs` behind `net` feature (it requires AI providers)
-- [ ] Clarify relationship between new `SecurityPipeline` and existing `AdvancedSecurityAnalyzer` -- document which one is the canonical entry point, and deprecate the other
+- [x] Default output threshold: only show findings with confidence >= 0.5 (configurable via `--min-confidence`)
+- [x] Replace "ML" filter (`security/ml_filter.rs`) internals with honest deterministic rules (rename to `heuristic_filter.rs`)
+- [x] Keep the `deterministic_filter.rs` as the primary filter
+- [x] Gate `ai_false_positive_filter.rs` behind `net` feature (it requires AI providers)
+- [x] Clarify relationship between new `SecurityPipeline` and existing `AdvancedSecurityAnalyzer` -- document which one is the canonical entry point, and deprecate the other
 
 ### Research Insights: Security Pipeline
 
@@ -407,14 +407,14 @@ The target architecture has three layers:
 
 ##### Task 2.3: Inline Suppression Comments
 
-- [ ] Implement `// rts-ignore[rule-id]` comment parsing:
+- [x] Implement `// rts-ignore[rule-id]` comment parsing:
   - Scope: suppresses findings on the immediately following line (N+1), matching ESLint's `eslint-disable-next-line`
   - Also support `// rts-ignore` (no rule-id) to suppress all findings on next line
   - Support language-appropriate comment syntax: `//` (Rust, JS, TS, C, C++, Go), `#` (Python)
   - Parse comments from tree-sitter AST (use `comment` node type)
-- [ ] Add suppressed findings to SARIF output with `"suppressions"` array per SARIF 2.1.0 spec
-- [ ] Inline suppressions take precedence over baseline suppressions
-- [ ] Add tests for each supported comment syntax
+- [x] Add suppressed findings to SARIF output with `"suppressions"` array per SARIF 2.1.0 spec
+- [x] Inline suppressions take precedence over baseline suppressions
+- [x] Add tests for each supported comment syntax
 
 **Acceptance criteria:**
 - `// rts-ignore[sql-injection]` on line N suppresses sql-injection findings on line N+1
@@ -426,18 +426,18 @@ The target architecture has three layers:
 
 **Scope note (from simplicity review):** Start with 12 high-signal test fixtures (2 true positives + 1 true negative per vulnerability class), not 96. Expand the corpus iteratively as false positive/negative patterns emerge from dogfooding.
 
-- [ ] Create `tests/fixtures/security-corpus/` directory
-- [ ] Add initial ground-truth test files (12 minimum):
+- [x] Create `tests/fixtures/security-corpus/` directory
+- [x] Add initial ground-truth test files (12 minimum):
   - `sql-injection/` -- 2 true positives, 1 true negative (Rust or JS)
   - `command-injection/` -- 2 true positives, 1 true negative
   - `secrets/` -- 2 true positives, 1 true negative
   - `xss/` -- 2 true positives, 1 true negative (JS)
-- [ ] Write integration tests that run the pipeline against the corpus and assert:
+- [x] Write integration tests that run the pipeline against the corpus and assert:
   - True positives detected (recall)
   - True negatives not flagged (precision)
   - Confidence scores within expected range
-- [ ] Add proptest strategies for generating syntactic variants of known vulnerable patterns
-- [ ] Track precision/recall metrics and gate CI on regression (< 80% recall or < 70% precision fails)
+- [x] Add proptest strategies for generating syntactic variants of known vulnerable patterns
+- [x] Track precision/recall metrics and gate CI on regression (< 80% recall or < 70% precision fails)
 - [ ] Expand corpus over time as dogfooding reveals gaps (target 50+ fixtures by end of Phase 2)
 
 **Acceptance criteria:**

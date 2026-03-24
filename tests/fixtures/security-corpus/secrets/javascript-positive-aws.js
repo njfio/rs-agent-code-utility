@@ -1,0 +1,6 @@
+const AWS_ACCESS_KEY_ID = "AKIA5C38F4W0HTH09SN4";
+const AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+
+export function readCredentials() {
+  return { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY };
+}

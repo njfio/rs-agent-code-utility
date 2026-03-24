@@ -86,6 +86,7 @@ wiremock = "0.5"
 criterion = "0.5"
 assert_cmd = "2.0"
 predicates = "3.0"
+proptest = "1.6"
 tokio = { version = "1.0", features = ["full"] }
 
 [features]
