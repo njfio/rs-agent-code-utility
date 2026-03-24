@@ -13,15 +13,12 @@ mod tests {
 
     // Test vulnerable SQL injection detection
     #[tokio::test]
-    async fn test_vulnerable_sql_injection_detection() {
-        let analyzer = AstSecurityAnalyzer::new().expect("Failed to create analyzer");
+    async fn test_vulnerable_sql_injection_detection() -> Result<(), Box<dyn std::error::Error>> {
+        let analyzer = AstSecurityAnalyzer::new()?;
         let path = Path::new("test_files/security_tests/vulnerable/sql_injection.rs");
 
         if path.exists() {
-            let findings = analyzer
-                .analyze_file(path, Language::Rust)
-                .await
-                .expect("Analysis failed");
+            let findings = analyzer.analyze_file(path, Language::Rust).await?;
 
             // Should detect at least some security issues
             // Note: The actual analyzer might not detect SQL injection specifically yet
@@ -37,58 +34,58 @@ mod tests {
                 );
             }
         }
+
+        Ok(())
     }
 
     // Test secure SQL injection code produces no false positives
     #[tokio::test]
-    async fn test_secure_sql_injection_no_false_positives() {
-        let analyzer = AstSecurityAnalyzer::new().expect("Failed to create analyzer");
+    async fn test_secure_sql_injection_no_false_positives() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let analyzer = AstSecurityAnalyzer::new()?;
         let path = Path::new("test_files/security_tests/secure/sql_injection.rs");
 
         if path.exists() {
-            let findings = analyzer
-                .analyze_file(path, Language::Rust)
-                .await
-                .expect("Analysis failed");
+            let findings = analyzer.analyze_file(path, Language::Rust).await?;
 
             // Secure code should ideally have fewer findings than vulnerable code
             // This is a basic validation that the pipeline works
             let _ = findings.len();
         }
+
+        Ok(())
     }
 
     // Test vulnerable XSS detection
     #[tokio::test]
-    async fn test_vulnerable_xss_detection() {
-        let analyzer = AstSecurityAnalyzer::new().expect("Failed to create analyzer");
+    async fn test_vulnerable_xss_detection() -> Result<(), Box<dyn std::error::Error>> {
+        let analyzer = AstSecurityAnalyzer::new()?;
         let path = Path::new("test_files/security_tests/vulnerable/xss.rs");
 
         if path.exists() {
-            let findings = analyzer
-                .analyze_file(path, Language::Rust)
-                .await
-                .expect("Analysis failed");
+            let findings = analyzer.analyze_file(path, Language::Rust).await?;
 
             // Should detect at least some security issues
             let _ = findings.len();
         }
+
+        Ok(())
     }
 
     // Test secure XSS code produces no false positives
     #[tokio::test]
-    async fn test_secure_xss_no_false_positives() {
-        let analyzer = AstSecurityAnalyzer::new().expect("Failed to create analyzer");
+    async fn test_secure_xss_no_false_positives() -> Result<(), Box<dyn std::error::Error>> {
+        let analyzer = AstSecurityAnalyzer::new()?;
         let path = Path::new("test_files/security_tests/secure/xss.rs");
 
         if path.exists() {
-            let findings = analyzer
-                .analyze_file(path, Language::Rust)
-                .await
-                .expect("Analysis failed");
+            let findings = analyzer.analyze_file(path, Language::Rust).await?;
 
             // Secure code should ideally have fewer findings than vulnerable code
             let _ = findings.len();
         }
+
+        Ok(())
     }
 
     // Test accuracy metrics calculation
@@ -143,8 +140,8 @@ mod tests {
 
     // Test comprehensive analysis on multiple files
     #[tokio::test]
-    async fn test_comprehensive_analysis_accuracy() {
-        let analyzer = AstSecurityAnalyzer::new().expect("Failed to create analyzer");
+    async fn test_comprehensive_analysis_accuracy() -> Result<(), Box<dyn std::error::Error>> {
+        let analyzer = AstSecurityAnalyzer::new()?;
 
         let test_files = vec![
             (
@@ -196,12 +193,14 @@ mod tests {
         println!("Precision: {:.2}%", metrics.precision() * 100.0);
         println!("Recall: {:.2}%", metrics.recall() * 100.0);
         println!("F1 Score: {:.2}%", metrics.f1_score() * 100.0);
+
+        Ok(())
     }
 
     // Test edge cases and error handling
     #[tokio::test]
-    async fn test_edge_cases() {
-        let analyzer = AstSecurityAnalyzer::new().expect("Failed to create analyzer");
+    async fn test_edge_cases() -> Result<(), Box<dyn std::error::Error>> {
+        let analyzer = AstSecurityAnalyzer::new()?;
 
         // Test with non-existent file
         let nonexistent_path = Path::new("nonexistent_file.rs");
@@ -222,24 +221,20 @@ mod tests {
                 "Should handle empty file"
             );
         }
+
+        Ok(())
     }
 
     // Test analyzer creation and basic functionality
     #[test]
-    fn test_analyzer_creation() {
-        let analyzer_result = AstSecurityAnalyzer::new();
-
-        // Should be able to create analyzer
-        assert!(
-            analyzer_result.is_ok(),
-            "Should be able to create AST security analyzer"
-        );
-
-        let _analyzer = analyzer_result.unwrap();
+    fn test_analyzer_creation() -> Result<(), Box<dyn std::error::Error>> {
+        let _analyzer = AstSecurityAnalyzer::new()?;
 
         // Analyzer should have language analyzers
         // This is a basic smoke test that the analyzer is properly initialized
         assert!(true, "Analyzer created successfully");
+
+        Ok(())
     }
 }
 // Use ast-grep for code-aware search and refactors. Prefer structural patterns over plain text. Keep all rewrites idempotent, reviewed, and covered by tests.

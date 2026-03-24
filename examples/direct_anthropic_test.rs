@@ -6,8 +6,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🤖 Direct Anthropic API Test");
     println!("============================");
 
-    let api_key =
-        env::var("ANTHROPIC_API_KEY").expect("ANTHROPIC_API_KEY environment variable not set");
+    let api_key = env::var("ANTHROPIC_API_KEY")?;
 
     println!("🔑 API Key found: {}...", &api_key[..10]);
 

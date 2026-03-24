@@ -73,7 +73,10 @@ fn test_parse_file() -> Result<(), Box<dyn std::error::Error>> {
     let test_file = temp_dir.path().join("test.rs");
     fs::write(&test_file, "fn main() { println!(\"Hello, world!\"); }")?;
 
-    let tree = parser.parse_file(test_file.to_str().unwrap())?;
+    let test_file = test_file
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("temporary file path was not valid UTF-8"))?;
+    let tree = parser.parse_file(test_file)?;
 
     assert!(!tree.has_error(), "Tree should not have parse errors");
     assert_eq!(tree.root_node().kind(), "source_file");

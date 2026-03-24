@@ -486,7 +486,7 @@ function createUser() {
     // Verify semantic graph was built
     let graph = analyzer
         .semantic_graph()
-        .expect("Semantic graph should be available");
+        .ok_or_else(|| std::io::Error::other("semantic graph should be available"))?;
     let stats = graph.get_statistics();
 
     assert!(stats.total_nodes > 0, "Graph should have nodes");
@@ -624,7 +624,7 @@ export function helper() {}
 
     let graph = analyzer
         .semantic_graph()
-        .expect("semantic graph should exist");
+        .ok_or_else(|| std::io::Error::other("semantic graph should exist"))?;
     let snapshot = graph.snapshot();
 
     assert!(
@@ -691,7 +691,7 @@ fn test_semantic_graph_builds_in_parallel_mode() -> Result<(), Box<dyn std::erro
 
     let graph = analyzer
         .semantic_graph()
-        .expect("semantic graph should exist");
+        .ok_or_else(|| std::io::Error::other("semantic graph should exist"))?;
     let snapshot = graph.snapshot();
 
     assert!(
@@ -746,7 +746,7 @@ fn test_semantic_graph_builds_cross_file_call_edges_and_queries(
 
     let graph = analyzer
         .semantic_graph()
-        .expect("semantic graph should exist");
+        .ok_or_else(|| std::io::Error::other("semantic graph should exist"))?;
     let snapshot = graph.snapshot();
 
     let rust_caller_id = snapshot
@@ -754,25 +754,25 @@ fn test_semantic_graph_builds_cross_file_call_edges_and_queries(
         .iter()
         .find(|node| node.file_path == PathBuf::from("src/main.rs") && node.name == "run")
         .map(|node| node.id.clone())
-        .expect("expected Rust caller node");
+        .ok_or_else(|| std::io::Error::other("expected Rust caller node"))?;
     let rust_callee_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("src/utils.rs") && node.name == "helper")
         .map(|node| node.id.clone())
-        .expect("expected Rust callee node");
+        .ok_or_else(|| std::io::Error::other("expected Rust callee node"))?;
     let js_caller_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("app.js") && node.name == "run")
         .map(|node| node.id.clone())
-        .expect("expected JavaScript caller node");
+        .ok_or_else(|| std::io::Error::other("expected JavaScript caller node"))?;
     let js_callee_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("helper.js") && node.name == "helper")
         .map(|node| node.id.clone())
-        .expect("expected JavaScript callee node");
+        .ok_or_else(|| std::io::Error::other("expected JavaScript callee node"))?;
 
     assert!(
         snapshot.edges.iter().any(|edge| {
@@ -890,7 +890,7 @@ fn test_semantic_graph_resolves_transitive_reexports_for_call_edges(
 
     let graph = analyzer
         .semantic_graph()
-        .expect("semantic graph should exist");
+        .ok_or_else(|| std::io::Error::other("semantic graph should exist"))?;
     let snapshot = graph.snapshot();
 
     let rust_caller_id = snapshot
@@ -898,25 +898,25 @@ fn test_semantic_graph_resolves_transitive_reexports_for_call_edges(
         .iter()
         .find(|node| node.file_path == PathBuf::from("src/main.rs") && node.name == "run")
         .map(|node| node.id.clone())
-        .expect("expected Rust caller node");
+        .ok_or_else(|| std::io::Error::other("expected Rust caller node"))?;
     let rust_callee_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("src/utils.rs") && node.name == "helper")
         .map(|node| node.id.clone())
-        .expect("expected Rust callee node");
+        .ok_or_else(|| std::io::Error::other("expected Rust callee node"))?;
     let js_caller_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("app.js") && node.name == "run")
         .map(|node| node.id.clone())
-        .expect("expected JavaScript caller node");
+        .ok_or_else(|| std::io::Error::other("expected JavaScript caller node"))?;
     let js_callee_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("helper.js") && node.name == "helper")
         .map(|node| node.id.clone())
-        .expect("expected JavaScript callee node");
+        .ok_or_else(|| std::io::Error::other("expected JavaScript callee node"))?;
 
     assert!(
         snapshot.edges.iter().any(|edge| {

@@ -3,40 +3,41 @@ use rust_tree_sitter::{ConfidenceSource, Language, SecurityPipeline};
 use tempfile::TempDir;
 
 #[test]
-fn test_security_pipeline_hides_heuristic_findings_by_default() {
-    let pipeline = SecurityPipeline::new().unwrap();
+fn test_security_pipeline_hides_heuristic_findings_by_default(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let pipeline = SecurityPipeline::new()?;
     let source = r#"
         fn delete_user(user_id: &str) {
             let _id = user_id;
         }
     "#;
 
-    let findings = pipeline
-        .analyze_with_path(source, std::path::Path::new("src/admin.rs"), Language::Rust)
-        .unwrap();
+    let findings =
+        pipeline.analyze_with_path(source, std::path::Path::new("src/admin.rs"), Language::Rust)?;
 
     assert!(
         findings.is_empty(),
         "heuristic-only findings should be hidden below the default 0.5 threshold"
     );
+
+    Ok(())
 }
 
 #[test]
-fn test_security_pipeline_can_include_lower_confidence_heuristics() {
+fn test_security_pipeline_can_include_lower_confidence_heuristics(
+) -> Result<(), Box<dyn std::error::Error>> {
     let pipeline = SecurityPipeline::with_config(SecurityPipelineConfig {
         min_confidence: 0.4,
         ..SecurityPipelineConfig::default()
-    })
-    .unwrap();
+    })?;
     let source = r#"
         fn delete_user(user_id: &str) {
             let _id = user_id;
         }
     "#;
 
-    let findings = pipeline
-        .analyze_with_path(source, std::path::Path::new("src/admin.rs"), Language::Rust)
-        .unwrap();
+    let findings =
+        pipeline.analyze_with_path(source, std::path::Path::new("src/admin.rs"), Language::Rust)?;
 
     assert!(
         findings.iter().any(|finding| {
@@ -46,11 +47,14 @@ fn test_security_pipeline_can_include_lower_confidence_heuristics() {
         "lowering the threshold should surface the heuristic broken-access-control finding"
     );
     assert!(findings.iter().all(|finding| finding.confidence >= 0.4));
+
+    Ok(())
 }
 
 #[test]
-fn test_security_pipeline_keeps_ast_backed_findings_at_or_above_default_threshold() {
-    let temp_dir = TempDir::new().unwrap();
+fn test_security_pipeline_keeps_ast_backed_findings_at_or_above_default_threshold(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("admin.rs");
     let source = r#"
         fn delete_user(user_id: &str) {
@@ -58,14 +62,13 @@ fn test_security_pipeline_keeps_ast_backed_findings_at_or_above_default_threshol
         }
     "#;
 
-    std::fs::write(&file_path, source).unwrap();
+    std::fs::write(&file_path, source)?;
 
     let pipeline = SecurityPipeline::with_config(SecurityPipelineConfig {
         min_confidence: 0.4,
         ..SecurityPipelineConfig::default()
-    })
-    .unwrap();
-    let findings = pipeline.analyze_file(&file_path, Language::Rust).unwrap();
+    })?;
+    let findings = pipeline.analyze_file(&file_path, Language::Rust)?;
 
     assert!(
         findings.iter().any(|finding| {
@@ -75,4 +78,6 @@ fn test_security_pipeline_keeps_ast_backed_findings_at_or_above_default_threshol
         "the file-based pipeline path should surface the same heuristic finding as the in-memory path"
     );
     assert!(findings.iter().all(|finding| finding.confidence >= 0.4));
+
+    Ok(())
 }
