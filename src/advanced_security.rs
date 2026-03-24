@@ -57,7 +57,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// New code should prefer `SecurityPipeline` directly. This type remains to preserve the
 /// existing codebase-wide result shape and CLI/reporting integrations.
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct AdvancedSecurityAnalyzer {
     /// Configuration for advanced security analysis
     pub config: AdvancedSecurityConfig,
@@ -570,12 +570,6 @@ impl AdvancedSecurityAnalyzer {
             secrets_detector,
             ai_false_positive_filter: ai_filter,
         })
-    }
-}
-
-impl Default for AdvancedSecurityAnalyzer {
-    fn default() -> Self {
-        Self::new().unwrap()
     }
 }
 
@@ -4134,7 +4128,8 @@ mod tests {
     use std::collections::HashMap;
     use std::path::PathBuf;
 
-    fn create_test_analysis_result() -> AnalysisResult {
+    fn create_test_analysis_result(
+    ) -> std::result::Result<AnalysisResult, Box<dyn std::error::Error>> {
         use std::io::Write;
         use tempfile::Builder;
 
@@ -4143,17 +4138,13 @@ mod tests {
         let temp_file = Builder::new()
             .prefix("test_security_")
             .suffix(".rs")
-            .tempfile()
-            .expect("Failed to create temporary file for testing");
+            .tempfile()?;
 
-        let (mut file, temp_path) = temp_file.keep().expect("Failed to persist temporary file");
-        writeln!(file, "fn vulnerable_function() {{")
-            .expect("Failed to write function declaration to test file");
-        writeln!(file, "    let password = \"hardcoded_password\";")
-            .expect("Failed to write password line to test file");
-        writeln!(file, "    println!(\"Password: {{}}\", password);")
-            .expect("Failed to write println line to test file");
-        writeln!(file, "}}").expect("Failed to write function closing brace to test file");
+        let (mut file, temp_path) = temp_file.keep()?;
+        writeln!(file, "fn vulnerable_function() {{")?;
+        writeln!(file, "    let password = \"hardcoded_password\";")?;
+        writeln!(file, "    println!(\"Password: {{}}\", password);")?;
+        writeln!(file, "}}")?;
 
         // Ensure the file is flushed and closed
         drop(file);
@@ -4180,7 +4171,7 @@ mod tests {
             security_vulnerabilities: Vec::new(),
         };
 
-        AnalysisResult {
+        Ok(AnalysisResult {
             root_path: PathBuf::from("."),
             total_files: 1,
             parsed_files: 1,
@@ -4189,43 +4180,39 @@ mod tests {
             languages: HashMap::new(),
             files: vec![file_info],
             config: crate::AnalysisConfig::default(),
-        }
+        })
     }
 
     #[test]
-    fn test_advanced_security_scanner_creation() {
+    fn test_advanced_security_scanner_creation(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new()
-            .expect("Failed to create AdvancedSecurityAnalyzer with default config");
+        let scanner = AdvancedSecurityAnalyzer::new()?;
 
         assert!(scanner.config.owasp_analysis);
         assert!(scanner.config.secrets_detection);
         assert_eq!(scanner.config.min_severity, SecuritySeverity::Low);
+
+        Ok(())
     }
 
     #[test]
-    fn test_scan_analysis_result() {
+    fn test_scan_analysis_result() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new()
-            .expect("Failed to create AdvancedSecurityAnalyzer for scan test");
-        let analysis = create_test_analysis_result();
+        let scanner = AdvancedSecurityAnalyzer::new()?;
+        let analysis = create_test_analysis_result()?;
 
-        let result = scanner.analyze(&analysis);
-        if let Err(e) = &result {
-            eprintln!("Security analysis failed: {:?}", e);
-        }
-        assert!(result.is_ok());
-
-        let security_result = result.expect("Security analysis should succeed with test data");
+        let security_result = scanner.analyze(&analysis)?;
         // Vulnerabilities should be counted
         assert!(security_result.security_score <= 100);
+
+        Ok(())
     }
 
     #[test]
-    fn test_user_input_function_detection() {
+    fn test_user_input_function_detection() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new()
-            .expect("Failed to create AdvancedSecurityAnalyzer for user input test");
+        let scanner = AdvancedSecurityAnalyzer::new()?;
 
         // Test user input function detection
         assert!(scanner.is_user_input_function("request"));
@@ -4235,6 +4222,8 @@ mod tests {
         assert!(scanner.is_user_input_function("getenv"));
         assert!(!scanner.is_user_input_function("println"));
         assert!(!scanner.is_user_input_function("calculate"));
+
+        Ok(())
     }
 
     #[test]
@@ -4250,10 +4239,9 @@ mod tests {
     }
 
     #[test]
-    fn test_entropy_calculation() {
+    fn test_entropy_calculation() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _config = AdvancedSecurityConfig::default();
-        let scanner = AdvancedSecurityAnalyzer::new()
-            .expect("Failed to create AdvancedSecurityAnalyzer for entropy test");
+        let scanner = AdvancedSecurityAnalyzer::new()?;
 
         // High entropy string (likely secret)
         let high_entropy = "sk-1234567890abcdef1234567890abcdef";
@@ -4262,5 +4250,7 @@ mod tests {
         // Low entropy string (unlikely secret)
         let low_entropy = "password123";
         assert!(scanner.calculate_entropy(low_entropy) < 4.0);
+
+        Ok(())
     }
 }

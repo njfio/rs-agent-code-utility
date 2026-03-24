@@ -153,7 +153,6 @@ pub mod advanced_memory;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_parallel;
 /// Advanced security analysis with OWASP compliance
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_security;
 /// AI service layer and provider integrations
 #[allow(clippy::unwrap_used, clippy::expect_used)]
