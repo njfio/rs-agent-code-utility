@@ -49,7 +49,7 @@ These remain part of the core build today and still dominate the dependency foot
 - `serde`, `serde_json`, `serde_yaml`, `toml`
 - `regex`, `sha2`, `rand`, `rayon`, `petgraph`, `ignore`
 - `crc32fast`, `flate2`, `crossbeam-channel`, `parking_lot`, `walkdir`, `base64`
-- `chrono`, `uuid`, `async-trait`, `config`, `tracing`, `anyhow`, `dashmap`, `exponential-backoff`
+- `chrono`, `uuid`, `async-trait`, `config`, `tracing`, `anyhow`, `exponential-backoff`
 
 ## Binary and Example Gating
 
@@ -61,13 +61,13 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, and replacing direct `dirs` usage with internal std-based path resolution, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, and swapping the cache backend off the direct `dashmap` dependency, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `582` |
-| Default | `cargo tree | wc -l` | `582` |
-| All features | `cargo tree --all-features | wc -l` | `1393` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `576` |
+| Default | `cargo tree | wc -l` | `576` |
+| All features | `cargo tree --all-features | wc -l` | `1392` |
 
 Notes:
 
@@ -76,4 +76,5 @@ Notes:
 - `memmap2` is absent from `cargo tree --no-default-features` and reappears when `mmap` is enabled.
 - `num_cpus` is no longer a direct core dependency; default thread sizing now uses `std::thread::available_parallelism()`.
 - `dirs` is no longer a direct core dependency; infrastructure default paths are resolved with internal std-based helpers, although `dirs` still appears transitively under `ml` through `hf-hub`.
+- `dashmap` is no longer a direct core dependency; the in-memory cache now uses `parking_lot::RwLock<HashMap<...>>`, although `dashmap` still appears transitively under `net` through `governor`.
 - The crate-count target from the plan is still not met. The next reduction pass should focus on the remaining always-on direct dependencies and the tree-sitter grammar footprint.

@@ -6,8 +6,9 @@
 use super::paths::app_cache_dir;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use dashmap::DashMap;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -20,7 +21,7 @@ use tracing::error;
 /// Multi-level cache with memory and disk storage
 #[derive(Clone)]
 pub struct Cache {
-    memory_cache: Arc<DashMap<String, CacheEntry>>,
+    memory_cache: Arc<RwLock<HashMap<String, CacheEntry>>>,
     disk_cache_dir: Option<PathBuf>,
     default_ttl: Duration,
     max_memory_entries: usize,
@@ -69,7 +70,7 @@ impl Cache {
         let disk_cache_dir = config.disk_cache_dir.clone();
 
         let cache = Self {
-            memory_cache: Arc::new(DashMap::new()),
+            memory_cache: Arc::new(RwLock::new(HashMap::new())),
             disk_cache_dir: config.disk_cache_dir,
             default_ttl: config.default_ttl,
             max_memory_entries: config.memory_max_entries,
@@ -170,7 +171,7 @@ impl Cache {
 
     /// Check if key exists in cache
     pub async fn exists(&self, key: &str) -> bool {
-        self.memory_cache.contains_key(key)
+        self.memory_cache.read().contains_key(key)
             || self.disk_entry_exists(key).await.unwrap_or_else(|e| {
                 debug!(
                     "Failed to check disk cache existence for key '{}': {}",
@@ -182,7 +183,7 @@ impl Cache {
 
     /// Remove entry from cache
     pub async fn remove(&self, key: &str) -> Result<bool> {
-        let memory_removed = self.memory_cache.remove(key).is_some();
+        let memory_removed = self.memory_cache.write().remove(key).is_some();
         let disk_removed = self.remove_disk_entry(key).await.unwrap_or_else(|e| {
             debug!("Failed to remove disk cache entry for key '{}': {}", key, e);
             false
@@ -193,7 +194,7 @@ impl Cache {
 
     /// Clear all cache entries
     pub async fn clear(&self) -> Result<()> {
-        self.memory_cache.clear();
+        self.memory_cache.write().clear();
 
         if let Some(disk_dir) = &self.disk_cache_dir {
             if disk_dir.exists() {
@@ -208,12 +209,13 @@ impl Cache {
 
     /// Get cache statistics
     pub async fn stats(&self) -> Result<CacheStats> {
-        let memory_entries = self.memory_cache.len();
-        let memory_size_bytes: usize = self
-            .memory_cache
-            .iter()
-            .map(|entry| entry.value().size_bytes)
-            .sum();
+        let (memory_entries, memory_size_bytes) = {
+            let memory_cache = self.memory_cache.read();
+            let memory_entries = memory_cache.len();
+            let memory_size_bytes: usize =
+                memory_cache.values().map(|entry| entry.size_bytes).sum();
+            (memory_entries, memory_size_bytes)
+        };
 
         let (disk_entries, disk_size_bytes) = self.get_disk_stats().await?;
 
@@ -239,35 +241,37 @@ impl Cache {
     /// Store entry in memory cache
     async fn set_memory_entry(&self, key: &str, mut entry: CacheEntry) -> Result<()> {
         // Check if we need to evict entries
-        if self.memory_cache.len() >= self.max_memory_entries {
+        if self.memory_cache.read().len() >= self.max_memory_entries {
             self.evict_lru_entries(1).await?;
         }
 
         entry.last_accessed = Utc::now();
-        self.memory_cache.insert(key.to_string(), entry);
+        self.memory_cache.write().insert(key.to_string(), entry);
         Ok(())
     }
 
     /// Get entry from memory cache
     async fn get_memory_entry(&self, key: &str) -> Result<Option<CacheEntry>> {
-        if let Some(mut entry) = self.memory_cache.get_mut(key) {
-            let now = Utc::now();
+        let now = Utc::now();
+        let mut cache = self.memory_cache.write();
+        let mut expired = false;
+        let mut result = None;
 
-            // Check if expired
+        if let Some(entry) = cache.get_mut(key) {
             if now > entry.expires_at {
-                drop(entry);
-                self.memory_cache.remove(key);
-                return Ok(None);
+                expired = true;
+            } else {
+                entry.access_count += 1;
+                entry.last_accessed = now;
+                result = Some(entry.clone());
             }
-
-            // Update access statistics
-            entry.access_count += 1;
-            entry.last_accessed = now;
-
-            return Ok(Some(entry.clone()));
         }
 
-        Ok(None)
+        if expired {
+            cache.remove(key);
+        }
+
+        Ok(result)
     }
 
     /// Store entry in disk cache
@@ -368,14 +372,16 @@ impl Cache {
     async fn evict_lru_entries(&self, count: usize) -> Result<()> {
         let mut entries: Vec<_> = self
             .memory_cache
+            .read()
             .iter()
-            .map(|entry| (entry.key().clone(), entry.value().last_accessed))
+            .map(|(key, entry)| (key.clone(), entry.last_accessed))
             .collect();
 
         entries.sort_by(|a, b| a.1.cmp(&b.1));
 
+        let mut memory_cache = self.memory_cache.write();
         for (key, _) in entries.into_iter().take(count) {
-            self.memory_cache.remove(&key);
+            memory_cache.remove(&key);
             debug!("Evicted LRU cache entry: {}", key);
         }
 
@@ -383,7 +389,6 @@ impl Cache {
     }
 
     /// Background cleanup task
-    #[cfg(feature = "net")]
     #[cfg(feature = "net")]
     async fn cleanup_task(&self, interval: Duration) {
         let mut cleanup_interval = tokio::time::interval(interval);
@@ -401,19 +406,19 @@ impl Cache {
     #[cfg(feature = "net")]
     async fn cleanup_expired_entries(&self) -> Result<()> {
         let now = Utc::now();
-        let mut expired_keys = Vec::new();
-
-        // Find expired memory entries
-        for entry in self.memory_cache.iter() {
-            if now > entry.value().expires_at {
-                expired_keys.push(entry.key().clone());
-            }
-        }
+        let mut expired_keys: Vec<_> = self
+            .memory_cache
+            .read()
+            .iter()
+            .filter_map(|(key, entry)| (now > entry.expires_at).then_some(key.clone()))
+            .collect();
 
         // Remove expired memory entries
+        let mut memory_cache = self.memory_cache.write();
         for key in &expired_keys {
-            self.memory_cache.remove(key);
+            memory_cache.remove(key);
         }
+        drop(memory_cache);
 
         // Clean up expired disk entries
         if let Some(disk_dir) = &self.disk_cache_dir {

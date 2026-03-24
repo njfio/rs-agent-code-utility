@@ -64,7 +64,6 @@ config = "0.14"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 anyhow = "1.0"
-dashmap = "5.5"
 governor = { version = "0.6", optional = true }
 tower = { version = "0.4", features = ["timeout", "retry"], optional = true }
 # backoff = "0.4"  # Replaced with exponential-backoff due to maintenance issues
