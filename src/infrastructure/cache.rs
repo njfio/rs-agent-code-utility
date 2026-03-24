@@ -8,13 +8,12 @@ use crate::log_debug as debug;
 #[cfg(feature = "net")]
 use crate::log_error as error;
 use anyhow::Result;
-use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 /// Multi-level cache with memory and disk storage
@@ -61,6 +60,15 @@ pub struct CacheConfig {
     pub disk_cache_dir: Option<PathBuf>,
     pub default_ttl: Duration,
     pub cleanup_interval: Duration,
+}
+
+fn read_lock<T>(lock: &RwLock<T>) -> std::sync::RwLockReadGuard<'_, T> {
+    lock.read().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn write_lock<T>(lock: &RwLock<T>) -> std::sync::RwLockWriteGuard<'_, T> {
+    lock.write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 impl Cache {
@@ -170,7 +178,7 @@ impl Cache {
 
     /// Check if key exists in cache
     pub async fn exists(&self, key: &str) -> bool {
-        self.memory_cache.read().contains_key(key)
+        read_lock(&self.memory_cache).contains_key(key)
             || self.disk_entry_exists(key).await.unwrap_or_else(|e| {
                 debug!(
                     "Failed to check disk cache existence for key '{}': {}",
@@ -182,7 +190,7 @@ impl Cache {
 
     /// Remove entry from cache
     pub async fn remove(&self, key: &str) -> Result<bool> {
-        let memory_removed = self.memory_cache.write().remove(key).is_some();
+        let memory_removed = write_lock(&self.memory_cache).remove(key).is_some();
         let disk_removed = self.remove_disk_entry(key).await.unwrap_or_else(|e| {
             debug!("Failed to remove disk cache entry for key '{}': {}", key, e);
             false
@@ -193,7 +201,7 @@ impl Cache {
 
     /// Clear all cache entries
     pub async fn clear(&self) -> Result<()> {
-        self.memory_cache.write().clear();
+        write_lock(&self.memory_cache).clear();
 
         if let Some(disk_dir) = &self.disk_cache_dir {
             if disk_dir.exists() {
@@ -209,7 +217,7 @@ impl Cache {
     /// Get cache statistics
     pub async fn stats(&self) -> Result<CacheStats> {
         let (memory_entries, memory_size_bytes) = {
-            let memory_cache = self.memory_cache.read();
+            let memory_cache = read_lock(&self.memory_cache);
             let memory_entries = memory_cache.len();
             let memory_size_bytes: usize =
                 memory_cache.values().map(|entry| entry.size_bytes).sum();
@@ -240,19 +248,19 @@ impl Cache {
     /// Store entry in memory cache
     async fn set_memory_entry(&self, key: &str, mut entry: CacheEntry) -> Result<()> {
         // Check if we need to evict entries
-        if self.memory_cache.read().len() >= self.max_memory_entries {
+        if read_lock(&self.memory_cache).len() >= self.max_memory_entries {
             self.evict_lru_entries(1).await?;
         }
 
         entry.last_accessed = crate::current_timestamp_millis();
-        self.memory_cache.write().insert(key.to_string(), entry);
+        write_lock(&self.memory_cache).insert(key.to_string(), entry);
         Ok(())
     }
 
     /// Get entry from memory cache
     async fn get_memory_entry(&self, key: &str) -> Result<Option<CacheEntry>> {
         let now = crate::current_timestamp_millis();
-        let mut cache = self.memory_cache.write();
+        let mut cache = write_lock(&self.memory_cache);
         let mut expired = false;
         let mut result = None;
 
@@ -369,16 +377,16 @@ impl Cache {
 
     /// Evict least recently used entries from memory cache
     async fn evict_lru_entries(&self, count: usize) -> Result<()> {
-        let mut entries: Vec<_> = self
-            .memory_cache
-            .read()
+        let memory_cache = read_lock(&self.memory_cache);
+        let mut entries: Vec<_> = memory_cache
             .iter()
             .map(|(key, entry)| (key.clone(), entry.last_accessed))
             .collect();
+        drop(memory_cache);
 
         entries.sort_by(|a, b| a.1.cmp(&b.1));
 
-        let mut memory_cache = self.memory_cache.write();
+        let mut memory_cache = write_lock(&self.memory_cache);
         for (key, _) in entries.into_iter().take(count) {
             memory_cache.remove(&key);
             debug!("Evicted LRU cache entry: {}", key);
@@ -405,15 +413,15 @@ impl Cache {
     #[cfg(feature = "net")]
     async fn cleanup_expired_entries(&self) -> Result<()> {
         let now = crate::current_timestamp_millis();
-        let mut expired_keys: Vec<_> = self
-            .memory_cache
-            .read()
+        let memory_cache = read_lock(&self.memory_cache);
+        let mut expired_keys: Vec<_> = memory_cache
             .iter()
             .filter_map(|(key, entry)| (now > entry.expires_at).then_some(key.clone()))
             .collect();
+        drop(memory_cache);
 
         // Remove expired memory entries
-        let mut memory_cache = self.memory_cache.write();
+        let mut memory_cache = write_lock(&self.memory_cache);
         for key in &expired_keys {
             memory_cache.remove(key);
         }

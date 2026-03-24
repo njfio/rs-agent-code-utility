@@ -11,11 +11,10 @@
 
 use crate::error::{Error, Result};
 use crate::system_parallelism;
-use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, sync_channel, Receiver, Sender, SyncSender, TrySendError};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
@@ -118,6 +117,15 @@ pub struct ThreadPoolStats {
     pub memory_usage_bytes: usize,
     pub cpu_usage_percent: f64,
     pub work_steals: u64,
+}
+
+fn read_lock<T>(lock: &RwLock<T>) -> std::sync::RwLockReadGuard<'_, T> {
+    lock.read().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn write_lock<T>(lock: &RwLock<T>) -> std::sync::RwLockWriteGuard<'_, T> {
+    lock.write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Internal task wrapper with metadata
@@ -238,7 +246,7 @@ impl Worker {
             memory_usage.fetch_sub(task_memory, Ordering::Relaxed);
 
             // Update statistics
-            let mut stats_guard = stats.write();
+            let mut stats_guard = write_lock(&stats);
             match result {
                 Ok(_) => {
                     stats_guard.completed_tasks += 1;
@@ -337,9 +345,9 @@ impl AdvancedThreadPool {
             Arc::clone(&self.global_task_queue),
         );
 
-        self.workers.write().insert(worker_id, worker);
+        write_lock(&self.workers).insert(worker_id, worker);
 
-        let mut stats = self.stats.write();
+        let mut stats = write_lock(&self.stats);
         stats.total_threads += 1;
 
         Ok(worker_id)
@@ -356,8 +364,8 @@ impl AdvancedThreadPool {
             while !shutdown.load(Ordering::Relaxed) {
                 thread::sleep(config.monitoring_interval);
 
-                let mut stats_guard = stats.write();
-                let workers_guard = workers.read();
+                let mut stats_guard = write_lock(&stats);
+                let workers_guard = read_lock(&workers);
 
                 // Update thread counts
                 stats_guard.active_threads = workers_guard
@@ -418,7 +426,7 @@ impl AdvancedThreadPool {
 
         // Try to send directly to a worker first
         {
-            let workers = self.workers.read();
+            let workers = read_lock(&self.workers);
             for worker in workers.values() {
                 if worker.is_idle.load(Ordering::Relaxed) {
                     match worker.try_send_task(task_wrapper) {
@@ -453,7 +461,7 @@ impl AdvancedThreadPool {
 
         // For high-priority tasks, try to find an idle worker immediately
         if priority >= TaskPriority::High {
-            let workers = self.workers.read();
+            let workers = read_lock(&self.workers);
             for worker in workers.values() {
                 if worker.is_idle.load(Ordering::Relaxed) {
                     match worker.try_send_task(task_wrapper) {
@@ -479,7 +487,7 @@ impl AdvancedThreadPool {
 
     /// Get current statistics
     pub fn stats(&self) -> ThreadPoolStats {
-        self.stats.read().clone()
+        read_lock(&self.stats).clone()
     }
 
     /// Shutdown the thread pool
@@ -492,7 +500,7 @@ impl AdvancedThreadPool {
         }
 
         // Shutdown workers
-        let workers = self.workers.read();
+        let workers = read_lock(&self.workers);
         for worker in workers.values() {
             if let Some(_handle) = &worker.handle {
                 // We can't join here because we only have a reference
