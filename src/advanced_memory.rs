@@ -7,9 +7,12 @@
 //! - Memory usage tracking and reporting
 //! - Garbage collection hints for long-running processes
 //! - Memory pressure monitoring and optimization
+//!
+//! When the optional `mmap` feature is disabled, `MemoryMappedFile` transparently falls back
+//! to an in-memory buffer so the public API stays available without pulling `memmap2` into the
+//! default dependency surface.
 
 use crate::error::{Error, Result};
-use memmap2::{Mmap, MmapOptions};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
@@ -17,6 +20,14 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+#[cfg(feature = "mmap")]
+use memmap2::{Mmap, MmapOptions};
+
+#[cfg(feature = "mmap")]
+type MappedBytes = Mmap;
+#[cfg(not(feature = "mmap"))]
+type MappedBytes = Vec<u8>;
 
 /// Configuration for memory management
 #[derive(Debug, Clone)]
@@ -27,7 +38,7 @@ pub struct MemoryConfig {
     pub streaming_threshold_bytes: usize,
     /// Chunk size for streaming analysis (bytes)
     pub chunk_size_bytes: usize,
-    /// Enable memory-mapped files
+    /// Enable memory-mapped files when the optional `mmap` feature is available
     pub enable_memory_mapping: bool,
     /// Memory pool size for object reuse
     pub memory_pool_size: usize,
@@ -43,7 +54,7 @@ impl Default for MemoryConfig {
             max_memory_bytes: 512 * 1024 * 1024,         // 512MB
             streaming_threshold_bytes: 50 * 1024 * 1024, // 50MB
             chunk_size_bytes: 1024 * 1024,               // 1MB chunks
-            enable_memory_mapping: true,
+            enable_memory_mapping: cfg!(feature = "mmap"),
             memory_pool_size: 10 * 1024 * 1024, // 10MB pool
             pressure_check_interval: Duration::from_secs(5),
             gc_hint_threshold_percent: 80,
@@ -66,21 +77,15 @@ pub struct MemoryStats {
 
 /// Memory-mapped file wrapper with safe access
 pub struct MemoryMappedFile {
-    mmap: Mmap,
+    data: MappedBytes,
     file_size: usize,
     _path: std::path::PathBuf,
 }
 
 impl MemoryMappedFile {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let file = File::open(&path).map_err(|e| {
-            Error::IoError(std::io::Error::other(format!(
-                "Failed to open file for memory mapping: {}",
-                e
-            )))
-        })?;
-
-        let metadata = file.metadata().map_err(|e| {
+        let path_ref = path.as_ref();
+        let metadata = std::fs::metadata(path_ref).map_err(|e| {
             Error::IoError(std::io::Error::other(format!(
                 "Failed to get file metadata: {}",
                 e
@@ -89,21 +94,43 @@ impl MemoryMappedFile {
 
         let file_size = metadata.len() as usize;
 
-        // Memory map the file
-        let mmap = unsafe {
-            MmapOptions::new().map(&file).map_err(|e| {
+        #[cfg(feature = "mmap")]
+        let data = {
+            let file = File::open(path_ref).map_err(|e| {
                 Error::IoError(std::io::Error::other(format!(
-                    "Failed to memory map file: {}",
+                    "Failed to open file for memory mapping: {}",
                     e
                 )))
-            })?
+            })?;
+
+            // Memory map the file
+            unsafe {
+                MmapOptions::new().map(&file).map_err(|e| {
+                    Error::IoError(std::io::Error::other(format!(
+                        "Failed to memory map file: {}",
+                        e
+                    )))
+                })?
+            }
         };
 
+        #[cfg(not(feature = "mmap"))]
+        let data = std::fs::read(path_ref).map_err(|e| {
+            Error::IoError(std::io::Error::other(format!(
+                "Failed to read file into fallback buffer: {}",
+                e
+            )))
+        })?;
+
         Ok(Self {
-            mmap,
+            data,
             file_size,
-            _path: path.as_ref().to_path_buf(),
+            _path: path_ref.to_path_buf(),
         })
+    }
+
+    pub fn uses_real_memory_mapping() -> bool {
+        cfg!(feature = "mmap")
     }
 
     /// Get the file size
@@ -113,7 +140,7 @@ impl MemoryMappedFile {
 
     /// Get a slice of the memory-mapped data
     pub fn as_slice(&self) -> &[u8] {
-        &self.mmap
+        self.data.as_ref()
     }
 
     /// Read data from a specific offset
@@ -124,13 +151,12 @@ impl MemoryMappedFile {
                 "Read beyond file bounds",
             )));
         }
-        Ok(&self.mmap[offset..offset + len])
+        Ok(&self.as_slice()[offset..offset + len])
     }
 
     /// Check if the file is suitable for memory mapping
     pub fn is_suitable_for_mapping(file_size: u64) -> bool {
-        // Don't memory map files larger than 1GB to avoid excessive memory usage
-        file_size <= 1024 * 1024 * 1024
+        cfg!(feature = "mmap") && file_size <= 1024 * 1024 * 1024
     }
 }
 
@@ -551,7 +577,9 @@ impl AdvancedMemoryManager {
         match strategy {
             AnalysisStrategy::MemoryMapped => {
                 let mmap = MemoryMappedFile::new(&file_path)?;
-                self.gc.memory_tracker.record_memory_mapped_file();
+                if MemoryMappedFile::uses_real_memory_mapping() {
+                    self.gc.memory_tracker.record_memory_mapped_file();
+                }
                 Ok(Box::new(mmap))
             }
             AnalysisStrategy::Streaming => {

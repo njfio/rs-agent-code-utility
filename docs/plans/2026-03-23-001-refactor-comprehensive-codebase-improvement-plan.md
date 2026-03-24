@@ -261,16 +261,16 @@ The target architecture has three layers:
 - [x] Verify `ml` feature correctly gates: `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub`
 - [x] Verify `net` feature correctly gates: `reqwest`, `tokio` (full runtime -- core tokio for async may stay)
 - [x] Verify `db` feature correctly gates: `sqlx`
-- [x] Create `full` feature alias: `full = ["std", "serde", "ml", "net", "db", "cli", "wiki"]`
+- [x] Create `full` feature alias: `full = ["std", "serde", "ml", "net", "db", "cli", "wiki", "mmap"]`
 - [ ] Audit remaining 34 direct deps for additional gating opportunities:
   - `pulldown-cmark` -> gate behind `wiki` feature
   - `tower`, `governor` -> gate behind `net` (rate limiting only needed for AI providers)
   - `rustyline`, `syntect` -> already gated behind `cli`
-  - `memmap2` -> evaluate if needed by core or only by `embeddings` (ml)
+  - `memmap2` -> gate behind dedicated `mmap` feature; keep `advanced_memory` usable with buffered fallback when disabled
 - [x] Update CI to test: `--no-default-features`, default features, `--all-features`
 - [x] Create dependency-to-feature mapping table (see Architecture Research Insights above) and store in `docs/FEATURE_FLAGS.md`
 
-**Implementation note (2026-03-24):** The feature split is already live in the repo: default features are `["std", "serde"]`, both CLI bins require `cli`, `docs/FEATURE_FLAGS.md` documents the mapping, and current builds pass for `cargo build`, `cargo build --no-default-features`, `cargo check --features ml`, `cargo check --features net`, `cargo check --features db`, and `cargo check --all-features`. The remaining open item in Task 1.1 is the next reduction pass over always-on dependencies like `memmap2`.
+**Implementation note (2026-03-24):** The feature split is already live in the repo: default features are `["std", "serde"]`, both CLI bins require `cli`, `docs/FEATURE_FLAGS.md` documents the mapping, and current builds pass for `cargo build`, `cargo build --no-default-features`, `cargo check --features ml`, `cargo check --features net`, `cargo check --features db`, and `cargo check --all-features`. `memmap2` has now been moved behind a dedicated `mmap` feature while keeping `advanced_memory` available through a buffered fallback in the default build. The remaining open item in Task 1.1 is the next reduction pass over other always-on dependencies.
 
 ### Research Insights: Feature Stratification
 

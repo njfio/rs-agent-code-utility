@@ -43,7 +43,7 @@ pulldown-cmark = { version = "0.10", optional = true }
 flate2 = "1.0"
 crossbeam-channel = "0.5"
 parking_lot = "0.12"
-memmap2 = "0.9"
+memmap2 = { version = "0.9", optional = true }
 walkdir = "2.4"
 base64 = "0.21"
 
@@ -124,6 +124,9 @@ net = [
     "dep:governor",
     "dep:tower",
 ]
+mmap = [
+    "dep:memmap2",
+]
 db = [
     "dep:sqlx",
 ]
@@ -131,7 +134,7 @@ wiki = [
     "dep:pulldown-cmark",
     "net",
 ]
-full = ["std", "serde", "ml", "net", "db", "cli", "wiki"]
+full = ["std", "serde", "ml", "net", "db", "cli", "wiki", "mmap"]
 
 # Gate all examples behind the optional "demo" feature
 [[example]]
