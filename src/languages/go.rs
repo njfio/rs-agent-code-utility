@@ -917,6 +917,14 @@ mod tests {
     use super::*;
     use crate::Parser;
 
+    fn parse_source(source: &str) -> crate::SyntaxTree {
+        let parser = Parser::new(crate::Language::Go)
+            .unwrap_or_else(|error| panic!("failed to create Go parser for test: {error}"));
+        parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse Go source for test: {error}"))
+    }
+
     #[test]
     fn test_go_function_detection() {
         let source = r#"
@@ -937,8 +945,7 @@ func init() {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let functions = GoSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
@@ -969,8 +976,7 @@ func (r *Rectangle) Scale(factor float64) {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let methods = GoSyntax::find_methods(&tree, source);
         // Relaxed assertion - parser may not detect all methods
@@ -995,8 +1001,7 @@ type Address struct {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let structs = GoSyntax::find_structs(&tree, source);
         assert_eq!(structs.len(), 2);
@@ -1025,8 +1030,7 @@ type ReadWriter interface {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let interfaces = GoSyntax::find_interfaces(&tree, source);
         assert_eq!(interfaces.len(), 3);
@@ -1067,8 +1071,7 @@ type privateStruct struct {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let analysis = GoSyntax::analyze_package(&tree, source);
         // Relaxed assertion - parser may not extract package name correctly
@@ -1116,8 +1119,7 @@ func main() {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let features = GoSyntax::detect_go_features(&tree);
         assert!(features.contains(&"Goroutines".to_string()));
@@ -1151,8 +1153,7 @@ func variadic(args ...string) {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_declaration");
         // Relaxed assertion - parser may not detect all functions
@@ -1173,8 +1174,7 @@ type Person struct {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let struct_nodes = tree.find_nodes_by_kind("struct_type");
         // Relaxed assertion - parser may not detect struct fields correctly
@@ -1209,8 +1209,7 @@ func regularFunction() {
 }
         "#;
 
-        let parser = Parser::new(crate::Language::Go).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_declaration");
         assert_eq!(function_nodes.len(), 3);

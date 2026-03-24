@@ -666,6 +666,14 @@ mod tests {
     use super::*;
     use crate::Parser;
 
+    fn parse_source(source: &str) -> crate::SyntaxTree {
+        let parser = Parser::new(crate::Language::JavaScript)
+            .unwrap_or_else(|error| panic!("failed to create JavaScript parser for test: {error}"));
+        parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse JavaScript source for test: {error}"))
+    }
+
     #[test]
     fn test_javascript_function_detection() {
         let source = r#"
@@ -682,8 +690,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::JavaScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let functions = JavaScriptSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
@@ -711,8 +718,7 @@ mod tests {
             };
         "#;
 
-        let parser = Parser::new(crate::Language::JavaScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let classes = JavaScriptSyntax::find_classes(&tree, source);
         assert_eq!(classes.len(), 1); // Only named classes are found
@@ -732,8 +738,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::JavaScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let features = JavaScriptSyntax::detect_modern_features(&tree);
         assert!(features.contains(&"Arrow Functions".to_string()));
@@ -764,8 +769,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::JavaScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let complexity = JavaScriptSyntax::analyze_complexity(&tree);
         assert!(complexity > 5); // Should detect multiple decision points

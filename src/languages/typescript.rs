@@ -834,6 +834,14 @@ mod tests {
     use super::*;
     use crate::Parser;
 
+    fn parse_source(source: &str) -> crate::SyntaxTree {
+        let parser = Parser::new(crate::Language::TypeScript)
+            .unwrap_or_else(|error| panic!("failed to create TypeScript parser for test: {error}"));
+        parser
+            .parse(source, None)
+            .unwrap_or_else(|error| panic!("failed to parse TypeScript source for test: {error}"))
+    }
+
     #[test]
     fn test_typescript_function_detection() {
         let source = r#"
@@ -850,8 +858,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::TypeScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let functions = TypeScriptSyntax::find_functions(&tree, source);
         assert_eq!(functions.len(), 3);
@@ -879,8 +886,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::TypeScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let classes = TypeScriptSyntax::find_classes(&tree, source);
         assert_eq!(classes.len(), 1);
@@ -901,8 +907,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::TypeScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let interfaces = TypeScriptSyntax::find_interfaces(&tree, source);
         assert_eq!(interfaces.len(), 2);
@@ -922,8 +927,7 @@ mod tests {
             type UserCallback = (user: User) => void;
         "#;
 
-        let parser = Parser::new(crate::Language::TypeScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let type_aliases = TypeScriptSyntax::find_type_aliases(&tree, source);
         assert_eq!(type_aliases.len(), 2);
@@ -951,8 +955,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::TypeScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let enums = TypeScriptSyntax::find_enums(&tree, source);
         assert_eq!(enums.len(), 2);
@@ -987,8 +990,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::TypeScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let features = TypeScriptSyntax::detect_typescript_features(&tree);
         assert!(features.contains(&"Interfaces".to_string()));
@@ -1008,8 +1010,7 @@ mod tests {
             }
         "#;
 
-        let parser = Parser::new(crate::Language::TypeScript).unwrap();
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parse_source(source);
 
         let function_nodes = tree.find_nodes_by_kind("function_declaration");
         assert!(!function_nodes.is_empty());
