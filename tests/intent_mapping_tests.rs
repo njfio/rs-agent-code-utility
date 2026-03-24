@@ -80,7 +80,7 @@ fn test_intent_mapping_system_with_config() {
         auto_validation_threshold: 0.95,
     };
 
-    let system = IntentMappingSystem::with_config(config.clone());
+    let system = IntentMappingSystem::with_config(config);
 
     assert_eq!(system.config().confidence_threshold, 0.8);
     assert_eq!(system.config().auto_validation_threshold, 0.95);

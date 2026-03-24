@@ -51,7 +51,7 @@ pub fn execute(path: &PathBuf, format: &str) -> CliResult<()> {
     }
 
     // Use the improved OutputHandler for consistent formatting
-    let output_handler = OutputHandler::new(output_format.clone(), None, true);
+    let output_handler = OutputHandler::new(output_format, None, true);
     output_handler.output_symbols(&all_symbols, analysis_result.files.len())?;
 
     Ok(())

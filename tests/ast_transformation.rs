@@ -27,7 +27,7 @@ fn test_ast_transformation_engine_with_config() {
         enable_incremental: false,
     };
 
-    let engine = AstTransformationEngine::with_config(config.clone());
+    let engine = AstTransformationEngine::with_config(config);
     assert!(!engine.config.enable_semantic_validation);
     assert!(!engine.config.enable_rollback);
     assert_eq!(engine.config.max_transformation_depth, 5);

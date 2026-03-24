@@ -194,7 +194,7 @@ impl RustAnalyzer {
                 let usage_locations = Vec::new(); // Will be populated during analysis
 
                 variables.insert(
-                    name.clone(),
+                    name,
                     VariableInfo {
                         var_type,
                         is_constant,
@@ -210,7 +210,7 @@ impl RustAnalyzer {
                 let usage_locations = Vec::new();
 
                 variables.insert(
-                    name.clone(),
+                    name,
                     VariableInfo {
                         var_type,
                         is_constant: true,

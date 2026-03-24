@@ -506,9 +506,9 @@ The target architecture has three layers:
 
 **Not a dedicated sprint -- apply Clippy lint and fix opportunistically during Phase 2 work.**
 
-- [ ] Add to `clippy.toml` or CI: `cargo clippy -- -W clippy::redundant_clone`
-- [ ] Fix redundant clones in files touched during Phase 2 (security modules, performance_analysis.rs)
-- [ ] In `DependencyAnalyzer::clone()`, fix the provider field being dropped to `None`
+- [x] Add to `clippy.toml` or CI: `cargo clippy -- -W clippy::redundant_clone`
+- [x] Fix redundant clones in files touched during Phase 2 (security modules, performance_analysis.rs)
+- [x] In `DependencyAnalyzer::clone()`, fix the provider field being dropped to `None`
 
 ### Research Insights: Performance Quick Wins
 

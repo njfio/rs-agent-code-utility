@@ -118,7 +118,7 @@ fn test_reasoning_engine_with_config() {
         confidence_threshold: 0.8,
     };
 
-    let engine = AutomatedReasoningEngine::with_config(config.clone());
+    let engine = AutomatedReasoningEngine::with_config(config);
 
     assert!(engine.config().enable_deductive);
     assert!(!engine.config().enable_inductive);
@@ -131,7 +131,7 @@ fn test_add_fact() {
     let mut engine = AutomatedReasoningEngine::new();
     let fact = create_sample_fact();
 
-    engine.add_fact(fact.clone());
+    engine.add_fact(fact);
 
     assert_eq!(engine.knowledge_base().facts().len(), 1);
     assert_eq!(engine.knowledge_base().facts()[0].id, "fact_001");
@@ -143,7 +143,7 @@ fn test_add_rule() {
     let mut engine = AutomatedReasoningEngine::new();
     let rule = create_sample_rule();
 
-    engine.add_rule(rule.clone());
+    engine.add_rule(rule);
 
     assert_eq!(engine.knowledge_base().rules().len(), 1);
     assert_eq!(engine.knowledge_base().rules()[0].id, "rule_001");

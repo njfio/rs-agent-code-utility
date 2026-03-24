@@ -544,7 +544,7 @@ impl PythonSyntax {
         let mut mro = Vec::new();
 
         if let Some(class_name) = Self::class_name(class_node, source) {
-            mro.push(class_name.clone());
+            mro.push(class_name);
 
             // Add base classes
             let bases = Self::class_bases(class_node, source);

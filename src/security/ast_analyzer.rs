@@ -572,7 +572,7 @@ impl AstSecurityAnalyzer {
         if let Some(func_name) = self.extract_function_from_finding(finding) {
             for func in &semantic_info.functions {
                 if func.name == func_name {
-                    finding.context.function_context = Some(func_name.clone());
+                    finding.context.function_context = Some(func_name);
                     break;
                 }
             }

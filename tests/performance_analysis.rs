@@ -81,7 +81,7 @@ fn switch_like_function(x: i32) -> String {
 
     // Create a manual AnalysisResult with the actual file path
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: complex_code.len(),
         lines: complex_code.lines().count(),
@@ -255,7 +255,7 @@ fn binary_search(arr: &[i32], target: i32) -> Option<usize> {
 
     // Create analysis result
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: algorithmic_code.len(),
         lines: algorithmic_code.lines().count(),
@@ -387,7 +387,7 @@ fn recursive_allocation(depth: usize) -> Vec<i32> {
 
     // Create analysis result
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: memory_code.len(),
         lines: memory_code.lines().count(),
@@ -537,7 +537,7 @@ fn fetch_data(url: &str) -> Result<String, Box<dyn std::error::Error>> {
 
     // Create analysis result
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: io_code.len(),
         lines: io_code.lines().count(),
@@ -668,7 +668,7 @@ fn recursive_inefficient(n: i32) -> i32 {
 
     // Create analysis result
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: problematic_code.len(),
         lines: problematic_code.lines().count(),

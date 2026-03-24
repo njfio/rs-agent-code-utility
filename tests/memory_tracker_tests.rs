@@ -55,7 +55,7 @@ fn test_memory_tracker_with_config() {
         real_time_tracking: true,
     };
 
-    let tracker = MemoryTracker::with_config(config.clone());
+    let tracker = MemoryTracker::with_config(config);
     assert_eq!(tracker.get_config().min_allocation_size, 64);
     assert_eq!(tracker.get_config().max_call_stack_depth, 15);
     assert!(tracker.get_config().real_time_tracking);

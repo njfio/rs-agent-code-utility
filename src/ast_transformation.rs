@@ -2043,7 +2043,7 @@ impl AstTransformationEngine {
         let mut offset = 0i32;
 
         // Sort by position and process from end to beginning
-        let mut all_locations = usages.clone();
+        let mut all_locations = usages;
         all_locations.push(variable_declaration.clone());
         all_locations.sort_by_key(|loc| loc.start_position.byte_offset);
         all_locations.reverse();
@@ -2103,7 +2103,7 @@ impl AstTransformationEngine {
         let mut offset = 0i32;
 
         // Sort by position and process from end to beginning
-        let mut all_locations = method_calls.clone();
+        let mut all_locations = method_calls;
         all_locations.push(method_definition.clone());
         all_locations.sort_by_key(|loc| loc.start_position.byte_offset);
         all_locations.reverse();

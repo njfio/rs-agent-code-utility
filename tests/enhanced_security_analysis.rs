@@ -54,7 +54,7 @@ fn execute_query_with_params(query: &str, params: &[&str]) -> Result<(), Box<dyn
 
     // Create a manual AnalysisResult with the actual file path
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: vulnerable_code.len(),
         lines: vulnerable_code.lines().count(),
@@ -154,7 +154,7 @@ fn safe_list_files(directory: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a manual AnalysisResult with the actual file path
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: vulnerable_code.len(),
         lines: vulnerable_code.lines().count(),
@@ -276,7 +276,7 @@ fn regular_function() -> String {
     // Create a manual AnalysisResult with the actual file path
     println!("Creating FileInfo with path: {:?}", file_path);
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: vulnerable_code.len(),
         lines: vulnerable_code.lines().count(),
@@ -379,7 +379,7 @@ fn safe_command() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a manual AnalysisResult with the actual file path
     let file_info = FileInfo {
-        path: file_path.clone(),
+        path: file_path,
         language: "Rust".to_string(),
         size: safe_code.len(),
         lines: safe_code.lines().count(),

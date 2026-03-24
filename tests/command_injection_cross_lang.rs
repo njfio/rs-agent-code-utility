@@ -14,7 +14,7 @@ def f():
     let p = tmp.path().join("ci_test.py");
     fs::write(&p, code).unwrap();
     let file = FileInfo {
-        path: p.clone(),
+        path: p,
         language: "Python".into(),
         size: code.len(),
         lines: code.lines().count(),
@@ -53,7 +53,7 @@ function f(arg){ child_process.exec('ls ' + arg) }
     let p = tmp.path().join("ci_test.js");
     fs::write(&p, code).unwrap();
     let file = FileInfo {
-        path: p.clone(),
+        path: p,
         language: "JavaScript".into(),
         size: code.len(),
         lines: code.lines().count(),
@@ -95,7 +95,7 @@ class T {
     let p = tmp.path().join("T.java");
     fs::write(&p, code).unwrap();
     let file = FileInfo {
-        path: p.clone(),
+        path: p,
         language: "Java".into(),
         size: code.len(),
         lines: code.lines().count(),

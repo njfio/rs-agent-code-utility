@@ -3646,7 +3646,7 @@ mod tests {
         config.confidence_threshold = 0.9;
         config.enable_nlp = false;
 
-        let system = IntentMappingSystem::with_config(config.clone());
+        let system = IntentMappingSystem::with_config(config);
         assert_eq!(system.config().confidence_threshold, 0.9);
         assert!(!system.config().enable_nlp);
     }

@@ -654,7 +654,7 @@ where
 
         // Store in disk if available
         if let Some(ref disk_cache) = self.disk {
-            disk_cache.put(key.clone(), data.clone(), ttl, dependencies.clone())?;
+            disk_cache.put(key, data, ttl, dependencies)?;
         }
 
         // TODO: Replicate to network peers if enabled

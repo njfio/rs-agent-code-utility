@@ -1503,7 +1503,7 @@ mod tests {
             confidence_threshold: 0.8,
         };
 
-        let engine = AutomatedReasoningEngine::with_config(config.clone());
+        let engine = AutomatedReasoningEngine::with_config(config);
         assert!(!engine.config.enable_deductive);
         assert!(engine.config.enable_inductive);
         assert_eq!(engine.config.confidence_threshold, 0.8);
