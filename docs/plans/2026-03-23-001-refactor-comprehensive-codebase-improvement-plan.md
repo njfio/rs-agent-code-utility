@@ -544,7 +544,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - [x] Remove deleted variants from `AIProvider` enum
 - [x] Delete `src/advanced_ai_analysis.rs` (~2,281 lines, self-documented as "MOSTLY PLACEHOLDER CODE")
 - [x] Delete `src/ai_analysis.rs` (no real AI calls)
-- [ ] Delete `src/smart_refactoring.rs` (generic, not actionable suggestions)
+- [x] Delete `src/smart_refactoring.rs` (generic, not actionable suggestions)
 - [ ] Delete `src/reasoning_engine.rs` (aspirational, no real inference)
 - [ ] Gate `src/intent_mapping.rs` and `src/embeddings.rs` behind `ml` feature (already partially done)
 - [ ] Update `src/lib.rs` to remove deleted module declarations

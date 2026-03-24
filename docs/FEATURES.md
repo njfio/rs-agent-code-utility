@@ -216,20 +216,6 @@
 - **Anomaly Detection**: Identify unusual code patterns
 - **Best Practice Validation**: Check against coding standards
 
-### Smart Refactoring Engine
-
-#### Refactoring Types
-- **Extract Method**: Identify code suitable for extraction
-- **Inline Method**: Suggest methods for inlining
-- **Move Method**: Recommend method relocations
-- **Rename Symbol**: Suggest better names for symbols
-
-#### Safety Analysis
-- **Impact Assessment**: Analyze refactoring impact
-- **Test Preservation**: Ensure tests remain valid
-- **Behavior Preservation**: Maintain code behavior
-- **Rollback Support**: Safe rollback mechanisms
-
 ## CLI Interface
 
 ### Command Architecture
@@ -237,7 +223,7 @@
 #### Command Categories
 - **Analysis Commands**: analyze, symbols, stats
 - **Security Commands**: security, secrets, dependencies
-- **Quality Commands**: refactor, insights, explain
+- **Quality Commands**: insights
 - **Search Commands**: query, find, grep
 - **Interactive Commands**: interactive, shell
 

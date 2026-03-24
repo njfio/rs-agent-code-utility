@@ -11,7 +11,6 @@ pub mod interactive;
 pub mod languages;
 pub mod map;
 pub mod query;
-pub mod refactor;
 pub mod security;
 pub mod stats;
 pub mod symbols;
@@ -272,23 +271,6 @@ impl Execute for Commands {
                     ))
                 }
             }
-            Commands::Refactor {
-                path,
-                category,
-                format,
-                quick_wins,
-                major_only,
-                min_priority,
-                output,
-            } => refactor::execute(
-                path,
-                category.as_ref(),
-                format,
-                *quick_wins,
-                *major_only,
-                min_priority,
-                output.as_ref(),
-            ),
             Commands::Dependencies {
                 path,
                 format,

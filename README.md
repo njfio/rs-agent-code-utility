@@ -71,7 +71,7 @@ The library includes a comprehensive AI service layer that integrates with multi
 
 ### CLI Interface
 
-- **Available Commands**: analyze, security, refactor, dependencies, symbols, query, find
+- **Available Commands**: analyze, ast-security, dependencies, find, insights, interactive, languages, map, query, security, stats, symbols
 - **Output Formats**: JSON, table, markdown, summary
 - **Progress Tracking**: Real-time progress indicators
 - **Filtering**: Severity levels, file types, symbol types
@@ -180,30 +180,6 @@ tree-sitter-cli symbols ./src --format json
 - Visibility information
 - Line numbers and locations
 
-### `refactor` - Smart Refactoring Engine
-
-Code improvement suggestions with refactoring capabilities.
-
-```bash
-tree-sitter-cli refactor <PATH> [OPTIONS]
-
-Options:
-  -f, --format <FORMAT>    Output format: table, json, markdown [default: table]
-  --category <CATEGORY>    Focus category: all, code_smells, patterns, performance
-  --quick-wins             Show only quick wins
-  --major-only             Show only major improvements
-  --min-priority <LEVEL>   Minimum priority: low, medium, high, critical
-  --output <FILE>          Save detailed report to file
-```
-
-**Capabilities:**
-
-- **Code Smell Detection**: Identify anti-patterns and code quality issues
-- **Design Pattern Recommendations**: Suggest appropriate design patterns
-- **Modernization Suggestions**: Update code to use modern language features
-- **Performance Optimization**: Identify and suggest performance improvements
-- **Complexity Reduction**: Simplify overly complex code structures
-
 ### `dependencies` - Dependency Analysis
 
 Dependency analysis with package manager integration.
@@ -271,21 +247,6 @@ Options:
   --show-symbols           Show symbol counts
   --languages <LANGS>      Filter by languages
   --collapse-empty         Collapse empty directories
-```
-
-### `explain` - Code Explanation
-
-Generate explanations of code functionality and architecture.
-
-```bash
-tree-sitter-cli explain <PATH> [OPTIONS]
-
-Options:
-  --file <FILE>            Specific file to explain
-  --symbol <SYMBOL>        Specific symbol to explain
-  -f, --format <FORMAT>    Output format: markdown, json [default: markdown]
-  --detailed               Include detailed analysis
-  --learning               Include learning recommendations
 ```
 
 ### `insights` - Codebase Insights

@@ -382,37 +382,6 @@ pub enum Commands {
         max_file_kb: usize,
     },
 
-    /// Smart refactoring suggestions
-    Refactor {
-        /// Directory to analyze
-        #[arg(value_name = "PATH")]
-        path: PathBuf,
-
-        /// Focus on specific category (complexity, duplication, naming, performance, architecture)
-        #[arg(short, long)]
-        category: Option<String>,
-
-        /// Output format (table, json, markdown)
-        #[arg(short, long, default_value = "table")]
-        format: String,
-
-        /// Show only quick wins (easy improvements)
-        #[arg(long)]
-        quick_wins: bool,
-
-        /// Show only major improvements
-        #[arg(long)]
-        major_only: bool,
-
-        /// Minimum priority level (critical, high, medium, low)
-        #[arg(long, default_value = "low")]
-        min_priority: String,
-
-        /// Save detailed report to file
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-    },
-
     /// Enhanced dependency analysis and security scanning
     Dependencies {
         /// Directory to analyze

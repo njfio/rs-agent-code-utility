@@ -108,32 +108,6 @@ tree-sitter-cli symbols ./src --type function --visibility public
 tree-sitter-cli symbols ./src --language rust --format json
 ```
 
-### refactor - Smart Refactoring Engine
-
-AI-powered code improvement suggestions and automated refactoring.
-
-```bash
-tree-sitter-cli refactor <PATH> [OPTIONS]
-```
-
-**Options:**
-- `-f, --format <FORMAT>` - Output format: table, json, markdown [default: table]
-- `--auto-apply` - Automatically apply safe refactoring suggestions
-- `--complexity-threshold <THRESHOLD>` - Maximum complexity threshold for suggestions
-- `--focus <AREA>` - Focus area: performance, maintainability, security
-
-**Examples:**
-```bash
-# Basic refactoring suggestions
-tree-sitter-cli refactor ./src
-
-# Focus on performance improvements
-tree-sitter-cli refactor ./src --focus performance --complexity-threshold 10
-
-# Auto-apply safe refactorings
-tree-sitter-cli refactor ./src --auto-apply --format json
-```
-
 ### dependencies - Enhanced Dependency Analysis
 
 Comprehensive dependency analysis with vulnerability scanning.
@@ -235,32 +209,6 @@ tree-sitter-cli map ./src --requirements requirements.json --format json
 tree-sitter-cli map ./src --gaps-only --confidence 0.8
 ```
 
-### explain - AI Code Explanation
-
-Generate comprehensive explanations of code functionality and architecture.
-
-```bash
-tree-sitter-cli explain <PATH> [OPTIONS]
-```
-
-**Options:**
-- `-f, --format <FORMAT>` - Output format: markdown, json [default: markdown]
-- `--detail-level <LEVEL>` - Explanation detail: basic, detailed, comprehensive [default: detailed]
-- `--include-examples` - Include usage examples
-- `--focus <ASPECT>` - Focus on specific aspect: functionality, architecture, security
-
-**Examples:**
-```bash
-# Explain code functionality
-tree-sitter-cli explain ./src/auth.rs
-
-# Comprehensive explanation with examples
-tree-sitter-cli explain ./src --detail-level comprehensive --include-examples
-
-# Focus on security aspects
-tree-sitter-cli explain ./src --focus security --format json
-```
-
 ### insights - Codebase Insights
 
 Generate high-level insights and recommendations for the codebase.
@@ -322,13 +270,17 @@ tree-sitter-cli interactive <PATH>
 ```
 
 **Interactive Commands:**
-- `analyze [path]` - Analyze path
-- `security [options]` - Run security scan
-- `symbols [filters]` - Show symbols
-- `query <pattern>` - Search code
-- `explain <path>` - Explain code
 - `help` - Show available commands
-- `exit` - Exit interactive mode
+- `stats` - Show codebase statistics
+- `files` - List analyzed files
+- `symbols` - Show extracted symbols
+- `find <name>` - Find symbols by name
+- `insights` - Generate high-level insights
+- `security` - Show the current security summary
+- `dependencies` - Show the current dependency summary
+- `clear` - Clear the screen
+- `history` - Show command history
+- `quit` - Exit interactive mode
 
 **Examples:**
 ```bash
@@ -336,11 +288,11 @@ tree-sitter-cli interactive <PATH>
 tree-sitter-cli interactive ./src
 
 # Interactive session
-> analyze ./auth.rs
-> security --min-severity high
-> query "function.*login"
-> explain ./auth.rs
-> exit
+> stats
+> find login
+> insights
+> security
+> quit
 ```
 
 ## Output Formats

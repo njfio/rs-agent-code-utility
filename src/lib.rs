@@ -258,9 +258,6 @@ pub mod security;
 /// Semantic graph construction and querying
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod semantic_graph;
-/// Smart refactoring with AI assistance
-#[allow(clippy::unwrap_used, clippy::expect_used)]
-pub mod smart_refactoring;
 /// Test coverage analysis and gap detection
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod test_coverage;
@@ -332,10 +329,6 @@ pub use ast_transformation::{
     ValidationResult, VariableInfo,
 };
 pub use code_map::{build_call_graph, build_module_graph, CallGraph, ModuleGraph};
-pub use smart_refactoring::{
-    CodeSmellFix, SmartRefactoringConfig, SmartRefactoringEngine, SmartRefactoringResult,
-};
-
 // Specialized analysis tools
 pub use command_injection_detector::{
     CommandInjectionDetector, CommandInjectionType, CommandInjectionVulnerability,
