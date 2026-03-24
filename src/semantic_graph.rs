@@ -496,6 +496,57 @@ impl SemanticGraphQuery {
         }
     }
 
+    /// Trace a relationship path between entities in the source and sink files.
+    pub fn trace_data_flow(
+        &self,
+        source_file: &Path,
+        sink_file: &Path,
+        config: &QueryConfig,
+    ) -> QueryResult {
+        let start_time = std::time::Instant::now();
+        let primary_starts = self.node_ids_for_file(source_file, false);
+        let primary_targets: HashSet<_> = self
+            .node_ids_for_file(sink_file, false)
+            .into_iter()
+            .collect();
+
+        let primary_search = if primary_starts.is_empty() || primary_targets.is_empty() {
+            None
+        } else {
+            self.find_shortest_path(primary_starts, &primary_targets, config)
+        };
+
+        let fallback = if primary_search.is_none() {
+            let all_starts = self.node_ids_for_file(source_file, true);
+            let all_targets: HashSet<_> = self
+                .node_ids_for_file(sink_file, true)
+                .into_iter()
+                .collect();
+            if all_starts.is_empty() || all_targets.is_empty() {
+                None
+            } else {
+                self.find_shortest_path(all_starts, &all_targets, config)
+            }
+        } else {
+            None
+        };
+
+        let (nodes, edges, edges_traversed, truncated) = primary_search
+            .or(fallback)
+            .unwrap_or_else(|| (Vec::new(), Vec::new(), 0, false));
+
+        QueryResult {
+            nodes,
+            edges,
+            metadata: QueryMetadata {
+                nodes_examined: self.nodes.len(),
+                edges_traversed,
+                execution_time_ms: start_time.elapsed().as_millis() as u64,
+                truncated,
+            },
+        }
+    }
+
     /// Traverse relationships from a starting node
     pub fn traverse_relationships(
         &self,
@@ -1095,6 +1146,91 @@ impl SemanticGraphQuery {
             .collect();
         node_ids.sort();
         node_ids
+    }
+
+    fn node_ids_for_file(&self, file_path: &Path, include_modules: bool) -> Vec<String> {
+        let mut node_ids: Vec<_> = self
+            .nodes
+            .values()
+            .filter(|node| {
+                node.file_path == file_path
+                    && (include_modules || node.node_type != NodeType::Module)
+            })
+            .map(|node| node.id.clone())
+            .collect();
+        node_ids.sort();
+        node_ids
+    }
+
+    fn find_shortest_path(
+        &self,
+        start_ids: Vec<String>,
+        target_ids: &HashSet<String>,
+        config: &QueryConfig,
+    ) -> Option<(Vec<GraphNode>, Vec<GraphEdge>, usize, bool)> {
+        let mut queue = VecDeque::new();
+        let mut visited = HashSet::new();
+        let mut parents: HashMap<String, (String, GraphEdge)> = HashMap::new();
+        let mut edges_traversed = 0;
+        let mut found_target = None;
+        let mut truncated = false;
+
+        for start_id in start_ids {
+            if visited.insert(start_id.clone()) {
+                if target_ids.contains(&start_id) {
+                    found_target = Some(start_id);
+                    break;
+                }
+                queue.push_back((start_id, 0usize));
+            }
+        }
+
+        while let Some((node_id, depth)) = queue.pop_front() {
+            if depth >= config.max_depth {
+                truncated |= self
+                    .edges
+                    .get(&node_id)
+                    .map(|node_edges| !node_edges.is_empty())
+                    .unwrap_or(false);
+                continue;
+            }
+
+            if let Some(node_edges) = self.edges.get(&node_id) {
+                for edge in node_edges {
+                    edges_traversed += 1;
+                    if visited.insert(edge.to.clone()) {
+                        parents.insert(edge.to.clone(), (node_id.clone(), edge.clone()));
+                        if target_ids.contains(&edge.to) {
+                            found_target = Some(edge.to.clone());
+                            queue.clear();
+                            break;
+                        }
+                        queue.push_back((edge.to.clone(), depth + 1));
+                    }
+                }
+            }
+        }
+
+        let found_target = found_target?;
+        let mut path_node_ids = vec![found_target.clone()];
+        let mut path_edges = Vec::new();
+        let mut current_id = found_target;
+
+        while let Some((previous_id, edge)) = parents.get(&current_id) {
+            path_edges.push(edge.clone());
+            path_node_ids.push(previous_id.clone());
+            current_id = previous_id.clone();
+        }
+
+        path_node_ids.reverse();
+        path_edges.reverse();
+
+        let nodes = path_node_ids
+            .into_iter()
+            .filter_map(|node_id| self.nodes.get(&node_id).cloned())
+            .collect();
+
+        Some((nodes, path_edges, edges_traversed, truncated))
     }
 
     fn resolve_rust_base_dir(current_file: &Path, segments: &mut Vec<String>) -> Option<PathBuf> {

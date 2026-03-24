@@ -665,7 +665,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - [ ] Add graph query functions:
   - [x] `find_callers(symbol)`
   - [x] `find_callees(symbol)`
-  - [ ] `trace_data_flow(source_file, sink_file)`
+  - [x] `trace_data_flow(source_file, sink_file)`
 
 **Acceptance criteria:**
 - Semantic graph connects symbols across files

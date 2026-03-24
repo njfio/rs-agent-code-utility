@@ -746,6 +746,32 @@ fn test_semantic_graph_builds_cross_file_call_edges_and_queries(
         .iter()
         .any(|node| node.file_path == PathBuf::from("src/utils.rs") && node.name == "helper"));
 
+    let rust_trace = graph.trace_data_flow(
+        PathBuf::from("src/main.rs").as_path(),
+        PathBuf::from("src/utils.rs").as_path(),
+        &config,
+    );
+    assert!(
+        !rust_trace.nodes.is_empty(),
+        "expected a trace between Rust files"
+    );
+    assert!(
+        !rust_trace.edges.is_empty(),
+        "expected trace edges between Rust files"
+    );
+    assert_eq!(
+        rust_trace.nodes.first().map(|node| node.name.as_str()),
+        Some("run")
+    );
+    assert_eq!(
+        rust_trace.nodes.last().map(|node| node.name.as_str()),
+        Some("helper")
+    );
+    assert!(rust_trace
+        .edges
+        .iter()
+        .any(|edge| edge.relationship == RelationshipType::Calls));
+
     Ok(())
 }
 
