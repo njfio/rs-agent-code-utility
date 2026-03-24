@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 use rust_tree_sitter::advanced_security::{
     AdvancedSecurityAnalyzer, AdvancedSecurityResult, ConfidenceLevel, DetectedSecret,
-    SecurityVulnerability,
+    InjectionType, InjectionVulnerability, SecurityVulnerability,
 };
 use rust_tree_sitter::analyzer::{AnalysisResult, FileInfo};
 use rust_tree_sitter::security::accuracy_metrics::AccuracyMetrics;
@@ -175,10 +175,12 @@ fn security_corpus_meets_detection_thresholds() {
         let fixture_path = fixture_path(case.relative_path);
         let result = analyze_corpus_fixture(&analyzer, &fixture_path);
         let relevant = relevant_findings(&result.vulnerabilities, case.cwe_id);
+        let relevant_injection =
+            relevant_injection_findings(&result.injection_vulnerabilities, case.cwe_id);
         let detected = if case.class == "secrets" {
             secret_detected(&result, &relevant)
         } else {
-            !relevant.is_empty()
+            !relevant.is_empty() || !relevant_injection.is_empty()
         };
         let expected_vulnerable = matches!(case.expected, ExpectedOutcome::Vulnerable);
 
@@ -194,7 +196,7 @@ fn security_corpus_meets_detection_thresholds() {
                         "expected {} fixture {} to produce {}, but result was {:?}",
                         case.class, case.relative_path, case.cwe_id, result
                     );
-                    assert_vulnerabilities_meet_confidence(case, &relevant);
+                    assert_findings_meet_expectations(case, &relevant, &relevant_injection);
                 }
             }
             ExpectedOutcome::Safe => {
@@ -375,23 +377,46 @@ fn relevant_findings<'a>(
         .collect()
 }
 
+fn relevant_injection_findings<'a>(
+    findings: &'a [InjectionVulnerability],
+    cwe_id: &str,
+) -> Vec<&'a InjectionVulnerability> {
+    findings
+        .iter()
+        .filter(|finding| injection_type_matches_cwe(&finding.injection_type, cwe_id))
+        .collect()
+}
+
 fn has_cwe(findings: &[SecurityVulnerability], cwe_id: &str) -> bool {
     findings
         .iter()
         .any(|finding| finding.cwe_id.as_deref() == Some(cwe_id))
 }
 
-fn assert_vulnerabilities_meet_confidence(case: &CorpusCase, findings: &[&SecurityVulnerability]) {
-    assert!(
-        findings
-            .iter()
-            .all(|finding| finding.confidence >= case.min_confidence),
-        "expected {} fixture {} findings to have at least {:?} confidence, got {:?}",
-        case.class,
-        case.relative_path,
-        case.min_confidence,
-        findings
-    );
+fn assert_findings_meet_expectations(
+    case: &CorpusCase,
+    findings: &[&SecurityVulnerability],
+    injection_findings: &[&InjectionVulnerability],
+) {
+    if !findings.is_empty() {
+        assert!(
+            findings
+                .iter()
+                .all(|finding| finding.confidence >= case.min_confidence),
+            "expected {} fixture {} findings to have at least {:?} confidence, got {:?}",
+            case.class,
+            case.relative_path,
+            case.min_confidence,
+            findings
+        );
+    } else {
+        assert!(
+            !injection_findings.is_empty(),
+            "expected {} fixture {} to surface at least one specialized injection finding",
+            case.class,
+            case.relative_path
+        );
+    }
 }
 
 fn assert_secrets_meet_confidence(case: &CorpusCase, secrets: &[DetectedSecret]) {
@@ -428,7 +453,7 @@ fn assert_secret_positive(
     if !result.secrets.is_empty() {
         assert_secrets_meet_confidence(case, &result.secrets);
     } else {
-        assert_vulnerabilities_meet_confidence(case, relevant);
+        assert_findings_meet_expectations(case, relevant, &[]);
     }
 }
 
@@ -458,4 +483,13 @@ fn fixture_language(path: &Path) -> &'static str {
         Some("py") => "python",
         _ => "unknown",
     }
+}
+
+fn injection_type_matches_cwe(injection_type: &InjectionType, cwe_id: &str) -> bool {
+    matches!(
+        (injection_type, cwe_id),
+        (InjectionType::SqlInjection, "CWE-89")
+            | (InjectionType::CommandInjection, "CWE-78")
+            | (InjectionType::XssInjection, "CWE-79")
+    )
 }

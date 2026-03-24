@@ -452,6 +452,8 @@ The target architecture has three layers:
 - [x] Track precision/recall metrics and gate CI on regression (< 80% recall or < 70% precision fails)
 - [ ] Expand corpus over time as dogfooding reveals gaps (currently 18 fixtures; target 50+ by end of Phase 2)
 
+**Implementation note (2026-03-24):** The baseline corpus and proptest coverage now pass again in reduced builds after tightening the fallback detector path and the corpus harness. Because the default build intentionally lacks the extended JS/Python grammars, `tests/security_corpus.rs` now validates the string-based fallback for those fixtures instead of depending on AST parsing to be available. The fallback detector now catches Python `%`-formatted SQL construction, plain `exec(...)` command construction, and short quoted hardcoded API tokens, and the corpus harness now counts specialized `injection_vulnerabilities` results for CWE-backed XSS/command/sql cases instead of treating those findings as misses. Corpus expansion remains the only open Task 2.4 item.
+
 **Acceptance criteria:**
 - >= 12 test fixtures across 4 vulnerability classes
 - Integration tests assert detection and non-detection

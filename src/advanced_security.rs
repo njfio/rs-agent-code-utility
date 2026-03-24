@@ -1507,7 +1507,14 @@ impl AdvancedSecurityAnalyzer {
                 || line_lower.contains("insert")
                 || line_lower.contains("update")
                 || line_lower.contains("delete"))
-                && (line.contains("+") || line.contains("format") || line.contains("{}"))
+                && (line.contains('+')
+                    || line.contains("format")
+                    || line_lower.contains(".format(")
+                    || line.contains("{}")
+                    || line_lower.contains("f\"")
+                    || line_lower.contains("f'")
+                    || line.contains("\" % ")
+                    || line.contains("' % "))
             {
                 vulnerabilities.push(SecurityVulnerability {
                     id: format!("INJ001_{}", line_num),
@@ -1561,6 +1568,10 @@ impl AdvancedSecurityAnalyzer {
                 || line_lower.contains("subprocess.call")
                 || line_lower.contains("subprocess.check_output")
                 || line_lower.contains("subprocess.popen")
+                || line_lower.contains("exec(")
+                || line_lower.contains("exec (")
+                || line_lower.contains("execsync(")
+                || line_lower.contains("execsync (")
                 || line_lower.contains("child_process.exec")
                 || line_lower.contains("child_process.execsync")
                 || line_lower.contains("runtime.getruntime().exec");
@@ -1916,7 +1927,8 @@ impl AdvancedSecurityAnalyzer {
             let parts: Vec<&str> = line.split(&['=', ':'][..]).collect();
             if parts.len() >= 2 {
                 let value = parts[1].trim().trim_matches(&['"', '\'', ' '][..]);
-                if value.len() > 20 {
+                let has_quoted_literal = line.contains('"') || line.contains('\'');
+                if has_quoted_literal && value.len() >= 8 {
                     return Some(DetectedSecret {
                         secret_type: SecretType::Token,
                         location: VulnerabilityLocation {
@@ -4126,6 +4138,7 @@ mod tests {
     use super::*;
     use crate::{AnalysisResult, FileInfo, Symbol};
     use std::collections::HashMap;
+    use std::fs;
     use std::path::PathBuf;
 
     fn create_test_analysis_result(
@@ -4181,6 +4194,54 @@ mod tests {
             files: vec![file_info],
             config: crate::AnalysisConfig::default(),
         })
+    }
+
+    fn detect_test_vulnerabilities(
+        suffix: &str,
+        language: &str,
+        source: &str,
+    ) -> std::result::Result<Vec<SecurityVulnerability>, Box<dyn std::error::Error>> {
+        let temp_dir = tempfile::tempdir()?;
+        let path = temp_dir.path().join(format!("fixture{suffix}"));
+        fs::write(&path, source)?;
+
+        let file_info = FileInfo {
+            path,
+            language: language.to_string(),
+            size: source.len(),
+            lines: source.lines().count(),
+            parsed_successfully: true,
+            parse_errors: Vec::new(),
+            symbols: Vec::new(),
+            security_vulnerabilities: Vec::new(),
+        };
+
+        let scanner = AdvancedSecurityAnalyzer::new()?;
+        Ok(scanner.detect_owasp_vulnerabilities(&file_info)?)
+    }
+
+    fn detect_test_secrets(
+        suffix: &str,
+        language: &str,
+        source: &str,
+    ) -> std::result::Result<Vec<DetectedSecret>, Box<dyn std::error::Error>> {
+        let temp_dir = tempfile::tempdir()?;
+        let path = temp_dir.path().join(format!("fixture{suffix}"));
+        fs::write(&path, source)?;
+
+        let file_info = FileInfo {
+            path,
+            language: language.to_string(),
+            size: source.len(),
+            lines: source.lines().count(),
+            parsed_successfully: true,
+            parse_errors: Vec::new(),
+            symbols: Vec::new(),
+            security_vulnerabilities: Vec::new(),
+        };
+
+        let scanner = AdvancedSecurityAnalyzer::new()?;
+        Ok(scanner.detect_secrets(&file_info)?)
     }
 
     #[test]
@@ -4250,6 +4311,50 @@ mod tests {
         // Low entropy string (unlikely secret)
         let low_entropy = "password123";
         assert!(scanner.calculate_entropy(low_entropy) < 4.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_detects_python_percent_formatted_sql_injection(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let vulnerabilities = detect_test_vulnerabilities(
+            ".py",
+            "python",
+            "def find_user(cursor, user_input):\n    query = \"SELECT * FROM users WHERE id = '%s'\" % user_input\n    return cursor.execute(query)\n",
+        )?;
+
+        assert!(vulnerabilities
+            .iter()
+            .any(|vuln| vuln.cwe_id.as_deref() == Some("CWE-89")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_detects_plain_exec_command_injection(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let vulnerabilities = detect_test_vulnerabilities(
+            ".js",
+            "javascript",
+            "function runCommand(userInput) {\n  return exec(\"ls \" + userInput);\n}\n",
+        )?;
+
+        assert!(vulnerabilities
+            .iter()
+            .any(|vuln| vuln.cwe_id.as_deref() == Some("CWE-78")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_detects_short_hardcoded_api_token(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let secrets = detect_test_secrets(".py", "python", "API_TOKEN = \"secret123\"\n")?;
+
+        assert!(secrets
+            .iter()
+            .any(|secret| matches!(secret.secret_type, SecretType::Token)));
 
         Ok(())
     }
