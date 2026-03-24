@@ -1066,9 +1066,8 @@ mod tests {
         let package_name = python_line
             .split(&['=', '>', '<'][..])
             .next()
-            .unwrap()
-            .trim();
-        assert_eq!(package_name, "requests");
+            .map(str::trim);
+        assert_eq!(package_name, Some("requests"));
 
         let go_line = "require github.com/gorilla/mux v1.8.0";
         let parts: Vec<&str> = go_line.split_whitespace().collect();
@@ -1080,16 +1079,19 @@ mod tests {
     fn test_language_detection() {
         // Test file extension to language mapping
         let rust_path = PathBuf::from("main.rs");
-        assert_eq!(rust_path.extension().unwrap().to_str().unwrap(), "rs");
+        assert_eq!(
+            rust_path.extension().and_then(|ext| ext.to_str()),
+            Some("rs")
+        );
 
         let js_path = PathBuf::from("app.js");
-        assert_eq!(js_path.extension().unwrap().to_str().unwrap(), "js");
+        assert_eq!(js_path.extension().and_then(|ext| ext.to_str()), Some("js"));
 
         let py_path = PathBuf::from("script.py");
-        assert_eq!(py_path.extension().unwrap().to_str().unwrap(), "py");
+        assert_eq!(py_path.extension().and_then(|ext| ext.to_str()), Some("py"));
 
         let go_path = PathBuf::from("main.go");
-        assert_eq!(go_path.extension().unwrap().to_str().unwrap(), "go");
+        assert_eq!(go_path.extension().and_then(|ext| ext.to_str()), Some("go"));
     }
 
     #[test]
@@ -1099,12 +1101,18 @@ mod tests {
 
         for ext in &source_extensions {
             let path = PathBuf::from(format!("test.{}", ext));
-            assert_eq!(path.extension().unwrap().to_str().unwrap(), *ext);
+            assert_eq!(
+                path.extension().and_then(|value| value.to_str()),
+                Some(*ext)
+            );
         }
 
         for ext in &non_source_extensions {
             let path = PathBuf::from(format!("test.{}", ext));
-            assert_eq!(path.extension().unwrap().to_str().unwrap(), *ext);
+            assert_eq!(
+                path.extension().and_then(|value| value.to_str()),
+                Some(*ext)
+            );
         }
     }
 }

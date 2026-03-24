@@ -1054,9 +1054,9 @@ mod tests {
         assert!(detector.command_functions.contains_key("os.system"));
         assert!(detector.command_functions.contains_key("subprocess.call"));
 
-        let system_info = detector.command_functions.get("os.system").unwrap();
-        assert_eq!(system_info.risk_level, CommandRiskLevel::Critical);
-        assert!(system_info.uses_shell);
+        let system_info = detector.command_functions.get("os.system");
+        assert!(system_info.is_some_and(|info| info.risk_level == CommandRiskLevel::Critical));
+        assert!(system_info.is_some_and(|info| info.uses_shell));
     }
 
     #[test]

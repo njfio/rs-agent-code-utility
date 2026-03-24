@@ -178,7 +178,6 @@ pub mod code_evolution;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod code_map;
 /// Command injection vulnerability detection
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod command_injection_detector;
 /// Code complexity metrics and analysis
 pub mod complexity_analysis;
@@ -192,7 +191,6 @@ pub mod control_flow;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod dependency_analysis;
 /// Enhanced security analysis with compliance checking
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(all(feature = "net", feature = "db"))]
 pub mod enhanced_security;
 /// Error types and handling
@@ -213,10 +211,8 @@ pub mod intent_mapping;
 #[cfg(not(feature = "ml"))]
 pub mod intent_mapping_stub;
 /// Semantic context analysis and data flow
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod semantic_context;
 /// SQL injection vulnerability detection
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod sql_injection_detector;
 /// Symbol table construction and management
 #[allow(clippy::unwrap_used, clippy::expect_used)]

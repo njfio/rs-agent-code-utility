@@ -21,7 +21,6 @@ pub use database::{
     AnalysisCacheEntry, DatabaseManager, DatabaseStats, SecretPattern, VulnerabilityRecord,
 };
 #[cfg(feature = "net")]
-#[cfg(feature = "net")]
 pub use http_client::{AuthConfig, HttpClient, HttpResponse, RateLimiter, RequestConfig};
 #[cfg(feature = "net")]
 pub use rate_limiter::{

@@ -2317,7 +2317,10 @@ mod tests {
             Some(&1)
         );
         assert_eq!(stats.node_type_distribution.get(&NodeType::Class), Some(&1));
-        assert_eq!(stats.node_type_distribution.get(&NodeType::Module), Some(&1));
+        assert_eq!(
+            stats.node_type_distribution.get(&NodeType::Module),
+            Some(&1)
+        );
     }
 
     #[test]
