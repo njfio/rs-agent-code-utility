@@ -1,5 +1,6 @@
 //! Syntax tree navigation and manipulation utilities
 #![allow(clippy::only_used_in_recursion)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use crate::error::{Error, Result};
 use tree_sitter::{InputEdit, Point, Range};
@@ -355,44 +356,51 @@ impl<'a> TreeCursor<'a> {
 pub type TreeEdit = InputEdit;
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+    use super::Error;
     use crate::{Language, Parser};
 
     #[test]
-    fn test_syntax_tree_basic() {
-        let parser = Parser::new(Language::Rust).unwrap();
+    fn test_syntax_tree_basic() -> crate::Result<()> {
+        let parser = Parser::new(Language::Rust)?;
         let source = "fn main() { println!(\"Hello, world!\"); }";
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parser.parse(source, None)?;
 
         assert_eq!(tree.root_node().kind(), "source_file");
         assert!(!tree.has_error());
         assert_eq!(tree.source(), source);
+        Ok(())
     }
 
     #[test]
-    fn test_node_navigation() {
-        let parser = Parser::new(Language::Rust).unwrap();
+    fn test_node_navigation() -> crate::Result<()> {
+        let parser = Parser::new(Language::Rust)?;
         let source = "fn main() { let x = 42; }";
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parser.parse(source, None)?;
 
         let root = tree.root_node();
         assert!(root.child_count() > 0);
 
-        let function = root.child(0).unwrap();
+        let function = root.child(0).ok_or_else(|| {
+            Error::internal_error("tree tests", "expected function item as first child")
+        })?;
         assert_eq!(function.kind(), "function_item");
 
-        let name = function.child_by_field_name("name").unwrap();
-        assert_eq!(name.text().unwrap(), "main");
+        let name = function
+            .child_by_field_name("name")
+            .ok_or_else(|| Error::internal_error("tree tests", "expected function name field"))?;
+        assert_eq!(name.text()?, "main");
+        Ok(())
     }
 
     #[test]
-    fn test_find_nodes_by_kind() {
-        let parser = Parser::new(Language::Rust).unwrap();
+    fn test_find_nodes_by_kind() -> crate::Result<()> {
+        let parser = Parser::new(Language::Rust)?;
         let source = "fn foo() {} fn bar() {}";
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parser.parse(source, None)?;
 
         let functions = tree.find_nodes_by_kind("function_item");
         assert_eq!(functions.len(), 2);
+        Ok(())
     }
 }

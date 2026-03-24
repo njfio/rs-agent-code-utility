@@ -19,6 +19,7 @@
 //!
 //! ### Basic File Analysis
 #![allow(clippy::only_used_in_recursion)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 //!
 //! ```rust
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
@@ -2234,22 +2235,22 @@ impl Default for CodebaseAnalyzer {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::fs;
     use tempfile::TempDir;
 
     #[test]
-    fn test_analyzer_creation() {
-        let analyzer = CodebaseAnalyzer::new().unwrap();
+    fn test_analyzer_creation() -> Result<()> {
+        let analyzer = CodebaseAnalyzer::new()?;
         assert_eq!(analyzer.config.max_file_size, Some(1024 * 1024));
+        Ok(())
     }
 
     #[test]
-    fn test_analyze_directory() {
+    fn test_analyze_directory() -> Result<()> {
         // Create a temporary directory with some test files
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new()?;
         let temp_path = temp_dir.path();
 
         // Create a Rust file
@@ -2267,8 +2268,7 @@ mod tests {
                 y: i32,
             }
         "#,
-        )
-        .unwrap();
+        )?;
 
         // Create a JavaScript file
         let js_file = temp_path.join("app.js");
@@ -2285,12 +2285,11 @@ mod tests {
                 }
             }
         "#,
-        )
-        .unwrap();
+        )?;
 
         // Analyze the directory
-        let mut analyzer = CodebaseAnalyzer::new().unwrap();
-        let result = analyzer.analyze_directory(temp_path).unwrap();
+        let mut analyzer = CodebaseAnalyzer::new()?;
+        let result = analyzer.analyze_directory(temp_path)?;
 
         assert_eq!(result.total_files, 2);
         assert_eq!(result.parsed_files, 2);
@@ -2302,14 +2301,14 @@ mod tests {
         let rust_file_info = result
             .files
             .iter()
-            .find(|f| f.path.extension().unwrap() == "rs")
-            .unwrap();
+            .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("rs"))
+            .ok_or_else(|| Error::internal_error("analyzer tests", "expected Rust file info"))?;
         assert!(!rust_file_info.symbols.is_empty());
         let main_symbol = rust_file_info
             .symbols
             .iter()
             .find(|s| s.name == "main")
-            .unwrap();
+            .ok_or_else(|| Error::internal_error("analyzer tests", "expected main symbol"))?;
         assert_eq!(main_symbol.visibility, "public");
         assert_eq!(
             main_symbol.documentation.as_deref(),
@@ -2319,9 +2318,12 @@ mod tests {
         let js_file_info = result
             .files
             .iter()
-            .find(|f| f.path.extension().unwrap() == "js")
-            .unwrap();
+            .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("js"))
+            .ok_or_else(|| {
+                Error::internal_error("analyzer tests", "expected JavaScript file info")
+            })?;
         assert!(!js_file_info.symbols.is_empty());
         assert!(js_file_info.symbols.iter().any(|s| s.name == "greet"));
+        Ok(())
     }
 }

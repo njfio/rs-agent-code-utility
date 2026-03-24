@@ -208,11 +208,11 @@ The target architecture has three layers:
 
 - [ ] Add `#![deny(clippy::unwrap_used, clippy::expect_used)]` to `src/lib.rs` with per-module `#[allow]` overrides for all existing modules
 - [ ] Convert the 5 highest-impact modules first (modules used by CLI and MCP):
-  - `src/parser.rs`
-  - `src/analyzer.rs`
+  - [x] `src/parser.rs`
+  - [x] `src/analyzer.rs`
   - `src/cli/mod.rs` and subcommands (replace `writeln!(...).unwrap()` with `?`)
-  - `src/tree.rs`
-  - `src/query.rs`
+  - [x] `src/tree.rs`
+  - [x] `src/query.rs`
 - [ ] Track remaining modules as a follow-up issue (one PR per module batch)
 
 **Acceptance criteria:**

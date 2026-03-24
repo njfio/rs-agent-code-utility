@@ -1,4 +1,5 @@
 //! Query system for pattern matching in syntax trees
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use crate::error::{Error, QueryErrorType, Result};
 use crate::languages::Language;
@@ -324,55 +325,49 @@ impl QueryBuilder {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::{Language, Parser};
 
     #[test]
-    fn test_query_creation() {
-        let query = Query::new(Language::Rust, "(function_item) @function");
-        assert!(query.is_ok());
-
-        let query = query.unwrap();
+    fn test_query_creation() -> Result<()> {
+        let query = Query::new(Language::Rust, "(function_item) @function")?;
         assert_eq!(query.language(), Language::Rust);
         assert_eq!(query.pattern_count(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_query_execution() {
-        let parser = Parser::new(Language::Rust).unwrap();
+    fn test_query_execution() -> Result<()> {
+        let parser = Parser::new(Language::Rust)?;
         let source = "fn main() {} fn test() {}";
-        let tree = parser.parse(source, None).unwrap();
+        let tree = parser.parse(source, None)?;
 
-        let query = Query::new(Language::Rust, "(function_item) @function").unwrap();
-        let matches = query.matches(&tree).unwrap();
+        let query = Query::new(Language::Rust, "(function_item) @function")?;
+        let matches = query.matches(&tree)?;
 
         assert_eq!(matches.len(), 2);
+        Ok(())
     }
 
     #[test]
-    fn test_query_builder() {
+    fn test_query_builder() -> Result<()> {
         let query = QueryBuilder::new(Language::Rust)
             .find_kind("function_item", "function")
             .find_kind("struct_item", "struct")
-            .build();
+            .build()?;
 
-        match query {
-            Ok(_) => {}
-            Err(e) => {
-                println!("Query error: {:?}", e);
-                panic!("Query failed: {}", e);
-            }
-        }
+        assert_eq!(query.language(), Language::Rust);
+        Ok(())
     }
 
     #[test]
-    fn test_predefined_queries() {
-        let functions_query = Query::functions(Language::Rust);
-        assert!(functions_query.is_ok());
+    fn test_predefined_queries() -> Result<()> {
+        let functions_query = Query::functions(Language::Rust)?;
+        assert_eq!(functions_query.language(), Language::Rust);
 
-        let classes_query = Query::classes(Language::Rust);
-        assert!(classes_query.is_ok());
+        let classes_query = Query::classes(Language::Rust)?;
+        assert_eq!(classes_query.language(), Language::Rust);
+        Ok(())
     }
 }
