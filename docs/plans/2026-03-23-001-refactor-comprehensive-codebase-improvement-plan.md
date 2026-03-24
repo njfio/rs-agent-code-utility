@@ -438,7 +438,7 @@ The target architecture has three layers:
   - Confidence scores within expected range
 - [x] Add proptest strategies for generating syntactic variants of known vulnerable patterns
 - [x] Track precision/recall metrics and gate CI on regression (< 80% recall or < 70% precision fails)
-- [ ] Expand corpus over time as dogfooding reveals gaps (target 50+ fixtures by end of Phase 2)
+- [ ] Expand corpus over time as dogfooding reveals gaps (currently 18 fixtures; target 50+ by end of Phase 2)
 
 **Acceptance criteria:**
 - >= 12 test fixtures across 4 vulnerability classes
