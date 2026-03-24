@@ -9,7 +9,7 @@ use tempfile::TempDir;
 
 /// Create a simple test project with basic Rust code
 fn create_simple_test_project() -> Result<TempDir> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let project_root = temp_dir.path();
 
     // Create src directory
@@ -125,8 +125,8 @@ fn test_basic_codebase_analysis() -> Result<()> {
     // Find main.rs
     let main_file = rust_files
         .iter()
-        .find(|f| f.path.file_name().unwrap() == "main.rs")
-        .expect("main.rs should be found");
+        .find(|f| f.path.file_name().is_some_and(|name| name == "main.rs"))
+        .ok_or_else(|| std::io::Error::other("main.rs should be found"))?;
 
     // Verify symbols were extracted
     assert!(!main_file.symbols.is_empty());
@@ -171,8 +171,8 @@ fn test_basic_complexity_analysis() -> Result<()> {
     let main_file = analysis_result
         .files
         .iter()
-        .find(|f| f.path.file_name().unwrap() == "main.rs")
-        .expect("main.rs should be found");
+        .find(|f| f.path.file_name().is_some_and(|name| name == "main.rs"))
+        .ok_or_else(|| std::io::Error::other("main.rs should be found"))?;
 
     // Parse the file for complexity analysis
     let parser = Parser::new(Language::Rust)?;
@@ -280,8 +280,8 @@ fn test_multi_file_analysis() -> Result<()> {
     // Find lib.rs and verify its symbols
     let lib_file = rust_files
         .iter()
-        .find(|f| f.path.file_name().unwrap() == "lib.rs")
-        .expect("lib.rs should be found");
+        .find(|f| f.path.file_name().is_some_and(|name| name == "lib.rs"))
+        .ok_or_else(|| std::io::Error::other("lib.rs should be found"))?;
 
     let multiply_function = lib_file
         .symbols
@@ -298,9 +298,13 @@ fn test_multi_file_analysis() -> Result<()> {
     println!("✅ Multi-file analysis completed successfully");
     println!("Rust files found: {}", rust_files.len());
     for file in &rust_files {
+        let file_name = file
+            .path
+            .file_name()
+            .ok_or_else(|| std::io::Error::other("rust file should have a file name"))?;
         println!(
             "  {}: {} symbols",
-            file.path.file_name().unwrap().to_string_lossy(),
+            file_name.to_string_lossy(),
             file.symbols.len()
         );
     }

@@ -838,7 +838,7 @@ def py_hotspot(matrix):
             .file_metrics
             .iter()
             .find(|metric| metric.file.ends_with(file_name))
-            .expect("file metrics should exist for analyzed file");
+            .ok_or_else(|| std::io::Error::other("file metrics should exist for analyzed file"))?;
 
         assert!(
             metrics.nested_loops > 0,
@@ -932,7 +932,7 @@ def allocation_tracker(items):
             .file_metrics
             .iter()
             .find(|metric| metric.file.ends_with(file_name))
-            .expect("file metrics should exist for analyzed file");
+            .ok_or_else(|| std::io::Error::other("file metrics should exist for analyzed file"))?;
 
         assert_eq!(
             metrics.nested_loops, 0,

@@ -12,7 +12,7 @@ use tempfile::TempDir;
 
 /// Create a temporary test project with realistic code structure
 fn create_test_project() -> Result<TempDir> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let project_root = temp_dir.path();
 
     // Create Rust project structure
@@ -410,7 +410,7 @@ fn test_security_analysis_integration() -> Result<()> {
 #[test]
 fn test_complexity_analysis_integration() -> Result<()> {
     // Create a simple test file directly
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let test_file = temp_dir.path().join("test.rs");
 
     fs::write(
@@ -603,7 +603,7 @@ fn test_test_coverage_analysis_integration() -> Result<()> {
 
 #[test]
 fn test_multi_language_analysis_workflow() -> Result<()> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let project_root = temp_dir.path();
 
     // Create multi-language project

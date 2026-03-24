@@ -10,7 +10,7 @@ use tempfile::TempDir;
 /// Test JavaScript missing features: closures, generators, async/await, destructuring, private fields
 #[test]
 fn test_javascript_missing_features() -> Result<()> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let js_file = temp_dir.path().join("test.js");
 
     let js_code = r#"
@@ -51,10 +51,10 @@ class Counter {
 }
 "#;
 
-    fs::write(&js_file, js_code).unwrap();
+    fs::write(&js_file, js_code)?;
 
-    let parser = Parser::new(rust_tree_sitter::Language::JavaScript).unwrap();
-    let tree = parser.parse(js_code, None).unwrap();
+    let parser = Parser::new(rust_tree_sitter::Language::JavaScript)?;
+    let tree = parser.parse(js_code, None)?;
 
     // Test generator functions
     let generators = JavaScriptSyntax::find_generators(&tree, js_code);
@@ -89,7 +89,7 @@ class Counter {
 /// Test TypeScript missing features: generics, namespaces, mapped types, decorators
 #[test]
 fn test_typescript_missing_features() -> Result<()> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let ts_file = temp_dir.path().join("test.ts");
 
     let ts_code = r#"
@@ -133,10 +133,10 @@ class UserComponent {
 }
 "#;
 
-    fs::write(&ts_file, ts_code).unwrap();
+    fs::write(&ts_file, ts_code)?;
 
-    let parser = Parser::new(rust_tree_sitter::Language::TypeScript).unwrap();
-    let tree = parser.parse(ts_code, None).unwrap();
+    let parser = Parser::new(rust_tree_sitter::Language::TypeScript)?;
+    let tree = parser.parse(ts_code, None)?;
 
     // Test generic types
     let generic_types = TypeScriptSyntax::find_generic_types(&tree, ts_code);
@@ -165,7 +165,7 @@ class UserComponent {
 /// Test Python missing features: async functions, context managers, metaclasses, dataclasses, type hints
 #[test]
 fn test_python_missing_features() -> Result<()> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let py_file = temp_dir.path().join("test.py");
 
     let py_code = r#"
@@ -238,10 +238,10 @@ square = lambda x: x ** 2
 filter_even = lambda lst: [x for x in lst if x % 2 == 0]
 "#;
 
-    fs::write(&py_file, py_code).unwrap();
+    fs::write(&py_file, py_code)?;
 
-    let parser = Parser::new(rust_tree_sitter::Language::Python).unwrap();
-    let tree = parser.parse(py_code, None).unwrap();
+    let parser = Parser::new(rust_tree_sitter::Language::Python)?;
+    let tree = parser.parse(py_code, None)?;
 
     // Test async functions
     let async_functions = PythonSyntax::find_async_functions(&tree, py_code);
@@ -284,7 +284,7 @@ filter_even = lambda lst: [x for x in lst if x % 2 == 0]
 /// Test C missing features: function pointers, unions, bit fields, preprocessor macros, static functions
 #[test]
 fn test_c_missing_features() -> Result<()> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let c_file = temp_dir.path().join("test.c");
 
     let c_code = r#"
@@ -333,10 +333,10 @@ int add(int a, int b) { return a + b; }
 int multiply(int a, int b) { return a * b; }
 "#;
 
-    fs::write(&c_file, c_code).unwrap();
+    fs::write(&c_file, c_code)?;
 
-    let parser = Parser::new(rust_tree_sitter::Language::C).unwrap();
-    let tree = parser.parse(c_code, None).unwrap();
+    let parser = Parser::new(rust_tree_sitter::Language::C)?;
+    let tree = parser.parse(c_code, None)?;
 
     // Test function pointers
     let function_pointers = CSyntax::find_function_pointers(&tree, c_code);
@@ -378,7 +378,7 @@ int multiply(int a, int b) { return a * b; }
 /// Test Go missing features: interfaces, channels, goroutines, embedded types, type assertions
 #[test]
 fn test_go_missing_features() -> Result<()> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let go_file = temp_dir.path().join("test.go");
 
     let go_code = r#"
@@ -458,10 +458,10 @@ func main() {
 }
 "#;
 
-    fs::write(&go_file, go_code).unwrap();
+    fs::write(&go_file, go_code)?;
 
-    let parser = Parser::new(rust_tree_sitter::Language::Go).unwrap();
-    let tree = parser.parse(go_code, None).unwrap();
+    let parser = Parser::new(rust_tree_sitter::Language::Go)?;
+    let tree = parser.parse(go_code, None)?;
 
     // Test interfaces
     let interfaces = GoSyntax::find_interfaces(&tree, go_code);
@@ -495,7 +495,7 @@ func main() {
 /// Test Rust missing features: traits, impl blocks, macros, lifetimes, associated types, const generics
 #[test]
 fn test_rust_missing_features() -> Result<()> {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let rust_file = temp_dir.path().join("test.rs");
 
     let rust_code = r#"
@@ -568,10 +568,10 @@ where
 }
 "#;
 
-    fs::write(&rust_file, rust_code).unwrap();
+    fs::write(&rust_file, rust_code)?;
 
-    let parser = Parser::new(rust_tree_sitter::Language::Rust).unwrap();
-    let tree = parser.parse(rust_code, None).unwrap();
+    let parser = Parser::new(rust_tree_sitter::Language::Rust)?;
+    let tree = parser.parse(rust_code, None)?;
 
     // Test traits
     let traits = RustSyntax::find_traits(&tree, rust_code);

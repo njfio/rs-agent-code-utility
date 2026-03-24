@@ -9,11 +9,13 @@ use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
 
-fn write_file(path: &PathBuf, content: &str) {
+fn write_file(path: &PathBuf, content: &str) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).unwrap();
+        fs::create_dir_all(parent)?;
     }
-    fs::write(path, content).unwrap();
+    fs::write(path, content)?;
+
+    Ok(())
 }
 
 #[test]
@@ -25,17 +27,17 @@ fn security_excludes_docs_and_tests_by_default() -> Result<(), Box<dyn std::erro
     write_file(
         &root.join("docs/readme.md"),
         "# Docs\nExample key: sk-example1234567890abcdef12345678",
-    );
+    )?;
 
     // tests directory with a real-looking secret
     write_file(
         &root.join("tests/sample_test.rs"),
         r#"#[test]
 fn it_works() { let key = "sk-1234567890abcdef1234567890abcdef"; }"#,
-    );
+    )?;
 
     // minimal src
-    write_file(&root.join("src/lib.rs"), "pub fn main() {}\n");
+    write_file(&root.join("src/lib.rs"), "pub fn main() {}\n")?;
 
     let output = Command::cargo_bin("tree-sitter-cli")?
         .arg("security")
@@ -64,8 +66,8 @@ fn security_includes_tests_when_flag_set() -> Result<(), Box<dyn std::error::Err
     write_file(
         &root.join("tests/alpha.rs"),
         "fn t() { let k = \"AKIA5C38F4W0HTH09SN4\"; }",
-    );
-    write_file(&root.join("src/lib.rs"), "pub fn main() {}\n");
+    )?;
+    write_file(&root.join("src/lib.rs"), "pub fn main() {}\n")?;
 
     let output = Command::cargo_bin("tree-sitter-cli")?
         .arg("security")

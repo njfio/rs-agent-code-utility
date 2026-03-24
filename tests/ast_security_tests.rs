@@ -18,6 +18,27 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
+fn empty_semantic_info() -> SemanticInfo {
+    SemanticInfo {
+        functions: Vec::new(),
+        classes: Vec::new(),
+        variables: HashMap::new(),
+        imports: Vec::new(),
+        string_literals: Vec::new(),
+        function_calls: Vec::new(),
+    }
+}
+
+fn write_temp_file(
+    temp_dir: &TempDir,
+    name: &str,
+    content: &str,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let path = temp_dir.path().join(name);
+    std::fs::write(&path, content)?;
+    Ok(path)
+}
+
 /// Test basic AST analyzer initialization
 #[tokio::test]
 async fn test_ast_analyzer_initialization() {
@@ -35,11 +56,11 @@ async fn test_rust_analyzer_creation() {
 
 /// Test semantic information extraction from Rust code
 #[test]
-fn test_rust_semantic_extraction() {
+fn test_rust_semantic_extraction() -> Result<(), Box<dyn std::error::Error>> {
     use rust_tree_sitter::security::ast_analyzer::RustAnalyzer;
 
     let analyzer = RustAnalyzer::new();
-    let parser = Parser::new(Language::Rust).unwrap();
+    let parser = Parser::new(Language::Rust)?;
 
     let rust_code = r#"
         fn main() {
@@ -56,8 +77,8 @@ fn test_rust_semantic_extraction() {
         }
     "#;
 
-    let tree = parser.parse(rust_code, None).unwrap();
-    let semantic_info = analyzer.extract_semantic_info(&tree).unwrap();
+    let tree = parser.parse(rust_code, None)?;
+    let semantic_info = analyzer.extract_semantic_info(&tree)?;
 
     // Basic test: semantic extraction should complete without error
     // The exact number of functions/structs may vary based on parser implementation
@@ -68,77 +89,43 @@ fn test_rust_semantic_extraction() {
         semantic_info.functions.len() + semantic_info.classes.len() + semantic_info.variables.len();
     // Non-negative by type; keep variable to use semantic_info
     let _ = total_items;
+
+    Ok(())
 }
 
 /// Test context classification for different file types
 #[test]
-fn test_context_classification() {
+fn test_context_classification() -> Result<(), Box<dyn std::error::Error>> {
     use rust_tree_sitter::security::ast_analyzer::ContextClassifier;
 
     let classifier = ContextClassifier::new();
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
+    let semantic_info = empty_semantic_info();
 
     // Test test file detection
     let test_file = temp_dir.path().join("user_test.rs");
-    let context = classifier
-        .classify_context(
-            &test_file,
-            "",
-            &SemanticInfo {
-                functions: Vec::new(),
-                classes: Vec::new(),
-                variables: HashMap::new(),
-                imports: Vec::new(),
-                string_literals: Vec::new(),
-                function_calls: Vec::new(),
-            },
-        )
-        .unwrap();
+    let context = classifier.classify_context(&test_file, "", &semantic_info)?;
     assert!(context.is_test_code);
 
     // Test example file detection
     let example_file = temp_dir.path().join("example.rs");
-    let context = classifier
-        .classify_context(
-            &example_file,
-            "",
-            &SemanticInfo {
-                functions: Vec::new(),
-                classes: Vec::new(),
-                variables: HashMap::new(),
-                imports: Vec::new(),
-                string_literals: Vec::new(),
-                function_calls: Vec::new(),
-            },
-        )
-        .unwrap();
+    let context = classifier.classify_context(&example_file, "", &semantic_info)?;
     assert!(context.is_example_code);
 
     // Test regular file
     let regular_file = temp_dir.path().join("user.rs");
-    let context = classifier
-        .classify_context(
-            &regular_file,
-            "",
-            &SemanticInfo {
-                functions: Vec::new(),
-                classes: Vec::new(),
-                variables: HashMap::new(),
-                imports: Vec::new(),
-                string_literals: Vec::new(),
-                function_calls: Vec::new(),
-            },
-        )
-        .unwrap();
+    let context = classifier.classify_context(&regular_file, "", &semantic_info)?;
     assert!(!context.is_test_code);
     assert!(!context.is_example_code);
+
+    Ok(())
 }
 
 /// Test detection of hardcoded secrets in Rust
 #[tokio::test]
-async fn test_hardcoded_secret_detection() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_hardcoded_secret_detection() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     let rust_code_with_secret = r#"
         const API_KEY: &str = "sk-1234567890abcdef";
@@ -149,13 +136,9 @@ async fn test_hardcoded_secret_detection() {
         }
     "#;
 
-    let test_file = temp_dir.path().join("secrets.rs");
-    std::fs::write(&test_file, rust_code_with_secret).unwrap();
+    let test_file = write_temp_file(&temp_dir, "secrets.rs", rust_code_with_secret)?;
 
-    let findings = analyzer
-        .analyze_file(&test_file, Language::Rust)
-        .await
-        .unwrap();
+    let findings = analyzer.analyze_file(&test_file, Language::Rust).await?;
 
     // Should detect hardcoded secrets (may not always trigger)
     let _secret_findings: Vec<_> = findings
@@ -165,13 +148,15 @@ async fn test_hardcoded_secret_detection() {
 
     // Analysis completed successfully - secret detection may vary
     assert!(true, "Hardcoded secret analysis completed successfully");
+
+    Ok(())
 }
 
 /// Test detection of unsafe blocks in Rust
 #[tokio::test]
-async fn test_unsafe_block_detection() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_unsafe_block_detection() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     let rust_code_with_unsafe = r#"
         fn main() {
@@ -184,13 +169,9 @@ async fn test_unsafe_block_detection() {
         }
     "#;
 
-    let test_file = temp_dir.path().join("unsafe.rs");
-    std::fs::write(&test_file, rust_code_with_unsafe).unwrap();
+    let test_file = write_temp_file(&temp_dir, "unsafe.rs", rust_code_with_unsafe)?;
 
-    let findings = analyzer
-        .analyze_file(&test_file, Language::Rust)
-        .await
-        .unwrap();
+    let findings = analyzer.analyze_file(&test_file, Language::Rust).await?;
 
     // Should detect unsafe block usage (may not always trigger)
     let _unsafe_findings: Vec<_> = findings
@@ -200,13 +181,15 @@ async fn test_unsafe_block_detection() {
 
     // Analysis completed successfully - unsafe block detection may vary
     assert!(true, "Unsafe block analysis completed successfully");
+
+    Ok(())
 }
 
 /// Test SQL injection detection in Rust
 #[tokio::test]
-async fn test_sql_injection_detection() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_sql_injection_detection() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     let rust_code_with_sql_injection = r#"
         use std::collections::HashMap;
@@ -221,13 +204,9 @@ async fn test_sql_injection_detection() {
         }
     "#;
 
-    let test_file = temp_dir.path().join("sql_injection.rs");
-    std::fs::write(&test_file, rust_code_with_sql_injection).unwrap();
+    let test_file = write_temp_file(&temp_dir, "sql_injection.rs", rust_code_with_sql_injection)?;
 
-    let findings = analyzer
-        .analyze_file(&test_file, Language::Rust)
-        .await
-        .unwrap();
+    let findings = analyzer.analyze_file(&test_file, Language::Rust).await?;
 
     // Should detect SQL injection vulnerability (may not always trigger)
     let _sql_findings: Vec<_> = findings
@@ -237,13 +216,15 @@ async fn test_sql_injection_detection() {
 
     // Analysis completed successfully - SQL injection detection may vary
     assert!(true, "SQL injection analysis completed successfully");
+
+    Ok(())
 }
 
 /// Test context awareness - secrets in tests should be handled differently
 #[tokio::test]
-async fn test_context_awareness_test_files() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_context_awareness_test_files() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     let test_code_with_secret = r#"
         #[cfg(test)]
@@ -256,13 +237,9 @@ async fn test_context_awareness_test_files() {
         }
     "#;
 
-    let test_file = temp_dir.path().join("user_test.rs");
-    std::fs::write(&test_file, test_code_with_secret).unwrap();
+    let test_file = write_temp_file(&temp_dir, "user_test.rs", test_code_with_secret)?;
 
-    let findings = analyzer
-        .analyze_file(&test_file, Language::Rust)
-        .await
-        .unwrap();
+    let findings = analyzer.analyze_file(&test_file, Language::Rust).await?;
 
     // Check that findings in test context are properly marked
     for finding in &findings {
@@ -275,13 +252,15 @@ async fn test_context_awareness_test_files() {
             );
         }
     }
+
+    Ok(())
 }
 
 /// Test multiple file analysis
 #[tokio::test]
-async fn test_multiple_file_analysis() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_multiple_file_analysis() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     // Create multiple files with different issues
     let files = vec![
@@ -307,27 +286,26 @@ async fn test_multiple_file_analysis() {
         ),
     ];
 
-    let file_paths: Vec<_> = files
-        .into_iter()
-        .map(|(name, content)| {
-            let path = temp_dir.path().join(name);
-            std::fs::write(&path, content).unwrap();
-            (path, Language::Rust)
-        })
-        .collect();
+    let mut file_paths = Vec::new();
+    for (name, content) in files {
+        let path = write_temp_file(&temp_dir, name, content)?;
+        file_paths.push((path, Language::Rust));
+    }
 
-    let _findings = analyzer.analyze_files(file_paths).await.unwrap();
+    let _findings = analyzer.analyze_files(file_paths).await?;
 
     // Analysis completed successfully for multiple files
     // (Findings may vary based on detection implementation)
     assert!(true, "Multiple file analysis completed successfully");
+
+    Ok(())
 }
 
 /// Test severity filtering
 #[tokio::test]
-async fn test_severity_filtering() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_severity_filtering() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     let mixed_severity_code = r#"
         // High severity - hardcoded secret
@@ -348,13 +326,9 @@ async fn test_severity_filtering() {
         }
     "#;
 
-    let test_file = temp_dir.path().join("mixed.rs");
-    std::fs::write(&test_file, mixed_severity_code).unwrap();
+    let test_file = write_temp_file(&temp_dir, "mixed.rs", mixed_severity_code)?;
 
-    let all_findings = analyzer
-        .analyze_file(&test_file, Language::Rust)
-        .await
-        .unwrap();
+    let all_findings = analyzer.analyze_file(&test_file, Language::Rust).await?;
 
     // Test different severity thresholds
     let high_and_above: Vec<_> = all_findings
@@ -371,34 +345,34 @@ async fn test_severity_filtering() {
         high_and_above.len() <= medium_and_above.len(),
         "Higher severity filter should return fewer or equal results"
     );
+
+    Ok(())
 }
 
 /// Test language detection and appropriate analyzer selection
 #[tokio::test]
-async fn test_language_specific_analysis() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_language_specific_analysis() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     // Test Rust file
-    let rust_file = temp_dir.path().join("test.rs");
-    std::fs::write(&rust_file, "fn main() { println!(\"Hello\"); }").unwrap();
+    let rust_file = write_temp_file(&temp_dir, "test.rs", "fn main() { println!(\"Hello\"); }")?;
 
-    let _rust_findings = analyzer
-        .analyze_file(&rust_file, Language::Rust)
-        .await
-        .unwrap();
+    let _rust_findings = analyzer.analyze_file(&rust_file, Language::Rust).await?;
 
     // Should be able to analyze Rust files without errors
     // (findings may be empty if no issues, but analysis should succeed)
     // The analysis completed successfully if we reach this point
     assert!(true, "Rust file analysis completed successfully");
+
+    Ok(())
 }
 
 /// Test error handling for invalid files
 #[tokio::test]
-async fn test_error_handling_invalid_files() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_error_handling_invalid_files() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     // Test with non-existent file
     let nonexistent_file = temp_dir.path().join("does_not_exist.rs");
@@ -410,13 +384,15 @@ async fn test_error_handling_invalid_files() {
         result.is_err(),
         "Should return error for non-existent files"
     );
+
+    Ok(())
 }
 
 /// Test performance characteristics
 #[tokio::test]
-async fn test_performance_large_file() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_performance_large_file() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     // Create a large Rust file with many functions
     let mut large_code = String::new();
@@ -435,15 +411,11 @@ async fn test_performance_large_file() {
         ));
     }
 
-    let large_file = temp_dir.path().join("large.rs");
-    std::fs::write(&large_file, large_code).unwrap();
+    let large_file = write_temp_file(&temp_dir, "large.rs", &large_code)?;
 
     // Measure analysis time
     let start_time = std::time::Instant::now();
-    let _findings = analyzer
-        .analyze_file(&large_file, Language::Rust)
-        .await
-        .unwrap();
+    let _findings = analyzer.analyze_file(&large_file, Language::Rust).await?;
     let elapsed = start_time.elapsed();
 
     // Analysis should complete in reasonable time (< 5 seconds for this size)
@@ -456,13 +428,15 @@ async fn test_performance_large_file() {
     // Should handle large files without issues
     // The analysis completed successfully if we reach this point
     assert!(true, "Large file analysis completed successfully");
+
+    Ok(())
 }
 
 /// Test finding deduplication and accuracy
 #[tokio::test]
-async fn test_finding_accuracy_and_deduplication() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
-    let temp_dir = TempDir::new().unwrap();
+async fn test_finding_accuracy_and_deduplication() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
+    let temp_dir = TempDir::new()?;
 
     let code_with_duplicate_issues = r#"
         // Multiple unsafe blocks that should be detected separately
@@ -481,13 +455,9 @@ async fn test_finding_accuracy_and_deduplication() {
         const KEY2: &str = "sk-1234567890abcdef";
     "#;
 
-    let test_file = temp_dir.path().join("duplicates.rs");
-    std::fs::write(&test_file, code_with_duplicate_issues).unwrap();
+    let test_file = write_temp_file(&temp_dir, "duplicates.rs", code_with_duplicate_issues)?;
 
-    let findings = analyzer
-        .analyze_file(&test_file, Language::Rust)
-        .await
-        .unwrap();
+    let findings = analyzer.analyze_file(&test_file, Language::Rust).await?;
 
     // Should detect multiple unsafe blocks (may not always trigger)
     let _unsafe_findings: Vec<_> = findings
@@ -503,12 +473,14 @@ async fn test_finding_accuracy_and_deduplication() {
 
     // Analysis completed successfully - detection may vary
     assert!(true, "Finding accuracy analysis completed successfully");
+
+    Ok(())
 }
 
 /// Test integration with existing codebase
 #[tokio::test]
-async fn test_integration_with_existing_codebase() {
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
+async fn test_integration_with_existing_codebase() -> Result<(), Box<dyn std::error::Error>> {
+    let analyzer = AstSecurityAnalyzer::new()?;
 
     // Test analyzing actual files from the codebase
     let test_files = vec![
@@ -527,6 +499,8 @@ async fn test_integration_with_existing_codebase() {
             assert!(findings.is_ok(), "Failed to analyze {}", file_path);
         }
     }
+
+    Ok(())
 }
 
 /// Test confidence scoring

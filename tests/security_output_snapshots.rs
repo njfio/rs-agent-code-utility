@@ -3,7 +3,7 @@
 // snapshot tests for markdown renderers
 
 #[test]
-fn security_markdown_snapshot_is_stable_for_empty() {
+fn security_markdown_snapshot_is_stable_for_empty() -> Result<(), Box<dyn std::error::Error>> {
     // Minimal empty result snapshot to stabilize header and sections
     let result = rust_tree_sitter::SecurityScanResult {
         security_score: 100,
@@ -24,9 +24,11 @@ fn security_markdown_snapshot_is_stable_for_empty() {
         },
     };
 
-    let md = render_security_markdown_wrapper(&result, true, false, &[]);
+    let md = render_security_markdown_wrapper(&result, true, false, &[])?;
     assert!(md.contains("# 🔍 Security Scan Report"));
     assert!(md.contains("## 📊 Executive Summary"));
+
+    Ok(())
 }
 
 fn render_security_markdown_wrapper(
@@ -34,7 +36,7 @@ fn render_security_markdown_wrapper(
     summary_only: bool,
     compliance: bool,
     filtered: &[&rust_tree_sitter::SecurityVulnerability],
-) -> String {
+) -> Result<String, Box<dyn std::error::Error>> {
     // Call the internal render to snapshot markdown
     rust_tree_sitter::cli::commands::security::render_security_markdown(
         res,
@@ -42,15 +44,17 @@ fn render_security_markdown_wrapper(
         compliance,
         filtered,
     )
-    .expect("security markdown renderer should succeed")
+    .map_err(Into::into)
 }
 
 #[test]
-fn ast_security_markdown_snapshot_is_stable_for_empty() {
+fn ast_security_markdown_snapshot_is_stable_for_empty() -> Result<(), Box<dyn std::error::Error>> {
     let findings: Vec<rust_tree_sitter::security::ast_analyzer::SecurityFinding> = vec![];
-    let md = render_ast_security_markdown_wrapper(&findings, true, 0, 0);
+    let md = render_ast_security_markdown_wrapper(&findings, true, 0, 0)?;
     assert!(md.contains("# 🔍 AST-Based Security Analysis Report"));
     assert!(md.contains("## 📊 Executive Summary"));
+
+    Ok(())
 }
 
 fn render_ast_security_markdown_wrapper(
@@ -58,12 +62,12 @@ fn render_ast_security_markdown_wrapper(
     summary_only: bool,
     analyzed: usize,
     failed: usize,
-) -> String {
+) -> Result<String, Box<dyn std::error::Error>> {
     rust_tree_sitter::cli::commands::ast_security::render_ast_security_markdown(
         findings,
         summary_only,
         analyzed,
         failed,
     )
-    .expect("AST security markdown renderer should succeed")
+    .map_err(Into::into)
 }

@@ -301,7 +301,10 @@ fn test_io_error_conversion() {
 fn test_utf8_error_conversion() {
     let invalid_utf8 = &[0xFF, 0xFE, 0xFD]; // Invalid UTF-8 bytes
     #[allow(invalid_from_utf8)]
-    let utf8_error = std::str::from_utf8(invalid_utf8).unwrap_err();
+    let utf8_error = match std::str::from_utf8(invalid_utf8) {
+        Ok(_) => panic!("expected invalid UTF-8 bytes to fail decoding"),
+        Err(err) => err,
+    };
     let error: Error = utf8_error.into();
 
     match error {

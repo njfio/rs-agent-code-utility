@@ -62,7 +62,7 @@ fn test_memory_tracker_with_config() {
 }
 
 #[test]
-fn test_rust_allocation_detection() {
+fn test_rust_allocation_detection() -> Result<(), Box<dyn std::error::Error>> {
     let mut tracker = MemoryTracker::new();
 
     // Create a mock analysis result with Rust code
@@ -83,11 +83,9 @@ fn main() {
     let analysis_result = create_test_analysis_result(rust_code, "rust", "test.rs");
 
     // Write the test file
-    std::fs::write("test.rs", rust_code).unwrap();
+    std::fs::write("test.rs", rust_code)?;
 
-    let result = tracker
-        .analyze_memory_allocations(&analysis_result)
-        .unwrap();
+    let result = tracker.analyze_memory_allocations(&analysis_result)?;
 
     // Clean up
     std::fs::remove_file("test.rs").ok();
@@ -112,10 +110,12 @@ fn main() {
     assert!(has_vec_allocation, "Should detect Vec allocations");
     assert!(has_string_allocation, "Should detect String allocations");
     assert!(has_box_allocation, "Should detect Box allocations");
+
+    Ok(())
 }
 
 #[test]
-fn test_memory_leak_detection() {
+fn test_memory_leak_detection() -> Result<(), Box<dyn std::error::Error>> {
     let mut tracker = MemoryTracker::new();
 
     // Rust code with potential memory leaks
@@ -143,11 +143,9 @@ fn forget_memory() {
     let analysis_result = create_test_analysis_result(rust_code, "rust", "leak_test.rs");
 
     // Write the test file
-    std::fs::write("leak_test.rs", rust_code).unwrap();
+    std::fs::write("leak_test.rs", rust_code)?;
 
-    let result = tracker
-        .analyze_memory_allocations(&analysis_result)
-        .unwrap();
+    let result = tracker.analyze_memory_allocations(&analysis_result)?;
 
     // Clean up
     std::fs::remove_file("leak_test.rs").ok();
@@ -167,10 +165,12 @@ fn forget_memory() {
 
     assert!(has_reference_cycle, "Should detect reference cycles");
     assert!(has_direct_leak, "Should detect explicit leaks");
+
+    Ok(())
 }
 
 #[test]
-fn test_cpp_allocation_detection() {
+fn test_cpp_allocation_detection() -> Result<(), Box<dyn std::error::Error>> {
     let mut tracker = MemoryTracker::new();
 
     let cpp_code = r#"
@@ -194,11 +194,9 @@ int main() {
     let analysis_result = create_test_analysis_result(cpp_code, "cpp", "test.cpp");
 
     // Write the test file
-    std::fs::write("test.cpp", cpp_code).unwrap();
+    std::fs::write("test.cpp", cpp_code)?;
 
-    let result = tracker
-        .analyze_memory_allocations(&analysis_result)
-        .unwrap();
+    let result = tracker.analyze_memory_allocations(&analysis_result)?;
 
     // Clean up
     std::fs::remove_file("test.cpp").ok();
@@ -214,10 +212,12 @@ int main() {
         .any(|h| h.allocation_type == AllocationType::HeapAllocation);
 
     assert!(has_heap_allocation, "Should detect heap allocations");
+
+    Ok(())
 }
 
 #[test]
-fn test_allocation_patterns() {
+fn test_allocation_patterns() -> Result<(), Box<dyn std::error::Error>> {
     let mut tracker = MemoryTracker::new();
 
     let rust_code = r#"
@@ -240,11 +240,9 @@ fn create_lookup_table() {
     let analysis_result = create_test_analysis_result(rust_code, "rust", "patterns.rs");
 
     // Write the test file
-    std::fs::write("patterns.rs", rust_code).unwrap();
+    std::fs::write("patterns.rs", rust_code)?;
 
-    let result = tracker
-        .analyze_memory_allocations(&analysis_result)
-        .unwrap();
+    let result = tracker.analyze_memory_allocations(&analysis_result)?;
 
     // Clean up
     std::fs::remove_file("patterns.rs").ok();
@@ -266,6 +264,8 @@ fn create_lookup_table() {
         has_growing_collections || has_frequent_churn,
         "Should detect allocation patterns"
     );
+
+    Ok(())
 }
 
 #[test]
@@ -283,7 +283,7 @@ fn test_memory_statistics() {
 }
 
 #[test]
-fn test_fragmentation_analysis() {
+fn test_fragmentation_analysis() -> Result<(), Box<dyn std::error::Error>> {
     let mut tracker = MemoryTracker::new();
 
     // Code with many small allocations (potential fragmentation)
@@ -299,11 +299,9 @@ fn fragment_memory() {
     let analysis_result = create_test_analysis_result(rust_code, "rust", "fragment.rs");
 
     // Write the test file
-    std::fs::write("fragment.rs", rust_code).unwrap();
+    std::fs::write("fragment.rs", rust_code)?;
 
-    let result = tracker
-        .analyze_memory_allocations(&analysis_result)
-        .unwrap();
+    let result = tracker.analyze_memory_allocations(&analysis_result)?;
 
     // Clean up
     std::fs::remove_file("fragment.rs").ok();
@@ -311,10 +309,12 @@ fn fragment_memory() {
     // Verify fragmentation analysis
     assert!(result.fragmentation_analysis.fragmentation_percentage >= 0.0);
     assert!(result.fragmentation_analysis.fragmentation_percentage <= 100.0);
+
+    Ok(())
 }
 
 #[test]
-fn test_call_stack_analysis() {
+fn test_call_stack_analysis() -> Result<(), Box<dyn std::error::Error>> {
     let mut tracker = MemoryTracker::new();
 
     let rust_code = r#"
@@ -337,11 +337,9 @@ fn main() {
     let analysis_result = create_test_analysis_result(rust_code, "rust", "callstack.rs");
 
     // Write the test file
-    std::fs::write("callstack.rs", rust_code).unwrap();
+    std::fs::write("callstack.rs", rust_code)?;
 
-    let result = tracker
-        .analyze_memory_allocations(&analysis_result)
-        .unwrap();
+    let result = tracker.analyze_memory_allocations(&analysis_result)?;
 
     // Clean up
     std::fs::remove_file("callstack.rs").ok();
@@ -353,4 +351,6 @@ fn main() {
     let has_frames = result.call_stacks.iter().any(|cs| !cs.frames.is_empty());
 
     assert!(has_frames, "Call stacks should have frames");
+
+    Ok(())
 }

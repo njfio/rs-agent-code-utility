@@ -13,7 +13,7 @@ use rust_tree_sitter::ai::{
 use std::time::Duration;
 
 #[tokio::test]
-async fn test_ai_service_creation() {
+async fn test_ai_service_creation() -> Result<(), Box<dyn std::error::Error>> {
     // Create a basic configuration with at least one provider
     let mut config = AIServiceConfig::default();
     config.default_provider = AIProvider::OpenAI;
@@ -46,10 +46,12 @@ async fn test_ai_service_creation() {
         .await;
 
     assert!(service.is_ok());
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_ai_service_with_config() {
+async fn test_ai_service_with_config() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = AIServiceConfig::default();
     config.default_provider = AIProvider::OpenAI;
 
@@ -91,15 +93,17 @@ async fn test_ai_service_with_config() {
         .await;
 
     assert!(service.is_ok());
-    let service = service.unwrap();
+    let service = service?;
 
     // Test that the service has the expected provider
     let providers = service.available_providers();
     assert!(providers.contains(&AIProvider::OpenAI));
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_ai_request_processing() {
+async fn test_ai_request_processing() -> Result<(), Box<dyn std::error::Error>> {
     // Create a basic configuration with at least one provider
     let mut config = AIServiceConfig::default();
     config.default_provider = AIProvider::OpenAI;
@@ -129,8 +133,7 @@ async fn test_ai_request_processing() {
         .with_config(config)
         .with_mock_providers(true)
         .build()
-        .await
-        .unwrap();
+        .await?;
 
     let request = AIRequest::new(
         AIFeature::CodeExplanation,
@@ -140,14 +143,16 @@ async fn test_ai_request_processing() {
     let response = service.process_request(request).await;
     assert!(response.is_ok());
 
-    let response = response.unwrap();
+    let response = response?;
     assert_eq!(response.feature, AIFeature::CodeExplanation);
     assert!(!response.content.is_empty());
     assert!(response.token_usage.total_tokens > 0);
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_ai_feature_support() {
+async fn test_ai_feature_support() -> Result<(), Box<dyn std::error::Error>> {
     // Create a basic configuration with at least one provider
     let mut config = AIServiceConfig::default();
     config.default_provider = AIProvider::OpenAI;
@@ -181,17 +186,18 @@ async fn test_ai_feature_support() {
         .with_config(config)
         .with_mock_providers(true)
         .build()
-        .await
-        .unwrap();
+        .await?;
 
     // Test that basic features are supported
     assert!(service.is_feature_supported(AIFeature::CodeExplanation));
     assert!(service.is_feature_supported(AIFeature::SecurityAnalysis));
     assert!(service.is_feature_supported(AIFeature::RefactoringSuggestions));
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_ai_cache_functionality() {
+async fn test_ai_cache_functionality() -> Result<(), Box<dyn std::error::Error>> {
     // Create a basic configuration with at least one provider
     let mut config = AIServiceConfig::default();
     config.default_provider = AIProvider::OpenAI;
@@ -221,18 +227,17 @@ async fn test_ai_cache_functionality() {
         .with_config(config)
         .with_mock_providers(true)
         .build()
-        .await
-        .unwrap();
+        .await?;
 
     let request1 = AIRequest::new(AIFeature::CodeExplanation, "fn test() {}".to_string());
 
     let request2 = AIRequest::new(AIFeature::CodeExplanation, "fn test() {}".to_string());
 
     // First request
-    let response1 = service.process_request(request1).await.unwrap();
+    let response1 = service.process_request(request1).await?;
 
     // Second identical request (should potentially be cached)
-    let response2 = service.process_request(request2).await.unwrap();
+    let response2 = service.process_request(request2).await?;
 
     // Both should succeed
     assert_eq!(response1.feature, response2.feature);
@@ -244,10 +249,12 @@ async fn test_ai_cache_functionality() {
         // Cache might have hits or misses depending on implementation
         assert!(stats.hits + stats.misses > 0);
     }
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_provider_validation() {
+async fn test_provider_validation() -> Result<(), Box<dyn std::error::Error>> {
     // Create a basic configuration with at least one provider
     let mut config = AIServiceConfig::default();
     config.default_provider = AIProvider::OpenAI;
@@ -277,8 +284,7 @@ async fn test_provider_validation() {
         .with_config(config)
         .with_mock_providers(true)
         .build()
-        .await
-        .unwrap();
+        .await?;
 
     let validation_results = service.validate_connections().await;
 
@@ -286,4 +292,6 @@ async fn test_provider_validation() {
     for (_, result) in validation_results {
         assert!(result.is_ok());
     }
+
+    Ok(())
 }

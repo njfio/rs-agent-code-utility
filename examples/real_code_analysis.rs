@@ -8,13 +8,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("======================================");
     println!("Analyzing YOUR actual rust-treesitter code");
 
-    let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable not set");
+    let api_key = env::var("OPENAI_API_KEY")?;
 
     // Read your actual files
-    let lib_content = fs::read_to_string("src/lib.rs").expect("Failed to read src/lib.rs");
+    let lib_content = fs::read_to_string("src/lib.rs")?;
 
-    let analyzer_content =
-        fs::read_to_string("src/analyzer.rs").expect("Failed to read src/analyzer.rs");
+    let analyzer_content = fs::read_to_string("src/analyzer.rs")?;
 
     println!(
         "📁 Analyzing: src/lib.rs ({} lines)",

@@ -8,17 +8,19 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-fn create_analysis_result_with_fs(specs: Vec<(&str, &str, &str)>) -> (TempDir, AnalysisResult) {
-    let temp_dir = TempDir::new().expect("failed to create temp dir");
+fn create_analysis_result_with_fs(
+    specs: Vec<(&str, &str, &str)>,
+) -> Result<(TempDir, AnalysisResult)> {
+    let temp_dir = TempDir::new()?;
     let root = temp_dir.path();
 
     let mut files: Vec<FileInfo> = Vec::new();
     for (rel, content, language) in specs {
         let p = root.join(rel);
         if let Some(parent) = p.parent() {
-            fs::create_dir_all(parent).unwrap();
+            fs::create_dir_all(parent)?;
         }
-        fs::write(&p, content).unwrap();
+        fs::write(&p, content)?;
 
         files.push(FileInfo {
             path: PathBuf::from(rel),
@@ -46,7 +48,7 @@ fn create_analysis_result_with_fs(specs: Vec<(&str, &str, &str)>) -> (TempDir, A
         config: rust_tree_sitter::AnalysisConfig::default(),
     };
 
-    (temp_dir, ar)
+    Ok((temp_dir, ar))
 }
 
 #[test]
@@ -74,7 +76,7 @@ fn test_sql_injection_detection() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("vulnerable.rs", vulnerable_code, "Rust")]);
+        create_analysis_result_with_fs(vec![("vulnerable.rs", vulnerable_code, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -112,7 +114,7 @@ fn test_command_injection_detection() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("command_vuln.rs", vulnerable_code, "Rust")]);
+        create_analysis_result_with_fs(vec![("command_vuln.rs", vulnerable_code, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -147,7 +149,7 @@ fn test_hardcoded_secrets_detection() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("secrets.rs", vulnerable_code, "Rust")]);
+        create_analysis_result_with_fs(vec![("secrets.rs", vulnerable_code, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -183,7 +185,7 @@ fn test_path_traversal_detection() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("path_traversal.rs", vulnerable_code, "Rust")]);
+        create_analysis_result_with_fs(vec![("path_traversal.rs", vulnerable_code, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -221,7 +223,7 @@ fn test_xss_detection() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("xss_vuln.js", vulnerable_code, "JavaScript")]);
+        create_analysis_result_with_fs(vec![("xss_vuln.js", vulnerable_code, "JavaScript")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -260,7 +262,7 @@ fn test_insecure_random_detection() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("weak_random.rs", vulnerable_code, "Rust")]);
+        create_analysis_result_with_fs(vec![("weak_random.rs", vulnerable_code, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -304,7 +306,7 @@ fn test_safe_code_no_vulnerabilities() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("safe.rs", safe_code, "Rust")]);
+        create_analysis_result_with_fs(vec![("safe.rs", safe_code, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -335,7 +337,7 @@ fn test_multiple_files_analysis() -> Result<()> {
     let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![
         ("file1.rs", file1_code, "Rust"),
         ("file2.rs", file2_code, "Rust"),
-    ]);
+    ])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -362,7 +364,7 @@ fn test_security_score_calculation() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("multiple_vulns.rs", vulnerable_code, "Rust")]);
+        create_analysis_result_with_fs(vec![("multiple_vulns.rs", vulnerable_code, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 
@@ -397,7 +399,7 @@ fn test_vulnerability_severity_classification() -> Result<()> {
     "#;
 
     let (_tmp, analysis_result) =
-        create_analysis_result_with_fs(vec![("critical.rs", code_with_critical_vuln, "Rust")]);
+        create_analysis_result_with_fs(vec![("critical.rs", code_with_critical_vuln, "Rust")])?;
 
     let security_result = scanner.analyze(&analysis_result)?;
 

@@ -142,9 +142,9 @@ fn test_simple_transformation_application() -> Result<()> {
 }"#;
 
     // Find the correct byte offsets for "Hello, world!"
-    let hello_world_start = source
-        .find("\"Hello, world!\"")
-        .expect("Should find the string");
+    let Some(hello_world_start) = source.find("\"Hello, world!\"") else {
+        return Err(std::io::Error::other("should find greeting string").into());
+    };
     let hello_world_end = hello_world_start + "\"Hello, world!\"".len();
 
     // Create a simple replace transformation

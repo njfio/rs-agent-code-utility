@@ -41,7 +41,9 @@ fn wiki_contains_breadcrumbs_and_active_support() -> Result<()> {
             break;
         }
     }
-    let file_page = found.expect("expected at least one file page");
+    let Some(file_page) = found else {
+        return Err(std::io::Error::other("expected at least one file page").into());
+    };
     let content = fs::read_to_string(&file_page)?;
 
     // Breadcrumb markup and editor link present

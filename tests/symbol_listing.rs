@@ -11,7 +11,7 @@ fn analyzer_extracts_symbols() -> Result<(), Box<dyn std::error::Error>> {
         .files
         .iter()
         .find(|f| f.path.ends_with("phase2_demo.rs"))
-        .unwrap();
+        .ok_or_else(|| std::io::Error::other("expected phase2_demo.rs in test_files analysis"))?;
     assert!(rust_file.symbols.iter().any(|s| s.name == "UserService"));
     Ok(())
 }

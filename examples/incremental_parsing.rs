@@ -41,7 +41,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Edit 1: Changing function name from 'hello' to 'greet' ===");
 
     // Find the position of "hello" in the source
-    let hello_start = source_code.find("hello").unwrap();
+    let hello_start = source_code
+        .find("hello")
+        .ok_or_else(|| std::io::Error::other("expected initial source to contain 'hello'"))?;
     let hello_end = hello_start + "hello".len();
 
     // Create the edit
@@ -80,7 +82,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Edit 2: Adding a parameter to the function ===");
 
     // Find the position of "()" and replace with "(name: &str)"
-    let params_start = source_code.find("()").unwrap();
+    let params_start = source_code
+        .find("()")
+        .ok_or_else(|| std::io::Error::other("expected function signature to contain '()'"))?;
     let params_end = params_start + "()".len();
     let new_params = "(name: &str)";
 
@@ -110,7 +114,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let old_content = r#"println!("Hello");"#;
     let new_content = r#"println!("Hello, {}!", name);"#;
 
-    let content_start = source_code.find(old_content).unwrap();
+    let content_start = source_code.find(old_content).ok_or_else(|| {
+        std::io::Error::other("expected original println! content before replacement")
+    })?;
     let content_end = content_start + old_content.len();
 
     let edit3 = create_edit(

@@ -14,16 +14,24 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 
 fn create_analysis_result_with_fs(specs: Vec<(&str, &str, &str)>) -> (TempDir, AnalysisResult) {
-    let temp_dir = TempDir::new().expect("failed to create temp project dir");
+    let temp_dir =
+        TempDir::new().unwrap_or_else(|err| panic!("failed to create temp project dir: {}", err));
     let root = temp_dir.path();
 
     let mut files: Vec<FileInfo> = Vec::new();
     for (rel, content, language) in specs {
         let p = root.join(rel);
         if let Some(parent) = p.parent() {
-            fs::create_dir_all(parent).unwrap();
+            fs::create_dir_all(parent).unwrap_or_else(|err| {
+                panic!(
+                    "failed to create parent directories for {}: {}",
+                    p.display(),
+                    err
+                )
+            });
         }
-        fs::write(&p, content).expect("failed to write test file");
+        fs::write(&p, content)
+            .unwrap_or_else(|err| panic!("failed to write test file {}: {}", p.display(), err));
 
         files.push(FileInfo {
             path: PathBuf::from(rel),
@@ -177,7 +185,10 @@ fn test_malformed_package_json_reports_error() {
 
     let res = analyzer.analyze(&analysis_result);
     assert!(res.is_err());
-    let msg = res.err().unwrap().to_string();
+    let msg = match res {
+        Ok(_) => panic!("expected malformed package.json to fail analysis"),
+        Err(err) => err.to_string(),
+    };
     assert!(msg.contains("Failed to parse package.json"));
 }
 
@@ -192,7 +203,10 @@ fn test_malformed_cargo_toml_reports_error() {
 
     let res = analyzer.analyze(&analysis_result);
     assert!(res.is_err());
-    let msg = res.err().unwrap().to_string();
+    let msg = match res {
+        Ok(_) => panic!("expected malformed Cargo.toml to fail analysis"),
+        Err(err) => err.to_string(),
+    };
     assert!(msg.contains("Cargo.toml") || msg.contains("Invalid version type in Cargo.toml"));
 }
 

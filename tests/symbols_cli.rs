@@ -34,6 +34,11 @@ fn cli_symbols_json() -> Result<(), Box<dyn std::error::Error>> {
 
     let json_str = &data[json_start..json_end];
     let json: Value = serde_json::from_str(json_str)?;
-    assert!(!json.as_object().unwrap().is_empty());
+    let Some(obj) = json.as_object() else {
+        return Err(
+            std::io::Error::other("expected symbols command to return a JSON object").into(),
+        );
+    };
+    assert!(!obj.is_empty());
     Ok(())
 }

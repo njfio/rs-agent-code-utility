@@ -130,12 +130,14 @@ fn test_code_evolution_tracker_creation() -> Result<(), Box<dyn std::error::Erro
 }
 
 #[test]
-fn test_code_evolution_tracker_invalid_repo() {
-    let temp_dir = TempDir::new().unwrap();
+fn test_code_evolution_tracker_invalid_repo() -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
 
     // Should fail for non-git directory
     let result = CodeEvolutionTracker::new(temp_dir.path());
     assert!(result.is_err());
+
+    Ok(())
 }
 
 #[test]

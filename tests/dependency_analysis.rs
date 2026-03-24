@@ -319,7 +319,7 @@ fn test_repository_dependency_analysis_matches_manifest() -> Result<(), Box<dyn 
         .package_managers
         .iter()
         .find(|pm| pm.manager == PackageManager::Cargo)
-        .expect("Cargo package manager should be detected");
+        .ok_or_else(|| std::io::Error::other("Cargo package manager should be detected"))?;
 
     assert_eq!(
         cargo_package_manager.dependency_count,

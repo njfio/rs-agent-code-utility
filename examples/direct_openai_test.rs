@@ -6,7 +6,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Direct OpenAI API Test");
     println!("=========================");
 
-    let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable not set");
+    let api_key = env::var("OPENAI_API_KEY")?;
 
     println!("🔑 API Key found: {}...", &api_key[..20]);
 

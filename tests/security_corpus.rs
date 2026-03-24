@@ -161,7 +161,8 @@ const CORPUS_CASES: &[CorpusCase] = &[
 
 #[test]
 fn security_corpus_meets_detection_thresholds() {
-    let analyzer = AdvancedSecurityAnalyzer::new().expect("failed to create analyzer");
+    let analyzer = AdvancedSecurityAnalyzer::new()
+        .unwrap_or_else(|err| panic!("failed to create analyzer: {}", err));
     let mut overall_metrics = AccuracyMetrics::new();
 
     assert!(
@@ -315,7 +316,8 @@ fn analyze_corpus_fixture(
 }
 
 fn analyze_generated_source(source: &str, file_name: &str) -> Vec<SecurityVulnerability> {
-    let temp_dir = TempDir::new().expect("failed to create temp dir");
+    let temp_dir =
+        TempDir::new().unwrap_or_else(|err| panic!("failed to create temp dir: {}", err));
     let path = temp_dir.path().join(file_name);
     std::fs::write(&path, source).unwrap_or_else(|err| {
         panic!(
@@ -325,7 +327,8 @@ fn analyze_generated_source(source: &str, file_name: &str) -> Vec<SecurityVulner
         )
     });
 
-    let analyzer = AdvancedSecurityAnalyzer::new().expect("failed to create analyzer");
+    let analyzer = AdvancedSecurityAnalyzer::new()
+        .unwrap_or_else(|err| panic!("failed to create analyzer: {}", err));
     analyze_generated_fixture(&analyzer, &path)
 }
 

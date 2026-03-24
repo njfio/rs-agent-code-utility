@@ -7,36 +7,33 @@ use rust_tree_sitter::{
 use tree_sitter::{InputEdit, Point};
 
 #[test]
-fn test_parser_creation_and_basic_parsing() {
-    let parser = Parser::new(Language::Rust).unwrap();
+fn test_parser_creation_and_basic_parsing() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Rust)?;
     assert_eq!(parser.language(), Language::Rust);
 
     let source = "fn main() { println!(\"Hello, world!\"); }";
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
 
     assert_eq!(tree.root_node().kind(), "source_file");
     assert!(!tree.has_error());
     assert_eq!(tree.source(), source);
+
+    Ok(())
 }
 
 #[test]
-fn test_multiple_languages() {
+fn test_multiple_languages() -> Result<(), Box<dyn std::error::Error>> {
     for language in Language::all() {
-        let parser = Parser::new(language);
-        assert!(
-            parser.is_ok(),
-            "Failed to create parser for {}",
-            language.name()
-        );
-
-        let parser = parser.unwrap();
+        let parser = Parser::new(language)?;
         assert_eq!(parser.language(), language);
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_rust_specific_parsing() {
-    let parser = Parser::new(Language::Rust).unwrap();
+fn test_rust_specific_parsing() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Rust)?;
     let source = r#"
         struct Point {
             x: i32,
@@ -54,7 +51,7 @@ fn test_rust_specific_parsing() {
         }
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
     assert!(!tree.has_error());
 
     // Find structs
@@ -68,11 +65,13 @@ fn test_rust_specific_parsing() {
     // Find functions
     let functions = tree.find_nodes_by_kind("function_item");
     assert_eq!(functions.len(), 2); // new and main
+
+    Ok(())
 }
 
 #[test]
-fn test_javascript_parsing() {
-    let parser = Parser::new(Language::JavaScript).unwrap();
+fn test_javascript_parsing() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::JavaScript)?;
     let source = r#"
         class Calculator {
             constructor() {
@@ -91,7 +90,7 @@ fn test_javascript_parsing() {
         }
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
     assert!(!tree.has_error());
 
     // Find classes
@@ -101,11 +100,13 @@ fn test_javascript_parsing() {
     // Find functions
     let functions = tree.find_nodes_by_kind("function_declaration");
     assert_eq!(functions.len(), 1);
+
+    Ok(())
 }
 
 #[test]
-fn test_python_parsing() {
-    let parser = Parser::new(Language::Python).unwrap();
+fn test_python_parsing() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Python)?;
     let source = r#"
 class Calculator:
     def __init__(self):
@@ -120,7 +121,7 @@ def main():
     calc.add(5)
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
     assert!(!tree.has_error());
 
     // Find classes
@@ -130,22 +131,24 @@ def main():
     // Find functions
     let functions = tree.find_nodes_by_kind("function_definition");
     assert_eq!(functions.len(), 3); // __init__, add, main
+
+    Ok(())
 }
 
 #[test]
-fn test_query_system() {
-    let parser = Parser::new(Language::Rust).unwrap();
+fn test_query_system() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Rust)?;
     let source = r#"
         pub fn public_function() {}
         fn private_function() {}
         pub fn another_public() {}
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
 
     // Test basic query
-    let query = Query::new(Language::Rust, "(function_item) @function").unwrap();
-    let matches = query.matches(&tree).unwrap();
+    let query = Query::new(Language::Rust, "(function_item) @function")?;
+    let matches = query.matches(&tree)?;
     assert_eq!(matches.len(), 3);
 
     // Test query with captures
@@ -157,10 +160,9 @@ fn test_query_system() {
             name: (identifier) @name
         ) @function
     "#,
-    )
-    .unwrap();
+    )?;
 
-    let pub_matches = pub_query.matches(&tree).unwrap();
+    let pub_matches = pub_query.matches(&tree)?;
     assert_eq!(pub_matches.len(), 2); // Only public functions
 
     // Test capture by name
@@ -168,21 +170,25 @@ fn test_query_system() {
         let name_capture = query_match.capture_by_name(&pub_query, "name");
         assert!(name_capture.is_some());
 
-        let name = name_capture.unwrap().text().unwrap();
+        let Some(name_capture) = name_capture else {
+            return Err(std::io::Error::other("expected name capture in public query").into());
+        };
+        let name = name_capture.text()?;
         assert!(name == "public_function" || name == "another_public");
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_query_builder() {
+fn test_query_builder() -> Result<(), Box<dyn std::error::Error>> {
     let query = QueryBuilder::new(Language::Rust)
         .find_kind("function_item", "function")
         .find_kind("struct_item", "struct")
         .add_pattern("(impl_item) @impl")
-        .build()
-        .unwrap();
+        .build()?;
 
-    let parser = Parser::new(Language::Rust).unwrap();
+    let parser = Parser::new(Language::Rust)?;
     let source = r#"
         struct Point { x: i32, y: i32 }
         impl Point {
@@ -191,16 +197,18 @@ fn test_query_builder() {
         fn main() {}
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
-    let matches = query.matches(&tree).unwrap();
+    let tree = parser.parse(source, None)?;
+    let matches = query.matches(&tree)?;
 
     // Should find: 1 struct, 1 impl, 2 functions (new and main)
     assert_eq!(matches.len(), 4);
+
+    Ok(())
 }
 
 #[test]
-fn test_predefined_queries() {
-    let parser = Parser::new(Language::Rust).unwrap();
+fn test_predefined_queries() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Rust)?;
     let source = r#"
         pub struct Point { x: i32, y: i32 }
         impl Point {
@@ -209,26 +217,28 @@ fn test_predefined_queries() {
         fn main() {}
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
 
     // Test functions query
-    let functions_query = Query::functions(Language::Rust).unwrap();
-    let function_matches = functions_query.matches(&tree).unwrap();
+    let functions_query = Query::functions(Language::Rust)?;
+    let function_matches = functions_query.matches(&tree)?;
     assert_eq!(function_matches.len(), 2); // new and main
 
     // Test classes query (structs in Rust)
-    let classes_query = Query::classes(Language::Rust).unwrap();
-    let class_matches = classes_query.matches(&tree).unwrap();
+    let classes_query = Query::classes(Language::Rust)?;
+    let class_matches = classes_query.matches(&tree)?;
     assert_eq!(class_matches.len(), 1); // Point struct
+
+    Ok(())
 }
 
 #[test]
-fn test_incremental_parsing() {
-    let parser = Parser::new(Language::Rust).unwrap();
+fn test_incremental_parsing() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Rust)?;
     let mut source = "fn hello() {}".to_string();
 
     // Initial parse
-    let mut tree = parser.parse(&source, None).unwrap();
+    let mut tree = parser.parse(&source, None)?;
     assert!(!tree.has_error());
 
     // Edit: change function name
@@ -244,9 +254,11 @@ fn test_incremental_parsing() {
     source.replace_range(3..8, "hi");
     tree.edit(&edit);
 
-    let new_tree = parser.parse(&source, Some(&tree)).unwrap();
+    let new_tree = parser.parse(&source, Some(&tree))?;
     assert!(!new_tree.has_error());
     assert_eq!(source, "fn hi() {}");
+
+    Ok(())
 }
 
 #[test]
@@ -284,13 +296,15 @@ fn test_supported_languages() {
     let rust_info = languages.iter().find(|lang| lang.name == "Rust");
     assert!(rust_info.is_some());
 
-    let rust_info = rust_info.unwrap();
+    let Some(rust_info) = rust_info else {
+        panic!("expected Rust language info");
+    };
     assert_eq!(rust_info.file_extensions, &["rs"]);
 }
 
 #[test]
-fn test_tree_navigation() {
-    let parser = Parser::new(Language::Rust).unwrap();
+fn test_tree_navigation() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Rust)?;
     let source = r#"
         fn main() {
             let x = 42;
@@ -298,19 +312,25 @@ fn test_tree_navigation() {
         }
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
     let root = tree.root_node();
 
     // Navigate to function
-    let function = root.child(0).unwrap();
+    let Some(function) = root.child(0) else {
+        return Err(std::io::Error::other("expected root child function node").into());
+    };
     assert_eq!(function.kind(), "function_item");
 
     // Get function name
-    let name = function.child_by_field_name("name").unwrap();
-    assert_eq!(name.text().unwrap(), "main");
+    let Some(name) = function.child_by_field_name("name") else {
+        return Err(std::io::Error::other("expected function name field").into());
+    };
+    assert_eq!(name.text()?, "main");
 
     // Get function body
-    let body = function.child_by_field_name("body").unwrap();
+    let Some(body) = function.child_by_field_name("body") else {
+        return Err(std::io::Error::other("expected function body field").into());
+    };
     assert_eq!(body.kind(), "block");
 
     // Test node properties
@@ -318,14 +338,16 @@ fn test_tree_navigation() {
     assert!(!function.is_error());
     assert!(!function.is_missing());
     assert!(function.child_count() > 0);
+
+    Ok(())
 }
 
 #[test]
-fn test_error_handling() {
+fn test_error_handling() -> Result<(), Box<dyn std::error::Error>> {
     // Test parsing invalid code (should still create a tree but with errors)
-    let parser = Parser::new(Language::Rust).unwrap();
+    let parser = Parser::new(Language::Rust)?;
     let invalid_source = "fn main( { invalid syntax }";
-    let tree = parser.parse(invalid_source, None).unwrap();
+    let tree = parser.parse(invalid_source, None)?;
     assert!(tree.has_error());
 
     let error_nodes = tree.error_nodes();
@@ -335,18 +357,20 @@ fn test_error_handling() {
     // TODO: Re-enable when tree-sitter fixes the byte index bounds issue
     // let invalid_query = Query::new(Language::Rust, "(invalid syntax)");
     // assert!(invalid_query.is_err());
+
+    Ok(())
 }
 
 #[test]
-fn test_node_search() {
-    let parser = Parser::new(Language::Rust).unwrap();
+fn test_node_search() -> Result<(), Box<dyn std::error::Error>> {
+    let parser = Parser::new(Language::Rust)?;
     let source = r#"
         struct Point { x: i32, y: i32 }
         struct Line { start: Point, end: Point }
         fn distance(p1: Point, p2: Point) -> f64 { 0.0 }
     "#;
 
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
     let root = tree.root_node();
 
     // Find all struct definitions
@@ -356,7 +380,12 @@ fn test_node_search() {
     // Find first function
     let function = root.find_descendant(|node| node.kind() == "function_item");
     assert!(function.is_some());
-    assert_eq!(function.unwrap().kind(), "function_item");
+    let Some(function) = function else {
+        return Err(std::io::Error::other("expected function descendant").into());
+    };
+    assert_eq!(function.kind(), "function_item");
+
+    Ok(())
 }
 
 #[test]

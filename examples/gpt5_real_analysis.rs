@@ -8,10 +8,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("===============================");
     println!("Analyzing YOUR actual rust-treesitter code with GPT-5");
 
-    let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable not set");
+    let api_key = env::var("OPENAI_API_KEY")?;
 
     // Read your actual lib.rs file
-    let lib_content = fs::read_to_string("src/lib.rs").expect("Failed to read src/lib.rs");
+    let lib_content = fs::read_to_string("src/lib.rs")?;
 
     println!("📁 Analyzing: src/lib.rs");
     println!("📊 File size: {} bytes", lib_content.len());

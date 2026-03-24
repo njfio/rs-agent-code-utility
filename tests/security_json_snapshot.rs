@@ -1,5 +1,5 @@
 #[test]
-fn security_json_snapshot_basic_fields() {
+fn security_json_snapshot_basic_fields() -> Result<(), Box<dyn std::error::Error>> {
     let result = rust_tree_sitter::SecurityScanResult {
         security_score: 100,
         total_vulnerabilities: 0,
@@ -18,7 +18,9 @@ fn security_json_snapshot_basic_fields() {
             overall_status: rust_tree_sitter::advanced_security::ComplianceStatus::Compliant,
         },
     };
-    let json = serde_json::to_string_pretty(&result).unwrap();
+    let json = serde_json::to_string_pretty(&result)?;
     assert!(json.contains("security_score"));
     assert!(json.contains("total_vulnerabilities"));
+
+    Ok(())
 }

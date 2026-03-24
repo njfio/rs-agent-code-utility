@@ -8,11 +8,11 @@ use rust_tree_sitter::security::ast_analyzer::{
     AstSecurityAnalyzer, SecurityFinding, SecurityFindingType, SecuritySeverity,
 };
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🧪 Testing Embedded Code Detection in Security Scanner");
     println!("===================================================");
 
-    let analyzer = AstSecurityAnalyzer::new().unwrap();
+    let analyzer = AstSecurityAnalyzer::new()?;
 
     // Test case 1: JavaScript code in string literal (should be detected as embedded)
     println!("\n📋 Test 1: JavaScript Code Detection");
@@ -42,9 +42,7 @@ function handleClick() {
         context: Default::default(),
     };
 
-    let result = analyzer
-        .analyze_semantic_context(&finding, js_code, None)
-        .unwrap();
+    let result = analyzer.analyze_semantic_context(&finding, js_code, None)?;
 
     println!("JavaScript embedded detection result:");
     println!("  Is embedded: {}", result.is_embedded);
@@ -84,9 +82,7 @@ function handleClick() {
         context: Default::default(),
     };
 
-    let result = analyzer
-        .analyze_semantic_context(&finding, html_code, None)
-        .unwrap();
+    let result = analyzer.analyze_semantic_context(&finding, html_code, None)?;
 
     println!("HTML embedded detection result:");
     println!("  Is embedded: {}", result.is_embedded);
@@ -132,9 +128,7 @@ function handleClick() {
         context: Default::default(),
     };
 
-    let result = analyzer
-        .analyze_semantic_context(&finding, css_code, None)
-        .unwrap();
+    let result = analyzer.analyze_semantic_context(&finding, css_code, None)?;
 
     println!("CSS embedded detection result:");
     println!("  Is embedded: {}", result.is_embedded);
@@ -176,9 +170,7 @@ fn process_data(data: &HashMap<String, String>) -> Result<(), Box<dyn std::error
         context: Default::default(),
     };
 
-    let result = analyzer
-        .analyze_semantic_context(&finding, rust_code, None)
-        .unwrap();
+    let result = analyzer.analyze_semantic_context(&finding, rust_code, None)?;
 
     println!("Real Rust code detection result:");
     println!("  Is embedded: {}", result.is_embedded);
@@ -219,9 +211,7 @@ function initTheme() {
         context: Default::default(),
     };
 
-    let result = analyzer
-        .analyze_semantic_context(&finding, mixed_code, None)
-        .unwrap();
+    let result = analyzer.analyze_semantic_context(&finding, mixed_code, None)?;
 
     println!("Mixed embedded detection result:");
     println!("  Is embedded: {}", result.is_embedded);
@@ -237,4 +227,6 @@ function initTheme() {
     println!("==========================================");
     println!("This example demonstrates how the AST analyzer can distinguish between");
     println!("real security vulnerabilities and embedded code in string literals.");
+
+    Ok(())
 }

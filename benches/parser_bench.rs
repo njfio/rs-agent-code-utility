@@ -6,9 +6,16 @@ fn benchmark_rust_parser(c: &mut Criterion) {
 
     c.bench_function("parse_rust_file", |b| {
         b.iter_batched_ref(
-            || Parser::new(Language::Rust).unwrap(),
+            || {
+                Parser::new(Language::Rust)
+                    .unwrap_or_else(|err| panic!("failed to create Rust parser: {err}"))
+            },
             |parser| {
-                black_box(parser.parse(black_box(code), None).unwrap());
+                black_box(
+                    parser.parse(black_box(code), None).unwrap_or_else(|err| {
+                        panic!("failed to parse Rust benchmark input: {err}")
+                    }),
+                );
             },
             BatchSize::SmallInput,
         )
@@ -26,9 +33,14 @@ fn benchmark_javascript_parser(c: &mut Criterion) {
 
     c.bench_function("parse_javascript", |b| {
         b.iter_batched_ref(
-            || Parser::new(Language::JavaScript).unwrap(),
+            || {
+                Parser::new(Language::JavaScript)
+                    .unwrap_or_else(|err| panic!("failed to create JavaScript parser: {err}"))
+            },
             |parser| {
-                black_box(parser.parse(black_box(code), None).unwrap());
+                black_box(parser.parse(black_box(code), None).unwrap_or_else(|err| {
+                    panic!("failed to parse JavaScript benchmark input: {err}")
+                }));
             },
             BatchSize::SmallInput,
         )

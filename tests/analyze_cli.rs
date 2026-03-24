@@ -39,16 +39,23 @@ pub fn create_user() -> User {
 fn cli_analyze_json_include_graph_adds_semantic_graph() -> Result<(), Box<dyn std::error::Error>> {
     let project = create_sample_project()?;
     let output_path = project.path().join("analysis-with-graph.json");
+    let project_path = project
+        .path()
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("project path must be valid UTF-8"))?;
+    let output_path_str = output_path
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("output path must be valid UTF-8"))?;
 
     Command::cargo_bin("tree-sitter-cli")?
         .args([
             "analyze",
-            project.path().to_str().unwrap(),
+            project_path,
             "--format",
             "json",
             "--include-graph",
             "--output",
-            output_path.to_str().unwrap(),
+            output_path_str,
         ])
         .assert()
         .success();
@@ -57,10 +64,23 @@ fn cli_analyze_json_include_graph_adds_semantic_graph() -> Result<(), Box<dyn st
     let graph = json
         .get("semantic_graph")
         .and_then(Value::as_object)
-        .expect("semantic_graph should be present when --include-graph is used");
+        .ok_or_else(|| {
+            std::io::Error::other("semantic_graph should be present when --include-graph is used")
+        })?;
 
-    assert!(!graph["nodes"].as_array().unwrap().is_empty());
-    assert!(graph["statistics"]["total_nodes"].as_u64().unwrap() > 0);
+    let nodes = graph
+        .get("nodes")
+        .and_then(Value::as_array)
+        .ok_or_else(|| std::io::Error::other("semantic graph nodes array should be present"))?;
+    let total_nodes = graph
+        .get("statistics")
+        .and_then(Value::as_object)
+        .and_then(|statistics| statistics.get("total_nodes"))
+        .and_then(Value::as_u64)
+        .ok_or_else(|| std::io::Error::other("semantic graph total_nodes should be present"))?;
+
+    assert!(!nodes.is_empty());
+    assert!(total_nodes > 0);
 
     Ok(())
 }
@@ -69,15 +89,22 @@ fn cli_analyze_json_include_graph_adds_semantic_graph() -> Result<(), Box<dyn st
 fn cli_analyze_json_omits_semantic_graph_without_flag() -> Result<(), Box<dyn std::error::Error>> {
     let project = create_sample_project()?;
     let output_path = project.path().join("analysis.json");
+    let project_path = project
+        .path()
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("project path must be valid UTF-8"))?;
+    let output_path_str = output_path
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("output path must be valid UTF-8"))?;
 
     Command::cargo_bin("tree-sitter-cli")?
         .args([
             "analyze",
-            project.path().to_str().unwrap(),
+            project_path,
             "--format",
             "json",
             "--output",
-            output_path.to_str().unwrap(),
+            output_path_str,
         ])
         .assert()
         .success();

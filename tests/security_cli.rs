@@ -8,6 +8,9 @@ use std::fs;
 fn cli_saves_json_report() -> Result<(), Box<dyn std::error::Error>> {
     let tmp_dir = tempfile::tempdir()?;
     let output_path = tmp_dir.path().join("report.json");
+    let output_path_str = output_path
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("output path must be valid UTF-8"))?;
 
     Command::cargo_bin("tree-sitter-cli")?
         .args([
@@ -16,7 +19,7 @@ fn cli_saves_json_report() -> Result<(), Box<dyn std::error::Error>> {
             "--format",
             "json",
             "--output",
-            output_path.to_str().unwrap(),
+            output_path_str,
         ])
         .assert()
         .success();
@@ -30,6 +33,10 @@ fn cli_saves_json_report() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn cli_filters_by_severity() -> Result<(), Box<dyn std::error::Error>> {
     let tmp_low = tempfile::NamedTempFile::new()?;
+    let tmp_low_path = tmp_low
+        .path()
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("low severity temp path must be valid UTF-8"))?;
     Command::cargo_bin("tree-sitter-cli")?
         .args([
             "security",
@@ -39,7 +46,7 @@ fn cli_filters_by_severity() -> Result<(), Box<dyn std::error::Error>> {
             "--min-severity",
             "low",
             "--output",
-            tmp_low.path().to_str().unwrap(),
+            tmp_low_path,
         ])
         .assert()
         .success();
@@ -48,6 +55,10 @@ fn cli_filters_by_severity() -> Result<(), Box<dyn std::error::Error>> {
     let low_total = low_json["total_vulnerabilities"].as_u64().unwrap_or(0);
 
     let tmp_high = tempfile::NamedTempFile::new()?;
+    let tmp_high_path = tmp_high
+        .path()
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("high severity temp path must be valid UTF-8"))?;
     Command::cargo_bin("tree-sitter-cli")?
         .args([
             "security",
@@ -57,7 +68,7 @@ fn cli_filters_by_severity() -> Result<(), Box<dyn std::error::Error>> {
             "--min-severity",
             "critical",
             "--output",
-            tmp_high.path().to_str().unwrap(),
+            tmp_high_path,
         ])
         .assert()
         .success();
@@ -73,6 +84,9 @@ fn cli_filters_by_severity() -> Result<(), Box<dyn std::error::Error>> {
 fn cli_emits_codeclimate_report() -> Result<(), Box<dyn std::error::Error>> {
     let tmp_dir = tempfile::tempdir()?;
     let output_path = tmp_dir.path().join("report.codeclimate.json");
+    let output_path_str = output_path
+        .to_str()
+        .ok_or_else(|| std::io::Error::other("output path must be valid UTF-8"))?;
 
     Command::cargo_bin("tree-sitter-cli")?
         .args([
@@ -81,7 +95,7 @@ fn cli_emits_codeclimate_report() -> Result<(), Box<dyn std::error::Error>> {
             "--format",
             "codeclimate",
             "--output",
-            output_path.to_str().unwrap(),
+            output_path_str,
         ])
         .assert()
         .success();

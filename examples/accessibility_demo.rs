@@ -394,7 +394,7 @@ fn convert_to_analysis_output(result: &AnalysisResult) -> AnalysisOutput {
                 "{}",
                 std::time::SystemTime::now()
                     .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .unwrap()
+                    .unwrap_or_else(|_| std::time::Duration::from_secs(0))
                     .as_secs()
             ),
             target_path: result.root_path.to_string_lossy().to_string(),

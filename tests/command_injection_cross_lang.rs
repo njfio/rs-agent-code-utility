@@ -4,15 +4,15 @@ use std::fs;
 use tempfile::TempDir;
 
 #[test]
-fn detects_python_command_injection_with_argv() {
-    let tmp = TempDir::new().unwrap();
+fn detects_python_command_injection_with_argv() -> Result<(), Box<dyn std::error::Error>> {
+    let tmp = TempDir::new()?;
     let code = r#"
 import os, sys
 def f():
     os.system('ls ' + sys.argv[1])
 "#;
     let p = tmp.path().join("ci_test.py");
-    fs::write(&p, code).unwrap();
+    fs::write(&p, code)?;
     let file = FileInfo {
         path: p,
         language: "Python".into(),
@@ -30,8 +30,8 @@ def f():
     ar.parsed_files = 1;
     ar.total_lines = code.lines().count();
     ar.languages.insert("Python".into(), 1);
-    let sa = AdvancedSecurityAnalyzer::new().unwrap();
-    let res = sa.analyze(&ar).unwrap();
+    let sa = AdvancedSecurityAnalyzer::new()?;
+    let res = sa.analyze(&ar)?;
     let count = res
         .vulnerabilities
         .iter()
@@ -41,17 +41,19 @@ def f():
         })
         .count();
     assert!(count >= 1, "expected >=1 python cmd inj, got {}", count);
+
+    Ok(())
 }
 
 #[test]
-fn detects_js_command_injection_with_exec() {
-    let tmp = TempDir::new().unwrap();
+fn detects_js_command_injection_with_exec() -> Result<(), Box<dyn std::error::Error>> {
+    let tmp = TempDir::new()?;
     let code = r#"
 const child_process = require('child_process');
 function f(arg){ child_process.exec('ls ' + arg) }
 "#;
     let p = tmp.path().join("ci_test.js");
-    fs::write(&p, code).unwrap();
+    fs::write(&p, code)?;
     let file = FileInfo {
         path: p,
         language: "JavaScript".into(),
@@ -69,8 +71,8 @@ function f(arg){ child_process.exec('ls ' + arg) }
     ar.parsed_files = 1;
     ar.total_lines = code.lines().count();
     ar.languages.insert("JavaScript".into(), 1);
-    let sa = AdvancedSecurityAnalyzer::new().unwrap();
-    let res = sa.analyze(&ar).unwrap();
+    let sa = AdvancedSecurityAnalyzer::new()?;
+    let res = sa.analyze(&ar)?;
     let count = res
         .vulnerabilities
         .iter()
@@ -80,11 +82,13 @@ function f(arg){ child_process.exec('ls ' + arg) }
         })
         .count();
     assert!(count >= 1, "expected >=1 js cmd inj, got {}", count);
+
+    Ok(())
 }
 
 #[test]
-fn detects_java_runtime_exec_injection() {
-    let tmp = TempDir::new().unwrap();
+fn detects_java_runtime_exec_injection() -> Result<(), Box<dyn std::error::Error>> {
+    let tmp = TempDir::new()?;
     let code = r#"
 class T {
   void f(String a) throws Exception {
@@ -93,7 +97,7 @@ class T {
 }
 "#;
     let p = tmp.path().join("T.java");
-    fs::write(&p, code).unwrap();
+    fs::write(&p, code)?;
     let file = FileInfo {
         path: p,
         language: "Java".into(),
@@ -111,8 +115,8 @@ class T {
     ar.parsed_files = 1;
     ar.total_lines = code.lines().count();
     ar.languages.insert("Java".into(), 1);
-    let sa = AdvancedSecurityAnalyzer::new().unwrap();
-    let res = sa.analyze(&ar).unwrap();
+    let sa = AdvancedSecurityAnalyzer::new()?;
+    let res = sa.analyze(&ar)?;
     let count = res
         .vulnerabilities
         .iter()
@@ -122,4 +126,6 @@ class T {
         })
         .count();
     assert!(count >= 1, "expected >=1 java cmd inj, got {}", count);
+
+    Ok(())
 }

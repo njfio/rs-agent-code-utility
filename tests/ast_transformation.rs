@@ -3,7 +3,7 @@ use rust_tree_sitter::ast_transformation::{
 };
 use rust_tree_sitter::RiskLevel;
 use rust_tree_sitter::{
-    AstTransformationEngine, Language, Parser, SemanticValidator, Transformation,
+    AstTransformationEngine, Language, Parser, Result, SemanticValidator, Transformation,
     TransformationConfig, TransformationType, ValidationConfig,
 };
 use std::path::PathBuf;
@@ -62,7 +62,7 @@ fn test_semantic_validator_with_config() {
 }
 
 #[test]
-fn test_simple_replace_transformation() {
+fn test_simple_replace_transformation() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = "fn main() { println!(\"Hello, world!\"); }";
 
@@ -101,17 +101,17 @@ fn test_simple_replace_transformation() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
     assert!(result.success);
     assert_eq!(result.applied_transformations.len(), 1);
     assert_eq!(result.failed_transformations.len(), 0);
     assert!(result.updated_source.contains("Hello, Rust!"));
+
+    Ok(())
 }
 
 #[test]
-fn test_simple_insert_transformation() {
+fn test_simple_insert_transformation() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = "fn main() {\n}";
 
@@ -150,17 +150,17 @@ fn test_simple_insert_transformation() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
     assert!(result.success);
     assert_eq!(result.applied_transformations.len(), 1);
     assert_eq!(result.failed_transformations.len(), 0);
     assert!(result.updated_source.contains("println!"));
+
+    Ok(())
 }
 
 #[test]
-fn test_simple_delete_transformation() {
+fn test_simple_delete_transformation() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = "fn main() {\n    println!(\"Hello, world!\");\n    // This is a comment\n}";
 
@@ -199,17 +199,17 @@ fn test_simple_delete_transformation() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
     assert!(result.success);
     assert_eq!(result.applied_transformations.len(), 1);
     assert_eq!(result.failed_transformations.len(), 0);
     assert!(!result.updated_source.contains("// This is a comment"));
+
+    Ok(())
 }
 
 #[test]
-fn test_multiple_transformations() {
+fn test_multiple_transformations() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = "fn main() {\n    let x = 5;\n    println!(\"{}\", x);\n}";
 
@@ -284,18 +284,18 @@ fn test_multiple_transformations() {
         },
     ];
 
-    let result = engine
-        .apply_transformations(source, Language::Rust, &transformations)
-        .unwrap();
+    let result = engine.apply_transformations(source, Language::Rust, &transformations)?;
     assert!(result.success);
     assert_eq!(result.applied_transformations.len(), 2);
     assert_eq!(result.failed_transformations.len(), 0);
     assert!(result.updated_source.contains("10"));
     assert!(result.updated_source.contains("Value:"));
+
+    Ok(())
 }
 
 #[test]
-fn test_transformation_with_syntax_error() {
+fn test_transformation_with_syntax_error() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = "fn main() { println!(\"Hello, world!\"); }";
 
@@ -335,17 +335,17 @@ fn test_transformation_with_syntax_error() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
     assert!(!result.success);
     assert_eq!(result.applied_transformations.len(), 0);
     assert_eq!(result.failed_transformations.len(), 1);
     assert_eq!(result.updated_source, source); // Should remain unchanged
+
+    Ok(())
 }
 
 #[test]
-fn test_validation_with_strict_mode() {
+fn test_validation_with_strict_mode() -> Result<()> {
     let config = ValidationConfig {
         enable_scope_analysis: true,
         enable_type_checking: true,
@@ -355,9 +355,9 @@ fn test_validation_with_strict_mode() {
     };
 
     let validator = SemanticValidator::with_config(config);
-    let parser = Parser::new(Language::Rust).unwrap();
+    let parser = Parser::new(Language::Rust)?;
     let source = "fn main() { let x = 5; }";
-    let tree = parser.parse(source, None).unwrap();
+    let tree = parser.parse(source, None)?;
 
     let transformation = Transformation {
         id: "test_validation".to_string(),
@@ -394,15 +394,15 @@ fn test_validation_with_strict_mode() {
         validation_result: None,
     };
 
-    let result = validator
-        .validate_transformation(&tree, &transformation, Language::Rust)
-        .unwrap();
+    let result = validator.validate_transformation(&tree, &transformation, Language::Rust)?;
     assert!(result.is_valid); // Should pass basic validation
     assert!(result.confidence > 0.0);
+
+    Ok(())
 }
 
 #[test]
-fn test_extract_method_transformation() {
+fn test_extract_method_transformation() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = r#"fn main() {
     let x = 5;
@@ -446,9 +446,7 @@ fn test_extract_method_transformation() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
 
     // Extract method transformation is complex and may not succeed in all cases
     // The important thing is that the transformation engine handles it gracefully
@@ -459,10 +457,12 @@ fn test_extract_method_transformation() {
         assert!(!result.failed_transformations.is_empty());
         assert!(!result.failed_transformations[0].failure_reason.is_empty());
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_rename_variable_transformation() {
+fn test_rename_variable_transformation() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = r#"fn main() {
     let old_name = 42;
@@ -505,9 +505,7 @@ fn test_rename_variable_transformation() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
 
     // The transformation should succeed and rename all occurrences
     assert!(result.success);
@@ -515,10 +513,12 @@ fn test_rename_variable_transformation() {
     assert_eq!(result.failed_transformations.len(), 0);
     assert!(result.updated_source.contains("new_name"));
     assert!(!result.updated_source.contains("old_name"));
+
+    Ok(())
 }
 
 #[test]
-fn test_inline_variable_transformation() {
+fn test_inline_variable_transformation() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = r#"fn main() {
     let temp = 42;
@@ -561,9 +561,7 @@ fn test_inline_variable_transformation() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
 
     // The transformation should succeed and inline the variable
     assert!(result.success);
@@ -574,10 +572,12 @@ fn test_inline_variable_transformation() {
         result.updated_source.contains("42 * 2")
             || result.updated_source.contains("let result = 42")
     );
+
+    Ok(())
 }
 
 #[test]
-fn test_invalid_identifier_rename() {
+fn test_invalid_identifier_rename() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = r#"fn main() { let x = 5; }"#;
 
@@ -616,19 +616,19 @@ fn test_invalid_identifier_rename() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
 
     // The transformation should fail due to invalid identifier
     assert!(!result.success);
     assert_eq!(result.applied_transformations.len(), 0);
     assert_eq!(result.failed_transformations.len(), 1);
     assert_eq!(result.updated_source, source); // Should remain unchanged
+
+    Ok(())
 }
 
 #[test]
-fn test_keyword_rename_conflict() {
+fn test_keyword_rename_conflict() -> Result<()> {
     let engine = AstTransformationEngine::new();
     let source = r#"fn main() { let x = 5; }"#;
 
@@ -667,13 +667,13 @@ fn test_keyword_rename_conflict() {
         validation_result: None,
     };
 
-    let result = engine
-        .apply_transformation(source, Language::Rust, &transformation)
-        .unwrap();
+    let result = engine.apply_transformation(source, Language::Rust, &transformation)?;
 
     // The transformation should fail due to keyword conflict
     assert!(!result.success);
     assert_eq!(result.applied_transformations.len(), 0);
     assert_eq!(result.failed_transformations.len(), 1);
     assert_eq!(result.updated_source, source); // Should remain unchanged
+
+    Ok(())
 }

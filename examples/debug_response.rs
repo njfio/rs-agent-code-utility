@@ -7,10 +7,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 Debug GPT-5 Response");
     println!("========================");
 
-    let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY environment variable not set");
+    let api_key = env::var("OPENAI_API_KEY")?;
 
     // Simple test with your actual lib.rs
-    let lib_content = fs::read_to_string("src/lib.rs").expect("Failed to read src/lib.rs");
+    let lib_content = fs::read_to_string("src/lib.rs")?;
 
     println!(
         "📁 Analyzing: src/lib.rs ({} lines)",
@@ -71,24 +71,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 } else {
                     println!("❌ No message object found in choice");
-                    println!(
-                        "Choice keys: {:?}",
-                        first_choice.as_object().unwrap().keys().collect::<Vec<_>>()
-                    );
+                    if let Some(choice_obj) = first_choice.as_object() {
+                        println!("Choice keys: {:?}", choice_obj.keys().collect::<Vec<_>>());
+                    } else {
+                        println!("Choice was not a JSON object");
+                    }
                 }
             } else {
                 println!("❌ No first choice found");
             }
         } else {
             println!("❌ No choices array found");
-            println!(
-                "Response keys: {:?}",
-                response_body
-                    .as_object()
-                    .unwrap()
-                    .keys()
-                    .collect::<Vec<_>>()
-            );
+            if let Some(response_obj) = response_body.as_object() {
+                println!(
+                    "Response keys: {:?}",
+                    response_obj.keys().collect::<Vec<_>>()
+                );
+            } else {
+                println!("Response body was not a JSON object");
+            }
         }
     } else {
         let error_text = response.text().await?;
