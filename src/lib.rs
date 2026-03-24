@@ -8,7 +8,7 @@
 //! ## Features
 //!
 //! ### Core Parsing
-//! - **Multi-language support**: Parse Rust, Python, JavaScript, TypeScript, Go, C, C++, and more
+//! - **Multi-language support**: Parse Rust, Python, JavaScript, TypeScript, C, C++, and more
 //! - **Incremental parsing**: Efficient re-parsing of modified code sections
 //! - **Query system**: Powerful pattern matching with Tree-sitter queries
 //! - **Error recovery**: Robust parsing with detailed error reporting and recovery
@@ -542,11 +542,6 @@ pub fn supported_languages() -> Vec<LanguageInfo> {
             version: "0.21.0",
             file_extensions: &["ts", "tsx", "mts", "cts"],
         },
-        LanguageInfo {
-            name: "Go",
-            version: "0.21.0",
-            file_extensions: &["go"],
-        },
     ]
 }
 
@@ -559,7 +554,6 @@ pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
         "py" | "pyi" => Some(Language::Python),
         "c" | "h" => Some(Language::C),
         "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Some(Language::Cpp),
-        "go" => Some(Language::Go),
         _ => None,
     }
 }
@@ -588,7 +582,6 @@ mod tests {
             Some(Language::TypeScript)
         );
         assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
-        assert_eq!(detect_language_from_extension("go"), Some(Language::Go));
         assert_eq!(detect_language_from_extension("unknown"), None);
     }
 
