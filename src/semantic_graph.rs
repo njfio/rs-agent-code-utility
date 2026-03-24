@@ -2193,8 +2193,16 @@ mod tests {
         let result = graph.build_from_analysis(&analysis);
         assert!(result.is_ok());
 
-        // Should have created nodes for the function and class
-        assert_eq!(graph.nodes.len(), 2);
+        // Should have created nodes for the file module, function, and class
+        assert_eq!(graph.nodes.len(), 3);
+
+        let module_nodes: Vec<_> = graph
+            .nodes
+            .values()
+            .filter(|n| n.node_type == NodeType::Module)
+            .collect();
+        assert_eq!(module_nodes.len(), 1);
+        assert_eq!(module_nodes[0].name, "test");
 
         // Check that nodes were created correctly
         let function_nodes: Vec<_> = graph
@@ -2234,7 +2242,8 @@ mod tests {
 
         // Find non-existent type
         let module_result = graph.find_by_type(NodeType::Module, &config);
-        assert_eq!(module_result.nodes.len(), 0);
+        assert_eq!(module_result.nodes.len(), 1);
+        assert_eq!(module_result.nodes[0].name, "test");
     }
 
     #[test]
@@ -2301,13 +2310,14 @@ mod tests {
 
         let stats = graph.get_statistics();
 
-        assert_eq!(stats.total_nodes, 2);
+        assert_eq!(stats.total_nodes, 3);
         assert!(stats.total_edges > 0); // Should have some relationships
         assert_eq!(
             stats.node_type_distribution.get(&NodeType::Function),
             Some(&1)
         );
         assert_eq!(stats.node_type_distribution.get(&NodeType::Class), Some(&1));
+        assert_eq!(stats.node_type_distribution.get(&NodeType::Module), Some(&1));
     }
 
     #[test]

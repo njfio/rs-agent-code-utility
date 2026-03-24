@@ -160,10 +160,8 @@ pub mod advanced_security;
 #[cfg(feature = "net")]
 pub mod ai;
 /// Common analysis functionality and helpers
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod analysis_common;
 /// Utility functions for code analysis
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod analysis_utils;
 /// Main codebase analyzer functionality
 pub mod analyzer;
@@ -183,7 +181,6 @@ pub mod code_map;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod command_injection_detector;
 /// Code complexity metrics and analysis
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod complexity_analysis;
 /// Configuration constants and defaults
 #[allow(clippy::unwrap_used, clippy::expect_used)]
@@ -242,12 +239,10 @@ pub mod memory_tracker;
 /// Tree-sitter parser integration
 pub mod parser;
 /// Performance analysis and optimization detection
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod performance_analysis;
 /// Code querying and pattern matching
 pub mod query;
 /// Code refactoring suggestions and analysis
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod refactoring;
 /// Security analysis and vulnerability detection
 #[allow(clippy::unwrap_used, clippy::expect_used)]
@@ -256,7 +251,6 @@ pub mod security;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod semantic_graph;
 /// Test coverage analysis and gap detection
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod test_coverage;
 /// Syntax tree manipulation and traversal
 pub mod tree;

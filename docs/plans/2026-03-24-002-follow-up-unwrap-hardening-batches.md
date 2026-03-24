@@ -19,12 +19,14 @@ This document breaks the remaining modules into reviewable follow-up PR batches.
 ## Current State
 
 - Crate root already enforces `#![deny(clippy::unwrap_used, clippy::expect_used)]` in [src/lib.rs](../../src/lib.rs)
-- 34 module declarations still carry explicit local `#[allow(...)]` escapes
+- 28 module declarations still carry explicit local `#[allow(...)]` escapes
 - Remaining work should remove those escapes batch-by-batch, not as one large refactor
 
 ## Batch Plan
 
 ### Batch 1: Analysis Surface
+
+Status: complete on 2026-03-24
 
 - `analysis_common`
 - `analysis_utils`
