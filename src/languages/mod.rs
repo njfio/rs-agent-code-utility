@@ -62,7 +62,16 @@ impl Language {
             Language::TypeScript => Ok(tree_sitter_typescript::language_typescript()),
             Language::Python => Ok(tree_sitter_python::language()),
             Language::C => Ok(tree_sitter_c::language()),
-            Language::Cpp => Ok(tree_sitter_cpp::language()),
+            Language::Cpp => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_cpp::language())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
             Language::Go => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -193,7 +202,16 @@ impl Language {
             Language::TypeScript => Some(tree_sitter_typescript::HIGHLIGHT_QUERY),
             Language::Python => Some(tree_sitter_python::HIGHLIGHT_QUERY),
             Language::C => Some(tree_sitter_c::HIGHLIGHT_QUERY),
-            Language::Cpp => Some(tree_sitter_cpp::HIGHLIGHT_QUERY),
+            Language::Cpp => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_cpp::HIGHLIGHT_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::Go => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -292,12 +310,12 @@ impl Language {
             Language::TypeScript,
             Language::Python,
             Language::C,
-            Language::Cpp,
         ];
         #[cfg(feature = "extended-languages")]
         {
             let mut languages = core_languages;
             languages.extend([
+                Language::Cpp,
                 Language::Go,
                 Language::Java,
                 Language::Php,
@@ -414,6 +432,7 @@ mod tests {
     #[test]
     fn test_extended_languages_require_feature() {
         for lang in [
+            Language::Cpp,
             Language::Go,
             Language::Java,
             Language::Php,
@@ -423,6 +442,7 @@ mod tests {
         ] {
             assert!(lang.tree_sitter_language().is_err());
         }
+        assert_eq!(detect_language_from_path("example.cpp"), None);
         assert_eq!(detect_language_from_path("example.go"), None);
         assert_eq!(detect_language_from_path("example.java"), None);
         assert_eq!(detect_language_from_path("example.php"), None);

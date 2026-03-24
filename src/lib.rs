@@ -8,7 +8,7 @@
 //! ## Features
 //!
 //! ### Core Parsing
-//! - **Multi-language support**: Parse Rust, Python, JavaScript, TypeScript, C, C++, and more
+//! - **Multi-language support**: Parse Rust, Python, JavaScript, TypeScript, C, and more
 //! - **Incremental parsing**: Efficient re-parsing of modified code sections
 //! - **Query system**: Powerful pattern matching with Tree-sitter queries
 //! - **Error recovery**: Robust parsing with detailed error reporting and recovery
@@ -533,11 +533,6 @@ pub fn supported_languages() -> Vec<LanguageInfo> {
             file_extensions: &["c", "h"],
         },
         LanguageInfo {
-            name: "C++",
-            version: "0.22.0",
-            file_extensions: &["cpp", "cxx", "cc", "hpp", "hxx"],
-        },
-        LanguageInfo {
             name: "TypeScript",
             version: "0.21.0",
             file_extensions: &["ts", "tsx", "mts", "cts"],
@@ -553,7 +548,6 @@ pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
         "ts" | "tsx" | "mts" | "cts" => Some(Language::TypeScript),
         "py" | "pyi" => Some(Language::Python),
         "c" | "h" => Some(Language::C),
-        "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Some(Language::Cpp),
         _ => None,
     }
 }
