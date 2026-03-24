@@ -43,7 +43,7 @@ pub enum Commands {
         #[arg(value_name = "PATH")]
         path: PathBuf,
 
-        /// Output format (table, json, summary)
+        /// Output format (table, json, sarif, codeclimate, summary)
         #[arg(short, long, default_value = "table")]
         format: String,
 
@@ -273,7 +273,7 @@ pub enum Commands {
         #[arg(value_name = "PATH")]
         path: PathBuf,
 
-        /// Output format (table, json, markdown, sarif)
+        /// Output format (table, json, markdown, sarif, codeclimate)
         #[arg(short, long, default_value = "table")]
         format: String,
 
@@ -360,7 +360,7 @@ pub enum Commands {
         #[arg(value_name = "PATH")]
         path: PathBuf,
 
-        /// Output format (table, json, markdown, sarif)
+        /// Output format (table, json, markdown, sarif, codeclimate)
         #[arg(short, long, default_value = "table")]
         format: String,
 

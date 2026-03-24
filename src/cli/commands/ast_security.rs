@@ -10,6 +10,7 @@
 
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
+use crate::cli::sarif::{partial_fingerprints, vulnerability_fingerprint, SARIF_SCHEMA_URL};
 use crate::cli::utils::{
     ast_severity_meets_threshold, create_progress_bar, parse_ast_severity, print_success,
     validate_output_path,
@@ -40,7 +41,10 @@ pub async fn execute(
 ) -> CliResult<()> {
     // Validate inputs
     validate_path(path)?;
-    validate_format(format, &["table", "json", "markdown", "sarif"])?;
+    validate_format(
+        format,
+        &["table", "json", "markdown", "sarif", "codeclimate"],
+    )?;
     let severity_threshold = parse_ast_severity(min_severity)?;
 
     if let Some(output_path) = output {
@@ -191,6 +195,18 @@ pub async fn execute(
                 ));
             } else {
                 println!("{}", sarif);
+            }
+        }
+        OutputFormat::CodeClimate => {
+            let codeclimate = generate_codeclimate_report(&all_findings, path)?;
+            if let Some(output_path) = output {
+                std::fs::write(output_path, &codeclimate)?;
+                print_success(&format!(
+                    "Code Climate security report saved to {}",
+                    output_path.display()
+                ));
+            } else {
+                println!("{}", codeclimate);
             }
         }
         OutputFormat::Markdown => {
@@ -484,6 +500,43 @@ fn finding_rule_id(finding: &SecurityFinding) -> String {
         "security-finding".to_string()
     } else {
         normalized_type
+    }
+}
+
+fn finding_help_uri(finding: &SecurityFinding) -> String {
+    if let Some(cwe_id) = finding.cwe_id.as_deref() {
+        let digits = cwe_id.trim_start_matches("CWE-");
+        return format!("https://cwe.mitre.org/data/definitions/{}.html", digits);
+    }
+
+    match finding_rule_id(finding).as_str() {
+        "sql-injection" | "command-injection" | "cross-site-scripting" | "code-injection" => {
+            "https://owasp.org/Top10/A03_2021-Injection/".to_string()
+        }
+        "hardcoded-secret" | "weak-crypto" => {
+            "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/".to_string()
+        }
+        "path-traversal" => "https://owasp.org/Top10/A01_2021-Broken_Access_Control/".to_string(),
+        _ => "https://owasp.org/Top10/".to_string(),
+    }
+}
+
+fn finding_security_severity(finding: &SecurityFinding) -> &'static str {
+    match finding.severity {
+        SecuritySeverity::Critical => "9.0",
+        SecuritySeverity::High => "8.0",
+        SecuritySeverity::Medium => "5.0",
+        SecuritySeverity::Low => "2.0",
+        SecuritySeverity::Info => "0.0",
+    }
+}
+
+fn finding_codeclimate_severity(finding: &SecurityFinding) -> &'static str {
+    match finding.severity {
+        SecuritySeverity::Critical => "critical",
+        SecuritySeverity::High | SecuritySeverity::Medium => "major",
+        SecuritySeverity::Low => "minor",
+        SecuritySeverity::Info => "info",
     }
 }
 
@@ -841,6 +894,7 @@ fn generate_sarif_report(
             "fullDescription": {
                 "text": finding.description.clone()
             },
+            "helpUri": finding_help_uri(finding),
             "defaultConfiguration": {
                 "level": match finding.severity {
                     SecuritySeverity::Critical | SecuritySeverity::High => "error",
@@ -870,6 +924,13 @@ fn generate_sarif_report(
                 .strip_prefix(root_path)
                 .map(|path| path.to_string_lossy().into_owned())
                 .unwrap_or_else(|_| finding.file_path.clone());
+            let sarif_fingerprint = vulnerability_fingerprint(
+                &relative_path,
+                finding.line_number,
+                finding.column_start,
+                &rule_id,
+                &finding.title,
+            );
 
             let mut result = json!({
                 "ruleId": rule_id,
@@ -894,10 +955,12 @@ fn generate_sarif_report(
                         }
                     }
                 }],
+                "partialFingerprints": partial_fingerprints(&sarif_fingerprint),
                 "properties": {
                     "remediation": finding.remediation.clone(),
                     "confidence": finding.confidence,
-                    "fingerprint": fp
+                    "fingerprint": fp,
+                    "security-severity": finding_security_severity(finding),
                 }
             });
 
@@ -924,13 +987,13 @@ fn generate_sarif_report(
 
     let sarif = json!({
         "version": "2.1.0",
-        "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+        "$schema": SARIF_SCHEMA_URL,
         "runs": [{
             "tool": {
                 "driver": {
                     "name": "rust_tree_sitter",
                     "version": env!("CARGO_PKG_VERSION"),
-                    "informationUri": "https://github.com/yourusername/rust_tree_sitter",
+                    "informationUri": option_env!("CARGO_PKG_REPOSITORY").unwrap_or("https://github.com/"),
                     "rules": rules
                 }
             },
@@ -943,6 +1006,51 @@ fn generate_sarif_report(
     });
 
     Ok(serde_json::to_string_pretty(&sarif)?)
+}
+
+fn generate_codeclimate_report(
+    findings: &[SecurityFinding],
+    root_path: &PathBuf,
+) -> CliResult<String> {
+    use serde_json::json;
+
+    let issues: Vec<_> = findings
+        .iter()
+        .map(|finding| {
+            let relative_path = Path::new(&finding.file_path)
+                .strip_prefix(root_path)
+                .map(|path| path.to_string_lossy().into_owned())
+                .unwrap_or_else(|_| finding.file_path.clone());
+            let rule_id = finding_rule_id(finding);
+            let fingerprint = vulnerability_fingerprint(
+                &relative_path,
+                finding.line_number,
+                finding.column_start,
+                &rule_id,
+                &finding.title,
+            );
+
+            json!({
+                "type": "issue",
+                "check_name": rule_id,
+                "description": format!("{}: {}", finding.title, finding.description),
+                "categories": ["Security"],
+                "severity": finding_codeclimate_severity(finding),
+                "fingerprint": fingerprint,
+                "location": {
+                    "path": relative_path,
+                    "lines": {
+                        "begin": finding.line_number.max(1),
+                    }
+                },
+                "content": {
+                    "body": finding.remediation,
+                }
+            })
+        })
+        .collect();
+
+    Ok(serde_json::to_string_pretty(&issues)?)
 }
 
 /// Print security analysis summary
@@ -1189,9 +1297,12 @@ mod tests {
         .unwrap();
 
         let sarif: serde_json::Value = serde_json::from_str(&report).unwrap();
+        assert_eq!(sarif["$schema"], SARIF_SCHEMA_URL);
         let result = &sarif["runs"][0]["results"][0];
         assert_eq!(result["ruleId"], "sql-injection");
         assert_eq!(result["suppressions"][0]["kind"], "inSource");
+        assert!(result["partialFingerprints"]["primaryLocationLineHash"].is_string());
+        assert_eq!(result["properties"]["security-severity"], "8.0");
         assert_eq!(
             result["suppressions"][0]["justification"],
             "// rts-ignore[sql-injection]"

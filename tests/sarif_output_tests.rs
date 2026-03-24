@@ -72,24 +72,51 @@ fn test_to_sarif_basic_shape() {
     let sarif = rust_tree_sitter::cli::sarif::to_sarif(&analysis);
 
     // Minimal shape and metadata
+    assert_eq!(sarif.schema, rust_tree_sitter::cli::sarif::SARIF_SCHEMA_URL);
     assert_eq!(sarif.version, "2.1.0");
     assert_eq!(sarif.runs.len(), 1);
 
     let run = &sarif.runs[0];
     assert_eq!(run.tool.driver.name, "rust-tree-sitter");
+    assert_eq!(run.tool.driver.rules.len(), 1);
 
     // One vulnerability -> one result
     assert_eq!(run.results.len(), 1);
     let r = &run.results[0];
-    assert!(
-        r.rule_id.as_deref().unwrap().contains("CWE-78")
-            || r.rule_id.as_deref().unwrap().contains("Injection")
-    );
+    assert!(r.rule_id.contains("CWE-78") || r.rule_id.contains("Injection"));
     assert_eq!(r.level, Some("error")); // High -> error
     assert!(r.message.text.contains("Untrusted input"));
+    assert!(r
+        .partial_fingerprints
+        .contains_key("primaryLocationLineHash"));
+    assert_eq!(
+        r.properties
+            .as_ref()
+            .map(|properties| properties.security_severity.as_str()),
+        Some("8.5")
+    );
+    assert_eq!(
+        r.properties
+            .as_ref()
+            .map(|properties| properties.confidence.as_str()),
+        Some("high")
+    );
     assert!(r.locations[0]
         .physical_location
         .artifact_location
         .uri
         .ends_with("src/main.rs"));
+}
+
+#[test]
+fn test_to_codeclimate_basic_shape() {
+    let analysis = sample_analysis_result();
+    let issues = rust_tree_sitter::cli::sarif::to_codeclimate(&analysis);
+
+    assert_eq!(issues.len(), 1);
+    assert_eq!(issues[0].issue_type, "issue");
+    assert_eq!(issues[0].check_name, "CWE-78");
+    assert_eq!(issues[0].categories, vec!["Security".to_string()]);
+    assert_eq!(issues[0].severity, "major");
+    assert_eq!(issues[0].location.path, "src/main.rs");
 }

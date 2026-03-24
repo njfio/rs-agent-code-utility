@@ -68,3 +68,30 @@ fn cli_filters_by_severity() -> Result<(), Box<dyn std::error::Error>> {
     assert!(high_total <= low_total);
     Ok(())
 }
+
+#[test]
+fn cli_emits_codeclimate_report() -> Result<(), Box<dyn std::error::Error>> {
+    let tmp_dir = tempfile::tempdir()?;
+    let output_path = tmp_dir.path().join("report.codeclimate.json");
+
+    Command::cargo_bin("tree-sitter-cli")?
+        .args([
+            "security",
+            "test_files",
+            "--format",
+            "codeclimate",
+            "--output",
+            output_path.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    let data = fs::read_to_string(&output_path)?;
+    let json: Value = serde_json::from_str(&data)?;
+    assert!(json.is_array());
+    if let Some(first) = json.as_array().and_then(|items| items.first()) {
+        assert_eq!(first["type"], "issue");
+        assert_eq!(first["categories"][0], "Security");
+    }
+    Ok(())
+}

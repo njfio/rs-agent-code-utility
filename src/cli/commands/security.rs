@@ -7,6 +7,10 @@
 use crate::ai::AIServiceBuilder;
 use crate::cli::error::{validate_format, validate_path, CliError, CliResult};
 use crate::cli::output::OutputFormat;
+use crate::cli::sarif::{
+    help_uri as sarif_help_uri, partial_fingerprints, rule_id as sarif_rule_id,
+    security_severity as sarif_security_severity, vulnerability_fingerprint, SARIF_SCHEMA_URL,
+};
 use crate::cli::utils::{
     create_analysis_config, create_progress_bar, parse_severity, print_success,
     severity_meets_threshold, validate_output_path,
@@ -16,7 +20,7 @@ use crate::security::deterministic_filter::{filter_vulnerabilities, FilterMode};
 use crate::security::{AstSecurityAnalyzer, HeuristicFindingFilter};
 use crate::{CodebaseAnalyzer, SecurityScanner};
 use colored::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 #[cfg(feature = "net")]
@@ -47,7 +51,10 @@ pub async fn execute(
 ) -> CliResult<()> {
     // Validate inputs
     validate_path(path)?;
-    validate_format(format, &["table", "json", "markdown", "sarif"])?;
+    validate_format(
+        format,
+        &["table", "json", "markdown", "sarif", "codeclimate"],
+    )?;
     let severity_threshold = parse_severity(min_severity)?;
 
     if let Some(output_path) = output {
@@ -449,7 +456,6 @@ pub async fn execute(
         }
         OutputFormat::Sarif => {
             let sarif = generate_security_sarif_report(
-                &security_result,
                 &filtered_vulnerabilities,
                 path,
                 baseline_set.as_ref(),
@@ -462,6 +468,19 @@ pub async fn execute(
                 ));
             } else {
                 println!("{}", sarif);
+            }
+        }
+        OutputFormat::CodeClimate => {
+            let codeclimate =
+                generate_security_codeclimate_report(&filtered_vulnerabilities, path)?;
+            if let Some(output_path) = output {
+                std::fs::write(output_path, &codeclimate)?;
+                print_success(&format!(
+                    "Code Climate security report saved to {}",
+                    output_path.display()
+                ));
+            } else {
+                println!("{}", codeclimate);
             }
         }
         OutputFormat::Table | _ => {
@@ -500,41 +519,51 @@ pub async fn execute(
 }
 
 fn generate_security_sarif_report(
-    _result: &crate::SecurityScanResult,
     filtered_vulns: &[&crate::SecurityVulnerability],
     root_path: &PathBuf,
     baseline: Option<&HashSet<String>>,
 ) -> CliResult<String> {
     use serde_json::json;
 
-    let rules: Vec<serde_json::Value> = filtered_vulns
-        .iter()
-        .enumerate()
-        .map(|(i, v)| {
-            json!({
-                "id": format!("RULE_{}", i),
-                "name": v.title,
-                "shortDescription": {"text": v.description},
-                "fullDescription": {"text": v.description},
-                "defaultConfiguration": {
-                    "level": match v.severity {
-                        crate::SecuritySeverity::Critical | crate::SecuritySeverity::High => "error",
-                        crate::SecuritySeverity::Medium => "warning",
-                        crate::SecuritySeverity::Low | crate::SecuritySeverity::Info => "note",
-                    }
-                },
-                "properties": {
-                    "tags": ["security"],
-                    "confidence": format!("{:?}", v.confidence)
+    let mut rule_indices = HashMap::new();
+    let mut rules = Vec::new();
+
+    for vuln in filtered_vulns {
+        let rule_id = sarif_rule_id(vuln.cwe_id.as_deref(), &vuln.owasp_category);
+        if rule_indices.contains_key(&rule_id) {
+            continue;
+        }
+
+        let rule_index = rules.len();
+        rule_indices.insert(rule_id.clone(), rule_index);
+        rules.push(json!({
+            "id": rule_id,
+            "name": vuln.title,
+            "shortDescription": {"text": vuln.description},
+            "fullDescription": {"text": vuln.description},
+            "helpUri": sarif_help_uri(vuln.cwe_id.as_deref(), &vuln.owasp_category),
+            "defaultConfiguration": {
+                "level": match vuln.severity {
+                    crate::SecuritySeverity::Critical | crate::SecuritySeverity::High => "error",
+                    crate::SecuritySeverity::Medium => "warning",
+                    crate::SecuritySeverity::Low | crate::SecuritySeverity::Info => "note",
                 }
-            })
-        })
-        .collect();
+            },
+            "properties": {
+                "tags": ["security"],
+                "cwe": vuln.cwe_id,
+                "owasp": format!("{:?}", vuln.owasp_category),
+            }
+        }));
+    }
 
     let results: Vec<serde_json::Value> = filtered_vulns
         .iter()
-        .enumerate()
-        .map(|(i, v)| {
+        .map(|v| {
+            let rule_id = sarif_rule_id(v.cwe_id.as_deref(), &v.owasp_category);
+            let rule_index = rule_indices.get(&rule_id).copied().ok_or_else(|| {
+                CliError::Internal(format!("Missing SARIF rule index for {}", rule_id))
+            })?;
             let relative_path = v
                 .location
                 .file
@@ -542,11 +571,18 @@ fn generate_security_sarif_report(
                 .unwrap_or(&v.location.file)
                 .to_string_lossy()
                 .to_string();
-            let fp = fingerprint_vuln(v);
-            let is_baselined = baseline.map(|b| b.contains(&fp)).unwrap_or(false);
-            json!({
-                "ruleId": format!("RULE_{}", i),
-                "ruleIndex": i,
+            let baseline_fp = fingerprint_vuln(v);
+            let is_baselined = baseline.map(|b| b.contains(&baseline_fp)).unwrap_or(false);
+            let fingerprint = vulnerability_fingerprint(
+                &relative_path,
+                v.location.start_line,
+                v.location.column,
+                &rule_id,
+                &v.title,
+            );
+            Ok(json!({
+                "ruleId": rule_id,
+                "ruleIndex": rule_index,
                 "level": match v.severity {
                     crate::SecuritySeverity::Critical | crate::SecuritySeverity::High => "error",
                     crate::SecuritySeverity::Medium => "warning",
@@ -559,28 +595,98 @@ fn generate_security_sarif_report(
                         "region": {
                             "startLine": v.location.start_line,
                             "endLine": v.location.end_line,
-                            "startColumn": v.location.column,
+                            "startColumn": v.location.column.max(1),
                         }
                     }
                 }],
                 "baselineState": if is_baselined { "unchanged" } else { "new" },
+                "partialFingerprints": partial_fingerprints(&fingerprint),
                 "properties": {
                     "remediation": v.remediation.summary,
-                    "confidence": match v.confidence { crate::advanced_security::ConfidenceLevel::Low => 0.3, crate::advanced_security::ConfidenceLevel::Medium => 0.6, crate::advanced_security::ConfidenceLevel::High => 0.9 }
+                    "confidence": match v.confidence {
+                        crate::advanced_security::ConfidenceLevel::Low => "low",
+                        crate::advanced_security::ConfidenceLevel::Medium => "medium",
+                        crate::advanced_security::ConfidenceLevel::High => "high",
+                    },
+                    "security-severity": sarif_security_severity(v.impact.overall_score, &v.severity),
+                    "cwe": v.cwe_id,
+                    "owasp": format!("{:?}", v.owasp_category),
+                }
+            }))
+        })
+        .collect::<CliResult<Vec<_>>>()?;
+
+    let sarif = json!({
+        "$schema": SARIF_SCHEMA_URL,
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {"driver": {
+                "name": "rust-tree-sitter security",
+                "version": env!("CARGO_PKG_VERSION"),
+                "informationUri": option_env!("CARGO_PKG_REPOSITORY").unwrap_or("https://github.com/"),
+                "rules": rules
+            }},
+            "results": results,
+            "invocations": [{
+                "executionSuccessful": true
+            }]
+        }]
+    });
+    serde_json::to_string_pretty(&sarif).map_err(CliError::Json)
+}
+
+fn generate_security_codeclimate_report(
+    filtered_vulns: &[&crate::SecurityVulnerability],
+    root_path: &PathBuf,
+) -> CliResult<String> {
+    use serde_json::json;
+
+    let issues: Vec<_> = filtered_vulns
+        .iter()
+        .map(|v| {
+            let relative_path = v
+                .location
+                .file
+                .strip_prefix(root_path)
+                .unwrap_or(&v.location.file)
+                .to_string_lossy()
+                .to_string();
+            let rule_id = sarif_rule_id(v.cwe_id.as_deref(), &v.owasp_category);
+            let fingerprint = vulnerability_fingerprint(
+                &relative_path,
+                v.location.start_line,
+                v.location.column,
+                &rule_id,
+                &v.title,
+            );
+
+            json!({
+                "type": "issue",
+                "check_name": rule_id,
+                "description": format!("{}: {}", v.title, v.description),
+                "categories": ["Security"],
+                "severity": match v.severity {
+                    crate::SecuritySeverity::Critical => "critical",
+                    crate::SecuritySeverity::High | crate::SecuritySeverity::Medium => "major",
+                    crate::SecuritySeverity::Low => "minor",
+                    crate::SecuritySeverity::Info => "info",
+                },
+                "fingerprint": fingerprint,
+                "location": {
+                    "path": relative_path,
+                    "lines": {
+                        "begin": v.location.start_line,
+                        "end": v.location.end_line,
+                    }
+                },
+                "content": {
+                    "body": v.remediation.summary,
                 }
             })
         })
         .collect();
 
-    let sarif = json!({
-        "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
-        "version": "2.1.0",
-        "runs": [{
-            "tool": {"driver": {"name": "rust-tree-sitter security", "informationUri": "https://example.com", "rules": rules}},
-            "results": results
-        }]
-    });
-    serde_json::to_string_pretty(&sarif).map_err(CliError::Json)
+    serde_json::to_string_pretty(&issues).map_err(CliError::Json)
 }
 
 fn fingerprint_vuln(v: &crate::SecurityVulnerability) -> String {

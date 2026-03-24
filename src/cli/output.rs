@@ -52,6 +52,7 @@ pub enum OutputFormat {
     Table,
     Json,
     Sarif,
+    CodeClimate,
     Markdown,
     Summary,
     Text,
@@ -89,13 +90,14 @@ impl OutputFormat {
             "table" => Ok(OutputFormat::Table),
             "json" => Ok(OutputFormat::Json),
             "sarif" => Ok(OutputFormat::Sarif),
+            "codeclimate" => Ok(OutputFormat::CodeClimate),
             "markdown" | "md" => Ok(OutputFormat::Markdown),
             "summary" => Ok(OutputFormat::Summary),
             "text" => Ok(OutputFormat::Text),
             "html" => Ok(OutputFormat::Html),
             "csv" => Ok(OutputFormat::Csv),
             "accessible" | "a11y" => Ok(OutputFormat::AccessibleText),
-            _ => Err(format!("Unsupported format: {}. Supported: table, json, sarif, markdown, summary, text, html, csv, accessible, localized:<lang>, template:<name>", s)),
+            _ => Err(format!("Unsupported format: {}. Supported: table, json, sarif, codeclimate, markdown, summary, text, html, csv, accessible, localized:<lang>, template:<name>", s)),
         }
     }
 
@@ -104,6 +106,7 @@ impl OutputFormat {
             "table",
             "json",
             "sarif",
+            "codeclimate",
             "markdown",
             "summary",
             "text",
@@ -1511,14 +1514,21 @@ impl OutputHandler {
                 }
             }
             OutputFormat::Sarif => {
-                // SARIF format would require additional implementation
-                print_warning("SARIF format not yet implemented, using JSON instead");
-                let json = serde_json::to_string_pretty(result)?;
+                let sarif = crate::cli::sarif::to_sarif_pretty_json(result)?;
                 if let Some(path) = &self.output_path {
-                    std::fs::write(path, json)?;
-                    print_success(&format!("Results saved to {}", path.display()));
+                    std::fs::write(path, sarif)?;
+                    print_success(&format!("SARIF results saved to {}", path.display()));
                 } else {
-                    println!("{}", json);
+                    println!("{}", sarif);
+                }
+            }
+            OutputFormat::CodeClimate => {
+                let codeclimate = crate::cli::sarif::to_codeclimate_pretty_json(result)?;
+                if let Some(path) = &self.output_path {
+                    std::fs::write(path, codeclimate)?;
+                    print_success(&format!("Code Climate results saved to {}", path.display()));
+                } else {
+                    println!("{}", codeclimate);
                 }
             }
             OutputFormat::Csv => {

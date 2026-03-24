@@ -71,7 +71,10 @@ pub fn execute(
     // Handle progress bar based on output format
     match output_format {
         // Structured formats - suppress informational output
-        OutputFormat::Json | OutputFormat::Sarif | OutputFormat::Csv => {
+        OutputFormat::Json
+        | OutputFormat::Sarif
+        | OutputFormat::CodeClimate
+        | OutputFormat::Csv => {
             pb.finish_and_clear();
         }
         // Human-readable formats - show completion message

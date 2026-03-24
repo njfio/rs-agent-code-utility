@@ -447,15 +447,15 @@ The target architecture has three layers:
 
 ##### Task 2.5: Complete SARIF Output
 
-- [ ] Audit `src/cli/sarif.rs` against SARIF 2.1.0 spec
-- [ ] Add missing required fields:
+- [x] Audit `src/cli/sarif.rs` against SARIF 2.1.0 spec
+- [x] Add missing required fields:
   - `$schema` field pointing to the SARIF 2.1.0 JSON schema
   - `tool.driver.rules[]` array with rule metadata (id, name, shortDescription, helpUri)
   - `partialFingerprints` on each result for deduplication across runs
   - `security-severity` in `properties` for GitHub Advanced Security severity mapping
-- [ ] Add `properties.confidence` to each result (from Task 2.2)
-- [ ] Add `suppressions` array support (from Task 2.3)
-- [ ] Add CodeClimate JSON output as alternative format (`--format codeclimate`)
+- [x] Add `properties.confidence` to each result (from Task 2.2)
+- [x] Add `suppressions` array support (from Task 2.3)
+- [x] Add CodeClimate JSON output as alternative format (`--format codeclimate`)
 - [ ] Test with GitHub Advanced Security SARIF upload action
 
 ### Research Insights: SARIF Compliance
