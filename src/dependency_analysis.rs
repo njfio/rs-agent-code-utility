@@ -1142,13 +1142,13 @@ impl DependencyAnalyzer {
                     .next()
                     .unwrap_or("");
                 if !first.is_empty() && !first.starts_with('.') {
-                    names.push(first.split('.').next().unwrap().to_string());
+                    names.push(first.split('.').next().unwrap_or(first).to_string());
                 }
             } else if let Some(after) = l.strip_prefix("from ") {
                 // from module import ...
                 let module = after.split_whitespace().next().unwrap_or("");
                 if !module.is_empty() && !module.starts_with('.') {
-                    names.push(module.split('.').next().unwrap().to_string());
+                    names.push(module.split('.').next().unwrap_or(module).to_string());
                 }
             }
         }

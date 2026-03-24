@@ -144,12 +144,10 @@
 #![deny(clippy::unwrap_used, clippy::expect_used)]
 
 /// Advanced multi-level caching system
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_cache;
 /// Advanced memory management system
 pub mod advanced_memory;
 /// Advanced parallel processing system
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod advanced_parallel;
 /// Advanced security analysis with OWASP compliance
 pub mod advanced_security;
@@ -164,7 +162,6 @@ pub mod analysis_utils;
 /// Main codebase analyzer functionality
 pub mod analyzer;
 /// AST transformation and refactoring engine
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod ast_transformation;
 /// Command-line interface implementation
 #[cfg(feature = "cli")]
@@ -182,7 +179,6 @@ pub mod constants;
 /// Control flow graph construction and analysis
 pub mod control_flow;
 /// Dependency analysis and vulnerability scanning
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod dependency_analysis;
 /// Enhanced security analysis with compliance checking
 #[cfg(all(feature = "net", feature = "db"))]

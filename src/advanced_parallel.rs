@@ -620,25 +620,26 @@ mod tests {
     }
 
     #[test]
-    fn test_thread_pool_creation() {
+    fn test_thread_pool_creation() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let config = ThreadPoolConfig {
             min_threads: 2,
             max_threads: 4,
             ..Default::default()
         };
 
-        let pool = AdvancedThreadPool::new(config).unwrap();
+        let pool = AdvancedThreadPool::new(config)?;
         let stats = pool.stats();
         assert_eq!(stats.total_threads, 2);
+
+        Ok(())
     }
 
     #[test]
-    fn test_task_submission() {
+    fn test_task_submission() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let pool = ThreadPoolBuilder::new()
             .min_threads(1)
             .max_threads(2)
-            .build()
-            .unwrap();
+            .build()?;
 
         let counter = Arc::new(AtomicUsize::new(0));
         let task = TestTask {
@@ -646,15 +647,17 @@ mod tests {
             counter: Arc::clone(&counter),
         };
 
-        pool.submit(task).unwrap();
+        pool.submit(task)?;
         thread::sleep(Duration::from_millis(50)); // Allow task to complete
 
         assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+        Ok(())
     }
 
     #[test]
-    fn test_task_priorities() {
-        let pool = ThreadPoolBuilder::new().min_threads(1).build().unwrap();
+    fn test_task_priorities() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let pool = ThreadPoolBuilder::new().min_threads(1).build()?;
 
         let counter = Arc::new(AtomicUsize::new(0));
 
@@ -663,17 +666,18 @@ mod tests {
             id: 1,
             counter: Arc::clone(&counter),
         };
-        pool.submit_priority(normal_task, TaskPriority::Normal)
-            .unwrap();
+        pool.submit_priority(normal_task, TaskPriority::Normal)?;
 
         // Submit high priority task
         let high_task = TestTask {
             id: 2,
             counter: Arc::clone(&counter),
         };
-        pool.submit_priority(high_task, TaskPriority::High).unwrap();
+        pool.submit_priority(high_task, TaskPriority::High)?;
 
         thread::sleep(Duration::from_millis(100));
         assert_eq!(counter.load(Ordering::Relaxed), 2);
+
+        Ok(())
     }
 }

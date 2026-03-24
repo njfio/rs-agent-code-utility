@@ -19,7 +19,7 @@ This document breaks the remaining modules into reviewable follow-up PR batches.
 ## Current State
 
 - Crate root already enforces `#![deny(clippy::unwrap_used, clippy::expect_used)]` in [src/lib.rs](../../src/lib.rs)
-- 8 module declarations still carry explicit local `#[allow(...)]` escapes
+- 5 module declarations still carry explicit local `#[allow(...)]` escapes
 - Remaining work should remove those escapes batch-by-batch, not as one large refactor
 
 ## Batch Plan
@@ -112,6 +112,13 @@ Verification:
 - `cargo check --features db`
 
 ### Batch 5: Parallelism and Transformation
+
+Status: complete on 2026-03-24
+
+- Complete:
+  - `advanced_parallel`
+  - `ast_transformation`
+  - `dependency_analysis`
 
 - `advanced_parallel`
 - `ast_transformation`
