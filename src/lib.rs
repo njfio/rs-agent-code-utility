@@ -171,10 +171,8 @@ pub mod ast_transformation;
 #[cfg(feature = "cli")]
 pub mod cli;
 /// Code evolution tracking and analysis
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod code_evolution;
 /// Code mapping and visualization utilities
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod code_map;
 /// Command injection vulnerability detection
 pub mod command_injection_detector;
@@ -184,7 +182,6 @@ pub mod complexity_analysis;
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod constants;
 /// Control flow graph construction and analysis
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod control_flow;
 /// Dependency analysis and vulnerability scanning
 #[allow(clippy::unwrap_used, clippy::expect_used)]
@@ -214,7 +211,6 @@ pub mod semantic_context;
 /// SQL injection vulnerability detection
 pub mod sql_injection_detector;
 /// Symbol table construction and management
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod symbol_table;
 /// Taint analysis for security vulnerability detection
 pub mod taint_analysis;
@@ -241,7 +237,6 @@ pub mod refactoring;
 /// Security analysis and vulnerability detection
 pub mod security;
 /// Semantic graph construction and querying
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 pub mod semantic_graph;
 /// Test coverage analysis and gap detection
 pub mod test_coverage;

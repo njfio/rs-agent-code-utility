@@ -19,7 +19,7 @@ This document breaks the remaining modules into reviewable follow-up PR batches.
 ## Current State
 
 - Crate root already enforces `#![deny(clippy::unwrap_used, clippy::expect_used)]` in [src/lib.rs](../../src/lib.rs)
-- 21 module declarations still carry explicit local `#[allow(...)]` escapes
+- 16 module declarations still carry explicit local `#[allow(...)]` escapes
 - Remaining work should remove those escapes batch-by-batch, not as one large refactor
 
 ## Batch Plan
@@ -62,6 +62,18 @@ Verification:
 - `cargo clippy --all-targets --all-features -- -D warnings -W clippy::unwrap_used -W clippy::expect_used`
 
 ### Batch 3: Graph and Symbol Infrastructure
+
+Status: in progress on 2026-03-24
+
+- Complete:
+  - `control_flow`
+  - `symbol_table`
+  - `semantic_graph`
+  - `code_map`
+  - `code_evolution`
+
+- Remaining:
+  - `languages`
 
 - `control_flow`
 - `symbol_table`

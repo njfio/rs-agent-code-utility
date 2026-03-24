@@ -1673,11 +1673,14 @@ impl SemanticGraphQuery {
     }
 
     fn extract_simple_call_names(line: &str) -> Vec<String> {
-        static SIMPLE_CALL_RE: OnceLock<Regex> = OnceLock::new();
-        let regex = SIMPLE_CALL_RE.get_or_init(|| {
-            Regex::new(r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
-                .expect("simple call regex must compile")
-        });
+        static SIMPLE_CALL_RE: OnceLock<std::result::Result<Regex, regex::Error>> = OnceLock::new();
+        let Some(regex) = SIMPLE_CALL_RE
+            .get_or_init(|| Regex::new(r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\("))
+            .as_ref()
+            .ok()
+        else {
+            return Vec::new();
+        };
 
         regex
             .captures_iter(line)
@@ -1699,11 +1702,19 @@ impl SemanticGraphQuery {
     }
 
     fn extract_rust_qualified_calls(line: &str) -> Vec<(String, String)> {
-        static QUALIFIED_RUST_CALL_RE: OnceLock<Regex> = OnceLock::new();
-        let regex = QUALIFIED_RUST_CALL_RE.get_or_init(|| {
-            Regex::new(r"(?P<module>[A-Za-z_][A-Za-z0-9_]*)::(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
-                .expect("rust qualified call regex must compile")
-        });
+        static QUALIFIED_RUST_CALL_RE: OnceLock<std::result::Result<Regex, regex::Error>> =
+            OnceLock::new();
+        let Some(regex) = QUALIFIED_RUST_CALL_RE
+            .get_or_init(|| {
+                Regex::new(
+                    r"(?P<module>[A-Za-z_][A-Za-z0-9_]*)::(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(",
+                )
+            })
+            .as_ref()
+            .ok()
+        else {
+            return Vec::new();
+        };
 
         regex
             .captures_iter(line)
@@ -1717,11 +1728,19 @@ impl SemanticGraphQuery {
     }
 
     fn extract_js_qualified_calls(line: &str) -> Vec<(String, String)> {
-        static QUALIFIED_JS_CALL_RE: OnceLock<Regex> = OnceLock::new();
-        let regex = QUALIFIED_JS_CALL_RE.get_or_init(|| {
-            Regex::new(r"(?P<module>[A-Za-z_][A-Za-z0-9_]*)\.(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
-                .expect("js qualified call regex must compile")
-        });
+        static QUALIFIED_JS_CALL_RE: OnceLock<std::result::Result<Regex, regex::Error>> =
+            OnceLock::new();
+        let Some(regex) = QUALIFIED_JS_CALL_RE
+            .get_or_init(|| {
+                Regex::new(
+                    r"(?P<module>[A-Za-z_][A-Za-z0-9_]*)\.(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\(",
+                )
+            })
+            .as_ref()
+            .ok()
+        else {
+            return Vec::new();
+        };
 
         regex
             .captures_iter(line)
@@ -2226,7 +2245,7 @@ mod tests {
     fn test_find_by_type() {
         let analysis = create_test_analysis_result();
         let mut graph = SemanticGraphQuery::new();
-        graph.build_from_analysis(&analysis).unwrap();
+        assert!(graph.build_from_analysis(&analysis).is_ok());
 
         let config = QueryConfig::default();
 
@@ -2250,7 +2269,7 @@ mod tests {
     fn test_find_by_name() {
         let analysis = create_test_analysis_result();
         let mut graph = SemanticGraphQuery::new();
-        graph.build_from_analysis(&analysis).unwrap();
+        assert!(graph.build_from_analysis(&analysis).is_ok());
 
         let config = QueryConfig::default();
 
@@ -2306,7 +2325,7 @@ mod tests {
     fn test_get_statistics() {
         let analysis = create_test_analysis_result();
         let mut graph = SemanticGraphQuery::new();
-        graph.build_from_analysis(&analysis).unwrap();
+        assert!(graph.build_from_analysis(&analysis).is_ok());
 
         let stats = graph.get_statistics();
 

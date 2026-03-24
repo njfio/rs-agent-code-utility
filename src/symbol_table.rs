@@ -3,7 +3,7 @@
 //! This module provides comprehensive symbol table analysis for scope-aware vulnerability detection.
 //! It builds symbol tables with proper scope resolution, variable binding, and cross-reference tracking.
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::languages::Language;
 use crate::tree::{Node, SyntaxTree};
 use std::collections::{HashMap, HashSet};
@@ -475,11 +475,22 @@ impl SymbolTableAnalyzer {
         }
     }
 
+    fn current_scope_id(&self) -> Result<ScopeId> {
+        self.scope_stack
+            .last()
+            .copied()
+            .ok_or_else(|| Error::Internal {
+                component: "symbol_table".to_string(),
+                message: "scope stack unexpectedly empty".to_string(),
+                context: Some("root scope must exist before symbol analysis traversal".to_string()),
+            })
+    }
+
     /// Enter a new scope
     fn enter_scope(&mut self, node: Node) -> Result<()> {
         let scope_type = self.determine_scope_type(node);
         let scope_name = self.extract_scope_name(node);
-        let current_scope_id = *self.scope_stack.last().unwrap();
+        let current_scope_id = self.current_scope_id()?;
         let new_scope_id = self.next_scope_id;
         self.next_scope_id += 1;
 
@@ -642,7 +653,7 @@ impl SymbolTableAnalyzer {
     /// Extract Rust symbol definitions
     fn extract_rust_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
         let node_kind = node.kind();
-        let current_scope = *self.scope_stack.last().unwrap();
+        let current_scope = self.current_scope_id()?;
 
         match node_kind {
             "function_item" => {
@@ -798,7 +809,7 @@ impl SymbolTableAnalyzer {
     /// Extract symbol reference from AST node
     fn extract_symbol_reference(&self, node: Node) -> Result<Option<SymbolReference>> {
         if let Ok(name) = node.text() {
-            let current_scope = *self.scope_stack.last().unwrap();
+            let current_scope = self.current_scope_id()?;
 
             // Try to resolve the symbol
             if let Some(resolution) = self.resolve_symbol(name, current_scope) {
@@ -1287,8 +1298,8 @@ mod tests {
 
         // Test basic operations
         assert_eq!(
-            symbol_table.get_scope(0).unwrap().scope_type,
-            ScopeType::Global
+            symbol_table.get_scope(0).map(|scope| &scope.scope_type),
+            Some(&ScopeType::Global)
         );
         assert!(symbol_table.get_symbol(0).is_none());
         assert!(symbol_table.get_symbols_in_scope(0).is_empty());
