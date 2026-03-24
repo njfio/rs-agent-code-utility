@@ -16,7 +16,7 @@ tree-sitter-javascript = "0.20"
 tree-sitter-python = "0.20"
 tree-sitter-c = { version = "0.20", optional = true }
 tree-sitter-cpp = { version = "0.20", optional = true }
-tree-sitter-typescript = "0.20"
+tree-sitter-typescript = { version = "0.20", optional = true }
 tree-sitter-go = { version = "0.20", optional = true }
 tree-sitter-java = { version = "0.20", optional = true }
 tree-sitter-php = { version = "0.21", optional = true }
@@ -140,6 +140,7 @@ wiki = [
 extended-languages = [
     "dep:tree-sitter-c",
     "dep:tree-sitter-cpp",
+    "dep:tree-sitter-typescript",
     "dep:tree-sitter-go",
     "dep:tree-sitter-java",
     "dep:tree-sitter-php",

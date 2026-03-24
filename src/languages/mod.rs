@@ -59,7 +59,16 @@ impl Language {
         match self {
             Language::Rust => Ok(tree_sitter_rust::language()),
             Language::JavaScript => Ok(tree_sitter_javascript::language()),
-            Language::TypeScript => Ok(tree_sitter_typescript::language_typescript()),
+            Language::TypeScript => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_typescript::language_typescript())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
             Language::Python => Ok(tree_sitter_python::language()),
             Language::C => {
                 #[cfg(feature = "extended-languages")]
@@ -208,7 +217,16 @@ impl Language {
         match self {
             Language::Rust => Some(tree_sitter_rust::HIGHLIGHT_QUERY),
             Language::JavaScript => Some(tree_sitter_javascript::HIGHLIGHT_QUERY),
-            Language::TypeScript => Some(tree_sitter_typescript::HIGHLIGHT_QUERY),
+            Language::TypeScript => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_typescript::HIGHLIGHT_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::Python => Some(tree_sitter_python::HIGHLIGHT_QUERY),
             Language::C => {
                 #[cfg(feature = "extended-languages")]
@@ -322,16 +340,12 @@ impl Language {
 
     /// Get all available languages
     pub fn all() -> Vec<Language> {
-        let core_languages = vec![
-            Language::Rust,
-            Language::JavaScript,
-            Language::TypeScript,
-            Language::Python,
-        ];
+        let core_languages = vec![Language::Rust, Language::JavaScript, Language::Python];
         #[cfg(feature = "extended-languages")]
         {
             let mut languages = core_languages;
             languages.extend([
+                Language::TypeScript,
                 Language::C,
                 Language::Cpp,
                 Language::Go,
@@ -450,6 +464,7 @@ mod tests {
     #[test]
     fn test_extended_languages_require_feature() {
         for lang in [
+            Language::TypeScript,
             Language::C,
             Language::Cpp,
             Language::Go,
@@ -461,6 +476,7 @@ mod tests {
         ] {
             assert!(lang.tree_sitter_language().is_err());
         }
+        assert_eq!(detect_language_from_path("example.ts"), None);
         assert_eq!(detect_language_from_path("example.c"), None);
         assert_eq!(detect_language_from_path("example.cpp"), None);
         assert_eq!(detect_language_from_path("example.go"), None);
