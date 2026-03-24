@@ -4096,7 +4096,7 @@ mod tests {
     }
 
     #[test]
-    fn test_identify_gaps() {
+    fn test_identify_gaps() -> Result<()> {
         let mut system = IntentMappingSystem::new();
 
         // Add requirement without implementation
@@ -4126,7 +4126,7 @@ mod tests {
         system.add_implementation(orphaned_implementation);
         system.build_traceability_matrix_public();
 
-        let gaps = system.identify_gaps_public().unwrap();
+        let gaps = system.identify_gaps_public()?;
         assert!(gaps.len() >= 2); // At least one missing implementation and one missing requirement
 
         let missing_impl_gaps: Vec<_> = gaps
@@ -4140,10 +4140,12 @@ mod tests {
             .filter(|g| g.gap_type == GapType::MissingRequirement)
             .collect();
         assert!(!missing_req_gaps.is_empty());
+
+        Ok(())
     }
 
     #[test]
-    fn test_generate_recommendations() {
+    fn test_generate_recommendations() -> Result<()> {
         let system = IntentMappingSystem::new();
         let gaps = vec![
             MappingGap {
@@ -4162,7 +4164,7 @@ mod tests {
             },
         ];
 
-        let recommendations = system.generate_recommendations_public(&gaps).unwrap();
+        let recommendations = system.generate_recommendations_public(&gaps)?;
         assert_eq!(recommendations.len(), 2);
 
         let create_impl_recs: Vec<_> = recommendations
@@ -4176,6 +4178,8 @@ mod tests {
             .filter(|r| r.recommendation_type == RecommendationType::AddTests)
             .collect();
         assert_eq!(add_test_recs.len(), 1);
+
+        Ok(())
     }
 
     #[test]
@@ -4644,7 +4648,7 @@ mod tests {
     }
 
     #[test]
-    fn test_relationship_graph_creation() {
+    fn test_relationship_graph_creation() -> Result<()> {
         let mut system = IntentMappingSystem::new();
 
         // Add test requirement
@@ -4698,7 +4702,7 @@ mod tests {
         system.mappings.push(mapping);
 
         // Build relationship graph
-        let graph = system.build_relationship_graph().unwrap();
+        let graph = system.build_relationship_graph()?;
 
         // Verify graph structure
         assert_eq!(graph.nodes.len(), 3); // 1 requirement + 1 implementation + 1 code element
@@ -4710,10 +4714,14 @@ mod tests {
         assert!(graph.get_node("IMPL-GRAPH-001_RelationshipGraph").is_some());
 
         // Verify node types
-        let req_node = graph.get_node("REQ-GRAPH-001").unwrap();
+        let Some(req_node) = graph.get_node("REQ-GRAPH-001") else {
+            panic!("expected requirement node in relationship graph");
+        };
         assert_eq!(req_node.node_type, RelationshipNodeType::Requirement);
 
-        let impl_node = graph.get_node("IMPL-GRAPH-001").unwrap();
+        let Some(impl_node) = graph.get_node("IMPL-GRAPH-001") else {
+            panic!("expected implementation node in relationship graph");
+        };
         assert_eq!(impl_node.node_type, RelationshipNodeType::Implementation);
 
         // Verify edges exist
@@ -4728,10 +4736,12 @@ mod tests {
             !impl_edges.is_empty(),
             "Implementation should have outgoing edges (containment)"
         );
+
+        Ok(())
     }
 
     #[test]
-    fn test_graph_metrics_calculation() {
+    fn test_graph_metrics_calculation() -> Result<()> {
         let mut graph = RelationshipGraph::new();
 
         // Add nodes
@@ -4760,7 +4770,7 @@ mod tests {
             metadata: HashMap::new(),
             attributes: HashMap::new(),
         };
-        graph.add_edge(edge).unwrap();
+        graph.add_edge(edge)?;
 
         // Calculate metrics
         graph.calculate_metrics();
@@ -4771,10 +4781,12 @@ mod tests {
         assert!(graph.metrics.density > 0.0);
         assert!(graph.metrics.average_degree > 0.0);
         assert_eq!(graph.metrics.connected_components, 1);
+
+        Ok(())
     }
 
     #[test]
-    fn test_shortest_path_finding() {
+    fn test_shortest_path_finding() -> Result<()> {
         let mut graph = RelationshipGraph::new();
 
         // Create a simple path: A -> B -> C
@@ -4807,13 +4819,15 @@ mod tests {
             metadata: HashMap::new(),
             attributes: HashMap::new(),
         };
-        graph.add_edge(edge1).unwrap();
-        graph.add_edge(edge2).unwrap();
+        graph.add_edge(edge1)?;
+        graph.add_edge(edge2)?;
 
         // Test shortest path
         let path = graph.find_shortest_path("node1", "node3");
         assert!(path.is_some());
-        let path = path.unwrap();
+        let Some(path) = path else {
+            panic!("expected shortest path between node1 and node3");
+        };
         assert_eq!(path.len(), 3);
         assert_eq!(path, vec!["node1", "node2", "node3"]);
 
@@ -4832,6 +4846,8 @@ mod tests {
 
         let no_path = graph.find_shortest_path("node1", "isolated");
         assert!(no_path.is_none());
+
+        Ok(())
     }
 
     #[test]
@@ -4859,14 +4875,16 @@ mod tests {
     }
 
     #[test]
-    fn test_analyze_requirement_clusters_empty() {
+    fn test_analyze_requirement_clusters_empty() -> Result<()> {
         let system = IntentMappingSystem::new();
 
         // Should return empty clusters when no embeddings exist
-        let clusters = system.analyze_requirement_clusters(0.7).unwrap();
+        let clusters = system.analyze_requirement_clusters(0.7)?;
         assert!(
             clusters.is_empty(),
             "Should return empty clusters when no embeddings exist"
         );
+
+        Ok(())
     }
 }

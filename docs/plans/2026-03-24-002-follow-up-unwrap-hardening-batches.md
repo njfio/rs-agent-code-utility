@@ -19,7 +19,7 @@ This document breaks the remaining modules into reviewable follow-up PR batches.
 ## Current State
 
 - Crate root already enforces `#![deny(clippy::unwrap_used, clippy::expect_used)]` in [src/lib.rs](../../src/lib.rs)
-- 2 module declarations still carry explicit local `#[allow(...)]` escapes
+- 1 module declaration still carries an explicit local `#[allow(...)]` escape
 - Remaining work should remove those escapes batch-by-batch, not as one large refactor
 
 ## Batch Plan
@@ -135,10 +135,10 @@ Status: in progress on 2026-03-24
 - Complete:
   - `ai`
   - `embeddings`
+  - `intent_mapping`
   - `intent_mapping_stub`
 
 - Remaining:
-  - `intent_mapping`
   - `wiki`
 
 - `ai`

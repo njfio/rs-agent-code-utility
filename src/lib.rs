@@ -190,7 +190,6 @@ pub mod file_cache;
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod infrastructure;
 /// Intent mapping between requirements and implementation
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "ml")]
 pub mod intent_mapping;
 #[cfg(not(feature = "ml"))]
