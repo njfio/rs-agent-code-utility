@@ -228,6 +228,7 @@ fn security_corpus_meets_detection_thresholds() {
 proptest! {
     #![proptest_config(ProptestConfig {
         cases: 8,
+        failure_persistence: None,
         .. ProptestConfig::default()
     })]
 

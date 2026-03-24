@@ -1031,18 +1031,21 @@ impl AdvancedSecurityAnalyzer {
     ) -> Result<Vec<SecurityVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
-        // Try AST-based analysis first
-        match self.analyze_with_ast(file) {
-            Ok(ast_vulnerabilities) => {
-                vulnerabilities.extend(ast_vulnerabilities);
-            }
-            Err(e) => {
-                eprintln!(
-                    "Warning: AST-based security analysis failed for {}: {}",
-                    file.path.display(),
-                    e
-                );
-                // Will rely on string-based analysis
+        // Reduced builds intentionally omit extended grammars, so skip AST attempts when
+        // the current feature set can't resolve a tree-sitter language for this file.
+        if detect_language_from_path(&file.path).is_some() {
+            match self.analyze_with_ast(file) {
+                Ok(ast_vulnerabilities) => {
+                    vulnerabilities.extend(ast_vulnerabilities);
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Warning: AST-based security analysis failed for {}: {}",
+                        file.path.display(),
+                        e
+                    );
+                    // Will rely on string-based analysis
+                }
             }
         }
 
