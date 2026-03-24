@@ -2,6 +2,7 @@
 
 use crate::cli::error::{validate_path, CliResult};
 use crate::cli::utils::create_progress_bar;
+use crate::languages::detect_language_from_path;
 use crate::CodebaseAnalyzer;
 use colored::Colorize;
 use std::path::PathBuf;
@@ -32,9 +33,7 @@ pub fn execute(
     for file in &analysis_result.files {
         // Filter by language if specified
         if let Some(lang_filter) = language {
-            if let Some(detected_lang) =
-                crate::detect_language_from_path(&file.path.to_string_lossy())
-            {
+            if let Some(detected_lang) = detect_language_from_path(&file.path) {
                 if detected_lang.name().to_lowercase() != lang_filter.to_lowercase() {
                     continue;
                 }

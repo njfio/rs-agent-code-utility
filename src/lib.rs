@@ -8,7 +8,7 @@
 //! ## Features
 //!
 //! ### Core Parsing
-//! - **Multi-language support**: Parse Rust, Python, JavaScript, and more
+//! - **Multi-language support**: Parse Rust, JavaScript, and more
 //! - **Incremental parsing**: Efficient re-parsing of modified code sections
 //! - **Query system**: Powerful pattern matching with Tree-sitter queries
 //! - **Error recovery**: Robust parsing with detailed error reporting and recovery
@@ -522,11 +522,6 @@ pub fn supported_languages() -> Vec<LanguageInfo> {
             version: "0.21.0",
             file_extensions: &["js", "mjs", "jsx"],
         },
-        LanguageInfo {
-            name: "Python",
-            version: "0.21.0",
-            file_extensions: &["py", "pyi"],
-        },
     ]
 }
 
@@ -535,7 +530,6 @@ pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
     match extension.to_lowercase().as_str() {
         "rs" => Some(Language::Rust),
         "js" | "mjs" | "jsx" => Some(Language::JavaScript),
-        "py" | "pyi" => Some(Language::Python),
         _ => None,
     }
 }
@@ -559,7 +553,7 @@ mod tests {
             detect_language_from_extension("js"),
             Some(Language::JavaScript)
         );
-        assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
+        assert_eq!(detect_language_from_extension("py"), None);
         assert_eq!(detect_language_from_extension("ts"), None);
         assert_eq!(detect_language_from_extension("c"), None);
         assert_eq!(detect_language_from_extension("unknown"), None);
@@ -572,10 +566,7 @@ mod tests {
             detect_language_from_path("src/lib.rs"),
             Some(Language::Rust)
         );
-        assert_eq!(
-            detect_language_from_path("script.py"),
-            Some(Language::Python)
-        );
+        assert_eq!(detect_language_from_path("script.py"), None);
         assert_eq!(detect_language_from_path("component.ts"), None);
         assert_eq!(detect_language_from_path("header.h"), None);
         assert_eq!(detect_language_from_path("unknown.txt"), None);
@@ -586,6 +577,7 @@ mod tests {
         let languages = supported_languages();
         assert!(!languages.is_empty());
         assert!(languages.iter().any(|lang| lang.name == "Rust"));
+        assert!(!languages.iter().any(|lang| lang.name == "Python"));
         assert!(!languages.iter().any(|lang| lang.name == "TypeScript"));
         assert!(!languages.iter().any(|lang| lang.name == "C"));
     }

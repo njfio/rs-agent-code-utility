@@ -16,7 +16,7 @@ use crate::cli::utils::{
     ast_severity_meets_threshold, create_progress_bar, parse_ast_severity, print_success,
     validate_output_path,
 };
-use crate::languages::Language;
+use crate::languages::{detect_language_from_path, Language};
 use crate::parser::Parser;
 use crate::security::ast_analyzer::{AstSecurityAnalyzer, SecurityFinding, SecuritySeverity};
 use crate::{log_info as info, log_warn as warn};
@@ -640,7 +640,7 @@ fn discover_files(
             }
         }
 
-        if let Some(language) = crate::detect_language_from_path(&entry.path().to_string_lossy()) {
+        if let Some(language) = detect_language_from_path(entry.path()) {
             if language_filter.is_none() || language_filter == Some(language) {
                 files.push((entry.path().to_path_buf(), language));
             }

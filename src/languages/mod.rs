@@ -69,7 +69,16 @@ impl Language {
                     Err(self.extended_language_error())
                 }
             }
-            Language::Python => Ok(tree_sitter_python::language()),
+            Language::Python => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Ok(tree_sitter_python::language())
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    Err(self.extended_language_error())
+                }
+            }
             Language::C => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -227,7 +236,16 @@ impl Language {
                     None
                 }
             }
-            Language::Python => Some(tree_sitter_python::HIGHLIGHT_QUERY),
+            Language::Python => {
+                #[cfg(feature = "extended-languages")]
+                {
+                    Some(tree_sitter_python::HIGHLIGHT_QUERY)
+                }
+                #[cfg(not(feature = "extended-languages"))]
+                {
+                    None
+                }
+            }
             Language::C => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -340,11 +358,12 @@ impl Language {
 
     /// Get all available languages
     pub fn all() -> Vec<Language> {
-        let core_languages = vec![Language::Rust, Language::JavaScript, Language::Python];
+        let core_languages = vec![Language::Rust, Language::JavaScript];
         #[cfg(feature = "extended-languages")]
         {
             let mut languages = core_languages;
             languages.extend([
+                Language::Python,
                 Language::TypeScript,
                 Language::C,
                 Language::Cpp,
@@ -464,6 +483,7 @@ mod tests {
     #[test]
     fn test_extended_languages_require_feature() {
         for lang in [
+            Language::Python,
             Language::TypeScript,
             Language::C,
             Language::Cpp,
@@ -476,6 +496,7 @@ mod tests {
         ] {
             assert!(lang.tree_sitter_language().is_err());
         }
+        assert_eq!(detect_language_from_path("example.py"), None);
         assert_eq!(detect_language_from_path("example.ts"), None);
         assert_eq!(detect_language_from_path("example.c"), None);
         assert_eq!(detect_language_from_path("example.cpp"), None);

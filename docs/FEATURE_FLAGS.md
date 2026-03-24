@@ -14,7 +14,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `mmap` | Real memory-mapped file support for the advanced memory manager | `memmap2` |
 | `db` | Database-backed infrastructure | `anyhow`, `sqlx`, `config`, `chrono`, `tracing` |
 | `wiki` | Static wiki generation with markdown + network-backed enrichment | `pulldown-cmark`, `net` |
-| `extended-languages` | Secondary tree-sitter grammars kept out of the baseline build | `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-typescript`, `tree-sitter-go`, `tree-sitter-java`, `tree-sitter-php`, `tree-sitter-ruby`, `tree-sitter-swift`, `tree-sitter-kotlin` |
+| `extended-languages` | Secondary tree-sitter grammars kept out of the baseline build | `tree-sitter-python`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-typescript`, `tree-sitter-go`, `tree-sitter-java`, `tree-sitter-php`, `tree-sitter-ruby`, `tree-sitter-swift`, `tree-sitter-kotlin` |
 | `demo` | Example binaries only | `uuid` |
 | `full` | Restore the previous broad behavior surface | `std`, `serde`, `ml`, `net`, `db`, `cli`, `wiki`, `mmap`, `extended-languages` |
 
@@ -43,6 +43,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `chrono` | `db` | Typed advisory/database timestamps for SQLite-backed persistence paths |
 | `tracing` | `cli`, `net`, `db` | Structured logging for CLI initialization and feature-gated infra/runtime paths |
 | `memmap2` | `mmap` | True OS-backed memory mapping for `advanced_memory` |
+| `tree-sitter-python` | `extended-languages` | Python grammar kept out of the baseline parser surface |
 | `tree-sitter-c` | `extended-languages` | C grammar kept out of the baseline parser surface |
 | `tree-sitter-cpp` | `extended-languages` | C++ grammar kept out of the baseline parser surface |
 | `tree-sitter-typescript` | `extended-languages` | TypeScript grammar kept out of the baseline parser surface |
@@ -60,7 +61,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 
 These remain part of the core build today and still dominate the dependency footprint:
 
-- `tree-sitter` plus the core grammar set: Rust, JavaScript, and Python
+- `tree-sitter` plus the core grammar set: Rust and JavaScript
 - `serde`, `serde_json`, `serde_yaml`, `toml`
 - `regex`, `sha2`, `rand`, `rayon`, `petgraph`, `ignore`
 - `crc32fast`, `flate2`, `crossbeam-channel`, `parking_lot`, `walkdir`, `base64`
@@ -75,12 +76,12 @@ These remain part of the core build today and still dominate the dependency foot
 
 ## Current Measurements
 
-Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, and moving the C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, using rough `cargo tree | wc -l` counts:
+Measured on 2026-03-24 after gating `memmap2` behind `mmap`, removing always-on `num_cpus`, replacing direct `dirs` usage with internal std-based path resolution, swapping the cache backend off the direct `dashmap` dependency, gating the external `config` crate behind infrastructure features, removing the unused `exponential-backoff` dependency, replacing direct `async-trait` usage with boxed std futures, gating `anyhow` behind feature-local modules, moving `uuid` behind the gated demo example, restricting `chrono` to the database feature after replacing core/reporting timestamps with std-based helpers, gating `tracing` behind `cli`/`net`/`db` with crate-local no-op log shims for the core build, and moving the Python/C/C++/TypeScript/Go/Java/PHP/Ruby/Swift/Kotlin grammars behind `extended-languages`, using rough `cargo tree | wc -l` counts:
 
 | Surface | Command | Lines |
 |---|---|---|
-| Core/no-default | `cargo tree --no-default-features | wc -l` | `452` |
-| Default | `cargo tree | wc -l` | `452` |
+| Core/no-default | `cargo tree --no-default-features | wc -l` | `448` |
+| Default | `cargo tree | wc -l` | `448` |
 | All features | `cargo tree --all-features | wc -l` | `1386` |
 
 Notes:
@@ -98,5 +99,5 @@ Notes:
 - `uuid` is no longer a direct core dependency; runtime string IDs now use a crate-local generator, `cargo tree -i uuid --no-default-features` no longer matches anything, and the `uuid` crate now only appears when the gated `demo` example feature is enabled.
 - `chrono` is no longer a direct core dependency; security reports and CLI output now use crate-local std-based timestamp formatting, the infrastructure cache now stores epoch-millisecond metadata, `cargo tree -i chrono --no-default-features` no longer matches anything, and the `chrono` crate now only appears when `db` is enabled.
 - `tracing` is no longer a direct core dependency; default/core builds route log macros through crate-local no-op shims, while `tracing` now only appears as a direct dependency when `cli`, `net`, or `db` is enabled. It still appears transitively in the no-default graph through dev-only `wiremock -> hyper -> h2`.
-- `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-typescript`, `tree-sitter-go`, `tree-sitter-java`, `tree-sitter-php`, `tree-sitter-ruby`, `tree-sitter-swift`, and `tree-sitter-kotlin` are no longer direct core dependencies; they now only appear when `extended-languages` is enabled, and path-based language detection omits those languages from the default build.
-- The crate-count target from the plan is still not met. The next reduction pass would need deeper changes to the remaining always-on parser/utility stack, especially the still-core Rust/JavaScript/Python parser set.
+- `tree-sitter-python`, `tree-sitter-c`, `tree-sitter-cpp`, `tree-sitter-typescript`, `tree-sitter-go`, `tree-sitter-java`, `tree-sitter-php`, `tree-sitter-ruby`, `tree-sitter-swift`, and `tree-sitter-kotlin` are no longer direct core dependencies; they now only appear when `extended-languages` is enabled. The top-level public helper surface omits those languages from the default build, while internal feature-aware analysis paths still detect them when the feature is enabled.
+- The crate-count target from the plan is still not met. The next reduction pass would need deeper changes to the remaining always-on parser/utility stack, especially the still-core Rust/JavaScript parser set.

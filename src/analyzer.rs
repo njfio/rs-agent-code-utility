@@ -89,7 +89,7 @@
 use crate::advanced_security::{AdvancedSecurityAnalyzer, SecurityVulnerability};
 use crate::error::{Error, Result};
 use crate::file_cache::FileCache;
-use crate::languages::Language;
+use crate::languages::{detect_language_from_path as detect_feature_language_from_path, Language};
 use crate::parser::Parser;
 use crate::semantic_graph::SemanticGraphQuery;
 
@@ -697,7 +697,7 @@ impl CodebaseAnalyzer {
         }
 
         // Detect language
-        let language = match crate::detect_language_from_extension(&extension) {
+        let language = match detect_feature_language_from_path(file_path) {
             Some(lang) => lang,
             None => return Ok(None), // Skip files with unknown languages
         };
@@ -853,7 +853,7 @@ impl CodebaseAnalyzer {
         }
 
         // Detect language
-        let language = match crate::detect_language_from_extension(&extension) {
+        let language = match detect_feature_language_from_path(file_path) {
             Some(lang) => lang,
             None => return Ok(()), // Skip files with unknown languages
         };

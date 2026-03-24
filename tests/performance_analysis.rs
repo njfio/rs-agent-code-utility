@@ -735,6 +735,7 @@ fn recursive_inefficient(n: i32) -> i32 {
     Ok(())
 }
 
+#[cfg(feature = "extended-languages")]
 #[test]
 fn test_ast_hotspot_detection_finds_cross_language_hotspots(
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -910,7 +911,12 @@ def allocation_tracker(items):
         },
     )?;
 
-    for file_name in ["rust_names.rs", "js_names.js", "py_names.py"] {
+    #[cfg(feature = "extended-languages")]
+    let expected_files = ["rust_names.rs", "js_names.js", "py_names.py"];
+    #[cfg(not(feature = "extended-languages"))]
+    let expected_files = ["rust_names.rs", "js_names.js"];
+
+    for file_name in expected_files {
         assert!(
             !result.hotspots.iter().any(|hotspot| {
                 hotspot.location.file.ends_with(file_name)
