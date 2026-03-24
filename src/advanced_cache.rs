@@ -42,7 +42,7 @@ impl<T> CacheEntry<T> {
     pub fn new(data: T, ttl: Duration, key: String, dependencies: Vec<String>) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_else(|_| Duration::from_secs(0))
             .as_secs();
 
         let size_bytes = std::mem::size_of_val(&data)
@@ -65,7 +65,7 @@ impl<T> CacheEntry<T> {
     pub fn is_expired(&self) -> bool {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_else(|_| Duration::from_secs(0))
             .as_secs();
         now >= self.expires_at
     }
@@ -73,7 +73,7 @@ impl<T> CacheEntry<T> {
     pub fn touch(&mut self) {
         self.last_accessed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_else(|_| Duration::from_secs(0))
             .as_secs();
         self.access_count += 1;
     }
@@ -735,66 +735,66 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_memory_cache_basic() {
+    fn test_memory_cache_basic() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let config = CacheConfig::default();
         let cache: MemoryCache<String> = MemoryCache::new(config);
 
         // Test put and get
-        cache
-            .put(
-                "test_key".to_string(),
-                "test_value".to_string(),
-                None,
-                Vec::new(),
-            )
-            .unwrap();
-        let result = cache.get("test_key").unwrap();
+        cache.put(
+            "test_key".to_string(),
+            "test_value".to_string(),
+            None,
+            Vec::new(),
+        )?;
+        let result = cache.get("test_key")?;
         assert_eq!(result, Some("test_value".to_string()));
 
         // Test miss
-        let result = cache.get("nonexistent").unwrap();
+        let result = cache.get("nonexistent")?;
         assert_eq!(result, None);
+
+        Ok(())
     }
 
     #[test]
-    fn test_disk_cache_basic() {
-        let temp_dir = tempdir().unwrap();
+    fn test_disk_cache_basic() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
         let config = CacheConfig {
             cache_dir: temp_dir.path().to_path_buf(),
             ..CacheConfig::default()
         };
 
-        let cache: DiskCache<String> = DiskCache::new(config).unwrap();
+        let cache: DiskCache<String> = DiskCache::new(config)?;
 
         // Test put and get
-        cache
-            .put(
-                "test_key".to_string(),
-                "test_value".to_string(),
-                None,
-                Vec::new(),
-            )
-            .unwrap();
-        let result = cache.get("test_key").unwrap();
+        cache.put(
+            "test_key".to_string(),
+            "test_value".to_string(),
+            None,
+            Vec::new(),
+        )?;
+        let result = cache.get("test_key")?;
         assert_eq!(result, Some("test_value".to_string()));
+
+        Ok(())
     }
 
     #[test]
-    fn test_cache_invalidation() {
+    fn test_cache_invalidation() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let config = CacheConfig::default();
         let cache: MemoryCache<String> = MemoryCache::new(config);
 
-        cache
-            .put(
-                "test_key".to_string(),
-                "test_value".to_string(),
-                None,
-                Vec::new(),
-            )
-            .unwrap();
-        assert!(cache.get("test_key").unwrap().is_some());
+        cache.put(
+            "test_key".to_string(),
+            "test_value".to_string(),
+            None,
+            Vec::new(),
+        )?;
+        assert!(cache.get("test_key")?.is_some());
 
-        cache.invalidate("test_key").unwrap();
-        assert!(cache.get("test_key").unwrap().is_none());
+        cache.invalidate("test_key")?;
+        assert!(cache.get("test_key")?.is_none());
+
+        Ok(())
     }
 }
