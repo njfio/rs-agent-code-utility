@@ -28,7 +28,7 @@ fn main() -> Result<()> {
     println!("1. ✅ Completed incomplete modules:");
     println!("   - Enhanced security module (now enabled)");
     println!("   - Infrastructure module (now enabled)");
-    println!("   - Intent mapping stub (fully implemented)");
+    println!("   - Intent mapping module (available in the real library surface)");
     println!("\n2. ✅ Enhanced error handling:");
     println!("   - Added 10+ new error types with detailed context");
     println!("   - Helper methods for easy error creation");
@@ -158,23 +158,18 @@ fn demonstrate_module_completion() -> Result<()> {
     println!("\n🔧 3. Module Completion Demonstration");
     println!("====================================");
 
-    println!("  📦 Previously Commented-Out Modules (Now Enabled):");
+    println!("  📦 Current Analysis Modules:");
     println!("     ✅ enhanced_security - Advanced security analysis");
     println!("     ✅ infrastructure - Configuration and infrastructure management");
     println!("     ✅ security - Basic security analysis and vulnerability detection");
 
-    println!("  🔄 Module Status Changes:");
-    println!("     Before: // pub mod enhanced_security; // TODO: Fix infrastructure dependency");
-    println!("     After:  pub mod enhanced_security; ✅");
-    println!();
-    println!("     Before: // pub mod infrastructure; // TODO: Fix sqlx dependency issues");
-    println!("     After:  pub mod infrastructure; ✅");
-    println!();
-    println!("     Before: // pub mod security; // TODO: Fix infrastructure dependency");
-    println!("     After:  pub mod security; ✅");
+    println!("  🔄 Current Library Surface:");
+    println!("     - Public analysis/security modules are exported from the crate root");
+    println!("     - Intent mapping uses the real module instead of a compatibility stub");
+    println!("     - Cleanup work removed stale commented-out module exports");
 
-    println!("  🎯 Intent Mapping Stub Completion:");
-    println!("     - Transformed from minimal stub to full implementation");
+    println!("  🎯 Intent Mapping Capabilities:");
+    println!("     - Available through the real intent mapping module");
     println!("     - Added comprehensive data structures");
     println!("     - Implemented analysis algorithms");
     println!("     - Added configuration support");
@@ -215,11 +210,24 @@ mod tests {
             Some(500),
         );
         assert!(network_error.to_string().contains("Network failure"));
-        assert!(network_error.to_string().contains("https://example.com"));
+        match network_error {
+            Error::NetworkError {
+                url, status_code, ..
+            } => {
+                assert_eq!(url.as_deref(), Some("https://example.com"));
+                assert_eq!(status_code, Some(500));
+            }
+            other => panic!("expected network error, got {other}"),
+        }
 
         let auth_error = Error::auth_error_with_provider("Auth failed", "TestProvider");
         assert!(auth_error.to_string().contains("Auth failed"));
-        assert!(auth_error.to_string().contains("TestProvider"));
+        match auth_error {
+            Error::AuthenticationError { provider, .. } => {
+                assert_eq!(provider.as_deref(), Some("TestProvider"));
+            }
+            other => panic!("expected authentication error, got {other}"),
+        }
     }
 
     #[test]

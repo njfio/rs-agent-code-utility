@@ -16,9 +16,11 @@
 //! - Access to the rust_tree_sitter library
 //! - Sample codebases to analyze (we'll create some in this tutorial)
 
-use rust_tree_sitter::ai::AIService;
+#[cfg(feature = "net")]
+use rust_tree_sitter::ai::{AIService, AIServiceBuilder};
 use rust_tree_sitter::cli::output::{AccessibilityConfig, AccessibleOutputHandler, AnalysisOutput};
 use rust_tree_sitter::{AnalysisResult, CodebaseAnalyzer};
+#[cfg(feature = "net")]
 use std::path::PathBuf;
 
 /// Main tutorial function demonstrating accessibility features
@@ -123,17 +125,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔒 Part 5: Advanced Security Analysis");
     println!("-------------------------------------");
 
-    // Initialize AI service for security analysis
-    let ai_service = initialize_ai_service().await?;
+    #[cfg(feature = "net")]
+    {
+        // Initialize AI service for security analysis
+        let ai_service = initialize_ai_service().await?;
 
-    // Analyze security vulnerabilities
-    for file in &analysis_result.files {
-        if file.language == "rust" {
-            println!("🔍 Analyzing security in: {}", file.path.display());
+        // Analyze security vulnerabilities
+        for file in &analysis_result.files {
+            if file.language == "rust" {
+                println!("🔍 Analyzing security in: {}", file.path.display());
 
-            let security_result = analyze_file_security(&ai_service, &file.path).await?;
-            println!("   Security Status: {}", security_result);
+                let security_result = analyze_file_security(&ai_service, &file.path).await?;
+                println!("   Security Status: {}", security_result);
+            }
         }
+    }
+
+    #[cfg(not(feature = "net"))]
+    {
+        println!("⚠ Skipping AI service tutorial step because the `net` feature is disabled.");
+        println!("  Re-run with `--features \"demo cli net\"` to enable the mock AI walkthrough.");
     }
     println!();
 
@@ -383,27 +394,22 @@ fn convert_to_accessible_output(result: &AnalysisResult) -> AnalysisOutput {
 }
 
 /// Initialize AI service for security analysis
+#[cfg(feature = "net")]
 async fn initialize_ai_service() -> Result<AIService, Box<dyn std::error::Error>> {
-    // For this tutorial, we'll create a mock AI service
-    // In a real application, you'd configure this with actual AI provider credentials
-
     println!("🤖 Initializing AI service for security analysis...");
+    let ai_service = AIServiceBuilder::new()
+        .with_mock_providers(true)
+        .build()
+        .await?;
 
-    // Mock implementation - in real usage, you'd configure with actual providers
-    // let ai_service = AIServiceBuilder::new()
-    //     .with_openai_config(openai_config)
-    //     .with_anthropic_config(anthropic_config)
-    //     .build()
-    //     .await?;
+    println!("✓ AI service initialized with deterministic mock providers");
+    println!("  Note: Swap in real provider configuration to connect live AI backends");
 
-    println!("✓ AI service initialized (mock implementation for tutorial)");
-    println!("  Note: Real AI integration requires API keys and configuration");
-
-    // Return a placeholder - in real implementation this would be a proper AIService
-    Err("AI service not configured for tutorial".into())
+    Ok(ai_service)
 }
 
 /// Analyze file security using AI
+#[cfg(feature = "net")]
 async fn analyze_file_security(
     _ai_service: &AIService,
     file_path: &PathBuf,
