@@ -2143,8 +2143,7 @@ impl IntentMappingSystem {
         requirement: &Requirement,
         implementation: &Implementation,
     ) -> f64 {
-        // This is a simplified implementation - in a real system, you would analyze
-        // actual dependency graphs and requirement dependencies
+        // This compares coarse technology and dependency signals instead of full dependency graphs.
 
         let mut dependency_score = 0.0;
         let mut factors = 0;

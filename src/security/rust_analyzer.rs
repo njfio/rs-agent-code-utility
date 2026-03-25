@@ -925,7 +925,7 @@ impl RustAnalyzer {
         // Simple check for authorization-related keywords in the function body
         let auth_keywords = ["auth", "authorize", "permission", "role", "access", "check"];
 
-        // This is a simplified check - in practice, you'd want more sophisticated analysis
+        // This keyword scan does not model control flow or authorization helper semantics.
         if let Ok(body_text) = node.text() {
             let body_lower = body_text.to_lowercase();
             auth_keywords

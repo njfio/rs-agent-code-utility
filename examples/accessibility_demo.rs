@@ -186,7 +186,7 @@ fn demo_high_contrast_mode(_result: &AnalysisResult) {
     println!("{}", settings);
     println!();
     println!("Note: High contrast would be applied to terminal colors.");
-    println!("In a real implementation, this would change the terminal color scheme.");
+    println!("In an interactive terminal app, this would change the terminal color scheme.");
 }
 
 fn demo_simple_text_mode(result: &AnalysisResult) {

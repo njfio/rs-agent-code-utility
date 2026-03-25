@@ -624,8 +624,7 @@ impl ControlFlowGraph {
 
     /// Get the number of paths through the CFG (NPATH complexity)
     pub fn npath_complexity(&self) -> usize {
-        // Simplified NPATH calculation
-        // In practice, this would require more sophisticated path counting
+        // This uses a coarse 2^decision_points heuristic instead of exact path enumeration.
         let decision_points = self.decision_points().len();
         if decision_points == 0 {
             1

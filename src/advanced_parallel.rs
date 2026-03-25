@@ -479,8 +479,7 @@ impl AdvancedThreadPool {
 
     /// Wait for all pending tasks to complete
     pub fn wait_for_completion(&self) -> Result<()> {
-        // This is a simplified implementation
-        // In a real system, you'd want more sophisticated synchronization
+        // This thread pool does not track task completion explicitly, so shutdown waits briefly.
         thread::sleep(Duration::from_millis(100));
         Ok(())
     }
@@ -504,8 +503,7 @@ impl AdvancedThreadPool {
         for worker in workers.values() {
             if let Some(_handle) = &worker.handle {
                 // We can't join here because we only have a reference
-                // In a real implementation, we'd need to store JoinHandles separately
-                // or use a different shutdown mechanism
+                // and this scheduler does not own detachable JoinHandles during shutdown.
             }
         }
 

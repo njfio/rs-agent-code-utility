@@ -4082,7 +4082,7 @@ impl AdvancedSecurityAnalyzer {
         _content: &str,
         _context: &SecurityContext,
     ) -> bool {
-        // This is a simplified check - in a real implementation, you'd track data flow
+        // This heuristic only inspects the local arguments and does not track data flow.
         for child in args_node.children() {
             if let Ok(arg_text) = child.text() {
                 let arg_text_lower = arg_text.to_lowercase();

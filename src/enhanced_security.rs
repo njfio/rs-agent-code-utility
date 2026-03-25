@@ -355,8 +355,7 @@ impl EnhancedSecurityScanner {
         let content = std::fs::read_to_string(cargo_path)?;
         let mut vulnerabilities = Vec::new();
 
-        // Parse TOML and extract dependencies
-        // This is a simplified implementation - would need proper TOML parsing
+        // This line-based scan only handles simple dependency assignments and not full TOML structure.
         for line in content.lines() {
             if line.contains("=") && !line.trim_start().starts_with("#") {
                 if let Some(package_name) = self.extract_package_name(line) {

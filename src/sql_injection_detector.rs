@@ -420,8 +420,7 @@ impl SqlInjectionDetector {
         _tree: &SyntaxTree,
         _location: &crate::taint_analysis::TaintLocation,
     ) -> Result<SqlQueryPattern> {
-        // This is a simplified implementation
-        // In practice, would need to analyze the actual SQL query structure
+        // This fallback returns a conservative query shape without reconstructing SQL structure.
         Ok(SqlQueryPattern {
             operation: SqlOperation::Select,
             is_parameterized: false,
@@ -597,7 +596,7 @@ impl SqlInjectionDetector {
         node: Node,
         injection_type: SqlInjectionType,
     ) -> Result<SqlInjectionVulnerability> {
-        // This is a simplified implementation
+        // Direct AST fallback keeps a conservative query pattern when richer structure is unavailable.
         let query_pattern = SqlQueryPattern {
             operation: SqlOperation::Select,
             is_parameterized: false,

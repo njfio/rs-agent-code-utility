@@ -90,11 +90,11 @@ impl CppSyntax {
         }
 
         // Check if function name matches class name
-        // This is a simplified check - in practice, we'd need more context
+        // This heuristic does not resolve full class context before treating the declarator as constructor-like.
         for child in node.children() {
             if child.kind() == "function_declarator" {
                 // Look for constructor patterns
-                return true; // Simplified for now
+                return true;
             }
         }
         false

@@ -653,8 +653,7 @@ impl RefactoringAnalyzer {
     ) -> Vec<RefactoringSuggestion> {
         let mut suggestions = Vec::new();
 
-        // This is a simplified complexity check
-        // In a real implementation, you'd analyze the actual function body
+        // This symbol-level heuristic does not inspect the function body.
         if symbol.kind == "function" && symbol.name.len() > 30 {
             suggestions.push(RefactoringSuggestion {
                 id: format!("COMPLEX_FUNCTION_{}_{}", file.path.display(), symbol.name),

@@ -381,8 +381,7 @@ impl GarbageCollector {
 
     /// Force a garbage collection cycle
     pub fn force_collection(&self) -> Result<()> {
-        // In a real implementation, this would trigger actual GC
-        // For now, just update the hint timestamp
+        // Rust does not expose a global GC trigger, so this only records a collection hint.
         let mut last_hint = self
             .last_gc_hint
             .lock()

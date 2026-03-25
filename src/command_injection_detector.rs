@@ -676,8 +676,7 @@ impl CommandInjectionDetector {
         _tree: &SyntaxTree,
         _location: &crate::taint_analysis::TaintLocation,
     ) -> Result<CommandExecutionPattern> {
-        // This is a simplified implementation
-        // In practice, would need to analyze the actual command execution structure
+        // This fallback returns a conservative shell-execution shape without rebuilding the command AST.
         Ok(CommandExecutionPattern {
             execution_function: "exec".to_string(),
             uses_shell: true,
@@ -822,8 +821,7 @@ impl CommandInjectionDetector {
 
     /// Extract function name from function call node
     fn extract_function_call_name(&self, node: Node) -> Option<String> {
-        // This is a simplified implementation
-        // In practice, would need to handle method calls, qualified names, etc.
+        // This only reads the first child and does not resolve qualified or method call names.
         let mut cursor = node.walk();
         if cursor.goto_first_child() {
             let function_node = cursor.node();
@@ -957,7 +955,7 @@ impl CommandInjectionDetector {
         node: Node,
         injection_type: CommandInjectionType,
     ) -> Result<CommandInjectionVulnerability> {
-        // This is a simplified implementation
+        // Direct AST fallback keeps a conservative execution pattern when richer structure is unavailable.
         let command_pattern = CommandExecutionPattern {
             execution_function: "exec".to_string(),
             uses_shell: true,

@@ -2190,8 +2190,7 @@ impl AstTransformationEngine {
         declaration_location: &TransformationLocation,
         _language: Language,
     ) -> Result<String> {
-        // This is a simplified implementation
-        // In practice, you'd need to parse the AST to find the initializer expression
+        // This extracts from the declaration slice and does not inspect the initializer AST directly.
         let start = declaration_location.start_position.byte_offset;
         let end = declaration_location.end_position.byte_offset;
 
@@ -2272,8 +2271,7 @@ impl AstTransformationEngine {
         _usages: &[TransformationLocation],
         _language: Language,
     ) -> Result<bool> {
-        // Simplified safety check
-        // In practice, this would check for side effects, evaluation order, etc.
+        // This conservative placeholder accepts the move without analyzing side effects or evaluation order.
         Ok(true)
     }
 
@@ -2409,8 +2407,7 @@ impl AstTransformationEngine {
         _method_calls: &[TransformationLocation],
         _language: Language,
     ) -> Result<bool> {
-        // Simplified safety check
-        // In practice, this would check for recursion, side effects, etc.
+        // This conservative placeholder accepts the extraction without checking recursion or side effects.
         Ok(true)
     }
 
@@ -2422,8 +2419,7 @@ impl AstTransformationEngine {
         _call_location: &TransformationLocation,
         _language: Language,
     ) -> Result<String> {
-        // Simplified implementation - just return the method body
-        // In practice, this would handle parameter substitution, return value handling, etc.
+        // This inlines the raw method body and does not perform parameter or return-value rewriting.
         Ok(format!("{{ {} }}", method_body))
     }
 

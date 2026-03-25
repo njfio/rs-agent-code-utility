@@ -825,7 +825,7 @@ impl SemanticContextAnalyzer {
         symbol_table: &SymbolTable,
         location: Point,
     ) -> Option<SymbolId> {
-        // This is a simplified implementation - in practice, you'd need more sophisticated lookup
+        // This lookup matches exact definition coordinates and does not search enclosing scopes.
         for (&symbol_id, symbol_def) in &symbol_table.symbols {
             if symbol_def.definition_location == location {
                 return Some(symbol_id);

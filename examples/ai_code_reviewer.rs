@@ -246,7 +246,7 @@ impl UserManager {
         3. Error condition testing\n\
         4. Integration test suggestions\n\
         5. Property-based testing opportunities\n\
-        6. Mock/stub requirements\n\
+        6. Test-double requirements\n\
         \n\
         Provide example test code where helpful.",
         code_to_review

@@ -1262,8 +1262,7 @@ impl TaintAnalyzer {
 
     /// Extract function name from function call node
     fn extract_function_call_name(&self, node: Node) -> Option<String> {
-        // This is a simplified implementation
-        // In practice, would need to handle method calls, qualified names, etc.
+        // This only reads the first child and does not resolve qualified or method call names.
         let mut cursor = node.walk();
         if cursor.goto_first_child() {
             let function_node = cursor.node();
@@ -1664,8 +1663,7 @@ impl TaintAnalyzer {
     ) -> Result<Vec<TaintFlow>> {
         let mut flows = Vec::new();
 
-        // This is a simplified implementation
-        // In practice, would need sophisticated data flow analysis
+        // This coarse pass pairs sources and sinks heuristically instead of building full data-flow paths.
         for sink in sinks {
             // Check if source and sink are in the same function or have data flow connection
             if self.has_potential_flow(source, sink) {
