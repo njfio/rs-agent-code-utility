@@ -160,7 +160,7 @@ fn test_set_language() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(not(feature = "extended-languages"))]
     {
-        // Default features only ship Rust, so exercise set_language as a no-op.
+        // Default features only ship Rust, so exercise set_language without changing grammars.
         parser.set_language(Language::Rust)?;
         let tree = parser.parse("fn hello() {}", None)?;
         assert!(
