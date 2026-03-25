@@ -952,3 +952,86 @@ def allocation_tracker(items):
 
     Ok(())
 }
+
+#[test]
+fn test_ast_file_metrics_ignore_misleading_names_but_count_real_operations(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
+
+    fs::write(
+        temp_dir.path().join("metrics.rs"),
+        r#"
+struct DatabaseCursor;
+
+impl DatabaseCursor {
+    fn execute(&self, _sql: &str) -> Result<(), ()> {
+        Ok(())
+    }
+}
+
+fn recursive_helper(value: i32) -> i32 {
+    value + 1
+}
+
+fn io_tracker(value: &str) -> usize {
+    value.len()
+}
+
+fn query_database(query: &str) -> usize {
+    query.len()
+}
+
+fn actual_recursive(n: usize) -> usize {
+    if n == 0 {
+        0
+    } else {
+        actual_recursive(n - 1)
+    }
+}
+
+fn actual_io(path: &str, data: &str) -> std::io::Result<String> {
+    std::fs::write(path, data)?;
+    std::fs::read_to_string(path)
+}
+
+fn actual_db(cursor: &DatabaseCursor) -> Result<(), ()> {
+    cursor.execute("SELECT * FROM widgets")?;
+    Ok(())
+}
+"#,
+    )?;
+
+    let result = analyze_directory_performance(
+        &temp_dir,
+        PerformanceConfig {
+            complexity_analysis: false,
+            memory_analysis: false,
+            io_analysis: true,
+            concurrency_analysis: false,
+            database_analysis: true,
+            min_complexity_threshold: 3,
+            max_function_length: 80,
+        },
+    )?;
+
+    let metrics = result
+        .file_metrics
+        .iter()
+        .find(|metric| metric.file.ends_with("metrics.rs"))
+        .ok_or_else(|| std::io::Error::other("file metrics should exist for analyzed file"))?;
+
+    assert_eq!(
+        metrics.recursive_functions, 1,
+        "Only the real self-recursive function should count"
+    );
+    assert_eq!(
+        metrics.io_operations, 2,
+        "Only the real std::fs calls should count as I/O operations"
+    );
+    assert_eq!(
+        metrics.database_queries, 1,
+        "Only the real SQL-bearing database call should count"
+    );
+
+    Ok(())
+}

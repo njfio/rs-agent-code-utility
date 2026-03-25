@@ -337,6 +337,8 @@ The target architecture has three layers:
 - [x] Add regression tests: create test fixtures with known hotspots, verify detection
 - [x] Add negative tests: functions named "loop_handler" or "allocation_tracker" must NOT be flagged
 
+**Implementation note (2026-03-24, later):** File-level recursion, I/O, and database metrics now walk parsed function/call nodes instead of counting symbol names, and per-function complexity enumeration now derives from AST function nodes instead of line-by-line Rust text scanning. Remaining simple pattern detectors elsewhere in `src/performance_analysis.rs` still keep the top-level summary criterion open until they are converted.
+
 ### Research Insights: Tree-sitter Query Patterns
 
 **Single-pass traversal mandate:** All AST-based detection should use a single tree traversal with `TreeCursor`, collecting all findings in one pass. Do NOT traverse the tree once per pattern. This is critical for maintaining the 2ms/1K LOC performance target.

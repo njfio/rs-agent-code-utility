@@ -1431,7 +1431,7 @@ impl PerformanceAnalyzer {
 
         for func_node in function_nodes {
             if let Some(func_name) = self.extract_function_name(&func_node, content, file) {
-                if self.is_recursive_function(&func_node, &func_name, content) {
+                if self.is_recursive_function(&func_node, &func_name, content, &file.language) {
                     let recursion_analysis =
                         self.analyze_recursion_complexity(&func_node, &func_name, content, file)?;
 
@@ -1652,18 +1652,7 @@ impl PerformanceAnalyzer {
     ) -> Vec<tree_sitter::Node<'a>> {
         let mut function_nodes = Vec::new();
 
-        let function_patterns = match file.language.to_lowercase().as_str() {
-            "rust" => vec!["function_item"],
-            "python" => vec!["function_definition"],
-            "javascript" | "typescript" => vec![
-                "function_declaration",
-                "function_expression",
-                "arrow_function",
-            ],
-            "c" | "cpp" | "c++" => vec!["function_definition"],
-            "go" => vec!["function_declaration"],
-            _ => vec!["function_definition"],
-        };
+        let function_patterns = self.function_node_kinds(&file.language);
 
         self.traverse_for_functions(node, &function_patterns, &mut function_nodes);
         function_nodes
@@ -1713,14 +1702,9 @@ impl PerformanceAnalyzer {
         node: &tree_sitter::Node,
         func_name: &str,
         content: &str,
+        language: &str,
     ) -> bool {
-        if let Ok(text) = node.utf8_text(content.as_bytes()) {
-            // Simple check: does the function body contain a call to itself?
-            text.contains(&format!("{}(", func_name))
-                && text.matches(&format!("{}(", func_name)).count() > 1 // More than just the definition
-        } else {
-            false
-        }
+        self.function_contains_recursive_call(crate::Node::new(*node, content), func_name, language)
     }
 
     /// Analyze recursion complexity
@@ -1878,18 +1862,7 @@ impl PerformanceAnalyzer {
         let mut hotspots = Vec::new();
 
         // Find function definitions
-        let function_patterns = match file.language.to_lowercase().as_str() {
-            "rust" => vec!["function_item"],
-            "python" => vec!["function_definition"],
-            "javascript" | "typescript" => vec![
-                "function_declaration",
-                "function_expression",
-                "arrow_function",
-            ],
-            "c" | "cpp" | "c++" => vec!["function_definition"],
-            "go" => vec!["function_declaration"],
-            _ => vec!["function_definition"],
-        };
+        let function_patterns = self.function_node_kinds(&file.language);
 
         for pattern in function_patterns {
             let functions = tree.find_nodes_by_kind(pattern);
@@ -2196,6 +2169,292 @@ impl PerformanceAnalyzer {
             .find_map(|field| node.child_by_field_name(field))
             .and_then(|target| target.text().ok())
             .map(str::to_string)
+    }
+
+    fn parse_file_syntax_tree(&self, file: &FileInfo) -> Option<crate::SyntaxTree> {
+        let content = std::fs::read_to_string(&file.path).ok()?;
+        let parsed_language = self.parse_language(&file.language)?;
+        self.create_syntax_tree(&content, parsed_language)
+    }
+
+    fn function_node_kinds(&self, language: &str) -> Vec<&'static str> {
+        match language.to_lowercase().as_str() {
+            "rust" => vec!["function_item"],
+            "python" => vec!["function_definition", "async_function_definition"],
+            "javascript" | "typescript" => vec![
+                "function_declaration",
+                "function_expression",
+                "arrow_function",
+                "method_definition",
+            ],
+            "c" | "cpp" | "c++" => vec!["function_definition"],
+            "go" => vec!["function_declaration", "method_declaration"],
+            _ => vec!["function_definition"],
+        }
+    }
+
+    fn call_node_kinds(&self, language: &str) -> Vec<&'static str> {
+        match language.to_lowercase().as_str() {
+            "rust" | "javascript" | "typescript" | "c" | "cpp" | "c++" | "go" => {
+                vec!["call_expression"]
+            }
+            "python" => vec!["call"],
+            _ => Vec::new(),
+        }
+    }
+
+    fn collect_function_nodes<'a>(
+        &self,
+        tree: &'a crate::SyntaxTree,
+        language: &str,
+    ) -> Vec<crate::Node<'a>> {
+        let mut seen = HashSet::new();
+        let mut functions = Vec::new();
+
+        for kind in self.function_node_kinds(language) {
+            for node in tree.find_nodes_by_kind(kind) {
+                if seen.insert((node.start_byte(), node.end_byte())) {
+                    functions.push(node);
+                }
+            }
+        }
+
+        functions
+    }
+
+    fn collect_call_nodes<'a>(
+        &self,
+        tree: &'a crate::SyntaxTree,
+        language: &str,
+    ) -> Vec<crate::Node<'a>> {
+        self.collect_call_nodes_in_subtree(tree.root_node(), language)
+    }
+
+    fn collect_call_nodes_in_subtree<'a>(
+        &self,
+        root: crate::Node<'a>,
+        language: &str,
+    ) -> Vec<crate::Node<'a>> {
+        let mut seen = HashSet::new();
+        let mut calls = Vec::new();
+
+        for kind in self.call_node_kinds(language) {
+            for node in root.find_descendants(|candidate| candidate.kind() == kind) {
+                if seen.insert((node.start_byte(), node.end_byte())) {
+                    calls.push(node);
+                }
+            }
+        }
+
+        calls
+    }
+
+    fn target_segments(&self, target: &str) -> Vec<String> {
+        target
+            .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .filter(|segment| !segment.is_empty())
+            .map(|segment| segment.to_ascii_lowercase())
+            .collect()
+    }
+
+    fn call_leaf_identifier(&self, target: &str) -> Option<String> {
+        self.target_segments(target).into_iter().last()
+    }
+
+    fn is_database_segment(&self, segment: &str) -> bool {
+        matches!(
+            segment,
+            "db" | "database"
+                | "conn"
+                | "connection"
+                | "pool"
+                | "cursor"
+                | "client"
+                | "transaction"
+                | "tx"
+                | "stmt"
+                | "statement"
+                | "engine"
+                | "session"
+                | "sqlx"
+                | "diesel"
+                | "sequelize"
+                | "knex"
+                | "postgres"
+                | "mysql"
+                | "sqlite"
+        )
+    }
+
+    fn call_contains_sql_literal(&self, node: &crate::Node) -> bool {
+        const SQL_KEYWORDS: [&str; 6] = ["SELECT", "INSERT", "UPDATE", "DELETE", "WITH", "FROM"];
+
+        node.find_descendants(|candidate| {
+            matches!(
+                candidate.kind(),
+                "string_literal"
+                    | "raw_string_literal"
+                    | "string"
+                    | "template_string"
+                    | "interpreted_string_literal"
+            )
+        })
+        .into_iter()
+        .filter_map(|literal| literal.text().ok())
+        .map(|literal| literal.to_ascii_uppercase())
+        .any(|literal| SQL_KEYWORDS.iter().any(|keyword| literal.contains(keyword)))
+    }
+
+    fn function_contains_recursive_call(
+        &self,
+        function_node: crate::Node<'_>,
+        function_name: &str,
+        language: &str,
+    ) -> bool {
+        let expected_name = function_name.to_ascii_lowercase();
+
+        self.collect_call_nodes_in_subtree(function_node, language)
+            .into_iter()
+            .filter_map(|call_node| self.call_target_text(&call_node))
+            .filter_map(|target| self.call_leaf_identifier(&target))
+            .any(|leaf| leaf == expected_name)
+    }
+
+    fn is_io_call_node(&self, node: &crate::Node, language: &str) -> bool {
+        let target = self
+            .call_target_text(node)
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        if target.is_empty() {
+            return false;
+        }
+
+        match language.to_lowercase().as_str() {
+            "rust" => {
+                matches!(
+                    target.as_str(),
+                    "std::fs::read"
+                        | "std::fs::read_to_string"
+                        | "std::fs::write"
+                        | "std::fs::copy"
+                        | "tokio::fs::read"
+                        | "tokio::fs::read_to_string"
+                        | "tokio::fs::write"
+                ) || target.ends_with("::open")
+                    || target.ends_with("::create")
+                    || target.ends_with(".read")
+                    || target.ends_with(".read_to_string")
+                    || target.ends_with(".read_to_end")
+                    || target.ends_with(".read_exact")
+                    || target.ends_with(".write")
+                    || target.ends_with(".write_all")
+                    || target.ends_with(".flush")
+                    || target.ends_with(".sync_all")
+                    || target.ends_with(".sync_data")
+            }
+            "python" => {
+                target == "open"
+                    || target.ends_with(".open")
+                    || target.ends_with(".read")
+                    || target.ends_with(".read_text")
+                    || target.ends_with(".read_bytes")
+                    || target.ends_with(".write")
+                    || target.ends_with(".write_text")
+                    || target.ends_with(".write_bytes")
+                    || target.ends_with(".flush")
+            }
+            "javascript" | "typescript" => {
+                matches!(
+                    target.as_str(),
+                    "fs.readfile"
+                        | "fs.readfilesync"
+                        | "fs.writefile"
+                        | "fs.writefilesync"
+                        | "fetch"
+                ) || target.ends_with(".readfile")
+                    || target.ends_with(".readfilesync")
+                    || target.ends_with(".writefile")
+                    || target.ends_with(".writefilesync")
+                    || target.ends_with(".appendfile")
+                    || target.ends_with(".createreadstream")
+                    || target.ends_with(".createwritestream")
+            }
+            "go" => {
+                matches!(
+                    target.as_str(),
+                    "os.readfile" | "os.writefile" | "os.open" | "os.create" | "io.readall"
+                ) || target.ends_with(".read")
+                    || target.ends_with(".write")
+            }
+            "c" | "cpp" | "c++" => {
+                matches!(
+                    target.as_str(),
+                    "fopen" | "fread" | "fwrite" | "read" | "write"
+                ) || target.ends_with(".open")
+            }
+            _ => false,
+        }
+    }
+
+    fn is_database_call_node(&self, node: &crate::Node, language: &str) -> bool {
+        let target = self
+            .call_target_text(node)
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        if target.is_empty() {
+            return false;
+        }
+
+        let segments = self.target_segments(&target);
+        let has_database_context = segments
+            .iter()
+            .any(|segment| self.is_database_segment(segment));
+        let has_sql_literal = self.call_contains_sql_literal(node);
+
+        match language.to_lowercase().as_str() {
+            "rust" => {
+                matches!(
+                    target.as_str(),
+                    "sqlx::query" | "sqlx::query_as" | "sqlx::query_scalar" | "diesel::sql_query"
+                ) || target.ends_with(".query")
+                    || target.ends_with(".query_as")
+                    || target.ends_with(".query_one")
+                    || target.ends_with(".query_all")
+                    || target.ends_with(".fetch_one")
+                    || target.ends_with(".fetch_all")
+                    || target.ends_with(".fetch_optional")
+                    || ((target.ends_with(".execute") || target.ends_with(".prepare"))
+                        && (has_database_context || has_sql_literal))
+            }
+            "python" => {
+                target.ends_with(".read_sql")
+                    || ((target.ends_with(".execute")
+                        || target.ends_with(".executemany")
+                        || target.ends_with(".prepare"))
+                        && (has_database_context || has_sql_literal))
+                    || (target.ends_with(".query") && has_database_context)
+            }
+            "javascript" | "typescript" => {
+                matches!(target.as_str(), "sequelize.query" | "knex.raw")
+                    || (target.ends_with(".query") && has_database_context)
+                    || ((target.ends_with(".execute")
+                        || target.ends_with(".prepare")
+                        || target.ends_with(".raw"))
+                        && (has_database_context || has_sql_literal))
+            }
+            "go" => {
+                (target.ends_with(".query")
+                    || target.ends_with(".queryrow")
+                    || target.ends_with(".exec")
+                    || target.ends_with(".prepare"))
+                    && (has_database_context || has_sql_literal)
+            }
+            "c" | "cpp" | "c++" => matches!(
+                target.as_str(),
+                "sqlite3_exec" | "mysql_query" | "pqexec" | "sqlite3_prepare_v2"
+            ),
+            _ => false,
+        }
     }
 
     fn is_allocation_node(&self, node: &crate::Node, language: &str) -> bool {
@@ -2621,12 +2880,25 @@ impl PerformanceAnalyzer {
     }
 
     fn count_recursive_functions(&self, file: &FileInfo) -> usize {
-        // Simplified detection - count functions with "recursive" in name
-        file.symbols
-            .iter()
-            .filter(|s| {
-                s.name.to_lowercase().contains("recursive")
-                    || s.name.to_lowercase().contains("recurse")
+        let Some(tree) = self.parse_file_syntax_tree(file) else {
+            return 0;
+        };
+
+        self.collect_function_nodes(&tree, &file.language)
+            .into_iter()
+            .filter_map(|function_node| {
+                let function_name = self.extract_function_name_from_node(
+                    &function_node,
+                    tree.source(),
+                    &file.language,
+                );
+                match function_name.as_str() {
+                    "" | "unknown" | "anonymous" => None,
+                    _ => Some((function_node, function_name)),
+                }
+            })
+            .filter(|(function_node, function_name)| {
+                self.function_contains_recursive_call(*function_node, function_name, &file.language)
             })
             .count()
     }
@@ -2661,30 +2933,24 @@ impl PerformanceAnalyzer {
     }
 
     fn count_io_operations(&self, file: &FileInfo) -> usize {
-        // Simplified detection - count functions with I/O-related names
-        file.symbols
-            .iter()
-            .filter(|s| {
-                let name = s.name.to_lowercase();
-                name.contains("read")
-                    || name.contains("write")
-                    || name.contains("file")
-                    || name.contains("io")
-            })
+        let Some(tree) = self.parse_file_syntax_tree(file) else {
+            return 0;
+        };
+
+        self.collect_call_nodes(&tree, &file.language)
+            .into_iter()
+            .filter(|call_node| self.is_io_call_node(call_node, &file.language))
             .count()
     }
 
     fn count_database_queries(&self, file: &FileInfo) -> usize {
-        // Simplified detection - count functions with database-related names
-        file.symbols
-            .iter()
-            .filter(|s| {
-                let name = s.name.to_lowercase();
-                name.contains("query")
-                    || name.contains("sql")
-                    || name.contains("db")
-                    || name.contains("database")
-            })
+        let Some(tree) = self.parse_file_syntax_tree(file) else {
+            return 0;
+        };
+
+        self.collect_call_nodes(&tree, &file.language)
+            .into_iter()
+            .filter(|call_node| self.is_database_call_node(call_node, &file.language))
             .count()
     }
 
@@ -2783,146 +3049,25 @@ impl PerformanceAnalyzer {
         })
     }
 
-    /// Analyze function complexities using simple pattern matching
+    /// Analyze function complexities using AST traversal
     fn analyze_function_complexities(&self, content: &str, language: &str) -> Vec<(String, f64)> {
-        let mut complexities = Vec::new();
+        let Some(parsed_language) = self.parse_language(language) else {
+            return Vec::new();
+        };
+        let Some(tree) = self.create_syntax_tree(content, parsed_language) else {
+            return Vec::new();
+        };
 
-        match language.to_lowercase().as_str() {
-            "rust" => {
-                // Simple pattern matching for Rust functions
-                let lines: Vec<&str> = content.lines().collect();
-                let mut current_function = None;
-                let mut current_complexity = 1.0;
-                let mut brace_depth = 0;
-                let mut function_start_depth = 0;
-                let mut in_function = false;
-
-                for line in lines {
-                    let trimmed = line.trim();
-
-                    // Update brace depth first
-                    let open_braces = trimmed.chars().filter(|&c| c == '{').count() as i32;
-                    let close_braces = trimmed.chars().filter(|&c| c == '}').count() as i32;
-
-                    // Detect function start
-                    if trimmed.starts_with("fn ") && trimmed.contains('(') {
-                        // Save previous function if exists
-                        if let Some(func_name) = current_function.take() {
-                            complexities.push((func_name, current_complexity));
-                        }
-
-                        // Extract function name
-                        if let Some(name_start) = trimmed.find("fn ") {
-                            if let Some(name_end) = trimmed[name_start + 3..].find('(') {
-                                let func_name = trimmed[name_start + 3..name_start + 3 + name_end]
-                                    .trim()
-                                    .to_string();
-                                current_function = Some(func_name);
-                                current_complexity = 1.0;
-                                function_start_depth = brace_depth;
-                                in_function = false; // Will be set to true when we see the opening brace
-                            }
-                        }
-                    }
-
-                    // Update brace depth after function detection
-                    brace_depth += open_braces;
-
-                    // Check if we're entering the function body
-                    if current_function.is_some() && !in_function && open_braces > 0 {
-                        in_function = true;
-                        function_start_depth = brace_depth - 1; // The depth before this opening brace
-                    }
-
-                    // Only count complexity if we're inside a function body
-                    if current_function.is_some()
-                        && in_function
-                        && brace_depth > function_start_depth
-                    {
-                        // Use more precise pattern matching to avoid false positives
-                        let line_lower = trimmed.to_lowercase();
-
-                        // Control flow statements - check if line is not a comment
-                        let is_comment = trimmed.starts_with("//");
-
-                        if !is_comment {
-                            // Check for if statements (but not else if to avoid double counting)
-                            if (line_lower.contains("if ") && !line_lower.contains("else if"))
-                                || line_lower.contains("if(")
-                            {
-                                current_complexity += 1.0;
-                            }
-                            // Check for if let statements
-                            if line_lower.contains("if let") {
-                                current_complexity += 1.0;
-                            }
-                            // Check for while statements
-                            if line_lower.contains("while ")
-                                || line_lower.contains("while let")
-                                || line_lower.contains("while(")
-                            {
-                                current_complexity += 1.0;
-                            }
-                            // Check for for statements
-                            if line_lower.contains("for ") || line_lower.contains("for(") {
-                                current_complexity += 1.0;
-                            }
-                            // Check for loop statements
-                            if line_lower.contains("loop ") {
-                                current_complexity += 1.0;
-                            }
-                            // Check for match statements
-                            if line_lower.contains("match ") {
-                                current_complexity += 1.0;
-                            }
-                            // Count match arms for additional complexity
-                            if trimmed.contains("=>") && !trimmed.contains("match") {
-                                current_complexity += 1.0; // Each match arm adds complexity
-                            }
-                        }
-                        // Count error handling patterns
-                        if (trimmed.contains("?")
-                            || trimmed.contains("unwrap")
-                            || trimmed.contains("expect"))
-                            && !trimmed.contains("//")
-                        {
-                            current_complexity += 0.3; // Error handling adds complexity
-                        }
-                        // Logical operators
-                        if (trimmed.contains("&&") || trimmed.contains("||"))
-                            && !trimmed.contains("//")
-                        {
-                            current_complexity += 0.5; // Logical operators add complexity
-                        }
-                    }
-
-                    // Update brace depth after processing
-                    brace_depth -= close_braces;
-
-                    // Check if we've exited the current function
-                    if current_function.is_some()
-                        && in_function
-                        && brace_depth <= function_start_depth
-                    {
-                        if let Some(func_name) = current_function.take() {
-                            complexities.push((func_name, current_complexity));
-                        }
-                        in_function = false;
-                    }
-                }
-
-                // Save last function if still open
-                if let Some(func_name) = current_function {
-                    complexities.push((func_name, current_complexity));
-                }
-            }
-            _ => {
-                // Simplified analysis for other languages
-                complexities.push(("unknown_function".to_string(), 5.0));
-            }
-        }
-
-        complexities
+        self.collect_function_nodes(&tree, language)
+            .into_iter()
+            .map(|function_node| {
+                let function_name =
+                    self.extract_function_name_from_node(&function_node, tree.source(), language);
+                let complexity =
+                    self.calculate_function_complexity(&function_node, tree.source(), language);
+                (function_name, complexity)
+            })
+            .collect()
     }
 
     fn analyze_memory_usage(&self, analysis_result: &AnalysisResult) -> Result<MemoryAnalysis> {
