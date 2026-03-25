@@ -684,6 +684,22 @@ impl AdvancedSecurityAnalyzer {
         }
     }
 
+    fn vulnerabilities_match(
+        existing: &SecurityVulnerability,
+        candidate: &SecurityVulnerability,
+    ) -> bool {
+        if existing.location.start_line != candidate.location.start_line
+            || existing.owasp_category != candidate.owasp_category
+        {
+            return false;
+        }
+
+        match (&existing.cwe_id, &candidate.cwe_id) {
+            (Some(existing_cwe), Some(candidate_cwe)) if existing_cwe == candidate_cwe => true,
+            _ => existing.title.eq_ignore_ascii_case(&candidate.title),
+        }
+    }
+
     /// Perform comprehensive security analysis on a codebase
     pub fn analyze(&self, analysis_result: &AnalysisResult) -> Result<AdvancedSecurityResult> {
         let mut vulnerabilities = Vec::new();
@@ -733,10 +749,9 @@ impl AdvancedSecurityAnalyzer {
                 let legacy_vulnerabilities =
                     self.detect_owasp_vulnerabilities(&file_with_absolute_path)?;
                 for vulnerability in legacy_vulnerabilities {
-                    let is_duplicate = file_vulnerabilities.iter().any(|existing| {
-                        existing.location.start_line == vulnerability.location.start_line
-                            && existing.owasp_category == vulnerability.owasp_category
-                    });
+                    let is_duplicate = file_vulnerabilities
+                        .iter()
+                        .any(|existing| Self::vulnerabilities_match(existing, &vulnerability));
                     if !is_duplicate {
                         file_vulnerabilities.push(vulnerability);
                     }
@@ -1054,10 +1069,9 @@ impl AdvancedSecurityAnalyzer {
             Ok(string_vulnerabilities) => {
                 // Deduplicate vulnerabilities by checking if similar ones already exist
                 for vuln in string_vulnerabilities {
-                    let is_duplicate = vulnerabilities.iter().any(|existing| {
-                        existing.location.start_line == vuln.location.start_line
-                            && existing.owasp_category == vuln.owasp_category
-                    });
+                    let is_duplicate = vulnerabilities
+                        .iter()
+                        .any(|existing| Self::vulnerabilities_match(existing, &vuln));
 
                     if !is_duplicate {
                         vulnerabilities.push(vuln);

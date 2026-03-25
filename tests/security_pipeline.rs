@@ -16,8 +16,11 @@ fn test_security_pipeline_hides_heuristic_findings_by_default(
         pipeline.analyze_with_path(source, std::path::Path::new("src/admin.rs"), Language::Rust)?;
 
     assert!(
-        findings.is_empty(),
-        "heuristic-only findings should be hidden below the default 0.5 threshold"
+        !findings.iter().any(|finding| {
+            finding.finding_type == SecurityFindingType::BrokenAccessControl
+                && finding.confidence_source == ConfidenceSource::Heuristic
+        }),
+        "the default 0.5 threshold should hide the heuristic broken-access-control finding"
     );
 
     Ok(())

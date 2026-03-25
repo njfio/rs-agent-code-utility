@@ -17,6 +17,8 @@ use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
 
+pub use super::rust_analyzer::RustAnalyzer;
+
 /// AST-based security analyzer
 pub struct AstSecurityAnalyzer {
     /// Language-specific analyzers
@@ -293,47 +295,47 @@ impl AstSecurityAnalyzer {
         );
         language_analyzers.insert(
             Language::JavaScript,
-            Box::new(JavaScriptAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::TypeScript,
-            Box::new(TypeScriptAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Python,
-            Box::new(PythonAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Java,
-            Box::new(JavaAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Go,
-            Box::new(GoAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::C,
-            Box::new(CAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Cpp,
-            Box::new(CppAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Php,
-            Box::new(PhpAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Ruby,
-            Box::new(RubyAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Swift,
-            Box::new(SwiftAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
         language_analyzers.insert(
             Language::Kotlin,
-            Box::new(KotlinAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
+            Box::new(NoopLanguageAnalyzer::new()) as Box<dyn LanguageSpecificAnalyzer>,
         );
 
         Ok(Self {
@@ -1418,68 +1420,39 @@ impl Default for EnhancedSemanticResult {
     }
 }
 
-// Language-specific analyzers will be implemented in separate modules
-// For now, we'll create placeholder implementations
+#[derive(Debug, Default)]
+struct NoopLanguageAnalyzer;
 
-macro_rules! placeholder_analyzer {
-    ($name:ident) => {
-        #[derive(Debug)]
-        pub struct $name;
-
-        impl Default for $name {
-            fn default() -> Self {
-                Self::new()
-            }
-        }
-
-        impl $name {
-            pub fn new() -> Self {
-                Self
-            }
-        }
-
-        impl LanguageSpecificAnalyzer for $name {
-            fn analyze<'a>(
-                &'a self,
-                _tree: &'a SyntaxTree,
-                _file_path: &'a str,
-            ) -> AnalyzerFuture<'a, Result<Vec<SecurityFinding>>> {
-                Box::pin(async move { Ok(Vec::new()) })
-            }
-
-            fn get_vulnerability_patterns(&self) -> Vec<VulnerabilityPattern> {
-                // Placeholder - will be enhanced with language-specific patterns
-                Vec::new()
-            }
-
-            fn extract_semantic_info(&self, _tree: &SyntaxTree) -> Result<SemanticInfo> {
-                // Placeholder - will be enhanced with language-specific semantic extraction
-                Ok(SemanticInfo {
-                    functions: Vec::new(),
-                    classes: Vec::new(),
-                    variables: HashMap::new(),
-                    imports: Vec::new(),
-                    string_literals: Vec::new(),
-                    function_calls: Vec::new(),
-                })
-            }
-        }
-    };
+impl NoopLanguageAnalyzer {
+    fn new() -> Self {
+        Self
+    }
 }
 
-// Create placeholder analyzers for all supported languages
-placeholder_analyzer!(RustAnalyzer);
-placeholder_analyzer!(JavaScriptAnalyzer);
-placeholder_analyzer!(TypeScriptAnalyzer);
-placeholder_analyzer!(PythonAnalyzer);
-placeholder_analyzer!(JavaAnalyzer);
-placeholder_analyzer!(GoAnalyzer);
-placeholder_analyzer!(CAnalyzer);
-placeholder_analyzer!(CppAnalyzer);
-placeholder_analyzer!(PhpAnalyzer);
-placeholder_analyzer!(RubyAnalyzer);
-placeholder_analyzer!(SwiftAnalyzer);
-placeholder_analyzer!(KotlinAnalyzer);
+impl LanguageSpecificAnalyzer for NoopLanguageAnalyzer {
+    fn analyze<'a>(
+        &'a self,
+        _tree: &'a SyntaxTree,
+        _file_path: &'a str,
+    ) -> AnalyzerFuture<'a, Result<Vec<SecurityFinding>>> {
+        Box::pin(async move { Ok(Vec::new()) })
+    }
+
+    fn get_vulnerability_patterns(&self) -> Vec<VulnerabilityPattern> {
+        Vec::new()
+    }
+
+    fn extract_semantic_info(&self, _tree: &SyntaxTree) -> Result<SemanticInfo> {
+        Ok(SemanticInfo {
+            functions: Vec::new(),
+            classes: Vec::new(),
+            variables: HashMap::new(),
+            imports: Vec::new(),
+            string_literals: Vec::new(),
+            function_calls: Vec::new(),
+        })
+    }
+}
 
 /// Context classifier for determining code context
 #[derive(Debug)]

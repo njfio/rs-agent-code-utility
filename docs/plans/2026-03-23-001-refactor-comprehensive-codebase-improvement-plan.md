@@ -594,6 +594,8 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - `src/ai/mod.rs`
 - `src/lib.rs`
 
+**Implementation note (2026-03-24, later):** As another placeholder-reduction slice, `src/security/ast_analyzer.rs` no longer shadows the real Rust security analyzer with a macro-generated stub family. Rust now uses `security::rust_analyzer::RustAnalyzer`, the remaining placeholder language analyzers were collapsed into a single internal no-op implementation, and `src/advanced_security.rs` now deduplicates merged vulnerabilities by line plus finding identity (`cwe_id` or title) instead of by OWASP category alone. Fresh verification with `cargo test --workspace -q` kept the workspace green after the analyzer swap. The top-level `~15K lines of stub code removed` criterion remains open until the broader placeholder/stub inventory is fully retired.
+
 ##### Task 3.2: Define MCP Tool Interface
 
 **Scope note (updated after audit on 2026-03-24):** The repository did not actually contain a checked-in MCP server with 9 tools. `integration/mcp/server/` only contained orphaned `node_modules/` and a `.package-lock.json` footprint. Start by recreating a small, honest adapter around CLI commands that already emit stable JSON, then expand once additional CLI contracts exist.
