@@ -300,14 +300,14 @@ window.addEventListener('DOMContentLoaded', runSearch);"#,
         let js_path = assets_dir.join("hljs.js");
         let css_path = assets_dir.join("hljs.css");
 
-        // Always ensure we have at least a minimal stub to avoid 404s
-        let js_stub = "window.hljs = window.hljs || { highlightAll: function(){ try { document.querySelectorAll('pre code').forEach(function(el){ el.classList.add('hljs'); }); } catch(e){} } };";
-        let css_stub = ".hljs{background:#0a1220;color:#e6e9ef}.hljs-keyword,.hljs-literal,.hljs-built_in{color:#7aa2f7}.hljs-string{color:#a6e3a1}.hljs-comment{color:#9aa4b2}.hljs-number{color:#f78c6c}";
+        // Always ensure we have at least a minimal local fallback asset to avoid 404s.
+        let js_fallback = "window.hljs = window.hljs || { highlightAll: function(){ try { document.querySelectorAll('pre code').forEach(function(el){ el.classList.add('hljs'); }); } catch(e){} } };";
+        let css_fallback = ".hljs{background:#0a1220;color:#e6e9ef}.hljs-keyword,.hljs-literal,.hljs-built_in{color:#7aa2f7}.hljs-string{color:#a6e3a1}.hljs-comment{color:#9aa4b2}.hljs-number{color:#f78c6c}";
         if !js_path.exists() {
-            let _ = fs::write(&js_path, js_stub);
+            let _ = fs::write(&js_path, js_fallback);
         }
         if !css_path.exists() {
-            let _ = fs::write(&css_path, css_stub);
+            let _ = fs::write(&css_path, css_fallback);
         }
 
         // Try to download real assets; ignore failures (offline environments)
@@ -354,8 +354,8 @@ window.addEventListener('DOMContentLoaded', runSearch);"#,
 
     pub(super) fn write_mermaid_asset_impl(&self, assets_dir: &Path) -> Result<()> {
         let path = assets_dir.join("mermaid.js");
-        // Minimal stub that attempts to load the real library when served over http(s)
-        let stub = r#"(function(){
+        // Minimal fallback asset that attempts to load the real library when served over http(s).
+        let fallback = r#"(function(){
   function ensureRealMermaid(){
     try {
       if (window.mermaid && window.mermaid.parse && window.mermaid.initialize) return;
@@ -371,7 +371,7 @@ window.addEventListener('DOMContentLoaded', runSearch);"#,
   ensureRealMermaid();
 })();"#;
         if !path.exists() {
-            let _ = fs::write(&path, stub);
+            let _ = fs::write(&path, fallback);
         }
 
         // Try to download the real library only if explicitly enabled; ignore failures

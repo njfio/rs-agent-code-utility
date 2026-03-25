@@ -26,7 +26,7 @@ Phase 0 — Status (completed)
 - Sample wiki: generated to `wiki_sample_phase0/` from `src/`.
   - Command: `cargo run --bin tree-sitter-cli -- wiki src --output wiki_sample_phase0 --include-api --depth full`
   - Verified assets exist: `index.html`, `assets/{style.css,hljs.css,hljs.js,mermaid.js,search.js,search_index.{json,js}}`, `pages/` and `symbols.html`.
-- Notes: browser console not checked in CI; asset generation designed to be offline-safe with local stubs.
+- Notes: browser console not checked in CI; asset generation designed to be offline-safe with local fallback assets.
 
 
 Phase 0 — Responsibility Inventory (current → target module)

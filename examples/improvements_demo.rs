@@ -165,7 +165,7 @@ fn demonstrate_module_completion() -> Result<()> {
 
     println!("  🔄 Current Library Surface:");
     println!("     - Public analysis/security modules are exported from the crate root");
-    println!("     - Intent mapping uses the real module instead of a compatibility stub");
+    println!("     - Intent mapping uses the real module instead of a legacy compatibility layer");
     println!("     - Cleanup work removed stale commented-out module exports");
 
     println!("  🎯 Intent Mapping Capabilities:");

@@ -482,9 +482,9 @@ impl WikiGenerator {
         // Assets
         self.write_style_css_impl(&assets.join("style.css"))?;
         self.write_search_js_impl(&assets.join("search.js"))?;
-        // Bundle local syntax highlighting assets (with graceful fallback)
+        // Bundle local syntax-highlighting assets with an offline-safe fallback.
         self.write_highlight_assets_impl(&assets)?;
-        // Provide local Mermaid asset (attempt network fetch; fallback to stub)
+        // Provide a local Mermaid asset with an offline-safe fallback.
         self.write_mermaid_asset_impl(&assets)?;
         // Provide main page behavior JS
         self.write_main_js_impl(&assets.join("main.js"))?;
@@ -982,72 +982,6 @@ updateSearch();
 });
 }"#;
         fs::write(path, js).map_err(|e| e.into())
-    }
-
-    fn write_highlight_assets(&self, assets_dir: &Path) -> Result<()> {
-        let js_path = assets_dir.join("hljs.js");
-        let css_path = assets_dir.join("hljs.css");
-
-    // Always ensure we have at least a minimal stub to avoid 404s
-        let js_stub = "window.hljs = window.hljs || { highlightAll: function(){ try { document.querySelectorAll('pre code').forEach(function(el){ el.classList.add('hljs'); }); } catch(e){} } };";
-        let css_stub = ".hljs{background:#0a1220;color:#e6e9ef}.hljs-keyword,.hljs-literal,.hljs-built_in{color:#7aa2f7}.hljs-string{color:#a6e3a1}.hljs-comment{color:#9aa4b2}.hljs-number{color:#f78c6c}";
-        if !js_path.exists() { let _ = fs::write(&js_path, js_stub); }
-        if !css_path.exists() { let _ = fs::write(&css_path, css_stub); }
-
-    // Try to download real assets; ignore failures (offline environments)
-        let js_url = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js";
-        let css_url = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css";
-
-    // Use tokio + reqwest if available (default features include net)
-        if let Ok(rt) = tokio::runtime::Runtime::new() {
-            let fetch = async move {
-                let client = reqwest::Client::new();
-                let js_resp = client.get(js_url).send().await;
-                if let Ok(resp) = js_resp { if resp.status().is_success() { if let Ok(text) = resp.text().await { let _ = fs::write(&js_path, text); } } }
-                let css_resp = client.get(css_url).send().await;
-                if let Ok(resp) = css_resp { if resp.status().is_success() { if let Ok(text) = resp.text().await { let _ = fs::write(&css_path, text); } } }
-            };
-            let _ = rt.block_on(fetch);
-        }
-
-        Ok(())
-    }
-
-    fn write_mermaid_asset(&self, assets_dir: &Path) -> Result<()> {
-        let path = assets_dir.join("mermaid.js");
-    // Minimal stub that attempts to load the real library when served over http(s)
-        let stub = r#"(function(){
-  function ensureRealMermaid(){
-    try {
-      if (window.mermaid && window.mermaid.parse && window.mermaid.initialize) return;
-      if (typeof document === 'undefined') return;
-      if (location && (location.protocol === 'http:' || location.protocol === 'https:')){
-        var s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
-        s.async=true; document.head.appendChild(s);
-      }
-    } catch(_){}
-  }
-  window.mermaid = window.mermaid || { initialize:function(){}, init:function(){}, parse:function(){}, render:function(){} };
-  ensureRealMermaid();
-})();"#;
-        if !path.exists() { let _ = fs::write(&path, stub); }
-
-    // Try to download the real library; ignore failures
-        let url = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js";
-        if let Ok(rt) = tokio::runtime::Runtime::new() {
-            let fetch = async move {
-                let client = reqwest::Client::new();
-                if let Ok(resp) = client.get(url).send().await {
-                    if resp.status().is_success() {
-                        if let Ok(text) = resp.text().await { let _ = fs::write(&path, text); }
-                    }
-                }
-            };
-            let _ = rt.block_on(fetch);
-        }
-
-        Ok(())
     }
 
     */
