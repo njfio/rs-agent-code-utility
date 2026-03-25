@@ -693,7 +693,7 @@ impl SymbolTableAnalyzer {
 
     /// Extract Kotlin symbol definitions
     fn extract_kotlin_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement Kotlin symbol definition extraction
+        // Kotlin parser support was removed from the dependency graph.
         Ok(None)
     }
 
@@ -1155,6 +1155,45 @@ impl SymbolTableAnalyzer {
         )?))
     }
 
+    fn extract_c_declarator_name(&self, node: Node) -> Option<String> {
+        if matches!(
+            node.kind(),
+            "identifier" | "field_identifier" | "type_identifier" | "qualified_identifier"
+        ) {
+            return node.text().ok().map(str::to_string);
+        }
+
+        if let Some(name_node) = node.child_by_field_name("name") {
+            if let Ok(name) = name_node.text() {
+                return Some(name.to_string());
+            }
+        }
+
+        if let Some(declarator_node) = node.child_by_field_name("declarator") {
+            if let Some(name) = self.extract_c_declarator_name(declarator_node) {
+                return Some(name);
+            }
+        }
+
+        node.named_children()
+            .into_iter()
+            .filter(|child| {
+                matches!(
+                    child.kind(),
+                    "identifier"
+                        | "field_identifier"
+                        | "type_identifier"
+                        | "qualified_identifier"
+                        | "function_declarator"
+                        | "pointer_declarator"
+                        | "reference_declarator"
+                        | "array_declarator"
+                        | "parenthesized_declarator"
+                )
+            })
+            .find_map(|child| self.extract_c_declarator_name(child))
+    }
+
     fn extract_js_callable_signature(&self, node: Node) -> Option<String> {
         self.extract_field_text(node, "parameters")
             .map(|parameters| format!("fn{parameters}"))
@@ -1313,9 +1352,50 @@ impl SymbolTableAnalyzer {
         }
     }
 
-    fn extract_c_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement C/C++ symbol extraction
-        Ok(None)
+    fn extract_c_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "function_definition" => {
+                let Some(declarator) = node.child_by_field_name("declarator") else {
+                    return Ok(None);
+                };
+                let Some(name) = self.extract_c_declarator_name(declarator) else {
+                    return Ok(None);
+                };
+
+                Ok(Some(self.build_symbol_definition(
+                    name,
+                    SymbolType::Function,
+                    node.start_position(),
+                    None,
+                    false,
+                    false,
+                    false,
+                    None,
+                )?))
+            }
+            "struct_specifier" | "enum_specifier" | "class_specifier" => self
+                .extract_named_symbol_definition(node, SymbolType::Class, Some(node.kind().into())),
+            "type_definition" => {
+                let Some(declarator) = node.child_by_field_name("declarator") else {
+                    return Ok(None);
+                };
+                let Some(name) = self.extract_c_declarator_name(declarator) else {
+                    return Ok(None);
+                };
+
+                Ok(Some(self.build_symbol_definition(
+                    name,
+                    SymbolType::TypeAlias,
+                    node.start_position(),
+                    Some("typedef".into()),
+                    false,
+                    false,
+                    false,
+                    None,
+                )?))
+            }
+            _ => Ok(None),
+        }
     }
 
     fn extract_go_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
@@ -2004,6 +2084,82 @@ func run() {}
         )?;
 
         let mut analyzer = SymbolTableAnalyzer::new(Language::Swift);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("Widget"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("Box"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("Mode"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("run"), Some(SymbolType::Function));
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_c_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::C)?;
+        let tree = parser.parse(
+            r#"
+typedef int Count;
+
+struct Box {
+    int value;
+};
+
+enum Mode {
+    MODE_ON
+};
+
+int run(void) {
+    return 0;
+}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::C);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("Count"), Some(SymbolType::TypeAlias));
+        assert_eq!(names_to_types.remove("Box"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("Mode"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("run"), Some(SymbolType::Function));
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_cpp_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::Cpp)?;
+        let tree = parser.parse(
+            r#"
+class Widget {};
+struct Box {};
+enum Mode { On };
+
+int run() {
+    return 0;
+}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Cpp);
         let result = analyzer.analyze(&tree)?;
 
         let mut names_to_types = result
