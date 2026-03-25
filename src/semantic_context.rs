@@ -174,6 +174,8 @@ pub struct FunctionDefinition {
     pub name: String,
     /// Function location
     pub location: Point,
+    /// End location of the function body/declaration
+    pub end_location: Point,
     /// Parameters
     pub parameters: Vec<ParameterInfo>,
     /// Return type
@@ -1167,6 +1169,7 @@ impl SemanticContextAnalyzer {
                         let function_def = FunctionDefinition {
                             name: name.to_string(),
                             location: node.start_position(),
+                            end_location: node.end_position(),
                             parameters,
                             return_type,
                             attributes,
@@ -1434,12 +1437,164 @@ impl SemanticContextAnalyzer {
     /// Build call chains
     fn build_call_chains(
         &self,
-        _calls: &HashMap<Point, Vec<FunctionCall>>,
-        _functions: &HashMap<String, FunctionDefinition>,
-        _call_chains: &mut Vec<CallChain>,
+        calls: &HashMap<Point, Vec<FunctionCall>>,
+        functions: &HashMap<String, FunctionDefinition>,
+        call_chains: &mut Vec<CallChain>,
     ) -> Result<()> {
-        // Placeholder implementation - would build actual call chains
+        let mut edges: HashMap<String, Vec<String>> = HashMap::new();
+
+        for function_calls in calls.values() {
+            for function_call in function_calls {
+                let Some(caller) =
+                    self.find_enclosing_function_name(function_call.call_site, functions)
+                else {
+                    continue;
+                };
+                let Some(callee) =
+                    self.resolve_called_function_name(&function_call.function_name, functions)
+                else {
+                    continue;
+                };
+
+                edges.entry(caller).or_default().push(callee);
+            }
+        }
+
+        let mut seen = HashSet::new();
+        for (function_name, function_def) in functions {
+            let mut path = vec![function_name.clone()];
+            let mut visited = HashSet::from([function_name.clone()]);
+            self.collect_call_chains(
+                function_name,
+                function_def.location,
+                &edges,
+                functions,
+                &mut path,
+                &mut visited,
+                &mut seen,
+                call_chains,
+            );
+        }
+
         Ok(())
+    }
+
+    fn collect_call_chains(
+        &self,
+        current: &str,
+        start: Point,
+        edges: &HashMap<String, Vec<String>>,
+        functions: &HashMap<String, FunctionDefinition>,
+        path: &mut Vec<String>,
+        visited: &mut HashSet<String>,
+        seen: &mut HashSet<Vec<String>>,
+        call_chains: &mut Vec<CallChain>,
+    ) {
+        let Some(callees) = edges.get(current) else {
+            return;
+        };
+
+        for callee in callees {
+            if !visited.insert(callee.clone()) {
+                continue;
+            }
+
+            path.push(callee.clone());
+
+            if seen.insert(path.clone()) {
+                let end = functions
+                    .get(callee)
+                    .map(|function| function.end_location)
+                    .unwrap_or(start);
+
+                call_chains.push(CallChain {
+                    chain: path.clone(),
+                    start,
+                    end,
+                    involves_user_input: path.iter().any(|name| self.is_input_like_function(name)),
+                    involves_output: path.iter().any(|name| {
+                        functions
+                            .get(name)
+                            .map(|function| function.attributes.performs_io)
+                            .unwrap_or(false)
+                            || self.is_output_like_function(name)
+                    }),
+                });
+            }
+
+            self.collect_call_chains(
+                callee,
+                start,
+                edges,
+                functions,
+                path,
+                visited,
+                seen,
+                call_chains,
+            );
+
+            path.pop();
+            visited.remove(callee);
+        }
+    }
+
+    fn find_enclosing_function_name(
+        &self,
+        point: Point,
+        functions: &HashMap<String, FunctionDefinition>,
+    ) -> Option<String> {
+        functions
+            .iter()
+            .filter(|(_, function)| self.point_within_function(point, function))
+            .max_by_key(|(_, function)| (function.location.row, function.location.column))
+            .map(|(name, _)| name.clone())
+    }
+
+    fn point_within_function(&self, point: Point, function: &FunctionDefinition) -> bool {
+        (point.row > function.location.row
+            || (point.row == function.location.row && point.column >= function.location.column))
+            && (point.row < function.end_location.row
+                || (point.row == function.end_location.row
+                    && point.column <= function.end_location.column))
+    }
+
+    fn resolve_called_function_name(
+        &self,
+        function_name: &str,
+        functions: &HashMap<String, FunctionDefinition>,
+    ) -> Option<String> {
+        let normalized = function_name
+            .rsplit("::")
+            .next()
+            .unwrap_or(function_name)
+            .rsplit("->")
+            .next()
+            .unwrap_or(function_name)
+            .rsplit('.')
+            .next()
+            .unwrap_or(function_name);
+
+        functions
+            .contains_key(normalized)
+            .then(|| normalized.to_string())
+    }
+
+    fn is_input_like_function(&self, function_name: &str) -> bool {
+        let function_name = function_name.to_lowercase();
+        [
+            "input", "request", "read", "recv", "query", "param", "body", "form",
+        ]
+        .iter()
+        .any(|needle| function_name.contains(needle))
+    }
+
+    fn is_output_like_function(&self, function_name: &str) -> bool {
+        let function_name = function_name.to_lowercase();
+        [
+            "print", "write", "send", "emit", "render", "response", "log",
+        ]
+        .iter()
+        .any(|needle| function_name.contains(needle))
     }
 
     /// Analyze security context
@@ -1793,6 +1948,62 @@ mod tests {
         assert_eq!(function_call.arguments.len(), 1);
         assert_eq!(function_call.arguments[0].position, 0);
         assert_eq!(function_call.arguments[0].expression, "arg1");
+    }
+
+    #[test]
+    fn test_builds_real_call_chains() -> Result<()> {
+        let parser = crate::Parser::new(Language::Rust)?;
+        let tree = parser.parse(
+            r#"
+fn read_input() -> String {
+    String::new()
+}
+
+fn emit_output(data: String) {
+    println!("{}", data);
+}
+
+fn sanitize(data: String) {
+    emit_output(data);
+}
+
+fn process(data: String) {
+    sanitize(data);
+}
+
+fn main_flow() {
+    let data = read_input();
+    process(data);
+}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SemanticContextAnalyzer::new(Language::Rust)?;
+        let context = analyzer.analyze(&tree, tree.source())?;
+
+        assert!(context
+            .call_graph
+            .call_chains
+            .iter()
+            .any(
+                |chain| chain.chain == vec!["main_flow".to_string(), "read_input".to_string()]
+                    && chain.involves_user_input
+            ));
+        assert!(context
+            .call_graph
+            .call_chains
+            .iter()
+            .any(|chain| chain.chain
+                == vec![
+                    "main_flow".to_string(),
+                    "process".to_string(),
+                    "sanitize".to_string(),
+                    "emit_output".to_string(),
+                ]
+                && chain.involves_output));
+
+        Ok(())
     }
 
     #[test]
