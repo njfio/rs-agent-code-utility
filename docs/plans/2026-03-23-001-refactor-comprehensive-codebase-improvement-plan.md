@@ -862,9 +862,11 @@ Phase 0 (CI/deps)
 
 ### Quality Gates
 
+**Implementation note (2026-03-24, later):** Using the plan's existing test-count proxy, the repository now contains `743` `#[test]`, `#[tokio::test]`, or `proptest!` annotations across `src/`, `tests/`, `benches/`, and `examples/`, which is above the `667 test functions` baseline recorded when this plan was written. That means the current test surface has increased rather than regressed, so this quality gate can now be marked complete.
+
 - [x] All phases pass `cargo clippy --all-targets --all-features -- -D warnings`
 - [x] All phases pass `cargo fmt --all -- --check`
-- [ ] Test coverage does not decrease (currently 667 test functions)
+- [x] Test coverage does not decrease (currently 667 test functions)
 - [ ] Each phase is a separate PR, reviewed before merge
 
 ---
