@@ -631,21 +631,64 @@ impl SymbolTableAnalyzer {
     }
 
     /// Extract Java symbol definitions
-    fn extract_java_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement Java symbol definition extraction
-        Ok(None)
+    fn extract_java_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "class_declaration" | "enum_declaration" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Class,
+                Some(node.kind().to_string()),
+            ),
+            "method_declaration" | "constructor_declaration" => self
+                .extract_named_symbol_definition(
+                    node,
+                    SymbolType::Method,
+                    self.extract_field_text(node, "parameters")
+                        .map(|parameters| format!("fn{parameters}")),
+                ),
+            _ => Ok(None),
+        }
     }
 
     /// Extract Ruby symbol definitions
-    fn extract_ruby_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement Ruby symbol definition extraction
-        Ok(None)
+    fn extract_ruby_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "class" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Class,
+                Some("class".to_string()),
+            ),
+            "module" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Module,
+                Some("module".to_string()),
+            ),
+            "method" | "singleton_method" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Method,
+                self.extract_field_text(node, "parameters")
+                    .map(|parameters| format!("fn{parameters}")),
+            ),
+            _ => Ok(None),
+        }
     }
 
     /// Extract Swift symbol definitions
-    fn extract_swift_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement Swift symbol definition extraction
-        Ok(None)
+    fn extract_swift_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "class_declaration" | "struct_declaration" | "enum_declaration" => self
+                .extract_named_symbol_definition(
+                    node,
+                    SymbolType::Class,
+                    Some(node.kind().to_string()),
+                ),
+            "function_declaration" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Function,
+                self.extract_field_text(node, "parameters")
+                    .map(|parameters| format!("fn{parameters}")),
+            ),
+            _ => Ok(None),
+        }
     }
 
     /// Extract Kotlin symbol definitions
@@ -1816,6 +1859,105 @@ answer = 42
         assert_eq!(names_to_types.remove("typed"), Some(SymbolType::Parameter));
         assert_eq!(names_to_types.remove("result"), Some(SymbolType::Variable));
         assert_eq!(names_to_types.remove("answer"), Some(SymbolType::Variable));
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_java_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::Java)?;
+        let tree = parser.parse(
+            r#"
+class Demo {
+    Demo() {}
+
+    void run() {}
+}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Java);
+        let result = analyzer.analyze(&tree)?;
+
+        let symbols = result.symbol_table.symbols.values().collect::<Vec<_>>();
+
+        assert!(symbols
+            .iter()
+            .any(|symbol| symbol.name == "Demo" && symbol.symbol_type == SymbolType::Class));
+        assert!(symbols
+            .iter()
+            .any(|symbol| symbol.name == "Demo" && symbol.symbol_type == SymbolType::Method));
+        assert!(symbols
+            .iter()
+            .any(|symbol| symbol.name == "run" && symbol.symbol_type == SymbolType::Method));
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_ruby_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::Ruby)?;
+        let tree = parser.parse(
+            r#"
+module Auth
+  class User
+    def run(name)
+      name
+    end
+  end
+end
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Ruby);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("Auth"), Some(SymbolType::Module));
+        assert_eq!(names_to_types.remove("User"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("run"), Some(SymbolType::Method));
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_swift_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::Swift)?;
+        let tree = parser.parse(
+            r#"
+class Widget {}
+struct Box {}
+enum Mode { case on }
+func run() {}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Swift);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("Widget"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("Box"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("Mode"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("run"), Some(SymbolType::Function));
 
         Ok(())
     }
