@@ -1,5 +1,4 @@
-// rust_tree_sitter/src/security/accuracy_metrics.rs
-
+use super::ast_analyzer::SecurityFinding;
 use serde::{Deserialize, Serialize};
 
 /// Represents accuracy metrics for security analysis
@@ -10,6 +9,13 @@ pub struct AccuracyMetrics {
     pub true_negatives: u32,
     pub false_negatives: u32,
     pub total_samples: u32,
+}
+
+/// Ground-truth sample used for accuracy calculations.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ClassificationSample {
+    pub detected: bool,
+    pub actual_positive: bool,
 }
 
 impl Default for AccuracyMetrics {
@@ -91,11 +97,13 @@ impl AccuracyMetrics {
         }
     }
 
-    /// Calculate accuracy metrics from findings (placeholder implementation)
-    pub fn calculate(_findings: &[SecurityFinding]) -> Self {
-        // Placeholder: In a real implementation, this would analyze findings
-        // against known ground truth to calculate true/false positives
-        Self::new()
+    /// Calculate accuracy metrics from labeled samples.
+    pub fn from_classification_samples(samples: &[ClassificationSample]) -> Self {
+        let mut metrics = Self::new();
+        for sample in samples {
+            metrics.update(sample.detected, sample.actual_positive);
+        }
+        metrics
     }
 }
 
@@ -126,6 +134,24 @@ impl SecurityAnalysisReport {
 
     /// Generate a human-readable text report
     pub fn generate_text_report(&self) -> String {
+        if self.metrics.total_samples == 0 {
+            return format!(
+                "Security Analysis Report\n\
+                Timestamp: {}\n\
+                \n\
+                Metrics:\n\
+                - Accuracy metrics unavailable without labeled ground truth samples\n\
+                \n\
+                Total Findings: {}\n\
+                \n\
+                Summary:\n\
+                {}\n",
+                self.timestamp,
+                self.findings.len(),
+                self.summary
+            );
+        }
+
         format!(
             "Security Analysis Report\n\
             Timestamp: {}\n\
@@ -153,12 +179,43 @@ impl SecurityAnalysisReport {
     }
 }
 
-/// Placeholder for SecurityFinding - should be defined in the main security module
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SecurityFinding {
-    pub severity: String,
-    pub description: String,
-    pub location: String,
-    pub cwe_id: Option<String>,
-    pub confidence: f64,
+#[cfg(test)]
+mod tests {
+    use super::{AccuracyMetrics, ClassificationSample, SecurityAnalysisReport};
+
+    #[test]
+    fn metrics_can_be_built_from_labeled_samples() {
+        let samples = [
+            ClassificationSample {
+                detected: true,
+                actual_positive: true,
+            },
+            ClassificationSample {
+                detected: true,
+                actual_positive: false,
+            },
+            ClassificationSample {
+                detected: false,
+                actual_positive: true,
+            },
+            ClassificationSample {
+                detected: false,
+                actual_positive: false,
+            },
+        ];
+
+        let metrics = AccuracyMetrics::from_classification_samples(&samples);
+        assert_eq!(metrics.true_positives, 1);
+        assert_eq!(metrics.false_positives, 1);
+        assert_eq!(metrics.false_negatives, 1);
+        assert_eq!(metrics.true_negatives, 1);
+        assert_eq!(metrics.total_samples, 4);
+    }
+
+    #[test]
+    fn report_text_is_honest_without_labels() {
+        let report = SecurityAnalysisReport::new(AccuracyMetrics::new(), Vec::new(), "ok".into());
+        let text = report.generate_text_report();
+        assert!(text.contains("unavailable without labeled ground truth samples"));
+    }
 }

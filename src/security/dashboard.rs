@@ -47,6 +47,21 @@ impl SecurityDashboard {
         analysis_duration: std::time::Duration,
         total_files: usize,
     ) -> DashboardReport {
+        Self::generate_report_with_metrics(
+            findings,
+            analysis_duration,
+            total_files,
+            AccuracyMetrics::new(),
+        )
+    }
+
+    /// Generate a dashboard report and attach labeled accuracy metrics when available.
+    pub fn generate_report_with_metrics(
+        findings: &[crate::security::SecurityFinding],
+        analysis_duration: std::time::Duration,
+        total_files: usize,
+        metrics: AccuracyMetrics,
+    ) -> DashboardReport {
         let timestamp = crate::current_timestamp_rfc3339();
 
         // Calculate summary statistics
@@ -112,13 +127,10 @@ impl SecurityDashboard {
                 "Consider breaking down large codebases into smaller analysis units".to_string(),
             );
         }
-        if summary.false_positive_rate() > 0.2 {
+        if metrics.total_samples > 0 && metrics.false_positive_rate() > 0.2 {
             recommendations
                 .push("Review and tune detection rules to reduce false positives".to_string());
         }
-
-        // Calculate accuracy metrics (placeholder - would need labeled data)
-        let metrics = AccuracyMetrics::new();
 
         DashboardReport {
             timestamp,
@@ -160,26 +172,31 @@ impl SecurityDashboard {
         output.push_str(&format!("Info: {}\n\n", report.summary.info_findings));
 
         output.push_str("ACCURACY METRICS\n");
-        output.push_str(&format!(
-            "True Positive Rate: {:.2}%\n",
-            report.metrics.recall() * 100.0
-        ));
-        output.push_str(&format!(
-            "False Positive Rate: {:.2}%\n",
-            report.metrics.false_positive_rate() * 100.0
-        ));
-        output.push_str(&format!(
-            "Precision: {:.2}%\n",
-            report.metrics.precision() * 100.0
-        ));
-        output.push_str(&format!(
-            "Recall: {:.2}%\n",
-            report.metrics.recall() * 100.0
-        ));
-        output.push_str(&format!(
-            "F1 Score: {:.2}%\n",
-            report.metrics.f1_score() * 100.0
-        ));
+        if report.metrics.total_samples == 0 {
+            output.push_str("Unavailable without labeled ground truth samples\n");
+        } else {
+            output.push_str(&format!(
+                "True Positive Rate: {:.2}%\n",
+                report.metrics.recall() * 100.0
+            ));
+            output.push_str(&format!(
+                "False Positive Rate: {:.2}%\n",
+                report.metrics.false_positive_rate() * 100.0
+            ));
+            output.push_str(&format!(
+                "Precision: {:.2}%\n",
+                report.metrics.precision() * 100.0
+            ));
+            output.push_str(&format!(
+                "Recall: {:.2}%\n",
+                report.metrics.recall() * 100.0
+            ));
+            output.push_str(&format!(
+                "F1 Score: {:.2}%\n",
+                report.metrics.f1_score() * 100.0
+            ));
+        }
+        output.push('\n');
 
         if !report.top_vulnerabilities.is_empty() {
             output.push_str("TOP VULNERABILITIES\n");
@@ -205,18 +222,5 @@ impl SecurityDashboard {
     /// Generate JSON report
     pub fn generate_json_report(report: &DashboardReport) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(report)
-    }
-}
-
-impl DashboardSummary {
-    /// Calculate false positive rate estimate
-    pub fn false_positive_rate(&self) -> f64 {
-        // This is a simplified estimate - in practice, would need labeled data
-        if self.total_findings == 0 {
-            0.0
-        } else {
-            // Assume 20% of findings in test code are false positives
-            0.2
-        }
     }
 }
