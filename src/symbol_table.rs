@@ -966,15 +966,217 @@ impl SymbolTableAnalyzer {
         }
     }
 
-    /// Placeholder methods for other languages (to be implemented)
-    fn extract_js_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement JavaScript symbol extraction
-        Ok(None)
+    fn build_symbol_definition(
+        &self,
+        name: String,
+        symbol_type: SymbolType,
+        definition_location: Point,
+        data_type: Option<String>,
+        is_mutable: bool,
+        is_public: bool,
+        is_parameter: bool,
+        initial_value: Option<String>,
+    ) -> Result<SymbolDefinition> {
+        Ok(SymbolDefinition {
+            id: self.symbol_table.next_symbol_id,
+            name,
+            symbol_type,
+            data_type,
+            scope_id: self.current_scope_id()?,
+            definition_location,
+            is_mutable,
+            is_public,
+            is_parameter,
+            initial_value,
+        })
     }
 
-    fn extract_python_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement Python symbol extraction
-        Ok(None)
+    fn extract_field_text(&self, node: Node, field_name: &str) -> Option<String> {
+        node.child_by_field_name(field_name)
+            .and_then(|child| child.text().ok().map(str::to_string))
+    }
+
+    fn extract_named_symbol_definition(
+        &self,
+        node: Node,
+        symbol_type: SymbolType,
+        data_type: Option<String>,
+    ) -> Result<Option<SymbolDefinition>> {
+        let Some(name_node) = node.child_by_field_name("name") else {
+            return Ok(None);
+        };
+        let Ok(name) = name_node.text() else {
+            return Ok(None);
+        };
+
+        Ok(Some(self.build_symbol_definition(
+            name.to_string(),
+            symbol_type,
+            node.start_position(),
+            data_type,
+            false,
+            false,
+            false,
+            None,
+        )?))
+    }
+
+    fn extract_js_callable_signature(&self, node: Node) -> Option<String> {
+        self.extract_field_text(node, "parameters")
+            .map(|parameters| format!("fn{parameters}"))
+    }
+
+    fn is_js_const_declaration(&self, node: Node) -> bool {
+        let mut current = node.parent();
+
+        while let Some(parent) = current {
+            if matches!(
+                parent.kind(),
+                "lexical_declaration" | "variable_declaration"
+            ) {
+                return parent
+                    .text()
+                    .map(|text| text.trim_start().starts_with("const "))
+                    .unwrap_or(false);
+            }
+            current = parent.parent();
+        }
+
+        false
+    }
+
+    fn extract_python_parameter_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        let Some(name_node) = node.child_by_field_name("name") else {
+            return Ok(None);
+        };
+        let Ok(name) = name_node.text() else {
+            return Ok(None);
+        };
+
+        Ok(Some(self.build_symbol_definition(
+            name.to_string(),
+            SymbolType::Parameter,
+            node.start_position(),
+            self.extract_field_text(node, "type"),
+            false,
+            false,
+            true,
+            self.extract_field_text(node, "value"),
+        )?))
+    }
+
+    /// Extract JavaScript and TypeScript symbol definitions
+    fn extract_js_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "function_declaration" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Function,
+                self.extract_js_callable_signature(node),
+            ),
+            "method_definition" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Method,
+                self.extract_js_callable_signature(node),
+            ),
+            "class_declaration" => {
+                self.extract_named_symbol_definition(node, SymbolType::Class, Some("class".into()))
+            }
+            "variable_declarator" => {
+                let Some(name_node) = node.child_by_field_name("name") else {
+                    return Ok(None);
+                };
+                if name_node.kind() != "identifier" {
+                    return Ok(None);
+                }
+                let Ok(name) = name_node.text() else {
+                    return Ok(None);
+                };
+
+                let is_const = self.is_js_const_declaration(node);
+                let symbol_type = if is_const {
+                    SymbolType::Constant
+                } else {
+                    SymbolType::Variable
+                };
+
+                Ok(Some(self.build_symbol_definition(
+                    name.to_string(),
+                    symbol_type,
+                    node.start_position(),
+                    None,
+                    !is_const,
+                    false,
+                    false,
+                    self.extract_field_text(node, "value"),
+                )?))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Extract Python symbol definitions
+    fn extract_python_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "function_definition" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Function,
+                self.extract_field_text(node, "parameters")
+                    .map(|parameters| format!("def{parameters}")),
+            ),
+            "class_definition" => {
+                self.extract_named_symbol_definition(node, SymbolType::Class, Some("class".into()))
+            }
+            "assignment" => {
+                let Some(left) = node.child_by_field_name("left") else {
+                    return Ok(None);
+                };
+                if left.kind() != "identifier" {
+                    return Ok(None);
+                }
+                let Ok(name) = left.text() else {
+                    return Ok(None);
+                };
+
+                Ok(Some(self.build_symbol_definition(
+                    name.to_string(),
+                    SymbolType::Variable,
+                    node.start_position(),
+                    None,
+                    true,
+                    false,
+                    false,
+                    self.extract_field_text(node, "right"),
+                )?))
+            }
+            "identifier" => {
+                let is_parameter = node
+                    .parent()
+                    .map(|parent| parent.kind() == "parameters")
+                    .unwrap_or(false);
+                if !is_parameter {
+                    return Ok(None);
+                }
+
+                let Ok(name) = node.text() else {
+                    return Ok(None);
+                };
+
+                Ok(Some(self.build_symbol_definition(
+                    name.to_string(),
+                    SymbolType::Parameter,
+                    node.start_position(),
+                    None,
+                    false,
+                    false,
+                    true,
+                    None,
+                )?))
+            }
+            "default_parameter" | "typed_parameter" | "typed_default_parameter" => {
+                self.extract_python_parameter_definition(node)
+            }
+            _ => Ok(None),
+        }
     }
 
     fn extract_c_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
@@ -1157,6 +1359,7 @@ impl SymbolTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Parser;
 
     #[test]
     fn test_symbol_table_analyzer_creation() {
@@ -1359,5 +1562,86 @@ mod tests {
 
         let chain = symbol_table.get_scope_chain(2);
         assert_eq!(chain, vec![2, 1, 0]);
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_javascript_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::JavaScript)?;
+        let tree = parser.parse(
+            r#"
+                class Widget {
+                    run(input) {
+                        let localCount = input;
+                        return localCount;
+                    }
+                }
+
+                function helper(flag) {
+                    return flag;
+                }
+
+                const READY = true;
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::JavaScript);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("Widget"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("run"), Some(SymbolType::Method));
+        assert_eq!(names_to_types.remove("helper"), Some(SymbolType::Function));
+        assert_eq!(names_to_types.remove("READY"), Some(SymbolType::Constant));
+        assert_eq!(
+            names_to_types.remove("localCount"),
+            Some(SymbolType::Variable)
+        );
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_python_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::Python)?;
+        let tree = parser.parse(
+            r#"
+class Worker:
+    def run(self, value=1, typed: int = 2):
+        result = value
+        return result
+
+answer = 42
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Python);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("Worker"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("run"), Some(SymbolType::Function));
+        assert_eq!(names_to_types.remove("self"), Some(SymbolType::Parameter));
+        assert_eq!(names_to_types.remove("value"), Some(SymbolType::Parameter));
+        assert_eq!(names_to_types.remove("typed"), Some(SymbolType::Parameter));
+        assert_eq!(names_to_types.remove("result"), Some(SymbolType::Variable));
+        assert_eq!(names_to_types.remove("answer"), Some(SymbolType::Variable));
+
+        Ok(())
     }
 }
