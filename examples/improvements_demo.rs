@@ -181,7 +181,7 @@ fn demonstrate_module_completion() -> Result<()> {
     println!("     - Included validation workflows");
 
     println!("  📊 Implementation Statistics:");
-    println!("     - Lines added to intent_mapping_stub.rs: ~400+");
+    println!("     - Lines added to intent_mapping.rs: ~400+");
     println!("     - New data structures: 10+");
     println!("     - New methods implemented: 15+");
     println!("     - Error handling integration: ✅");

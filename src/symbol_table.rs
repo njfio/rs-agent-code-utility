@@ -1359,6 +1359,7 @@ impl SymbolTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "extended-languages")]
     use crate::Parser;
 
     #[test]

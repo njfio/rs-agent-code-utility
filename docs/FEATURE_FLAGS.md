@@ -9,7 +9,7 @@ This document tracks the current dependency-to-feature mapping for `rust_tree_si
 | `std` | Baseline library surface | No additional dependencies |
 | `serde` | Compatibility marker for the default feature set | No additional dependencies |
 | `cli` | Command-line binaries and CLI-only formatting | `clap`, `colored`, `indicatif`, `rustyline`, `syntect`, `tracing`, `tracing-subscriber` |
-| `ml` | Embeddings and model-backed intent mapping | `anyhow`, `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub` |
+| `ml` | Embeddings and model-backed intent-mapping enhancements on top of the baseline rule-based mapper | `anyhow`, `candle-core`, `candle-nn`, `candle-transformers`, `tokenizers`, `hf-hub` |
 | `net` | Network/runtime-backed providers and rate-limited HTTP | `anyhow`, `reqwest`, `tokio`, `governor`, `tower`, `config`, `tracing` |
 | `mmap` | Real memory-mapped file support for the advanced memory manager | `memmap2` |
 | `db` | Database-backed infrastructure | `anyhow`, `sqlx-core`, `sqlx-sqlite`, `config`, `chrono`, `tracing` |

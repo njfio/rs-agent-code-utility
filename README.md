@@ -44,7 +44,7 @@ Default features are intentionally minimal:
 | `std` | Baseline library surface |
 | `serde` | Default compatibility marker |
 | `cli` | CLI binaries and terminal-only dependencies |
-| `ml` | Model-backed intent-mapping and embedding code |
+| `ml` | Model-backed intent-mapping enhancements and embedding code |
 | `net` | Network/runtime-backed providers and HTTP clients |
 | `db` | Database-backed infrastructure |
 | `wiki` | Wiki generation and markdown enrichment |

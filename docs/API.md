@@ -64,7 +64,9 @@ let security_result = scanner.scan_analysis_result(&analysis_result)?;
 Map business requirements to code implementations with AI assistance.
 
 ```rust
-use rust_tree_sitter::{IntentMappingSystem, Requirement, RequirementType, Priority};
+use rust_tree_sitter::{
+    IntentMappingSystem, Priority, Requirement, RequirementStatus, RequirementType,
+};
 
 // Create mapping system
 let mut system = IntentMappingSystem::new();

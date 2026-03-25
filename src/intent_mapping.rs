@@ -5,12 +5,146 @@
 #![allow(clippy::field_reassign_with_default, clippy::ptr_arg)]
 
 use crate::constants::intent_mapping::*;
+#[cfg(feature = "ml")]
 use crate::embeddings::{Embedding, EmbeddingConfig, EmbeddingEngine};
 use crate::{AnalysisResult, FileInfo, Result};
+#[cfg(not(feature = "ml"))]
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet, VecDeque};
+#[cfg(not(feature = "ml"))]
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+
+#[cfg(not(feature = "ml"))]
+#[derive(Debug, Clone)]
+struct EmbeddingConfig {
+    similarity_threshold: f64,
+}
+
+#[cfg(not(feature = "ml"))]
+impl Default for EmbeddingConfig {
+    fn default() -> Self {
+        Self {
+            similarity_threshold: 0.7,
+        }
+    }
+}
+
+#[cfg(not(feature = "ml"))]
+#[derive(Debug, Clone)]
+struct Embedding {
+    vector: Vec<f32>,
+    metadata: HashMap<String, String>,
+}
+
+#[cfg(not(feature = "ml"))]
+impl Embedding {
+    fn new(vector: Vec<f32>, _text: String) -> Self {
+        Self {
+            vector,
+            metadata: HashMap::new(),
+        }
+    }
+
+    fn with_metadata(mut self, key: String, value: String) -> Self {
+        self.metadata.insert(key, value);
+        self
+    }
+
+    fn dimension(&self) -> usize {
+        self.vector.len()
+    }
+
+    fn cosine_similarity(&self, other: &Embedding) -> Result<f64> {
+        if self.vector.len() != other.vector.len() {
+            return Err(crate::Error::internal_error(
+                "intent_mapping",
+                format!(
+                    "Fallback embedding dimensions don't match: {} vs {}",
+                    self.vector.len(),
+                    other.vector.len()
+                ),
+            ));
+        }
+
+        let dot_product: f32 = self
+            .vector
+            .iter()
+            .zip(other.vector.iter())
+            .map(|(left, right)| left * right)
+            .sum();
+
+        let norm_left: f32 = self
+            .vector
+            .iter()
+            .map(|value| value * value)
+            .sum::<f32>()
+            .sqrt();
+        let norm_right: f32 = other
+            .vector
+            .iter()
+            .map(|value| value * value)
+            .sum::<f32>()
+            .sqrt();
+
+        if norm_left == 0.0 || norm_right == 0.0 {
+            return Ok(0.0);
+        }
+
+        Ok((dot_product / (norm_left * norm_right)) as f64)
+    }
+}
+
+#[cfg(not(feature = "ml"))]
+#[derive(Debug)]
+struct EmbeddingEngine {
+    config: EmbeddingConfig,
+}
+
+#[cfg(not(feature = "ml"))]
+impl EmbeddingEngine {
+    fn new(config: EmbeddingConfig) -> Self {
+        Self { config }
+    }
+
+    async fn initialize(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
+        Ok(texts
+            .iter()
+            .map(|text| self.hash_text_to_embedding(text))
+            .collect())
+    }
+
+    fn calculate_similarity(&self, text1: &str, text2: &str) -> Result<f64> {
+        let _similarity_threshold = self.config.similarity_threshold;
+        let left = self.hash_text_to_embedding(text1);
+        let right = self.hash_text_to_embedding(text2);
+        left.cosine_similarity(&right)
+    }
+
+    fn hash_text_to_embedding(&self, text: &str) -> Embedding {
+        const FALLBACK_EMBEDDING_DIMENSION: usize = 64;
+
+        let mut vector = vec![0.0_f32; FALLBACK_EMBEDDING_DIMENSION];
+        for token in text
+            .split(|ch: char| !ch.is_alphanumeric())
+            .filter(|token| !token.is_empty())
+        {
+            let normalized = token.to_ascii_lowercase();
+            let mut hasher = DefaultHasher::new();
+            normalized.hash(&mut hasher);
+            let index = hasher.finish() as usize % FALLBACK_EMBEDDING_DIMENSION;
+            vector[index] += 1.0;
+        }
+
+        Embedding::new(vector, text.to_string())
+    }
+}
 
 /// Confidence scoring thresholds for different mapping types
 #[derive(Debug, Clone)]
@@ -1008,7 +1142,7 @@ impl IntentMappingSystem {
         self.generate_automatic_mappings().await?;
 
         // Build traceability matrix
-        self.build_traceability_matrix();
+        self.rebuild_traceability_matrix();
 
         // Identify gaps
         let gaps = self.identify_gaps()?;
@@ -1052,6 +1186,26 @@ impl IntentMappingSystem {
         }
 
         Ok(validated_mappings)
+    }
+
+    /// Generate mappings synchronously using the available rule-based strategies.
+    ///
+    /// This convenience surface is available in all builds; `analyze_mappings`
+    /// remains the richer async entry point for callers that also want the
+    /// structured gap/recommendation report.
+    pub fn generate_mappings(&mut self, analysis: &AnalysisResult) -> Result<Vec<IntentMapping>> {
+        self.extract_implementations(analysis)?;
+        self.mappings.clear();
+        self.generate_keyword_mappings()?;
+        self.generate_pattern_mappings()?;
+        self.rebuild_traceability_matrix();
+        Ok(self.mappings.clone())
+    }
+
+    /// Build and return the current traceability matrix.
+    pub fn build_traceability_matrix(&mut self) -> Result<TraceabilityMatrix> {
+        self.rebuild_traceability_matrix();
+        Ok(self.traceability.clone())
     }
 
     /// Get traceability report
@@ -1296,7 +1450,7 @@ impl IntentMappingSystem {
     }
 
     /// Build traceability matrix
-    fn build_traceability_matrix(&mut self) {
+    fn rebuild_traceability_matrix(&mut self) {
         self.traceability = TraceabilityMatrix::new();
 
         for mapping in &self.mappings {
@@ -2650,7 +2804,7 @@ impl IntentMappingSystem {
 
     /// Build traceability matrix (for testing)
     pub fn build_traceability_matrix_public(&mut self) {
-        self.build_traceability_matrix();
+        self.rebuild_traceability_matrix();
     }
 
     /// Identify gaps (for testing)

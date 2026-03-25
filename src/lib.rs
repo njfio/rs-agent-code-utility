@@ -331,6 +331,9 @@ pub mod constants;
 pub mod control_flow;
 /// Dependency analysis and vulnerability scanning
 pub mod dependency_analysis;
+/// Text embeddings and semantic similarity
+#[cfg(feature = "ml")]
+pub mod embeddings;
 /// Enhanced security analysis with compliance checking
 #[cfg(all(feature = "net", feature = "db"))]
 pub mod enhanced_security;
@@ -342,23 +345,7 @@ pub mod file_cache;
 #[cfg(any(feature = "net", feature = "db"))]
 pub mod infrastructure;
 /// Intent mapping between requirements and implementation
-#[cfg(feature = "ml")]
 pub mod intent_mapping;
-#[cfg(not(feature = "ml"))]
-pub mod intent_mapping_stub;
-/// Semantic context analysis and data flow
-pub mod semantic_context;
-/// SQL injection vulnerability detection
-pub mod sql_injection_detector;
-/// Symbol table construction and management
-pub mod symbol_table;
-/// Taint analysis for security vulnerability detection
-pub mod taint_analysis;
-#[cfg(not(feature = "ml"))]
-pub use intent_mapping_stub as intent_mapping;
-/// Text embeddings and semantic similarity
-#[cfg(feature = "ml")]
-pub mod embeddings;
 /// Programming language support and parsers
 pub mod languages;
 /// Memory allocation tracking and analysis
@@ -373,8 +360,16 @@ pub mod query;
 pub mod refactoring;
 /// Security analysis and vulnerability detection
 pub mod security;
+/// Semantic context analysis and data flow
+pub mod semantic_context;
 /// Semantic graph construction and querying
 pub mod semantic_graph;
+/// SQL injection vulnerability detection
+pub mod sql_injection_detector;
+/// Symbol table construction and management
+pub mod symbol_table;
+/// Taint analysis for security vulnerability detection
+pub mod taint_analysis;
 /// Test coverage analysis and gap detection
 pub mod test_coverage;
 /// Syntax tree manipulation and traversal
@@ -473,14 +468,12 @@ pub use code_evolution::{
     ChangePattern, ChangeType, CodeEvolutionTracker, EvolutionAnalysisResult, EvolutionConfig,
     EvolutionMetrics, EvolutionRecommendation, FileInsight, PatternType,
 };
-#[cfg(not(feature = "ml"))]
-pub use intent_mapping::IntentMappingSystem;
-#[cfg(feature = "ml")]
 pub use intent_mapping::{
     CodeElement, GapType, Implementation, ImplementationStatus, ImplementationType, IntentMapping,
     IntentMappingSystem, MappingAnalysisResult, MappingConfig, MappingGap, MappingRecommendation,
-    MappingType, Priority as IntentPriority, QualityMetrics, RecommendationType, Requirement,
-    RequirementStatus, RequirementType, TraceabilityMatrix, TraceabilityReport, ValidationStatus,
+    MappingType, Priority, Priority as IntentPriority, QualityMetrics, RecommendationType,
+    Requirement, RequirementStatus, RequirementType, TraceabilityMatrix, TraceabilityReport,
+    ValidationStatus,
 };
 pub use memory_tracker::{
     AllocationCallStack, AllocationHotspot, AllocationImpact, AllocationLocation,
