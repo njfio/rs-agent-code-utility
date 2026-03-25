@@ -339,7 +339,7 @@ The target architecture has three layers:
 - [x] Add negative tests: functions named "loop_handler" or "allocation_tracker" must NOT be flagged
 
 **Implementation note (2026-03-24, later):** File-level recursion, I/O, and database metrics now walk parsed function/call nodes instead of counting symbol names, and per-function complexity enumeration now derives from AST function nodes instead of line-by-line Rust text scanning. Remaining simple pattern detectors elsewhere in `src/performance_analysis.rs` still keep the top-level summary criterion open until they are converted.
-**Implementation note (2026-03-24, latest):** Rust memory-leak detection in `src/performance_analysis.rs` now walks parsed call nodes to find `Rc::new(RefCell::new(...))`, `Box::leak(...)`, and `mem::forget(...)` instead of scanning raw source lines, and the loop-type classifier no longer infers recursion from `kind().contains("function")`. `tests/performance_analysis.rs` now locks in that real leak-risk calls are reported while string literals mentioning those APIs stay clean. Recursion-risk scoring still contains text-based analysis, so the top-level performance summary criterion remains open.
+**Implementation note (2026-03-24, latest):** Rust memory-leak detection in `src/performance_analysis.rs` now walks parsed call nodes to find `Rc::new(RefCell::new(...))`, `Box::leak(...)`, and `mem::forget(...)` instead of scanning raw source lines, the loop-type classifier no longer infers recursion from `kind().contains("function")`, and recursion-risk scoring now derives recursive-call counts, branch base cases, and tail-recursion checks from AST nodes instead of function text. `tests/performance_analysis.rs` now locks in both leak-detection and recursion-hotspot behavior, so the top-level performance summary criterion can be marked complete.
 
 ### Research Insights: Tree-sitter Query Patterns
 
@@ -841,7 +841,7 @@ Phase 0 (CI/deps)
 - [ ] Default `cargo add rust_tree_sitter` pulls < 120 crates (down from 506; tighten threshold as measured)
 - [x] Security scanner produces confidence-scored findings with < 30% false positive rate on test corpus
 - [x] `// rts-ignore[rule-id]` suppresses findings per spec
-- [ ] Performance analysis uses AST traversal, not string matching
+- [x] Performance analysis uses AST traversal, not string matching
 - [x] Dependency analyzer returns correct results for Cargo.toml
 - [ ] 3-8 MCP tools functional and tested (start with 3, expand to 8)
 - [ ] ~15K lines of stub AI code removed

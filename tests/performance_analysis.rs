@@ -1119,3 +1119,89 @@ fn intentional_mem_forget() {
 
     Ok(())
 }
+
+#[test]
+fn test_ast_recursion_hotspots_distinguish_branching_and_tail_recursion(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
+
+    fs::write(
+        temp_dir.path().join("recursion.rs"),
+        r#"
+fn recursion_name_in_string() -> &'static str {
+    "branching_recursion(4)"
+}
+
+fn branching_recursion(n: u32) -> u32 {
+    if n <= 1 {
+        1
+    } else {
+        branching_recursion(n - 1) + branching_recursion(n - 2)
+    }
+}
+
+fn tail_recursion(n: u32, acc: u32) -> u32 {
+    if n == 0 {
+        acc
+    } else {
+        tail_recursion(n - 1, acc + n)
+    }
+}
+"#,
+    )?;
+
+    let result = analyze_directory_performance(
+        &temp_dir,
+        PerformanceConfig {
+            complexity_analysis: true,
+            memory_analysis: false,
+            io_analysis: false,
+            concurrency_analysis: false,
+            database_analysis: false,
+            min_complexity_threshold: 1,
+            max_function_length: 80,
+        },
+    )?;
+
+    let recursive_hotspots: Vec<_> = result
+        .hotspots
+        .iter()
+        .filter(|hotspot| hotspot.id.starts_with("RECURSIVE_COMPLEXITY_"))
+        .collect();
+
+    assert!(
+        recursive_hotspots.iter().any(|hotspot| {
+            hotspot
+                .location
+                .function
+                .as_deref()
+                .is_some_and(|function| function == "branching_recursion")
+                && hotspot
+                    .patterns
+                    .iter()
+                    .any(|pattern| pattern == "Multiple Recursive Calls")
+        }),
+        "Branching recursion should be reported as a high-complexity recursion hotspot: {:?}",
+        recursive_hotspots
+            .iter()
+            .map(|hotspot| (
+                &hotspot.location.function,
+                &hotspot.patterns,
+                &hotspot.optimization
+            ))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        recursive_hotspots.iter().all(|hotspot| {
+            hotspot.location.function.as_deref() != Some("tail_recursion")
+                && hotspot.location.function.as_deref() != Some("recursion_name_in_string")
+        }),
+        "Tail recursion and string literals should not create recursion hotspots: {:?}",
+        recursive_hotspots
+            .iter()
+            .map(|hotspot| (&hotspot.location.function, &hotspot.patterns))
+            .collect::<Vec<_>>()
+    );
+
+    Ok(())
+}

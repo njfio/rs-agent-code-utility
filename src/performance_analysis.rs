@@ -1717,48 +1717,34 @@ impl PerformanceAnalyzer {
         node: &tree_sitter::Node,
         func_name: &str,
         content: &str,
-        _file: &FileInfo,
+        file: &FileInfo,
     ) -> Result<RecursionAnalysis> {
         let mut complexity_risk: f64 = 0.5; // Base risk
         let mut pattern_type = "Direct Recursion".to_string();
         let mut optimization_suggestion = "Consider iterative approach or memoization".to_string();
 
-        if let Ok(text) = node.utf8_text(content.as_bytes()) {
-            // Count recursive calls
-            let recursive_calls = text.matches(&format!("{}(", func_name)).count() - 1; // Subtract definition
+        let function_node = crate::Node::new(*node, content);
+        let recursive_calls =
+            self.recursive_call_nodes_in_subtree(function_node, func_name, &file.language);
 
-            if recursive_calls > 2 {
-                complexity_risk += 0.3;
-                pattern_type = "Multiple Recursive Calls".to_string();
-                optimization_suggestion =
-                    "CRITICAL: Multiple recursive calls detected - consider dynamic programming"
-                        .to_string();
-            }
+        if recursive_calls.len() > 1 {
+            complexity_risk += 0.3;
+            pattern_type = "Multiple Recursive Calls".to_string();
+            optimization_suggestion =
+                "CRITICAL: Multiple recursive calls detected - consider dynamic programming"
+                    .to_string();
+        }
 
-            // Check for base case
-            let has_base_case = text.contains("return")
-                && (text.contains("if") || text.contains("match") || text.contains("when"));
+        if !self.function_has_recursive_base_case(function_node, func_name, &file.language) {
+            complexity_risk += 0.4;
+            optimization_suggestion =
+                "URGENT: No clear base case detected - infinite recursion risk".to_string();
+        }
 
-            if !has_base_case {
-                complexity_risk += 0.4;
-                optimization_suggestion =
-                    "URGENT: No clear base case detected - infinite recursion risk".to_string();
-            }
-
-            // Check for tail recursion
-            let lines: Vec<&str> = text.lines().collect();
-            let last_meaningful_line = lines
-                .iter()
-                .rev()
-                .find(|line| !line.trim().is_empty() && !line.trim().starts_with('}'))
-                .unwrap_or(&"");
-
-            if last_meaningful_line.contains(&format!("{}(", func_name)) {
-                pattern_type = "Tail Recursion".to_string();
-                complexity_risk -= 0.2; // Tail recursion is better
-                optimization_suggestion =
-                    "Consider converting tail recursion to iteration".to_string();
-            }
+        if self.is_tail_recursive(function_node, func_name, &file.language) {
+            pattern_type = "Tail Recursion".to_string();
+            complexity_risk -= 0.2; // Tail recursion is better
+            optimization_suggestion = "Consider converting tail recursion to iteration".to_string();
         }
 
         Ok(RecursionAnalysis {
@@ -2315,13 +2301,128 @@ impl PerformanceAnalyzer {
         function_name: &str,
         language: &str,
     ) -> bool {
+        !self
+            .recursive_call_nodes_in_subtree(function_node, function_name, language)
+            .is_empty()
+    }
+
+    fn recursive_call_nodes_in_subtree<'a>(
+        &self,
+        root: crate::Node<'a>,
+        function_name: &str,
+        language: &str,
+    ) -> Vec<crate::Node<'a>> {
         let expected_name = function_name.to_ascii_lowercase();
 
-        self.collect_call_nodes_in_subtree(function_node, language)
+        self.collect_call_nodes_in_subtree(root, language)
             .into_iter()
-            .filter_map(|call_node| self.call_target_text(&call_node))
-            .filter_map(|target| self.call_leaf_identifier(&target))
-            .any(|leaf| leaf == expected_name)
+            .filter(|call_node| {
+                self.call_target_text(call_node)
+                    .and_then(|target| self.call_leaf_identifier(&target))
+                    .map(|leaf| leaf == expected_name)
+                    .unwrap_or(false)
+            })
+            .collect()
+    }
+
+    fn function_body_node<'a>(&self, function_node: crate::Node<'a>) -> Option<crate::Node<'a>> {
+        function_node.child_by_field_name("body").or_else(|| {
+            function_node
+                .named_children()
+                .into_iter()
+                .rev()
+                .find(|child| {
+                    matches!(
+                        child.kind(),
+                        "block"
+                            | "statement_block"
+                            | "compound_statement"
+                            | "statement_list"
+                            | "body"
+                    )
+                })
+        })
+    }
+
+    fn branch_node_kinds(&self, language: &str) -> Vec<&'static str> {
+        match language.to_lowercase().as_str() {
+            "rust" => vec!["match_arm"],
+            "python" => vec!["case_clause", "elif_clause", "else_clause"],
+            "javascript" | "typescript" => vec!["switch_case", "switch_default", "case_clause"],
+            "c" | "cpp" | "c++" => vec!["case_statement"],
+            "go" => vec!["expression_case", "default_case", "communication_case"],
+            _ => Vec::new(),
+        }
+    }
+
+    fn if_node_kinds(&self, language: &str) -> Vec<&'static str> {
+        match language.to_lowercase().as_str() {
+            "rust" => vec!["if_expression"],
+            "python" => vec!["if_statement"],
+            "javascript" | "typescript" | "c" | "cpp" | "c++" | "go" => vec!["if_statement"],
+            _ => Vec::new(),
+        }
+    }
+
+    fn function_has_recursive_base_case(
+        &self,
+        function_node: crate::Node<'_>,
+        function_name: &str,
+        language: &str,
+    ) -> bool {
+        for if_kind in self.if_node_kinds(language) {
+            for if_node in function_node.find_descendants(|candidate| candidate.kind() == if_kind) {
+                for field in ["consequence", "alternative"] {
+                    if let Some(branch) = if_node.child_by_field_name(field) {
+                        if !self.function_contains_recursive_call(branch, function_name, language) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        for branch_kind in self.branch_node_kinds(language) {
+            for branch in
+                function_node.find_descendants(|candidate| candidate.kind() == branch_kind)
+            {
+                if !self.function_contains_recursive_call(branch, function_name, language) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    fn is_tail_recursive(
+        &self,
+        function_node: crate::Node<'_>,
+        function_name: &str,
+        language: &str,
+    ) -> bool {
+        if self
+            .recursive_call_nodes_in_subtree(function_node, function_name, language)
+            .len()
+            != 1
+        {
+            return false;
+        }
+
+        let Some(body_node) = self.function_body_node(function_node) else {
+            return false;
+        };
+
+        let Some(last_child) = body_node
+            .named_children()
+            .into_iter()
+            .rev()
+            .find(|child| child.kind() != "comment")
+        else {
+            return false;
+        };
+
+        self.function_contains_recursive_call(last_child, function_name, language)
     }
 
     fn is_io_call_node(&self, node: &crate::Node, language: &str) -> bool {
