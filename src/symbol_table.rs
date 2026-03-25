@@ -16,6 +16,8 @@ pub struct SymbolTableAnalyzer {
     symbol_table: SymbolTable,
     /// Current scope stack for building the table
     scope_stack: Vec<ScopeId>,
+    /// Unresolved symbol references collected during resolution
+    unresolved_references: Vec<UnresolvedReference>,
     /// Next available scope ID
     next_scope_id: usize,
 }
@@ -253,6 +255,7 @@ impl SymbolTableAnalyzer {
             language,
             symbol_table,
             scope_stack: vec![0], // Start with root scope
+            unresolved_references: Vec::new(),
             next_scope_id: 1,
         }
     }
@@ -290,6 +293,7 @@ impl SymbolTableAnalyzer {
         self.symbol_table.references.clear();
         self.symbol_table.next_symbol_id = 0;
         self.scope_stack = vec![0];
+        self.unresolved_references.clear();
         self.next_scope_id = 1;
 
         // Recreate root scope
@@ -770,8 +774,19 @@ impl SymbolTableAnalyzer {
     fn resolve_references(&mut self, node: Node) -> Result<()> {
         // Check if this node is a symbol reference
         if self.is_symbol_reference(node) {
-            if let Some(reference) = self.extract_symbol_reference(node)? {
+            if self.should_skip_symbol_reference(node) {
+                // Definition sites are not usages and should not be treated as unresolved.
+            } else if let Some(reference) = self.extract_symbol_reference(node)? {
                 self.symbol_table.references.push(reference);
+            } else if self.should_record_unresolved_reference(node) {
+                let scope_id = self.scope_for_position(node.start_position());
+                if let Ok(name) = node.text() {
+                    self.unresolved_references.push(UnresolvedReference {
+                        name: name.to_string(),
+                        location: node.start_position(),
+                        scope_id,
+                    });
+                }
             }
         }
 
@@ -809,7 +824,7 @@ impl SymbolTableAnalyzer {
     /// Extract symbol reference from AST node
     fn extract_symbol_reference(&self, node: Node) -> Result<Option<SymbolReference>> {
         if let Ok(name) = node.text() {
-            let current_scope = self.current_scope_id()?;
+            let current_scope = self.scope_for_position(node.start_position());
 
             // Try to resolve the symbol
             if let Some(resolution) = self.resolve_symbol(name, current_scope) {
@@ -825,6 +840,82 @@ impl SymbolTableAnalyzer {
         }
 
         Ok(None)
+    }
+
+    fn should_skip_symbol_reference(&self, node: Node) -> bool {
+        let Some(parent) = node.parent() else {
+            return false;
+        };
+
+        let matches_field = |field_name: &str| {
+            parent
+                .child_by_field_name(field_name)
+                .map(|field_node| {
+                    field_node.start_position() == node.start_position()
+                        && field_node.end_position() == node.end_position()
+                })
+                .unwrap_or(false)
+        };
+
+        if matches_field("name") || matches_field("pattern") {
+            return true;
+        }
+
+        if self.language == Language::Python
+            && parent.kind() == "assignment"
+            && matches_field("left")
+        {
+            return true;
+        }
+
+        match self.language {
+            Language::JavaScript | Language::TypeScript => {
+                node.kind() == "identifier" && parent.kind() == "formal_parameters"
+            }
+            Language::Python => node.kind() == "identifier" && parent.kind() == "parameters",
+            _ => false,
+        }
+    }
+
+    fn should_record_unresolved_reference(&self, node: Node) -> bool {
+        node.kind() == "identifier"
+    }
+
+    fn scope_for_position(&self, position: Point) -> ScopeId {
+        self.symbol_table
+            .scopes
+            .values()
+            .filter(|scope| Self::scope_contains_position(scope, position))
+            .max_by_key(|scope| self.scope_depth(scope.id))
+            .map(|scope| scope.id)
+            .unwrap_or(self.symbol_table.root_scope)
+    }
+
+    fn scope_contains_position(scope: &Scope, position: Point) -> bool {
+        let starts_before_or_at = position.row > scope.start_location.row
+            || (position.row == scope.start_location.row
+                && position.column >= scope.start_location.column);
+        let ends_after_or_at = position.row < scope.end_location.row
+            || (position.row == scope.end_location.row
+                && position.column <= scope.end_location.column);
+
+        starts_before_or_at && ends_after_or_at
+    }
+
+    fn scope_depth(&self, scope_id: ScopeId) -> usize {
+        let mut depth = 0;
+        let mut current_scope = scope_id;
+
+        while let Some(scope) = self.symbol_table.scopes.get(&current_scope) {
+            if let Some(parent) = scope.parent {
+                depth += 1;
+                current_scope = parent;
+            } else {
+                break;
+            }
+        }
+
+        depth
     }
 
     /// Resolve symbol by name starting from given scope
@@ -1196,9 +1287,7 @@ impl SymbolTableAnalyzer {
 
     /// Find unresolved symbol references
     fn find_unresolved_references(&self) -> Vec<UnresolvedReference> {
-        // This would require tracking attempted resolutions during the reference phase
-        // For now, return empty vector as a placeholder
-        Vec::new()
+        self.unresolved_references.clone()
     }
 
     /// Find variable shadowing warnings
@@ -1270,7 +1359,7 @@ impl SymbolTableAnalyzer {
             total_scopes: self.symbol_table.scopes.len(),
             total_symbols: self.symbol_table.symbols.len(),
             total_references: self.symbol_table.references.len(),
-            unresolved_count: 0, // Would be calculated during resolution phase
+            unresolved_count: self.unresolved_references.len(),
             shadowing_count: self.find_shadowing_warnings().len(),
             symbols_by_type,
             scopes_by_type,
@@ -1359,7 +1448,6 @@ impl SymbolTable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "extended-languages")]
     use crate::Parser;
 
     #[test]
@@ -1563,6 +1651,92 @@ mod tests {
 
         let chain = symbol_table.get_scope_chain(2);
         assert_eq!(chain, vec![2, 1, 0]);
+    }
+
+    #[test]
+    fn test_rust_symbol_references_use_lexical_scope() -> Result<()> {
+        let parser = Parser::new(Language::Rust)?;
+        let tree = parser.parse(
+            r#"
+fn demo(input: i32) -> i32 {
+    let local = input;
+    local
+}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Rust);
+        let result = analyzer.analyze(&tree)?;
+
+        let input_symbol = result
+            .symbol_table
+            .symbols
+            .values()
+            .find(|symbol| symbol.name == "input")
+            .expect("input parameter should be defined");
+        let local_symbol = result
+            .symbol_table
+            .symbols
+            .values()
+            .find(|symbol| symbol.name == "local")
+            .expect("local variable should be defined");
+
+        assert_eq!(
+            result
+                .symbol_table
+                .get_symbol_references(input_symbol.id)
+                .len(),
+            1
+        );
+        assert_eq!(
+            result
+                .symbol_table
+                .get_symbol_references(local_symbol.id)
+                .len(),
+            1
+        );
+        assert!(result.unresolved_references.is_empty());
+        assert_eq!(result.statistics.unresolved_count, 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_rust_unresolved_references_are_reported() -> Result<()> {
+        let parser = Parser::new(Language::Rust)?;
+        let tree = parser.parse(
+            r#"
+fn demo() {
+    let local = missing;
+    local;
+}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Rust);
+        let result = analyzer.analyze(&tree)?;
+
+        assert_eq!(result.unresolved_references.len(), 1);
+        assert_eq!(result.unresolved_references[0].name, "missing");
+        assert_eq!(result.statistics.unresolved_count, 1);
+
+        let local_symbol = result
+            .symbol_table
+            .symbols
+            .values()
+            .find(|symbol| symbol.name == "local")
+            .expect("local variable should be defined");
+        assert_eq!(
+            result
+                .symbol_table
+                .get_symbol_references(local_symbol.id)
+                .len(),
+            1
+        );
+
+        Ok(())
     }
 
     #[cfg(feature = "extended-languages")]
