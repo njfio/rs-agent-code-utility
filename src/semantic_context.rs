@@ -15,64 +15,16 @@
 use crate::error::Result;
 use crate::languages::Language;
 use crate::symbol_table::{SymbolId, SymbolTable, SymbolTableAnalyzer};
+use crate::taint_analysis::{
+    TaintAnalyzer as ProgramTaintAnalyzer, TaintFlow as ProgramTaintFlow, TaintLocation,
+};
 use crate::tree::{Node, SyntaxTree};
-// Note: These modules will be implemented in future tasks
-// use crate::control_flow::{ControlFlowGraph, CfgBuilder};
-// use crate::taint_analysis::{TaintAnalyzer, TaintFlow, TaintSource, TaintSink};
+use crate::{CfgBuilder, ControlFlowGraph};
 use std::collections::{HashMap, HashSet};
 use tree_sitter::Point;
 
 // Serde support disabled for now due to Point type compatibility
 // // use serde::{Serialize, Deserialize};
-
-// Placeholder types for modules to be implemented
-#[derive(Debug, Clone)]
-pub struct ControlFlowGraph {
-    pub nodes: Vec<String>, // Placeholder
-}
-
-#[derive(Debug, Clone)]
-pub struct CfgBuilder;
-
-impl Default for CfgBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl CfgBuilder {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn build_cfg(&self, _node: Node) -> Result<ControlFlowGraph> {
-        Ok(ControlFlowGraph { nodes: Vec::new() })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TaintAnalyzer;
-
-impl Default for TaintAnalyzer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl TaintAnalyzer {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn analyze_taint_flows(&mut self, _tree: &SyntaxTree) -> Result<TaintAnalysisResult> {
-        Ok(TaintAnalysisResult { flows: Vec::new() })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TaintAnalysisResult {
-    pub flows: Vec<TaintFlow>,
-}
 
 #[derive(Debug, Clone)]
 pub struct TaintFlow {
@@ -666,14 +618,9 @@ pub struct CodeIdiom {
 /// Semantic context analyzer
 pub struct SemanticContextAnalyzer {
     /// Language being analyzed
-    #[allow(dead_code)]
     language: Language,
     /// Symbol table analyzer
     symbol_analyzer: SymbolTableAnalyzer,
-    /// Control flow graph builder
-    cfg_builder: CfgBuilder,
-    /// Taint analyzer
-    taint_analyzer: TaintAnalyzer,
 }
 
 impl SemanticContextAnalyzer {
@@ -682,8 +629,6 @@ impl SemanticContextAnalyzer {
         Ok(Self {
             language,
             symbol_analyzer: SymbolTableAnalyzer::new(language),
-            cfg_builder: CfgBuilder::new(),
-            taint_analyzer: TaintAnalyzer::new(),
         })
     }
 
@@ -694,7 +639,8 @@ impl SemanticContextAnalyzer {
         let symbol_table = symbol_analysis.symbol_table;
 
         // Phase 2: Build control flow graph
-        let control_flow = self.cfg_builder.build_cfg(tree.root_node())?;
+        let cfg_builder = CfgBuilder::new(self.language.name());
+        let control_flow = cfg_builder.build_cfg(tree)?;
 
         // Phase 3: Perform data flow analysis
         let data_flow = self.analyze_data_flow(tree, &symbol_table, &control_flow)?;
@@ -1136,9 +1082,31 @@ impl SemanticContextAnalyzer {
         tree: &SyntaxTree,
         _symbol_table: &SymbolTable,
     ) -> Result<Vec<TaintFlow>> {
-        // Use the existing taint analyzer
-        let taint_result = self.taint_analyzer.analyze_taint_flows(tree)?;
-        Ok(taint_result.flows)
+        let mut taint_analyzer = ProgramTaintAnalyzer::new(self.language.name());
+        let taint_flows = taint_analyzer.analyze(tree)?;
+        Ok(taint_flows
+            .into_iter()
+            .map(Self::convert_taint_flow)
+            .collect())
+    }
+
+    fn convert_taint_flow(flow: ProgramTaintFlow) -> TaintFlow {
+        TaintFlow {
+            source: Self::point_from_taint_location(&flow.source.location),
+            sink: Self::point_from_taint_location(&flow.sink.location),
+            path: flow
+                .path
+                .into_iter()
+                .map(|step| Self::point_from_taint_location(&step.location))
+                .collect(),
+        }
+    }
+
+    fn point_from_taint_location(location: &TaintLocation) -> Point {
+        Point {
+            row: location.line.saturating_sub(1),
+            column: location.column,
+        }
     }
 
     /// Build call graph

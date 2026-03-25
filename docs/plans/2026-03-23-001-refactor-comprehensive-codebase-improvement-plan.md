@@ -595,6 +595,7 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - `src/lib.rs`
 
 **Implementation note (2026-03-24, later):** As another placeholder-reduction slice, `src/security/ast_analyzer.rs` no longer shadows the real Rust security analyzer with a macro-generated stub family. Rust now uses `security::rust_analyzer::RustAnalyzer`, the remaining placeholder language analyzers were collapsed into a single internal no-op implementation, and `src/advanced_security.rs` now deduplicates merged vulnerabilities by line plus finding identity (`cwe_id` or title) instead of by OWASP category alone. Fresh verification with `cargo test --workspace -q` kept the workspace green after the analyzer swap. The top-level `~15K lines of stub code removed` criterion remains open until the broader placeholder/stub inventory is fully retired.
+**Implementation note (2026-03-25):** `src/semantic_context.rs` no longer carries its own inline placeholder CFG builder and taint analyzer types. That module now uses the real `control_flow::CfgBuilder` / `ControlFlowGraph` and `taint_analysis::TaintAnalyzer`, converting the richer taint results into the semantic-context view instead of fabricating empty graphs and flows. Focused verification passed with `cargo check -q`, `cargo test semantic_context -q`, and the existing public/documentation validation harnesses.
 
 ##### Task 3.2: Define MCP Tool Interface
 
