@@ -120,16 +120,15 @@ mod tests {
             "F1 score should be between 0 and 1"
         );
 
-        // TODO: Re-enable F1 score precision test after resolving floating point issues
         // Test that F1 score is the harmonic mean of precision and recall
-        // let expected_f1 =
-        //     2.0 * metrics.precision() * metrics.recall() / (metrics.precision() + metrics.recall());
-        // assert!(
-        //     (f1_score - expected_f1).abs() < 1e-10,
-        //     "F1 score calculation incorrect: expected {:.10}, got {:.10}",
-        //     expected_f1,
-        //     f1_score
-        // );
+        let expected_f1 =
+            2.0 * metrics.precision() * metrics.recall() / (metrics.precision() + metrics.recall());
+        assert!(
+            (f1_score - expected_f1).abs() < f64::EPSILON,
+            "F1 score calculation incorrect: expected {:.10}, got {:.10}",
+            expected_f1,
+            f1_score
+        );
 
         assert_eq!(
             metrics.false_positive_rate(),

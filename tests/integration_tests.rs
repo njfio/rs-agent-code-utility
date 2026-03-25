@@ -382,10 +382,8 @@ fn test_error_handling() -> Result<(), Box<dyn std::error::Error>> {
     let error_nodes = tree.error_nodes();
     assert!(!error_nodes.is_empty());
 
-    // Skip the problematic query test for now due to tree-sitter library issue
-    // TODO: Re-enable when tree-sitter fixes the byte index bounds issue
-    // let invalid_query = Query::new(Language::Rust, "(invalid syntax)");
-    // assert!(invalid_query.is_err());
+    let invalid_query = Query::new(Language::Rust, "(invalid syntax)");
+    assert!(invalid_query.is_err());
 
     Ok(())
 }
