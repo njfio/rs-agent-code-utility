@@ -128,3 +128,45 @@ fn embeds_ai_generated_content_and_crossrefs() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn renders_performance_sections_when_enabled() -> Result<()> {
+    let (_tmp, project_root) = create_sample_project()?;
+    let out_dir = TempDir::new()?;
+
+    let cfg: WikiConfig = WikiConfigBuilder::new()
+        .with_site_title("Perf Wiki")
+        .with_output_dir(out_dir.path())
+        .include_api_docs(true)
+        .with_performance_analysis(true)
+        .build()?;
+
+    let generator = WikiGenerator::new(cfg);
+    generator.generate_from_path(&project_root)?;
+
+    let index = fs::read_to_string(out_dir.path().join("index.html"))?;
+    assert!(
+        index.contains("Performance Overview"),
+        "index should include the performance overview when enabled"
+    );
+
+    let pages_dir = out_dir.path().join("pages");
+    let mut found_file_performance = false;
+    if pages_dir.exists() {
+        for entry in fs::read_dir(&pages_dir)? {
+            let entry = entry?;
+            let content = fs::read_to_string(entry.path())?;
+            if content.contains("Performance Analysis") {
+                found_file_performance = true;
+                break;
+            }
+        }
+    }
+
+    assert!(
+        found_file_performance,
+        "file pages should include performance analysis when enabled"
+    );
+
+    Ok(())
+}

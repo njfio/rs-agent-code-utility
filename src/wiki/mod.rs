@@ -25,6 +25,7 @@ mod util;
 use self::search::SearchEntry;
 use self::util::{html_escape, markdown_to_html, sanitize_filename};
 use crate::analyzer::{AnalysisConfig, AnalysisDepth, AnalysisResult};
+use crate::performance_analysis::PerformanceAnalysisResult;
 use crate::{CodebaseAnalyzer, Result};
 use security_enhancements::SecurityWikiGenerator;
 use std::collections::HashMap;
@@ -59,7 +60,7 @@ pub struct WikiConfig {
     pub refactoring_hints_enabled: bool,
     /// Enable diagram annotations
     pub diagram_annotations_enabled: bool,
-    /// Enable performance analysis (placeholder for future implementation)
+    /// Enable performance analysis in generated wiki pages
     pub performance_analysis_enabled: bool,
     /// AI provider to use for enhancement
     pub ai_provider: Option<String>,
@@ -488,14 +489,6 @@ impl WikiGenerator {
         // Provide main page behavior JS
         self.write_main_js_impl(&assets.join("main.js"))?;
 
-        // Initialize AI enhancer placeholder - to be implemented when enhanced AI module is ready
-        let _ai_enhancer: Option<String> = if self.config.enhanced_ai_enabled {
-            Some("enhanced_ai_enabled".to_string())
-        } else {
-            None
-        };
-        // For now, use simple heuristics for AI enhancement
-
         // Initialize security analysis if enabled
         let security_analysis = if self.config.security_insights_enabled {
             // Create security wiki generator
@@ -516,8 +509,11 @@ impl WikiGenerator {
         // Generate AI-enhanced relationship map across all files
         let _relationship_map = self.generate_relationship_map_simple(analysis);
 
-        // Performance analysis placeholder - to be implemented when performance_analysis module is available
-        let _performance_analysis_enabled = self.config.performance_analysis_enabled;
+        let performance_analysis = if self.config.performance_analysis_enabled {
+            Some(crate::PerformanceAnalyzer::new().analyze(analysis)?)
+        } else {
+            None
+        };
 
         // Pages and search index
         let mut page_count = 0usize;
@@ -528,7 +524,13 @@ impl WikiGenerator {
         let nav_pages = self.build_sidebar_with_search(analysis, &security_analysis, "");
 
         // Index.html
-        self.write_index_html(out, analysis, &security_analysis, &nav_index)?;
+        self.write_index_html(
+            out,
+            analysis,
+            &security_analysis,
+            performance_analysis.as_ref(),
+            &nav_index,
+        )?;
         page_count += 1;
 
         // Security overview page if security analysis is enabled
@@ -597,6 +599,12 @@ impl WikiGenerator {
                 String::new()
             };
 
+            let performance_block = if let Some(ref performance) = performance_analysis {
+                self.generate_file_performance_block(file, &analysis.root_path, performance)
+            } else {
+                String::new()
+            };
+
             // Generate AI block early so we can also capture tags for search index
             let (ai_block_html, ai_tags) = if self.config.ai_enabled {
                 self.generate_file_ai_block_and_tags(file)
@@ -611,6 +619,7 @@ impl WikiGenerator {
                 file,
                 &analysis.root_path,
                 &security_block,
+                &performance_block,
                 &nav_pages,
                 &ai_block_html,
             )?;
@@ -1971,6 +1980,81 @@ updateSearch();
         if !owasp_rec.is_empty() {
             let _ = writeln!(&mut block, "<h4>OWASP Recommendations</h4>");
             let _ = writeln!(&mut block, "{}", owasp_rec);
+        }
+
+        let _ = writeln!(&mut block, "</div>");
+        block
+    }
+
+    fn generate_file_performance_block(
+        &self,
+        file: &crate::analyzer::FileInfo,
+        root_path: &Path,
+        performance: &PerformanceAnalysisResult,
+    ) -> String {
+        let absolute_file = {
+            let joined = root_path.join(&file.path);
+            fs::canonicalize(&joined).unwrap_or(joined)
+        };
+
+        let file_metrics = performance
+            .file_metrics
+            .iter()
+            .find(|metrics| metrics.file == absolute_file || metrics.file.ends_with(&file.path));
+
+        let file_hotspots: Vec<_> = performance
+            .hotspots
+            .iter()
+            .filter(|hotspot| {
+                let hotspot_path = Path::new(&hotspot.location.file);
+                hotspot_path == absolute_file || hotspot_path.ends_with(&file.path)
+            })
+            .collect();
+
+        if file_metrics.is_none() && file_hotspots.is_empty() {
+            return String::new();
+        }
+
+        let mut block = String::new();
+        let _ = writeln!(&mut block, "<div class=\"card\">");
+        let _ = writeln!(&mut block, "<h3>Performance Analysis</h3>");
+
+        if let Some(metrics) = file_metrics {
+            let _ = writeln!(
+                &mut block,
+                "<p><strong>Performance Score:</strong> {} / 100</p>",
+                metrics.performance_score
+            );
+            let _ = writeln!(
+                &mut block,
+                "<p><strong>Complexity:</strong> {:.1} | <strong>Functions:</strong> {} | <strong>Average Function Length:</strong> {:.1}</p>",
+                metrics.cyclomatic_complexity,
+                metrics.function_count,
+                metrics.average_function_length
+            );
+            let _ = writeln!(
+                &mut block,
+                "<p><strong>Nested Loops:</strong> {} | <strong>Memory Allocations:</strong> {} | <strong>I/O Operations:</strong> {} | <strong>Database Queries:</strong> {}</p>",
+                metrics.nested_loops,
+                metrics.memory_allocations,
+                metrics.io_operations,
+                metrics.database_queries
+            );
+        }
+
+        if !file_hotspots.is_empty() {
+            let _ = writeln!(&mut block, "<h4>Hotspots</h4><ul>");
+            for hotspot in file_hotspots {
+                let _ = writeln!(
+                    &mut block,
+                    "<li><strong>{}</strong> ({})<br>{}<br><em>Optimization:</em> {}</li>",
+                    html_escape(&hotspot.title),
+                    hotspot.severity,
+                    html_escape(&hotspot.description),
+                    html_escape(&hotspot.optimization)
+                );
+            }
+            let _ = writeln!(&mut block, "</ul>");
         }
 
         let _ = writeln!(&mut block, "</div>");

@@ -2,6 +2,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::analyzer::AnalysisResult;
+use crate::performance_analysis::PerformanceAnalysisResult;
 use std::fmt::Write as _;
 use std::path::Path;
 
@@ -167,6 +168,7 @@ impl super::WikiGenerator {
         out: &Path,
         analysis: &AnalysisResult,
         security_analysis: &Option<super::security_enhancements::SecurityAnalysisResult>,
+        performance_analysis: Option<&PerformanceAnalysisResult>,
         nav_content: &str,
     ) -> super::Result<()> {
         let ai_block = if self.config.ai_enabled {
@@ -179,6 +181,46 @@ impl super::WikiGenerator {
         let security_block = if let Some(ref security) = security_analysis {
             let inner = self.generate_security_overview_block(security);
             format!("<details class=\"card\" id=\"security-overview\"><summary>Security Overview</summary>{}</details>", inner)
+        } else {
+            String::new()
+        };
+
+        let performance_block = if let Some(performance) = performance_analysis {
+            let mut severity_items = String::new();
+            for (severity, count) in &performance.hotspots_by_severity {
+                let _ = writeln!(&mut severity_items, "<li>{}: {}</li>", severity, count);
+            }
+
+            let recommendations = performance
+                .recommendations
+                .iter()
+                .take(3)
+                .map(|recommendation| {
+                    format!(
+                        "<li><strong>{}</strong>: {}</li>",
+                        super::util::html_escape(&recommendation.category),
+                        super::util::html_escape(&recommendation.recommendation)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("");
+
+            format!(
+                "<details class=\"card\" id=\"performance-overview\"><summary>Performance Overview</summary><div class=\"card\"><h2>Performance Score: {score}/100</h2><p><strong>Total Hotspots:</strong> {hotspots}</p><p><strong>Files Analyzed:</strong> {files}</p>{severity}<h3>Top Recommendations</h3><ul>{recommendations}</ul></div></details>",
+                score = performance.performance_score,
+                hotspots = performance.total_hotspots,
+                files = performance.file_metrics.len(),
+                severity = if severity_items.is_empty() {
+                    String::new()
+                } else {
+                    format!("<h3>Hotspots by Severity</h3><ul>{}</ul>", severity_items)
+                },
+                recommendations = if recommendations.is_empty() {
+                    "<li>No performance recommendations generated.</li>".to_string()
+                } else {
+                    recommendations
+                }
+            )
         } else {
             String::new()
         };
@@ -197,6 +239,12 @@ impl super::WikiGenerator {
         toc_items.push(
             "<li><a href=\\\"#dependency-overview\\\">Dependency Overview</a></li>".to_string(),
         );
+        if performance_analysis.is_some() {
+            toc_items.push(
+                "<li><a href=\\\"#performance-overview\\\">Performance Overview</a></li>"
+                    .to_string(),
+            );
+        }
         if security_analysis.is_some() {
             toc_items.push(
                 "<li><a href=\\\"#security-overview\\\">Security Overview</a></li>".to_string(),
@@ -244,6 +292,7 @@ impl super::WikiGenerator {
 {dep}
 </div>
 </details>
+{performance_block}
 {security_block}
 <details class="card" id="docs-insights"><summary>Documentation Insights</summary>
 <p>Automatic summaries are generated from symbols and structure. Public functions and modules include heuristic descriptions and cross-references.</p>
@@ -259,6 +308,7 @@ impl super::WikiGenerator {
             project_snapshot =
                 super::util::markdown_to_html(&super::WikiGenerator::project_snapshot_md(analysis)),
             dep = super::util::build_simple_dependency_graph(analysis),
+            performance_block = performance_block,
             security_block = security_block,
             ai_block = ai_block,
         );
@@ -482,6 +532,7 @@ impl super::WikiGenerator {
         file: &crate::analyzer::FileInfo,
         root_path: &Path,
         security_block: &str,
+        performance_block: &str,
         nav_content: &str,
         ai_block_html: &str,
     ) -> super::Result<()> {
@@ -601,6 +652,11 @@ impl super::WikiGenerator {
         } else {
             String::new()
         };
+        let performance_section = if !performance_block.trim().is_empty() {
+            format!("<details class=\\\"card\\\" id=\\\"performance-analysis\\\"><summary>Performance Analysis</summary>{}</details>", performance_block)
+        } else {
+            String::new()
+        };
 
         let mut toc_items: Vec<String> = Vec::new();
         toc_items.push("<li><a href=\\\"#ai-summary\\\">AI Summary</a></li>".to_string());
@@ -619,6 +675,12 @@ impl super::WikiGenerator {
             );
         }
         toc_items.push("<li><a href=\\\"#symbols\\\">Symbols</a></li>".to_string());
+        if !performance_section.is_empty() {
+            toc_items.push(
+                "<li><a href=\\\"#performance-analysis\\\">Performance Analysis</a></li>"
+                    .to_string(),
+            );
+        }
         if !security_section.is_empty() {
             toc_items.push(
                 "<li><a href=\\\"#security-analysis\\\">Security Analysis</a></li>".to_string(),
@@ -711,6 +773,7 @@ impl super::WikiGenerator {
         content.push_str(&ai_commentary);
         content.push_str(&diag_blocks);
         content.push_str(&symbols_block);
+        content.push_str(&performance_section);
         content.push_str(&security_section);
         content.push_str("\n</section>\n</main>\n</body>\n</html>");
 
