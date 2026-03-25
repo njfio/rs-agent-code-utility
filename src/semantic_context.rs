@@ -1602,7 +1602,7 @@ impl SemanticContextAnalyzer {
         &self,
         tree: &SyntaxTree,
         _content: &str,
-        _symbol_table: &SymbolTable,
+        symbol_table: &SymbolTable,
         _data_flow: &DataFlowAnalysis,
     ) -> Result<SecuritySemanticContext> {
         let mut validation_points = Vec::new();
@@ -1616,6 +1616,7 @@ impl SemanticContextAnalyzer {
         let root = tree.root_node();
         self.analyze_security_patterns(
             &root,
+            symbol_table,
             &mut validation_points,
             &mut sanitization_points,
             &mut auth_checks,
@@ -1640,6 +1641,7 @@ impl SemanticContextAnalyzer {
     fn analyze_security_patterns(
         &self,
         node: &Node,
+        symbol_table: &SymbolTable,
         validation_points: &mut Vec<ValidationPoint>,
         sanitization_points: &mut Vec<SanitizationPoint>,
         auth_checks: &mut Vec<AuthenticationCheck>,
@@ -1653,13 +1655,15 @@ impl SemanticContextAnalyzer {
                 if let Some(function) = node.child_by_field_name("function") {
                     if let Ok(func_name) = function.text() {
                         let func_name_lower = func_name.to_lowercase();
+                        let related_symbols =
+                            self.extract_security_relevant_symbols(node, symbol_table);
 
                         // Detect validation patterns
                         if self.is_validation_function(&func_name_lower) {
                             validation_points.push(ValidationPoint {
                                 location: node.start_position(),
                                 validation_type: ValidationType::CustomValidation,
-                                validated_variables: Vec::new(), // Would be populated with actual analysis
+                                validated_variables: related_symbols.clone(),
                                 strength: ValidationStrength::Moderate,
                             });
                         }
@@ -1669,7 +1673,7 @@ impl SemanticContextAnalyzer {
                             sanitization_points.push(SanitizationPoint {
                                 location: node.start_position(),
                                 sanitization_type: SanitizationType::CustomSanitization,
-                                sanitized_variables: Vec::new(), // Would be populated with actual analysis
+                                sanitized_variables: related_symbols.clone(),
                                 effectiveness: SanitizationEffectiveness::Effective,
                             });
                         }
@@ -1706,6 +1710,7 @@ impl SemanticContextAnalyzer {
         for child in node.children() {
             self.analyze_security_patterns(
                 &child,
+                symbol_table,
                 validation_points,
                 sanitization_points,
                 auth_checks,
@@ -1717,6 +1722,93 @@ impl SemanticContextAnalyzer {
         }
 
         Ok(())
+    }
+
+    fn extract_security_relevant_symbols(
+        &self,
+        call_node: &Node,
+        symbol_table: &SymbolTable,
+    ) -> Vec<SymbolId> {
+        let Some(arguments) = call_node.child_by_field_name("arguments") else {
+            return Vec::new();
+        };
+
+        let mut identifiers = Vec::new();
+        let mut resolved = Vec::new();
+        let mut seen = HashSet::new();
+
+        for child in arguments.children() {
+            if child.kind() == "," {
+                continue;
+            }
+            self.collect_argument_identifiers(&child, &mut identifiers);
+        }
+
+        for (name, point) in identifiers {
+            let Some(symbol_id) = self.resolve_symbol_at_point(&name, point, symbol_table) else {
+                continue;
+            };
+
+            let Some(symbol) = symbol_table.symbols.get(&symbol_id) else {
+                continue;
+            };
+
+            if !matches!(
+                symbol.symbol_type,
+                crate::symbol_table::SymbolType::Variable
+                    | crate::symbol_table::SymbolType::Parameter
+                    | crate::symbol_table::SymbolType::Constant
+                    | crate::symbol_table::SymbolType::Field
+            ) {
+                continue;
+            }
+
+            if seen.insert(symbol_id) {
+                resolved.push(symbol_id);
+            }
+        }
+
+        resolved
+    }
+
+    fn collect_argument_identifiers(&self, node: &Node, identifiers: &mut Vec<(String, Point)>) {
+        if matches!(node.kind(), "identifier" | "field_identifier") {
+            if let Ok(name) = node.text() {
+                identifiers.push((name.to_string(), node.start_position()));
+            }
+        }
+
+        for child in node.children() {
+            self.collect_argument_identifiers(&child, identifiers);
+        }
+    }
+
+    fn resolve_symbol_at_point(
+        &self,
+        name: &str,
+        point: Point,
+        symbol_table: &SymbolTable,
+    ) -> Option<SymbolId> {
+        let mut scope_id = symbol_table
+            .scopes
+            .values()
+            .filter(|scope| self.point_within_span(point, scope.start_location, scope.end_location))
+            .max_by_key(|scope| (scope.start_location.row, scope.start_location.column))
+            .map(|scope| scope.id)?;
+
+        loop {
+            let scope = symbol_table.scopes.get(&scope_id)?;
+            if let Some(symbol_id) = scope.symbols.get(name) {
+                return Some(*symbol_id);
+            }
+
+            scope_id = scope.parent?;
+        }
+    }
+
+    fn point_within_span(&self, point: Point, start: Point, end: Point) -> bool {
+        (point.row > start.row || (point.row == start.row && point.column >= start.column))
+            && (point.row < end.row || (point.row == end.row && point.column <= end.column))
     }
 
     /// Analyze types
@@ -2002,6 +2094,51 @@ fn main_flow() {
                     "emit_output".to_string(),
                 ]
                 && chain.involves_output));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tracks_validated_and_sanitized_variables() -> Result<()> {
+        let parser = crate::Parser::new(Language::Rust)?;
+        let tree = parser.parse(
+            r#"
+fn validate_input(value: &str) -> bool {
+    !value.is_empty()
+}
+
+fn sanitize_html(value: &str) -> String {
+    value.to_string()
+}
+
+fn handler(payload: &str) {
+    validate_input(payload);
+    sanitize_html(payload);
+}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SemanticContextAnalyzer::new(Language::Rust)?;
+        let context = analyzer.analyze(&tree, tree.source())?;
+
+        let payload_symbol_id = context
+            .symbol_table
+            .symbols
+            .iter()
+            .find_map(|(id, symbol)| (symbol.name == "payload").then_some(*id))
+            .expect("payload symbol should exist");
+
+        assert!(context
+            .security_context
+            .validation_points
+            .iter()
+            .any(|point| point.validated_variables.contains(&payload_symbol_id)));
+        assert!(context
+            .security_context
+            .sanitization_points
+            .iter()
+            .any(|point| point.sanitized_variables.contains(&payload_symbol_id)));
 
         Ok(())
     }
