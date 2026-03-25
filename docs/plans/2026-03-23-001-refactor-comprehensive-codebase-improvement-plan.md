@@ -761,6 +761,8 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - [x] Fail CI if parsing performance regresses by > 10% (start permissive)
 - [x] Store benchmark results as CI artifacts for historical tracking
 
+**Implementation note (2026-03-24, later):** `benches/parser_bench.rs` now keeps `parse_rust_file` in the default benchmark surface and only includes `parse_javascript` when the `extended-languages` feature is enabled, which fixes the default benchmark gate panic caused by trying to instantiate the JavaScript grammar without that feature. `scripts/check_benchmark_regression.sh` now treats `parse_rust_file` as required and `parse_javascript` as optional-but-consistent, so default-feature comparisons still enforce the Rust parser regression threshold while extended-language runs compare both benchmarks. Fresh local verification passed for both modes: the default bench plus regression script completed successfully, and an `--features extended-languages` run still produced passing Rust and JavaScript comparisons. The current `parse_rust_file` Criterion estimate is `845,872.52ns` over `591` LOC in `src/lib.rs`, which is approximately `1.43ms / 1K LOC`, so the top-level parser-speed criterion can now be marked complete.
+
 ### Research Insights: Benchmarking
 
 **Criterion 0.5 changes:** Criterion 0.5 changed the default statistics backend. Verify the project is using a compatible version. `critcmp` works with Criterion's JSON output (enable with `--save-baseline`).
@@ -853,7 +855,7 @@ Phase 0 (CI/deps)
 
 ### Non-Functional Requirements
 
-- [ ] Parse speed remains < 3ms/1K LOC (no regression from Phase 2 changes)
+- [x] Parse speed remains < 3ms/1K LOC (no regression from Phase 2 changes)
 - [ ] `cargo build` (default features) completes in < 30 seconds on CI
 - [ ] Zero known CVEs in dependency tree
 - [x] Zero panics in library code paths (non-test)

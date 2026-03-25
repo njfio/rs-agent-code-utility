@@ -22,6 +22,7 @@ fn benchmark_rust_parser(c: &mut Criterion) {
     });
 }
 
+#[cfg(feature = "extended-languages")]
 fn benchmark_javascript_parser(c: &mut Criterion) {
     let code = r#"
         function fibonacci(n) {
@@ -47,5 +48,8 @@ fn benchmark_javascript_parser(c: &mut Criterion) {
     });
 }
 
+#[cfg(feature = "extended-languages")]
 criterion_group!(benches, benchmark_rust_parser, benchmark_javascript_parser);
+#[cfg(not(feature = "extended-languages"))]
+criterion_group!(benches, benchmark_rust_parser);
 criterion_main!(benches);
