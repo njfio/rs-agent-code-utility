@@ -395,6 +395,120 @@ fn test_npath_complexity_logical_operators() -> Result<()> {
 }
 
 #[test]
+fn test_rust_logical_operators_increase_cognitive_complexity() -> Result<()> {
+    let analyzer = ComplexityAnalyzer::new("rust");
+    let parser = Parser::new(Language::Rust)?;
+
+    let simple_code = r#"
+        fn simple_condition(a: bool, b: bool) -> bool {
+            if a {
+                b
+            } else {
+                false
+            }
+        }
+    "#;
+
+    let logical_code = r#"
+        fn logical_condition(a: bool, b: bool) -> bool {
+            if a && b {
+                b
+            } else {
+                false
+            }
+        }
+    "#;
+
+    let simple_metrics = analyzer.analyze_complexity(&parser.parse(simple_code, None)?)?;
+    let logical_metrics = analyzer.analyze_complexity(&parser.parse(logical_code, None)?)?;
+
+    assert_eq!(
+        logical_metrics.cognitive_complexity,
+        simple_metrics.cognitive_complexity + 1
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "extended-languages")]
+#[test]
+fn test_c_logical_operators_increase_cognitive_complexity() -> Result<()> {
+    let analyzer = ComplexityAnalyzer::new("c");
+    let parser = Parser::new(Language::C)?;
+
+    let simple_code = r#"
+        int simple_condition(int a, int b) {
+            int result = 0;
+            if (a) {
+                result = b;
+            }
+            return result;
+        }
+    "#;
+
+    let logical_code = r#"
+        int logical_condition(int a, int b) {
+            int result = 0;
+            if (a && b) {
+                result = b;
+            }
+            return result;
+        }
+    "#;
+
+    let simple_metrics = analyzer.analyze_complexity(&parser.parse(simple_code, None)?)?;
+    let logical_metrics = analyzer.analyze_complexity(&parser.parse(logical_code, None)?)?;
+
+    assert_eq!(
+        logical_metrics.cognitive_complexity,
+        simple_metrics.cognitive_complexity + 1
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "extended-languages")]
+#[test]
+fn test_go_logical_operators_increase_cognitive_complexity() -> Result<()> {
+    let analyzer = ComplexityAnalyzer::new("go");
+    let parser = Parser::new(Language::Go)?;
+
+    let simple_code = r#"
+        package main
+
+        func simpleCondition(a bool, b bool) int {
+            result := 0
+            if a {
+                result = 1
+            }
+            return result
+        }
+    "#;
+
+    let logical_code = r#"
+        package main
+
+        func logicalCondition(a bool, b bool) int {
+            result := 0
+            if a && b {
+                result = 1
+            }
+            return result
+        }
+    "#;
+
+    let simple_metrics = analyzer.analyze_complexity(&parser.parse(simple_code, None)?)?;
+    let logical_metrics = analyzer.analyze_complexity(&parser.parse(logical_code, None)?)?;
+
+    assert_eq!(
+        logical_metrics.cognitive_complexity,
+        simple_metrics.cognitive_complexity + 1
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_npath_complexity_nested_functions() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("rust");
     let parser = Parser::new(Language::Rust)?;

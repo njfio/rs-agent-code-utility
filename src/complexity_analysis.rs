@@ -152,9 +152,9 @@ impl ComplexityAnalyzer {
         let mut complexity = 0;
         let mut nesting_level = 0;
 
-        // For now, we'll use a simplified approach without source code access
         self.traverse_for_cognitive_complexity(
             tree.inner().root_node(),
+            tree.source(),
             &mut complexity,
             &mut nesting_level,
         );
@@ -167,13 +167,14 @@ impl ComplexityAnalyzer {
     fn traverse_for_cognitive_complexity(
         &self,
         node: Node,
+        source: &str,
         complexity: &mut usize,
         nesting_level: &mut usize,
     ) {
         let node_kind = node.kind();
 
         // Determine the impact of this node on cognitive complexity
-        let impact = self.get_cognitive_complexity_impact(node, node_kind);
+        let impact = self.get_cognitive_complexity_impact(node, node_kind, source);
 
         // Apply the cognitive complexity impact
 
@@ -204,7 +205,12 @@ impl ComplexityAnalyzer {
         let mut cursor = node.walk();
         if cursor.goto_first_child() {
             loop {
-                self.traverse_for_cognitive_complexity(cursor.node(), complexity, nesting_level);
+                self.traverse_for_cognitive_complexity(
+                    cursor.node(),
+                    source,
+                    complexity,
+                    nesting_level,
+                );
                 if !cursor.goto_next_sibling() {
                     break;
                 }
@@ -233,19 +239,27 @@ impl ComplexityAnalyzer {
         &self,
         node: Node,
         node_kind: &str,
+        source: &str,
     ) -> CognitiveComplexityImpact {
         match self.language.as_str() {
-            "rust" => self.get_rust_cognitive_impact(node, node_kind),
-            "javascript" | "typescript" => self.get_javascript_cognitive_impact(node, node_kind),
-            "python" => self.get_python_cognitive_impact(node, node_kind),
-            "c" | "cpp" | "c++" => self.get_c_cognitive_impact(node, node_kind),
-            "go" => self.get_go_cognitive_impact(node, node_kind),
+            "rust" => self.get_rust_cognitive_impact(node, node_kind, source),
+            "javascript" | "typescript" => {
+                self.get_javascript_cognitive_impact(node, node_kind, source)
+            }
+            "python" => self.get_python_cognitive_impact(node_kind),
+            "c" | "cpp" | "c++" => self.get_c_cognitive_impact(node, node_kind, source),
+            "go" => self.get_go_cognitive_impact(node, node_kind, source),
             _ => CognitiveComplexityImpact::None,
         }
     }
 
     /// Get cognitive complexity impact for Rust nodes
-    fn get_rust_cognitive_impact(&self, _node: Node, node_kind: &str) -> CognitiveComplexityImpact {
+    fn get_rust_cognitive_impact(
+        &self,
+        node: Node,
+        node_kind: &str,
+        source: &str,
+    ) -> CognitiveComplexityImpact {
         match node_kind {
             // Conditional operators - increment with nesting penalty and increase nesting
             "if_expression" => CognitiveComplexityImpact::IncrementWithNestingAndNesting,
@@ -265,10 +279,9 @@ impl ComplexityAnalyzer {
             // Flow-breaking statements - basic increment only (excluding return for now)
             "break_expression" | "continue_expression" => CognitiveComplexityImpact::Increment,
 
-            // Binary logical operators - simplified for now
-            "binary_expression" => {
-                // TODO: Implement proper logical operator detection with source code access
-                CognitiveComplexityImpact::None
+            // Binary logical operators
+            "binary_expression" if self.is_logical_operator(node, source) => {
+                CognitiveComplexityImpact::Increment
             }
 
             // Nested functions and closures - increase nesting only (but not top-level functions)
@@ -283,6 +296,7 @@ impl ComplexityAnalyzer {
         &self,
         node: Node,
         node_kind: &str,
+        source: &str,
     ) -> CognitiveComplexityImpact {
         match node_kind {
             // Conditional operators
@@ -308,8 +322,8 @@ impl ComplexityAnalyzer {
             "catch_clause" => CognitiveComplexityImpact::IncrementWithNestingAndNesting,
 
             // Binary logical operators
-            "binary_expression" => {
-                if self.is_logical_operator(node) {
+            "binary_expression" | "logical_expression" => {
+                if self.is_logical_operator(node, source) {
                     CognitiveComplexityImpact::Increment
                 } else {
                     CognitiveComplexityImpact::None
@@ -324,11 +338,7 @@ impl ComplexityAnalyzer {
     }
 
     /// Get cognitive complexity impact for Python nodes
-    fn get_python_cognitive_impact(
-        &self,
-        _node: Node,
-        node_kind: &str,
-    ) -> CognitiveComplexityImpact {
+    fn get_python_cognitive_impact(&self, node_kind: &str) -> CognitiveComplexityImpact {
         match node_kind {
             // Conditional operators
             "if_statement" => CognitiveComplexityImpact::IncrementWithNestingAndNesting,
@@ -366,7 +376,12 @@ impl ComplexityAnalyzer {
     }
 
     /// Get cognitive complexity impact for C/C++ nodes
-    fn get_c_cognitive_impact(&self, _node: Node, node_kind: &str) -> CognitiveComplexityImpact {
+    fn get_c_cognitive_impact(
+        &self,
+        node: Node,
+        node_kind: &str,
+        source: &str,
+    ) -> CognitiveComplexityImpact {
         match node_kind {
             // Conditional operators
             "if_statement" => CognitiveComplexityImpact::IncrementWithNestingAndNesting,
@@ -388,10 +403,9 @@ impl ComplexityAnalyzer {
                 CognitiveComplexityImpact::Increment
             }
 
-            // Binary logical operators - simplified for now
-            "binary_expression" => {
-                // TODO: Implement proper logical operator detection
-                CognitiveComplexityImpact::None
+            // Binary logical operators
+            "binary_expression" if self.is_logical_operator(node, source) => {
+                CognitiveComplexityImpact::Increment
             }
 
             // Nested functions (C++ lambdas, nested functions in GCC)
@@ -402,7 +416,12 @@ impl ComplexityAnalyzer {
     }
 
     /// Get cognitive complexity impact for Go nodes
-    fn get_go_cognitive_impact(&self, _node: Node, node_kind: &str) -> CognitiveComplexityImpact {
+    fn get_go_cognitive_impact(
+        &self,
+        node: Node,
+        node_kind: &str,
+        source: &str,
+    ) -> CognitiveComplexityImpact {
         match node_kind {
             // Conditional operators
             "if_statement" => CognitiveComplexityImpact::IncrementWithNestingAndNesting,
@@ -423,10 +442,9 @@ impl ComplexityAnalyzer {
                 CognitiveComplexityImpact::Increment
             }
 
-            // Binary logical operators - simplified for now
-            "binary_expression" => {
-                // TODO: Implement proper logical operator detection
-                CognitiveComplexityImpact::None
+            // Binary logical operators
+            "binary_expression" if self.is_logical_operator(node, source) => {
+                CognitiveComplexityImpact::Increment
             }
 
             // Nested functions
@@ -436,11 +454,45 @@ impl ComplexityAnalyzer {
         }
     }
 
-    /// Check if a binary expression node represents a logical operator (&& or ||)
-    /// For now, we'll use a simplified approach - this would need source code access for full implementation
-    fn is_logical_operator(&self, _node: Node) -> bool {
-        // TODO: Implement proper logical operator detection with source code access
-        // For now, we'll return false to avoid panics
+    /// Check if an expression node represents a direct logical operator (`&&` or `||`).
+    fn is_logical_operator(&self, node: Node, source: &str) -> bool {
+        for index in 0..node.child_count() {
+            let Some(child) = node.child(index) else {
+                continue;
+            };
+            if matches!(child.kind(), "&&" | "||") {
+                return true;
+            }
+        }
+
+        let named_children: Vec<_> = (0..node.named_child_count())
+            .filter_map(|index| node.named_child(index))
+            .collect();
+        if named_children.len() < 2 {
+            return false;
+        }
+
+        let Ok(text) = node.utf8_text(source.as_bytes()) else {
+            return false;
+        };
+
+        for pair in named_children.windows(2) {
+            let left = pair[0];
+            let right = pair[1];
+
+            let between_start = left.end_byte().saturating_sub(node.start_byte());
+            let between_end = right.start_byte().saturating_sub(node.start_byte());
+
+            if between_start >= between_end || between_end > text.len() {
+                continue;
+            }
+
+            let between = &text[between_start..between_end];
+            if between.contains("&&") || between.contains("||") {
+                return true;
+            }
+        }
+
         false
     }
 
