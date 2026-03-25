@@ -628,6 +628,8 @@ Fix these benchmark errors during Phase 2 to get accurate baseline measurements 
 - [x] Add a client-facing `tools/list` smoke test for the MCP package
 - [x] Wire the MCP package into CI
 
+**Implementation note (2026-03-24, later):** The checked-in MCP adapter now honestly ships six audited tools: `analyze_codebase`, `get_symbols`, `query_code`, `scan_security`, `analyze_dependencies`, and `query_semantic_graph`. Their JSON schemas are checked in under `integration/mcp/schemas/`, `integration/mcp/server/src/tool-definitions.test.ts` locks the shipped tool set and `schema_version` contract, `integration/mcp/server/src/index.test.ts` exercises every registered handler end-to-end against the typed MCP envelope, and `integration/mcp/server/src/stdio.test.ts` proves the stdio server responds to `tools/list`. With fresh local verification via `cargo build --bin tree-sitter-cli --features cli`, `npm run build`, and `npm test` in `integration/mcp/server`, the top-level `3-8 MCP tools functional and tested` criterion can now be marked complete.
+
 ### Research Insights: MCP Implementation
 
 **Native Rust option (future):** The `rmcp` crate on crates.io provides a native Rust MCP server. This would eliminate the TypeScript adapter, the shell-out latency, and the JSON serialization overhead. However, the TypeScript adapter works now and `rmcp` adds complexity. Flag this as a post-Phase 4 consideration.
@@ -843,7 +845,7 @@ Phase 0 (CI/deps)
 - [x] `// rts-ignore[rule-id]` suppresses findings per spec
 - [x] Performance analysis uses AST traversal, not string matching
 - [x] Dependency analyzer returns correct results for Cargo.toml
-- [ ] 3-8 MCP tools functional and tested (start with 3, expand to 8)
+- [x] 3-8 MCP tools functional and tested (start with 3, expand to 8)
 - [ ] ~15K lines of stub AI code removed
 - [ ] CI green with parallel jobs, dogfood analysis, and benchmark gate
 
