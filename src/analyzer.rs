@@ -89,15 +89,18 @@
 use crate::advanced_security::{AdvancedSecurityAnalyzer, SecurityVulnerability};
 use crate::error::{Error, Result};
 use crate::file_cache::FileCache;
-use crate::languages::{detect_language_from_path as detect_feature_language_from_path, Language};
+use crate::languages::{
+    detect_language_from_path as detect_feature_language_from_path, java::JavaSyntax,
+    php::PhpSyntax, ruby::RubySyntax, swift::SwiftSyntax, Language,
+};
 use crate::parser::Parser;
 use crate::semantic_graph::SemanticGraphQuery;
 
-use crate::tree::SyntaxTree;
+use crate::tree::{Node, SyntaxTree};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -1031,6 +1034,156 @@ impl CodebaseAnalyzer {
         Ok(symbols)
     }
 
+    fn push_symbol(
+        &self,
+        symbols: &mut Vec<Symbol>,
+        node: &Node,
+        name: String,
+        kind: &str,
+        visibility: String,
+        documentation: Option<String>,
+    ) {
+        symbols.push(Symbol {
+            name,
+            kind: kind.to_string(),
+            start_line: node.start_position().row + 1,
+            end_line: node.end_position().row + 1,
+            start_column: node.start_position().column,
+            end_column: node.end_position().column,
+            visibility,
+            documentation,
+        });
+    }
+
+    fn push_named_symbol(
+        &self,
+        symbols: &mut Vec<Symbol>,
+        node: &Node,
+        kind: &str,
+        visibility: String,
+        documentation: Option<String>,
+    ) {
+        if let Some(name_node) = node.child_by_field_name("name") {
+            if let Ok(name) = name_node.text() {
+                self.push_symbol(
+                    symbols,
+                    node,
+                    name.to_string(),
+                    kind,
+                    visibility,
+                    documentation,
+                );
+            }
+        }
+    }
+
+    fn java_visibility(&self, node: &Node) -> String {
+        let modifiers = node.child_by_field_name("modifiers").or_else(|| {
+            node.children()
+                .into_iter()
+                .find(|child| child.kind() == "modifiers")
+        });
+
+        if let Some(modifiers) = modifiers {
+            for modifier in modifiers.children() {
+                match modifier.kind() {
+                    "public" => return "public".to_string(),
+                    "private" => return "private".to_string(),
+                    "protected" => return "protected".to_string(),
+                    _ => {}
+                }
+            }
+        }
+        "package-private".to_string()
+    }
+
+    fn ruby_method_visibility(&self, node: &Node, content: &str) -> String {
+        if RubySyntax::is_public_method(node, content) {
+            "public".to_string()
+        } else {
+            "private".to_string()
+        }
+    }
+
+    fn swift_visibility(&self, node: &Node) -> String {
+        let modifiers = node.child_by_field_name("modifiers").or_else(|| {
+            node.children()
+                .into_iter()
+                .find(|child| child.kind() == "modifiers")
+        });
+
+        if let Some(modifiers) = modifiers {
+            for modifier in modifiers.children() {
+                if modifier.kind() == "access_control_modifier" {
+                    if let Ok(text) = modifier.text() {
+                        return text.to_string();
+                    }
+                }
+            }
+        }
+
+        if let Ok(text) = node.text() {
+            for token in text.split_whitespace().take(4) {
+                match token {
+                    "open" | "public" | "internal" | "fileprivate" | "private" => {
+                        return token.to_string();
+                    }
+                    _ => {}
+                }
+            }
+        }
+        "internal".to_string()
+    }
+
+    fn swift_type_kind(&self, node: &Node) -> &'static str {
+        match node.kind() {
+            "struct_declaration" => "struct",
+            "enum_declaration" => "enum",
+            _ => {
+                if let Ok(text) = node.text() {
+                    for token in text.split_whitespace().take(6) {
+                        match token {
+                            "struct" => return "struct",
+                            "enum" => return "enum",
+                            "class" => return "class",
+                            _ => {}
+                        }
+                    }
+                }
+                "class"
+            }
+        }
+    }
+
+    fn php_visibility(&self, node: &Node) -> String {
+        if let Some(visibility) = node.child_by_field_name("visibility") {
+            if let Ok(text) = visibility.text() {
+                return text.to_string();
+            }
+        }
+
+        for index in 0..node.child_count() {
+            if let Some(child) = node.child(index) {
+                if child.kind() == "visibility_modifier" {
+                    if let Ok(text) = child.text() {
+                        return text.to_string();
+                    }
+                }
+            }
+        }
+
+        if let Ok(text) = node.text() {
+            for token in text.split_whitespace().take(8) {
+                match token {
+                    "public" | "protected" | "private" => return token.to_string(),
+                    _ => {}
+                }
+            }
+        }
+
+        "public".to_string()
+    }
+
     /// Extract Rust symbols
     fn extract_rust_symbols(
         &self,
@@ -1582,45 +1735,61 @@ impl CodebaseAnalyzer {
     fn extract_java_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full Java symbol extraction
-        // For now, extract basic class and method symbols
-        let classes = tree.find_nodes_by_kind("class_declaration");
+        let classes = JavaSyntax::find_classes(tree);
         for class in classes {
-            if let Some(name_node) = class.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "class".to_string(),
-                        start_line: class.start_position().row + 1,
-                        start_column: class.start_position().column,
-                        end_line: class.end_position().row + 1,
-                        end_column: class.end_position().column,
-                        visibility: "public".to_string(), // Default for Java
-                        documentation: None,
-                    });
-                }
-            }
+            let docs = JavaSyntax::extract_javadoc_comment(&class, content);
+            self.push_named_symbol(symbols, &class, "class", self.java_visibility(&class), docs);
         }
 
-        let methods = tree.find_nodes_by_kind("method_declaration");
+        let interfaces = JavaSyntax::find_interfaces(tree);
+        for interface in interfaces {
+            let docs = JavaSyntax::extract_javadoc_comment(&interface, content);
+            self.push_named_symbol(
+                symbols,
+                &interface,
+                "interface",
+                self.java_visibility(&interface),
+                docs,
+            );
+        }
+
+        let enums = tree.find_nodes_by_kind("enum_declaration");
+        for enum_node in enums {
+            let docs = JavaSyntax::extract_javadoc_comment(&enum_node, content);
+            self.push_named_symbol(
+                symbols,
+                &enum_node,
+                "enum",
+                self.java_visibility(&enum_node),
+                docs,
+            );
+        }
+
+        let methods = JavaSyntax::find_methods(tree);
         for method in methods {
-            if let Some(name_node) = method.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "method".to_string(),
-                        start_line: method.start_position().row + 1,
-                        start_column: method.start_position().column,
-                        end_line: method.end_position().row + 1,
-                        end_column: method.end_position().column,
-                        visibility: "public".to_string(), // Default for Java
-                        documentation: None,
-                    });
-                }
-            }
+            let docs = JavaSyntax::extract_javadoc_comment(&method, content);
+            self.push_named_symbol(
+                symbols,
+                &method,
+                "method",
+                self.java_visibility(&method),
+                docs,
+            );
+        }
+
+        let constructors = tree.find_nodes_by_kind("constructor_declaration");
+        for constructor in constructors {
+            let docs = JavaSyntax::extract_javadoc_comment(&constructor, content);
+            self.push_named_symbol(
+                symbols,
+                &constructor,
+                "constructor",
+                self.java_visibility(&constructor),
+                docs,
+            );
         }
 
         Ok(())
@@ -1630,45 +1799,43 @@ impl CodebaseAnalyzer {
     fn extract_ruby_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full Ruby symbol extraction
-        // For now, extract basic class and method symbols
-        let classes = tree.find_nodes_by_kind("class");
+        let classes = RubySyntax::find_classes(tree);
         for class in classes {
-            if let Some(name_node) = class.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "class".to_string(),
-                        start_line: class.start_position().row + 1,
-                        start_column: class.start_position().column,
-                        end_line: class.end_position().row + 1,
-                        end_column: class.end_position().column,
-                        visibility: "public".to_string(), // Ruby classes are public
-                        documentation: None,
-                    });
-                }
-            }
+            let docs = RubySyntax::extract_rdoc_comment(&class, content);
+            self.push_named_symbol(symbols, &class, "class", "public".to_string(), docs);
         }
 
-        let methods = tree.find_nodes_by_kind("method");
+        let modules = RubySyntax::find_modules(tree);
+        for module in modules {
+            let docs = RubySyntax::extract_rdoc_comment(&module, content);
+            self.push_named_symbol(symbols, &module, "module", "public".to_string(), docs);
+        }
+
+        let methods = RubySyntax::find_methods(tree);
         for method in methods {
-            if let Some(name_node) = method.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "method".to_string(),
-                        start_line: method.start_position().row + 1,
-                        start_column: method.start_position().column,
-                        end_line: method.end_position().row + 1,
-                        end_column: method.end_position().column,
-                        visibility: "public".to_string(), // Ruby methods are public by default
-                        documentation: None,
-                    });
-                }
-            }
+            let docs = RubySyntax::extract_rdoc_comment(&method, content);
+            self.push_named_symbol(
+                symbols,
+                &method,
+                "method",
+                self.ruby_method_visibility(&method, content),
+                docs,
+            );
+        }
+
+        let singleton_methods = RubySyntax::find_singleton_methods(tree);
+        for method in singleton_methods {
+            let docs = RubySyntax::extract_rdoc_comment(&method, content);
+            self.push_named_symbol(
+                symbols,
+                &method,
+                "singleton_method",
+                self.ruby_method_visibility(&method, content),
+                docs,
+            );
         }
 
         Ok(())
@@ -1678,63 +1845,54 @@ impl CodebaseAnalyzer {
     fn extract_swift_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full Swift symbol extraction
-        // For now, extract basic class, struct and function symbols
-        let classes = tree.find_nodes_by_kind("class_declaration");
-        for class in classes {
-            if let Some(name_node) = class.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "class".to_string(),
-                        start_line: class.start_position().row + 1,
-                        start_column: class.start_position().column,
-                        end_line: class.end_position().row + 1,
-                        end_column: class.end_position().column,
-                        visibility: "internal".to_string(), // Default for Swift
-                        documentation: None,
-                    });
-                }
+        let mut emitted_type_declarations = HashSet::new();
+        for type_node in SwiftSyntax::find_classes(tree)
+            .into_iter()
+            .chain(SwiftSyntax::find_structs(tree))
+            .chain(tree.find_nodes_by_kind("enum_declaration"))
+        {
+            let key = (
+                type_node.start_position().row,
+                type_node.start_position().column,
+            );
+            if !emitted_type_declarations.insert(key) {
+                continue;
             }
+
+            let docs = SwiftSyntax::extract_doc_comment(&type_node, content);
+            self.push_named_symbol(
+                symbols,
+                &type_node,
+                self.swift_type_kind(&type_node),
+                self.swift_visibility(&type_node),
+                docs,
+            );
         }
 
-        let structs = tree.find_nodes_by_kind("struct_declaration");
-        for struct_node in structs {
-            if let Some(name_node) = struct_node.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "struct".to_string(),
-                        start_line: struct_node.start_position().row + 1,
-                        start_column: struct_node.start_position().column,
-                        end_line: struct_node.end_position().row + 1,
-                        end_column: struct_node.end_position().column,
-                        visibility: "internal".to_string(), // Default for Swift
-                        documentation: None,
-                    });
-                }
-            }
+        let protocols = tree.find_nodes_by_kind("protocol_declaration");
+        for protocol in protocols {
+            let docs = SwiftSyntax::extract_doc_comment(&protocol, content);
+            self.push_named_symbol(
+                symbols,
+                &protocol,
+                "protocol",
+                self.swift_visibility(&protocol),
+                docs,
+            );
         }
 
-        let functions = tree.find_nodes_by_kind("function_declaration");
+        let functions = SwiftSyntax::find_functions(tree);
         for func in functions {
-            if let Some(name_node) = func.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "function".to_string(),
-                        start_line: func.start_position().row + 1,
-                        start_column: func.start_position().column,
-                        end_line: func.end_position().row + 1,
-                        end_column: func.end_position().column,
-                        visibility: "internal".to_string(), // Default for Swift
-                        documentation: None,
-                    });
-                }
-            }
+            let docs = SwiftSyntax::extract_doc_comment(&func, content);
+            let kind = if SwiftSyntax::is_method(&func) {
+                "method"
+            } else {
+                "function"
+            };
+            self.push_named_symbol(symbols, &func, kind, self.swift_visibility(&func), docs);
         }
 
         Ok(())
@@ -1747,8 +1905,8 @@ impl CodebaseAnalyzer {
         _content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full Kotlin symbol extraction
-        // For now, extract basic class and function symbols
+        // Built-in Kotlin parser support was removed from the dependency graph.
+        // Keep this as a best-effort extractor for externally supplied parse trees.
         let classes = tree.find_nodes_by_kind("class_declaration");
         for class in classes {
             if let Some(name_node) = class.child_by_field_name("name") {
@@ -2032,45 +2190,45 @@ impl CodebaseAnalyzer {
     fn extract_php_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full PHP symbol extraction
-        // For now, extract basic class and function symbols
-        let classes = tree.find_nodes_by_kind("class_declaration");
+        let classes = PhpSyntax::find_classes(tree);
         for class in classes {
-            if let Some(name_node) = class.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "class".to_string(),
-                        start_line: class.start_position().row + 1,
-                        start_column: class.start_position().column,
-                        end_line: class.end_position().row + 1,
-                        end_column: class.end_position().column,
-                        visibility: "public".to_string(), // PHP classes are public
-                        documentation: None,
-                    });
-                }
+            let docs = PhpSyntax::extract_phpdoc_comment(&class, content);
+            self.push_named_symbol(symbols, &class, "class", "public".to_string(), docs);
+        }
+
+        let interfaces = PhpSyntax::find_interfaces(tree);
+        for interface in interfaces {
+            let docs = PhpSyntax::extract_phpdoc_comment(&interface, content);
+            self.push_named_symbol(symbols, &interface, "interface", "public".to_string(), docs);
+        }
+
+        let traits = PhpSyntax::find_traits(tree);
+        for trait_node in traits {
+            let docs = PhpSyntax::extract_phpdoc_comment(&trait_node, content);
+            self.push_named_symbol(symbols, &trait_node, "trait", "public".to_string(), docs);
+        }
+
+        let functions = PhpSyntax::find_functions(tree);
+        for func in functions {
+            if PhpSyntax::is_global_function(&func) {
+                let docs = PhpSyntax::extract_phpdoc_comment(&func, content);
+                self.push_named_symbol(symbols, &func, "function", "public".to_string(), docs);
             }
         }
 
-        let functions = tree.find_nodes_by_kind("function_definition");
-        for func in functions {
-            if let Some(name_node) = func.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "function".to_string(),
-                        start_line: func.start_position().row + 1,
-                        start_column: func.start_position().column,
-                        end_line: func.end_position().row + 1,
-                        end_column: func.end_position().column,
-                        visibility: "public".to_string(), // PHP functions are public
-                        documentation: None,
-                    });
-                }
-            }
+        let methods = PhpSyntax::find_methods(tree);
+        for method in methods {
+            let docs = PhpSyntax::extract_phpdoc_comment(&method, content);
+            self.push_named_symbol(
+                symbols,
+                &method,
+                "method",
+                self.php_visibility(&method),
+                docs,
+            );
         }
 
         Ok(())
@@ -2342,6 +2500,179 @@ mod tests {
                 "default features should skip JavaScript parser-dependent file info"
             );
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_extracts_extended_language_symbols() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let temp_path = temp_dir.path();
+
+        fs::write(
+            temp_path.join("Greeter.java"),
+            r#"
+            /** Java doc */
+            public class Greeter {
+                public Greeter() {}
+                private void whisper() {}
+                public String speak() { return "hi"; }
+            }
+
+            interface Formatter {}
+
+            enum Mode { FAST, SLOW }
+        "#,
+        )?;
+
+        fs::write(
+            temp_path.join("billing.rb"),
+            r#"
+            # Billing namespace
+            module Billing
+              # Invoice model
+              class Invoice
+                # Calculates total
+                def total
+                  42
+                end
+
+                # Factory
+                def self.build
+                  new
+                end
+              end
+            end
+        "#,
+        )?;
+
+        fs::write(
+            temp_path.join("Greeter.swift"),
+            r#"
+            /// Greeter docs
+            public class Greeter {
+                func speak() {}
+            }
+
+            struct Payload {}
+            enum Mode { case fast }
+            public protocol Renderable {}
+            func helper() {}
+        "#,
+        )?;
+
+        fs::write(
+            temp_path.join("controller.php"),
+            r#"
+            <?php
+            /** Controller docs */
+            class Controller {
+                private function secret() {}
+                public function execute() {}
+            }
+
+            interface Handler {}
+            trait Logs {}
+
+            /** helper docs */
+            function helper() {}
+        "#,
+        )?;
+
+        let mut analyzer = CodebaseAnalyzer::new()?;
+        let result = analyzer.analyze_directory(temp_path)?;
+
+        let java_symbols = &result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("java"))
+            .ok_or_else(|| Error::internal_error("analyzer tests", "expected Java file info"))?
+            .symbols;
+        assert!(java_symbols
+            .iter()
+            .any(|s| s.name == "Greeter" && s.kind == "class" && s.visibility == "public"));
+        assert!(java_symbols.iter().any(|s| s.name == "Formatter"
+            && s.kind == "interface"
+            && s.visibility == "package-private"));
+        assert!(java_symbols
+            .iter()
+            .any(|s| s.name == "Mode" && s.kind == "enum"));
+        assert!(java_symbols
+            .iter()
+            .any(|s| s.name == "Greeter" && s.kind == "constructor"));
+        assert!(java_symbols
+            .iter()
+            .any(|s| s.name == "whisper" && s.kind == "method" && s.visibility == "private"));
+
+        let ruby_symbols = &result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("rb"))
+            .ok_or_else(|| Error::internal_error("analyzer tests", "expected Ruby file info"))?
+            .symbols;
+        assert!(ruby_symbols
+            .iter()
+            .any(|s| s.name == "Billing" && s.kind == "module"));
+        assert!(ruby_symbols
+            .iter()
+            .any(|s| s.name == "Invoice" && s.kind == "class"));
+        assert!(ruby_symbols
+            .iter()
+            .any(|s| s.name == "total" && s.kind == "method" && s.visibility == "public"));
+        assert!(ruby_symbols
+            .iter()
+            .any(|s| s.name == "build" && s.kind == "singleton_method"));
+
+        let swift_symbols = &result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("swift"))
+            .ok_or_else(|| Error::internal_error("analyzer tests", "expected Swift file info"))?
+            .symbols;
+        assert!(swift_symbols
+            .iter()
+            .any(|s| s.name == "Greeter" && s.kind == "class" && s.visibility == "public"));
+        assert!(swift_symbols
+            .iter()
+            .any(|s| s.name == "Payload" && s.kind == "struct" && s.visibility == "internal"));
+        assert!(swift_symbols
+            .iter()
+            .any(|s| s.name == "Mode" && s.kind == "enum"));
+        assert!(swift_symbols
+            .iter()
+            .any(|s| s.name == "Renderable" && s.kind == "protocol" && s.visibility == "public"));
+        assert!(swift_symbols
+            .iter()
+            .any(|s| s.name == "speak" && s.kind == "method" && s.visibility == "internal"));
+        assert!(swift_symbols
+            .iter()
+            .any(|s| s.name == "helper" && s.kind == "function" && s.visibility == "internal"));
+
+        let php_symbols = &result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("php"))
+            .ok_or_else(|| Error::internal_error("analyzer tests", "expected PHP file info"))?
+            .symbols;
+        assert!(php_symbols
+            .iter()
+            .any(|s| s.name == "Controller" && s.kind == "class"));
+        assert!(php_symbols
+            .iter()
+            .any(|s| s.name == "Handler" && s.kind == "interface"));
+        assert!(php_symbols
+            .iter()
+            .any(|s| s.name == "Logs" && s.kind == "trait"));
+        assert!(php_symbols
+            .iter()
+            .any(|s| s.name == "execute" && s.kind == "method" && s.visibility == "public"));
+        assert!(php_symbols
+            .iter()
+            .any(|s| s.name == "secret" && s.kind == "method" && s.visibility == "private"));
+        assert!(php_symbols
+            .iter()
+            .any(|s| s.name == "helper" && s.kind == "function"));
+
         Ok(())
     }
 }
