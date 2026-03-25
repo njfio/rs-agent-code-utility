@@ -1035,3 +1035,87 @@ fn actual_db(cursor: &DatabaseCursor) -> Result<(), ()> {
 
     Ok(())
 }
+
+#[test]
+fn test_ast_memory_leak_detection_ignores_strings_and_detects_real_calls(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = TempDir::new()?;
+
+    fs::write(
+        temp_dir.path().join("memory_leaks.rs"),
+        r#"
+use std::cell::RefCell;
+use std::rc::Rc;
+
+fn misleading_strings_only() {
+    let docs = "Rc::new RefCell::new Box::leak std::mem::forget";
+    let _ = docs.len();
+}
+
+fn reference_cycle_candidate() {
+    let shared = Rc::new(RefCell::new(vec![1, 2, 3]));
+    let _ = shared.borrow();
+}
+
+fn intentional_box_leak() -> &'static mut Vec<i32> {
+    Box::leak(Box::new(vec![1, 2, 3]))
+}
+
+fn intentional_mem_forget() {
+    let buffer = String::from("retained");
+    std::mem::forget(buffer);
+}
+"#,
+    )?;
+
+    let result = analyze_directory_performance(
+        &temp_dir,
+        PerformanceConfig {
+            complexity_analysis: false,
+            memory_analysis: true,
+            io_analysis: false,
+            concurrency_analysis: false,
+            database_analysis: false,
+            min_complexity_threshold: 3,
+            max_function_length: 80,
+        },
+    )?;
+
+    let leak_risks = &result.memory_analysis.leak_potential;
+    assert_eq!(
+        leak_risks.len(),
+        3,
+        "Only real leak-risk calls should be reported, found: {:?}",
+        leak_risks
+            .iter()
+            .map(|risk| (
+                &risk.location.scope,
+                &risk.description,
+                &risk.location.function
+            ))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        leak_risks.iter().any(|risk| {
+            risk.location.scope == "reference_cycle"
+                && risk.location.function.as_deref() == Some("reference_cycle_candidate")
+        }),
+        "Rc<RefCell<_>> reference cycle risk should be detected",
+    );
+    assert!(
+        leak_risks
+            .iter()
+            .filter(|risk| risk.location.scope == "intentional_leak")
+            .count()
+            == 2,
+        "Box::leak and std::mem::forget should both be detected as explicit leak risks",
+    );
+    assert!(
+        leak_risks
+            .iter()
+            .all(|risk| risk.location.function.as_deref() != Some("misleading_strings_only")),
+        "String literals should not create memory leak risks",
+    );
+
+    Ok(())
+}

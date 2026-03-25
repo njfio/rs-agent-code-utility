@@ -1237,7 +1237,7 @@ impl PerformanceAnalyzer {
     }
 
     /// Classify the types of loops found
-    fn classify_loop_types(&self, node: &tree_sitter::Node, _file: &FileInfo) -> Vec<LoopType> {
+    fn classify_loop_types(&self, node: &tree_sitter::Node, file: &FileInfo) -> Vec<LoopType> {
         let mut types = Vec::new();
 
         match node.kind() {
@@ -1253,7 +1253,11 @@ impl PerformanceAnalyzer {
             _ => {
                 // Check if it's a recursive pattern
                 if let Some(parent) = node.parent() {
-                    if parent.kind().contains("function") {
+                    if self
+                        .function_node_kinds(&file.language)
+                        .iter()
+                        .any(|kind| *kind == parent.kind())
+                    {
                         types.push(LoopType::Recursive);
                     }
                 }
@@ -2457,6 +2461,40 @@ impl PerformanceAnalyzer {
         }
     }
 
+    fn is_reference_cycle_call_node(&self, node: &crate::Node, language: &str) -> bool {
+        if !language.eq_ignore_ascii_case("rust") {
+            return false;
+        }
+
+        let target = self.call_target_text(node).unwrap_or_default();
+        if !target.ends_with("Rc::new") {
+            return false;
+        }
+
+        node.find_descendant(|candidate| {
+            candidate.start_byte() != node.start_byte()
+                && candidate.kind() == "call_expression"
+                && self
+                    .call_target_text(candidate)
+                    .map(|candidate_target| candidate_target.ends_with("RefCell::new"))
+                    .unwrap_or(false)
+        })
+        .is_some()
+    }
+
+    fn is_explicit_leak_call_node(&self, node: &crate::Node, language: &str) -> bool {
+        if !language.eq_ignore_ascii_case("rust") {
+            return false;
+        }
+
+        let target = self.call_target_text(node).unwrap_or_default();
+        let segments = self.target_segments(&target);
+        let leaf = segments.last().map(String::as_str);
+
+        matches!(leaf, Some("leak")) && segments.iter().any(|segment| segment == "box")
+            || matches!(leaf, Some("forget")) && segments.iter().any(|segment| segment == "mem")
+    }
+
     fn is_allocation_node(&self, node: &crate::Node, language: &str) -> bool {
         let target = self.call_target_text(node).unwrap_or_default();
 
@@ -3150,63 +3188,60 @@ impl PerformanceAnalyzer {
             .collect()
     }
 
-    /// Detect potential memory leaks using simple pattern analysis
+    /// Detect potential memory leaks using AST call analysis
     fn detect_potential_memory_leaks(
         &self,
         content: &str,
         language: &str,
         file: &FileInfo,
     ) -> Vec<MemoryLeakRisk> {
-        let mut leaks = Vec::new();
+        let Some(parsed_language) = self.parse_language(language) else {
+            return Vec::new();
+        };
+        let Some(tree) = self.create_syntax_tree(content, parsed_language) else {
+            return Vec::new();
+        };
 
-        match language.to_lowercase().as_str() {
-            "rust" => {
-                // Rust has automatic memory management, but we can look for potential issues
-                let lines: Vec<&str> = content.lines().collect();
+        self.collect_call_nodes(&tree, language)
+            .into_iter()
+            .filter_map(|call_node| {
+                let start_line = call_node.start_position().row + 1;
+                let end_line = call_node.end_position().row + 1;
+                let function = self.find_enclosing_function_name(&call_node, content, language);
 
-                for (line_num, line) in lines.iter().enumerate() {
-                    let trimmed = line.trim();
-
-                    // Look for potential reference cycles or unsafe patterns
-                    if trimmed.contains("Rc::new") && trimmed.contains("RefCell") {
-                        leaks.push(MemoryLeakRisk {
-                            location: HotspotLocation {
-                                file: file.path.display().to_string(),
-                                function: None,
-                                start_line: line_num + 1,
-                                end_line: line_num + 1,
-                                scope: "reference_cycle".to_string(),
-                            },
-                            risk_level: RiskLevel::Medium,
-                            description: "Rc<RefCell<T>> can create reference cycles".to_string(),
-                            mitigation: vec![
-                                "Consider using Weak references to break cycles".to_string()
-                            ],
-                        });
-                    }
-
-                    if trimmed.contains("Box::leak") || trimmed.contains("mem::forget") {
-                        leaks.push(MemoryLeakRisk {
-                            location: HotspotLocation {
-                                file: file.path.display().to_string(),
-                                function: None,
-                                start_line: line_num + 1,
-                                end_line: line_num + 1,
-                                scope: "intentional_leak".to_string(),
-                            },
-                            risk_level: RiskLevel::High,
-                            description: "Explicit memory leak detected".to_string(),
-                            mitigation: vec!["Ensure this is intentional and necessary".to_string()],
-                        });
-                    }
+                if self.is_reference_cycle_call_node(&call_node, language) {
+                    Some(MemoryLeakRisk {
+                        location: HotspotLocation {
+                            file: file.path.display().to_string(),
+                            function,
+                            start_line,
+                            end_line,
+                            scope: "reference_cycle".to_string(),
+                        },
+                        risk_level: RiskLevel::Medium,
+                        description: "Rc<RefCell<T>> can create reference cycles".to_string(),
+                        mitigation: vec![
+                            "Consider using Weak references to break cycles".to_string()
+                        ],
+                    })
+                } else if self.is_explicit_leak_call_node(&call_node, language) {
+                    Some(MemoryLeakRisk {
+                        location: HotspotLocation {
+                            file: file.path.display().to_string(),
+                            function,
+                            start_line,
+                            end_line,
+                            scope: "intentional_leak".to_string(),
+                        },
+                        risk_level: RiskLevel::High,
+                        description: "Explicit memory leak detected".to_string(),
+                        mitigation: vec!["Ensure this is intentional and necessary".to_string()],
+                    })
+                } else {
+                    None
                 }
-            }
-            _ => {
-                // Analysis for other languages would go here
-            }
-        }
-
-        leaks
+            })
+            .collect()
     }
 
     fn analyze_concurrency(
