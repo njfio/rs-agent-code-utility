@@ -1,7 +1,7 @@
 //! Infrastructure module for real production-grade functionality
 //!
-//! This module provides the foundation for converting mock implementations
-//! into fully functional, tested, and validated professional code.
+//! This module provides shared infrastructure for the production cache,
+//! configuration, database, and networking integrations.
 
 pub mod cache;
 pub mod config;

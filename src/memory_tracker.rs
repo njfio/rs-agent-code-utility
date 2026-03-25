@@ -480,7 +480,7 @@ impl MemoryTracker {
             _ => {
                 return Err(Error::not_supported_error(
                     format!("Language: {}", language),
-                    "Memory tracking not implemented for this language",
+                    "Memory tracking is unsupported for this language",
                 ))
             }
         };

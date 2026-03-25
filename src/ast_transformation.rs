@@ -2271,7 +2271,7 @@ impl AstTransformationEngine {
         _usages: &[TransformationLocation],
         _language: Language,
     ) -> Result<bool> {
-        // This conservative placeholder accepts the move without analyzing side effects or evaluation order.
+        // This currently accepts the move without analyzing side effects or evaluation order.
         Ok(true)
     }
 
@@ -2407,7 +2407,7 @@ impl AstTransformationEngine {
         _method_calls: &[TransformationLocation],
         _language: Language,
     ) -> Result<bool> {
-        // This conservative placeholder accepts the extraction without checking recursion or side effects.
+        // This currently accepts the extraction without checking recursion or side effects.
         Ok(true)
     }
 
