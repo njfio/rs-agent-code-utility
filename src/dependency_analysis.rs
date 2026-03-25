@@ -21,7 +21,8 @@ use serde::{Deserialize, Serialize};
 pub struct DependencyAnalyzer {
     /// Configuration for dependency analysis
     pub config: DependencyConfig,
-    /// Optional external vulnerability provider (e.g., OSV/CVE). Scaffold only.
+    /// Optional external vulnerability provider (e.g., OSV/CVE).
+    /// Without one, only already-attached advisory metadata is reported.
     #[serde(skip)]
     provider: Option<Arc<dyn VulnerabilityProvider + Send + Sync>>,
 }
@@ -412,14 +413,14 @@ impl Default for DependencyConfig {
     }
 }
 
-// --- Vulnerability Provider Scaffold ---
+// --- Vulnerability Provider Integration ---
 
-/// A pluggable vulnerability provider interface (e.g., OSV/CVE). Stub only.
+/// A pluggable vulnerability provider interface (e.g., OSV/CVE).
 pub trait VulnerabilityProvider {
     fn enrich(&self, deps: &[Dependency]) -> Vec<DependencyVulnerability>;
 }
 
-/// A no-op stub provider for testing/scaffolding.
+/// A provider that intentionally returns no external vulnerability data.
 pub struct NoopVulnProvider;
 
 impl VulnerabilityProvider for NoopVulnProvider {
@@ -451,7 +452,7 @@ impl DependencyAnalyzer {
         }
     }
 
-    /// Attach an external vulnerability provider (scaffold; may be a stub)
+    /// Attach an external vulnerability provider for dependency enrichment.
     pub fn with_provider(mut self, provider: Box<dyn VulnerabilityProvider + Send + Sync>) -> Self {
         self.provider = Some(provider.into());
         self
@@ -1312,34 +1313,40 @@ impl DependencyAnalyzer {
         }
     }
 
-    /// Analyze vulnerabilities in dependencies
+    /// Summarize dependency vulnerability metadata when no external provider is configured.
     fn analyze_vulnerabilities(
         &self,
         dependencies: &[Dependency],
     ) -> Result<Vec<DependencyVulnerability>> {
         let mut vulnerabilities = Vec::new();
 
-        // Simulate vulnerability detection
         for dep in dependencies {
-            if dep.security_advisories > 0 || dep.name.contains("vulnerable") {
+            if dep.security_advisories > 0 {
                 vulnerabilities.push(DependencyVulnerability {
-                    id: format!("VULN-{}-001", dep.name.to_uppercase()),
-                    dependency: dep.name.clone(),
-                    affected_versions: format!("<= {}", dep.version),
-                    title: format!("Security vulnerability in {}", dep.name),
-                    description: format!(
-                        "A security vulnerability has been identified in {} version {}",
-                        dep.name, dep.version
+                    id: format!(
+                        "ADVISORY-METADATA-{:?}-{}",
+                        dep.manager,
+                        dep.name.to_uppercase().replace('-', "_")
                     ),
-                    severity: VulnerabilitySeverity::Medium,
-                    cvss_score: Some(6.5),
-                    cve: Some("CVE-2024-0001".to_string()),
-                    fix_available: true,
-                    recommended_action: format!("Update {} to the latest version", dep.name),
-                    references: vec![
-                        format!("https://security.example.com/{}", dep.name),
-                        "https://nvd.nist.gov/vuln/detail/CVE-2024-0001".to_string(),
-                    ],
+                    dependency: dep.name.clone(),
+                    affected_versions: dep.version.clone(),
+                    title: format!(
+                        "{} known security advisories reported for {}",
+                        dep.security_advisories, dep.name
+                    ),
+                    description: format!(
+                        "Dependency metadata reported {} known security advisories for {} version {}, but no external vulnerability provider is configured to supply detailed records.",
+                        dep.security_advisories, dep.name, dep.version
+                    ),
+                    severity: VulnerabilitySeverity::Info,
+                    cvss_score: None,
+                    cve: None,
+                    fix_available: false,
+                    recommended_action: format!(
+                        "Review {}'s upstream advisories or configure an external vulnerability provider",
+                        dep.name
+                    ),
+                    references: Vec::new(),
                 });
             }
         }

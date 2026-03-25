@@ -583,6 +583,23 @@ fn test_clone_preserves_vulnerability_provider() -> Result<()> {
 }
 
 #[test]
+fn test_default_analysis_does_not_fabricate_vulnerabilities_from_dependency_names() -> Result<()> {
+    let analyzer = DependencyAnalyzer::new();
+
+    let (_tmp, analysis_result) = create_analysis_result_with_fs(vec![(
+        "Cargo.toml",
+        "[dependencies]\nvulnerable-demo = \"1.0\"\n",
+        "toml",
+    )]);
+
+    let result = analyzer.analyze(&analysis_result)?;
+
+    assert!(result.vulnerabilities.is_empty());
+
+    Ok(())
+}
+
+#[test]
 fn test_manifest_dependencies_are_not_duplicated_by_source_imports() -> Result<()> {
     let analyzer = DependencyAnalyzer::new().with_provider(Box::new(NoopVulnProvider));
 
