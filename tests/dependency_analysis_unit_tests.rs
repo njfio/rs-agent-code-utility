@@ -676,6 +676,68 @@ clap = "~4.0.0"
 }
 
 #[test]
+fn test_target_specific_cargo_dependency_detection() -> Result<()> {
+    let analyzer = DependencyAnalyzer::new();
+
+    let cargo_toml_content = r#"
+[package]
+name = "targeted-project"
+version = "0.1.0"
+edition = "2021"
+
+[target.'cfg(unix)'.dependencies]
+nix = "0.29"
+libc = { version = "0.2", optional = true }
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+insta = "1.39"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+    "#;
+
+    let (_tmp, analysis_result) =
+        create_analysis_result_with_fs(vec![("Cargo.toml", cargo_toml_content, "toml")]);
+
+    let dependency_result = analyzer.analyze(&analysis_result)?;
+
+    assert!(
+        dependency_result.dependencies.iter().any(|dependency| {
+            dependency.name == "nix"
+                && dependency.manager == PackageManager::Cargo
+                && dependency.dependency_type == DependencyType::Direct
+        }),
+        "target-specific direct dependency should be detected",
+    );
+    assert!(
+        dependency_result.dependencies.iter().any(|dependency| {
+            dependency.name == "libc"
+                && dependency.manager == PackageManager::Cargo
+                && dependency.dependency_type == DependencyType::Optional
+        }),
+        "target-specific optional dependency should preserve optional type",
+    );
+    assert!(
+        dependency_result.dependencies.iter().any(|dependency| {
+            dependency.name == "insta"
+                && dependency.manager == PackageManager::Cargo
+                && dependency.dependency_type == DependencyType::Development
+        }),
+        "target-specific dev-dependency should be detected",
+    );
+    assert!(
+        dependency_result.dependencies.iter().any(|dependency| {
+            dependency.name == "winres"
+                && dependency.manager == PackageManager::Cargo
+                && dependency.dependency_type == DependencyType::Build
+        }),
+        "target-specific build-dependency should be detected",
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_empty_project_analysis() -> Result<()> {
     let analyzer = DependencyAnalyzer::new();
 

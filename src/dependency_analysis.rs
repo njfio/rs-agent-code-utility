@@ -730,33 +730,7 @@ impl DependencyAnalyzer {
 
         // Extract regular dependencies
         if let Some(deps) = toml_value.get("dependencies").and_then(|d| d.as_table()) {
-            for (name, version_spec) in deps {
-                // Minimal schema validation: if version provided in table, it must be string
-                if let toml::Value::Table(t) = version_spec {
-                    if let Some(ver_val) = t.get("version") {
-                        if !ver_val.is_str() {
-                            return Err(crate::error::Error::parse_error(
-                                "Invalid version type in Cargo.toml: expected string".to_string(),
-                            ));
-                        }
-                    }
-                }
-                let (version, dependency_type) = self.parse_cargo_dependency_spec(version_spec);
-                dependencies.push(Dependency {
-                    name: name.clone(),
-                    version,
-                    latest_version: None,
-                    manager: PackageManager::Cargo,
-                    dependency_type,
-                    license: None,
-                    repository: None,
-                    description: None,
-                    maintainers: Vec::new(),
-                    download_count: None,
-                    last_updated: None,
-                    security_advisories: 0,
-                });
-            }
+            self.extend_cargo_dependencies(deps, DependencyType::Direct, &mut dependencies)?;
         }
 
         // Extract dev dependencies if configured
@@ -765,15 +739,11 @@ impl DependencyAnalyzer {
                 .get("dev-dependencies")
                 .and_then(|d| d.as_table())
             {
-                for (name, version_spec) in dev_deps {
-                    let (version, _) = self.parse_cargo_dependency_spec(version_spec);
-                    dependencies.push(Self::create_dependency(
-                        name,
-                        version,
-                        PackageManager::Cargo,
-                        DependencyType::Development,
-                    ));
-                }
+                self.extend_cargo_dependencies(
+                    dev_deps,
+                    DependencyType::Development,
+                    &mut dependencies,
+                )?;
             }
         }
 
@@ -782,18 +752,89 @@ impl DependencyAnalyzer {
             .get("build-dependencies")
             .and_then(|d| d.as_table())
         {
-            for (name, version_spec) in build_deps {
-                let (version, _) = self.parse_cargo_dependency_spec(version_spec);
-                dependencies.push(Self::create_dependency(
-                    name,
-                    version,
-                    PackageManager::Cargo,
-                    DependencyType::Build,
-                ));
+            self.extend_cargo_dependencies(build_deps, DependencyType::Build, &mut dependencies)?;
+        }
+
+        if let Some(target_tables) = toml_value
+            .get("target")
+            .and_then(|target| target.as_table())
+        {
+            for target_table in target_tables.values().filter_map(|value| value.as_table()) {
+                if let Some(target_deps) =
+                    target_table.get("dependencies").and_then(|d| d.as_table())
+                {
+                    self.extend_cargo_dependencies(
+                        target_deps,
+                        DependencyType::Direct,
+                        &mut dependencies,
+                    )?;
+                }
+
+                if self.config.include_dev_dependencies {
+                    if let Some(target_dev_deps) = target_table
+                        .get("dev-dependencies")
+                        .and_then(|d| d.as_table())
+                    {
+                        self.extend_cargo_dependencies(
+                            target_dev_deps,
+                            DependencyType::Development,
+                            &mut dependencies,
+                        )?;
+                    }
+                }
+
+                if let Some(target_build_deps) = target_table
+                    .get("build-dependencies")
+                    .and_then(|d| d.as_table())
+                {
+                    self.extend_cargo_dependencies(
+                        target_build_deps,
+                        DependencyType::Build,
+                        &mut dependencies,
+                    )?;
+                }
             }
         }
 
         Ok(dependencies)
+    }
+
+    fn extend_cargo_dependencies(
+        &self,
+        deps: &toml::map::Map<String, toml::Value>,
+        default_dependency_type: DependencyType,
+        dependencies: &mut Vec<Dependency>,
+    ) -> Result<()> {
+        for (name, version_spec) in deps {
+            self.validate_cargo_dependency_spec(version_spec)?;
+            let (version, parsed_dependency_type) = self.parse_cargo_dependency_spec(version_spec);
+            let dependency_type = match default_dependency_type {
+                DependencyType::Direct => parsed_dependency_type,
+                _ => default_dependency_type.clone(),
+            };
+            dependencies.push(Self::create_dependency(
+                name,
+                version,
+                PackageManager::Cargo,
+                dependency_type,
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn validate_cargo_dependency_spec(&self, version_spec: &toml::Value) -> Result<()> {
+        if let toml::Value::Table(table) = version_spec {
+            if let Some(ver_val) = table.get("version") {
+                if !ver_val.is_str() {
+                    return Err(crate::error::Error::parse_error(
+                        "Invalid version type in Cargo.toml: expected string".to_string(),
+                    ));
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Parse a Cargo dependency specification

@@ -300,6 +300,7 @@ The target architecture has three layers:
 - [x] Add integration test: analyze a known `package.json`, verify deps found
 
 **Implementation note (2026-03-24):** The dependency analyzer no longer exhibits the original "0 dependencies" behavior. `src/dependency_analysis.rs` now extracts manifest dependencies, preserves the optional vulnerability provider across `Clone`, tracks per-package-manager counts, and deduplicates inferred source imports against manifest entries. Coverage now includes both the provider-preservation unit test and repo-level characterization in `tests/dependency_analysis.rs`, which verifies that analyzing this repository returns the current Cargo manifest dependency set instead of a hard-coded historical count.
+**Implementation note (2026-03-24, later):** Cargo manifest coverage now also includes `target.'cfg(...)'.dependencies`, `target.'cfg(...)'.dev-dependencies`, and `target.'cfg(...)'.build-dependencies`, with a dedicated regression in `tests/dependency_analysis_unit_tests.rs` that verifies target-specific direct, optional, development, and build entries are all extracted with the correct dependency types.
 
 **Acceptance criteria:**
 - Running dependency analysis on `rust_tree_sitter` itself returns the current Cargo manifest dependency count, as verified by the repo-level characterization test
@@ -840,7 +841,7 @@ Phase 0 (CI/deps)
 - [x] Security scanner produces confidence-scored findings with < 30% false positive rate on test corpus
 - [x] `// rts-ignore[rule-id]` suppresses findings per spec
 - [ ] Performance analysis uses AST traversal, not string matching
-- [ ] Dependency analyzer returns correct results for Cargo.toml
+- [x] Dependency analyzer returns correct results for Cargo.toml
 - [ ] 3-8 MCP tools functional and tested (start with 3, expand to 8)
 - [ ] ~15K lines of stub AI code removed
 - [ ] CI green with parallel jobs, dogfood analysis, and benchmark gate
