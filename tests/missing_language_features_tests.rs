@@ -1,6 +1,8 @@
 use rust_tree_sitter::error::Result;
+use rust_tree_sitter::languages::rust::RustSyntax;
+#[cfg(feature = "extended-languages")]
 use rust_tree_sitter::languages::{
-    c::CSyntax, go::GoSyntax, javascript::JavaScriptSyntax, python::PythonSyntax, rust::RustSyntax,
+    c::CSyntax, go::GoSyntax, javascript::JavaScriptSyntax, python::PythonSyntax,
     typescript::TypeScriptSyntax,
 };
 use rust_tree_sitter::Parser;
@@ -9,6 +11,7 @@ use tempfile::TempDir;
 
 /// Test JavaScript missing features: closures, generators, async/await, destructuring, private fields
 #[test]
+#[cfg(feature = "extended-languages")]
 fn test_javascript_missing_features() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let js_file = temp_dir.path().join("test.js");
@@ -88,6 +91,7 @@ class Counter {
 
 /// Test TypeScript missing features: generics, namespaces, mapped types, decorators
 #[test]
+#[cfg(feature = "extended-languages")]
 fn test_typescript_missing_features() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let ts_file = temp_dir.path().join("test.ts");
@@ -164,6 +168,7 @@ class UserComponent {
 
 /// Test Python missing features: async functions, context managers, metaclasses, dataclasses, type hints
 #[test]
+#[cfg(feature = "extended-languages")]
 fn test_python_missing_features() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let py_file = temp_dir.path().join("test.py");
@@ -283,6 +288,7 @@ filter_even = lambda lst: [x for x in lst if x % 2 == 0]
 
 /// Test C missing features: function pointers, unions, bit fields, preprocessor macros, static functions
 #[test]
+#[cfg(feature = "extended-languages")]
 fn test_c_missing_features() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let c_file = temp_dir.path().join("test.c");
@@ -377,6 +383,7 @@ int multiply(int a, int b) { return a * b; }
 
 /// Test Go missing features: interfaces, channels, goroutines, embedded types, type assertions
 #[test]
+#[cfg(feature = "extended-languages")]
 fn test_go_missing_features() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let go_file = temp_dir.path().join("test.go");

@@ -169,6 +169,7 @@ fn forget_memory() {
     Ok(())
 }
 
+#[cfg(feature = "extended-languages")]
 #[test]
 fn test_cpp_allocation_detection() -> Result<(), Box<dyn std::error::Error>> {
     let mut tracker = MemoryTracker::new();

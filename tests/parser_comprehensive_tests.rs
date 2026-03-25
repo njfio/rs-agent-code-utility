@@ -147,14 +147,27 @@ fn test_set_language() -> Result<(), Box<dyn std::error::Error>> {
     // Initial language should be Rust
     assert_eq!(parser.language(), Language::Rust);
 
-    // Change to Python
-    parser.set_language(Language::Python)?;
-    assert_eq!(parser.language(), Language::Python);
+    #[cfg(feature = "extended-languages")]
+    {
+        // Change to Python when extended grammars are available.
+        parser.set_language(Language::Python)?;
+        assert_eq!(parser.language(), Language::Python);
 
-    // Test parsing Python code
-    let python_code = "def hello():\n    print('Hello, world!')";
-    let tree = parser.parse(python_code, None)?;
-    assert!(!tree.has_error(), "Should parse Python code correctly");
+        let python_code = "def hello():\n    print('Hello, world!')";
+        let tree = parser.parse(python_code, None)?;
+        assert!(!tree.has_error(), "Should parse Python code correctly");
+    }
+
+    #[cfg(not(feature = "extended-languages"))]
+    {
+        // Default features only ship Rust, so exercise set_language as a no-op.
+        parser.set_language(Language::Rust)?;
+        let tree = parser.parse("fn hello() {}", None)?;
+        assert!(
+            !tree.has_error(),
+            "Should continue parsing Rust code correctly"
+        );
+    }
 
     // Change back to Rust
     parser.set_language(Language::Rust)?;
@@ -172,19 +185,28 @@ fn test_clone_parser() -> Result<(), Box<dyn std::error::Error>> {
         include_extras: false,
     };
 
-    let original_parser = Parser::with_options(Language::JavaScript, original_options)?;
+    #[cfg(feature = "extended-languages")]
+    let language = Language::JavaScript;
+    #[cfg(not(feature = "extended-languages"))]
+    let language = Language::Rust;
+
+    #[cfg(feature = "extended-languages")]
+    let sample_code = "function hello() { console.log('Hello'); }";
+    #[cfg(not(feature = "extended-languages"))]
+    let sample_code = "fn hello() { println!(\"Hello\"); }";
+
+    let original_parser = Parser::with_options(language, original_options)?;
     let cloned_parser = original_parser.clone_parser()?;
 
     // Cloned parser should have same language and options
-    assert_eq!(cloned_parser.language(), Language::JavaScript);
+    assert_eq!(cloned_parser.language(), language);
     assert_eq!(cloned_parser.options().max_bytes, Some(1000));
     assert_eq!(cloned_parser.options().timeout_millis, Some(3000));
     assert!(!cloned_parser.options().include_extras);
 
     // Both parsers should work independently
-    let js_code = "function hello() { console.log('Hello'); }";
-    let tree1 = original_parser.parse(js_code, None)?;
-    let tree2 = cloned_parser.parse(js_code, None)?;
+    let tree1 = original_parser.parse(sample_code, None)?;
+    let tree2 = cloned_parser.parse(sample_code, None)?;
 
     assert!(!tree1.has_error(), "Original parser should work");
     assert!(!tree2.has_error(), "Cloned parser should work");

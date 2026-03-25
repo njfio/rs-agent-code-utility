@@ -611,6 +611,21 @@ fn test_multi_language_analysis_workflow() -> Result<()> {
     fs::create_dir_all(project_root.join("scripts"))?;
     fs::create_dir_all(project_root.join("web"))?;
 
+    // Create Rust file so the workflow remains valid under default features.
+    fs::write(
+        project_root.join("src/lib.rs"),
+        r#"
+pub struct ProcessedRecord {
+    pub id: u64,
+    pub name: String,
+}
+
+pub fn normalize_name(name: &str) -> String {
+    name.trim().to_lowercase()
+}
+"#,
+    )?;
+
     // Create Python file
     fs::write(
         project_root.join("scripts/data_processor.py"),
@@ -792,20 +807,38 @@ if (typeof module !== 'undefined' && module.exports) {
     let mut analyzer = CodebaseAnalyzer::new()?;
     let analysis_result = analyzer.analyze_directory(project_root)?;
 
-    // Verify multi-language detection - should have at least one language
-    assert!(!analysis_result.languages.is_empty());
+    assert!(analysis_result.languages.contains_key("Rust"));
 
-    // Check if we have the expected languages (but don't require them)
+    let rust_files: Vec<_> = analysis_result
+        .files
+        .iter()
+        .filter(|f| f.language == "Rust")
+        .collect();
     let python_files: Vec<_> = analysis_result
         .files
         .iter()
-        .filter(|f| f.language == "python")
+        .filter(|f| f.language == "Python")
         .collect();
     let js_files: Vec<_> = analysis_result
         .files
         .iter()
-        .filter(|f| f.language == "javascript")
+        .filter(|f| f.language == "JavaScript")
         .collect();
+
+    assert!(!rust_files.is_empty());
+    assert!(!rust_files[0].symbols.is_empty());
+
+    #[cfg(feature = "extended-languages")]
+    {
+        assert!(!python_files.is_empty());
+        assert!(!js_files.is_empty());
+    }
+
+    #[cfg(not(feature = "extended-languages"))]
+    {
+        assert!(python_files.is_empty());
+        assert!(js_files.is_empty());
+    }
 
     // If we have Python files, verify they have symbols
     if !python_files.is_empty() {

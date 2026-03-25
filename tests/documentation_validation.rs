@@ -23,17 +23,30 @@ fn test_readme_examples_compile() -> std::result::Result<(), Box<dyn std::error:
 #[test]
 fn test_language_detection_examples() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // Test language detection examples from README
-    assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
     assert_eq!(detect_language_from_extension("rs"), Some(Language::Rust));
-    assert_eq!(detect_language_from_extension("js"), Some(Language::JavaScript));
-    assert_eq!(detect_language_from_extension("ts"), Some(Language::TypeScript));
-    assert_eq!(detect_language_from_extension("go"), Some(Language::Go));
-    assert_eq!(detect_language_from_extension("c"), Some(Language::C));
-    assert_eq!(detect_language_from_extension("cpp"), Some(Language::Cpp));
-
-    // Test path-based detection
     assert_eq!(detect_language_from_path("main.rs"), Some(Language::Rust));
-    assert_eq!(detect_language_from_path("app.py"), Some(Language::Python));
+
+    #[cfg(feature = "extended-languages")]
+    {
+        assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
+        assert_eq!(detect_language_from_extension("js"), Some(Language::JavaScript));
+        assert_eq!(detect_language_from_extension("ts"), Some(Language::TypeScript));
+        assert_eq!(detect_language_from_extension("go"), Some(Language::Go));
+        assert_eq!(detect_language_from_extension("c"), Some(Language::C));
+        assert_eq!(detect_language_from_extension("cpp"), Some(Language::Cpp));
+        assert_eq!(detect_language_from_path("app.py"), Some(Language::Python));
+    }
+
+    #[cfg(not(feature = "extended-languages"))]
+    {
+        assert_eq!(detect_language_from_extension("py"), None);
+        assert_eq!(detect_language_from_extension("js"), None);
+        assert_eq!(detect_language_from_extension("ts"), None);
+        assert_eq!(detect_language_from_extension("go"), None);
+        assert_eq!(detect_language_from_extension("c"), None);
+        assert_eq!(detect_language_from_extension("cpp"), None);
+        assert_eq!(detect_language_from_path("app.py"), None);
+    }
 
     Ok(())
 }
@@ -43,7 +56,7 @@ fn test_supported_languages_documentation() -> std::result::Result<(), Box<dyn s
     // Verify all documented languages are actually supported
     let languages = supported_languages();
 
-    // Check that all documented languages are present
+    #[cfg(feature = "extended-languages")]
     let expected_languages = vec![
         Language::Rust,
         Language::JavaScript,
@@ -53,6 +66,8 @@ fn test_supported_languages_documentation() -> std::result::Result<(), Box<dyn s
         Language::C,
         Language::Cpp,
     ];
+    #[cfg(not(feature = "extended-languages"))]
+    let expected_languages = vec![Language::Rust];
 
     for expected_lang in expected_languages {
         assert!(languages.iter().any(|lang| lang.name == expected_lang.name()),

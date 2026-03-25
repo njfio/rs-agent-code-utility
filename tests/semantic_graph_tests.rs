@@ -478,10 +478,21 @@ function createUser() {
     let result = analyzer.analyze_directory(temp_dir.path())?;
 
     // Verify analysis results
-    assert_eq!(result.total_files, 2);
-    assert_eq!(result.parsed_files, 2);
     assert!(result.languages.contains_key("Rust"));
-    assert!(result.languages.contains_key("JavaScript"));
+
+    #[cfg(feature = "extended-languages")]
+    {
+        assert_eq!(result.total_files, 2);
+        assert_eq!(result.parsed_files, 2);
+        assert!(result.languages.contains_key("JavaScript"));
+    }
+
+    #[cfg(not(feature = "extended-languages"))]
+    {
+        assert_eq!(result.total_files, 1);
+        assert_eq!(result.parsed_files, 1);
+        assert!(!result.languages.contains_key("JavaScript"));
+    }
 
     // Verify semantic graph was built
     let graph = analyzer
@@ -633,7 +644,11 @@ export function helper() {}
             .iter()
             .filter(|node| node.node_type == NodeType::Module)
             .count()
-            >= 4,
+            >= if cfg!(feature = "extended-languages") {
+                4
+            } else {
+                2
+            },
         "expected per-file module nodes to be added to the graph"
     );
 
@@ -642,6 +657,8 @@ export function helper() {}
             && edge.from == "module:src/main.rs"
             && edge.to == "module:src/utils.rs"
     }));
+
+    #[cfg(feature = "extended-languages")]
     assert!(snapshot.edges.iter().any(|edge| {
         edge.relationship == RelationshipType::Imports
             && edge.from == "module:app.js"
@@ -687,7 +704,10 @@ fn test_semantic_graph_builds_in_parallel_mode() -> Result<(), Box<dyn std::erro
     analyzer.enable_semantic_graph();
     let result = analyzer.analyze_directory(temp_dir.path())?;
 
+    #[cfg(feature = "extended-languages")]
     assert_eq!(result.total_files, 4);
+    #[cfg(not(feature = "extended-languages"))]
+    assert_eq!(result.total_files, 2);
 
     let graph = analyzer
         .semantic_graph()
@@ -703,6 +723,8 @@ fn test_semantic_graph_builds_in_parallel_mode() -> Result<(), Box<dyn std::erro
             && edge.from == "module:src/main.rs"
             && edge.to == "module:src/utils.rs"
     }));
+
+    #[cfg(feature = "extended-languages")]
     assert!(snapshot.edges.iter().any(|edge| {
         edge.relationship == RelationshipType::Imports
             && edge.from == "module:app.js"
@@ -761,12 +783,16 @@ fn test_semantic_graph_builds_cross_file_call_edges_and_queries(
         .find(|node| node.file_path == PathBuf::from("src/utils.rs") && node.name == "helper")
         .map(|node| node.id.clone())
         .ok_or_else(|| std::io::Error::other("expected Rust callee node"))?;
+
+    #[cfg(feature = "extended-languages")]
     let js_caller_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("app.js") && node.name == "run")
         .map(|node| node.id.clone())
         .ok_or_else(|| std::io::Error::other("expected JavaScript caller node"))?;
+
+    #[cfg(feature = "extended-languages")]
     let js_callee_id = snapshot
         .nodes
         .iter()
@@ -783,6 +809,8 @@ fn test_semantic_graph_builds_cross_file_call_edges_and_queries(
         "expected Rust call edge, got edges: {:?}",
         snapshot.edges
     );
+
+    #[cfg(feature = "extended-languages")]
     assert!(
         snapshot.edges.iter().any(|edge| {
             edge.relationship == RelationshipType::Calls
@@ -905,12 +933,16 @@ fn test_semantic_graph_resolves_transitive_reexports_for_call_edges(
         .find(|node| node.file_path == PathBuf::from("src/utils.rs") && node.name == "helper")
         .map(|node| node.id.clone())
         .ok_or_else(|| std::io::Error::other("expected Rust callee node"))?;
+
+    #[cfg(feature = "extended-languages")]
     let js_caller_id = snapshot
         .nodes
         .iter()
         .find(|node| node.file_path == PathBuf::from("app.js") && node.name == "run")
         .map(|node| node.id.clone())
         .ok_or_else(|| std::io::Error::other("expected JavaScript caller node"))?;
+
+    #[cfg(feature = "extended-languages")]
     let js_callee_id = snapshot
         .nodes
         .iter()
@@ -927,6 +959,8 @@ fn test_semantic_graph_resolves_transitive_reexports_for_call_edges(
         "expected Rust call edge to resolve through re-exports, got edges: {:?}",
         snapshot.edges
     );
+
+    #[cfg(feature = "extended-languages")]
     assert!(
         snapshot.edges.iter().any(|edge| {
             edge.relationship == RelationshipType::Calls
@@ -945,11 +979,15 @@ fn test_semantic_graph_resolves_transitive_reexports_for_call_edges(
         .iter()
         .any(|node| node.file_path == PathBuf::from("src/main.rs") && node.name == "run"));
 
-    let js_callers = graph.find_callers("helper", PathBuf::from("helper.js").as_path(), &config);
-    assert!(js_callers
-        .nodes
-        .iter()
-        .any(|node| node.file_path == PathBuf::from("app.js") && node.name == "run"));
+    #[cfg(feature = "extended-languages")]
+    {
+        let js_callers =
+            graph.find_callers("helper", PathBuf::from("helper.js").as_path(), &config);
+        assert!(js_callers
+            .nodes
+            .iter()
+            .any(|node| node.file_path == PathBuf::from("app.js") && node.name == "run"));
+    }
 
     Ok(())
 }

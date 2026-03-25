@@ -912,7 +912,7 @@ pub struct PackageAnalysis {
     pub exported_types: usize,
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "extended-languages"))]
 mod tests {
     use super::*;
     use crate::Parser;

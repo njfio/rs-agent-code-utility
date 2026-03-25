@@ -2291,11 +2291,8 @@ mod tests {
         let mut analyzer = CodebaseAnalyzer::new()?;
         let result = analyzer.analyze_directory(temp_path)?;
 
-        assert_eq!(result.total_files, 2);
-        assert_eq!(result.parsed_files, 2);
         assert_eq!(result.error_files, 0);
         assert!(result.languages.contains_key("Rust"));
-        assert!(result.languages.contains_key("JavaScript"));
 
         // Check that symbols were extracted
         let rust_file_info = result
@@ -2315,15 +2312,36 @@ mod tests {
             Some("Main entry point")
         );
 
-        let js_file_info = result
-            .files
-            .iter()
-            .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("js"))
-            .ok_or_else(|| {
-                Error::internal_error("analyzer tests", "expected JavaScript file info")
-            })?;
-        assert!(!js_file_info.symbols.is_empty());
-        assert!(js_file_info.symbols.iter().any(|s| s.name == "greet"));
+        #[cfg(feature = "extended-languages")]
+        {
+            assert_eq!(result.total_files, 2);
+            assert_eq!(result.parsed_files, 2);
+            assert!(result.languages.contains_key("JavaScript"));
+
+            let js_file_info = result
+                .files
+                .iter()
+                .find(|f| f.path.extension().and_then(|ext| ext.to_str()) == Some("js"))
+                .ok_or_else(|| {
+                    Error::internal_error("analyzer tests", "expected JavaScript file info")
+                })?;
+            assert!(!js_file_info.symbols.is_empty());
+            assert!(js_file_info.symbols.iter().any(|s| s.name == "greet"));
+        }
+
+        #[cfg(not(feature = "extended-languages"))]
+        {
+            assert_eq!(result.total_files, 1);
+            assert_eq!(result.parsed_files, 1);
+            assert!(!result.languages.contains_key("JavaScript"));
+            assert!(
+                result
+                    .files
+                    .iter()
+                    .all(|f| f.path.extension().and_then(|ext| ext.to_str()) != Some("js")),
+                "default features should skip JavaScript parser-dependent file info"
+            );
+        }
         Ok(())
     }
 }

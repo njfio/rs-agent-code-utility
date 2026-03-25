@@ -273,6 +273,7 @@ fn test_error_handling_complexity() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "extended-languages")]
 #[test]
 fn test_javascript_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("javascript");
@@ -306,6 +307,7 @@ fn test_javascript_complexity() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "extended-languages")]
 #[test]
 fn test_python_complexity() -> Result<()> {
     let analyzer = ComplexityAnalyzer::new("python");

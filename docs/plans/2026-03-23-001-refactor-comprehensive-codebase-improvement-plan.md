@@ -129,6 +129,8 @@ The target architecture has three layers:
 - [x] Fix any failing tests on current branch
 - [x] Set `WIKI_FETCH_ASSETS=0` in CI to prevent macOS SystemConfiguration hangs
 
+**Implementation note (2026-03-24, latest):** A fresh local `cargo test --workspace -q` run now passes on the default feature set again. The remaining regressions on this branch were not runtime bugs in the Rust core; they were tests that still assumed JavaScript/Python/C/C++/TypeScript/Go grammars were available in the default build after the `extended-languages` split. Those suites are now feature-aware: Rust/default tests stay active in baseline builds, while grammar-specific cases only run behind `extended-languages`. Focused `--all-features` verification also passed for the gated surfaces (`complexity_analysis_unit_tests`, `cross_file_taint`, `memory_tracker_tests`, `missing_language_features_tests`, `parser_comprehensive_tests`, `semantic_graph_tests`, plus the `test_analyze_directory` and inline taint-path unit tests), so the local test surface is green in both baseline mode and the touched extended-language paths. The top-level `CI green with parallel jobs, dogfood analysis, and benchmark gate` criterion still remains open until this branch has matching remote workflow evidence.
+
 **Acceptance criteria:**
 - `cargo fmt --all -- --check` passes
 - `cargo clippy --all-targets --all-features -- -D warnings` passes

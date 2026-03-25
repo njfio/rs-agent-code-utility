@@ -100,6 +100,7 @@ pub fn run_query(user_input: String) {
     Ok(())
 }
 
+#[cfg(feature = "extended-languages")]
 #[test]
 fn test_taint_analysis_propagates_across_javascript_files() -> Result<(), Box<dyn std::error::Error>>
 {
@@ -240,6 +241,7 @@ pub fn run_query(query: String) {
     Ok(())
 }
 
+#[cfg(feature = "extended-languages")]
 #[test]
 fn test_taint_analysis_propagates_return_values_across_javascript_files(
 ) -> Result<(), Box<dyn std::error::Error>> {

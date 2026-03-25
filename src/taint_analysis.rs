@@ -1986,7 +1986,9 @@ impl TaintAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "extended-languages")]
     use crate::{Language, Parser};
+    #[cfg(feature = "extended-languages")]
     use std::path::{Path, PathBuf};
 
     #[test]
@@ -2162,6 +2164,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "extended-languages")]
     #[test]
     fn test_taint_sources_and_sinks_capture_explicit_file_paths(
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
