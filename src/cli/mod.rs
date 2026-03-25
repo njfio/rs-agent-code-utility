@@ -9,7 +9,6 @@ pub mod sarif;
 pub mod sbom;
 pub mod schemas;
 pub mod utils;
-// pub mod watch; // TODO: Implement watch module
 
 use clap::{Parser, Subcommand};
 use colored::control as color_control;
