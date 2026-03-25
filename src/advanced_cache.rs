@@ -75,6 +75,15 @@ impl<T> CacheEntry<T> {
             .as_secs();
         self.access_count += 1;
     }
+
+    pub fn remaining_ttl(&self) -> Duration {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_else(|_| Duration::from_secs(0))
+            .as_secs();
+
+        Duration::from_secs(self.expires_at.saturating_sub(now))
+    }
 }
 
 /// Cache statistics for monitoring and optimization
@@ -217,6 +226,15 @@ where
             stats.record_miss(start_time.elapsed().as_millis() as f64);
             Ok(None)
         }
+    }
+
+    fn contains_valid_key(&self, key: &str) -> Result<bool> {
+        let entries = self
+            .entries
+            .read()
+            .map_err(|_| Error::internal_error("cache", "Failed to acquire read lock"))?;
+
+        Ok(entries.get(key).is_some_and(|entry| !entry.is_expired()))
     }
 
     pub fn put(
@@ -393,7 +411,7 @@ where
         path.extension().and_then(|ext| ext.to_str()) == Some("cache")
     }
 
-    pub fn get(&self, key: &str) -> Result<Option<T>> {
+    fn load_entry(&self, key: &str) -> Result<Option<CacheEntry<T>>> {
         let cache_path = self.get_cache_path(key);
 
         if !cache_path.exists() {
@@ -446,7 +464,11 @@ where
             return Ok(None);
         }
 
-        Ok(Some(entry.data))
+        Ok(Some(entry))
+    }
+
+    pub fn get(&self, key: &str) -> Result<Option<T>> {
+        Ok(self.load_entry(key)?.map(|entry| entry.data))
     }
 
     pub fn put(
@@ -593,6 +615,20 @@ where
         })
     }
 
+    fn promote_entry_to_memory(&self, key: &str, entry: &CacheEntry<T>) -> Result<()> {
+        let ttl = entry.remaining_ttl();
+        if ttl.is_zero() {
+            return Ok(());
+        }
+
+        self.memory.put(
+            key.to_string(),
+            entry.data.clone(),
+            Some(ttl),
+            entry.dependencies.clone(),
+        )
+    }
+
     pub async fn get(&self, key: &str) -> Result<Option<T>> {
         // Try memory cache first
         if let Some(data) = self.memory.get(key)? {
@@ -601,11 +637,9 @@ where
 
         // Try disk cache if available
         if let Some(ref disk_cache) = self.disk {
-            if let Some(data) = disk_cache.get(key)? {
-                // Promote to memory cache
-                let _ = self
-                    .memory
-                    .put(key.to_string(), data.clone(), None, Vec::new());
+            if let Some(entry) = disk_cache.load_entry(key)? {
+                let data = entry.data.clone();
+                let _ = self.promote_entry_to_memory(key, &entry);
                 return Ok(Some(data));
             }
         }
@@ -678,9 +712,21 @@ where
     }
 
     /// Warm up cache with frequently accessed data
-    pub async fn warmup(&self, _keys: Vec<String>) -> Result<()> {
-        // TODO: Implement cache warming logic
-        // This could load frequently accessed files or analysis results
+    pub async fn warmup(&self, keys: Vec<String>) -> Result<()> {
+        let Some(ref disk_cache) = self.disk else {
+            return Ok(());
+        };
+
+        for key in keys {
+            if self.memory.contains_valid_key(&key)? {
+                continue;
+            }
+
+            if let Some(entry) = disk_cache.load_entry(&key)? {
+                let _ = self.promote_entry_to_memory(&key, &entry);
+            }
+        }
+
         Ok(())
     }
 
@@ -768,6 +814,69 @@ mod tests {
 
         cache.invalidate("test_key")?;
         assert!(cache.get("test_key")?.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_warmup_promotes_disk_entries_with_dependencies(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let config = CacheConfig {
+            cache_dir: temp_dir.path().to_path_buf(),
+            ..CacheConfig::default()
+        };
+
+        let cache: AdvancedCache<String> = AdvancedCache::new(config)?;
+        let disk_cache = cache.disk.as_ref().expect("disk cache should be enabled");
+
+        disk_cache.put(
+            "warm_key".to_string(),
+            "warm_value".to_string(),
+            Some(Duration::from_secs(60)),
+            vec!["file:src/lib.rs".to_string()],
+        )?;
+
+        assert_eq!(cache.memory.get("warm_key")?, None);
+
+        cache.warmup(vec!["warm_key".to_string()]).await?;
+
+        assert_eq!(
+            cache.memory.get("warm_key")?,
+            Some("warm_value".to_string())
+        );
+        assert_eq!(cache.invalidate_by_dependency("file:src/lib.rs").await?, 1);
+        assert_eq!(cache.memory.get("warm_key")?, None);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_promotes_disk_entries_with_dependencies(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let config = CacheConfig {
+            cache_dir: temp_dir.path().to_path_buf(),
+            ..CacheConfig::default()
+        };
+
+        let cache: AdvancedCache<String> = AdvancedCache::new(config)?;
+        let disk_cache = cache.disk.as_ref().expect("disk cache should be enabled");
+
+        disk_cache.put(
+            "promote_key".to_string(),
+            "promoted".to_string(),
+            Some(Duration::from_secs(60)),
+            vec!["file:src/main.rs".to_string()],
+        )?;
+
+        assert_eq!(cache.memory.get("promote_key")?, None);
+        assert_eq!(
+            cache.get("promote_key").await?,
+            Some("promoted".to_string())
+        );
+        assert_eq!(cache.invalidate_by_dependency("file:src/main.rs").await?, 1);
+        assert_eq!(cache.memory.get("promote_key")?, None);
 
         Ok(())
     }
