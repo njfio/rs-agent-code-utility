@@ -14,6 +14,7 @@ use crate::security::ast_analyzer::{
 use crate::tree::{Node, SyntaxTree};
 
 use std::collections::HashMap;
+use streaming_iterator::StreamingIterator;
 
 use tree_sitter::{Query, QueryCursor};
 
@@ -951,10 +952,11 @@ impl RustAnalyzer {
         ) @macro_call
         "#;
 
-        if let Ok(query) = Query::new(tree.language(), macro_query) {
+        if let Ok(query) = Query::new(&tree.language(), macro_query) {
             let mut cursor = QueryCursor::new();
-            for match_ in cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes())
-            {
+            let mut matches =
+                cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes());
+            while let Some(match_) = matches.next() {
                 for capture in match_.captures {
                     if capture.index == 1 {
                         // macro_name capture
@@ -1013,10 +1015,11 @@ impl RustAnalyzer {
         ) @unwrap_call
         "#;
 
-        if let Ok(query) = Query::new(tree.language(), unwrap_query) {
+        if let Ok(query) = Query::new(&tree.language(), unwrap_query) {
             let mut cursor = QueryCursor::new();
-            for match_ in cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes())
-            {
+            let mut matches =
+                cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes());
+            while let Some(match_) = matches.next() {
                 for capture in match_.captures {
                     if capture.index == 0 {
                         // unwrap_call capture
@@ -1061,10 +1064,11 @@ impl RustAnalyzer {
         ) @static_mut
         "#;
 
-        if let Ok(query) = Query::new(tree.language(), static_mut_query) {
+        if let Ok(query) = Query::new(&tree.language(), static_mut_query) {
             let mut cursor = QueryCursor::new();
-            for match_ in cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes())
-            {
+            let mut matches =
+                cursor.matches(&query, tree.root_node().inner(), tree.source().as_bytes());
+            while let Some(match_) = matches.next() {
                 for capture in match_.captures {
                     if capture.index == 0 {
                         // static_mut capture

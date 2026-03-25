@@ -149,16 +149,16 @@ The target architecture has three layers:
 
 ##### Task 0.2: Upgrade Vulnerable Dependencies
 
-- [ ] Upgrade `ring` transitively (via `reqwest`/`rustls` version bumps) to >= 0.17.12 (RUSTSEC-2025-0009)
-- [ ] Upgrade `sqlx` from 0.7.4 to 0.8.1+ (RUSTSEC-2024-0363) -- note: API breaking changes in sqlx 0.8
+- [x] Upgrade `ring` transitively (via `reqwest`/`rustls` version bumps) to >= 0.17.12 (RUSTSEC-2025-0009)
+- [x] Upgrade `sqlx` from 0.7.4 to 0.8.1+ (RUSTSEC-2024-0363) -- note: API breaking changes in sqlx 0.8
 - [x] Replace unmaintained `backoff` with `exponential-backoff`
 - [x] Audit `instant`, `paste`, `proc-macro-error` for maintained alternatives or removal
 
 **Note:** The `ring` and `sqlx` upgrades become less critical once Phase 1 removes `net` and `db` from defaults, since they'll only affect opt-in users. However, they should still be upgraded for users who do opt in.
 
-**Implementation note (2026-03-24):** `reqwest` was bumped to `0.12` and `hf-hub` to `0.5.0` with explicit `rustls-tls`, but that alone does not clear `ring` because `sqlx 0.7.4` still brings in `rustls 0.21` and keeps `ring 0.17.9` in the graph. Attempting `sqlx 0.8.6` exposed the real blocker: `libsqlite3-sys 0.30.x` requires `cc ^1.1.6`, while the current `tree-sitter 0.20` parser stack still constrains `cc` to the old line. A straightforward parser-stack upgrade is also blocked by `tree-sitter-kotlin`, whose latest published crate still requires `tree-sitter < 0.23`. Finishing Task 0.2 likely needs either a broader tree-sitter migration strategy or a Kotlin parser replacement.
+**Implementation note (2026-03-24):** `reqwest` was bumped to `0.12` and `hf-hub` to `0.5.0` with explicit `rustls-tls`, but that alone did not clear `ring` because `sqlx 0.7.4` still brought in `rustls 0.21` and kept `ring 0.17.9` in the graph. Attempting `sqlx 0.8.6` exposed the real blocker: `libsqlite3-sys 0.30.x` requires `cc ^1.1.6`, while the old `tree-sitter 0.20` parser stack still constrained `cc` to the older line. The Kotlin grammar crate was the remaining incompatible outlier because its published release still required `tree-sitter < 0.23`.
 **Implementation note (2026-03-24, later):** The follow-up audit of `instant`, `paste`, and `proc-macro-error` showed that `instant` only remains on a target-specific dev-only path through `wiremock`, `paste` remains fully transitive under the optional `ml` and `db` stacks (`candle-*`, `tokenizers`, `sqlx`) rather than the default surface, and `proc-macro-error` came from the direct `tabled` dependency on the `cli` feature. The CLI now uses a crate-local text-table renderer instead of `tabled`, so `proc-macro-error` is no longer pulled in by `cargo tree --features cli`.
-**Implementation note (2026-03-24, latest):** A fresh `cargo audit` run with an updated `cargo-audit` client shows the live vulnerability set has dropped to three entries, all still rooted in the blocked `sqlx 0.7.4` path: `RUSTSEC-2025-0009` (`ring 0.17.9`), `RUSTSEC-2024-0363` (`sqlx 0.7.4`), and `RUSTSEC-2023-0071` (`rsa 0.9.8` via `sqlx-mysql`). The earlier `bytes`, `rustls-webpki`, and `time` advisories no longer appear under a freshly resolved local dependency graph, but the top-level `Zero known CVEs` criterion must remain open until the `sqlx` migration blocker is cleared.
+**Implementation note (2026-03-24, latest):** Task 0.2 is now unblocked and implemented. The parser stack was refreshed to `tree-sitter 0.25` plus current language crates, Kotlin was removed from the shipped parser surface to eliminate the last incompatible grammar edge, and the database layer moved from the umbrella `sqlx` crate to direct `sqlx-core 0.8.6` plus `sqlx-sqlite 0.8.6` so `Cargo.lock` no longer retains inactive `sqlx-mysql` / macro packages. A fresh `cargo audit -q` run now reports `0` known vulnerabilities and only the pre-existing allowed unmaintained warnings (`bincode`, `instant`, `number_prefix`, `paste`, `yaml-rust`).
 
 ### Research Insights: sqlx 0.8 Migration
 
@@ -863,7 +863,7 @@ Phase 0 (CI/deps)
 
 - [x] Parse speed remains < 3ms/1K LOC (no regression from Phase 2 changes)
 - [ ] `cargo build` (default features) completes in < 30 seconds on CI
-- [ ] Zero known CVEs in dependency tree
+- [x] Zero known CVEs in dependency tree
 - [x] Zero panics in library code paths (non-test)
 
 ### Quality Gates

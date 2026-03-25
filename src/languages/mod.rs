@@ -54,14 +54,22 @@ impl Language {
         )
     }
 
+    fn removed_language_error(&self) -> Error {
+        Error::not_supported_with_alternative(
+            format!("{} grammar", self.name()),
+            "this grammar is no longer shipped in the crate dependency graph",
+            "use another supported language or add Kotlin support back with a compatible parser stack",
+        )
+    }
+
     /// Get the tree-sitter language for this language
     pub fn tree_sitter_language(&self) -> Result<tree_sitter::Language> {
         match self {
-            Language::Rust => Ok(tree_sitter_rust::language()),
+            Language::Rust => Ok(tree_sitter_rust::LANGUAGE.into()),
             Language::JavaScript => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_javascript::language())
+                    Ok(tree_sitter_javascript::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -71,7 +79,7 @@ impl Language {
             Language::TypeScript => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_typescript::language_typescript())
+                    Ok(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -81,7 +89,7 @@ impl Language {
             Language::Python => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_python::language())
+                    Ok(tree_sitter_python::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -91,7 +99,7 @@ impl Language {
             Language::C => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_c::language())
+                    Ok(tree_sitter_c::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -101,7 +109,7 @@ impl Language {
             Language::Cpp => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_cpp::language())
+                    Ok(tree_sitter_cpp::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -111,7 +119,7 @@ impl Language {
             Language::Go => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_go::language())
+                    Ok(tree_sitter_go::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -121,7 +129,7 @@ impl Language {
             Language::Java => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_java::language())
+                    Ok(tree_sitter_java::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -131,7 +139,7 @@ impl Language {
             Language::Php => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_php::language_php())
+                    Ok(tree_sitter_php::LANGUAGE_PHP.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -141,7 +149,7 @@ impl Language {
             Language::Ruby => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_ruby::language())
+                    Ok(tree_sitter_ruby::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -151,23 +159,14 @@ impl Language {
             Language::Swift => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Ok(tree_sitter_swift::language())
+                    Ok(tree_sitter_swift::LANGUAGE.into())
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
                     Err(self.extended_language_error())
                 }
             }
-            Language::Kotlin => {
-                #[cfg(feature = "extended-languages")]
-                {
-                    Ok(tree_sitter_kotlin::language())
-                }
-                #[cfg(not(feature = "extended-languages"))]
-                {
-                    Err(self.extended_language_error())
-                }
-            }
+            Language::Kotlin => Err(self.removed_language_error()),
         }
     }
 
@@ -210,18 +209,18 @@ impl Language {
     /// Get the language version
     pub fn version(&self) -> &'static str {
         match self {
-            Language::Rust => "0.21.0",
-            Language::JavaScript => "0.21.0",
-            Language::TypeScript => "0.21.0",
-            Language::Python => "0.21.0",
-            Language::C => "0.21.0",
-            Language::Cpp => "0.22.0",
-            Language::Go => "0.21.0",
-            Language::Java => "0.21.0",
-            Language::Php => "0.21.0",
-            Language::Ruby => "0.21.0",
-            Language::Swift => "0.21.0",
-            Language::Kotlin => "0.21.0",
+            Language::Rust => "0.24.1",
+            Language::JavaScript => "0.25.0",
+            Language::TypeScript => "0.23.2",
+            Language::Python => "0.25.0",
+            Language::C => "0.24.1",
+            Language::Cpp => "0.23.4",
+            Language::Go => "0.25.0",
+            Language::Java => "0.23.5",
+            Language::Php => "0.24.2",
+            Language::Ruby => "0.23.1",
+            Language::Swift => "0.7.1",
+            Language::Kotlin => "unsupported",
         }
     }
 
@@ -233,7 +232,7 @@ impl Language {
     /// Get syntax highlighting query for this language
     pub fn highlights_query(&self) -> Option<&'static str> {
         match self {
-            Language::Rust => Some(tree_sitter_rust::HIGHLIGHT_QUERY),
+            Language::Rust => Some(tree_sitter_rust::HIGHLIGHTS_QUERY),
             Language::JavaScript => {
                 #[cfg(feature = "extended-languages")]
                 {
@@ -247,7 +246,7 @@ impl Language {
             Language::TypeScript => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Some(tree_sitter_typescript::HIGHLIGHT_QUERY)
+                    Some(tree_sitter_typescript::HIGHLIGHTS_QUERY)
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -257,7 +256,7 @@ impl Language {
             Language::Python => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Some(tree_sitter_python::HIGHLIGHT_QUERY)
+                    Some(tree_sitter_python::HIGHLIGHTS_QUERY)
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -287,7 +286,7 @@ impl Language {
             Language::Go => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Some(tree_sitter_go::HIGHLIGHT_QUERY)
+                    Some(tree_sitter_go::HIGHLIGHTS_QUERY)
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -297,7 +296,7 @@ impl Language {
             Language::Java => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Some(tree_sitter_java::HIGHLIGHT_QUERY)
+                    Some(tree_sitter_java::HIGHLIGHTS_QUERY)
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -307,7 +306,7 @@ impl Language {
             Language::Php => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Some(tree_sitter_php::HIGHLIGHT_QUERY)
+                    Some(tree_sitter_php::HIGHLIGHTS_QUERY)
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -317,7 +316,7 @@ impl Language {
             Language::Ruby => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    Some(tree_sitter_ruby::HIGHLIGHT_QUERY)
+                    Some(tree_sitter_ruby::HIGHLIGHTS_QUERY)
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
@@ -341,27 +340,27 @@ impl Language {
     /// Get injections query for this language (if available)
     pub fn injections_query(&self) -> Option<&'static str> {
         match self {
-            Language::Rust => tree_sitter_rust::INJECTIONS_QUERY.into(),
+            Language::Rust => Some(tree_sitter_rust::INJECTIONS_QUERY),
             Language::JavaScript => {
                 #[cfg(feature = "extended-languages")]
                 {
-                    tree_sitter_javascript::INJECTION_QUERY.into()
+                    Some(tree_sitter_javascript::INJECTIONS_QUERY)
                 }
                 #[cfg(not(feature = "extended-languages"))]
                 {
                     None
                 }
             }
-            Language::TypeScript => None, // TypeScript injections query not available
-            Language::Python => None,     // Python doesn't have injections query
-            Language::C => None,          // C doesn't have injections query
-            Language::Cpp => None,        // C++ doesn't have injections query
-            Language::Go => None,         // Go doesn't have injections query
-            Language::Java => None,       // Java doesn't have injections query
-            Language::Php => None,        // PHP doesn't have injections query
-            Language::Ruby => None,       // Ruby doesn't have injections query
-            Language::Swift => None,      // Swift doesn't have injections query
-            Language::Kotlin => None,     // Kotlin doesn't have injections query
+            Language::TypeScript => None,
+            Language::Python => None,
+            Language::C => None,
+            Language::Cpp => None,
+            Language::Go => None,
+            Language::Java => None,
+            Language::Php => None,
+            Language::Ruby => None,
+            Language::Swift => None,  // Swift doesn't have injections query
+            Language::Kotlin => None, // Kotlin doesn't have injections query
         }
     }
 
@@ -409,7 +408,6 @@ impl Language {
                 Language::Php,
                 Language::Ruby,
                 Language::Swift,
-                Language::Kotlin,
             ]);
             languages
         }
@@ -514,6 +512,7 @@ mod tests {
         for lang in Language::all() {
             assert!(lang.tree_sitter_language().is_ok());
         }
+        assert!(Language::Kotlin.tree_sitter_language().is_err());
     }
 
     #[cfg(not(feature = "extended-languages"))]

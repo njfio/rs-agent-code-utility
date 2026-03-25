@@ -7,7 +7,11 @@ use crate::infrastructure::config::DatabaseConfig;
 use crate::{log_debug as debug, log_info as info};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{migrate::MigrateDatabase, Sqlite, SqlitePool};
+use sqlx_core::{
+    error::Error as SqlxError, from_row::FromRow, migrate::MigrateDatabase, query::query,
+    query_as::query_as, query_scalar::query_scalar, row::Row,
+};
+use sqlx_sqlite::{Sqlite, SqlitePool, SqliteRow};
 use std::path::Path;
 
 /// Database manager for handling all database operations
@@ -17,7 +21,7 @@ pub struct DatabaseManager {
 }
 
 /// Vulnerability data stored in database
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VulnerabilityRecord {
     pub id: String,
     pub cve_id: String,
@@ -35,7 +39,7 @@ pub struct VulnerabilityRecord {
 }
 
 /// Analysis result cache entry
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisCacheEntry {
     pub id: String,
     pub file_path: String,
@@ -47,7 +51,7 @@ pub struct AnalysisCacheEntry {
 }
 
 /// Secret pattern for detection
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecretPattern {
     pub id: String,
     pub name: String,
@@ -59,14 +63,69 @@ pub struct SecretPattern {
     pub updated_at: DateTime<Utc>,
 }
 
+fn parse_timestamp(value: String) -> Result<DateTime<Utc>, SqlxError> {
+    DateTime::parse_from_rfc3339(&value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|error| SqlxError::Decode(Box::new(error)))
+}
+
+impl<'r> FromRow<'r, SqliteRow> for VulnerabilityRecord {
+    fn from_row(row: &'r SqliteRow) -> Result<Self, SqlxError> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            cve_id: row.try_get("cve_id")?,
+            package_name: row.try_get("package_name")?,
+            affected_versions: row.try_get("affected_versions")?,
+            severity: row.try_get("severity")?,
+            cvss_score: row.try_get("cvss_score")?,
+            description: row.try_get("description")?,
+            published_date: parse_timestamp(row.try_get("published_date")?)?,
+            last_modified: parse_timestamp(row.try_get("last_modified")?)?,
+            references: row.try_get("references")?,
+            cwe_ids: row.try_get("cwe_ids")?,
+            created_at: parse_timestamp(row.try_get("created_at")?)?,
+            updated_at: parse_timestamp(row.try_get("updated_at")?)?,
+        })
+    }
+}
+
+impl<'r> FromRow<'r, SqliteRow> for AnalysisCacheEntry {
+    fn from_row(row: &'r SqliteRow) -> Result<Self, SqlxError> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            file_path: row.try_get("file_path")?,
+            file_hash: row.try_get("file_hash")?,
+            analysis_type: row.try_get("analysis_type")?,
+            result_data: row.try_get("result_data")?,
+            created_at: parse_timestamp(row.try_get("created_at")?)?,
+            expires_at: parse_timestamp(row.try_get("expires_at")?)?,
+        })
+    }
+}
+
+impl<'r> FromRow<'r, SqliteRow> for SecretPattern {
+    fn from_row(row: &'r SqliteRow) -> Result<Self, SqlxError> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            name: row.try_get("name")?,
+            pattern: row.try_get("pattern")?,
+            entropy_threshold: row.try_get("entropy_threshold")?,
+            confidence: row.try_get("confidence")?,
+            enabled: row.try_get("enabled")?,
+            created_at: parse_timestamp(row.try_get("created_at")?)?,
+            updated_at: parse_timestamp(row.try_get("updated_at")?)?,
+        })
+    }
+}
+
 impl DatabaseManager {
     /// Create a new database manager with the given configuration
-    pub async fn new(config: &DatabaseConfig) -> Result<Self, sqlx::Error> {
+    pub async fn new(config: &DatabaseConfig) -> Result<Self, SqlxError> {
         // Ensure database directory exists
         if let Some(parent) = Path::new(&config.url.replace("sqlite://", "")).parent() {
             if !parent.exists() {
                 std::fs::create_dir_all(parent).map_err(|e| {
-                    sqlx::Error::Io(std::io::Error::other(format!(
+                    SqlxError::Io(std::io::Error::other(format!(
                         "Failed to create database directory: {}",
                         e
                     )))
@@ -92,11 +151,11 @@ impl DatabaseManager {
     }
 
     /// Run database migrations
-    async fn run_migrations(&self) -> Result<(), sqlx::Error> {
+    async fn run_migrations(&self) -> Result<(), SqlxError> {
         info!("Running database migrations");
 
         // Create vulnerabilities table
-        sqlx::query(
+        query(
             r#"
             CREATE TABLE IF NOT EXISTS vulnerabilities (
                 id TEXT PRIMARY KEY,
@@ -119,7 +178,7 @@ impl DatabaseManager {
         .await?;
 
         // Create analysis cache table
-        sqlx::query(
+        query(
             r#"
             CREATE TABLE IF NOT EXISTS analysis_cache (
                 id TEXT PRIMARY KEY,
@@ -136,7 +195,7 @@ impl DatabaseManager {
         .await?;
 
         // Create secret patterns table
-        sqlx::query(
+        query(
             r#"
             CREATE TABLE IF NOT EXISTS secret_patterns (
                 id TEXT PRIMARY KEY,
@@ -154,21 +213,19 @@ impl DatabaseManager {
         .await?;
 
         // Create indexes for better performance
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_vulnerabilities_package ON vulnerabilities(package_name)")
+        query("CREATE INDEX IF NOT EXISTS idx_vulnerabilities_package ON vulnerabilities(package_name)")
             .execute(&self.pool)
             .await?;
 
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_vulnerabilities_cve ON vulnerabilities(cve_id)",
-        )
-        .execute(&self.pool)
-        .await?;
-
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_cache_file_hash ON analysis_cache(file_hash)")
+        query("CREATE INDEX IF NOT EXISTS idx_vulnerabilities_cve ON vulnerabilities(cve_id)")
             .execute(&self.pool)
             .await?;
 
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_cache_expires ON analysis_cache(expires_at)")
+        query("CREATE INDEX IF NOT EXISTS idx_cache_file_hash ON analysis_cache(file_hash)")
+            .execute(&self.pool)
+            .await?;
+
+        query("CREATE INDEX IF NOT EXISTS idx_cache_expires ON analysis_cache(expires_at)")
             .execute(&self.pool)
             .await?;
 
@@ -180,7 +237,7 @@ impl DatabaseManager {
     }
 
     /// Insert default secret patterns
-    async fn insert_default_secret_patterns(&self) -> Result<(), sqlx::Error> {
+    async fn insert_default_secret_patterns(&self) -> Result<(), SqlxError> {
         let patterns = vec![
             ("AWS Access Key", r"AKIA[0-9A-Z]{16}", None, 0.9),
             ("AWS Secret Key", r"[0-9a-zA-Z/+]{40}", Some(4.5), 0.8),
@@ -215,7 +272,7 @@ impl DatabaseManager {
             let id = crate::generated_id();
             let now = Utc::now();
 
-            sqlx::query(
+            query(
                 r#"
                 INSERT OR IGNORE INTO secret_patterns
                 (id, name, pattern, entropy_threshold, confidence, enabled, created_at, updated_at)
@@ -237,8 +294,8 @@ impl DatabaseManager {
     }
 
     /// Store vulnerability data
-    pub async fn store_vulnerability(&self, vuln: &VulnerabilityRecord) -> Result<(), sqlx::Error> {
-        sqlx::query(
+    pub async fn store_vulnerability(&self, vuln: &VulnerabilityRecord) -> Result<(), SqlxError> {
+        query(
             r#"
             INSERT OR REPLACE INTO vulnerabilities
             (id, cve_id, package_name, affected_versions, severity, cvss_score, description,
@@ -270,8 +327,8 @@ impl DatabaseManager {
     pub async fn get_vulnerabilities_for_package(
         &self,
         package_name: &str,
-    ) -> Result<Vec<VulnerabilityRecord>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, VulnerabilityRecord>(
+    ) -> Result<Vec<VulnerabilityRecord>, SqlxError> {
+        let rows = query_as::<Sqlite, VulnerabilityRecord>(
             "SELECT * FROM vulnerabilities WHERE package_name = ? ORDER BY published_date DESC",
         )
         .bind(package_name)
@@ -282,11 +339,8 @@ impl DatabaseManager {
     }
 
     /// Store analysis result in cache
-    pub async fn store_analysis_cache(
-        &self,
-        entry: &AnalysisCacheEntry,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query(
+    pub async fn store_analysis_cache(&self, entry: &AnalysisCacheEntry) -> Result<(), SqlxError> {
+        query(
             r#"
             INSERT OR REPLACE INTO analysis_cache
             (id, file_path, file_hash, analysis_type, result_data, created_at, expires_at)
@@ -311,10 +365,10 @@ impl DatabaseManager {
         &self,
         file_hash: &str,
         analysis_type: &str,
-    ) -> Result<Option<AnalysisCacheEntry>, sqlx::Error> {
+    ) -> Result<Option<AnalysisCacheEntry>, SqlxError> {
         let now = Utc::now();
 
-        let row = sqlx::query_as::<_, AnalysisCacheEntry>(
+        let row = query_as::<Sqlite, AnalysisCacheEntry>(
             "SELECT * FROM analysis_cache WHERE file_hash = ? AND analysis_type = ? AND expires_at > ?"
         )
         .bind(file_hash)
@@ -327,8 +381,8 @@ impl DatabaseManager {
     }
 
     /// Get all secret patterns
-    pub async fn get_secret_patterns(&self) -> Result<Vec<SecretPattern>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, SecretPattern>(
+    pub async fn get_secret_patterns(&self) -> Result<Vec<SecretPattern>, SqlxError> {
+        let rows = query_as::<Sqlite, SecretPattern>(
             "SELECT * FROM secret_patterns WHERE enabled = 1 ORDER BY confidence DESC",
         )
         .fetch_all(&self.pool)
@@ -338,10 +392,10 @@ impl DatabaseManager {
     }
 
     /// Clean expired cache entries
-    pub async fn clean_expired_cache(&self) -> Result<u64, sqlx::Error> {
+    pub async fn clean_expired_cache(&self) -> Result<u64, SqlxError> {
         let now = Utc::now();
 
-        let result = sqlx::query("DELETE FROM analysis_cache WHERE expires_at < ?")
+        let result = query("DELETE FROM analysis_cache WHERE expires_at < ?")
             .bind(now.to_rfc3339())
             .execute(&self.pool)
             .await?;
@@ -355,17 +409,17 @@ impl DatabaseManager {
     }
 
     /// Get database statistics
-    pub async fn get_stats(&self) -> Result<DatabaseStats, sqlx::Error> {
-        let vuln_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM vulnerabilities")
+    pub async fn get_stats(&self) -> Result<DatabaseStats, SqlxError> {
+        let vuln_count: i64 = query_scalar::<Sqlite, i64>("SELECT COUNT(*) FROM vulnerabilities")
             .fetch_one(&self.pool)
             .await?;
 
-        let cache_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM analysis_cache")
+        let cache_count: i64 = query_scalar::<Sqlite, i64>("SELECT COUNT(*) FROM analysis_cache")
             .fetch_one(&self.pool)
             .await?;
 
         let pattern_count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM secret_patterns WHERE enabled = 1")
+            query_scalar::<Sqlite, i64>("SELECT COUNT(*) FROM secret_patterns WHERE enabled = 1")
                 .fetch_one(&self.pool)
                 .await?;
 
@@ -380,8 +434,8 @@ impl DatabaseManager {
     pub async fn get_vulnerabilities_by_cwe(
         &self,
         cwe_id: &str,
-    ) -> Result<Vec<VulnerabilityRecord>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, VulnerabilityRecord>(
+    ) -> Result<Vec<VulnerabilityRecord>, SqlxError> {
+        let rows = query_as::<Sqlite, VulnerabilityRecord>(
             r#"
             SELECT * FROM vulnerabilities
             WHERE cwe_ids LIKE ?
@@ -400,8 +454,8 @@ impl DatabaseManager {
     pub async fn search_vulnerabilities_by_keyword(
         &self,
         keyword: &str,
-    ) -> Result<Vec<VulnerabilityRecord>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, VulnerabilityRecord>(
+    ) -> Result<Vec<VulnerabilityRecord>, SqlxError> {
+        let rows = query_as::<Sqlite, VulnerabilityRecord>(
             r#"
             SELECT * FROM vulnerabilities
             WHERE description LIKE ? OR cve_id LIKE ?

@@ -48,7 +48,7 @@ impl SyntaxTree {
 
     /// Get the language of this tree
     pub fn language(&self) -> tree_sitter::Language {
-        self.inner.language()
+        self.inner.language().clone()
     }
 
     /// Check if the tree has any parse errors

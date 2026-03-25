@@ -422,25 +422,23 @@ impl RustSyntax {
             if let Some(func_name) = Self::function_name(&ts_node, source) {
                 // Look for lifetime parameters
                 if let Some(params_node) = ts_node.child_by_field_name("type_parameters") {
-                    let mut cursor = params_node.walk();
-                    if cursor.goto_first_child() {
-                        loop {
-                            let node = cursor.node();
-                            if node.kind() == "lifetime" {
-                                if let Ok(lifetime_text) = node.utf8_text(source.as_bytes()) {
-                                    lifetimes.push((
-                                        func_name.clone(),
-                                        lifetime_text.to_string(),
-                                        func_node.start_position(),
-                                        func_node.end_position(),
-                                    ));
-                                }
+                    let mut stack = vec![params_node];
+                    while let Some(node) = stack.pop() {
+                        if node.kind() == "lifetime_parameter" {
+                            let lifetime_node = node.child_by_field_name("name").unwrap_or(node);
+                            if let Ok(lifetime_text) = lifetime_node.utf8_text(source.as_bytes()) {
+                                lifetimes.push((
+                                    func_name.clone(),
+                                    lifetime_text.to_string(),
+                                    func_node.start_position(),
+                                    func_node.end_position(),
+                                ));
                             }
-
-                            if !cursor.goto_next_sibling() {
-                                break;
-                            }
+                            continue;
                         }
+
+                        let mut cursor = node.walk();
+                        stack.extend(node.named_children(&mut cursor));
                     }
                 }
             }
