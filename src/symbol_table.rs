@@ -1318,14 +1318,73 @@ impl SymbolTableAnalyzer {
         Ok(None)
     }
 
-    fn extract_go_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement Go symbol extraction
-        Ok(None)
+    fn extract_go_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "function_declaration" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Function,
+                self.extract_field_text(node, "parameters")
+                    .map(|parameters| format!("fn{parameters}")),
+            ),
+            "method_declaration" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Method,
+                self.extract_field_text(node, "parameters")
+                    .map(|parameters| format!("fn{parameters}")),
+            ),
+            "type_spec" | "type_alias" => {
+                let Some(name_node) = node.child_by_field_name("name") else {
+                    return Ok(None);
+                };
+                let Ok(name) = name_node.text() else {
+                    return Ok(None);
+                };
+                let type_node = node.child_by_field_name("type");
+                let data_type = type_node.and_then(|ty| ty.text().ok().map(str::to_string));
+                let symbol_type = match node.kind() {
+                    "type_alias" => SymbolType::TypeAlias,
+                    _ => match type_node.map(|ty| ty.kind().to_string()) {
+                        Some(kind) if matches!(kind.as_str(), "struct_type" | "interface_type") => {
+                            SymbolType::Class
+                        }
+                        _ => SymbolType::TypeAlias,
+                    },
+                };
+
+                Ok(Some(self.build_symbol_definition(
+                    name.to_string(),
+                    symbol_type,
+                    node.start_position(),
+                    data_type,
+                    false,
+                    false,
+                    false,
+                    None,
+                )?))
+            }
+            _ => Ok(None),
+        }
     }
 
-    fn extract_php_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement PHP symbol extraction
-        Ok(None)
+    fn extract_php_symbol_definition(&self, node: Node) -> Result<Option<SymbolDefinition>> {
+        match node.kind() {
+            "class_declaration" => {
+                self.extract_named_symbol_definition(node, SymbolType::Class, Some("class".into()))
+            }
+            "function_definition" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Function,
+                self.extract_field_text(node, "parameters")
+                    .map(|parameters| format!("fn{parameters}")),
+            ),
+            "method_declaration" => self.extract_named_symbol_definition(
+                node,
+                SymbolType::Method,
+                self.extract_field_text(node, "parameters")
+                    .map(|parameters| format!("fn{parameters}")),
+            ),
+            _ => Ok(None),
+        }
     }
 
     /// Find unresolved symbol references
@@ -1958,6 +2017,77 @@ func run() {}
         assert_eq!(names_to_types.remove("Box"), Some(SymbolType::Class));
         assert_eq!(names_to_types.remove("Mode"), Some(SymbolType::Class));
         assert_eq!(names_to_types.remove("run"), Some(SymbolType::Function));
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_go_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::Go)?;
+        let tree = parser.parse(
+            r#"
+type Box struct{}
+type Reader interface {
+    Read([]byte) (int, error)
+}
+type Alias = int
+
+func Run() {}
+
+func (b *Box) helper() {}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Go);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("Box"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("Reader"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("Alias"), Some(SymbolType::TypeAlias));
+        assert_eq!(names_to_types.remove("Run"), Some(SymbolType::Function));
+        assert_eq!(names_to_types.remove("helper"), Some(SymbolType::Method));
+
+        Ok(())
+    }
+
+    #[cfg(feature = "extended-languages")]
+    #[test]
+    fn test_php_symbol_extraction() -> Result<()> {
+        let parser = Parser::new(Language::Php)?;
+        let tree = parser.parse(
+            r#"
+<?php
+class User {
+    public function run($name) {}
+}
+
+function helper($value) {}
+            "#,
+            None,
+        )?;
+
+        let mut analyzer = SymbolTableAnalyzer::new(Language::Php);
+        let result = analyzer.analyze(&tree)?;
+
+        let mut names_to_types = result
+            .symbol_table
+            .symbols
+            .values()
+            .map(|symbol| (symbol.name.clone(), symbol.symbol_type.clone()))
+            .collect::<HashMap<_, _>>();
+
+        assert_eq!(names_to_types.remove("User"), Some(SymbolType::Class));
+        assert_eq!(names_to_types.remove("run"), Some(SymbolType::Method));
+        assert_eq!(names_to_types.remove("helper"), Some(SymbolType::Function));
 
         Ok(())
     }
