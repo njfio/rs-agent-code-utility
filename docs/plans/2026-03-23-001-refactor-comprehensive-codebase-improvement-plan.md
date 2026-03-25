@@ -220,6 +220,8 @@ The target architecture has three layers:
   - [x] `src/query.rs`
 - [x] Track remaining modules as a follow-up issue (one PR per module batch) in `docs/plans/2026-03-24-002-follow-up-unwrap-hardening-batches.md`
 
+**Implementation note (2026-03-24, later):** A fresh `panic!|unwrap|expect` audit over `src/` shows the remaining matches are limited to `#[cfg(test)]` modules, commented-out examples, or analyzer heuristics that intentionally match user code containing `unwrap()` / `expect()`. The dormant `integration_testing` and `performance_benchmarking` modules are not exported from `src/lib.rs`, and there is no active `fuzz_testing` module in the crate root, so they do not affect non-test library code paths. Combined with the existing `#![deny(clippy::unwrap_used, clippy::expect_used)]` guard in `src/lib.rs`, the current compiled library surface can now be marked panic-free for non-test code paths.
+
 **Acceptance criteria:**
 - Core parsing/analysis path is panic-free
 - CLI does not panic on malformed input
@@ -854,7 +856,7 @@ Phase 0 (CI/deps)
 - [ ] Parse speed remains < 3ms/1K LOC (no regression from Phase 2 changes)
 - [ ] `cargo build` (default features) completes in < 30 seconds on CI
 - [ ] Zero known CVEs in dependency tree
-- [ ] Zero panics in library code paths (non-test)
+- [x] Zero panics in library code paths (non-test)
 
 ### Quality Gates
 
