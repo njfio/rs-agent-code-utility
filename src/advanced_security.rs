@@ -1005,8 +1005,7 @@ impl AdvancedSecurityAnalyzer {
             }
         }
 
-        // For now, keep all other finding types (secrets, input issues, etc.)
-        // TODO: Add more sophisticated filtering for these types
+        // Semantic false-positive filtering currently only refines vulnerability findings.
         let filtered_secrets = secrets;
         let filtered_input_issues = input_issues;
         let filtered_injection_vulns = injection_vulns;

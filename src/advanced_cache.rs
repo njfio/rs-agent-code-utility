@@ -316,32 +316,42 @@ where
     }
 
     pub fn invalidate_by_dependency(&self, dependency: &str) -> Result<usize> {
+        let keys_to_remove = self.keys_for_dependency(dependency)?;
+        let removed_count = keys_to_remove.len();
+
+        if removed_count == 0 {
+            return Ok(0);
+        }
+
         let mut entries = self
             .entries
             .write()
             .map_err(|_| Error::internal_error("cache", "Failed to acquire write lock"))?;
-
-        let keys_to_remove: Vec<String> = entries
-            .iter()
-            .filter(|(_, entry)| entry.dependencies.contains(&dependency.to_string()))
-            .map(|(key, _)| key.clone())
-            .collect();
-
-        let mut removed_count = 0;
         for key in keys_to_remove {
             entries.remove(&key);
-            removed_count += 1;
         }
 
-        if removed_count > 0 {
-            let total_size: usize = entries.values().map(|e| e.size_bytes).sum();
-            let mut stats = self.stats.write().map_err(|_| {
-                Error::internal_error("cache", "Failed to acquire stats write lock")
-            })?;
-            stats.memory_usage_bytes = total_size;
-        }
+        let total_size: usize = entries.values().map(|e| e.size_bytes).sum();
+        let mut stats = self
+            .stats
+            .write()
+            .map_err(|_| Error::internal_error("cache", "Failed to acquire stats write lock"))?;
+        stats.memory_usage_bytes = total_size;
 
         Ok(removed_count)
+    }
+
+    pub fn keys_for_dependency(&self, dependency: &str) -> Result<Vec<String>> {
+        let entries = self
+            .entries
+            .read()
+            .map_err(|_| Error::internal_error("cache", "Failed to acquire read lock"))?;
+
+        Ok(entries
+            .iter()
+            .filter(|(_, entry)| entry.dependencies.iter().any(|dep| dep == dependency))
+            .map(|(key, _)| key.clone())
+            .collect())
     }
 
     pub fn cleanup_expired(&self) -> Result<usize> {
@@ -578,6 +588,77 @@ where
         Ok(removed)
     }
 
+    pub fn invalidate_by_dependency(&self, dependency: &str) -> Result<usize> {
+        let keys_to_remove = self.keys_for_dependency(dependency)?;
+
+        let mut removed_count = 0;
+        for key in keys_to_remove {
+            if self.invalidate(&key)? {
+                removed_count += 1;
+            }
+        }
+
+        Ok(removed_count)
+    }
+
+    pub fn cleanup_expired(&self) -> Result<usize> {
+        let cache_files: Vec<PathBuf> = fs::read_dir(&self.cache_dir)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| Self::is_cache_file(path))
+            .collect();
+
+        let mut removed_count = 0;
+        for path in cache_files {
+            let existed = path.exists();
+            let Some(key) = path
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .map(str::to_owned)
+            else {
+                continue;
+            };
+
+            let _ = self.load_entry(&key)?;
+            if existed && !path.exists() {
+                removed_count += 1;
+            }
+        }
+
+        if removed_count > 0 {
+            self.update_disk_usage_stats()?;
+        }
+
+        Ok(removed_count)
+    }
+
+    pub fn keys_for_dependency(&self, dependency: &str) -> Result<Vec<String>> {
+        let cache_files: Vec<PathBuf> = fs::read_dir(&self.cache_dir)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| Self::is_cache_file(path))
+            .collect();
+
+        let mut keys = Vec::new();
+        for path in cache_files {
+            let Some(key) = path
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .map(str::to_owned)
+            else {
+                continue;
+            };
+
+            if let Some(entry) = self.load_entry(&key)? {
+                if entry.dependencies.iter().any(|dep| dep == dependency) {
+                    keys.push(key);
+                }
+            }
+        }
+
+        Ok(keys)
+    }
+
     pub fn stats(&self) -> Result<CacheStats> {
         let mut stats = self
             .stats
@@ -644,8 +725,6 @@ where
             }
         }
 
-        // TODO: Try network cache if enabled
-
         Ok(None)
     }
 
@@ -665,8 +744,6 @@ where
             disk_cache.put(key, data, ttl, dependencies)?;
         }
 
-        // TODO: Replicate to network peers if enabled
-
         Ok(())
     }
 
@@ -681,27 +758,35 @@ where
             invalidated |= disk_cache.invalidate(key)?;
         }
 
-        // TODO: Invalidate from network peers
-
         Ok(invalidated)
     }
 
     pub async fn invalidate_by_dependency(&self, dependency: &str) -> Result<usize> {
-        let mut total_invalidated = 0;
+        let mut keys = self.memory.keys_for_dependency(dependency)?;
+        if let Some(ref disk_cache) = self.disk {
+            for key in disk_cache.keys_for_dependency(dependency)? {
+                if !keys.iter().any(|existing| existing == &key) {
+                    keys.push(key);
+                }
+            }
+        }
 
-        // Invalidate from memory
-        total_invalidated += self.memory.invalidate_by_dependency(dependency)?;
+        for key in &keys {
+            let _ = self.memory.invalidate(key)?;
+            if let Some(ref disk_cache) = self.disk {
+                let _ = disk_cache.invalidate(key)?;
+            }
+        }
 
-        // TODO: Invalidate from disk and network
-
-        Ok(total_invalidated)
+        Ok(keys.len())
     }
 
     pub async fn cleanup(&self) -> Result<()> {
         // Cleanup memory cache
         let _ = self.memory.cleanup_expired()?;
-
-        // TODO: Cleanup disk and network caches
+        if let Some(ref disk_cache) = self.disk {
+            let _ = disk_cache.cleanup_expired()?;
+        }
 
         Ok(())
     }
@@ -877,6 +962,53 @@ mod tests {
         );
         assert_eq!(cache.invalidate_by_dependency("file:src/main.rs").await?, 1);
         assert_eq!(cache.memory.get("promote_key")?, None);
+        assert_eq!(cache.get("promote_key").await?, None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_disk_cache_invalidate_by_dependency(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let config = CacheConfig {
+            cache_dir: temp_dir.path().to_path_buf(),
+            ..CacheConfig::default()
+        };
+
+        let cache: DiskCache<String> = DiskCache::new(config)?;
+        cache.put(
+            "disk_key".to_string(),
+            "disk_value".to_string(),
+            Some(Duration::from_secs(60)),
+            vec!["file:src/lib.rs".to_string()],
+        )?;
+
+        assert_eq!(cache.invalidate_by_dependency("file:src/lib.rs")?, 1);
+        assert_eq!(cache.get("disk_key")?, None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_disk_cache_cleanup_expired_entries(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let config = CacheConfig {
+            cache_dir: temp_dir.path().to_path_buf(),
+            ..CacheConfig::default()
+        };
+
+        let cache: DiskCache<String> = DiskCache::new(config)?;
+        cache.put(
+            "expired_key".to_string(),
+            "expired_value".to_string(),
+            Some(Duration::from_secs(0)),
+            Vec::new(),
+        )?;
+
+        assert_eq!(cache.cleanup_expired()?, 1);
+        assert_eq!(cache.get("expired_key")?, None);
 
         Ok(())
     }
