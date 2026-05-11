@@ -53,7 +53,6 @@
 //! for file_info in &result.files {
 //!     println!("File: {}", file_info.path.display());
 //!     println!("  Functions: {}", file_info.symbols.len());
-//!     println!("  Security issues: {}", file_info.security_vulnerabilities.len());
 //! }
 //! # Ok(())
 //! # }
@@ -79,12 +78,10 @@
 //! // Access results directly
 //! println!("Total files analyzed: {}", result.total_files);
 //! println!("Total functions: {}", result.files.iter().map(|f| f.symbols.len()).sum::<usize>());
-//! println!("Security issues found: {}", result.files.iter().map(|f| f.security_vulnerabilities.len()).sum::<usize>());
 //! # Ok(())
 //! # }
 //! ```
 
-use crate::advanced_security::{AdvancedSecurityAnalyzer, SecurityVulnerability};
 use crate::error::{Error, Result};
 use crate::file_cache::FileCache;
 use crate::languages::Language;
@@ -155,8 +152,6 @@ pub struct AnalysisConfig {
     pub thread_count: Option<usize>,
     /// Minimum number of files to enable parallel processing
     pub parallel_threshold: usize,
-    /// Enable security analysis (OWASP, taint) during file analysis
-    pub enable_security: bool,
 }
 
 impl Default for AnalysisConfig {
@@ -196,7 +191,6 @@ impl Default for AnalysisConfig {
             enable_parallel: true,
             thread_count: None,     // Auto-detect
             parallel_threshold: 10, // Enable parallel processing for 10+ files
-            enable_security: false,
         }
     }
 }
@@ -219,8 +213,6 @@ pub struct FileInfo {
     pub parse_errors: Vec<String>,
     /// Extracted symbols (functions, classes, etc.)
     pub symbols: Vec<Symbol>,
-    /// Security vulnerabilities found in this file
-    pub security_vulnerabilities: Vec<SecurityVulnerability>,
 }
 
 /// A code symbol (function, class, struct, etc.)
@@ -292,7 +284,6 @@ impl AnalysisResult {
 pub struct CodebaseAnalyzer {
     config: AnalysisConfig,
     parsers: HashMap<Language, Parser>,
-    security_analyzer: AdvancedSecurityAnalyzer,
     semantic_graph: Option<SemanticGraphQuery>,
     file_cache: FileCache,
 }
@@ -308,7 +299,6 @@ impl CodebaseAnalyzer {
         Ok(Self {
             config,
             parsers: HashMap::new(),
-            security_analyzer: AdvancedSecurityAnalyzer::new()?,
             semantic_graph: None,
             file_cache: FileCache::new(),
         })
@@ -735,7 +725,6 @@ impl CodebaseAnalyzer {
                 parsed_successfully: false,
                 parse_errors: Vec::new(),
                 symbols: Vec::new(),
-                security_vulnerabilities: Vec::new(),
             };
             return Ok(Some(file_info));
         }
@@ -750,7 +739,6 @@ impl CodebaseAnalyzer {
             parsed_successfully: false,
             parse_errors: Vec::new(),
             symbols: Vec::new(),
-            security_vulnerabilities: Vec::new(),
         };
 
         match parser.parse(&content, None) {
@@ -774,49 +762,6 @@ impl CodebaseAnalyzer {
                 // Extract symbols only for Full depth
                 if matches!(self.config.depth, AnalysisDepth::Full) {
                     file_info.symbols = self.extract_symbols(&tree, &content, language)?;
-                }
-
-                // Perform security analysis for Deep and Full depth if enabled
-                if self.config.enable_security
-                    && matches!(self.config.depth, AnalysisDepth::Deep | AnalysisDepth::Full)
-                {
-                    // Create a temporary FileInfo for security analysis with full path
-                    let temp_file_info = FileInfo {
-                        path: file_path.to_path_buf(), // Use full path for security analysis
-                        language: file_info.language.clone(),
-                        size: file_info.size,
-                        lines: file_info.lines,
-                        parsed_successfully: file_info.parsed_successfully,
-                        parse_errors: file_info.parse_errors.clone(),
-                        symbols: file_info.symbols.clone(),
-                        security_vulnerabilities: Vec::new(),
-                    };
-
-                    // Create a new security analyzer for this thread
-                    let security_analyzer = AdvancedSecurityAnalyzer::new().map_err(|e| {
-                        Error::internal_error(
-                            "security_analyzer",
-                            format!("Failed to create security analyzer: {}", e),
-                        )
-                    })?;
-
-                    match security_analyzer.detect_owasp_vulnerabilities(&temp_file_info) {
-                        Ok(vulnerabilities) => {
-                            // Update the vulnerabilities to use relative paths for consistency
-                            let mut updated_vulnerabilities = vulnerabilities;
-                            for vuln in &mut updated_vulnerabilities {
-                                vuln.location.file = relative_path.clone();
-                            }
-                            file_info.security_vulnerabilities = updated_vulnerabilities;
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "Warning: Security analysis failed for {}: {}",
-                                file_path.display(),
-                                e
-                            );
-                        }
-                    }
                 }
             }
             Err(e) => {
@@ -896,7 +841,6 @@ impl CodebaseAnalyzer {
                 parsed_successfully: false,
                 parse_errors: Vec::new(),
                 symbols: Vec::new(),
-                security_vulnerabilities: Vec::new(),
             };
             result.files.push(file_info);
             return Ok(());
@@ -912,7 +856,6 @@ impl CodebaseAnalyzer {
             parsed_successfully: false,
             parse_errors: Vec::new(),
             symbols: Vec::new(),
-            security_vulnerabilities: Vec::new(),
         };
 
         match parser.parse(&content, None) {
@@ -937,44 +880,6 @@ impl CodebaseAnalyzer {
                 // Extract symbols only for Full depth
                 if matches!(self.config.depth, AnalysisDepth::Full) {
                     file_info.symbols = self.extract_symbols(&tree, &content, language)?;
-                }
-
-                // Perform security analysis for Deep and Full depth if enabled
-                if self.config.enable_security
-                    && matches!(self.config.depth, AnalysisDepth::Deep | AnalysisDepth::Full)
-                {
-                    // Create a temporary FileInfo for security analysis with full path
-                    let temp_file_info = FileInfo {
-                        path: file_path.to_path_buf(), // Use full path for security analysis
-                        language: file_info.language.clone(),
-                        size: file_info.size,
-                        lines: file_info.lines,
-                        parsed_successfully: file_info.parsed_successfully,
-                        parse_errors: file_info.parse_errors.clone(),
-                        symbols: file_info.symbols.clone(),
-                        security_vulnerabilities: Vec::new(),
-                    };
-
-                    match self
-                        .security_analyzer
-                        .detect_owasp_vulnerabilities(&temp_file_info)
-                    {
-                        Ok(vulnerabilities) => {
-                            // Update the vulnerabilities to use relative paths for consistency
-                            let mut updated_vulnerabilities = vulnerabilities;
-                            for vuln in &mut updated_vulnerabilities {
-                                vuln.location.file = relative_path.clone();
-                            }
-                            file_info.security_vulnerabilities = updated_vulnerabilities;
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "Warning: Security analysis failed for {}: {}",
-                                file_path.display(),
-                                e
-                            );
-                        }
-                    }
                 }
             }
             Err(e) => {
@@ -2222,16 +2127,12 @@ impl CodebaseAnalyzer {
 
 impl Default for CodebaseAnalyzer {
     fn default() -> Self {
-        Self::new().unwrap_or_else(|_| {
-            // Fallback implementation if security analyzer fails
-            Self {
-                config: AnalysisConfig::default(),
-                parsers: HashMap::new(),
-                security_analyzer: AdvancedSecurityAnalyzer::default(),
-                semantic_graph: None,
-                file_cache: FileCache::new(),
-            }
-        })
+        Self {
+            config: AnalysisConfig::default(),
+            parsers: HashMap::new(),
+            semantic_graph: None,
+            file_cache: FileCache::new(),
+        }
     }
 }
 

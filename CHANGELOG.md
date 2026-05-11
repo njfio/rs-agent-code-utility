@@ -7,16 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Security CLI: `--min-confidence`, `--fail-on`, `--no-ai-filter`, `--filter-mode`, `--baseline`, `--update-baseline`, `--include-tests`, `--include-examples`, `--include-non-code`, `--max-file-kb`, and `--format sarif`.
-- AST Security CLI: baseline handling, SARIF output, `--max-file-kb` size budget.
-- Deterministic false-positive filter with `strict|balanced|permissive` modes.
-- Secrets detector: added Twilio, SendGrid, Azure validators; tuned entropy and placeholders.
-- Markdown/JSON snapshot tests for security outputs.
+## [0.2.0-alpha.1] - 2026-05-11
 
-### Changed
-- Security SARIF now includes `baselineState` new/unchanged when baseline is provided.
-- Severity breakdowns computed after filtering for accurate counts.
+This is the first alpha of the **agentic-retrieval MCP pivot**. The crate
+is being repositioned from "library that calls LLMs for code analysis"
+to a focused parsing/indexing core for the upcoming `rts-daemon` + `rts-mcp`
+stack that serves AI coding agents (Claude Code, Cursor, Cline, Aider) over
+the Model Context Protocol.
+
+See `docs/brainstorms/2026-05-10-agentic-retrieval-mcp-requirements.md` and
+`docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md`
+for the full design rationale.
+
+### BREAKING CHANGES
+
+- **`FileInfo.security_vulnerabilities` field removed.** Anything that
+  read this field on `FileInfo` no longer compiles. Use one of the
+  archived security analyzers (under `archive/src/`) if you still need
+  per-file vulnerability data.
+- **`AnalysisConfig.enable_security` field removed.** The flag and its
+  underlying security passes are gone from the default analyzer.
+- **`CodebaseAnalyzer.security_analyzer` field removed.** No public method
+  changed but the type is no longer constructible with a security pass.
+- **The `default` Cargo feature set is reduced** from
+  `["std", "ml", "net", "db"]` to `["std"]`. The `ml`, `net`, `db`, and
+  `demo` features and all their gated dependencies have been removed.
+- **The `tree-sitter-cli` and `rts-cli` binaries are no longer built** by
+  this crate. Both wrapped `src/cli/`, which is archived. The new entry
+  points are coming as separate workspace crates (`rts-daemon`,
+  `rts-mcp`, `rts-bench`) per the plan.
+
+### Removed
+
+The following ~30k LOC of modules and their public re-exports have been
+**archived** (moved to `archive/src/`, kept in git history, not built by
+default). Recovery: `git mv archive/src/<mod> src/<mod>` and add the
+`pub mod` declaration back.
+
+- **AI service layer**: `ai/`, `ai_analysis.rs`, `advanced_ai_analysis.rs`,
+  `embeddings.rs`, `intent_mapping.rs`, `intent_mapping_stub.rs`,
+  `reasoning_engine.rs`.
+- **Security analyzers**: `taint_analysis.rs`, `sql_injection_detector.rs`,
+  `command_injection_detector.rs`, `security/`, `enhanced_security.rs`,
+  `advanced_security.rs`.
+- **Refactoring + AST transform**: `smart_refactoring.rs`,
+  `refactoring.rs`, `ast_transformation.rs`.
+- **Wiki + dev tooling**: `wiki/`, `fuzz_testing.rs`,
+  `integration_testing.rs`, `test_coverage.rs`, `ci_cd_integration.rs`,
+  `performance_benchmarking.rs`, `code_evolution.rs`.
+- **CLI + binaries**: `cli/`, `bin/main.rs`, `bin/rts.rs`.
+- **Infrastructure shells**: `infrastructure/` (HTTP / sqlx / rate-limiter
+  shells archived; cache and config kept inline if needed).
+- **Over-engineered cache**: `advanced_cache.rs`.
+
+### Security
+
+- Archiving the AI service layer + sqlx + reqwest removes the transitive
+  dependencies that carried open `RUSTSEC` advisories on `ring`, `sqlx`,
+  and `paste` per `docs/DEPENDENCY_AUDIT_REPORT.md`. The new
+  `rust_tree_sitter` v0.2.0-alpha.1 has zero outbound HTTP dependencies.
+
+### Internal
+
+- `src/analyzer.rs` ↔ `src/advanced_security.rs` coupling severed at all
+  reference sites (the field on `FileInfo`, the field on
+  `CodebaseAnalyzer`, both analyze paths, the `Default` impl, and two
+  module-level doctest examples).
+- `src/lib.rs` rewritten from 478 lines to ~170 lines, exposing only the
+  surviving parsing + analysis primitives. The crate doc no longer
+  references removed AI/security features.
+- Workspace pre-archive audit confirmed only **one** structural coupling
+  between surviving core and cut buckets; `semantic_context.rs`'s
+  earlier taint-analyzer dependency had already been commented out.
+- 286 lib + integration tests pass on the slim build (was 49 test files;
+  surviving file count is 15 plus the lib's 171 unit tests).
+
+### Coming next (planned, not in this alpha)
+
+- P1: Tree-sitter `0.20 → 0.26.8` bump with the `Query → QueryCursor +
+  streaming_iterator` API migration — much smaller surface to migrate
+  now that ~30k LOC is archived.
+- P4: Cargo workspace split into `rts-core`, `rts-daemon`, `rts-mcp`,
+  `rts-bench`. Rust 2024 edition. `#![forbid(unsafe_code)]` on
+  `rts-core`.
+- P5: Daemon ↔ MCP protocol-v0 design doc.
+- P6 / P7: The daemon and the MCP server itself.
+
+### Previously in [Unreleased]
+
+The pre-pivot 0.1.x backlog (additional security CLI flags, SARIF
+extensions, secrets-detector validators, deterministic false-positive
+filter modes) is now in `archive/`. None of those features are part of
+the agentic-retrieval product surface and they will not return in v0.2.x.
 
 ## [0.1.0] - 2024-12-19
 

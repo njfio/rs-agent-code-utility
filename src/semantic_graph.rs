@@ -776,7 +776,6 @@ mod tests {
             parsed_successfully: true,
             parse_errors: Vec::new(),
             symbols,
-            security_vulnerabilities: Vec::new(),
         };
 
         AnalysisResult {

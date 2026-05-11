@@ -439,7 +439,6 @@ mod tests {
             symbols: vec![],
             parsed_successfully: true,
             parse_errors: vec![],
-            security_vulnerabilities: vec![],
             size: 12000,
         };
 

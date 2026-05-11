@@ -480,7 +480,6 @@ import React from 'react';
             parsed_successfully: true,
             parse_errors: Vec::new(),
             symbols: Vec::new(),
-            security_vulnerabilities: Vec::new(),
         });
         files.push(FileInfo {
             path: PathBuf::from("src/analyzer.rs"),
@@ -490,7 +489,6 @@ import React from 'react';
             parsed_successfully: true,
             parse_errors: Vec::new(),
             symbols: Vec::new(),
-            security_vulnerabilities: Vec::new(),
         });
 
         let result = AnalysisResult {
