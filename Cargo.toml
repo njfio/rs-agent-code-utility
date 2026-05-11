@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/rts-core",
+    "crates/rts-daemon",
 ]
 # `spikes/*` and `archive/*` are deliberately excluded — they're scratch
 # binaries (P0 validation) and historical retired code, not part of the

@@ -257,9 +257,13 @@ Refuse to start on network mounts. Implementation: read `/proc/self/mountinfo` (
 
 (security-review HIGH findings F4, F5 collapsed.)
 
-### 6.1 Refuse symlinked workspace components at Mount
+### 6.1 Refuse symlinked workspace roots at Mount
 
-`Workspace.Mount` walks every component of the supplied path and rejects (`MOUNT_HAS_SYMLINK`) if any component is itself a symlink. This is stricter than `realpath()`-once and eliminates the entire symlink-escape attack surface for v0.
+`Workspace.Mount` rejects with `MOUNT_HAS_SYMLINK` if the workspace root itself (the leaf of the supplied path) is a symlink. **Ancestor symlinks are tolerated** — macOS structurally symlinks `/var → /private/var` and `/tmp → /private/tmp`, and many development setups have symlinked parent directories (Homebrew aliases, conda envs, etc.). Enforcing "no symlinks anywhere in the path" broke too many legitimate cases for too little additional security: the real defence against root-replacement-after-mount is the `(dev, inode)` fingerprint binding in `verify_unchanged` (§5.2), which catches swaps the strict ancestor scan was nominally protecting against, and catches them at remount time without false positives at first mount.
+
+What we still refuse at Mount:
+- The workspace-root leaf being a symlink (the obvious "I mounted a symlink that points at the attacker's tree" case).
+- `..` segments anywhere in the user-supplied path (`PATH_TRAVERSAL`).
 
 ### 6.2 Per-read prefix check
 

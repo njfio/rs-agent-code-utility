@@ -7,6 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.5] - 2026-05-11
+
+P6 skeleton of the agentic-retrieval pivot: first slice of the `rts-daemon`
+crate ships. The daemon binds a Unix-domain socket, enforces the protocol-v0
+auth boundary, and round-trips 6 of the 10 v0 methods. The remaining 4 (the
+`Index.*` family) explicitly return `INDEX_NOT_READY` until indexing wires
+in (later P6 phases).
+
+### Added
+
+- **`crates/rts-daemon/`** workspace member with binary `rts-daemon`.
+- **Lifecycle (`src/lifecycle.rs`)** per protocol-v0 §12 + §15:
+  - `umask(0077)` at startup
+  - Refuse-to-run-as-root (aborts on `geteuid() == 0`)
+  - `RLIMIT_CORE=0` + Linux `PR_SET_DUMPABLE=0` to prevent core dumps
+  - PID lockfile via `flock(LOCK_EX | LOCK_NB)` with stale-PID
+    detection (`kill(pid, 0)` + ESRCH), stale-rename-don't-unlink
+    forensics
+  - SIGTERM / SIGINT / SIGHUP graceful shutdown via Tokio signals
+  - Idle-shutdown timer (default 10 min, override via
+    `RTS_IDLE_SHUTDOWN_SECS`)
+- **Socket server (`src/socket.rs`)** per protocol-v0 §12.1-§12.2:
+  - Parent dir mode `0700`, socket mode `0600`
+  - Per-OS peer-credential check: `SO_PEERCRED` on Linux,
+    `LOCAL_PEERCRED` on macOS; refuses cross-uid connections without
+    response. Windows = v1.1.
+  - Refuses to start if `XDG_RUNTIME_DIR` unset on Linux (no /tmp
+    fallback, per protocol-v0 §5.3 / security F2)
+  - Per-connection in-flight cap of 16 requests via
+    `tokio::sync::Semaphore`; over-cap returns `BUSY`
+- **Wire protocol (`src/protocol.rs`)** per protocol-v0 §3:
+  - Newline-delimited JSON framing, 16 MiB cap, optional trailing `\r`
+    tolerated
+  - Request envelope: `{id, method, params}` with method-name regex
+    validation `^[A-Z][a-z]+\.[A-Z][A-Za-z]+$`
+  - Response envelope: `{id, result|error}` with `partial`/`content_version`
+    extension points for later phases
+- **Error model (`src/error.rs`)**: every v0 error-code string from
+  protocol-v0 §14 (~20 codes); structured `ProtocolError` with optional
+  `data` payload (e.g. `WORKSPACE_VANISHED` carries stored vs current
+  `(dev, inode)`)
+- **Workspace identity (`src/workspace.rs`)** per protocol-v0 §5-§6:
+  - Per-OS canonicalisation (macOS NFC via `unicode-normalization`,
+    Linux UTF-8 byte-validation)
+  - `WorkspaceFingerprint = blake3(dev_le || inode_le || canonical_path)[:16]`
+    rendered hex
+  - Network-mount refusal on Linux via `/proc/self/mountinfo` parse
+    (NFS/SMB/sshfs/etc.)
+  - `verify_unchanged` re-stats the path and refuses `WORKSPACE_VANISHED`
+    if `(dev, inode)` shifted (defeats symlink-swap-after-mount)
+- **Methods (`src/methods/`)**:
+  - `Daemon.Ping` — advertises `protocol: "0"` + capability list
+  - `Workspace.Mount` — canonicalises + fingerprints + records mount,
+    idempotent on same path within a connection
+  - `Workspace.Status` — returns mount state + `index_generation` +
+    `watcher_status` + uptime
+  - `Workspace.Unmount` — refcount-aware
+  - `Session.Open` — synthesises `sess_<16hex>` ids (entropy from blake3
+    of pid + ns timestamp + monotonic counter); session-dedup state is
+    inert in v0 (the `session_dedup` capability is v1.1)
+  - `Session.Close` — validates `sess_` prefix, otherwise inert
+- **End-to-end integration test (`tests/wire_round_trip.rs`)**:
+  spawns the daemon as a subprocess with per-test
+  `XDG_RUNTIME_DIR`/`XDG_STATE_HOME`/`HOME`; round-trips
+  `Daemon.Ping` → `Workspace.Mount` → `Workspace.Status` →
+  `Session.Open` → `Session.Close`, and asserts the negative-case
+  error codes (unknown method → `INVALID_PARAMS`,
+  `Index.FindSymbol` → `INDEX_NOT_READY`). This is the v0
+  conformance-test seed referenced in the plan.
+
+### Changed
+
+- **`docs/protocol-v0.md` §6.1**: softened "refuse symlinked workspace
+  components" to refuse only when the workspace-root *leaf* is a
+  symlink. Ancestor symlinks (macOS structural `/var → /private/var`,
+  `/tmp → /private/tmp`, Homebrew aliases, conda envs, etc.) are
+  tolerated. The strict ancestor rule was breaking legitimate use
+  cases without buying meaningful security — the real defence is the
+  `(dev, inode)` fingerprint check on remount, which is unaffected by
+  this softening.
+
+### Not in this slice (later P6 phases)
+
+- File watcher (`notify` + `notify-debouncer-full`)
+- Writer-drain task + redb store + parser pool
+- `Index.Outline` / `Index.FindSymbol` / `Index.ReadSymbol` / `Index.ReadRange`
+  handlers
+- PageRank precompute + incremental patch (P8)
+- Session-aware dedup (capability `session_dedup`, v1.1)
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **307 passed, 0 failed, 2 ignored**
+  (was 281; +26 from the new daemon's unit tests and integration
+  round-trip).
+
 ## [0.2.0-alpha.4] - 2026-05-11
 
 P5 of the agentic-retrieval pivot: doc-only. Ships the `protocol-v0`

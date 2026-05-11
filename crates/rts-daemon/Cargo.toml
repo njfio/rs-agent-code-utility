@@ -1,0 +1,59 @@
+[package]
+name = "rts-daemon"
+description = "Persistent local code-retrieval daemon for the rts-mcp stack (see docs/protocol-v0.md)"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "rts-daemon"
+path = "src/main.rs"
+
+[dependencies]
+# Surviving rts-core: parser, language adapters, ignore-walk, symbol table.
+rust_tree_sitter = { path = "../rts-core" }
+
+# Async runtime + Unix-socket plumbing
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util", "signal", "fs", "sync", "time", "process"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+tokio-stream = "0.1"
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Errors
+thiserror = "1"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Hashing for workspace fingerprint and (later) content hashes
+blake3 = "1"
+
+# Unix syscalls: umask, prctl, peer-creds, flock, etc.
+# nix 0.29 supports rust-version >= 1.69; we're on 1.85, well above.
+nix = { version = "0.29", features = ["fs", "user", "process", "resource", "socket", "signal"] }
+libc = "0.2"
+
+# On-disk index store. Pinned to the same major used in the P0.2 spike (redb 2.6).
+redb = "2"
+postcard = { version = "1", features = ["alloc"] }
+
+# XDG / runtime-dir lookup
+dirs = "5"
+
+# macOS path NFC normalisation (per protocol-v0.md §5.1)
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
