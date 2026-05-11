@@ -4,11 +4,51 @@
 //! and an "active connections" gauge driving the idle-shutdown timer (per
 //! `docs/protocol-v0.md` §15.2).
 
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Instant;
 
+use crate::watcher::Watcher;
 use crate::workspace::MountedWorkspace;
+
+/// Watcher health surfaced in `Workspace.Status.watcher_status` (protocol-v0
+/// §7.4). Stored as an `AtomicU8` for lock-free reads from the status handler.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum WatcherStatus {
+    /// No watcher running yet (no workspace mounted).
+    NoWatcher = 0,
+    /// Native (`notify::RecommendedWatcher`) running normally.
+    Ok = 1,
+    /// Native watcher dropped events; daemon transitioned to "indexing" while
+    /// re-walking the affected subtree.
+    OverflowedRewalking = 2,
+    /// Native watcher unavailable (e.g. inotify exhaustion); fell back to
+    /// `PollWatcher`. v0 surfaces the status but the cutover is implemented
+    /// in §P6 watcher hardening (later session).
+    PollingFallback = 3,
+}
+
+impl WatcherStatus {
+    /// Stable wire-level name surfaced by `Workspace.Status`.
+    pub fn as_wire_str(self) -> &'static str {
+        match self {
+            WatcherStatus::NoWatcher => "no_watcher",
+            WatcherStatus::Ok => "ok",
+            WatcherStatus::OverflowedRewalking => "overflowed_rewalking",
+            WatcherStatus::PollingFallback => "polling_fallback",
+        }
+    }
+
+    fn from_u8(n: u8) -> Self {
+        match n {
+            1 => WatcherStatus::Ok,
+            2 => WatcherStatus::OverflowedRewalking,
+            3 => WatcherStatus::PollingFallback,
+            _ => WatcherStatus::NoWatcher,
+        }
+    }
+}
 
 /// Process-wide daemon state. Cheap to `Arc`-share; everything inside is
 /// interior-mutable.
@@ -27,6 +67,9 @@ pub struct DaemonState {
     /// paths return `WorkspaceVanished`. Stored as `Mutex<Option<...>>` so the
     /// accept loop and method handlers can both reach it.
     pub workspace: Mutex<Option<MountedWorkspace>>,
+    /// Owning handle for the active file watcher. `None` until first Mount.
+    /// Dropped on Unmount (refcount → 0); dropping stops the debouncer thread.
+    pub watcher: Mutex<Option<Watcher>>,
     /// Refcount of `Workspace.Mount` minus `Workspace.Unmount` across all
     /// currently-open connections. When this drops back to 0 with idle time
     /// elapsed, the daemon exits.
@@ -37,6 +80,8 @@ pub struct DaemonState {
     /// write; later phases expose this via `Workspace.Status.index_generation`.
     /// Currently always 0 (no writer yet).
     pub index_generation: AtomicU64,
+    /// File-watcher health for `Workspace.Status.watcher_status` (§7.4).
+    watcher_status: AtomicU8,
 }
 
 impl DaemonState {
@@ -45,10 +90,24 @@ impl DaemonState {
             active_connections: AtomicU32::new(0),
             last_activity: Mutex::new(Instant::now()),
             workspace: Mutex::new(None),
+            watcher: Mutex::new(None),
             mount_refcount: AtomicU32::new(0),
             started_at: Instant::now(),
             index_generation: AtomicU64::new(0),
+            watcher_status: AtomicU8::new(WatcherStatus::NoWatcher as u8),
         }
+    }
+
+    /// Current watcher status. Cheap lock-free read.
+    pub fn watcher_status(&self) -> WatcherStatus {
+        WatcherStatus::from_u8(self.watcher_status.load(Ordering::Relaxed))
+    }
+
+    /// Set the watcher status. Called from the watcher's background worker;
+    /// the next `Workspace.Status` call reflects the new value.
+    pub fn set_watcher_status(&self, status: WatcherStatus) {
+        self.watcher_status
+            .store(status as u8, Ordering::Relaxed);
     }
 
     /// Bump the activity timestamp. Called on connect, on every method

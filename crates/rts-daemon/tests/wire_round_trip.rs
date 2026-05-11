@@ -136,6 +136,11 @@ async fn full_round_trip() -> anyhow::Result<()> {
         status["result"]["workspace_id"],
         mount["result"]["workspace_id"]
     );
+    // Watcher must have come up healthy on Mount.
+    assert_eq!(
+        status["result"]["watcher_status"], "ok",
+        "watcher should be running after Mount; got {status:?}"
+    );
 
     // 4. Session.Open + Session.Close
     let opened = round_trip(&mut stream, "4", "Session.Open", json!({"client_name":"itest"})).await?;

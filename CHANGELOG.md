@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.6] - 2026-05-11
+
+P6 watcher slice. The daemon now starts a `notify` + `notify-debouncer-full`
+file watcher on `Workspace.Mount` and tears it down on the last `Unmount`.
+Events flow through an internal mpsc but aren't yet consumed by an indexing
+pipeline — the writer-drain task lands in a later P6 slice. `Workspace.Status`
+surfaces the watcher's health via `watcher_status`.
+
+### Added
+
+- **`crates/rts-daemon/src/filter.rs`** — path-level filter shared by the
+  initial walk and the live watcher:
+  - Default secrets blocklist regex per protocol-v0 §13.1 (`.env`, SSH
+    keys, certs, AWS/npm/PyPI credentials, etc.).
+  - Code-extension allowlist for body returns per §13.4.
+  - Editor swap / temp / lock-file regex (vim `.swp`/`4913`, emacs
+    `.#`/`#…#`, JetBrains `___jb_tmp___`, VS Code `.tmp.NNN`, generic
+    backup/`crdownload`/`part`).
+  - `PrebuiltGitignore` wrapping `ignore::gitignore::GitignoreBuilder`
+    with fallback patterns (`target/`, `node_modules/`, `.git/`,
+    `build/`, `dist/`, `.next/`, `.cache/`) and `.rtsignore` extension
+    per §6.4.
+  - Cost-ordered classification (cheapest filter first: editor-swap →
+    extension → secrets → gitignore).
+  - `is_ignored` defensively returns `false` for paths outside the
+    matcher root rather than panicking — needed because macOS's
+    `/var → /private/var` structural symlink can make notify report
+    events under either prefix.
+- **`crates/rts-daemon/src/watcher.rs`** — file watcher per
+  protocol-v0 §6 + §9:
+  - `Watcher::start(root, state)` performs the initial gitignore-aware
+    walk via `ignore::WalkBuilder` and feeds every survivor through the
+    filter to an internal `tokio::sync::mpsc::channel(256)`.
+  - `notify-debouncer-full` at 150 ms debounce (matches the protocol-v0
+    default + P0.3 spike's measured "first batch ~94-188 ms" latency).
+  - Bakes in the P0.3 macOS findings: `Create` and `Modify(Data)` are
+    treated symmetrically (no dependency on `RenameMode::*`), and
+    `EventKind::Other` is interpreted as a touch for rename pairing
+    that didn't surface as a Rename event.
+  - On `event.need_rescan()` overflow, transitions
+    `WatcherStatus::OverflowedRewalking` and emits a `Rescan` marker
+    on the channel for a future re-walk by the writer-drain.
+  - On `notify::ErrorKind::MaxFilesWatch` (Linux inotify exhaustion),
+    transitions `WatcherStatus::PollingFallback`. (The cutover to an
+    actual `PollWatcher` is a later P6 hardening step; the status
+    string is surfaced now so clients can see the degradation.)
+- **`WatcherStatus` enum** in `state.rs` with `as_wire_str()` rendering
+  (`no_watcher` | `ok` | `overflowed_rewalking` | `polling_fallback`).
+  Stored as `AtomicU8` for lock-free reads from the status handler.
+- **Integration test assertion**: `wire_round_trip` now also asserts
+  `result.watcher_status == "ok"` after `Workspace.Mount`, so future
+  regressions to watcher startup surface immediately.
+
+### Changed
+
+- **`Workspace.Mount`** starts the watcher synchronously (initial walk
+  blocks the response) and stores the `Watcher` handle in
+  `DaemonState.watcher`. A tiny `tokio::spawn`-ed consumer logs every
+  `WatchEvent` at `tracing::debug!` so events are visible without a
+  writer-drain.
+- **`Workspace.Unmount`** tears down the watcher when refcount hits 0.
+- **`Workspace.Status.watcher_status`** is now sourced from
+  `DaemonState.watcher_status()` rather than hardcoded to `"ok"`.
+
+### Not in this slice (next P6 phases)
+
+- Writer-drain task that consumes `WatchEvent`s and re-parses files.
+- Parser pool, redb upserts, hot-tree LRU.
+- `Index.Outline`/`FindSymbol`/`ReadSymbol`/`ReadRange` handlers (still
+  return `INDEX_NOT_READY`).
+- `PollWatcher` cutover when inotify exhausts (status flag is
+  surfaced; cutover is hardening).
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **318 passed, 0 failed, 2 ignored**
+  (was 307; +11 from filter unit tests + watcher unit tests +
+  the new integration assertion).
+
 ## [0.2.0-alpha.5] - 2026-05-11
 
 P6 skeleton of the agentic-retrieval pivot: first slice of the `rts-daemon`

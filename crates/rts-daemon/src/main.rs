@@ -10,11 +10,13 @@
 #![deny(unsafe_code)]
 
 mod error;
+mod filter;
 mod lifecycle;
-mod protocol;
 mod methods;
+mod protocol;
 mod socket;
 mod state;
+mod watcher;
 mod workspace;
 
 use anyhow::Context;
