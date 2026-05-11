@@ -61,9 +61,16 @@ enum TaskCmd {
         /// Workspace root to bench against.
         #[arg(long)]
         workspace: PathBuf,
-        /// Symbol name the task should look up (most tasks need this).
+        /// Symbol name to look up (locate_def, get_body).
         #[arg(long)]
         symbol: Option<String>,
+        /// Workspace-relative file path (summarize_module, fix_imports).
+        #[arg(long)]
+        file: Option<String>,
+        /// Line budget for the summary head (summarize_module). Defaults
+        /// to 50.
+        #[arg(long)]
+        line_budget: Option<u32>,
         /// Where to write the JSON report. Defaults to
         /// `crates/rts-bench/bench-<short-sha>.json` next to the binary.
         #[arg(long)]
@@ -112,10 +119,12 @@ async fn main() -> Result<()> {
                     id,
                     workspace,
                     symbol,
+                    file,
+                    line_budget,
                     out,
                     dry_run,
                 },
-        } => run_one(id, workspace, symbol, out, dry_run).await,
+        } => run_one(id, workspace, symbol, file, line_budget, out, dry_run).await,
         Cmd::Fixture {
             sub:
                 FixtureCmd::Restore {
@@ -130,6 +139,8 @@ async fn run_one(
     id: String,
     workspace: PathBuf,
     symbol: Option<String>,
+    file: Option<String>,
+    line_budget: Option<u32>,
     out: Option<PathBuf>,
     dry_run: bool,
 ) -> Result<()> {
@@ -138,15 +149,7 @@ async fn run_one(
     let rts_mcp_bin = resolve_bin("rts-mcp")?;
     let rts_daemon_bin = resolve_bin("rts-daemon")?;
 
-    let inputs = match (id.as_str(), symbol.as_deref()) {
-        (_, Some(s)) => json!({ "symbol_name": s }),
-        ("locate_def", None) => {
-            return Err(anyhow!(
-                "task locate_def requires --symbol; pick a function in the workspace"
-            ));
-        }
-        (_, None) => json!({}),
-    };
+    let inputs = build_task_inputs(&id, symbol.as_deref(), file.as_deref(), line_budget)?;
 
     let ctx = TaskContext {
         workspace: &workspace,
@@ -216,6 +219,51 @@ async fn restore_fixtures(corpus_lock: PathBuf, corpus_root: Option<PathBuf>) ->
          remaining piece is the HTTPS fetch + extract pipeline, scheduled for a later bench slice."
     );
     Ok(())
+}
+
+/// Validate + assemble the per-task `task_inputs` JSON. Per-task required
+/// args are checked here so the CLI fails fast with a clear message before
+/// any subprocess is spawned.
+fn build_task_inputs(
+    id: &str,
+    symbol: Option<&str>,
+    file: Option<&str>,
+    line_budget: Option<u32>,
+) -> Result<serde_json::Value> {
+    let mut obj = serde_json::Map::new();
+    if let Some(s) = symbol {
+        obj.insert("symbol_name".into(), json!(s));
+    }
+    if let Some(f) = file {
+        obj.insert("file".into(), json!(f));
+    }
+    if let Some(n) = line_budget {
+        obj.insert("line_budget".into(), json!(n));
+    }
+    match id {
+        "locate_def" | "get_body" => {
+            if symbol.is_none() {
+                return Err(anyhow!(
+                    "task `{id}` requires --symbol; pick a function in the workspace"
+                ));
+            }
+        }
+        "summarize_module" => {
+            if file.is_none() {
+                return Err(anyhow!(
+                    "task `summarize_module` requires --file (workspace-relative path)"
+                ));
+            }
+        }
+        "find_callers" | "fix_imports" => {
+            // Not implemented this slice; tasks::run_task returns
+            // NotImplemented with a pointer to the later P9 slice. We
+            // accept the args (so callers can be future-compatible) and
+            // let the dispatcher emit the explanatory message.
+        }
+        _ => {} // Unknown ids fall through to the dispatcher's error.
+    }
+    Ok(serde_json::Value::Object(obj))
 }
 
 /// Best-effort short SHA for the bench report filename. Defaults to

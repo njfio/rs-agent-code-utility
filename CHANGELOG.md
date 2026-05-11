@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.11] - 2026-05-11
+
+P9 widening — bench tasks 2 (`get_body`) and 4 (`summarize_module`) ship.
+The bench now produces three measurements per run; the `median_reduction_pct`
+summary is meaningful for the first time.
+
+Smoke results on this repo:
+- `get_body(parse)` vs `crates/rts-core/`: baseline 94,285 tokens → MCP 28
+  tokens = **100.0% reduction**.
+- `summarize_module(src/analyzer.rs, line_budget=50)` vs `crates/rts-core/`:
+  baseline 27,258 tokens → MCP 571 tokens = **97.9% reduction**.
+
+### Added
+
+- **Task 2: `get_body`** (`src/tasks/get_body.rs`):
+  - Baseline: `rg -n "fn <name>"` locates the def, then the agent reads
+    the entire containing file in full (no symbol-end awareness).
+  - MCP: one `read_symbol(name, shape: "body")` call returning the def's
+    byte slice.
+  - Baseline cap of 4 files protects against pathological many-match
+    cases.
+- **Task 4: `summarize_module`** (`src/tasks/summarize_module.rs`):
+  - Baseline: read the entire file (no outline tool available).
+  - MCP: one `read_range(file, 1, line_budget)` call returning the
+    module head — where imports + top-level public declarations
+    typically live.
+  - v0 approximation; the P8 path swaps this for `outline_workspace`
+    (ranked top-K with rendered signatures) once PageRank + the
+    `SignatureRenderer` ship. Wire-stable: the report shape doesn't
+    change when the MCP path improves.
+- **CLI flags** `--file <PATH>` and `--line-budget <N>` on `task run`,
+  needed for `summarize_module`. Per-task input validation lives in a
+  new `build_task_inputs` helper that fails fast with a clear message
+  before any subprocess starts.
+- **`tests/get_body_bench.rs`**: seeds a small but realistic module
+  (struct + impl + target_fn + decoy fn), asserts MCP > 50% reduction
+  over baseline.
+- **`tests/summarize_module_bench.rs`**: synthesises a 150-line module
+  with imports + public signatures at the top and a long tail of
+  private decoys, asserts MCP > 50% reduction with a 30-line budget.
+
+### Changed
+
+- **`src/tasks/mod.rs`** dispatcher routes `get_body` and
+  `summarize_module`. `find_callers` and `fix_imports` continue to
+  return `NotImplemented` with explicit pointers to the P8
+  reference-graph slice they depend on.
+
+### Not in this slice (later P9 / P8)
+
+- Tasks 3 (`find_callers`) and 5 (`fix_imports`) — both need the P8
+  reference graph (def→ref edges from tags.scm) that the daemon
+  doesn't index yet.
+- HTTPS download in `fixture restore`.
+- `--with-network` Anthropic SDK token oracle.
+- Latency (S1) and footprint (S3) benches.
+- Install docs + prebuilt binaries.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **360 passed, 0 failed, 2 ignored** (was
+  358; +2 from the new `get_body_bench` and `summarize_module_bench`
+  integration tests).
+
 ## [0.2.0-alpha.10] - 2026-05-11
 
 P9 — `rts-bench` skeleton + first baseline measurement. The harness can

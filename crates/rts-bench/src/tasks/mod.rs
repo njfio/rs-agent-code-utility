@@ -13,7 +13,9 @@ use anyhow::Result;
 use crate::baseline::BaselineRun;
 use crate::mcp_runner::McpRun;
 
+pub mod get_body;
 pub mod locate_def;
+pub mod summarize_module;
 
 /// Stable identifiers used on the CLI (`rts-bench task <id>`) and in
 /// `bench-<sha>.json`.
@@ -52,18 +54,21 @@ pub struct TaskContext<'a> {
     pub task_inputs: serde_json::Value,
 }
 
-/// Run one task by id. Returns `TaskOutcome::NotImplemented` for tasks 2-5
-/// — the v0 contract.
+/// Run one task by id. v0 implements `locate_def`, `get_body`, and
+/// `summarize_module`. `find_callers` + `fix_imports` need the P8
+/// reference-graph that isn't built yet — they return `NotImplemented`
+/// with a pointer to the later slice.
 pub async fn run_task(id: &str, ctx: &TaskContext<'_>) -> Result<TaskOutcome> {
     match id {
         "locate_def" => locate_def::run(ctx).await,
-        "get_body" | "find_callers" | "summarize_module" | "fix_imports" => {
-            Ok(TaskOutcome::NotImplemented {
-                reason: format!(
-                    "task `{id}` is enumerated in plan §P9 but lands in a later bench slice"
-                ),
-            })
-        }
+        "get_body" => get_body::run(ctx).await,
+        "summarize_module" => summarize_module::run(ctx).await,
+        "find_callers" => Ok(TaskOutcome::NotImplemented {
+            reason: "task `find_callers` needs the P8 reference graph; defer".into(),
+        }),
+        "fix_imports" => Ok(TaskOutcome::NotImplemented {
+            reason: "task `fix_imports` needs the P8 reference graph; defer".into(),
+        }),
         other => anyhow::bail!("unknown task id: {other}; valid ids: {TASK_IDS:?}"),
     }
 }
