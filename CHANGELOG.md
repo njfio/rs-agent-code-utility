@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.9] - 2026-05-11
+
+P7 — `rts-mcp` MCP server. The agent-facing half of the stack ships. Claude
+Code / Cursor / Cline / Aider can now `claude mcp add rts -- rts-mcp` and
+get the four retrieval tools (`outline_workspace`, `find_symbol`,
+`read_symbol`, `read_range`) over stdio, backed by the workspace-pinned
+daemon. The protocol-v0 socket is the line of separation: stdio agents
+talk MCP to `rts-mcp`; `rts-mcp` talks JSON to `rts-daemon` over a Unix
+socket.
+
+### Added
+
+- **`crates/rts-mcp/`** new workspace member, binary `rts-mcp`. Uses
+  `rmcp 1.6` + `schemars 1` (versions verified by the P0.1 spike) with
+  the macro-driven `#[tool_router]` / `#[tool]` / `#[tool_handler]`
+  authoring pattern.
+- **`src/main.rs`** — stdio entry point per protocol-v0 §"stdio
+  hygiene":
+  - `tokio::main(flavor = "current_thread")` (stdio MCP is sequential
+    per connection).
+  - `tracing_subscriber::fmt().with_writer(stderr).with_ansi(false)`
+    so Claude Code's stderr parser doesn't choke on color codes.
+  - `--workspace <path>` flag (default: `$PWD`).
+  - Auto-spawns `rts-daemon` if no socket exists, then mounts the
+    workspace before accepting any MCP traffic.
+- **`src/socket.rs`** — socket-path discovery + daemon auto-spawn:
+  - Mirrors `rts-daemon::socket::socket_path_for_default` so both
+    halves agree on the path (Linux: `$XDG_RUNTIME_DIR/rts/default.sock`;
+    macOS: `$HOME/Library/Caches/rts/default.sock`).
+  - Spawns the daemon with detached stdio (the agent owns our stdio)
+    and polls up to 5 s with exponential backoff (25 ms → 250 ms).
+  - `RTS_DAEMON_BIN` env override for tests / benches.
+- **`src/daemon_client.rs`** — newline-delimited JSON client over the
+  Unix socket. 16 MiB frame cap, 35 s call timeout, monotonic
+  string-typed request ids. Returns `DaemonError { code, message, data }`
+  on protocol-level errors so the MCP layer can map them to
+  `CallToolResult::error(...)`.
+- **`src/server.rs`** — `RtsServer` with the four `#[tool]`s. Tool
+  descriptions are pinned per the plan §"Tool descriptions
+  (LLM-facing, pinned in P5)" with explicit negative guidance
+  ("do not use for…, fall back to `rg`"). Per-tool argument structs
+  derive `schemars::JsonSchema` so the inputSchema lands in
+  `tools/list` automatically.
+- **Error bifurcation** verified by P0.1 carried forward:
+  - Argument-schema validation → `Err(McpError::invalid_params(...))`
+    → JSON-RPC `-32602 "Invalid params"`.
+  - Daemon-side protocol errors (`INDEX_NOT_READY`, `SYMBOL_NOT_FOUND`,
+    `OUT_OF_ROOT`, `OUT_OF_ALLOWED_BODY_EXTENSIONS`, …) →
+    `CallToolResult::error(...)` with the structured `{ code, message,
+    data }` body so agents can act on the code without parsing English.
+- **`crates/rts-mcp/tests/mcp_round_trip.rs`** — end-to-end test:
+  spawns `rts-mcp` as a subprocess with stdio piped, drives it with
+  raw MCP JSON-RPC, and asserts:
+  - `initialize` returns `protocolVersion: "2024-11-05"` and
+    `serverInfo.name == "rts-mcp"`.
+  - `tools/list` enumerates all four tools.
+  - `tools/call find_symbol` polls until the writer commits, then
+    returns a structured match for the seeded `build_index` fn.
+  - `tools/call read_range` returns line 1 of the seeded `lib.rs`.
+  - `tools/call outline_workspace` surfaces the daemon's
+    `INDEX_NOT_READY` as a `CallToolResult` with `isError: true` and
+    a structured `error.code` body.
+
+### Changed
+
+- **`Cargo.toml`** root workspace adds `crates/rts-mcp` as a member.
+
+### Not in this slice (later P7 / P8 / P9)
+
+- `Index.Outline` body — gated on P8 PageRank + `SignatureRenderer`.
+- `partial: true` mid-call streaming via `ProgressNotificationParam`
+  (currently the agent gets the daemon's full payload after the
+  writer's initial commit; cold-state polling works via repeated
+  `tools/call`).
+- `rts://capabilities` MCP resource.
+- Real Claude Code / Cursor smoke test (`claude mcp add` flow) — P9.
+- Skeleton-mode `shape: "signature"` rendering — P8.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **338 passed, 0 failed, 2 ignored**
+  (was 337; +1 from the new `mcp_round_trip` integration test).
+
 ## [0.2.0-alpha.8] - 2026-05-11
 
 P6 read API. The two remaining body-returning verbs land:
