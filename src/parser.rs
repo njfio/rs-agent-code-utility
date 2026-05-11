@@ -3,10 +3,17 @@
 use crate::error::{Error, Result};
 use crate::languages::Language;
 use crate::tree::SyntaxTree;
-use std::collections::HashMap;
+use lru::LruCache;
+use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
-// Removed unused imports
 use tree_sitter::{InputEdit, Point};
+
+/// Default capacity for the parsed-tree cache.
+///
+/// Previously hardcoded as the field `max_cache_size: 100`. Same default, but
+/// expressed as a constant so the eviction policy and capacity decision live
+/// together.
+const DEFAULT_TREE_CACHE_SIZE: usize = 100;
 
 /// Configuration options for parsing
 #[derive(Debug, Clone, Copy)]
@@ -29,15 +36,20 @@ impl Default for ParseOptions {
     }
 }
 
-/// A thread-safe wrapper around tree-sitter parser with caching
+/// A thread-safe wrapper around the tree-sitter parser with caching.
+///
+/// The cache is an LRU of `(source_hash → SyntaxTree)`. Prior versions used a
+/// `HashMap` with "first-key from HashMap iteration" eviction, which is
+/// effectively random under `HashMap`'s rehash seed — the
+/// performance-oracle review of the agentic-retrieval pivot plan flagged this
+/// as a real latency hazard (hot symbols dropped at random). LRU eviction
+/// makes the cache behavior deterministic and recency-aware.
 pub struct Parser {
     inner: Arc<Mutex<tree_sitter::Parser>>,
     language: Language,
     options: ParseOptions,
-    /// Cache for parsed trees to avoid re-parsing identical content
-    cache: Arc<Mutex<HashMap<u64, SyntaxTree>>>,
-    /// Maximum cache size
-    max_cache_size: usize,
+    /// Cache for parsed trees to avoid re-parsing identical content.
+    cache: Arc<Mutex<LruCache<u64, SyntaxTree>>>,
 }
 
 impl Parser {
@@ -54,12 +66,13 @@ impl Parser {
             )
         })?;
 
+        let cache_capacity = NonZeroUsize::new(DEFAULT_TREE_CACHE_SIZE)
+            .expect("DEFAULT_TREE_CACHE_SIZE is a positive constant");
         Ok(Self {
             inner: Arc::new(Mutex::new(parser)),
             language,
             options: ParseOptions::default(),
-            cache: Arc::new(Mutex::new(HashMap::new())),
-            max_cache_size: 100, // Default cache size
+            cache: Arc::new(Mutex::new(LruCache::new(cache_capacity))),
         })
     }
 
@@ -91,9 +104,11 @@ impl Parser {
         if old_tree.is_none() {
             let cache_key = self.calculate_cache_key(source);
 
-            // Try to get from cache
+            // Try to get from cache. `LruCache::get` is `&mut` (it bumps
+            // recency), so we hold the mutex exclusively even for hits — the
+            // critical section is short.
             {
-                let cache = self.cache.lock().map_err(|e| {
+                let mut cache = self.cache.lock().map_err(|e| {
                     Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e))
                 })?;
                 if let Some(cached_tree) = cache.get(&cache_key) {
@@ -146,21 +161,13 @@ impl Parser {
         hasher.finish()
     }
 
-    /// Cache a parsed tree
+    /// Cache a parsed tree. LRU-evicts the least-recently-used entry if the
+    /// cache is at capacity.
     fn cache_tree(&self, key: u64, tree: SyntaxTree) -> Result<()> {
         let mut cache = self.cache.lock().map_err(|e| {
             Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e))
         })?;
-
-        // Evict oldest entries if cache is full
-        if cache.len() >= self.max_cache_size {
-            // Simple eviction: remove first entry
-            if let Some(first_key) = cache.keys().next().cloned() {
-                cache.remove(&first_key);
-            }
-        }
-
-        cache.insert(key, tree);
+        cache.put(key, tree);
         Ok(())
     }
 
@@ -232,30 +239,37 @@ impl Parser {
         Ok(())
     }
 
-    /// Get cache statistics
+    /// Get cache statistics: `(current_len, capacity)`.
     pub fn cache_stats(&self) -> Result<(usize, usize)> {
         let cache = self.cache.lock().map_err(|e| {
             Error::internal_error("parser", format!("Failed to acquire cache lock: {}", e))
         })?;
-        Ok((cache.len(), self.max_cache_size))
+        Ok((cache.len(), cache.cap().get()))
     }
 
-    /// Create a parser with custom cache size
+    /// Create a parser with a custom tree-cache capacity.
+    ///
+    /// `cache_size == 0` is silently clamped to 1, because `LruCache` requires
+    /// a non-zero capacity and a zero-capacity cache is degenerate.
     pub fn with_cache_size(language: Language, cache_size: usize) -> Result<Self> {
-        let mut parser = Self::new(language)?;
-        parser.max_cache_size = cache_size;
+        let parser = Self::new(language)?;
+        let cap = NonZeroUsize::new(cache_size.max(1)).expect("cache_size.max(1) is non-zero");
+        if let Ok(mut cache) = parser.cache.lock() {
+            cache.resize(cap);
+        }
         Ok(parser)
     }
 }
 
 impl Clone for Parser {
     fn clone(&self) -> Self {
-        // Note: This creates a new parser instance rather than sharing the inner parser
-        // This is safer for concurrent use
-        let mut parser = Self::with_options(self.language, self.options)
-            .expect("Failed to clone parser: parser creation should always succeed with valid language and options");
-        parser.max_cache_size = self.max_cache_size;
-        parser
+        // Note: This creates a new parser instance rather than sharing the inner
+        // parser. Safer for concurrent use; tree-sitter's `Parser` is `!Send`
+        // across concurrent parse calls. The fresh parser starts with an empty
+        // cache at the default capacity — explicit `with_cache_size` would
+        // override that if a non-default capacity is desired.
+        Self::with_options(self.language, self.options)
+            .expect("Parser clone: with_options should succeed with valid language and options")
     }
 }
 

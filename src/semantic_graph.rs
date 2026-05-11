@@ -209,7 +209,10 @@ impl SemanticGraphQuery {
         }
     }
 
-    /// Helper function to create graph edge without excessive cloning
+    /// Helper for constructing graph edges. Currently only used by the
+    /// `create_graph_edge` exported test helper; the real edge factories will
+    /// land in P8 with the PageRank-driven ranking work.
+    #[cfg(test)]
     fn create_graph_edge(
         from: &str,
         to: &str,
@@ -492,61 +495,21 @@ impl SemanticGraphQuery {
         }
     }
 
-    /// Build relationships between nodes
-    fn build_relationships(&mut self, analysis: &AnalysisResult) -> Result<()> {
-        // Build basic file-level relationships
-        for file in &analysis.files {
-            self.build_file_relationships(file)?;
-        }
-
-        // Calculate node degrees
+    /// Build relationships between nodes.
+    ///
+    /// Previously called `build_file_relationships` per file, which emitted an
+    /// O(n²) edge between every pair of symbols in the same file with weight 0.3
+    /// labelled `same_file`. The performance-oracle review of the agentic-
+    /// retrieval pivot plan flagged this as garbage data that would pollute any
+    /// future PageRank pass (~625k spurious edges on a 100k-LOC repo). The
+    /// future PageRank-driven `outline_workspace` MCP tool will compute edges
+    /// from real `tags.scm`-derived `(def, ref)` tuples instead, so the
+    /// same-file edge emitter has been removed entirely. See
+    /// `docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md`.
+    fn build_relationships(&mut self, _analysis: &AnalysisResult) -> Result<()> {
+        // Edges will be re-introduced from tags.scm-derived def/ref tuples in
+        // the P8 token-reduction depth phase. For now, no synthetic edges.
         self.calculate_node_degrees();
-
-        Ok(())
-    }
-
-    /// Build relationships within a file
-    fn build_file_relationships(&mut self, file: &FileInfo) -> Result<()> {
-        let file_symbols: Vec<_> = file.symbols.iter().collect();
-
-        // Create relationships between symbols in the same file
-        for (i, symbol1) in file_symbols.iter().enumerate() {
-            let node1_id = format!(
-                "{}:{}:{}",
-                file.path.display(),
-                symbol1.name,
-                symbol1.start_line
-            );
-            let mut edges_for_node1 = Vec::new();
-
-            for symbol2 in file_symbols.iter().skip(i + 1) {
-                let node2_id = format!(
-                    "{}:{}:{}",
-                    file.path.display(),
-                    symbol2.name,
-                    symbol2.start_line
-                );
-
-                // Create a basic "defined in same file" relationship
-                let edge = Self::create_graph_edge(
-                    &node1_id,
-                    &node2_id,
-                    RelationshipType::DependsOn,
-                    0.3, // Low weight for same-file relationships
-                    Some("same_file"),
-                );
-
-                edges_for_node1.push(edge);
-            }
-
-            if !edges_for_node1.is_empty() {
-                self.edges
-                    .entry(node1_id)
-                    .or_insert_with(Vec::new)
-                    .extend(edges_for_node1);
-            }
-        }
-
         Ok(())
     }
 
@@ -915,7 +878,10 @@ mod tests {
         let stats = graph.get_statistics();
 
         assert_eq!(stats.total_nodes, 2);
-        assert!(stats.total_edges > 0); // Should have some relationships
+        // P4: the O(n²) `same_file` edge emitter was removed; edges return
+        // in P8 from tags.scm-derived def/ref tuples. Currently no synthetic
+        // edges, so total_edges is 0.
+        assert_eq!(stats.total_edges, 0);
         assert_eq!(
             stats.node_type_distribution.get(&NodeType::Function),
             Some(&1)
