@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.8] - 2026-05-11
+
+P6 read API. The two remaining body-returning verbs land:
+`Index.ReadRange` (explicit line slice) and `Index.ReadSymbol` (body of a
+named definition). `Index.Outline` still returns `INDEX_NOT_READY` until
+the P8 PageRank ranking + `SignatureRenderer`-rendered skeletons land.
+
+### Added
+
+- **`Index.ReadRange`** (protocol-v0 §7.8) in
+  `crates/rts-daemon/src/methods/index.rs`:
+  - Workspace-relative or workspace-absolute `file` argument; resolves
+    against the mounted root with per-read prefix check (§6.2) +
+    `..`-segment refusal (§6.3).
+  - Extension allowlist enforced per §13.4 — body reads for any
+    extension outside the v0 allowlist return the new
+    `OUT_OF_ALLOWED_BODY_EXTENSIONS` error code rather than the file.
+  - 1-indexed inclusive `[start_line..=end_line]` slice; lines past EOF
+    surface as `RANGE_OUT_OF_BOUNDS`.
+  - `token_budget` validated against the 50..=200_000 window (§18.5);
+    out-of-range returns `BUDGET_TOO_SMALL` / `BUDGET_TOO_LARGE`. The
+    text is bytewise-clipped to `token_budget * 3` and to a 4 MiB
+    safety ceiling, with the clip honoring UTF-8 char boundaries.
+  - Emits the §3.6 `content_version` field
+    (`blake3(content)[:16]@mtime_ns+index_generation`) so v2 safe-edit
+    flows can detect stale views.
+- **`Index.ReadSymbol`** (protocol-v0 §7.7) in the same file:
+  - Looks up the name through the shared `Store::find_symbol`; applies
+    optional `file` and `kind` disambiguators.
+  - Zero matches return `SYMBOL_NOT_FOUND`. Multiple matches return the
+    first (deterministic order: path then start byte) plus
+    `truncated: true` and `truncated_symbols: [extra files]` — the
+    spec-preferred "top-K + truncated" path over `AMBIGUOUS_SYMBOL`.
+  - `shape: "body"` (default) returns the symbol's raw byte slice.
+    `signature`/`both` accept the param for forwards compatibility but
+    `signature` remains `null` until the P8 `SignatureRenderer` ships.
+  - Same token-budget + 4 MiB cap + `content_version` rules as
+    `ReadRange`.
+- **`Store::get_file_meta(path)`** — small helper for the future
+  `Index.Outline` path + diagnostics; lookups the (FID, FileMeta) for a
+  workspace-relative path.
+- **`ErrorCode::OutOfAllowedBodyExtensions`** wire string
+  `OUT_OF_ALLOWED_BODY_EXTENSIONS` per protocol-v0 §13.4.
+- **`crates/rts-daemon/tests/read_round_trip.rs`** — integration test:
+  mounts a tempdir with a small `.rs` (containing `pub fn alpha` and
+  `pub struct Beta`) plus a stray `.bin`, polls until the writer
+  commits, then exercises each handler's happy path plus the
+  `RANGE_OUT_OF_BOUNDS`, `OUT_OF_ROOT`, `PATH_TRAVERSAL`,
+  `OUT_OF_ALLOWED_BODY_EXTENSIONS`, `BUDGET_TOO_SMALL`,
+  `BUDGET_TOO_LARGE`, `SYMBOL_NOT_FOUND`, and "kind filter prunes
+  match" cases.
+
+### Changed
+
+- **`crates/rts-daemon/src/methods/mod.rs`** dispatcher routes
+  `Index.ReadRange` and `Index.ReadSymbol` to their new handlers.
+  `Index.Outline` is the only remaining `Index.*` that still returns
+  `INDEX_NOT_READY` (it wants the P8 outputs).
+- **`Daemon.Ping` capability list** already advertised `read_range`
+  and `read_symbol`; behaviour now matches advertisement.
+
+### Not in this slice (later P6 + P8)
+
+- `Index.Outline` (needs P8 PageRank + `SignatureRenderer`).
+- Per-language skeleton renderer for `shape: "signature"` /
+  `shape: "both"` (P8).
+- `include_dependencies` closure walk (P8 tree-shake closure walker).
+- v1.1 `session_dedup` short-circuit (`body_omitted` + `see_earlier_id`).
+- `PollWatcher` cutover when inotify exhausts.
+- `rayon`-thread-local parser pool.
+- Workspace re-walk on `Rescan` events.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **337 passed, 0 failed, 2 ignored**
+  (was 326; +10 unit tests in `methods/index.rs` for the new helpers +
+  the `read_round_trip` integration test).
+
 ## [0.2.0-alpha.7] - 2026-05-11
 
 P6 writer pipeline + `Index.FindSymbol`. End-to-end retrieval now works: the

@@ -39,6 +39,10 @@ pub enum ErrorCode {
     AmbiguousSymbol,
     /// Path is below root but excluded (gitignore, secrets blocklist, extension allowlist).
     FileNotIndexed,
+    /// Body read requested for a file whose extension isn't in the §13.4
+    /// allowlist (e.g. `.csv`, `.bin`). Signature-only reads MAY still be
+    /// available once §P8 `SignatureRenderer` lands.
+    OutOfAllowedBodyExtensions,
     /// `start_line`/`end_line` past the end of the file.
     RangeOutOfBounds,
     /// `token_budget` is too small for a minimal-viable answer.
@@ -76,6 +80,7 @@ impl ErrorCode {
             ErrorCode::SymbolNotFound => "SYMBOL_NOT_FOUND",
             ErrorCode::AmbiguousSymbol => "AMBIGUOUS_SYMBOL",
             ErrorCode::FileNotIndexed => "FILE_NOT_INDEXED",
+            ErrorCode::OutOfAllowedBodyExtensions => "OUT_OF_ALLOWED_BODY_EXTENSIONS",
             ErrorCode::RangeOutOfBounds => "RANGE_OUT_OF_BOUNDS",
             ErrorCode::BudgetTooSmall => "BUDGET_TOO_SMALL",
             ErrorCode::BudgetTooLarge => "BUDGET_TOO_LARGE",

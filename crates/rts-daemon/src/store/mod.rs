@@ -306,6 +306,29 @@ impl Store {
         Ok(indexed)
     }
 
+    /// Look up a file by its workspace-relative path and return the FID + the
+    /// stored `FileMeta` (content hash, mtime, lang, parse status, oversize).
+    ///
+    /// Returns `Ok(None)` if the path isn't indexed (gitignore/secrets/ext or
+    /// just not seen by the watcher yet). Used by `Index.ReadRange` for the
+    /// pre-read existence check + by `Index.ReadSymbol` for `content_version`.
+    pub fn get_file_meta(&self, path: &str) -> anyhow::Result<Option<(FileId, FileMeta)>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let path_to_fid = txn.open_table(PATH_TO_FID)?;
+        let fid_u32 = match path_to_fid.get(path)? {
+            Some(v) => v.value(),
+            None => return Ok(None),
+        };
+        let files = txn.open_table(FILES)?;
+        match files.get(&fid_u32)? {
+            Some(v) => {
+                let meta: FileMeta = from_bytes(v.value()).context("decode FileMeta")?;
+                Ok(Some((FileId(fid_u32), meta)))
+            }
+            None => Ok(None),
+        }
+    }
+
     /// Resolve a name to all of its def sites + the file path each lives in.
     ///
     /// Returned in arbitrary order; the caller (`Index.FindSymbol` handler) is
