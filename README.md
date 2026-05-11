@@ -116,8 +116,8 @@ Requires Rust **1.85+** (Rust 2024 edition). macOS and Linux only for
 v0.2; Windows lands in v1.1.
 
 ```sh
-git clone https://github.com/njfio/rust-treesitter-agent-code-utility.git
-cd rust-treesitter-agent-code-utility
+git clone https://github.com/njfio/rs-agent-code-utility.git
+cd rs-agent-code-utility
 cargo build --workspace --release
 ```
 
