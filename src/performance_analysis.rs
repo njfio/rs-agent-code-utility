@@ -1315,7 +1315,7 @@ impl PerformanceAnalyzer {
         }
 
         for i in 0..node.child_count() {
-            if let Some(child) = node.child(i) {
+            if let Some(child) = node.child(i as u32) {
                 self.traverse_for_loops(&child, patterns, loop_nodes);
             }
         }
@@ -1374,7 +1374,7 @@ impl PerformanceAnalyzer {
         };
 
         for i in 0..node.child_count() {
-            if let Some(child) = node.child(i) {
+            if let Some(child) = node.child(i as u32) {
                 if loop_patterns.contains(&child.kind()) {
                     count += 1 + self.count_nested_loops(&child, file);
                 } else {
@@ -1950,7 +1950,7 @@ impl PerformanceAnalyzer {
         }
 
         for i in 0..node.child_count() {
-            if let Some(child) = node.child(i) {
+            if let Some(child) = node.child(i as u32) {
                 self.traverse_for_functions(&child, patterns, function_nodes);
             }
         }
@@ -1965,7 +1965,7 @@ impl PerformanceAnalyzer {
     ) -> Option<String> {
         // Look for identifier nodes within the function declaration
         for i in 0..node.child_count() {
-            if let Some(child) = node.child(i) {
+            if let Some(child) = node.child(i as u32) {
                 if child.kind() == "identifier" {
                     if let Ok(name) = child.utf8_text(content.as_bytes()) {
                         return Some(name.to_string());

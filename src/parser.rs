@@ -46,7 +46,7 @@ impl Parser {
         let mut parser = tree_sitter::Parser::new();
         let ts_language = language.tree_sitter_language()?;
 
-        parser.set_language(ts_language).map_err(|e| {
+        parser.set_language(&ts_language).map_err(|e| {
             Error::language_error_with_cause(
                 language.name(),
                 "parser initialization",
@@ -106,10 +106,12 @@ impl Parser {
             Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e))
         })?;
 
-        // Apply parsing options
-        if let Some(timeout) = self.options.timeout_millis {
-            parser.set_timeout_micros(timeout * 1000);
-        }
+        // Note: `Parser::set_timeout_micros` was removed in tree-sitter 0.26.
+        // The replacement is `ParseOptions::progress_callback(cb)` returning
+        // `ControlFlow::Break` to cancel parsing. Cooperative-timeout support is
+        // a follow-up task; the historical `options.timeout_millis` is currently
+        // a no-op. Tracked in the P1 migration notes.
+        let _ = self.options.timeout_millis;
 
         // Convert old tree if provided
         let old_ts_tree = old_tree.map(|t| t.inner());
@@ -208,7 +210,7 @@ impl Parser {
             Error::internal_error("parser", format!("Failed to acquire parser lock: {}", e))
         })?;
 
-        parser.set_language(ts_language).map_err(|e| {
+        parser.set_language(&ts_language).map_err(|e| {
             Error::language_error_with_cause(language.name(), "language change", format!("{:?}", e))
         })?;
 

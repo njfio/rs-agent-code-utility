@@ -1,6 +1,6 @@
 [package]
 name = "rust_tree_sitter"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
 description = "Tree-sitter-backed code parsing and analysis primitives for the upcoming rts-daemon + rts-mcp retrieval stack"
@@ -10,20 +10,25 @@ keywords = ["parsing", "tree-sitter", "syntax", "ast", "source-code"]
 categories = ["parsing", "development-tools"]
 
 [dependencies]
-# Tree-sitter runtime + 12 language grammars (P1 will bump these to 0.26)
-tree-sitter = "0.20"
-tree-sitter-rust = "0.20"
-tree-sitter-javascript = "0.20"
-tree-sitter-python = "0.20"
-tree-sitter-c = "0.20"
-tree-sitter-cpp = "0.20"
-tree-sitter-typescript = "0.20"
-tree-sitter-go = "0.20"
-tree-sitter-java = "0.20"
-tree-sitter-php = "0.21"
-tree-sitter-ruby = "0.20"
-tree-sitter-swift = "0.4"
-tree-sitter-kotlin = "0.2.11"
+# Tree-sitter runtime + 12 language grammars (P1: bumped from 0.20 → 0.26, ABI 15 default)
+tree-sitter = "0.26"
+streaming-iterator = "0.1"
+tree-sitter-rust = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-python = "0.23"
+tree-sitter-c = "0.23"
+tree-sitter-cpp = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-php = "0.23"
+tree-sitter-ruby = "0.23"
+tree-sitter-swift = "0.7"
+# tree-sitter-kotlin 0.3.x links the C `tree-sitter` lib at major 0.20 and
+# conflicts with `tree-sitter = "0.26"` (cargo's `links = "tree-sitter"`
+# uniqueness rule). The grammar's upstream is community-maintained and
+# lagging — restore once a compatible release ships. Plan flag: v1.1.
+# tree-sitter-kotlin = "..."
 
 # Error handling
 thiserror = "1.0"

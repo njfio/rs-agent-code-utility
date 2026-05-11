@@ -207,9 +207,14 @@ impl<'a> Node<'a> {
         self.inner.child_count()
     }
 
-    /// Get a child by index
+    /// Get a child by index.
+    ///
+    /// tree-sitter 0.26 changed `Node::child` to take `u32`; we keep the
+    /// crate-level API on `usize` for consistency with `child_count` and convert
+    /// inside.
     pub fn child(&self, index: usize) -> Option<Node<'a>> {
-        self.inner.child(index).map(|c| Node::new(c, self.source))
+        let idx: u32 = u32::try_from(index).ok()?;
+        self.inner.child(idx).map(|c| Node::new(c, self.source))
     }
 
     /// Get a child by field name

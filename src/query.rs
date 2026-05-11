@@ -3,6 +3,7 @@
 use crate::error::{Error, QueryErrorType, Result};
 use crate::languages::Language;
 use crate::tree::{Node, SyntaxTree};
+use streaming_iterator::StreamingIterator;
 use tree_sitter::{Point, Range};
 
 /// A wrapper around tree-sitter's Query with additional functionality
@@ -15,7 +16,7 @@ impl Query {
     /// Create a new query for the specified language
     pub fn new(language: Language, pattern: &str) -> Result<Self> {
         let ts_language = language.tree_sitter_language()?;
-        let query = tree_sitter::Query::new(ts_language, pattern)?;
+        let query = tree_sitter::Query::new(&ts_language, pattern)?;
 
         Ok(Self {
             inner: query,
@@ -35,30 +36,25 @@ impl Query {
 
     /// Get capture names
     pub fn capture_names(&self) -> Vec<&str> {
-        self.inner
-            .capture_names()
-            .iter()
-            .map(|s| s.as_str())
-            .collect()
+        // `capture_names()` returns `&[&str]` in tree-sitter 0.26; deref each entry.
+        self.inner.capture_names().iter().copied().collect()
     }
 
     /// Execute the query on a syntax tree
     pub fn matches<'a>(&'a self, tree: &'a SyntaxTree) -> Result<Vec<QueryMatch<'a>>> {
         let mut cursor = tree_sitter::QueryCursor::new();
         let root = tree.root_node();
+        let source = tree.source();
 
+        // `QueryCursor::matches` is a `StreamingIterator` in tree-sitter 0.26.
+        // Drain it with `while let Some(m) = it.next()` and copy out the data we
+        // need before advancing, since each iteration mutates the cursor.
         let mut matches = Vec::new();
-
-        // Collect all matches first to avoid lifetime issues
-        let ts_matches: Vec<_> = cursor
-            .matches(&self.inner, root.inner(), tree.source().as_bytes())
-            .collect();
-
-        // Convert to our QueryMatch type
-        for ts_match in ts_matches {
+        let mut it = cursor.matches(&self.inner, root.inner(), source.as_bytes());
+        while let Some(ts_match) = it.next() {
             let mut captures = Vec::new();
             for capture in ts_match.captures {
-                let node = Node::new(capture.node, tree.source());
+                let node = Node::new(capture.node, source);
                 let query_capture = QueryCapture {
                     node,
                     index: capture.index,
@@ -70,12 +66,10 @@ impl Query {
                 };
                 captures.push(query_capture);
             }
-
-            let query_match = QueryMatch {
+            matches.push(QueryMatch {
                 pattern_index: ts_match.pattern_index,
                 captures,
-            };
-            matches.push(query_match);
+            });
         }
 
         Ok(matches)
@@ -85,13 +79,15 @@ impl Query {
     pub fn captures<'a>(&'a self, tree: &'a SyntaxTree) -> Result<Vec<QueryCapture<'a>>> {
         let mut cursor = tree_sitter::QueryCursor::new();
         let root = tree.root_node();
-        let ts_captures = cursor.captures(&self.inner, root.inner(), tree.source().as_bytes());
+        let source = tree.source();
 
+        // `QueryCursor::captures` is also a `StreamingIterator` in 0.26.
         let mut captures = Vec::new();
-        for (m, idx) in ts_captures {
-            let capture = m.captures[idx];
+        let mut it = cursor.captures(&self.inner, root.inner(), source.as_bytes());
+        while let Some((m, idx)) = it.next() {
+            let capture = m.captures[*idx];
             captures.push(QueryCapture {
-                node: Node::new(capture.node, tree.source()),
+                node: Node::new(capture.node, source),
                 index: capture.index,
                 name: self
                     .inner
@@ -111,12 +107,9 @@ impl Query {
         source: &'a str,
     ) -> Result<Vec<QueryMatch<'a>>> {
         let mut cursor = tree_sitter::QueryCursor::new();
-        let ts_matches: Vec<_> = cursor
-            .matches(&self.inner, node.inner(), source.as_bytes())
-            .collect();
-
         let mut matches_vec = Vec::new();
-        for ts_match in ts_matches {
+        let mut it = cursor.matches(&self.inner, node.inner(), source.as_bytes());
+        while let Some(ts_match) = it.next() {
             let mut captures = Vec::new();
             for capture in ts_match.captures {
                 captures.push(QueryCapture {
@@ -165,7 +158,6 @@ impl Query {
             Language::Php => "(function_definition name: (identifier) @name) @function",
             Language::Ruby => "(method name: (identifier) @name) @function",
             Language::Swift => "(function_declaration name: (simple_identifier) @name) @function",
-            Language::Kotlin => "(function_declaration name: (simple_identifier) @name) @function",
         };
 
         Self::new(language, pattern)
@@ -185,7 +177,6 @@ impl Query {
             Language::Php => "(class_declaration name: (identifier) @name) @class",
             Language::Ruby => "(class name: (constant) @name) @class",
             Language::Swift => "(class_declaration name: (simple_identifier) @name) @class",
-            Language::Kotlin => "(class_declaration name: (simple_identifier) @name) @class",
         };
 
         Self::new(language, pattern)

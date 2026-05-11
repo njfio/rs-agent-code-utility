@@ -929,9 +929,6 @@ impl CodebaseAnalyzer {
             Language::Swift => {
                 self.extract_swift_symbols(tree, content, &mut symbols)?;
             }
-            Language::Kotlin => {
-                self.extract_kotlin_symbols(tree, content, &mut symbols)?;
-            }
         }
 
         Ok(symbols)
@@ -1637,54 +1634,6 @@ impl CodebaseAnalyzer {
                         end_line: func.end_position().row + 1,
                         end_column: func.end_position().column,
                         visibility: "internal".to_string(), // Default for Swift
-                        documentation: None,
-                    });
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Extract Kotlin symbols
-    fn extract_kotlin_symbols(
-        &self,
-        tree: &SyntaxTree,
-        _content: &str,
-        symbols: &mut Vec<Symbol>,
-    ) -> Result<()> {
-        // TODO: Implement full Kotlin symbol extraction
-        // For now, extract basic class and function symbols
-        let classes = tree.find_nodes_by_kind("class_declaration");
-        for class in classes {
-            if let Some(name_node) = class.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "class".to_string(),
-                        start_line: class.start_position().row + 1,
-                        start_column: class.start_position().column,
-                        end_line: class.end_position().row + 1,
-                        end_column: class.end_position().column,
-                        visibility: "public".to_string(), // Default for Kotlin
-                        documentation: None,
-                    });
-                }
-            }
-        }
-
-        let functions = tree.find_nodes_by_kind("function_declaration");
-        for func in functions {
-            if let Some(name_node) = func.child_by_field_name("name") {
-                if let Ok(name) = name_node.text() {
-                    symbols.push(Symbol {
-                        name: name.to_string(),
-                        kind: "function".to_string(),
-                        start_line: func.start_position().row + 1,
-                        start_column: func.start_position().column,
-                        end_line: func.end_position().row + 1,
-                        end_column: func.end_position().column,
-                        visibility: "public".to_string(), // Default for Kotlin
                         documentation: None,
                     });
                 }

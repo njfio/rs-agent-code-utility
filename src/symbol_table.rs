@@ -458,20 +458,6 @@ impl SymbolTableAnalyzer {
                     | "do_statement"
                     | "switch_statement"
             ),
-            Language::Kotlin => matches!(
-                node_kind,
-                "class_declaration"
-                    | "interface_declaration"
-                    | "enum_class_declaration"
-                    | "object_declaration"
-                    | "function_declaration"
-                    | "statements"
-                    | "if_statement"
-                    | "while_statement"
-                    | "for_statement"
-                    | "try_statement"
-                    | "when_statement"
-            ),
         }
     }
 
@@ -577,14 +563,6 @@ impl SymbolTableAnalyzer {
                 "function_declaration" => ScopeType::Function,
                 _ => ScopeType::Block,
             },
-            Language::Kotlin => match node_kind {
-                "class_declaration" => ScopeType::Class,
-                "interface_declaration" => ScopeType::Class,
-                "enum_class_declaration" => ScopeType::Class,
-                "object_declaration" => ScopeType::Class,
-                "function_declaration" => ScopeType::Function,
-                _ => ScopeType::Block,
-            },
         }
     }
 
@@ -611,7 +589,6 @@ impl SymbolTableAnalyzer {
             Language::Php => self.extract_php_symbol_definition(node),
             Language::Ruby => self.extract_ruby_symbol_definition(node),
             Language::Swift => self.extract_swift_symbol_definition(node),
-            Language::Kotlin => self.extract_kotlin_symbol_definition(node),
         }
     }
 
@@ -630,12 +607,6 @@ impl SymbolTableAnalyzer {
     /// Extract Swift symbol definitions
     fn extract_swift_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
         // TODO: Implement Swift symbol definition extraction
-        Ok(None)
-    }
-
-    /// Extract Kotlin symbol definitions
-    fn extract_kotlin_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
-        // TODO: Implement Kotlin symbol definition extraction
         Ok(None)
     }
 
@@ -791,7 +762,6 @@ impl SymbolTableAnalyzer {
             Language::Php => matches!(node_kind, "identifier" | "variable_name"),
             Language::Ruby => matches!(node_kind, "identifier" | "constant"),
             Language::Swift => matches!(node_kind, "simple_identifier" | "type_identifier"),
-            Language::Kotlin => matches!(node_kind, "simple_identifier" | "type_identifier"),
         }
     }
 
