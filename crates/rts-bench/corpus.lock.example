@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "model": "claude-sonnet-4-6-2026-04-30",
+  "fixtures": [
+    {
+      "name": "tokio",
+      "git_url": "https://github.com/tokio-rs/tokio",
+      "commit_sha": "PIN_BEFORE_USE",
+      "tarball_url": "https://codeload.github.com/tokio-rs/tokio/tar.gz/PIN_BEFORE_USE",
+      "tarball_sha256": "PIN_BEFORE_USE",
+      "archive_size_bytes": 0
+    },
+    {
+      "name": "mitmproxy",
+      "git_url": "https://github.com/mitmproxy/mitmproxy",
+      "commit_sha": "PIN_BEFORE_USE",
+      "tarball_url": "https://codeload.github.com/mitmproxy/mitmproxy/tar.gz/PIN_BEFORE_USE",
+      "tarball_sha256": "PIN_BEFORE_USE",
+      "archive_size_bytes": 0
+    },
+    {
+      "name": "vscode-extension-samples",
+      "git_url": "https://github.com/microsoft/vscode-extension-samples",
+      "commit_sha": "PIN_BEFORE_USE",
+      "tarball_url": "https://codeload.github.com/microsoft/vscode-extension-samples/tar.gz/PIN_BEFORE_USE",
+      "tarball_sha256": "PIN_BEFORE_USE",
+      "archive_size_bytes": 0
+    }
+  ]
+}

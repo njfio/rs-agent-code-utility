@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.10] - 2026-05-11
+
+P9 — `rts-bench` skeleton + first baseline measurement. The harness can
+now drive `rts-mcp` end-to-end and emit a real `bench-<sha>.json` with
+S2 token-reduction numbers. Task 1 ("locate definition") lands fully;
+tasks 2-5 are scaffolded but stubbed for a later P9 slice.
+
+Smoke result on this repo: looking up `parse` against `crates/rts-core/`,
+baseline (ripgrep + read every file in full) = 259,607 tokens; MCP
+(`find_symbol`) = 148 tokens; **99.9% reduction**. The plan's CI gate is
+≥50% median, so the first real measurement is well clear of the floor —
+but the rest of the corpus + 4 other tasks need to land before the
+median over the full suite is meaningful.
+
+### Added
+
+- **`crates/rts-bench/`** — new workspace member, binary `rts-bench`.
+  The only operator-facing surface in the v0.2 stack
+  (`workspace_status`/`reindex`/`cache_stats` are MCP tools or
+  resources, not CLI subcommands — per plan).
+- **CLI subcommands** (`clap` 4):
+  - `rts-bench task list` — prints the five task ids.
+  - `rts-bench task run <id> --workspace PATH --symbol NAME [--out FILE] [--dry-run]`
+    — runs one task end-to-end and writes the report.
+  - `rts-bench fixture restore --corpus-lock PATH [--corpus-root DIR]`
+    — parses + validates `corpus.lock`. The tarball-download step is
+    intentionally a placeholder (the schema + SHA256 verify path
+    ships now; HTTPS fetch + extract lands when there's a pinned
+    corpus to point at).
+- **`src/token.rs`** — `bytes / 3` approximator (`div_ceil`) matching
+  protocol-v0 §11.1's `bytes_div_3` token counter. The Anthropic SDK
+  oracle gated on `--with-network` + `RTS_BENCH_ANTHROPIC_API_KEY`
+  lands later; v0 keeps both sides of the comparison on the same
+  counter so the *ratio* is meaningful.
+- **`src/corpus.rs`** — `corpus.lock` schema:
+  `{ version, model, fixtures: [{ name, git_url, commit_sha,
+  tarball_url, tarball_sha256, archive_size_bytes }] }`. Streaming
+  SHA-256 verification helper for the future download path.
+- **`crates/rts-bench/corpus.lock.example`** — three pinned-by-shape
+  candidates (`tokio`, `mitmproxy`, `vscode-extension-samples`)
+  per plan, with `PIN_BEFORE_USE` placeholders for the SHA/commit
+  fields.
+- **`src/baseline.rs`** — baseline retrieval runner. Probes `rg` for
+  availability, subprocesses `rg -n --no-heading --color=never
+  <pattern> <root>` (treating exit-1 as zero matches, not failure),
+  deduplicates candidate paths, reads each file in full, and returns
+  `(rg_stdout_bytes, file_bytes_read, tokens)` summed via the v0
+  counter. Honest baseline: this is what an agent without `rts-mcp`
+  would have to feed its context window.
+- **`src/mcp_runner.rs`** — drives `rts-mcp` over stdio with the same
+  raw JSON-RPC dance as `crates/rts-mcp/tests/mcp_round_trip.rs`.
+  Polls past `INDEX_NOT_READY` to wait for the writer's first commit.
+  Reads `tokens_returned` from the daemon's response when present;
+  falls back to the `bytes / 3` approximator over the response text
+  otherwise.
+- **`src/report.rs`** — `BenchReport` schema with `IndexMap`-preserved
+  task order and a `summary.median_reduction_pct` aggregate (the
+  plan's CI gate at ≥50%). Wire-stable; CI assertion lands when the
+  full suite of 5 tasks does.
+- **`src/tasks/locate_def.rs`** — Task 1 implemented end-to-end:
+  - Baseline: `rg -n target_fn` (literal, regex-escaped) + read all
+    candidate files capped at 16 to model agent patience.
+  - MCP: one `find_symbol(name)` call.
+  - Reduction is the ratio of (rg stdout + every file read) to
+    `find_symbol`'s structured matches.
+- **`src/tasks/mod.rs`** — Task registry + `TaskOutcome` enum. Tasks
+  2-5 (`get_body`, `find_callers`, `summarize_module`,
+  `fix_imports`) enumerated and dispatched, but return
+  `NotImplemented` with a pointer to the later slice. CLI surfaces
+  this gracefully.
+- **`crates/rts-bench/tests/locate_def_bench.rs`** — integration test:
+  seeds a tempdir with `lib.rs` (defines `target_fn` + a caller),
+  `README.md` (mentions in prose), `notes.txt` (mentions in TODO),
+  then runs `rts-bench task run locate_def`. Asserts:
+  - Both baseline and MCP tokens are non-zero.
+  - `reduction_pct > 0` (MCP strictly fewer tokens than baseline).
+  - Baseline opened ≥ 2 files (catching the prose mentions).
+  - The bench JSON has `version: 1`, `token_counter: "bytes_div_3"`.
+
+### Changed
+
+- **`Cargo.toml`** root workspace adds `crates/rts-bench` as a member.
+- **`.gitignore`** ignores `crates/rts-bench/corpus/` (where fixture
+  tarballs land after `fixture restore`) and `crates/rts-bench/bench-*.json`
+  (per-run reports).
+
+### Not in this slice (later P9)
+
+- HTTPS download in `fixture restore` (the SHA256 verify + extract
+  layout ships now; the actual fetch + tar/zip extraction lands when
+  there's a pinned corpus).
+- Tasks 2-5 implementations: `get_body`, `find_callers`,
+  `summarize_module`, `fix_imports`.
+- `--with-network` Anthropic SDK token oracle.
+- Latency bench (S1 — synthetic 100k-LOC fixture, 1000 randomised
+  queries, p50/p95/p99 cold + warm).
+- Footprint bench (S3 — peak RSS, on-disk index size, build time).
+- Install docs (`docs/install.md`).
+- Prebuilt-binary release GH Action.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **358 passed, 0 failed, 2 ignored**
+  (was 338; +19 bench unit tests + 1 integration test).
+
 ## [0.2.0-alpha.9] - 2026-05-11
 
 P7 — `rts-mcp` MCP server. The agent-facing half of the stack ships. Claude
