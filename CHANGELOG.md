@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.3] - 2026-05-11
+
+P4 of the agentic-retrieval pivot: convert to a Cargo workspace with
+`crates/rts-core/` as the surviving primitive library, bump to Rust 2024
+edition, and ship three smaller cleanups flagged by the deepening reviews.
+
+### Changed
+
+- **Cargo workspace layout.** Root `Cargo.toml` is now a workspace
+  manifest with `resolver = "3"` and a single member, `crates/rts-core`.
+  `src/` moved to `crates/rts-core/src/`, `tests/` to
+  `crates/rts-core/tests/`, `test_files/` to `crates/rts-core/test_files/`.
+  Future workspace members (`rts-daemon`, `rts-mcp`, `rts-bench`) land
+  alongside as separate crates.
+- **Rust 2024 edition, MSRV 1.85** declared at the workspace level
+  (`[workspace.package]`); members inherit via `edition.workspace = true`
+  / `rust-version.workspace = true`.
+- **`spikes/p0-*` and `archive/` are excluded** from the workspace via
+  `[workspace.exclude]`. The spike binaries remain independent crates;
+  archived modules are pure history.
+- **LRU caches** (perf-oracle critical fix). Both `file_cache.rs` and
+  `parser.rs` previously used `HashMap` + "first-key from HashMap
+  iteration" eviction — effectively random under `HashMap`'s rehash
+  seed. Replaced with `lru::LruCache` so eviction is deterministic and
+  recency-aware. The file cache also moved from
+  `Arc<RwLock<HashMap>>` to `Arc<Mutex<LruCache>>` because
+  `LruCache::get` is `&mut self` (it bumps recency). Tests now include
+  explicit LRU semantics (oldest-evicted, touch-prevents-eviction).
+  - New dep: `lru = "0.12"`.
+
+### Security / hygiene
+
+- **`#![forbid(unsafe_code)]` on `crates/rts-core/src/lib.rs`.** The
+  pivot plan called for `forbid` on rts-core (leaf library); verified
+  no `unsafe` survives the cut after archiving `advanced_memory.rs`
+  (its single `unsafe { mmap... }` block was the only one in the
+  surviving core; the module wasn't used by anything else and the
+  daemon's segment-store path was already dropped in alpha.1 in favour
+  of redb blobs).
+- **Workspace-level `unsafe_code = "deny"`** in `[workspace.lints.rust]`
+  applies to every future workspace member; individual crates can
+  override via `#[allow(unsafe_code)]` on a specific item. The plan's
+  intended split (forbid on rts-core, deny on rts-daemon/rts-mcp) is
+  set up.
+- **Removed silent `eprintln!` log** in `file_cache.rs::insert`'s
+  poisoned-lock branch. Replaced with `tracing::warn!` under target
+  `rust_tree_sitter::file_cache`. The daemon's tracing subscriber
+  will surface this; previously it was lost to stderr.
+
+### Removed
+
+- **`src/advanced_memory.rs`** → `archive/src/advanced_memory.rs`.
+  Contained the only `unsafe` block in the surviving core (mmap via
+  `memmap2`) and was unused outside its own module. Plan path forward:
+  the daemon doesn't need it (segments are redb blobs per
+  alpha.1 decision); revisit only if a future profile shows actual
+  memory-mmap'd primitives are load-bearing.
+- **`semantic_graph::build_file_relationships`** (perf-oracle critical
+  fix). The function emitted a `same_file` edge with weight 0.3 between
+  every pair of symbols in a file — O(n²) per file, ~625k spurious
+  edges on a 100k-LOC repo. Garbage data that would have polluted any
+  future PageRank pass. Removed entirely; real edges return in P8 from
+  tags.scm-derived (def, ref) tuples.
+- `test_get_statistics` now asserts `total_edges == 0` instead of
+  `> 0`; the old assertion was validating the O(n²) garbage.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **281 passed, 0 failed, 2 ignored** (was
+  286; delta: -5 from archiving `advanced_memory` tests).
+
+### Deferred
+
+- **`ThreadedRodeo` symbol interning.** Per-plan P4 deliverable; this
+  refactor changes `SymbolDefinition::name` from `String` to
+  `Symbol(u32)` and ripples through every consumer. Big enough to
+  warrant its own PR; will land alongside the P6 daemon work when the
+  hot-path latency matters most.
+
 ## [0.2.0-alpha.2] - 2026-05-11
 
 P1 of the agentic-retrieval pivot: tree-sitter ABI bump and Query API migration.

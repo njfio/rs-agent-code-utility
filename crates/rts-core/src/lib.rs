@@ -36,8 +36,6 @@
 
 // ---------- Surviving modules ----------
 
-/// Memory tracking primitives (under review for P4 slimdown).
-pub mod advanced_memory;
 /// Parallel-processing primitives (under review for P4 slimdown).
 pub mod advanced_parallel;
 /// Shared analysis helpers.

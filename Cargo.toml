@@ -1,81 +1,25 @@
-[package]
-name = "rust_tree_sitter"
-version = "0.2.0-alpha.2"
-edition = "2021"
+[workspace]
+resolver = "3"
+members = [
+    "crates/rts-core",
+]
+# `spikes/*` and `archive/*` are deliberately excluded — they're scratch
+# binaries (P0 validation) and historical retired code, not part of the
+# product build. Each `spikes/p0-*` directory is its own independent crate.
+exclude = [
+    "spikes/p0-1-rmcp-hello",
+    "spikes/p0-2-redb-smoke",
+    "spikes/p0-3-notify-smoke",
+    "archive",
+]
+
+[workspace.package]
+version = "0.2.0-alpha.3"
 authors = ["Your Name <your.email@example.com>"]
-description = "Tree-sitter-backed code parsing and analysis primitives for the upcoming rts-daemon + rts-mcp retrieval stack"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/yourusername/rust_tree_sitter"
-keywords = ["parsing", "tree-sitter", "syntax", "ast", "source-code"]
-categories = ["parsing", "development-tools"]
+edition = "2024"
+rust-version = "1.85"
 
-[dependencies]
-# Tree-sitter runtime + 12 language grammars (P1: bumped from 0.20 → 0.26, ABI 15 default)
-tree-sitter = "0.26"
-streaming-iterator = "0.1"
-tree-sitter-rust = "0.23"
-tree-sitter-javascript = "0.23"
-tree-sitter-python = "0.23"
-tree-sitter-c = "0.23"
-tree-sitter-cpp = "0.23"
-tree-sitter-typescript = "0.23"
-tree-sitter-go = "0.23"
-tree-sitter-java = "0.23"
-tree-sitter-php = "0.23"
-tree-sitter-ruby = "0.23"
-tree-sitter-swift = "0.7"
-# tree-sitter-kotlin 0.3.x links the C `tree-sitter` lib at major 0.20 and
-# conflicts with `tree-sitter = "0.26"` (cargo's `links = "tree-sitter"`
-# uniqueness rule). The grammar's upstream is community-maintained and
-# lagging — restore once a compatible release ships. Plan flag: v1.1.
-# tree-sitter-kotlin = "..."
-
-# Error handling
-thiserror = "1.0"
-anyhow = "1.0"
-
-# Serialization (still used by analyzer/symbol_table)
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml = "0.9"
-
-# Core analysis helpers
-regex = "1.10"
-sha2 = "0.10"
-rayon = "1.8"
-petgraph = "0.6"
-ignore = "0.4"
-walkdir = "2.4"
-parking_lot = "0.12"
-crossbeam-channel = "0.5"
-memmap2 = "0.9"
-dashmap = "5.5"
-num_cpus = "1.0"
-
-# Time / IDs / paths
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-dirs = "5.0"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# LRU cache (replaces the prior random-eviction HashMap caches)
-lru = "0.12"
-
-# Dependency-manifest parsing (for dependency_analysis module)
-toml = "0.8"
-
-[dev-dependencies]
-tempfile = "3.0"
-criterion = "0.5"
-
-[features]
-default = ["std"]
-std = []
-wasm = []
-
-[lib]
-name = "rust_tree_sitter"
-path = "src/lib.rs"
+[workspace.lints.rust]
+unsafe_code = "deny"

@@ -1,0 +1,80 @@
+[package]
+name = "rust_tree_sitter"
+description = "Tree-sitter-backed code parsing and analysis primitives for the upcoming rts-daemon + rts-mcp retrieval stack"
+keywords = ["parsing", "tree-sitter", "syntax", "ast", "source-code"]
+categories = ["parsing", "development-tools"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Tree-sitter runtime + 11 language grammars (Kotlin defers to v1.1 — see CHANGELOG)
+tree-sitter = "0.26"
+streaming-iterator = "0.1"
+tree-sitter-rust = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-python = "0.23"
+tree-sitter-c = "0.23"
+tree-sitter-cpp = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-php = "0.23"
+tree-sitter-ruby = "0.23"
+tree-sitter-swift = "0.7"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Core analysis helpers
+regex = "1.10"
+sha2 = "0.10"
+rayon = "1.8"
+petgraph = "0.6"
+ignore = "0.4"
+walkdir = "2.4"
+parking_lot = "0.12"
+crossbeam-channel = "0.5"
+memmap2 = "0.9"
+dashmap = "5.5"
+num_cpus = "1.0"
+
+# Time / IDs / paths
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+dirs = "5.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# LRU cache (replaces prior random-eviction HashMap caches)
+lru = "0.12"
+
+# Dependency-manifest parsing (for the `dependency_analysis` module)
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3.0"
+criterion = "0.5"
+
+[features]
+default = ["std"]
+std = []
+wasm = []
+
+[lib]
+name = "rust_tree_sitter"
+path = "src/lib.rs"
