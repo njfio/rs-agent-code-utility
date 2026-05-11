@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.4] - 2026-05-11
+
+P5 of the agentic-retrieval pivot: doc-only. Ships the `protocol-v0`
+design document — the daemon↔MCP wire-protocol spec that P6 (daemon)
+and P7 (MCP server) will both implement against. Pure documentation;
+no code changes.
+
+### Added
+
+- **`docs/protocol-v0.md`** — comprehensive design doc for the
+  daemon↔MCP wire protocol. Sections:
+  1. Trust model (single-user, local-only, single-uid boundary)
+  2. Architecture overview
+  3. Wire format (newline-delimited JSON, 16 MiB cap, `content_version`)
+  4. Capability negotiation (not single-version semver)
+  5. Workspace identity (`(dev, inode, canonical_path)` binding;
+     per-OS canonicalisation matrix)
+  6. Path safety (refuse symlinked components, per-read prefix check,
+     `.rtsignore` extension)
+  7. Method catalog (10 methods + 1 notification):
+     `Daemon.Ping`/`Telemetry`, `Workspace.Mount`/`Unmount`/`Status`,
+     `Index.Outline`/`FindSymbol`/`ReadSymbol`/`ReadRange`,
+     `Session.Open`/`Close`. `Daemon.Cancel` and `Session.MarkDeduped`
+     dropped from v0 per the deepening reviews.
+  8. Cold-state semantics (`partial: true` + `progress`)
+  9. Concurrency model (single writer-drain task, parse-parallel +
+     commit-serial, bounded mpsc, 16-in-flight cap)
+  10. Cancellation contract (connection drop + 30s soft deadline; no
+      explicit `Daemon.Cancel` in v0)
+  11. Token counting (`bytes / 3` approximator; oracle = Anthropic
+      `countTokens` offline only)
+  12. Auth boundary (per-OS peer-creds, `umask(0077)`,
+      refuse-to-run-as-root, `prctl(PR_SET_DUMPABLE, 0)`)
+  13. Default secrets policy (filename blocklist + content scanner +
+      code-extension allowlist for body returns)
+  14. Error code catalog (string codes, ~20 entries)
+  15. State lifecycle (startup, mount, stale PID handling, redb
+      corruption recovery, auto-spawn race resolution)
+  16. Resource limits (concrete numbers + env-var overrides)
+  17. Telemetry/observability (opt-in `RTS_TELEMETRY=1`; 64 MiB
+      rotation × 3 retention; silent-drop on ENOSPC)
+  18. JSON Schema fragments for each method's `params`
+  - Appendix A: Local-auth recipes per OS (Linux/macOS/Windows-v1.1)
+  - Appendix B: What's intentionally not in v0
+  - Appendix C: Decisions resolved from the deepening (cross-ref
+    table linking 24 specific decisions back to the originating
+    review)
+  - Appendix D: Open questions deferred to P6
+  - Appendix E: Wire-protocol versioning policy
+
+The doc is the source of truth for P6 (rts-daemon) and P7 (rts-mcp).
+The MCP-facing tool surface remains governed by
+`docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md`
+and the MCP 2025-11-25 spec.
+
+### Verification
+
+- `cargo build --workspace`: green (no code changes; doc-only).
+- `cargo test --workspace`: still 281 passed, 0 failed, 2 ignored.
+
 ## [0.2.0-alpha.3] - 2026-05-11
 
 P4 of the agentic-retrieval pivot: convert to a Cargo workspace with
