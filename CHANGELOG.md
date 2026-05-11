@@ -7,6 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.12] - 2026-05-11
+
+P9 distribution slice. Pure docs + housekeeping. The project's front
+door + `claude mcp add` flow now reflect the post-pivot product surface;
+pre-pivot artifacts (the original library README, the
+`tree-sitter-cli`-shaped install docs, the `.windsurferrules` /
+`.clinerules` / `INSTRUCTIONS.md` rule files) are out of the way under
+`archive/`.
+
+### Added
+
+- **`docs/install.md`** — install guide:
+  - System requirements matrix (macOS arm64/x86_64, Linux
+    x86_64/aarch64 supported; Windows is v1.1).
+  - Build-from-source instructions; smoke commands for all three
+    binaries.
+  - `claude mcp add` one-liner + `.mcp.json` snippets for Claude Code,
+    Cursor, Cline, Aider, Continue.
+  - Manual `initialize` smoke test (one-liner against stdin).
+  - Troubleshooting matrix: `INDEX_NOT_READY`, `OUT_OF_ROOT`,
+    `WORKSPACE_VANISHED`, immediate exits.
+  - Daemon kill + state-dir cleanup instructions.
+  - Uninstall recipe.
+
+### Changed
+
+- **`README.md`** — rewritten from scratch (was the pre-pivot
+  library + `tree-sitter-cli` description). New structure:
+  - One-paragraph product pitch.
+  - Real bench numbers from `crates/rts-bench/` measurements on this
+    repo (locate_def 99.9%, get_body 100.0%, summarize_module 97.9%).
+  - Phase-by-phase status table (P0–P9).
+  - ASCII architecture diagram.
+  - Quick-start (`cargo build` + `claude mcp add`).
+  - Tool matrix for the four MCP verbs.
+  - Crate layout table.
+  - Pointers to `docs/install.md`, `docs/protocol-v0.md`, the active
+    plans directory.
+- **`AGENTS.md`** — rewritten to reflect the post-pivot workspace:
+  - Project layout per crate (`rts-core`, `rts-daemon`, `rts-mcp`,
+    `rts-bench`).
+  - `cargo build/test/clippy --workspace` recipes + per-crate
+    integration-test ordering note (the MCP and bench tests need their
+    sibling binaries built first).
+  - Coding style: Rust 2024, `#![forbid(unsafe_code)]` on `rts-core`,
+    `deny` workspace-wide, structured errors over panics, "no comments
+    without a why", stderr-only tracing in stdio MCP discipline.
+  - Testing conventions: per-crate `tests/<area>_round_trip.rs`
+    integration shape; happy + negative cases; bench gracefully skips
+    when `rg` is missing.
+  - Conventional Commits scoped by crate.
+  - Security boundary callouts (no-root, `umask(0077)`,
+    `RLIMIT_CORE=0`, §13 secrets policy).
+  - Dependency hygiene: zero HTTP code paths in daemon + MCP server;
+    bench's `--with-network` adapter is feature-gated when it lands.
+
+### Removed (moved to `archive/`)
+
+Per plan §P9 "Docs sweep" — all pre-pivot artifacts referenced the
+library + `tree-sitter-cli` shape that no longer exists:
+
+- **`docs/`** stale entries moved to `archive/docs/`:
+  `API.md`, `CLI.md`, `CODE_QUALITY_REVIEW.md`,
+  `DEPENDENCY_AUDIT_REPORT.md`, `FEATURES.md`, `MEMORY_SAFETY_AUDIT.md`,
+  `SECURITY_SCANNER_GUIDE.md`, `STYLE_GUIDE.md`,
+  `WIKI_REFACTOR_TASK_LIST.md`, `ast_transformation.md`.
+- **`INSTRUCTIONS.md`**, **`.windsurferrules`**, **`.clinerules/`**
+  moved to `archive/`. These were per-tool rule files for the
+  pre-pivot CLI workflow; `AGENTS.md` is the single canonical
+  reference now.
+
+`docs/` retains only `install.md`, `protocol-v0.md`, `assistant_profile.xml`,
+`brainstorms/`, `plans/`, and `schemas/`.
+
+### Not in this slice (later P9)
+
+- `docs/benchmarks.md` — needs S1 latency + S3 footprint numbers, which
+  need the latency bench harness that lands in a later slice.
+- `docs/architecture.md` — the README's ASCII diagram + protocol-v0
+  cover the v0 surface; a separate doc waits for P8 + ref-graph
+  decisions to firm up.
+- Prebuilt-binary GitHub Action.
+- `cargo install` recipe (publishable crate metadata sweep).
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **360 passed, 0 failed, 2 ignored**
+  (unchanged from alpha.11 — this slice is docs only).
+- Manual `--help` smoke on `rts-mcp`, `rts-bench task list`,
+  `rts-daemon` (no flags).
+
 ## [0.2.0-alpha.11] - 2026-05-11
 
 P9 widening — bench tasks 2 (`get_body`) and 4 (`summarize_module`) ship.
