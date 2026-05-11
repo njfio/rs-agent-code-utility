@@ -1,0 +1,12 @@
+[package]
+name = "p0-3-notify-smoke"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+notify = "8"
+notify-debouncer-full = "0.7"
+tempfile = "3"
+anyhow = "1"
