@@ -7,6 +7,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.7] - 2026-05-11
+
+P6 writer pipeline + `Index.FindSymbol`. End-to-end retrieval now works: the
+watcher feeds a writer-drain task that parses touched files through the
+existing `rts-core` analyzer and commits symbol definitions to redb, and the
+first `Index.*` verb returns real matches over the wire.
+
+### Added
+
+- **`crates/rts-daemon/src/store/`** — redb-backed on-disk index per
+  protocol-v0 §"Concrete redb schema":
+  - `Store::open` opens (or recreates) the per-workspace `db.redb` at
+    `${XDG_STATE_HOME}/rts/<workspace_id>/db.redb`. Schema version is
+    persisted in a `META` table; mismatch triggers a daemon-controlled
+    rebuild (§15.4), and a newer-than-binary schema is refused with
+    `SCHEMA_VERSION_NEWER`.
+  - Tables: `FILES (fid → FileMeta)`, `PATH_TO_FID`, `FID_TO_PATH`,
+    `NAME_TO_SID`, `SID_TO_NAME`, `DEFS (sid → DefSite, multimap)`,
+    `FID_DEFS (fid → sid, multimap)`, `META`. All tables are materialised
+    inside `Store::open` so read handlers can query an empty workspace
+    without hitting `TableDoesNotExist`.
+  - `Store::commit_batch(upserts, removals, durability)` applies one
+    writer batch as a single `WriteTransaction`; `durability` is
+    threaded through so the writer can pick `None` for the hot path and
+    `Immediate` for the periodic flush per protocol-v0 §9.2.
+  - `Store::find_symbol(name)` is the read path used by
+    `Index.FindSymbol`; returns `FoundSymbol` records with byte+line
+    ranges, visibility, and the resolved file path.
+  - `postcard` is the value encoding for `FileMeta`/`DefSite`.
+- **`crates/rts-daemon/src/writer.rs`** — writer-drain task per
+  protocol-v0 §9:
+  - 150 ms batch interval, 128-event budget per flush, 5 s durability
+    flush interval (`Durability::Immediate` every 5 s; `Durability::None`
+    otherwise).
+  - 4 MiB oversize threshold: oversized files are indexed by
+    `(size, mtime)` only and skipped for body parsing.
+  - Per-language `Parser` pool keyed on `Language`; `rayon`-thread-local
+    pooling is a later perf step.
+  - Symbol extraction reuses `rust_tree_sitter::CodebaseAnalyzer` so
+    every grammar already supported by `rts-core` works on day one
+    (11 languages).
+  - Cancels cleanly on the per-workspace `CancellationToken` — last
+    `Workspace.Unmount` signals the writer first, lets it drain its
+    final batch, then drops the watcher.
+- **`Index.FindSymbol`** (`crates/rts-daemon/src/methods/index.rs`)
+  per protocol-v0 §7.6:
+  - Always returns a list (length ≥ 0); empty results are not an error.
+  - Supports optional `kind` and `file` filters.
+  - Caps the response at 256 matches and sets `truncated: true` at the
+    boundary.
+  - `signature`/`doc`/`rank_score` are placeholder fields (null / 0.0)
+    until the P8 `SignatureRenderer` + PageRank slices land; the wire
+    shape itself is v0-stable.
+- **`crates/rts-daemon/tests/find_symbol_round_trip.rs`** — new
+  integration test. Mounts a tempdir containing a single `lib.rs`
+  (`pub fn build_index() {}` + `pub struct WidgetIndex;`), polls
+  `Index.FindSymbol` until the writer commits, then asserts:
+  - real match for `build_index` with `kind == "fn"` and `file` ending
+    in `lib.rs`,
+  - real match for `WidgetIndex` with `kind == "struct"`,
+  - the `kind=fn` filter drops the struct match for `WidgetIndex`, and
+  - an unknown symbol returns an empty match list (not an error).
+
+### Changed
+
+- **`Workspace.Mount`** now opens the per-workspace redb, spawns the
+  writer-drain task, and stores both alongside a per-mount
+  `CancellationToken` in `DaemonState`. The previous "debug log every
+  WatchEvent" consumer is gone — events go to the writer.
+- **`Workspace.Unmount`** signals the writer before dropping the
+  watcher so the final batch is drained.
+- **`Workspace.Status.progress.files_done`** is sourced from
+  `StoreStats::files_indexed` instead of being hardcoded to 0; the
+  daemon now reports real index progress.
+- **`crates/rts-daemon/Cargo.toml`** — `tempfile` moved from
+  `[dev-dependencies]` to `[dependencies]`; the writer uses tempfiles
+  to bridge `analyze_file` for in-memory content.
+- **`crates/rts-daemon/tests/wire_round_trip.rs`** updated to reflect
+  the new wiring: `Index.FindSymbol` on an unknown name returns an
+  empty match list (success), and the `INDEX_NOT_READY` assertion was
+  retargeted to `Index.Outline` (still stubbed until a later P6 slice).
+
+### Not in this slice (later P6 + P8)
+
+- `Index.Outline`, `Index.ReadSymbol`, `Index.ReadRange` (still return
+  `INDEX_NOT_READY`).
+- `PollWatcher` cutover when inotify exhausts (status flag already
+  surfaces; cutover is hardening).
+- `rayon`-thread-local parser pool (perf tuning).
+- `ThreadedRodeo` symbol interning (deferred from P4 by the deepening
+  reviews).
+- Workspace re-walk on `Rescan` events.
+- PageRank-driven `rank_score` and `SignatureRenderer`-rendered
+  `signature` fields on the wire (P8).
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **326 passed, 0 failed, 2 ignored** (was
+  318; delta: +7 daemon unit tests for `store` + `writer` + the new
+  `find_symbol_round_trip` integration test).
+
 ## [0.2.0-alpha.6] - 2026-05-11
 
 P6 watcher slice. The daemon now starts a `notify` + `notify-debouncer-full`

@@ -16,8 +16,10 @@ mod methods;
 mod protocol;
 mod socket;
 mod state;
+mod store;
 mod watcher;
 mod workspace;
+mod writer;
 
 use anyhow::Context;
 use std::time::Duration;

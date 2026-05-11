@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Instant;
 
+use crate::store::Store;
 use crate::watcher::Watcher;
 use crate::workspace::MountedWorkspace;
 
@@ -70,6 +71,13 @@ pub struct DaemonState {
     /// Owning handle for the active file watcher. `None` until first Mount.
     /// Dropped on Unmount (refcount → 0); dropping stops the debouncer thread.
     pub watcher: Mutex<Option<Watcher>>,
+    /// On-disk index. `None` until first Mount; opened at
+    /// `${XDG_STATE_HOME}/rts/<workspace_id>/db.redb`. Shared via `Arc` so the
+    /// writer task and read handlers can both reach it without cloning the
+    /// `DaemonState`'s big bag of state.
+    pub store: Mutex<Option<std::sync::Arc<Store>>>,
+    /// Cancellation token that stops the writer task on the last Unmount.
+    pub writer_cancel: Mutex<Option<tokio_util::sync::CancellationToken>>,
     /// Refcount of `Workspace.Mount` minus `Workspace.Unmount` across all
     /// currently-open connections. When this drops back to 0 with idle time
     /// elapsed, the daemon exits.
@@ -91,6 +99,8 @@ impl DaemonState {
             last_activity: Mutex::new(Instant::now()),
             workspace: Mutex::new(None),
             watcher: Mutex::new(None),
+            store: Mutex::new(None),
+            writer_cancel: Mutex::new(None),
             mount_refcount: AtomicU32::new(0),
             started_at: Instant::now(),
             index_generation: AtomicU64::new(0),

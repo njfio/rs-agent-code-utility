@@ -7,6 +7,7 @@ use crate::error::{ErrorCode, ProtocolError};
 use crate::state::DaemonState;
 
 mod daemon;
+mod index;
 mod session;
 mod workspace;
 
@@ -24,13 +25,11 @@ pub async fn dispatch(
         "Session.Open" => session::open(params, state).await,
         "Session.Close" => session::close(params, state).await,
 
-        // Index.* methods exist in the protocol but the daemon doesn't index
-        // anything yet (P6 baseline: lifecycle + mount only). Return a clear
-        // not-ready error so clients learn capability gaps via Daemon.Ping.
-        "Index.Outline"
-        | "Index.FindSymbol"
-        | "Index.ReadSymbol"
-        | "Index.ReadRange" => Err(ProtocolError::new(
+        "Index.FindSymbol" => index::find_symbol(params, state).await,
+
+        // The remaining Index.* verbs still return INDEX_NOT_READY until later
+        // P6 slices add the read handlers.
+        "Index.Outline" | "Index.ReadSymbol" | "Index.ReadRange" => Err(ProtocolError::new(
             ErrorCode::IndexNotReady,
             format!("{method} not yet implemented in this daemon build"),
         )),
