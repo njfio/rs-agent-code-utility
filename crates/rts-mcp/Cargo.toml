@@ -1,0 +1,60 @@
+[package]
+name = "rts-mcp"
+description = "MCP (Model Context Protocol) server bridge for rts-daemon. Speaks rmcp 1.6 over stdio to agents (Claude Code, Cursor, Cline, Aider) and protocol-v0 over a Unix socket to the daemon."
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "rts-mcp"
+path = "src/main.rs"
+
+[dependencies]
+# MCP SDK pin verified by the P0.1 spike (see spikes/p0-1-rmcp-hello/RESULTS.md):
+# - rmcp 1.6 requires schemars 1 (NOT 0.8). Mismatch produces a "two majors of
+#   schemars" duplicate-trait build failure.
+# - The Parameters wrapper lives at `rmcp::handler::server::wrapper::Parameters`,
+#   not `handler::server::tool::Parameters` (that path is private).
+# - ServerInfo is #[non_exhaustive]; construct via ServerInfo::new() then mutate.
+rmcp = { version = "1", features = ["server", "macros", "transport-io", "schemars"] }
+schemars = "1"
+
+# Stdio transport runs on a current-thread Tokio runtime per the spike's
+# main.rs (the JSON-RPC stream is inherently sequential per connection).
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "io-std", "io-util", "process", "time", "net", "sync", "fs"] }
+
+# Wire-level framing (newline-delimited JSON, 16 MiB cap) for the
+# daemon-side socket protocol.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Errors
+anyhow = "1"
+thiserror = "1"
+
+# Logging — stderr-only per stdio MCP discipline.
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Workspace fingerprint → socket path discovery.
+blake3 = "1"
+hex = "0.4"
+
+# XDG / runtime-dir lookup mirrors rts-daemon's `socket::socket_path_for_default`.
+dirs = "5"
+
+# Path canonicalisation parity with rts-daemon's `workspace.rs`.
+unicode-normalization = "0.1"
+
+# Unix peer-cred / metadata probes parity with the daemon.
+nix = { version = "0.29", features = ["user", "fs"] }
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"

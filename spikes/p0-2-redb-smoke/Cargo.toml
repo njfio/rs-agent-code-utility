@@ -1,0 +1,17 @@
+[package]
+name = "p0-2-redb-smoke"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+redb = "2"
+postcard = { version = "1", features = ["alloc"] }
+serde = { version = "1", features = ["derive"] }
+anyhow = "1"
+tempfile = "3"
+blake3 = "1"
+
+[profile.release]
+debug = "line-tables-only"

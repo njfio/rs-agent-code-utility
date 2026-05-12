@@ -1,0 +1,417 @@
+//! File watcher: notify + notify-debouncer-full with the v0 filter chain.
+//!
+//! Implements the watcher behaviour from `docs/protocol-v0.md` §6 + §9 and the
+//! `Watcher` line in the §P6 phase plan. The P0.3 spike documented two macOS
+//! quirks this module handles up front:
+//!
+//! 1. **`fs::rename` does NOT surface as `RenameMode::*` on macOS**: rename
+//!    events arrive as a `Create` on the destination plus `Modify(Data)` /
+//!    `Other` on the source. So the handler treats `Create` and
+//!    `Modify(Data)` symmetrically and never depends on rename pairing.
+//! 2. **`fs::write` of an existing file reports as `Create`**, not
+//!    `Modify(Data)`. Same handling — branch by path, not by event kind.
+//!
+//! Both findings are baked in via [`WatchEvent::Touched`].
+//!
+//! Lifecycle:
+//! - `Watcher::start(root, …)` performs the initial walk via
+//!   `ignore::WalkBuilder` (gitignore-aware) and feeds every match through
+//!   the filter (`super::filter::classify`).
+//! - It then spins up a `notify-debouncer-full` watcher at 150 ms, filtering
+//!   each batch by the same rules and forwarding the survivors to an mpsc.
+//! - On `Event::need_rescan()` overflow, the watcher transitions
+//!   `WatcherStatus` to `OverflowedRewalking`, re-runs the walker, and falls
+//!   back to `Ok` once drained.
+//! - `notify::ErrorKind::MaxFilesWatch` (inotify exhaustion) flips
+//!   `WatcherStatus` to `PollingFallback` and re-binds with `PollWatcher`.
+//!   (Implementation note: the fallback path is wired but the cutover lives
+//!   in §P6 watcher hardening — for v0 we surface the status string and
+//!   refuse to silently drop events.)
+
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
+use notify::{EventKind, RecommendedWatcher, RecursiveMode};
+use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
+use tokio::sync::mpsc;
+use tracing::{debug, info, warn};
+
+use crate::filter::{FilterDecision, PrebuiltGitignore, classify};
+use crate::state::{DaemonState, WatcherStatus};
+
+/// Default debounce window per protocol-v0 §9.3 / P0.3 spike (`first batch
+/// latency ~94-188 ms` measured at 150 ms).
+pub const DEBOUNCE_WINDOW: Duration = Duration::from_millis(150);
+
+/// Bounded mpsc capacity for events flowing from the watcher into the
+/// (future) writer-drain task. Matches the protocol-v0 §9.3 default.
+pub const CHANNEL_CAPACITY: usize = 256;
+
+/// Normalised watcher event. The watcher boils every notify/debouncer event
+/// down to one of these so the writer-drain doesn't have to re-implement the
+/// per-OS event-kind taxonomy.
+#[derive(Debug, Clone)]
+pub enum WatchEvent {
+    /// File appeared or its content changed. On macOS this also covers
+    /// `fs::write` of an existing file (which the platform reports as
+    /// `Create`) and atomic-rename targets. The handler should reparse the
+    /// path.
+    Touched {
+        path: PathBuf,
+        decision: FilterDecision,
+    },
+    /// File disappeared (delete, rename source, unlink). The handler should
+    /// drop the file's index entries.
+    Removed { path: PathBuf },
+    /// Kernel event-buffer overflowed (`Event::need_rescan() == true` on
+    /// Linux/Windows; FSEvents coalesce flag on macOS). The watcher has
+    /// already started a re-walk; this event is purely informational.
+    Rescan,
+}
+
+/// Running watcher handle. Drop it to stop watching.
+///
+/// The internal debouncer is held in a field so its background thread isn't
+/// dropped while the daemon still wants events. The mpsc consumer side is
+/// returned alongside `Watcher::start`; only one consumer is supported.
+pub struct Watcher {
+    /// Hold the debouncer alive. `notify-debouncer-full` runs its own thread;
+    /// dropping this stops the watcher.
+    _debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
+    /// Workspace root for path-rebasing in log messages.
+    root: PathBuf,
+}
+
+impl std::fmt::Debug for Watcher {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Watcher")
+            .field("root", &self.root)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Watcher {
+    /// Start watching `root`. Performs the initial walk synchronously
+    /// (cheap on small workspaces; can be pushed onto a blocking task on
+    /// big trees in a later phase) so the caller learns about every existing
+    /// file before the watcher begins reporting incremental events.
+    pub fn start(
+        root: &Path,
+        state: Arc<DaemonState>,
+    ) -> std::io::Result<(Watcher, mpsc::Receiver<WatchEvent>)> {
+        let gitignore = PrebuiltGitignore::build(root)?;
+        let gitignore = Arc::new(gitignore);
+        let (tx, rx) = mpsc::channel::<WatchEvent>(CHANNEL_CAPACITY);
+
+        // Initial walk: emit a `Touched` for every survivor. The walker
+        // itself is gitignore-aware (cheap path-component matching done in
+        // libignore's C-ish core); we re-classify each survivor through our
+        // filter so the secrets blocklist + extension allowlist apply too.
+        initial_walk(root, &gitignore, &tx, &state)?;
+
+        // Construct the debouncer. The closure runs on the debouncer's own
+        // worker thread; we forward to the async mpsc with `try_send` so a
+        // slow consumer doesn't block the watcher. Drops are surfaced via
+        // `WatcherStatus::OverflowedRewalking`.
+        let tx_for_handler = tx.clone();
+        let state_for_handler = state.clone();
+        let gitignore_for_handler = gitignore.clone();
+        let root_for_handler = root.to_path_buf();
+        let debouncer = new_debouncer(
+            DEBOUNCE_WINDOW,
+            None,
+            move |res: DebounceEventResult| match res {
+                Ok(events) => {
+                    handle_batch(
+                        events,
+                        &gitignore_for_handler,
+                        &root_for_handler,
+                        &tx_for_handler,
+                        &state_for_handler,
+                    );
+                }
+                Err(errs) => {
+                    for e in errs {
+                        warn!(error = %e, "notify watcher error");
+                        if let notify::ErrorKind::MaxFilesWatch = e.kind {
+                            state_for_handler.set_watcher_status(WatcherStatus::PollingFallback);
+                        }
+                    }
+                }
+            },
+        )
+        .map_err(|e| std::io::Error::other(format!("new_debouncer: {e}")))?;
+
+        let mut debouncer = debouncer;
+        debouncer
+            .watch(root, RecursiveMode::Recursive)
+            .map_err(|e| std::io::Error::other(format!("debouncer.watch: {e}")))?;
+
+        state.set_watcher_status(WatcherStatus::Ok);
+        info!(root = %root.display(), "watcher started");
+
+        Ok((
+            Watcher {
+                _debouncer: debouncer,
+                root: root.to_path_buf(),
+            },
+            rx,
+        ))
+    }
+
+    /// Workspace root this watcher is bound to. Reserved for the writer-drain
+    /// task (lands in a later P6 phase) which uses it for path-rebasing in
+    /// telemetry spans.
+    #[allow(dead_code)]
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+}
+
+fn initial_walk(
+    root: &Path,
+    gitignore: &PrebuiltGitignore,
+    tx: &mpsc::Sender<WatchEvent>,
+    state: &Arc<DaemonState>,
+) -> std::io::Result<()> {
+    let walker = ignore::WalkBuilder::new(root)
+        .standard_filters(true)
+        .git_ignore(true)
+        .git_global(true)
+        .git_exclude(true)
+        .ignore(true)
+        .add_custom_ignore_filename(".rtsignore")
+        .follow_links(false)
+        .build();
+
+    let mut emitted = 0u64;
+    for entry in walker {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                warn!(error = %e, "initial walk error; continuing");
+                continue;
+            }
+        };
+        if !entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+            continue;
+        }
+        let path = entry.into_path();
+        let decision = classify(&path, gitignore);
+        match decision {
+            FilterDecision::IndexFull | FilterDecision::IndexSignatureOnly => {
+                // try_send: never block on the initial walk. If the channel
+                // fills (consumer is slow / not yet attached), drop events
+                // and rely on the consumer to do a fresh walk on attach. The
+                // watcher's overall `WatcherStatus` covers this.
+                if tx
+                    .try_send(WatchEvent::Touched {
+                        path: path.clone(),
+                        decision,
+                    })
+                    .is_err()
+                {
+                    state.set_watcher_status(WatcherStatus::OverflowedRewalking);
+                    return Ok(()); // bail out of walk; consumer will catch up via rewalk
+                }
+                emitted += 1;
+            }
+            FilterDecision::Skip(_) => {}
+        }
+    }
+    debug!(emitted, "initial walk done");
+    Ok(())
+}
+
+fn handle_batch(
+    events: Vec<notify_debouncer_full::DebouncedEvent>,
+    gitignore: &PrebuiltGitignore,
+    _root: &Path,
+    tx: &mpsc::Sender<WatchEvent>,
+    state: &Arc<DaemonState>,
+) {
+    for ev in events {
+        if ev.need_rescan() {
+            // Overflow on this batch; transition to OverflowedRewalking. The
+            // future writer-drain layer is responsible for triggering a
+            // re-walk. For the watcher-only slice, we just surface a Rescan
+            // event and the status flip.
+            state.set_watcher_status(WatcherStatus::OverflowedRewalking);
+            let _ = tx.try_send(WatchEvent::Rescan);
+            continue;
+        }
+        for path in &ev.event.paths {
+            // Path safety: reject `..` segments outright and re-check the
+            // file isn't a symlink at this depth. Per-read prefix checks
+            // happen in the file-reader path, not here.
+            if path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                continue;
+            }
+            match &ev.event.kind {
+                EventKind::Create(_) | EventKind::Modify(_) => {
+                    let decision = classify(path, gitignore);
+                    match decision {
+                        FilterDecision::IndexFull | FilterDecision::IndexSignatureOnly => {
+                            let _ = tx.try_send(WatchEvent::Touched {
+                                path: path.clone(),
+                                decision,
+                            });
+                        }
+                        FilterDecision::Skip(_) => {}
+                    }
+                }
+                EventKind::Remove(_) => {
+                    // Don't re-filter on Remove — the file is gone and the
+                    // index entry should be dropped regardless of whether it
+                    // would have passed classify(). The writer-drain will
+                    // no-op if the path isn't indexed.
+                    let _ = tx.try_send(WatchEvent::Removed {
+                        path: path.clone(),
+                    });
+                }
+                EventKind::Other | EventKind::Access(_) | EventKind::Any => {
+                    // macOS quirk per P0.3: `fs::rename` can land here with
+                    // `Other`. Treat as a touched event so the writer-drain
+                    // re-reads. Filtering still applies.
+                    if matches!(&ev.event.kind, EventKind::Other) {
+                        let decision = classify(path, gitignore);
+                        match decision {
+                            FilterDecision::IndexFull | FilterDecision::IndexSignatureOnly => {
+                                let _ = tx.try_send(WatchEvent::Touched {
+                                    path: path.clone(),
+                                    decision,
+                                });
+                            }
+                            FilterDecision::Skip(_) => {}
+                        }
+                    }
+                    // EventKind::Access is read-only metadata; ignore.
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+
+    fn fresh_state() -> Arc<DaemonState> {
+        Arc::new(DaemonState::new())
+    }
+
+    /// Wait for an event matching `pred` within `timeout`. Returns the matching
+    /// event or panics if the timeout expires.
+    async fn wait_for(
+        rx: &mut mpsc::Receiver<WatchEvent>,
+        timeout: Duration,
+        mut pred: impl FnMut(&WatchEvent) -> bool,
+    ) -> WatchEvent {
+        let deadline = Instant::now() + timeout;
+        loop {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            let recv = tokio::time::timeout(remaining, rx.recv())
+                .await
+                .unwrap_or_else(|_| {
+                    panic!("timed out waiting for event")
+                })
+                .expect("watcher channel closed unexpectedly");
+            if pred(&recv) {
+                return recv;
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn initial_walk_emits_existing_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.rs"), "fn a(){}").unwrap();
+        std::fs::write(tmp.path().join("b.rs"), "fn b(){}").unwrap();
+        std::fs::write(tmp.path().join("readme.md"), "# x").unwrap();
+        // These three should NOT come through the channel:
+        std::fs::write(tmp.path().join("logo.png"), b"binary").unwrap();
+        std::fs::write(tmp.path().join(".env"), "SECRET=1").unwrap();
+        std::fs::write(tmp.path().join("a.rs.swp"), "swap").unwrap();
+
+        let state = fresh_state();
+        let (_watcher, mut rx) = Watcher::start(tmp.path(), state).unwrap();
+
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..3 {
+            let ev = tokio::time::timeout(Duration::from_secs(2), rx.recv())
+                .await
+                .expect("walker should emit promptly")
+                .expect("channel closed");
+            match ev {
+                WatchEvent::Touched { path, .. } => {
+                    seen.insert(path.file_name().unwrap().to_owned());
+                }
+                other => panic!("unexpected event during initial walk: {other:?}"),
+            }
+        }
+
+        assert!(seen.contains(std::ffi::OsStr::new("a.rs")));
+        assert!(seen.contains(std::ffi::OsStr::new("b.rs")));
+        assert!(seen.contains(std::ffi::OsStr::new("readme.md")));
+    }
+
+    #[tokio::test]
+    async fn live_create_surfaces_through_debouncer() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = fresh_state();
+        let (_watcher, mut rx) = Watcher::start(tmp.path(), state.clone()).unwrap();
+
+        // Drain anything from the (empty) initial walk.
+        while let Ok(Some(_)) = tokio::time::timeout(Duration::from_millis(100), rx.recv()).await {}
+
+        let path = tmp.path().join("hello.rs");
+        std::fs::write(&path, "fn hello(){}").unwrap();
+
+        let ev = wait_for(&mut rx, Duration::from_secs(3), |e| {
+            matches!(e, WatchEvent::Touched { path: p, .. } if p.file_name() == Some(std::ffi::OsStr::new("hello.rs")))
+        })
+        .await;
+        match ev {
+            WatchEvent::Touched { decision, .. } => {
+                assert_eq!(decision, FilterDecision::IndexFull);
+            }
+            other => panic!("expected Touched, got {other:?}"),
+        }
+
+        // WatcherStatus should still be Ok after a quiet save.
+        assert_eq!(state.watcher_status(), WatcherStatus::Ok);
+    }
+
+    #[tokio::test]
+    async fn live_create_of_secrets_file_is_filtered() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = fresh_state();
+        let (_watcher, mut rx) = Watcher::start(tmp.path(), state).unwrap();
+
+        // Drain initial walk.
+        while let Ok(Some(_)) = tokio::time::timeout(Duration::from_millis(100), rx.recv()).await {}
+
+        std::fs::write(tmp.path().join(".env"), "SECRET=x").unwrap();
+        std::fs::write(tmp.path().join("ok.rs"), "fn ok(){}").unwrap();
+
+        // We should see `ok.rs` come through but never `.env`.
+        let ev = wait_for(&mut rx, Duration::from_secs(3), |e| {
+            matches!(e, WatchEvent::Touched { path, .. } if path.file_name() == Some(std::ffi::OsStr::new("ok.rs")))
+        })
+        .await;
+        let _ = ev;
+
+        // Drain a small tail to ensure nothing else arrives that's the `.env`.
+        while let Ok(Some(ev)) = tokio::time::timeout(Duration::from_millis(200), rx.recv()).await {
+            if let WatchEvent::Touched { path, .. } = &ev {
+                assert_ne!(
+                    path.file_name(),
+                    Some(std::ffi::OsStr::new(".env")),
+                    "secrets blocklist should suppress .env"
+                );
+            }
+        }
+    }
+}

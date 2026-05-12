@@ -122,3 +122,10 @@ security_report.json
 
 # Rust package lock (libraries typically ignore)
 Cargo.lock
+
+# Bench fixture corpus (tarballs extracted into here by `rts-bench fixture restore`).
+# Per plan §P9, fixtures are pinned in `corpus.lock` and verified by SHA256 —
+# the actual bytes don't belong in git.
+crates/rts-bench/corpus/
+# Bench output reports — produced by `rts-bench task <id>`.
+crates/rts-bench/bench-*.json
