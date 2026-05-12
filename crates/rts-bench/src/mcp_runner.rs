@@ -149,7 +149,7 @@ impl McpSession {
         if n == 0 {
             return Err(anyhow!("rts-mcp closed stdout"));
         }
-        Ok(serde_json::from_slice(&buf).context("decode MCP response")?)
+        serde_json::from_slice(&buf).context("decode MCP response")
     }
 
     /// One `tools/call`. Polls up to `max_retries` times when the response is

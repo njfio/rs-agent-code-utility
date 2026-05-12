@@ -606,7 +606,7 @@ impl CSyntax {
             for decl in function_declarators {
                 if decl
                     .parent()
-                    .map_or(false, |p| p.kind() == "pointer_declarator")
+                    .is_some_and(|p| p.kind() == "pointer_declarator")
                 {
                     features.push("Function Pointers".to_string());
                     break;

@@ -253,8 +253,8 @@ impl Worker {
                 let _total_tasks_u32 = total_tasks as u32;
                 let duration_u32 = duration.as_millis() as u32;
                 stats_guard.average_task_duration = Duration::from_millis(
-                    ((current_avg.as_millis() as u64 * (total_tasks - 1) + duration_u32 as u64)
-                        / total_tasks) as u64,
+                    (current_avg.as_millis() as u64 * (total_tasks - 1) + duration_u32 as u64)
+                        / total_tasks,
                 );
             }
         }

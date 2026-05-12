@@ -55,7 +55,7 @@ fn runtime_root() -> anyhow::Result<PathBuf> {
     {
         let home =
             dirs::home_dir().ok_or_else(|| anyhow!("could not resolve $HOME for socket dir"))?;
-        return Ok(home.join("Library").join("Caches").join("rts"));
+        Ok(home.join("Library").join("Caches").join("rts"))
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
@@ -134,7 +134,7 @@ fn check_peer_credentials(stream: &tokio::net::UnixStream) -> anyhow::Result<u32
                 our_uid
             ));
         }
-        return Ok(peer_uid);
+        Ok(peer_uid)
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {

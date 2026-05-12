@@ -35,7 +35,7 @@ async fn read_one_response(reader: &mut BufReader<ChildStdout>) -> Result<Value>
     if n == 0 {
         anyhow::bail!("EOF before MCP response");
     }
-    Ok(serde_json::from_slice(&buf).context("decode MCP response")?)
+    serde_json::from_slice(&buf).context("decode MCP response")
 }
 
 async fn send_request(stdin: &mut ChildStdin, req: &Value) -> Result<()> {

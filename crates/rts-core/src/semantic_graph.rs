@@ -284,7 +284,7 @@ impl SemanticGraphQuery {
         let mut edges = Vec::new();
         let mut examined = 0;
 
-        for (_, node) in &self.nodes {
+        for node in self.nodes.values() {
             examined += 1;
             if node.name.contains(pattern) {
                 nodes.push(node.clone());
@@ -369,7 +369,7 @@ impl SemanticGraphQuery {
                 nodes_examined: visited.len(),
                 edges_traversed,
                 execution_time_ms: execution_time,
-                truncated: queue.len() > 0,
+                truncated: !queue.is_empty(),
             },
         }
     }
@@ -598,21 +598,21 @@ impl SemanticGraphQuery {
             self.index
                 .by_type
                 .entry(node.node_type.clone())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(node_id.to_string());
 
             // Index by file
             self.index
                 .by_file
                 .entry(node.file_path.to_path_buf())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(node_id.to_string());
 
             // Index by name
             self.index
                 .by_name
                 .entry(node.name.to_string())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(node_id.to_string());
         }
     }

@@ -98,20 +98,15 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 /// Depth level for analysis
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AnalysisDepth {
     /// Only collect basic file metadata without parsing
     Basic,
     /// Parse files but skip symbol extraction
     Deep,
     /// Full parsing with symbol extraction
+    #[default]
     Full,
-}
-
-impl Default for AnalysisDepth {
-    fn default() -> Self {
-        AnalysisDepth::Full
-    }
 }
 
 impl std::str::FromStr for AnalysisDepth {
@@ -254,6 +249,12 @@ pub struct AnalysisResult {
     pub config: AnalysisConfig,
 }
 
+impl Default for AnalysisResult {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AnalysisResult {
     /// Create a new empty analysis result
     pub fn new() -> Self {
@@ -276,6 +277,7 @@ impl AnalysisResult {
 }
 
 /// Main analyzer for processing codebases
+#[derive(Default)]
 pub struct CodebaseAnalyzer {
     config: AnalysisConfig,
     parsers: HashMap<Language, Parser>,
@@ -301,9 +303,9 @@ impl CodebaseAnalyzer {
 
     /// Get or create a parser for the given language
     fn get_parser(&mut self, language: Language) -> Result<&Parser> {
-        if !self.parsers.contains_key(&language) {
+        if let std::collections::hash_map::Entry::Vacant(e) = self.parsers.entry(language) {
             let parser = Parser::new(language)?;
-            self.parsers.insert(language, parser);
+            e.insert(parser);
         }
         self.parsers.get(&language).ok_or_else(|| {
             Error::internal_error(
@@ -323,7 +325,7 @@ impl CodebaseAnalyzer {
         if !file_path.exists() {
             return Err(Error::invalid_input_error(
                 "file path",
-                &file_path.display().to_string(),
+                file_path.display().to_string(),
                 "existing file",
             ));
         }
@@ -331,7 +333,7 @@ impl CodebaseAnalyzer {
         if !file_path.is_file() {
             return Err(Error::invalid_input_error(
                 "path type",
-                &file_path.display().to_string(),
+                file_path.display().to_string(),
                 "file (not directory)",
             ));
         }
@@ -352,7 +354,7 @@ impl CodebaseAnalyzer {
         if !root_path.exists() {
             return Err(Error::invalid_input_error(
                 "directory path",
-                &root_path.display().to_string(),
+                root_path.display().to_string(),
                 "existing directory",
             ));
         }
@@ -360,7 +362,7 @@ impl CodebaseAnalyzer {
         if !root_path.is_dir() {
             return Err(Error::invalid_input_error(
                 "path type",
-                &root_path.display().to_string(),
+                root_path.display().to_string(),
                 "directory (not file)",
             ));
         }
@@ -1058,7 +1060,7 @@ impl CodebaseAnalyzer {
             // Try to find an identifier within the pattern
             let ids = let_node.find_descendants(|n| n.kind() == "identifier");
             let name = ids
-                .get(0)
+                .first()
                 .and_then(|n| n.text().ok())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| {
@@ -2069,17 +2071,6 @@ impl CodebaseAnalyzer {
     }
 }
 
-impl Default for CodebaseAnalyzer {
-    fn default() -> Self {
-        Self {
-            config: AnalysisConfig::default(),
-            parsers: HashMap::new(),
-            semantic_graph: None,
-            file_cache: FileCache::new(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2150,7 +2141,7 @@ mod tests {
             .iter()
             .find(|f| f.path.extension().unwrap() == "rs")
             .unwrap();
-        assert!(rust_file_info.symbols.len() > 0);
+        assert!(!rust_file_info.symbols.is_empty());
         let main_symbol = rust_file_info
             .symbols
             .iter()
@@ -2167,7 +2158,7 @@ mod tests {
             .iter()
             .find(|f| f.path.extension().unwrap() == "js")
             .unwrap();
-        assert!(js_file_info.symbols.len() > 0);
+        assert!(!js_file_info.symbols.is_empty());
         assert!(js_file_info.symbols.iter().any(|s| s.name == "greet"));
     }
 }

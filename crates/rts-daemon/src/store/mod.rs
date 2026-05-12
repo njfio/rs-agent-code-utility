@@ -8,7 +8,7 @@
 
 pub mod schema;
 
-pub use schema::{DefSite, FileId, FileMeta, ParseStatus, SymbolId, SymbolKind};
+pub use schema::{DefSite, FileId, FileMeta, ParseStatus, SymbolKind};
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -404,8 +404,8 @@ fn drop_file_entries(
     // O(1) per drop.
     let prior_sids: Vec<u32> = {
         let mut v = Vec::new();
-        let mut it = fid_defs.get(&fid)?;
-        while let Some(row) = it.next() {
+        let it = fid_defs.get(&fid)?;
+        for row in it {
             v.push(row?.value());
         }
         v
@@ -416,8 +416,8 @@ fn drop_file_entries(
         // Read & filter.
         let kept: Vec<Vec<u8>> = {
             let mut v = Vec::new();
-            let mut it = defs.get(&sid)?;
-            while let Some(row) = it.next() {
+            let it = defs.get(&sid)?;
+            for row in it {
                 let bytes = row?.value().to_vec();
                 if let Ok(d) = from_bytes::<DefSite>(&bytes) {
                     if d.fid != fid {

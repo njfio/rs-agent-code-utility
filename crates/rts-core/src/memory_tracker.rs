@@ -343,6 +343,12 @@ impl Default for MemoryTrackingConfig {
     }
 }
 
+impl Default for MemoryTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryTracker {
     /// Create a new memory tracker with default configuration
     pub fn new() -> Self {

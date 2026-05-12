@@ -91,7 +91,7 @@ pub fn build_call_graph(result: &AnalysisResult) -> CallGraph {
     // Build call relationships using simple string-based analysis for now
     // This is more reliable than complex AST analysis for basic call graphs
     for file in &result.files {
-        if let Ok(content) = fs::read_to_string(&result.root_path.join(&file.path)) {
+        if let Ok(content) = fs::read_to_string(result.root_path.join(&file.path)) {
             // Find all function calls in this file using simple pattern matching
             let calls = extract_function_calls_simple(&content);
 
@@ -267,7 +267,7 @@ fn extract_imports_from_node(node: &tree_sitter::Node, content: &str, deps: &mut
             for child in node.children(&mut node.walk()) {
                 if child.kind() == "dotted_name" || child.kind() == "identifier" {
                     let import_text = &content[child.start_byte()..child.end_byte()];
-                    let dep = import_text.split('.').last().unwrap_or(import_text);
+                    let dep = import_text.split('.').next_back().unwrap_or(import_text);
                     deps.push(dep.to_string());
                 }
             }
@@ -275,12 +275,12 @@ fn extract_imports_from_node(node: &tree_sitter::Node, content: &str, deps: &mut
         // JavaScript/TypeScript
         "import_statement" => {
             // Check if it's a Python import first
-            if node.parent().map_or(false, |p| p.kind() == "module") {
+            if node.parent().is_some_and(|p| p.kind() == "module") {
                 // Python import
                 for child in node.children(&mut node.walk()) {
                     if child.kind() == "dotted_name" || child.kind() == "identifier" {
                         let import_text = &content[child.start_byte()..child.end_byte()];
-                        let dep = import_text.split('.').last().unwrap_or(import_text);
+                        let dep = import_text.split('.').next_back().unwrap_or(import_text);
                         deps.push(dep.to_string());
                     }
                 }
@@ -403,7 +403,7 @@ fn extract_dependencies_string_based(content: &str) -> Vec<String> {
 }
 
 fn sanitize_mermaid(text: &str) -> String {
-    text.replace(':', "_").replace('.', "_").replace('/', "_")
+    text.replace([':', '.', '/'], "_")
 }
 
 #[cfg(test)]

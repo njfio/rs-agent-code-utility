@@ -32,22 +32,22 @@ fn synth_module(target_lines: usize) -> String {
     s.push_str("//! The first ~30 lines tell a reader what this module exposes; the rest is\n");
     s.push_str("//! private implementation detail that an `outline_workspace` agent doesn't\n");
     s.push_str("//! need to fetch.\n");
-    s.push_str("\n");
+    s.push('\n');
     s.push_str("use std::collections::HashMap;\n");
     s.push_str("use std::path::PathBuf;\n");
-    s.push_str("\n");
+    s.push('\n');
     s.push_str("pub struct Public {\n");
     s.push_str("    pub name: String,\n");
     s.push_str("    pub value: u32,\n");
     s.push_str("}\n");
-    s.push_str("\n");
+    s.push('\n');
     s.push_str("pub trait PublicTrait {\n");
     s.push_str("    fn handle(&self, input: &str) -> String;\n");
     s.push_str("}\n");
-    s.push_str("\n");
+    s.push('\n');
     s.push_str("pub fn entry_a(x: u32) -> u32 { x.saturating_add(1) }\n");
     s.push_str("pub fn entry_b(x: u32) -> u32 { x.saturating_mul(2) }\n");
-    s.push_str("\n");
+    s.push('\n');
     let header_lines = s.lines().count();
     let mut i: usize = 0;
     while s.lines().count() < target_lines.max(header_lines + 1) {

@@ -427,6 +427,12 @@ impl VulnerabilityProvider for NoopVulnProvider {
     }
 }
 
+impl Default for DependencyAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DependencyAnalyzer {
     /// Create a new dependency analyzer with default configuration
     pub fn new() -> Self {
@@ -485,7 +491,7 @@ impl DependencyAnalyzer {
         let mut dependencies_by_manager = HashMap::new();
 
         for pm_info in &package_managers {
-            let deps = self.extract_dependencies(&pm_info)?;
+            let deps = self.extract_dependencies(pm_info)?;
             let count = deps.len();
             all_dependencies.extend(deps);
             dependencies_by_manager.insert(pm_info.manager.clone(), count);
@@ -969,9 +975,8 @@ impl DependencyAnalyzer {
         let mut names = Vec::new();
         for line in src.lines() {
             let l = line.trim();
-            if l.starts_with("use ") {
+            if let Some(after) = l.strip_prefix("use ") {
                 // use foo::bar::{...}
-                let after = &l[4..];
                 let first = after
                     .split(|c: char| c == ':' || c.is_whitespace() || c == '{')
                     .next()
@@ -982,8 +987,7 @@ impl DependencyAnalyzer {
                 ) {
                     names.push(first.to_string());
                 }
-            } else if l.starts_with("extern crate ") {
-                let after = &l[13..];
+            } else if let Some(after) = l.strip_prefix("extern crate ") {
                 let name = after
                     .split(|c: char| c == ';' || c.is_whitespace())
                     .next()
@@ -1089,9 +1093,8 @@ impl DependencyAnalyzer {
         let mut names = Vec::new();
         for line in src.lines() {
             let l = line.trim();
-            if l.starts_with("import ") {
+            if let Some(after) = l.strip_prefix("import ") {
                 // import module [as alias]
-                let after = &l[7..];
                 let first = after
                     .split(|c: char| c.is_whitespace() || c == ',')
                     .next()
@@ -1099,9 +1102,8 @@ impl DependencyAnalyzer {
                 if !first.is_empty() && !first.starts_with('.') {
                     names.push(first.split('.').next().unwrap().to_string());
                 }
-            } else if l.starts_with("from ") {
+            } else if let Some(after) = l.strip_prefix("from ") {
                 // from module import ...
-                let after = &l[5..];
                 let module = after.split_whitespace().next().unwrap_or("");
                 if !module.is_empty() && !module.starts_with('.') {
                     names.push(module.split('.').next().unwrap().to_string());

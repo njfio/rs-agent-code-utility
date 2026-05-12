@@ -422,8 +422,8 @@ impl ParserPool {
                 .by_lang
                 .lock()
                 .map_err(|e| anyhow::anyhow!("parser pool poisoned: {e}"))?;
-            if !pool.contains_key(&language) {
-                pool.insert(language, Parser::new(language)?);
+            if let std::collections::hash_map::Entry::Vacant(e) = pool.entry(language) {
+                e.insert(Parser::new(language)?);
             }
         }
 

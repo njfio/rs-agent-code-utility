@@ -37,7 +37,7 @@ impl Query {
     /// Get capture names
     pub fn capture_names(&self) -> Vec<&str> {
         // `capture_names()` returns `&[&str]` in tree-sitter 0.26; deref each entry.
-        self.inner.capture_names().iter().copied().collect()
+        self.inner.capture_names().to_vec()
     }
 
     /// Execute the query on a syntax tree
@@ -136,7 +136,7 @@ impl Query {
     pub fn highlights(language: Language) -> Result<Self> {
         let highlights_query = language.highlights_query().ok_or_else(|| {
             Error::not_supported_error(
-                &format!("Highlights query for {}", language.name()),
+                format!("Highlights query for {}", language.name()),
                 "Language does not support syntax highlighting",
             )
         })?;

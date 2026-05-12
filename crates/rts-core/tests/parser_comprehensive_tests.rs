@@ -11,12 +11,12 @@ fn test_parser_with_options() -> Result<(), Box<dyn std::error::Error>> {
         include_extras: false,
     };
 
-    let parser = Parser::with_options(Language::Rust, options.clone())?;
+    let parser = Parser::with_options(Language::Rust, options)?;
 
     assert_eq!(parser.language(), Language::Rust);
     assert_eq!(parser.options().max_bytes, Some(1000));
     assert_eq!(parser.options().timeout_millis, Some(2000));
-    assert_eq!(parser.options().include_extras, false);
+    assert!(!parser.options().include_extras);
 
     Ok(())
 }
@@ -30,7 +30,7 @@ fn test_parser_options_management() -> Result<(), Box<dyn std::error::Error>> {
     let default_options = parser.options();
     assert_eq!(default_options.max_bytes, None);
     assert_eq!(default_options.timeout_millis, Some(5000));
-    assert_eq!(default_options.include_extras, true);
+    assert!(default_options.include_extras);
 
     // Test setting new options
     let new_options = ParseOptions {
@@ -39,12 +39,12 @@ fn test_parser_options_management() -> Result<(), Box<dyn std::error::Error>> {
         include_extras: false,
     };
 
-    parser.set_options(new_options.clone());
+    parser.set_options(new_options);
 
     let updated_options = parser.options();
     assert_eq!(updated_options.max_bytes, Some(500));
     assert_eq!(updated_options.timeout_millis, Some(1000));
-    assert_eq!(updated_options.include_extras, false);
+    assert!(!updated_options.include_extras);
 
     Ok(())
 }
@@ -176,7 +176,7 @@ fn test_clone_parser() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(cloned_parser.language(), Language::JavaScript);
     assert_eq!(cloned_parser.options().max_bytes, Some(1000));
     assert_eq!(cloned_parser.options().timeout_millis, Some(3000));
-    assert_eq!(cloned_parser.options().include_extras, false);
+    assert!(!cloned_parser.options().include_extras);
 
     // Both parsers should work independently
     let js_code = "function hello() { console.log('Hello'); }";
