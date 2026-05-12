@@ -7,6 +7,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.15] - 2026-05-12
+
+P8 SignatureRenderer extends to **Go, Java, C, and C++**. Eight of the
+eleven supported grammars now have signature renderers. Remaining 3
+(PHP, Ruby, Swift) follow in a subsequent slice.
+
+Go ships end-to-end (writer extraction + signature renderer). Java, C,
+and C++ ship renderers + dispatcher routing; the daemon's writer-side
+symbol extraction in `rust_tree_sitter::analyzer` is currently
+incomplete for some kinds in those three languages — a follow-up
+analyzer-layer PR will close that gap. Until then those agents get
+the body in `text` and a `null` `signature` field.
+
+### Added
+
+- **`render_go(bytes)`** in `crates/rts-core/src/signature.rs`:
+  - `function_declaration` / `method_declaration`: drops `block` body.
+  - `type_declaration` (struct/interface): strips from the first `{`
+    in the item's text — Go's grammar nests the body two levels deep
+    (`type_declaration > type_spec > struct_type > field_declaration_list`),
+    and the first-brace heuristic is exact for Go's syntax.
+  - `type Foo = int` (type alias): no `{`, kept whole.
+  - `const_declaration`, `var_declaration`, `import_declaration`,
+    `package_clause`: kept whole.
+- **`render_java(bytes)`**:
+  - `class_declaration` / `record_declaration`: drops `class_body`.
+  - `interface_declaration`: drops `interface_body`.
+  - `enum_declaration`: drops `enum_body`.
+  - `annotation_type_declaration`: drops `annotation_type_body`.
+  - `method_declaration` / `constructor_declaration`: drops `block`.
+  - `package_declaration`, `import_declaration`: kept whole.
+- **`render_c(bytes)`**:
+  - `function_definition`: drops `compound_statement`.
+  - `struct_specifier` / `union_specifier`: drops
+    `field_declaration_list`.
+  - `enum_specifier`: drops `enumerator_list`.
+  - Function prototypes, typedefs, preprocessor directives: kept whole.
+- **`render_cpp(bytes)`**:
+  - C semantics plus `class_specifier` (drops `field_declaration_list`),
+    `namespace_definition` (drops `declaration_list`), and
+    `template_declaration` (strips at first `{`, preserving the template
+    parameter list).
+  - `using` / `alias_declaration`: kept whole.
+- **Shared internal helper** `render_strip_body(bytes, language,
+  handlers)` factored out — each new renderer is a handler-table
+  literal rather than a custom function. Cuts ~150 LOC of duplication.
+- **`render_signature_for_path`** dispatch in
+  `crates/rts-daemon/src/methods/index.rs` extended for `.go`, `.java`,
+  `.c`, `.h`, `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hh`, `.hxx`.
+- **`crates/rts-daemon/tests/read_round_trip.rs`** seeds a Go file
+  and asserts the daemon routes `.go` to `render_go` end-to-end.
+- **`crates/rts-daemon/src/writer.rs`** gets one new unit test
+  (`parse_and_extract_returns_go_symbols`) that verifies the writer's
+  Go-symbol extraction works at the language-extractor layer, with a
+  comment documenting the upstream Java/C/C++ extraction gap.
+
+### Changed
+
+- Module-level doc comment in `crates/rts-core/src/signature.rs` now
+  lists all 8 supported languages + flags Java/C/C++ as
+  renderer-ready/writer-pending.
+
+### Known limitations (filed as follow-up)
+
+The analyzer's `extract_java_symbols`, `extract_c_symbols`, and
+`extract_cpp_symbols` paths in `rust_tree_sitter::analyzer` are
+TODO-stubbed for several symbol kinds. Symbols for these languages
+that don't make it through extraction won't be reachable via
+`Index.ReadSymbol`, even though their signature renderers work. The
+22 unit tests for those languages (in
+`rust_tree_sitter::signature::tests`) confirm the renderers
+themselves are correct. A follow-up analyzer PR will fix the gap.
+
+### Not in this slice (later P8 slices)
+
+- PHP, Ruby, Swift signature renderers — dispatcher returns `None`
+  for those.
+- Analyzer-layer fix for Java/C/C++ symbol extraction.
+- Tree-shake closure walker for `include_dependencies: true`.
+- PageRank `rank_score` ordering on `Index.FindSymbol`.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **429 passed, 0 failed, 2 ignored** (was
+  399; +29 unit tests + 1 writer-layer Go test). The new
+  `read_round_trip` Go assertion is the integration coverage.
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: exit 0.
+
 ## [0.2.0-alpha.14] - 2026-05-12
 
 P8 SignatureRenderer expands to **Python, TypeScript, and JavaScript**.

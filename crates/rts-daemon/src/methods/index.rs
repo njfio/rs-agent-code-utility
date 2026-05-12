@@ -599,9 +599,19 @@ fn render_signature_for_path(rel_path: &str, body: &[u8]) -> Option<String> {
         Some("js") | Some("jsx") | Some("mjs") | Some("cjs") => {
             rust_tree_sitter::signature::render_javascript(body)
         }
-        // Go, Java, C, C++, PHP, Ruby, Swift land in subsequent P8 slices.
-        // Until then those agents get the body in `text` and a `null`
-        // signature field.
+        Some("go") => rust_tree_sitter::signature::render_go(body),
+        Some("java") => rust_tree_sitter::signature::render_java(body),
+        // C headers (.h) routed to the C renderer — C++ headers are
+        // typically .hpp/.hh/.hxx and parse fine under the C++ grammar,
+        // which is a superset of C for the patterns the renderer cares
+        // about.
+        Some("c") | Some("h") => rust_tree_sitter::signature::render_c(body),
+        Some("cpp") | Some("cc") | Some("cxx") | Some("hpp") | Some("hh") | Some("hxx") => {
+            rust_tree_sitter::signature::render_cpp(body)
+        }
+        // PHP, Ruby, Swift land in subsequent P8 slices. Until then
+        // those agents get the body in `text` and a `null` signature
+        // field.
         _ => None,
     }
 }

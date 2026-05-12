@@ -13,10 +13,18 @@
 //!
 //! the signature is `pub fn build_index(workspace: &Path) -> Result<Index>`.
 //!
-//! v0 ships **Rust, Python, TypeScript, and JavaScript**. The remaining
-//! 7 grammars (Go, Java, C, C++, PHP, Ruby, Swift) land in subsequent
-//! P8 slices. Callers fall through to body returns when this module
-//! returns `None`.
+//! v0 ships renderers for **Rust, Python, TypeScript, JavaScript, Go,
+//! Java, C, and C++**. The remaining 3 grammars (PHP, Ruby, Swift)
+//! land in a subsequent P8 slice. Callers fall through to body returns
+//! when this module returns `None`.
+//!
+//! **Note**: Java / C / C++ have working renderers here, but their
+//! end-to-end `Index.ReadSymbol shape=signature` path also needs the
+//! daemon's writer (via `rust_tree_sitter::analyzer::extract_*_symbols`)
+//! to put the symbol into the index in the first place. Those
+//! extractors are currently incomplete for Java / C / C++ in some
+//! cases; a follow-up analyzer-layer PR will close the gap. Go works
+//! end-to-end.
 
 use streaming_iterator::StreamingIterator as _;
 
@@ -368,6 +376,355 @@ fn ts_body_start(item: &tree_sitter::Node<'_>) -> Option<usize> {
     None
 }
 
+// ---------- Generic body-stripping helper ----------
+//
+// The pattern below is shared by Go, Java, C, and C++ renderers: parse,
+// find the first top-level item, look up its body via the `body` field
+// (preferred) or by walking children for a recognised body node-kind,
+// then return the prefix slice trimmed of trailing whitespace.
+
+fn render_strip_body(
+    bytes: &[u8],
+    language: tree_sitter::Language,
+    handlers: &[Handler],
+) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+    let item = root.children(&mut root.walk()).find(|n| {
+        !matches!(
+            n.kind(),
+            "comment"
+                | "line_comment"
+                | "block_comment"
+                | "preproc_call"
+                | "preproc_include"
+                | "preproc_def"
+        )
+    })?;
+
+    let handler = handlers.iter().find(|h| h.kinds.contains(&item.kind()))?;
+    let signature_end = match handler.body_action {
+        BodyAction::Strip(body_kinds) => {
+            find_body_start(&item, body_kinds).unwrap_or(item.end_byte())
+        }
+        BodyAction::Keep => item.end_byte(),
+    };
+
+    let start = item.start_byte();
+    let slice = bytes.get(start..signature_end)?;
+    let text = std::str::from_utf8(slice).ok()?.trim_end().to_string();
+    if text.is_empty() {
+        return None;
+    }
+    Some(text)
+}
+
+#[derive(Clone, Copy)]
+struct Handler {
+    kinds: &'static [&'static str],
+    body_action: BodyAction,
+}
+
+#[derive(Clone, Copy)]
+enum BodyAction {
+    /// Strip the body. Tries `child_by_field_name("body")` first; falls
+    /// back to walking children for a node-kind in the list.
+    Strip(&'static [&'static str]),
+    /// Keep the whole item as-is — no body to strip.
+    Keep,
+}
+
+fn find_body_start(item: &tree_sitter::Node<'_>, body_kinds: &[&str]) -> Option<usize> {
+    if let Some(body) = item.child_by_field_name("body") {
+        return Some(body.start_byte());
+    }
+    let mut cursor = item.walk();
+    for child in item.children(&mut cursor) {
+        if body_kinds.contains(&child.kind()) {
+            return Some(child.start_byte());
+        }
+    }
+    None
+}
+
+// ---------- Go ----------
+
+/// Render the signature of a Go top-level item.
+///
+/// - **`function_declaration`** / **`method_declaration`**: drops the
+///   `block` body. Keeps receiver, parameters, return types.
+/// - **`type_declaration`** (`type Foo struct {…}` / `interface {…}`):
+///   strips the embedded `struct_type` / `interface_type` body. Type
+///   aliases (`type Foo = int`) have no body and are kept whole.
+/// - **`const_declaration`** / **`var_declaration`** /
+///   **`import_declaration`** / **`package_clause`**: kept whole.
+pub fn render_go(bytes: &[u8]) -> Option<String> {
+    // `type Foo struct {…}` / `type Foo interface {…}`: the body node
+    // lives two levels deep (`type_declaration > type_spec > struct_type
+    // > field_declaration_list`). Handle that with a recursive descent
+    // first; fall through to the flat handlers for everything else.
+    if let Some(s) = render_strip_body_with_recursive_body(bytes, tree_sitter_go::LANGUAGE.into()) {
+        return Some(s);
+    }
+    render_strip_body(
+        bytes,
+        tree_sitter_go::LANGUAGE.into(),
+        &[
+            Handler {
+                kinds: &["function_declaration", "method_declaration"],
+                body_action: BodyAction::Strip(&["block"]),
+            },
+            Handler {
+                kinds: &["type_declaration"],
+                // Flat-walk fallback — keep whole when no body found
+                // (e.g. type aliases `type Foo = int`).
+                body_action: BodyAction::Keep,
+            },
+            Handler {
+                kinds: &[
+                    "const_declaration",
+                    "var_declaration",
+                    "import_declaration",
+                    "package_clause",
+                ],
+                body_action: BodyAction::Keep,
+            },
+        ],
+    )
+    .map(|s| trim_trailing_open_brace(&s))
+}
+
+/// Fallback path for Go's `type X struct { … }` / `type X interface { … }`:
+/// the body braces sit deep in the AST (`type_declaration > type_spec >
+/// struct_type > field_declaration_list`). The flat-walk doesn't reach
+/// it. Slice at the first `{` character in the item's text — Go's
+/// grammar guarantees there's no `{` before a struct/interface body in
+/// a type declaration.
+fn render_strip_body_with_recursive_body(
+    bytes: &[u8],
+    language: tree_sitter::Language,
+) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+    let item = root
+        .children(&mut root.walk())
+        .find(|n| !matches!(n.kind(), "comment" | "line_comment" | "block_comment"))?;
+
+    if item.kind() != "type_declaration" {
+        return None;
+    }
+    let start = item.start_byte();
+    let end = item.end_byte();
+    let slice = bytes.get(start..end)?;
+    let text = std::str::from_utf8(slice).ok()?;
+    let brace = text.find('{')?;
+    let signature = text[..brace].trim_end().to_string();
+    if signature.is_empty() {
+        return None;
+    }
+    Some(signature)
+}
+
+fn descend_for_body(node: &tree_sitter::Node<'_>, kinds: &[&str], out: &mut Option<usize>) {
+    if out.is_some() {
+        return;
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if kinds.contains(&child.kind()) {
+            *out = Some(child.start_byte());
+            return;
+        }
+        descend_for_body(&child, kinds, out);
+        if out.is_some() {
+            return;
+        }
+    }
+}
+
+fn trim_trailing_open_brace(s: &str) -> String {
+    let trimmed = s.trim_end();
+    if let Some(rest) = trimmed.strip_suffix('{') {
+        rest.trim_end().to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+// ---------- Java ----------
+
+/// Render the signature of a Java top-level item.
+///
+/// - **`class_declaration`** / **`record_declaration`**: drops `class_body`.
+/// - **`interface_declaration`**: drops `interface_body`.
+/// - **`enum_declaration`**: drops `enum_body`.
+/// - **`annotation_type_declaration`**: drops `annotation_type_body`.
+/// - **`method_declaration`** / **`constructor_declaration`** (in-class):
+///   drops `block` body.
+/// - **`import_declaration`** / **`package_declaration`**: kept whole.
+pub fn render_java(bytes: &[u8]) -> Option<String> {
+    render_strip_body(
+        bytes,
+        tree_sitter_java::LANGUAGE.into(),
+        &[
+            Handler {
+                kinds: &[
+                    "class_declaration",
+                    "record_declaration",
+                    "interface_declaration",
+                    "enum_declaration",
+                    "annotation_type_declaration",
+                ],
+                body_action: BodyAction::Strip(&[
+                    "class_body",
+                    "interface_body",
+                    "enum_body",
+                    "annotation_type_body",
+                ]),
+            },
+            Handler {
+                kinds: &["method_declaration", "constructor_declaration"],
+                body_action: BodyAction::Strip(&["block"]),
+            },
+            Handler {
+                kinds: &["import_declaration", "package_declaration"],
+                body_action: BodyAction::Keep,
+            },
+        ],
+    )
+}
+
+// ---------- C ----------
+
+/// Render the signature of a C top-level item.
+///
+/// - **`function_definition`**: drops `compound_statement` body.
+/// - **`declaration`** (variable / function prototype / typedef): kept
+///   whole — these are typically one-liners.
+/// - **`struct_specifier`** / **`union_specifier`** / **`enum_specifier`**
+///   (top-level): drops the field/enumerator list.
+/// - **`preproc_*`**: kept whole.
+pub fn render_c(bytes: &[u8]) -> Option<String> {
+    render_strip_body(
+        bytes,
+        tree_sitter_c::LANGUAGE.into(),
+        &[
+            Handler {
+                kinds: &["function_definition"],
+                body_action: BodyAction::Strip(&["compound_statement"]),
+            },
+            Handler {
+                kinds: &["struct_specifier", "union_specifier"],
+                body_action: BodyAction::Strip(&["field_declaration_list"]),
+            },
+            Handler {
+                kinds: &["enum_specifier"],
+                body_action: BodyAction::Strip(&["enumerator_list"]),
+            },
+            Handler {
+                kinds: &[
+                    "declaration",
+                    "type_definition",
+                    "preproc_include",
+                    "preproc_def",
+                    "preproc_function_def",
+                    "preproc_call",
+                ],
+                body_action: BodyAction::Keep,
+            },
+        ],
+    )
+}
+
+// ---------- C++ ----------
+
+/// Render the signature of a C++ top-level item.
+///
+/// Inherits C's semantics plus:
+/// - **`class_specifier`**: drops `field_declaration_list`.
+/// - **`namespace_definition`**: drops `declaration_list`.
+/// - **`template_declaration`**: unwraps to the inner declaration's
+///   signature (preserving the template prefix).
+pub fn render_cpp(bytes: &[u8]) -> Option<String> {
+    // Try the inner-declaration unwrap path first for template_declaration;
+    // otherwise fall through to the same handler set as C, extended for
+    // C++ kinds.
+    if let Some(s) = render_cpp_template(bytes) {
+        return Some(s);
+    }
+    render_strip_body(
+        bytes,
+        tree_sitter_cpp::LANGUAGE.into(),
+        &[
+            Handler {
+                kinds: &["function_definition"],
+                body_action: BodyAction::Strip(&["compound_statement", "field_initializer_list"]),
+            },
+            Handler {
+                kinds: &["class_specifier", "struct_specifier", "union_specifier"],
+                body_action: BodyAction::Strip(&["field_declaration_list"]),
+            },
+            Handler {
+                kinds: &["enum_specifier"],
+                body_action: BodyAction::Strip(&["enumerator_list"]),
+            },
+            Handler {
+                kinds: &["namespace_definition"],
+                body_action: BodyAction::Strip(&["declaration_list"]),
+            },
+            Handler {
+                kinds: &[
+                    "declaration",
+                    "type_definition",
+                    "alias_declaration",
+                    "using_declaration",
+                    "preproc_include",
+                    "preproc_def",
+                    "preproc_function_def",
+                    "preproc_call",
+                ],
+                body_action: BodyAction::Keep,
+            },
+        ],
+    )
+}
+
+/// Render a `template <…> …` declaration by slicing at the first `{`
+/// character in the item's text. The template parameter list uses
+/// angle brackets, so the first `{` reliably marks where the function /
+/// class / namespace body opens.
+///
+/// `template <…> using Foo = …;` has no `{` at all — return `None` so
+/// the caller's flat-handler path picks the item up as `alias_declaration`.
+fn render_cpp_template(bytes: &[u8]) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_cpp::LANGUAGE.into())
+        .ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+    let item = root
+        .children(&mut root.walk())
+        .find(|n| !matches!(n.kind(), "comment" | "line_comment" | "block_comment"))?;
+    if item.kind() != "template_declaration" {
+        return None;
+    }
+    let start = item.start_byte();
+    let end = item.end_byte();
+    let slice = bytes.get(start..end)?;
+    let text = std::str::from_utf8(slice).ok()?;
+    let brace = text.find('{')?;
+    let signature = text[..brace].trim_end().to_string();
+    if signature.is_empty() {
+        return None;
+    }
+    Some(signature)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -662,5 +1019,239 @@ mod tests {
     #[test]
     fn js_empty_input_returns_none() {
         assert!(render_javascript(b"").is_none());
+    }
+
+    // ---------- Go ----------
+
+    fn go(input: &str) -> String {
+        render_go(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a go signature for `{input}`"))
+    }
+
+    #[test]
+    fn go_fn_strips_body() {
+        let s = go("func BuildIndex(workspace string) (Index, error) {\n    return nil, nil\n}\n");
+        assert!(
+            s.starts_with("func BuildIndex(workspace string) (Index, error)"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("return nil"), "got {s:?}");
+    }
+
+    #[test]
+    fn go_method_strips_body() {
+        let s = go("func (w *Widget) Greet() string {\n    return w.name\n}\n");
+        assert!(
+            s.starts_with("func (w *Widget) Greet() string"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("return w.name"), "got {s:?}");
+    }
+
+    #[test]
+    fn go_struct_strips_fields() {
+        let s = go("type Widget struct {\n    Name string\n    Kind uint32\n}\n");
+        assert!(s.starts_with("type Widget struct"), "got {s:?}");
+        assert!(!s.contains("Name string"), "got {s:?}");
+    }
+
+    #[test]
+    fn go_interface_strips_methods() {
+        let s = go("type Handler interface {\n    Handle(input string) string\n}\n");
+        assert!(s.starts_with("type Handler interface"), "got {s:?}");
+        assert!(!s.contains("Handle(input string)"), "got {s:?}");
+    }
+
+    #[test]
+    fn go_type_alias_keeps_whole() {
+        let s = go("type StringList = []string\n");
+        assert_eq!(s, "type StringList = []string");
+    }
+
+    #[test]
+    fn go_const_keeps_whole() {
+        let s = go("const MaxRetries = 5\n");
+        assert_eq!(s, "const MaxRetries = 5");
+    }
+
+    #[test]
+    fn go_package_clause_keeps_whole() {
+        let s = go("package main\n");
+        assert_eq!(s, "package main");
+    }
+
+    #[test]
+    fn go_empty_input_returns_none() {
+        assert!(render_go(b"").is_none());
+    }
+
+    // ---------- Java ----------
+
+    fn java(input: &str) -> String {
+        render_java(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a java signature for `{input}`"))
+    }
+
+    #[test]
+    fn java_class_strips_body() {
+        let s = java(
+            "public class Widget extends Base implements Stackable {\n    public void greet() {}\n}\n",
+        );
+        assert!(
+            s.starts_with("public class Widget extends Base implements Stackable"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("greet"), "got {s:?}");
+    }
+
+    #[test]
+    fn java_interface_strips_body() {
+        let s = java("public interface Handler {\n    String handle(String input);\n}\n");
+        assert!(s.starts_with("public interface Handler"), "got {s:?}");
+        assert!(!s.contains("handle"), "got {s:?}");
+    }
+
+    #[test]
+    fn java_enum_strips_body() {
+        let s = java("public enum Direction {\n    UP, DOWN, LEFT, RIGHT\n}\n");
+        assert!(s.starts_with("public enum Direction"), "got {s:?}");
+        assert!(!s.contains("UP"), "got {s:?}");
+    }
+
+    #[test]
+    fn java_record_strips_body() {
+        let s =
+            java("public record Point(int x, int y) {\n    public Point { /* validation */ }\n}\n");
+        assert!(
+            s.starts_with("public record Point(int x, int y)"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("validation"), "got {s:?}");
+    }
+
+    #[test]
+    fn java_package_decl_keeps_whole() {
+        let s = java("package com.example.widget;\n");
+        assert_eq!(s, "package com.example.widget;");
+    }
+
+    #[test]
+    fn java_import_decl_keeps_whole() {
+        let s = java("import java.util.List;\n");
+        assert_eq!(s, "import java.util.List;");
+    }
+
+    #[test]
+    fn java_empty_input_returns_none() {
+        assert!(render_java(b"").is_none());
+    }
+
+    // ---------- C ----------
+
+    fn c(input: &str) -> String {
+        render_c(input.as_bytes()).unwrap_or_else(|| panic!("expected a c signature for `{input}`"))
+    }
+
+    #[test]
+    fn c_fn_strips_body() {
+        let s = c("int add(int a, int b) {\n    return a + b;\n}\n");
+        assert_eq!(s, "int add(int a, int b)");
+    }
+
+    #[test]
+    fn c_static_fn() {
+        let s = c("static inline int square(int x) {\n    return x * x;\n}\n");
+        assert!(
+            s.starts_with("static inline int square(int x)"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("x * x"), "got {s:?}");
+    }
+
+    #[test]
+    fn c_struct_strips_fields() {
+        let s = c("struct Point {\n    int x;\n    int y;\n};\n");
+        assert!(s.starts_with("struct Point"), "got {s:?}");
+        assert!(!s.contains("int x"), "got {s:?}");
+    }
+
+    #[test]
+    fn c_enum_strips_values() {
+        let s = c("enum Direction {\n    UP, DOWN, LEFT, RIGHT\n};\n");
+        assert!(s.starts_with("enum Direction"), "got {s:?}");
+        assert!(!s.contains("UP"), "got {s:?}");
+    }
+
+    #[test]
+    fn c_function_prototype_keeps_whole() {
+        let s = c("int add(int a, int b);\n");
+        assert_eq!(s, "int add(int a, int b);");
+    }
+
+    #[test]
+    fn c_typedef_keeps_whole() {
+        let s = c("typedef unsigned int u32;\n");
+        assert_eq!(s, "typedef unsigned int u32;");
+    }
+
+    #[test]
+    fn c_empty_input_returns_none() {
+        assert!(render_c(b"").is_none());
+    }
+
+    // ---------- C++ ----------
+
+    fn cpp(input: &str) -> String {
+        render_cpp(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a cpp signature for `{input}`"))
+    }
+
+    #[test]
+    fn cpp_fn_strips_body() {
+        let s = cpp("int add(int a, int b) {\n    return a + b;\n}\n");
+        assert_eq!(s, "int add(int a, int b)");
+    }
+
+    #[test]
+    fn cpp_class_strips_body() {
+        let s = cpp("class Widget : public Base {\npublic:\n    void greet() {}\n};\n");
+        assert!(s.starts_with("class Widget : public Base"), "got {s:?}");
+        assert!(!s.contains("greet"), "got {s:?}");
+    }
+
+    #[test]
+    fn cpp_namespace_strips_body() {
+        let s = cpp("namespace foo {\n    int bar() { return 0; }\n}\n");
+        assert!(s.starts_with("namespace foo"), "got {s:?}");
+        assert!(!s.contains("bar"), "got {s:?}");
+    }
+
+    #[test]
+    fn cpp_template_fn() {
+        let s = cpp("template <typename T> T identity(T x) {\n    return x;\n}\n");
+        assert!(s.starts_with("template <typename T>"), "got {s:?}");
+        assert!(s.contains("T identity(T x)"), "got {s:?}");
+        assert!(!s.contains("return x"), "got {s:?}");
+    }
+
+    #[test]
+    fn cpp_template_class() {
+        let s = cpp(
+            "template <typename T> class Box {\npublic:\n    T value;\n    T get() const { return value; }\n};\n",
+        );
+        assert!(s.contains("template <typename T>"), "got {s:?}");
+        assert!(s.contains("class Box"), "got {s:?}");
+        assert!(!s.contains("T value;"), "got {s:?}");
+    }
+
+    #[test]
+    fn cpp_using_keeps_whole() {
+        let s = cpp("using IntList = std::vector<int>;\n");
+        assert_eq!(s, "using IntList = std::vector<int>;");
+    }
+
+    #[test]
+    fn cpp_empty_input_returns_none() {
+        assert!(render_cpp(b"").is_none());
     }
 }
