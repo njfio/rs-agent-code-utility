@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use serde::Deserialize;
+use serde_json::Value;
 
 use crate::error::{ErrorCode, ProtocolError};
 use crate::filter::BODY_ALLOWED_EXTENSIONS;
@@ -510,14 +511,34 @@ pub async fn read_symbol(
         ));
     }
     let slice = &bytes[start..end];
-    let text = std::str::from_utf8(slice).map_err(|e| {
+    let body_text = std::str::from_utf8(slice).map_err(|e| {
         ProtocolError::new(
             ErrorCode::InternalError,
             format!("symbol body is not valid UTF-8: {e}"),
         )
     })?;
 
-    let (text_kept, byte_truncated) = truncate_utf8(text, MAX_TEXT_BYTES);
+    // Render the signature when the file is in a language we support.
+    // v0 ships Rust only (P8 SignatureRenderer first slice); other
+    // languages return `signature: null` and the caller still gets the
+    // body. Falls through gracefully when the slice doesn't parse as a
+    // single top-level item.
+    let signature: Option<String> = if matches!(shape, "signature" | "both") {
+        render_signature_for_path(&chosen.file, body_text.as_bytes())
+    } else {
+        None
+    };
+
+    // `text` returned to the client depends on shape:
+    //   body       → full body bytes
+    //   signature  → signature only (or full body if renderer returned None)
+    //   both       → full body bytes; `signature` field carries the cheap form
+    let text_source: String = match shape {
+        "signature" => signature.clone().unwrap_or_else(|| body_text.to_string()),
+        _ => body_text.to_string(),
+    };
+
+    let (text_kept, byte_truncated) = truncate_utf8(&text_source, MAX_TEXT_BYTES);
     let budget_bytes = budget.saturating_mul(3) as usize;
     let (text_kept, budget_truncated) = truncate_utf8(text_kept, budget_bytes);
     let body_truncated = byte_truncated || budget_truncated;
@@ -528,6 +549,11 @@ pub async fn read_symbol(
         mtime_ns,
         state.index_generation.load(Ordering::Relaxed),
     );
+
+    let signature_value = match signature {
+        Some(s) => Value::String(s),
+        None => Value::Null,
+    };
 
     Ok(serde_json::json!({
         "qualified_name": chosen.name,
@@ -541,9 +567,7 @@ pub async fn read_symbol(
         },
         "shape":           shape,
         "text":            text_kept,
-        // v0: SignatureRenderer is P8. Pass through null so clients can
-        // distinguish "no signature available" from "signature is empty".
-        "signature":       serde_json::Value::Null,
+        "signature":       signature_value,
         "visibility":      chosen.visibility.as_wire_str(),
         "content_version": cv,
         "tokens_returned": tokens_returned,
@@ -555,6 +579,23 @@ pub async fn read_symbol(
         "truncated":         ambiguous || body_truncated,
         "truncated_symbols": extra,
     }))
+}
+
+/// Dispatch to the right per-language signature renderer based on the
+/// file extension. Returns `None` for languages without a renderer yet —
+/// the caller falls back to the full body.
+fn render_signature_for_path(rel_path: &str, body: &[u8]) -> Option<String> {
+    let ext = std::path::Path::new(rel_path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase());
+    match ext.as_deref() {
+        Some("rs") => rust_tree_sitter::signature::render_rust(body),
+        // Python, TypeScript, and the other 8 grammars land in subsequent
+        // P8 slices. Until then those agents get the body in `text` and
+        // a `null` signature field.
+        _ => None,
+    }
 }
 
 #[cfg(test)]

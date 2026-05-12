@@ -72,6 +72,8 @@ pub mod query;
 pub mod semantic_context;
 /// Symbol-graph queries for repo-map ranking and reasoning.
 pub mod semantic_graph;
+/// Per-language signature renderer for `Index.ReadSymbol shape=signature`.
+pub mod signature;
 /// Symbol table construction and lexical-scope resolution.
 pub mod symbol_table;
 /// Syntax-tree traversal helpers.

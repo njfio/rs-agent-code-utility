@@ -293,6 +293,87 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         "got {mismatch:?}"
     );
 
+    // ---- shape=signature returns the declaration prefix, not the body ----
+    let sig_resp = round_trip(
+        &mut stream,
+        "23",
+        "Index.ReadSymbol",
+        json!({ "name": "alpha", "shape": "signature" }),
+    )
+    .await?;
+    assert!(
+        sig_resp["error"].is_null(),
+        "shape=signature should succeed: {sig_resp:?}"
+    );
+    assert_eq!(sig_resp["result"]["shape"], "signature");
+    let sig_field = sig_resp["result"]["signature"]
+        .as_str()
+        .expect("signature field is a string");
+    assert!(
+        sig_field.contains("pub fn alpha"),
+        "signature should contain `pub fn alpha`; got {sig_field:?}"
+    );
+    assert!(
+        !sig_field.contains("println!"),
+        "signature must NOT include the function body; got {sig_field:?}"
+    );
+    let sig_text = sig_resp["result"]["text"]
+        .as_str()
+        .expect("text field is a string");
+    assert!(
+        !sig_text.contains("println!"),
+        "shape=signature `text` should be the cheap signature, not the body; got {sig_text:?}"
+    );
+
+    // ---- shape=both carries the full body in `text` AND signature ----
+    let both_resp = round_trip(
+        &mut stream,
+        "24",
+        "Index.ReadSymbol",
+        json!({ "name": "alpha", "shape": "both" }),
+    )
+    .await?;
+    assert!(
+        both_resp["error"].is_null(),
+        "shape=both should succeed: {both_resp:?}"
+    );
+    assert_eq!(both_resp["result"]["shape"], "both");
+    let both_sig = both_resp["result"]["signature"]
+        .as_str()
+        .expect("signature field is a string under shape=both");
+    assert!(
+        both_sig.contains("pub fn alpha"),
+        "got signature={both_sig:?}"
+    );
+    let both_text = both_resp["result"]["text"]
+        .as_str()
+        .expect("text field is a string under shape=both");
+    assert!(
+        both_text.contains("println!"),
+        "shape=both should keep the body in `text`; got {both_text:?}"
+    );
+
+    // ---- struct signature strips fields ----
+    let beta = round_trip(
+        &mut stream,
+        "25",
+        "Index.ReadSymbol",
+        json!({ "name": "Beta", "shape": "signature" }),
+    )
+    .await?;
+    assert!(
+        beta["error"].is_null(),
+        "Beta signature should succeed: {beta:?}"
+    );
+    let beta_sig = beta["result"]["signature"]
+        .as_str()
+        .expect("signature field is a string");
+    assert!(beta_sig.contains("pub struct Beta"), "got {beta_sig:?}");
+    assert!(
+        !beta_sig.contains("pub value: u32"),
+        "struct signature must drop the field block; got {beta_sig:?}"
+    );
+
     Ok(())
 }
 
