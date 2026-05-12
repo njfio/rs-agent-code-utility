@@ -224,15 +224,28 @@ async fn mcp_round_trip_against_real_daemon() -> Result<()> {
     )
     .await?;
     let resp = read_one_response(&mut reader).await?;
+    // outline_workspace now ships end-to-end as of alpha.18 (PageRank +
+    // Index.Outline). The seeded `lib.rs` is the only file in the
+    // workspace and contains `build_index` + `WidgetIndex`; both should
+    // appear in the returned outline.
     assert_eq!(
-        resp["result"]["isError"], true,
-        "outline_workspace should surface INDEX_NOT_READY as isError=true; got {resp:?}"
+        resp["result"]["isError"],
+        serde_json::Value::Bool(false),
+        "outline_workspace should succeed; got {resp:?}"
     );
     let body = resp["result"]["content"][0]["text"]
         .as_str()
         .expect("text content");
     let parsed: Value = serde_json::from_str(body)?;
-    assert_eq!(parsed["error"]["code"], "INDEX_NOT_READY");
+    assert!(
+        parsed["files_considered"].as_u64().unwrap_or(0) >= 1,
+        "expected at least 1 file considered; got {parsed:?}"
+    );
+    let outline_text = parsed["outline_text"].as_str().unwrap_or_default();
+    assert!(
+        outline_text.contains("build_index"),
+        "outline_text should mention seeded symbol; got {outline_text:?}"
+    );
 
     // Close stdin so rts-mcp shuts down cleanly.
     drop(stdin);

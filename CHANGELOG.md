@@ -7,6 +7,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.18] - 2026-05-12
+
+**P8 PageRank + `Index.Outline`.** The largest remaining feature from
+the v0.2 plan lands. `outline_workspace` is now end-to-end: agents
+calling the MCP tool get a token-budgeted, PageRank-ranked structural
+map of the workspace instead of `INDEX_NOT_READY`.
+
+Also fixes an upstream bug in the Rust symbol extractor that was
+polluting the def index — see "Bug fix" below.
+
+### Added
+
+- **`crates/rts-core/src/pagerank.rs`** — Personalized PageRank over a
+  directed weighted graph. NetworkX-default parameters (α=0.85,
+  max_iter=100, tol=1e-6), power iteration with row-stochastic
+  transition, dangling-node redistribution. The Aider repo-map edge-
+  weight recipe (`mul × sqrt(num_refs)`) is included as
+  `pagerank::edge_weight` with multipliers for `mentioned_idents`,
+  compound-and-long names, leading-underscore privates, ubiquitous
+  identifiers, and `chat_files`.
+- **`Store::list_files_with_defs`** + **`Store::all_defined_names`**
+  helpers — enumerate every indexed file path with its defined symbols
+  and surface the global def-name set for the outline orchestrator.
+- **`crates/rts-daemon/src/outline.rs`** orchestrator:
+  1. Pull all (file, defs) tuples from redb.
+  2. For each file, re-read content and extract identifier-shaped
+     tokens; cross-reference against the workspace def set to produce
+     ref edges.
+  3. Build a file→file weighted directed graph via the Aider
+     edge-weight recipe.
+  4. Run PageRank with optional personalization from
+     `mentioned_files` / `mentioned_idents`.
+  5. Greedy-pack files into the token budget; emit dotted plain text +
+     structured JSON sidecar per protocol-v0 §7.5.
+- **`Index.Outline` handler** in `crates/rts-daemon/src/methods/index.rs`.
+  Dispatcher no longer returns `INDEX_NOT_READY` — outline is wired
+  through to the orchestrator above (run on the blocking pool to keep
+  the daemon's async runtime free).
+- **`crates/rts-daemon/tests/outline_round_trip.rs`** — end-to-end
+  test: seeds a hub-spoke workspace (one file defines symbols, two
+  others reference them), verifies PageRank ranks the hub strictly
+  above both callers.
+- **18 new unit tests**: 7 for `pagerank.rs` (empty/single-node/chain/
+  hub/personalization/edge-weight/compound-detection), 4 for
+  `outline.rs` (glob match, identifier extraction), 7 for the
+  daemon's parse_and_extract path covering the new probe + analyzer
+  regression cases.
+
+### Changed
+
+- **`Visibility` enum** in `crates/rts-daemon/src/store/schema.rs` now
+  derives `PartialOrd` / `Ord` so outline rendering can sort symbols by
+  (visibility, line) deterministically.
+- **`methods/mod.rs`** dispatcher: `Index.Outline` routes to the new
+  handler instead of returning `INDEX_NOT_READY`.
+- **Module-level doc** in `methods/index.rs` updated to reflect all
+  four `Index.*` verbs shipping.
+
+### Bug fix
+
+The Rust symbol extractor's `let_declaration` walker was pulling the
+FIRST identifier descendant of a `let` node, which for
+`let _ = hub_compute(1);` was matching the *call target* `hub_compute`
+— polluting the def index with the names of called functions in every
+file that imported them. PageRank made the bug visible (hub files got
+their callers' rank instead of their own); previously it was silent
+noise in `find_symbol`/`read_symbol` matches.
+
+Fix in `crates/rts-core/src/analyzer.rs::extract_rust_symbols`:
+constrain the identifier search to the `pattern` field of the
+`let_declaration` (where the binding name actually lives), skip
+wildcards (`let _ = …`), and skip patterns with no extractable
+identifier rather than synthesising a placeholder.
+
+This adds a new regression test
+`writer::tests::parse_and_extract_caller_excludes_called_fn_names`.
+
+### Not in this slice (later)
+
+- Incremental PageRank patch on file change (push-flow local PageRank,
+  Andersen et al. 2006). v0 recomputes from scratch on every
+  `Index.Outline` call.
+- Tags.scm-based reference extraction. v0 uses a regex-based
+  identifier scan filtered against the workspace's def set — works
+  across all 11 languages with no per-language query maintenance, but
+  has lower precision than tags.scm.
+- Tree-shake closure walker for `include_dependencies: true`.
+- P6 watcher hardening (Rescan re-walk, rayon parsers, PollWatcher).
+- P9 latency bench (S1), prebuilt-binary GH Action.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **466 passed, 0 failed, 3 ignored** (was
+  453; +13 new tests).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: exit 0.
+- Smoke: `rts-bench task run locate_def` on this repo still produces
+  the **99.9% reduction** measurement; bench harness unaffected.
+
 ## [0.2.0-alpha.17] - 2026-05-12
 
 Analyzer-layer fix. Closes the writer-side extraction gap noted in

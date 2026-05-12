@@ -306,6 +306,74 @@ impl Store {
     /// Returns `Ok(None)` if the path isn't indexed (gitignore/secrets/ext or
     /// just not seen by the watcher yet). Used by `Index.ReadRange` for the
     /// pre-read existence check + by `Index.ReadSymbol` for `content_version`.
+    /// Enumerate every indexed file path + its symbol defs. Used by
+    /// `Index.Outline` to build the file-level reference graph for
+    /// PageRank ranking. Returns paths in arbitrary order.
+    pub fn list_files_with_defs(&self) -> anyhow::Result<Vec<FileWithDefs>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let fid_to_path = txn.open_table(FID_TO_PATH)?;
+        let fid_defs = txn.open_multimap_table(FID_DEFS)?;
+        let sid_to_name = txn.open_table(SID_TO_NAME)?;
+        let defs = txn.open_multimap_table(DEFS)?;
+
+        let mut out: Vec<FileWithDefs> = Vec::new();
+        let iter = fid_to_path.iter()?;
+        for row in iter {
+            let row = row?;
+            let fid = row.0.value();
+            let path = row.1.value().to_string();
+            let mut defined_symbols: Vec<DefinedSymbol> = Vec::new();
+            let mut sid_it = fid_defs.get(&fid)?;
+            while let Some(sid_row) = sid_it.next() {
+                let sid = sid_row?.value();
+                let name = match sid_to_name.get(&sid)? {
+                    Some(v) => v.value().to_string(),
+                    None => continue,
+                };
+                // Walk the DEFS multimap for this SID and pick the def
+                // whose FID matches the current file.
+                let mut defs_it = defs.get(&sid)?;
+                while let Some(def_row) = defs_it.next() {
+                    let bytes = def_row?.value().to_vec();
+                    if let Ok(d) = from_bytes::<DefSite>(&bytes) {
+                        if d.fid == fid {
+                            defined_symbols.push(DefinedSymbol {
+                                name: name.clone(),
+                                kind: d.kind,
+                                visibility: d.visibility,
+                                start_line: d.start_line,
+                                end_line: d.end_line,
+                                start_byte: d.start,
+                                end_byte: d.end,
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+            out.push(FileWithDefs {
+                path,
+                defined_symbols,
+            });
+        }
+        Ok(out)
+    }
+
+    /// All symbol names defined anywhere in the workspace, as a set.
+    /// Used by `Index.Outline` to filter raw identifier references
+    /// down to "actual symbol references" before building the graph.
+    pub fn all_defined_names(&self) -> anyhow::Result<std::collections::HashSet<String>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let name_to_sid = txn.open_table(NAME_TO_SID)?;
+        let mut out = std::collections::HashSet::new();
+        let iter = name_to_sid.iter()?;
+        for row in iter {
+            let row = row?;
+            out.insert(row.0.value().to_string());
+        }
+        Ok(out)
+    }
+
     pub fn get_file_meta(&self, path: &str) -> anyhow::Result<Option<(FileId, FileMeta)>> {
         let txn = self.db.begin_read().context("begin_read")?;
         let path_to_fid = txn.open_table(PATH_TO_FID)?;
@@ -370,6 +438,25 @@ impl Store {
 }
 
 /// Surface struct for `Index.FindSymbol` consumers. Plain data; no redb
+/// Single defined symbol — surface for `Index.Outline`.
+#[derive(Debug, Clone)]
+pub struct DefinedSymbol {
+    pub name: String,
+    pub kind: SymbolKind,
+    pub visibility: schema::Visibility,
+    pub start_line: u32,
+    pub end_line: u32,
+    pub start_byte: u32,
+    pub end_byte: u32,
+}
+
+/// One file's defs surface for `Index.Outline` orchestration.
+#[derive(Debug, Clone)]
+pub struct FileWithDefs {
+    pub path: String,
+    pub defined_symbols: Vec<DefinedSymbol>,
+}
+
 /// types leak past this boundary.
 #[derive(Debug, Clone)]
 pub struct FoundSymbol {

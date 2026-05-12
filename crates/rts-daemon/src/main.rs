@@ -13,6 +13,7 @@ mod error;
 mod filter;
 mod lifecycle;
 mod methods;
+mod outline;
 mod protocol;
 mod socket;
 mod state;

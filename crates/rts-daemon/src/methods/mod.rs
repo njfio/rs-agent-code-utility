@@ -28,14 +28,7 @@ pub async fn dispatch(
         "Index.FindSymbol" => index::find_symbol(params, state).await,
         "Index.ReadRange" => index::read_range(params, state).await,
         "Index.ReadSymbol" => index::read_symbol(params, state).await,
-
-        // `Index.Outline` still returns INDEX_NOT_READY — it wants the P8
-        // PageRank ranking + SignatureRenderer-rendered skeletons that the
-        // current build doesn't yet have.
-        "Index.Outline" => Err(ProtocolError::new(
-            ErrorCode::IndexNotReady,
-            format!("{method} not yet implemented in this daemon build"),
-        )),
+        "Index.Outline" => index::outline(params, state).await,
 
         other => Err(ProtocolError::new(
             ErrorCode::InvalidParams,

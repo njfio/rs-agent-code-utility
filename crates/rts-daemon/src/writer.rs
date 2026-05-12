@@ -477,6 +477,29 @@ mod tests {
         );
     }
 
+    #[test]
+    fn parse_and_extract_caller_excludes_called_fn_names() {
+        // Probe for the bug where the analyzer was reporting referenced
+        // function names as defined symbols in the referring file.
+        let pool = ParserPool::new();
+        let src =
+            "pub fn caller_a_one() {\n    let _ = hub_compute(1);\n    let _ = hub_format(2);\n}\n";
+        let syms = pool.parse_and_extract(Language::Rust, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"caller_a_one"),
+            "expected `caller_a_one` in {names:?}"
+        );
+        assert!(
+            !names.contains(&"hub_compute"),
+            "`hub_compute` is a CALL, not a def, should not appear; got {names:?}"
+        );
+        assert!(
+            !names.contains(&"hub_format"),
+            "`hub_format` is a CALL, not a def, should not appear; got {names:?}"
+        );
+    }
+
     /// **Known issue**: as of `0.2.0-alpha.15` the analyzer's
     /// `extract_java_symbols` / `extract_c_symbols` / `extract_cpp_symbols`
     /// paths return empty when called via the writer's tempfile route
