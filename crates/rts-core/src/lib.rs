@@ -85,12 +85,12 @@ pub use analyzer::{
 };
 pub use error::{Error, Result};
 pub use languages::Language;
-pub use parser::{create_edit, ParseOptions, Parser};
+pub use parser::{ParseOptions, Parser, create_edit};
 pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // Analysis modules surviving the cut (under review for P4)
-pub use code_map::{build_call_graph, build_module_graph, CallGraph, ModuleGraph};
+pub use code_map::{CallGraph, ModuleGraph, build_call_graph, build_module_graph};
 pub use complexity_analysis::{ComplexityAnalyzer, ComplexityMetrics, HalsteadMetrics};
 pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
 pub use dependency_analysis::{
@@ -99,9 +99,7 @@ pub use dependency_analysis::{
 pub use performance_analysis::{
     PerformanceAnalysisResult, PerformanceAnalyzer, PerformanceConfig, PerformanceHotspot,
 };
-pub use semantic_context::{
-    DataFlowAnalysis, SemanticContext, SemanticContextAnalyzer,
-};
+pub use semantic_context::{DataFlowAnalysis, SemanticContext, SemanticContextAnalyzer};
 pub use semantic_graph::{
     GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
     SemanticGraphQuery,
@@ -140,13 +138,41 @@ pub struct LanguageInfo {
 /// Information about all supported languages.
 pub fn supported_languages() -> Vec<LanguageInfo> {
     vec![
-        LanguageInfo { name: "Rust", version: "0.21.0", file_extensions: &["rs"] },
-        LanguageInfo { name: "JavaScript", version: "0.21.0", file_extensions: &["js", "mjs", "jsx"] },
-        LanguageInfo { name: "Python", version: "0.21.0", file_extensions: &["py", "pyi"] },
-        LanguageInfo { name: "C", version: "0.21.0", file_extensions: &["c", "h"] },
-        LanguageInfo { name: "C++", version: "0.22.0", file_extensions: &["cpp", "cxx", "cc", "hpp", "hxx"] },
-        LanguageInfo { name: "TypeScript", version: "0.21.0", file_extensions: &["ts", "tsx", "mts", "cts"] },
-        LanguageInfo { name: "Go", version: "0.21.0", file_extensions: &["go"] },
+        LanguageInfo {
+            name: "Rust",
+            version: "0.21.0",
+            file_extensions: &["rs"],
+        },
+        LanguageInfo {
+            name: "JavaScript",
+            version: "0.21.0",
+            file_extensions: &["js", "mjs", "jsx"],
+        },
+        LanguageInfo {
+            name: "Python",
+            version: "0.21.0",
+            file_extensions: &["py", "pyi"],
+        },
+        LanguageInfo {
+            name: "C",
+            version: "0.21.0",
+            file_extensions: &["c", "h"],
+        },
+        LanguageInfo {
+            name: "C++",
+            version: "0.22.0",
+            file_extensions: &["cpp", "cxx", "cc", "hpp", "hxx"],
+        },
+        LanguageInfo {
+            name: "TypeScript",
+            version: "0.21.0",
+            file_extensions: &["ts", "tsx", "mts", "cts"],
+        },
+        LanguageInfo {
+            name: "Go",
+            version: "0.21.0",
+            file_extensions: &["go"],
+        },
     ]
 }
 
@@ -179,8 +205,14 @@ mod tests {
     #[test]
     fn test_language_detection() {
         assert_eq!(detect_language_from_extension("rs"), Some(Language::Rust));
-        assert_eq!(detect_language_from_extension("js"), Some(Language::JavaScript));
-        assert_eq!(detect_language_from_extension("ts"), Some(Language::TypeScript));
+        assert_eq!(
+            detect_language_from_extension("js"),
+            Some(Language::JavaScript)
+        );
+        assert_eq!(
+            detect_language_from_extension("ts"),
+            Some(Language::TypeScript)
+        );
         assert_eq!(detect_language_from_extension("py"), Some(Language::Python));
         assert_eq!(detect_language_from_extension("go"), Some(Language::Go));
         assert_eq!(detect_language_from_extension("unknown"), None);
@@ -189,8 +221,14 @@ mod tests {
     #[test]
     fn test_path_detection() {
         assert_eq!(detect_language_from_path("main.rs"), Some(Language::Rust));
-        assert_eq!(detect_language_from_path("src/lib.rs"), Some(Language::Rust));
-        assert_eq!(detect_language_from_path("script.py"), Some(Language::Python));
+        assert_eq!(
+            detect_language_from_path("src/lib.rs"),
+            Some(Language::Rust)
+        );
+        assert_eq!(
+            detect_language_from_path("script.py"),
+            Some(Language::Python)
+        );
         assert_eq!(detect_language_from_path("unknown.txt"), None);
     }
 

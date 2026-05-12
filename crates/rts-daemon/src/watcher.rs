@@ -118,30 +118,32 @@ impl Watcher {
         let state_for_handler = state.clone();
         let gitignore_for_handler = gitignore.clone();
         let root_for_handler = root.to_path_buf();
-        let debouncer = new_debouncer(
-            DEBOUNCE_WINDOW,
-            None,
-            move |res: DebounceEventResult| match res {
-                Ok(events) => {
-                    handle_batch(
-                        events,
-                        &gitignore_for_handler,
-                        &root_for_handler,
-                        &tx_for_handler,
-                        &state_for_handler,
-                    );
-                }
-                Err(errs) => {
-                    for e in errs {
-                        warn!(error = %e, "notify watcher error");
-                        if let notify::ErrorKind::MaxFilesWatch = e.kind {
-                            state_for_handler.set_watcher_status(WatcherStatus::PollingFallback);
+        let debouncer =
+            new_debouncer(
+                DEBOUNCE_WINDOW,
+                None,
+                move |res: DebounceEventResult| match res {
+                    Ok(events) => {
+                        handle_batch(
+                            events,
+                            &gitignore_for_handler,
+                            &root_for_handler,
+                            &tx_for_handler,
+                            &state_for_handler,
+                        );
+                    }
+                    Err(errs) => {
+                        for e in errs {
+                            warn!(error = %e, "notify watcher error");
+                            if let notify::ErrorKind::MaxFilesWatch = e.kind {
+                                state_for_handler
+                                    .set_watcher_status(WatcherStatus::PollingFallback);
+                            }
                         }
                     }
-                }
-            },
-        )
-        .map_err(|e| std::io::Error::other(format!("new_debouncer: {e}")))?;
+                },
+            )
+            .map_err(|e| std::io::Error::other(format!("new_debouncer: {e}")))?;
 
         let mut debouncer = debouncer;
         debouncer
@@ -245,7 +247,10 @@ fn handle_batch(
             // Path safety: reject `..` segments outright and re-check the
             // file isn't a symlink at this depth. Per-read prefix checks
             // happen in the file-reader path, not here.
-            if path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+            if path
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+            {
                 continue;
             }
             match &ev.event.kind {
@@ -266,9 +271,7 @@ fn handle_batch(
                     // index entry should be dropped regardless of whether it
                     // would have passed classify(). The writer-drain will
                     // no-op if the path isn't indexed.
-                    let _ = tx.try_send(WatchEvent::Removed {
-                        path: path.clone(),
-                    });
+                    let _ = tx.try_send(WatchEvent::Removed { path: path.clone() });
                 }
                 EventKind::Other | EventKind::Access(_) | EventKind::Any => {
                     // macOS quirk per P0.3: `fs::rename` can land here with
@@ -314,9 +317,7 @@ mod tests {
             let remaining = deadline.saturating_duration_since(Instant::now());
             let recv = tokio::time::timeout(remaining, rx.recv())
                 .await
-                .unwrap_or_else(|_| {
-                    panic!("timed out waiting for event")
-                })
+                .unwrap_or_else(|_| panic!("timed out waiting for event"))
                 .expect("watcher channel closed unexpectedly");
             if pred(&recv) {
                 return recv;

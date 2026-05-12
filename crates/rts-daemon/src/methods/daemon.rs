@@ -7,7 +7,7 @@ use crate::error::ProtocolError;
 use crate::state::DaemonState;
 
 const DAEMON_CAPABILITIES: &[&str] = &[
-    "outline",          // present in spec; reads return IndexNotReady until P6 indexing lands
+    "outline", // present in spec; reads return IndexNotReady until P6 indexing lands
     "find_symbol",
     "read_symbol",
     "read_range",

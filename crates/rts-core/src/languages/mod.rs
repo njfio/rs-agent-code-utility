@@ -208,13 +208,9 @@ pub fn detect_language_from_path<P: AsRef<std::path::Path>>(path: P) -> Option<L
     let path = path.as_ref();
     let extension = path.extension()?.to_str()?.to_lowercase();
 
-    for language in Language::all() {
-        if language.file_extensions().contains(&extension.as_str()) {
-            return Some(language);
-        }
-    }
-
-    None
+    Language::all()
+        .into_iter()
+        .find(|&language| language.file_extensions().contains(&extension.as_str()))
 }
 
 impl std::fmt::Display for Language {
@@ -328,9 +324,9 @@ mod tests {
         for (lang, snippet) in snippets {
             let parser = crate::parser::Parser::new(*lang)
                 .unwrap_or_else(|e| panic!("failed to create Parser for {}: {e}", lang.name()));
-            let tree = parser.parse(snippet, None).unwrap_or_else(|e| {
-                panic!("failed to parse snippet for {}: {e}", lang.name())
-            });
+            let tree = parser
+                .parse(snippet, None)
+                .unwrap_or_else(|e| panic!("failed to parse snippet for {}: {e}", lang.name()));
             assert!(
                 !tree.root_node().is_missing(),
                 "root node missing for {}",

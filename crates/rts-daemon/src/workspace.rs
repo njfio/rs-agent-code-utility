@@ -144,11 +144,7 @@ pub fn fingerprint(canonical: &CanonicalPath) -> Result<WorkspaceFingerprint, Pr
     let mut id_hex = [0u8; 32];
     id_hex.copy_from_slice(&hex_full.as_bytes()[..32]);
 
-    Ok(WorkspaceFingerprint {
-        dev,
-        inode,
-        id_hex,
-    })
+    Ok(WorkspaceFingerprint { dev, inode, id_hex })
 }
 
 /// Refuse network-mounted workspaces (protocol-v0 §5.6).

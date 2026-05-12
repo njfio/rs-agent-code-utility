@@ -9,7 +9,7 @@
 //! - Custom thread pool implementation with fine-grained control
 
 use crate::error::{Error, Result};
-use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -253,8 +253,8 @@ impl Worker {
                 let _total_tasks_u32 = total_tasks as u32;
                 let duration_u32 = duration.as_millis() as u32;
                 stats_guard.average_task_duration = Duration::from_millis(
-                    ((current_avg.as_millis() as u64 * (total_tasks - 1) + duration_u32 as u64)
-                        / total_tasks) as u64,
+                    (current_avg.as_millis() as u64 * (total_tasks - 1) + duration_u32 as u64)
+                        / total_tasks,
                 );
             }
         }

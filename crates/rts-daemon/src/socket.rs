@@ -44,9 +44,7 @@ fn runtime_root() -> anyhow::Result<PathBuf> {
     #[cfg(target_os = "linux")]
     {
         let xdg = std::env::var("XDG_RUNTIME_DIR").map_err(|_| {
-            anyhow!(
-                "XDG_RUNTIME_DIR is unset; refusing to fall back to /tmp (security)"
-            )
+            anyhow!("XDG_RUNTIME_DIR is unset; refusing to fall back to /tmp (security)")
         })?;
         if xdg.is_empty() {
             return Err(anyhow!("XDG_RUNTIME_DIR is empty"));
@@ -55,9 +53,9 @@ fn runtime_root() -> anyhow::Result<PathBuf> {
     }
     #[cfg(target_os = "macos")]
     {
-        let home = dirs::home_dir()
-            .ok_or_else(|| anyhow!("could not resolve $HOME for socket dir"))?;
-        return Ok(home.join("Library").join("Caches").join("rts"));
+        let home =
+            dirs::home_dir().ok_or_else(|| anyhow!("could not resolve $HOME for socket dir"))?;
+        Ok(home.join("Library").join("Caches").join("rts"))
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
@@ -86,8 +84,7 @@ pub fn bind_with_safe_perms(path: &Path) -> anyhow::Result<UnixListener> {
         std::fs::remove_file(path)
             .with_context(|| format!("remove stale socket {}", path.display()))?;
     }
-    let listener =
-        UnixListener::bind(path).with_context(|| format!("bind {}", path.display()))?;
+    let listener = UnixListener::bind(path).with_context(|| format!("bind {}", path.display()))?;
     nix::sys::stat::fchmodat(
         None,
         path,
@@ -110,11 +107,9 @@ fn check_peer_credentials(stream: &tokio::net::UnixStream) -> anyhow::Result<u32
     let borrowed: std::os::fd::BorrowedFd<'_> = unsafe { std::os::fd::BorrowedFd::borrow_raw(fd) };
     #[cfg(target_os = "linux")]
     {
-        let cred = nix::sys::socket::getsockopt(
-            &borrowed,
-            nix::sys::socket::sockopt::PeerCredentials,
-        )
-        .context("SO_PEERCRED getsockopt failed")?;
+        let cred =
+            nix::sys::socket::getsockopt(&borrowed, nix::sys::socket::sockopt::PeerCredentials)
+                .context("SO_PEERCRED getsockopt failed")?;
         let our_uid = nix::unistd::geteuid().as_raw();
         if cred.uid() != our_uid {
             return Err(anyhow!(
@@ -127,11 +122,9 @@ fn check_peer_credentials(stream: &tokio::net::UnixStream) -> anyhow::Result<u32
     }
     #[cfg(target_os = "macos")]
     {
-        let xucred = nix::sys::socket::getsockopt(
-            &borrowed,
-            nix::sys::socket::sockopt::LocalPeerCred,
-        )
-        .context("LOCAL_PEERCRED getsockopt failed")?;
+        let xucred =
+            nix::sys::socket::getsockopt(&borrowed, nix::sys::socket::sockopt::LocalPeerCred)
+                .context("LOCAL_PEERCRED getsockopt failed")?;
         let our_uid = nix::unistd::geteuid().as_raw();
         let peer_uid = xucred.uid();
         if peer_uid != our_uid {
@@ -141,7 +134,7 @@ fn check_peer_credentials(stream: &tokio::net::UnixStream) -> anyhow::Result<u32
                 our_uid
             ));
         }
-        return Ok(peer_uid);
+        Ok(peer_uid)
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
@@ -285,7 +278,10 @@ async fn serve_connection(
     Ok(())
 }
 
-async fn dispatch(req: Request, state: &Arc<DaemonState>) -> Result<serde_json::Value, ProtocolError> {
+async fn dispatch(
+    req: Request,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
     methods::dispatch(&req.method, req.params, state).await
 }
 

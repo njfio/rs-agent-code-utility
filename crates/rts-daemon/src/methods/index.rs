@@ -63,7 +63,9 @@ struct ReadSymbolParams {
     force_resend: bool,
 }
 
-fn parse_params<T: for<'de> Deserialize<'de>>(value: serde_json::Value) -> Result<T, ProtocolError> {
+fn parse_params<T: for<'de> Deserialize<'de>>(
+    value: serde_json::Value,
+) -> Result<T, ProtocolError> {
     serde_json::from_value(value).map_err(|e| {
         ProtocolError::new(
             ErrorCode::InvalidParams,
@@ -247,7 +249,11 @@ async fn read_file(abs: &Path) -> Result<(Vec<u8>, i128), ProtocolError> {
 /// in a buffer that uses `\n` line terminators. Lines past EOF surface as
 /// `RANGE_OUT_OF_BOUNDS`. The end byte is exclusive (points one past the
 /// trailing `\n`).
-fn line_range_bytes(buf: &[u8], start_line: u32, end_line: u32) -> Result<(usize, usize), ProtocolError> {
+fn line_range_bytes(
+    buf: &[u8],
+    start_line: u32,
+    end_line: u32,
+) -> Result<(usize, usize), ProtocolError> {
     if start_line == 0 || end_line == 0 {
         return Err(ProtocolError::new(
             ErrorCode::InvalidParams,

@@ -55,7 +55,7 @@ fn runtime_root() -> Result<PathBuf> {
     {
         let home =
             dirs::home_dir().ok_or_else(|| anyhow!("could not resolve $HOME for socket dir"))?;
-        return Ok(home.join("Library").join("Caches").join("rts"));
+        Ok(home.join("Library").join("Caches").join("rts"))
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {

@@ -606,7 +606,7 @@ impl CSyntax {
             for decl in function_declarators {
                 if decl
                     .parent()
-                    .map_or(false, |p| p.kind() == "pointer_declarator")
+                    .is_some_and(|p| p.kind() == "pointer_declarator")
                 {
                     features.push("Function Pointers".to_string());
                     break;
@@ -1328,9 +1328,11 @@ int main() {
 
         let issues = CSyntax::check_memory_patterns(&tree, source);
         assert!(!issues.is_empty());
-        assert!(issues
-            .iter()
-            .any(|issue| issue.contains("allocations") && issue.contains("free calls")));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.contains("allocations") && issue.contains("free calls"))
+        );
         assert!(issues.iter().any(|issue| issue.contains("Array access")));
     }
 }

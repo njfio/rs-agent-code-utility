@@ -1614,7 +1614,7 @@ mod tests {
 
         // Complex function should have higher complexity
         assert!(metrics.cyclomatic_complexity >= 1); // At least base complexity
-                                                     // Complexity metrics should be calculated
+        // Complexity metrics should be calculated
 
         Ok(())
     }

@@ -1,5 +1,5 @@
-use rust_tree_sitter::error::QueryErrorType;
 use rust_tree_sitter::Error;
+use rust_tree_sitter::error::QueryErrorType;
 use std::path::PathBuf;
 
 /// Test language error creation

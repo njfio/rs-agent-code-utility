@@ -23,7 +23,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -70,7 +74,10 @@ async fn poll_for_match(
             json!({ "name": name }),
         )
         .await?;
-        let matches = resp["result"]["matches"].as_array().cloned().unwrap_or_default();
+        let matches = resp["result"]["matches"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
         if !matches.is_empty() {
             return Ok(resp);
         }
@@ -99,7 +106,12 @@ async fn writer_indexes_and_find_symbol_returns_match() -> anyhow::Result<()> {
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
-        home_dir.path().join("Library").join("Caches").join("rts").join("default.sock")
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
     } else {
         runtime_dir.path().join("rts").join("default.sock")
     };
@@ -143,7 +155,10 @@ async fn writer_indexes_and_find_symbol_returns_match() -> anyhow::Result<()> {
     assert_eq!(m["qualified_name"], "build_index");
     assert_eq!(m["kind"], "fn");
     assert!(
-        m["file"].as_str().map(|f| f.ends_with("lib.rs")).unwrap_or(false),
+        m["file"]
+            .as_str()
+            .map(|f| f.ends_with("lib.rs"))
+            .unwrap_or(false),
         "match file should end in `lib.rs`; got {:?}",
         m["file"]
     );

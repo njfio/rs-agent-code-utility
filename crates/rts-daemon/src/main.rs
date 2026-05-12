@@ -46,8 +46,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Phase 2: socket path and lockfile.
     let socket_path = socket::socket_path_for_default()?;
-    let _lock = lifecycle::acquire_lock(&socket_path)
-        .with_context(|| format!("could not acquire daemon lock for {}", socket_path.display()))?;
+    let _lock = lifecycle::acquire_lock(&socket_path).with_context(|| {
+        format!(
+            "could not acquire daemon lock for {}",
+            socket_path.display()
+        )
+    })?;
     info!(socket = %socket_path.display(), "acquired daemon lock");
 
     // Phase 3: bind the socket. Mode is set by socket::bind_with_safe_perms.
@@ -100,4 +104,3 @@ async fn main() -> anyhow::Result<()> {
     info!("daemon exited cleanly");
     Ok(())
 }
-

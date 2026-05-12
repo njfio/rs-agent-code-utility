@@ -33,7 +33,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -77,16 +81,18 @@ async fn full_round_trip() -> anyhow::Result<()> {
     // Make the runtime dir mode 0700 (the daemon's bind step also chmods, but
     // some systems' tempfile defaults leak 0755 → 0700 transitions can race).
     use std::os::unix::fs::PermissionsExt;
-    let _ = std::fs::set_permissions(
-        runtime_dir.path(),
-        std::fs::Permissions::from_mode(0o700),
-    );
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
 
     // Compute the expected socket path. The daemon's `socket_path_for_default`
     // uses `${XDG_RUNTIME_DIR}/rts/default.sock` on Linux and
     // `~/Library/Caches/rts/default.sock` on macOS.
     let socket_path = if cfg!(target_os = "macos") {
-        home_dir.path().join("Library").join("Caches").join("rts").join("default.sock")
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
     } else {
         runtime_dir.path().join("rts").join("default.sock")
     };
@@ -113,7 +119,9 @@ async fn full_round_trip() -> anyhow::Result<()> {
     assert_eq!(pong["id"], "1");
     assert_eq!(pong["result"]["protocol"], "0");
     assert_eq!(pong["result"]["daemon"]["name"], "rts-daemon");
-    let caps = pong["result"]["capabilities"].as_array().expect("capabilities array");
+    let caps = pong["result"]["capabilities"]
+        .as_array()
+        .expect("capabilities array");
     assert!(caps.iter().any(|v| v == "find_symbol"));
 
     // 2. Workspace.Mount
@@ -143,7 +151,13 @@ async fn full_round_trip() -> anyhow::Result<()> {
     );
 
     // 4. Session.Open + Session.Close
-    let opened = round_trip(&mut stream, "4", "Session.Open", json!({"client_name":"itest"})).await?;
+    let opened = round_trip(
+        &mut stream,
+        "4",
+        "Session.Open",
+        json!({"client_name":"itest"}),
+    )
+    .await?;
     let sid = opened["result"]["session_id"]
         .as_str()
         .expect("session_id should be a string")
@@ -168,9 +182,15 @@ async fn full_round_trip() -> anyhow::Result<()> {
     //    `Index.Outline`/`Index.ReadSymbol`/`Index.ReadRange` still surface
     //    `INDEX_NOT_READY` until later P6 slices.
     let empty = round_trip(&mut stream, "7", "Index.FindSymbol", json!({"name":"x"})).await?;
-    assert!(empty["error"].is_null(), "FindSymbol should succeed on empty workspace; got {empty:?}");
+    assert!(
+        empty["error"].is_null(),
+        "FindSymbol should succeed on empty workspace; got {empty:?}"
+    );
     assert_eq!(
-        empty["result"]["matches"].as_array().map(|a| a.len()).unwrap_or(usize::MAX),
+        empty["result"]["matches"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(usize::MAX),
         0,
         "expected empty matches on an empty workspace; got {empty:?}"
     );

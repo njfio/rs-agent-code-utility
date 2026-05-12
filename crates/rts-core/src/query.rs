@@ -37,7 +37,7 @@ impl Query {
     /// Get capture names
     pub fn capture_names(&self) -> Vec<&str> {
         // `capture_names()` returns `&[&str]` in tree-sitter 0.26; deref each entry.
-        self.inner.capture_names().iter().copied().collect()
+        self.inner.capture_names().to_vec()
     }
 
     /// Execute the query on a syntax tree
@@ -136,7 +136,7 @@ impl Query {
     pub fn highlights(language: Language) -> Result<Self> {
         let highlights_query = language.highlights_query().ok_or_else(|| {
             Error::not_supported_error(
-                &format!("Highlights query for {}", language.name()),
+                format!("Highlights query for {}", language.name()),
                 "Language does not support syntax highlighting",
             )
         })?;
@@ -151,8 +151,12 @@ impl Query {
             Language::JavaScript => "(function_declaration name: (identifier) @name) @function",
             Language::TypeScript => "(function_declaration name: (identifier) @name) @function",
             Language::Python => "(function_definition name: (identifier) @name) @function",
-            Language::C => "(function_definition declarator: (function_declarator declarator: (identifier) @name)) @function",
-            Language::Cpp => "(function_definition declarator: (function_declarator declarator: (identifier) @name)) @function",
+            Language::C => {
+                "(function_definition declarator: (function_declarator declarator: (identifier) @name)) @function"
+            }
+            Language::Cpp => {
+                "(function_definition declarator: (function_declarator declarator: (identifier) @name)) @function"
+            }
             Language::Go => "(function_declaration name: (identifier) @name) @function",
             Language::Java => "(method_declaration name: (identifier) @name) @function",
             Language::Php => "(function_definition name: (identifier) @name) @function",
@@ -171,7 +175,9 @@ impl Query {
             Language::TypeScript => "(class_declaration name: (type_identifier) @name) @class",
             Language::Python => "(class_definition name: (identifier) @name) @class",
             Language::C => "(struct_specifier name: (type_identifier) @name) @struct",
-            Language::Cpp => "[(class_specifier name: (type_identifier) @name) (struct_specifier name: (type_identifier) @name)] @class",
+            Language::Cpp => {
+                "[(class_specifier name: (type_identifier) @name) (struct_specifier name: (type_identifier) @name)] @class"
+            }
             Language::Go => "(type_declaration (type_spec name: (type_identifier) @name)) @struct",
             Language::Java => "(class_declaration name: (identifier) @name) @class",
             Language::Php => "(class_declaration name: (identifier) @name) @class",

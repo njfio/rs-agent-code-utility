@@ -23,7 +23,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -111,7 +115,12 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
     std::fs::write(workspace.path().join("data.bin"), b"\x00\x01\x02\x03")?;
 
     let socket_path = if cfg!(target_os = "macos") {
-        home_dir.path().join("Library").join("Caches").join("rts").join("default.sock")
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
     } else {
         runtime_dir.path().join("rts").join("default.sock")
     };
@@ -165,7 +174,9 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         "expected line 2 to contain `pub fn alpha`; got {rng:?}"
     );
     assert_eq!(rng["result"]["token_counter"], "bytes_div_3");
-    let cv = rng["result"]["content_version"].as_str().expect("content_version");
+    let cv = rng["result"]["content_version"]
+        .as_str()
+        .expect("content_version");
     assert!(cv.contains('@') && cv.contains('+'), "got {cv}");
 
     // ---- Index.ReadRange — negative cases ----
@@ -220,7 +231,10 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         json!({ "file": "src.rs", "start_line": 1, "end_line": 1, "token_budget": 1 }),
     )
     .await?;
-    assert_eq!(bsmall["error"]["code"], "BUDGET_TOO_SMALL", "got {bsmall:?}");
+    assert_eq!(
+        bsmall["error"]["code"], "BUDGET_TOO_SMALL",
+        "got {bsmall:?}"
+    );
     let blarge = round_trip(
         &mut stream,
         "16",
@@ -228,7 +242,10 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         json!({ "file": "src.rs", "start_line": 1, "end_line": 1, "token_budget": 999_999 }),
     )
     .await?;
-    assert_eq!(blarge["error"]["code"], "BUDGET_TOO_LARGE", "got {blarge:?}");
+    assert_eq!(
+        blarge["error"]["code"], "BUDGET_TOO_LARGE",
+        "got {blarge:?}"
+    );
 
     // ---- Index.ReadSymbol ----
     let sym = round_trip(
@@ -258,7 +275,10 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         json!({ "name": "no_such_thing" }),
     )
     .await?;
-    assert_eq!(unknown["error"]["code"], "SYMBOL_NOT_FOUND", "got {unknown:?}");
+    assert_eq!(
+        unknown["error"]["code"], "SYMBOL_NOT_FOUND",
+        "got {unknown:?}"
+    );
 
     // ---- Filter test: kind=struct on `alpha` → SYMBOL_NOT_FOUND ----
     let mismatch = round_trip(
@@ -268,7 +288,10 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         json!({ "name": "alpha", "kind": "struct" }),
     )
     .await?;
-    assert_eq!(mismatch["error"]["code"], "SYMBOL_NOT_FOUND", "got {mismatch:?}");
+    assert_eq!(
+        mismatch["error"]["code"], "SYMBOL_NOT_FOUND",
+        "got {mismatch:?}"
+    );
 
     Ok(())
 }

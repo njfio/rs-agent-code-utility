@@ -192,7 +192,7 @@ impl RubySyntax {
             .into_iter()
             .filter(|node| {
                 node.child_by_field_name("left")
-                    .map_or(false, |left| left.kind() == "constant")
+                    .is_some_and(|left| left.kind() == "constant")
             })
             .collect()
     }
@@ -204,7 +204,7 @@ impl RubySyntax {
             .filter(|node| {
                 node.child_by_field_name("method")
                     .and_then(|method| method.utf8_text(b"").ok())
-                    .map_or(false, |text| {
+                    .is_some_and(|text| {
                         matches!(text, "require" | "require_relative" | "include" | "extend")
                     })
             })

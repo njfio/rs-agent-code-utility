@@ -25,7 +25,9 @@ struct CloseParams {
     session_id: String,
 }
 
-fn parse_params<T: for<'de> Deserialize<'de>>(value: serde_json::Value) -> Result<T, ProtocolError> {
+fn parse_params<T: for<'de> Deserialize<'de>>(
+    value: serde_json::Value,
+) -> Result<T, ProtocolError> {
     serde_json::from_value(value).map_err(|e| {
         ProtocolError::new(
             ErrorCode::InvalidParams,
