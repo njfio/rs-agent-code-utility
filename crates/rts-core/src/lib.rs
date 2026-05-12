@@ -62,6 +62,8 @@ pub mod file_cache;
 pub mod languages;
 /// Memory-allocation tracking analysis.
 pub mod memory_tracker;
+/// Personalised PageRank for `Index.Outline` symbol ranking.
+pub mod pagerank;
 /// Tree-sitter parser wrapper.
 pub mod parser;
 /// Performance-hotspot heuristics.

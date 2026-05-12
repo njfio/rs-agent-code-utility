@@ -177,10 +177,8 @@ async fn full_round_trip() -> anyhow::Result<()> {
     let bad = round_trip(&mut stream, "6", "Index.NotARealVerb", json!({})).await?;
     assert_eq!(bad["error"]["code"], "INVALID_PARAMS");
 
-    // 6. `Index.FindSymbol` is wired up as of P6's writer-pipeline slice; an
-    //    unknown symbol returns an empty match list (success), not an error.
-    //    `Index.Outline`/`Index.ReadSymbol`/`Index.ReadRange` still surface
-    //    `INDEX_NOT_READY` until later P6 slices.
+    // 6. `Index.FindSymbol` returns empty matches for an unknown symbol
+    //    (success, not error).
     let empty = round_trip(&mut stream, "7", "Index.FindSymbol", json!({"name":"x"})).await?;
     assert!(
         empty["error"].is_null(),
@@ -194,9 +192,22 @@ async fn full_round_trip() -> anyhow::Result<()> {
         0,
         "expected empty matches on an empty workspace; got {empty:?}"
     );
-    let still_not_ready =
-        round_trip(&mut stream, "8", "Index.Outline", json!({"path":"x.rs"})).await?;
-    assert_eq!(still_not_ready["error"]["code"], "INDEX_NOT_READY");
+
+    // 7. `Index.Outline` on an empty workspace succeeds with zero files
+    //    (no more INDEX_NOT_READY — PageRank ships as of alpha.18).
+    let outline_resp = round_trip(
+        &mut stream,
+        "8",
+        "Index.Outline",
+        json!({ "token_budget": 1024 }),
+    )
+    .await?;
+    assert!(
+        outline_resp["error"].is_null(),
+        "Outline should succeed on empty workspace; got {outline_resp:?}"
+    );
+    assert_eq!(outline_resp["result"]["files_considered"], 0);
+    assert_eq!(outline_resp["result"]["files_included"], 0);
 
     Ok(())
 }

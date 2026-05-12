@@ -1,7 +1,6 @@
-//! `Index.*` method handlers. v0 implements `Index.FindSymbol`,
-//! `Index.ReadSymbol`, and `Index.ReadRange`. `Index.Outline` is still wired
-//! into the dispatcher but returns `INDEX_NOT_READY` until the P6 outline
-//! slice (which depends on the P8 PageRank score) lands.
+//! `Index.*` method handlers. v0 implements all four verbs:
+//! `Index.FindSymbol`, `Index.ReadSymbol`, `Index.ReadRange`, and
+//! `Index.Outline` (PageRank-ranked).
 
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
@@ -578,6 +577,66 @@ pub async fn read_symbol(
         // Disambiguation surface per §7.7.
         "truncated":         ambiguous || body_truncated,
         "truncated_symbols": extra,
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+struct OutlineParamsWire {
+    #[serde(default)]
+    glob: Option<String>,
+    #[serde(default)]
+    token_budget: Option<u64>,
+    #[serde(default)]
+    mentioned_files: Vec<String>,
+    #[serde(default)]
+    mentioned_idents: Vec<String>,
+}
+
+/// `Index.Outline` — protocol-v0 §7.5.
+///
+/// Walks the indexed workspace, builds a file→file reference graph
+/// from the existing redb index + on-disk content, runs Personalized
+/// PageRank per the plan's §"Aider repo-map algorithm" recipe, and
+/// returns a token-budgeted outline (dotted plain text + structured
+/// sidecar).
+pub async fn outline(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    let p: OutlineParamsWire = parse_params(params)?;
+    let budget = check_budget(p.token_budget)?;
+
+    let (root, store_arc) = snapshot(state)?;
+    let store = store_arc.clone();
+    let glob_owned = p.glob.clone();
+    // PageRank + content reads can be heavy on large workspaces;
+    // delegate to a blocking task so we don't hog the daemon's
+    // single-threaded async runtime.
+    let result = tokio::task::spawn_blocking(move || {
+        let outline_params = crate::outline::OutlineParams {
+            glob: glob_owned.as_deref(),
+            token_budget: budget,
+            mentioned_files: &p.mentioned_files,
+            mentioned_idents: &p.mentioned_idents,
+        };
+        crate::outline::compute(&root, &store, &outline_params)
+    })
+    .await
+    .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("outline join error: {e}")))?
+    .map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("outline compute error: {e:#}"),
+        )
+    })?;
+
+    Ok(serde_json::json!({
+        "outline_text":     result.outline_text,
+        "outline_json":     result.outline_json,
+        "tokens_returned":  result.tokens_returned,
+        "token_counter":    TOKEN_COUNTER,
+        "files_considered": result.files_considered,
+        "files_included":   result.files_included,
     }))
 }
 

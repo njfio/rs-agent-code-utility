@@ -124,7 +124,7 @@ impl SymbolKind {
 }
 
 /// Symbol visibility — loosely classified from the producer's string.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum Visibility {
     Public = 0,

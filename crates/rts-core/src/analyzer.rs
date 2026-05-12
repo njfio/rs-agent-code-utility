@@ -1054,22 +1054,31 @@ impl CodebaseAnalyzer {
             }
         }
 
-        // Extract let declarations as variable symbols (best-effort)
+        // Extract let declarations as variable symbols (best-effort).
+        //
+        // **Subtle bug to avoid**: a naïve "first identifier descendant"
+        // search picks up the FUNCTION NAME of any call expression in
+        // the let's value, e.g. `let _ = hub_compute(1);` would otherwise
+        // register `hub_compute` as a variable. Restrict the search to
+        // the `pattern` field — that's where the binding name lives.
         let lets = tree.find_nodes_by_kind("let_declaration");
         for let_node in lets {
-            // Try to find an identifier within the pattern
-            let ids = let_node.find_descendants(|n| n.kind() == "identifier");
-            let name = ids
-                .first()
-                .and_then(|n| n.text().ok())
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| {
-                    format!(
-                        "var@{}:{}",
-                        let_node.start_position().row + 1,
-                        let_node.start_position().column
-                    )
-                });
+            let pattern = match let_node.child_by_field_name("pattern") {
+                Some(p) => p,
+                None => continue,
+            };
+            // Skip wildcard / placeholder patterns (`let _ = …`).
+            if pattern.kind() == "_" || pattern.text().map(|t| t.trim() == "_").unwrap_or(false) {
+                continue;
+            }
+            let ids = pattern.find_descendants(|n| n.kind() == "identifier");
+            let name = match ids.first().and_then(|n| n.text().ok()) {
+                Some(s) => s.to_string(),
+                // No identifier in pattern (probably a tuple destructure
+                // without simple names); skip rather than synthesise a
+                // placeholder name that pollutes the index.
+                None => continue,
+            };
 
             symbols.push(Symbol {
                 name,
