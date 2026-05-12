@@ -591,9 +591,17 @@ fn render_signature_for_path(rel_path: &str, body: &[u8]) -> Option<String> {
         .map(|s| s.to_ascii_lowercase());
     match ext.as_deref() {
         Some("rs") => rust_tree_sitter::signature::render_rust(body),
-        // Python, TypeScript, and the other 8 grammars land in subsequent
-        // P8 slices. Until then those agents get the body in `text` and
-        // a `null` signature field.
+        Some("py") => rust_tree_sitter::signature::render_python(body),
+        // TypeScript grammar handles `.ts`; `.tsx` is intentionally
+        // routed here too — the grammar accepts both and the agent's
+        // signature shape is identical.
+        Some("ts") | Some("tsx") => rust_tree_sitter::signature::render_typescript(body),
+        Some("js") | Some("jsx") | Some("mjs") | Some("cjs") => {
+            rust_tree_sitter::signature::render_javascript(body)
+        }
+        // Go, Java, C, C++, PHP, Ruby, Swift land in subsequent P8 slices.
+        // Until then those agents get the body in `text` and a `null`
+        // signature field.
         _ => None,
     }
 }

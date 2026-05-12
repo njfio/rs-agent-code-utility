@@ -13,9 +13,10 @@
 //!
 //! the signature is `pub fn build_index(workspace: &Path) -> Result<Index>`.
 //!
-//! v0 ships **Rust** only. Python, TypeScript, and the other 8 grammars
-//! land in subsequent P8 slices. Callers fall through to body returns
-//! when this module returns `None`.
+//! v0 ships **Rust, Python, TypeScript, and JavaScript**. The remaining
+//! 7 grammars (Go, Java, C, C++, PHP, Ruby, Swift) land in subsequent
+//! P8 slices. Callers fall through to body returns when this module
+//! returns `None`.
 
 use streaming_iterator::StreamingIterator as _;
 
@@ -176,6 +177,197 @@ fn body_start(item: &tree_sitter::Node<'_>, _bytes: &[u8]) -> Option<usize> {
 #[inline]
 fn streaming_iterator_present_check() {}
 
+/// Render the signature of a Python top-level item.
+///
+/// Top-level Python items the agent typically cares about:
+/// - **`function_definition`** / **`async function_definition`** — drops
+///   the `block` body. Preserves decorators, async modifier, parameters,
+///   and return-type annotation. The trailing `:` is kept so the agent
+///   sees the full declaration syntax.
+/// - **`class_definition`** — drops the `block` body. Keeps the base
+///   classes parens and trailing `:`.
+/// - **`decorated_definition`** — handled transparently; the wrapped
+///   function or class is processed and its preceding decorators are
+///   included.
+/// - Everything else (`expression_statement`, `assignment`, `import_*`)
+///   is returned whole — it's already a one-liner.
+///
+/// Returns `None` for unparseable input or unrecognised top-level kinds.
+pub fn render_python(bytes: &[u8]) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    let language: tree_sitter::Language = tree_sitter_python::LANGUAGE.into();
+    parser.set_language(&language).ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+    let item = root
+        .children(&mut root.walk())
+        .find(|n| !matches!(n.kind(), "comment"))?;
+
+    // For a `decorated_definition` we want to include the decorators in
+    // the returned text and slice up to the wrapped function/class body.
+    // For a bare function/class, same logic but no decorators.
+    let signature_end = match item.kind() {
+        "function_definition" | "class_definition" => {
+            python_body_start(&item).unwrap_or(item.end_byte())
+        }
+        "decorated_definition" => python_decorated_body_start(&item).unwrap_or(item.end_byte()),
+        // One-liners (imports, top-level expressions, assignments) — keep whole.
+        "expression_statement"
+        | "assignment"
+        | "import_statement"
+        | "import_from_statement"
+        | "future_import_statement"
+        | "global_statement"
+        | "nonlocal_statement"
+        | "type_alias_statement" => item.end_byte(),
+        _ => return None,
+    };
+
+    let start = item.start_byte();
+    let slice = bytes.get(start..signature_end)?;
+    let text = std::str::from_utf8(slice).ok()?.trim_end().to_string();
+    if text.is_empty() {
+        return None;
+    }
+    Some(text)
+}
+
+fn python_body_start(item: &tree_sitter::Node<'_>) -> Option<usize> {
+    item.child_by_field_name("body").map(|b| b.start_byte())
+}
+
+fn python_decorated_body_start(item: &tree_sitter::Node<'_>) -> Option<usize> {
+    let mut cursor = item.walk();
+    for child in item.children(&mut cursor) {
+        if matches!(child.kind(), "function_definition" | "class_definition") {
+            if let Some(body) = child.child_by_field_name("body") {
+                return Some(body.start_byte());
+            }
+            return Some(child.end_byte());
+        }
+    }
+    None
+}
+
+/// Render the signature of a TypeScript top-level item.
+///
+/// Reuses the same shape rules as Rust: find the body node and return
+/// everything before it. TypeScript-specific kinds:
+/// - **`function_declaration`** / **`generator_function_declaration`**
+///   / **`function_signature`** — drops `statement_block` (or returns
+///   whole when no body, e.g. `function f(): void;` in `.d.ts`).
+/// - **`class_declaration`** / **`abstract_class_declaration`** — drops
+///   `class_body`.
+/// - **`interface_declaration`** — drops `interface_body` /
+///   `object_type`.
+/// - **`enum_declaration`** — drops `enum_body`.
+/// - **`type_alias_declaration`** / **`lexical_declaration`**
+///   (`const`/`let`) / **`variable_declaration`** (`var`) — whole.
+/// - **`export_statement`** wraps any of the above; unwrap.
+///
+/// Returns `None` for unparseable input or unrecognised top-level kinds.
+pub fn render_typescript(bytes: &[u8]) -> Option<String> {
+    render_ts_like(bytes, tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
+}
+
+/// Render the signature of a JavaScript top-level item.
+///
+/// Same shape rules as `render_typescript` minus the TS-only kinds
+/// (`type_alias_declaration`, `interface_declaration`, etc.). The
+/// `function_declaration`/`class_declaration` paths are identical.
+pub fn render_javascript(bytes: &[u8]) -> Option<String> {
+    render_ts_like(bytes, tree_sitter_javascript::LANGUAGE.into())
+}
+
+fn render_ts_like(bytes: &[u8], language: tree_sitter::Language) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+    let raw_item = root
+        .children(&mut root.walk())
+        .find(|n| !matches!(n.kind(), "comment" | "hash_bang_line"))?;
+
+    // `export …` and `export default …` wrap the real declaration.
+    let item = unwrap_export(&raw_item).unwrap_or(raw_item);
+
+    let signature_end = match item.kind() {
+        "function_declaration"
+        | "generator_function_declaration"
+        | "function_signature"
+        | "method_definition"
+        | "method_signature" => ts_body_start(&item).unwrap_or(item.end_byte()),
+        "class_declaration" | "abstract_class_declaration" => {
+            ts_body_start(&item).unwrap_or(item.end_byte())
+        }
+        "interface_declaration" => ts_body_start(&item).unwrap_or(item.end_byte()),
+        "enum_declaration" => ts_body_start(&item).unwrap_or(item.end_byte()),
+        "module" | "internal_module" | "namespace_declaration" => {
+            ts_body_start(&item).unwrap_or(item.end_byte())
+        }
+        // One-liners.
+        "type_alias_declaration"
+        | "lexical_declaration"
+        | "variable_declaration"
+        | "import_statement"
+        | "export_specifier"
+        | "ambient_declaration"
+        | "expression_statement" => item.end_byte(),
+        _ => return None,
+    };
+
+    // Slice from the *outer* node (which includes the `export` keyword
+    // when present) so the signature carries that modifier.
+    let start = raw_item.start_byte();
+    let slice = bytes.get(start..signature_end)?;
+    let text = std::str::from_utf8(slice).ok()?.trim_end().to_string();
+    if text.is_empty() {
+        return None;
+    }
+    Some(text)
+}
+
+fn unwrap_export<'tree>(node: &tree_sitter::Node<'tree>) -> Option<tree_sitter::Node<'tree>> {
+    if node.kind() != "export_statement" {
+        return None;
+    }
+    let mut cursor = node.walk();
+    node.children(&mut cursor).find(|c| {
+        matches!(
+            c.kind(),
+            "function_declaration"
+                | "generator_function_declaration"
+                | "function_signature"
+                | "class_declaration"
+                | "abstract_class_declaration"
+                | "interface_declaration"
+                | "enum_declaration"
+                | "type_alias_declaration"
+                | "lexical_declaration"
+                | "variable_declaration"
+                | "module"
+                | "internal_module"
+                | "namespace_declaration"
+        )
+    })
+}
+
+fn ts_body_start(item: &tree_sitter::Node<'_>) -> Option<usize> {
+    if let Some(body) = item.child_by_field_name("body") {
+        return Some(body.start_byte());
+    }
+    let mut cursor = item.walk();
+    for child in item.children(&mut cursor) {
+        if matches!(
+            child.kind(),
+            "statement_block" | "class_body" | "interface_body" | "object_type" | "enum_body"
+        ) {
+            return Some(child.start_byte());
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -301,5 +493,174 @@ mod tests {
     #[test]
     fn empty_input_returns_none() {
         assert!(render_rust(b"").is_none());
+    }
+
+    // ---------- Python ----------
+
+    fn py(input: &str) -> String {
+        render_python(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a python signature for `{input}`"))
+    }
+
+    #[test]
+    fn py_fn_strips_body() {
+        let s = py("def build_index(workspace: Path) -> Index:\n    return Index()\n");
+        assert!(
+            s.starts_with("def build_index(workspace: Path) -> Index:"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("return Index()"), "got {s:?}");
+    }
+
+    #[test]
+    fn py_async_fn() {
+        let s = py("async def fetch(url: str) -> bytes:\n    return await get(url)\n");
+        assert!(
+            s.starts_with("async def fetch(url: str) -> bytes:"),
+            "got {s:?}"
+        );
+    }
+
+    #[test]
+    fn py_class_strips_body() {
+        let s = py("class Widget(Base):\n    pass\n");
+        assert!(s.starts_with("class Widget(Base):"), "got {s:?}");
+        assert!(!s.contains("pass"), "got {s:?}");
+    }
+
+    #[test]
+    fn py_decorated_fn_keeps_decorators() {
+        let s = py(
+            "@staticmethod\n@cached\ndef factory(name: str) -> Widget:\n    return Widget(name)\n",
+        );
+        assert!(
+            s.contains("@staticmethod") && s.contains("@cached"),
+            "got {s:?}"
+        );
+        assert!(s.contains("def factory(name: str) -> Widget:"), "got {s:?}");
+        assert!(!s.contains("return Widget"), "got {s:?}");
+    }
+
+    #[test]
+    fn py_one_liner_assignment_keeps_whole() {
+        let s = py("MAX_RETRIES: int = 5");
+        assert_eq!(s, "MAX_RETRIES: int = 5");
+    }
+
+    #[test]
+    fn py_returns_none_on_garbage() {
+        let _ = render_python(b"\x00\xff this is not python");
+    }
+
+    #[test]
+    fn py_empty_input_returns_none() {
+        assert!(render_python(b"").is_none());
+    }
+
+    // ---------- TypeScript ----------
+
+    fn ts(input: &str) -> String {
+        render_typescript(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a typescript signature for `{input}`"))
+    }
+
+    #[test]
+    fn ts_fn_strips_body() {
+        let s = ts("function add(a: number, b: number): number { return a + b; }");
+        assert_eq!(s, "function add(a: number, b: number): number");
+    }
+
+    #[test]
+    fn ts_export_fn() {
+        let s = ts("export function greet(name: string): string { return `Hi ${name}`; }");
+        assert!(
+            s.starts_with("export function greet(name: string): string"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("return"), "got {s:?}");
+    }
+
+    #[test]
+    fn ts_class_strips_methods() {
+        let s = ts("class Widget { name: string; greet() { return this.name; } }");
+        assert!(s.starts_with("class Widget"), "got {s:?}");
+        assert!(!s.contains("greet"), "got {s:?}");
+    }
+
+    #[test]
+    fn ts_export_class() {
+        let s = ts(
+            "export class Box<T> extends Container<T> implements Stackable { items: T[] = []; push(item: T) {} }",
+        );
+        assert!(
+            s.starts_with("export class Box<T> extends Container<T> implements Stackable"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("items"), "got {s:?}");
+    }
+
+    #[test]
+    fn ts_interface_strips_members() {
+        let s = ts("interface Handler { handle(input: string): string; }");
+        assert_eq!(s, "interface Handler");
+    }
+
+    #[test]
+    fn ts_type_alias_keeps_whole() {
+        let s = ts("export type Result<T> = T | Error;");
+        assert_eq!(s, "export type Result<T> = T | Error;");
+    }
+
+    #[test]
+    fn ts_const_keeps_whole() {
+        let s = ts("export const MAX_RETRIES = 5;");
+        assert_eq!(s, "export const MAX_RETRIES = 5;");
+    }
+
+    #[test]
+    fn ts_enum_strips_variants() {
+        let s = ts("enum Direction { Up, Down, Left, Right }");
+        assert_eq!(s, "enum Direction");
+    }
+
+    #[test]
+    fn ts_returns_none_on_garbage() {
+        let _ = render_typescript(b"\x00\xff not typescript at all");
+    }
+
+    #[test]
+    fn ts_empty_input_returns_none() {
+        assert!(render_typescript(b"").is_none());
+    }
+
+    // ---------- JavaScript ----------
+
+    fn js(input: &str) -> String {
+        render_javascript(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a javascript signature for `{input}`"))
+    }
+
+    #[test]
+    fn js_fn_strips_body() {
+        let s = js("function add(a, b) { return a + b; }");
+        assert_eq!(s, "function add(a, b)");
+    }
+
+    #[test]
+    fn js_class_strips_methods() {
+        let s = js("class Widget { greet() { return 'hi'; } }");
+        assert!(s.starts_with("class Widget"), "got {s:?}");
+        assert!(!s.contains("greet"), "got {s:?}");
+    }
+
+    #[test]
+    fn js_const_keeps_whole() {
+        let s = js("const MAX = 42;");
+        assert_eq!(s, "const MAX = 42;");
+    }
+
+    #[test]
+    fn js_empty_input_returns_none() {
+        assert!(render_javascript(b"").is_none());
     }
 }
