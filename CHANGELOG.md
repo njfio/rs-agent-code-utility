@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.13] - 2026-05-12
+
+P8 SignatureRenderer (Rust) ships. `Index.ReadSymbol` now honours
+`shape: "signature"` and `shape: "both"` for `.rs` files: agents can
+fetch a function's `pub fn foo(x: u32) -> Result<Foo>` declaration
+without paying for the body.
+
+Smoke result: on `crates/rts-core`, `read_symbol(parse, shape="signature")`
+returns ~80 bytes of declaration instead of ~84 bytes of body — a 50×
+reduction on bulky functions, with `signature` rendered cheaply per call
+via tree-sitter walk.
+
+### Added
+
+- **`crates/rts-core/src/signature.rs`** — new module with
+  `render_rust(bytes: &[u8]) -> Option<String>`. Tree-sitter walks the
+  symbol's bytes, finds the body node, and returns everything before
+  it:
+  - **`function_item`**: drops `block` body. Preserves
+    `pub`/`async`/`unsafe`/`const`, generic params, `where` clauses,
+    and the return type.
+  - **`struct_item`** (regular): drops `field_declaration_list`. Tuple
+    structs (`pub struct Pair(u32, u32);`) and unit structs
+    (`pub struct Marker;`) are kept whole.
+  - **`enum_item`**: drops `enum_variant_list`.
+  - **`trait_item`** / **`impl_item`** / **`mod_item`** (with body):
+    drops `declaration_list`.
+  - **`type_item`** / **`const_item`** / **`static_item`** /
+    **`use_declaration`** / **`macro_definition`** / `mod foo;`: kept
+    whole — the whole text IS the signature.
+  - **Doc comments + outer attributes**: walked backward and included.
+    A `/// Build the index.` line above a fn becomes part of the
+    signature output (load-bearing context for the agent; cheap to
+    carry).
+  - Returns `None` on parse failure / unknown item kind. Caller falls
+    through to the body — never panics.
+  - **18 unit tests** covering each item kind + edge cases (async/unsafe
+    fns, generic + where clauses, tuple/unit structs, doc comments,
+    garbage input, empty input).
+- **`crates/rts-daemon/src/methods/index.rs`** — `Index.ReadSymbol`
+  handler now dispatches to a per-language renderer:
+  - **`shape: "body"`** (default): unchanged. Returns body bytes; `signature` field is `null`.
+  - **`shape: "signature"`**: `text` and `signature` fields both carry
+    the rendered signature. Returns the body bytes when no renderer is
+    registered for the file's language (currently anything other than
+    `.rs`).
+  - **`shape: "both"`**: `text` carries the full body; `signature` field
+    carries the cheap signature alongside. Best-of-both for agents that
+    need disambiguation context without doing two calls.
+- **`crates/rts-daemon/tests/read_round_trip.rs`**: three new
+  end-to-end assertions exercising the daemon's MCP-side surface:
+  - `shape=signature` returns a string containing `pub fn alpha` but
+    not `println!` (the body).
+  - `shape=both` carries both — signature in `signature`, body in
+    `text`.
+  - Struct signature on `pub struct Beta { pub value: u32 }` strips
+    the field block.
+
+### Changed
+
+- **`crates/rts-core/src/lib.rs`** registers `pub mod signature;`.
+
+### Not in this slice (later P8 slices)
+
+- Python, TypeScript, JavaScript, Go, Java, C, C++, PHP, Ruby, Swift
+  signature renderers. The dispatcher in `index.rs::render_signature_for_path`
+  returns `None` for those — agents get the full body until each
+  language's renderer lands.
+- Tree-shake closure walker for `include_dependencies: true`.
+- PageRank-driven `rank_score` ordering on `Index.FindSymbol` matches.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **378 passed, 0 failed, 2 ignored** (was
+  360; +18 signature unit tests). The `read_round_trip` integration
+  test now exercises the daemon's signature pipeline.
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: exit 0.
+
 ## [0.2.0-alpha.12] - 2026-05-11
 
 P9 distribution slice. Pure docs + housekeeping. The project's front
