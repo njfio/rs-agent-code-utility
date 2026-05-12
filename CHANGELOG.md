@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.16] - 2026-05-12
+
+Final P8 SignatureRenderer slice. **All 11 supported grammars now have
+signature renderers**: PHP, Ruby, and Swift ship in this PR, completing
+the surface across Rust, Python, TypeScript, JavaScript, Go, Java, C,
+C++, PHP, Ruby, and Swift.
+
+### Added
+
+- **`render_php(bytes)`** in `crates/rts-core/src/signature.rs`:
+  - PHP wraps content in `<?php … ?>`, so items aren't direct root
+    children. Uses a recursive `find_descendant_by_kind` to locate the
+    first interesting top-level item (`function_definition`,
+    `class_declaration`, `interface_declaration`, `trait_declaration`,
+    `enum_declaration`, `namespace_definition`, etc.).
+  - Drops `compound_statement` (function bodies) / `declaration_list`
+    (class, interface, trait, enum bodies). Const declarations and
+    `use Namespace\Foo;` kept whole.
+- **`render_ruby(bytes)`** in the same module:
+  - Ruby uses `end` instead of `{` so the standard body-strip helper
+    doesn't apply. Pragmatic approach: slice at the first newline (or
+    `;` for one-line `def foo; … end` forms) after the item start.
+  - Covers `method`, `singleton_method`, `class`, `module`.
+- **`render_swift(bytes)`**:
+  - `function_declaration` / `init_declaration` / `deinit_declaration` /
+    `class_declaration` / `protocol_declaration` / `enum_declaration`:
+    slice at the first `{` (Swift's body always starts with `{` and
+    the header has none).
+  - `property_declaration`, `typealias_declaration`,
+    `import_declaration`, `operator_declaration`: kept whole.
+- **`render_signature_for_path`** dispatch in
+  `crates/rts-daemon/src/methods/index.rs` extended for `.php`,
+  `.phtml`, `.rb`, `.rake`, `.swift`.
+- **18 new unit tests** in `crates/rts-core/src/signature.rs::tests`
+  (6 PHP, 6 Ruby, 6 Swift), covering function/method bodies, class
+  bodies, interfaces / protocols / traits, imports, const/typealias
+  one-liners, and empty-input safety.
+
+### Changed
+
+- Module-level doc comment in `crates/rts-core/src/signature.rs` now
+  lists all 11 grammars and flags the writer-side analyzer gap for
+  Java/C/C++ (and now potentially PHP/Ruby/Swift, depending on the
+  upstream extractor status) as the remaining bottleneck for
+  end-to-end coverage.
+
+### Not in this slice
+
+- Analyzer-layer fix for Java/C/C++ (still open from alpha.15) and
+  potentially PHP/Ruby/Swift symbol extraction in
+  `rust_tree_sitter::analyzer::extract_*_symbols`. The renderers all
+  work; full end-to-end signature delivery for those languages
+  depends on the writer-side fix.
+- Tree-shake closure walker for `include_dependencies: true`.
+- PageRank `rank_score` ordering on `Index.FindSymbol`.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **447 passed, 0 failed, 2 ignored** (was
+  429; +18 new signature unit tests).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: exit 0.
+
 ## [0.2.0-alpha.15] - 2026-05-12
 
 P8 SignatureRenderer extends to **Go, Java, C, and C++**. Eight of the

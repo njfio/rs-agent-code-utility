@@ -609,9 +609,9 @@ fn render_signature_for_path(rel_path: &str, body: &[u8]) -> Option<String> {
         Some("cpp") | Some("cc") | Some("cxx") | Some("hpp") | Some("hh") | Some("hxx") => {
             rust_tree_sitter::signature::render_cpp(body)
         }
-        // PHP, Ruby, Swift land in subsequent P8 slices. Until then
-        // those agents get the body in `text` and a `null` signature
-        // field.
+        Some("php") | Some("phtml") => rust_tree_sitter::signature::render_php(body),
+        Some("rb") | Some("rake") => rust_tree_sitter::signature::render_ruby(body),
+        Some("swift") => rust_tree_sitter::signature::render_swift(body),
         _ => None,
     }
 }
