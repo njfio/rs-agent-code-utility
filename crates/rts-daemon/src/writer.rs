@@ -477,6 +477,27 @@ mod tests {
         );
     }
 
+    /// **Known issue**: as of `0.2.0-alpha.15` the analyzer's
+    /// `extract_java_symbols` / `extract_c_symbols` / `extract_cpp_symbols`
+    /// paths return empty when called via the writer's tempfile route
+    /// (the `extract_*_symbols` methods in `rust_tree_sitter::analyzer`
+    /// are TODO-stubbed for these languages). The SignatureRenderer for
+    /// these languages works (covered by 22 unit tests in
+    /// `rust_tree_sitter::signature::tests`), but they won't get
+    /// signature-rendered through `Index.ReadSymbol` until the writer's
+    /// upstream extraction is fixed in a follow-up PR. Go works.
+    #[test]
+    fn parse_and_extract_returns_go_symbols() {
+        let pool = ParserPool::new();
+        let src = "package demo\n\nfunc GoTarget(name string) int { return len(name) }\n";
+        let syms = pool.parse_and_extract(Language::Go, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"GoTarget"),
+            "expected `GoTarget` in symbols; got {names:?}"
+        );
+    }
+
     #[test]
     fn line_col_translation_is_consistent_with_str_bytes() {
         let content = "abc\ndef\nghij\n";

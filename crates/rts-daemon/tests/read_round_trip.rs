@@ -124,6 +124,15 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         workspace.path().join("ts_demo.ts"),
         "export function tsTarget(a: number, b: number): number { return a + b; }\n",
     )?;
+    // Go end-to-end. Java / C / C++ have working SignatureRenderers but
+    // their writer-side symbol extraction in `rust_tree_sitter::analyzer`
+    // is TODO-stubbed for some kinds — those will be covered by an
+    // analyzer-layer follow-up PR. Until then they're verified only
+    // through unit tests in `rust_tree_sitter::signature::tests`.
+    std::fs::write(
+        workspace.path().join("go_demo.go"),
+        "package demo\n\nfunc GoTarget(name string) (int, error) {\n    return len(name), nil\n}\n",
+    )?;
 
     let socket_path = if cfg!(target_os = "macos") {
         home_dir
@@ -435,6 +444,31 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
     assert!(
         !ts_text.contains("return a + b"),
         "typescript signature must strip body; got {ts_text:?}"
+    );
+
+    // ---- Per-language dispatch: Go ----
+    wait_for_symbol(&mut stream, "GoTarget", Duration::from_secs(5)).await?;
+    let go_sig = round_trip(
+        &mut stream,
+        "32",
+        "Index.ReadSymbol",
+        json!({ "name": "GoTarget", "shape": "signature" }),
+    )
+    .await?;
+    assert!(
+        go_sig["error"].is_null(),
+        "GoTarget signature should succeed: {go_sig:?}"
+    );
+    let go_text = go_sig["result"]["signature"]
+        .as_str()
+        .expect("signature field for go");
+    assert!(
+        go_text.contains("func GoTarget(name string) (int, error)"),
+        "go signature shape wrong; got {go_text:?}"
+    );
+    assert!(
+        !go_text.contains("return len"),
+        "go signature must strip body; got {go_text:?}"
     );
 
     Ok(())
