@@ -113,6 +113,17 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
     std::fs::write(workspace.path().join("src.rs"), SOURCE)?;
     // A file with a disallowed extension, to exercise §13.4.
     std::fs::write(workspace.path().join("data.bin"), b"\x00\x01\x02\x03")?;
+    // Python + TypeScript files so the signature dispatch in
+    // `methods::index::render_signature_for_path` can be exercised
+    // end-to-end alongside the Rust one.
+    std::fs::write(
+        workspace.path().join("py_demo.py"),
+        "def py_target(name: str) -> int:\n    return len(name)\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("ts_demo.ts"),
+        "export function tsTarget(a: number, b: number): number { return a + b; }\n",
+    )?;
 
     let socket_path = if cfg!(target_os = "macos") {
         home_dir
@@ -372,6 +383,58 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
     assert!(
         !beta_sig.contains("pub value: u32"),
         "struct signature must drop the field block; got {beta_sig:?}"
+    );
+
+    // ---- Per-language dispatch: Python ----
+    // Wait for the Python symbol to land in the index (the writer is
+    // asynchronous; py_demo.py is parsed alongside src.rs).
+    wait_for_symbol(&mut stream, "py_target", Duration::from_secs(5)).await?;
+    let py_sig = round_trip(
+        &mut stream,
+        "30",
+        "Index.ReadSymbol",
+        json!({ "name": "py_target", "shape": "signature" }),
+    )
+    .await?;
+    assert!(
+        py_sig["error"].is_null(),
+        "py_target signature should succeed: {py_sig:?}"
+    );
+    let py_text = py_sig["result"]["signature"]
+        .as_str()
+        .expect("signature field for python");
+    assert!(
+        py_text.starts_with("def py_target(name: str) -> int:"),
+        "python signature shape wrong; got {py_text:?}"
+    );
+    assert!(
+        !py_text.contains("return len(name)"),
+        "python signature must strip body; got {py_text:?}"
+    );
+
+    // ---- Per-language dispatch: TypeScript ----
+    wait_for_symbol(&mut stream, "tsTarget", Duration::from_secs(5)).await?;
+    let ts_sig = round_trip(
+        &mut stream,
+        "31",
+        "Index.ReadSymbol",
+        json!({ "name": "tsTarget", "shape": "signature" }),
+    )
+    .await?;
+    assert!(
+        ts_sig["error"].is_null(),
+        "tsTarget signature should succeed: {ts_sig:?}"
+    );
+    let ts_text = ts_sig["result"]["signature"]
+        .as_str()
+        .expect("signature field for typescript");
+    assert!(
+        ts_text.contains("function tsTarget(a: number, b: number): number"),
+        "typescript signature shape wrong; got {ts_text:?}"
+    );
+    assert!(
+        !ts_text.contains("return a + b"),
+        "typescript signature must strip body; got {ts_text:?}"
     );
 
     Ok(())

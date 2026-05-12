@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.14] - 2026-05-12
+
+P8 SignatureRenderer expands to **Python, TypeScript, and JavaScript**.
+`Index.ReadSymbol shape=signature` now returns rendered declarations
+for `.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs` in addition to
+`.rs`. Remaining 7 grammars (Go, Java, C, C++, PHP, Ruby, Swift) follow
+in subsequent slices.
+
+### Added
+
+- **`render_python(bytes)`** in `crates/rts-core/src/signature.rs`:
+  - **`function_definition`** / async fns — drops `block` body. Keeps
+    `async` modifier, parameters, return annotation, trailing `:`.
+  - **`class_definition`** — drops `block` body. Keeps bases parens
+    and `:`.
+  - **`decorated_definition`** — preserves decorators and unwraps to
+    the function/class body inside.
+  - One-liners (`expression_statement`, `assignment`, `import_*`,
+    `global_statement`, `nonlocal_statement`, `type_alias_statement`)
+    are kept whole.
+- **`render_typescript(bytes)`** + **`render_javascript(bytes)`** in
+  the same module:
+  - **`function_declaration`** / `generator_function_declaration` /
+    `function_signature` / `method_definition` / `method_signature` —
+    drops `statement_block`.
+  - **`class_declaration`** / `abstract_class_declaration` — drops
+    `class_body`.
+  - **`interface_declaration`** — drops `interface_body` / `object_type`.
+  - **`enum_declaration`** — drops `enum_body`.
+  - **`module`** / `internal_module` / `namespace_declaration` —
+    drops body block.
+  - **`export …`** statements unwrap transparently; the `export`
+    keyword is preserved in the rendered signature.
+  - One-liners (`type_alias_declaration`, `lexical_declaration`,
+    `variable_declaration`, `import_statement`, `expression_statement`,
+    `ambient_declaration`) are kept whole.
+- **`render_signature_for_path`** dispatch in
+  `crates/rts-daemon/src/methods/index.rs` extended for `.py`, `.ts`,
+  `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`.
+- **`crates/rts-daemon/tests/read_round_trip.rs`** seeds two new
+  files in the test workspace (`py_demo.py`, `ts_demo.ts`) and
+  asserts the daemon's signature dispatch routes each file to the
+  correct renderer, producing language-appropriate signatures.
+
+### Changed
+
+- Module-level doc comment in
+  `crates/rts-core/src/signature.rs` now lists Rust + Python +
+  TypeScript + JavaScript as the supported languages.
+
+### Not in this slice (later P8 slices)
+
+- Go, Java, C, C++, PHP, Ruby, Swift signature renderers — dispatcher
+  returns `None` for those.
+- Tree-shake closure walker for `include_dependencies: true`.
+- PageRank `rank_score` ordering on `Index.FindSymbol`.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **399 passed, 0 failed, 2 ignored** (was
+  378; +21 new signature unit tests: 7 Python + 11 TypeScript + 3
+  JavaScript, plus 2 integration assertions for the dispatch).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: exit 0.
+
 ## [0.2.0-alpha.13] - 2026-05-12
 
 P8 SignatureRenderer (Rust) ships. `Index.ReadSymbol` now honours
