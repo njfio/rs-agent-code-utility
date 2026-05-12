@@ -1291,29 +1291,48 @@ impl CodebaseAnalyzer {
         // Extract function definitions
         let functions = tree.find_nodes_by_kind("function_definition");
         for func in functions {
-            if let Some(declarator) = func.child_by_field_name("declarator") {
-                if let Some(func_declarator) = declarator
+            // The grammar tree for a C function looks like:
+            //   function_definition
+            //     type:      primitive_type / type_identifier
+            //     declarator: function_declarator       ← usually here
+            //                   declarator: identifier  ← the name
+            //                   parameters: ...
+            //     body:      compound_statement
+            //
+            // …but pointer-returning functions wrap the function_declarator
+            // in a pointer_declarator, so we search for the
+            // `function_declarator` whether it's the direct child or one
+            // level deeper.
+            let Some(declarator) = func.child_by_field_name("declarator") else {
+                continue;
+            };
+            let func_declarator = if declarator.kind() == "function_declarator" {
+                declarator
+            } else {
+                match declarator
                     .children()
-                    .iter()
+                    .into_iter()
                     .find(|child| child.kind() == "function_declarator")
                 {
-                    if let Some(name_node) = func_declarator.child_by_field_name("declarator") {
-                        if let Ok(name) = name_node.text() {
-                            let docs =
-                                self.extract_c_doc_comments(content, func.start_position().row);
-                            symbols.push(Symbol {
-                                name: name.to_string(),
-                                kind: "function".to_string(),
-                                start_line: func.start_position().row + 1,
-                                end_line: func.end_position().row + 1,
-                                start_column: func.start_position().column,
-                                end_column: func.end_position().column,
-                                visibility: "public".to_string(),
-                                documentation: docs,
-                            });
-                        }
-                    }
+                    Some(d) => d,
+                    None => continue,
                 }
+            };
+            let Some(name_node) = func_declarator.child_by_field_name("declarator") else {
+                continue;
+            };
+            if let Ok(name) = name_node.text() {
+                let docs = self.extract_c_doc_comments(content, func.start_position().row);
+                symbols.push(Symbol {
+                    name: name.to_string(),
+                    kind: "function".to_string(),
+                    start_line: func.start_position().row + 1,
+                    end_line: func.end_position().row + 1,
+                    start_column: func.start_position().column,
+                    end_column: func.end_position().column,
+                    visibility: "public".to_string(),
+                    documentation: docs,
+                });
             }
         }
 

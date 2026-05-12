@@ -124,14 +124,37 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         workspace.path().join("ts_demo.ts"),
         "export function tsTarget(a: number, b: number): number { return a + b; }\n",
     )?;
-    // Go end-to-end. Java / C / C++ have working SignatureRenderers but
-    // their writer-side symbol extraction in `rust_tree_sitter::analyzer`
-    // is TODO-stubbed for some kinds — those will be covered by an
-    // analyzer-layer follow-up PR. Until then they're verified only
-    // through unit tests in `rust_tree_sitter::signature::tests`.
+    // Go + Java + C + C++ + PHP + Ruby + Swift — all 7 non-Rust/Python/TS
+    // languages now reach Index.ReadSymbol end-to-end after the
+    // analyzer-layer fix in alpha.17. Each gets a one-symbol seed file
+    // and a `shape: "signature"` assertion below.
     std::fs::write(
         workspace.path().join("go_demo.go"),
         "package demo\n\nfunc GoTarget(name string) (int, error) {\n    return len(name), nil\n}\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("JavaDemo.java"),
+        "package demo;\n\npublic class JavaTarget {\n    public int compute(int x) { return x + 1; }\n}\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("c_demo.c"),
+        "int c_target(int a, int b) { return a + b; }\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("cpp_demo.cpp"),
+        "int cpp_target(int a, int b) { return a + b; }\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("php_demo.php"),
+        "<?php\nfunction phpTarget($a, $b) { return $a + $b; }\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("ruby_demo.rb"),
+        "def ruby_target(name)\n  name.length\nend\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("swift_demo.swift"),
+        "func swiftTarget(_ a: Int, _ b: Int) -> Int { return a + b }\n",
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
@@ -446,30 +469,67 @@ async fn read_handlers_round_trip() -> anyhow::Result<()> {
         "typescript signature must strip body; got {ts_text:?}"
     );
 
-    // ---- Per-language dispatch: Go ----
-    wait_for_symbol(&mut stream, "GoTarget", Duration::from_secs(5)).await?;
-    let go_sig = round_trip(
-        &mut stream,
-        "32",
-        "Index.ReadSymbol",
-        json!({ "name": "GoTarget", "shape": "signature" }),
-    )
-    .await?;
-    assert!(
-        go_sig["error"].is_null(),
-        "GoTarget signature should succeed: {go_sig:?}"
-    );
-    let go_text = go_sig["result"]["signature"]
-        .as_str()
-        .expect("signature field for go");
-    assert!(
-        go_text.contains("func GoTarget(name string) (int, error)"),
-        "go signature shape wrong; got {go_text:?}"
-    );
-    assert!(
-        !go_text.contains("return len"),
-        "go signature must strip body; got {go_text:?}"
-    );
+    // Per-language dispatch — all 7 newly-end-to-end languages route
+    // correctly to their signature renderer + the result is body-free.
+    let cases: &[(&str, &str, &str, &str)] = &[
+        (
+            "32",
+            "GoTarget",
+            "func GoTarget(name string) (int, error)",
+            "return len",
+        ),
+        ("33", "JavaTarget", "public class JavaTarget", "compute"),
+        (
+            "34",
+            "c_target",
+            "int c_target(int a, int b)",
+            "return a + b",
+        ),
+        (
+            "35",
+            "cpp_target",
+            "int cpp_target(int a, int b)",
+            "return a + b",
+        ),
+        (
+            "36",
+            "phpTarget",
+            "function phpTarget($a, $b)",
+            "return $a + $b",
+        ),
+        ("37", "ruby_target", "def ruby_target(name)", "name.length"),
+        (
+            "38",
+            "swiftTarget",
+            "func swiftTarget(_ a: Int, _ b: Int) -> Int",
+            "return a + b",
+        ),
+    ];
+    for (id, symbol, expected_substring, forbidden_substring) in cases {
+        wait_for_symbol(&mut stream, symbol, Duration::from_secs(5)).await?;
+        let resp = round_trip(
+            &mut stream,
+            id,
+            "Index.ReadSymbol",
+            json!({ "name": symbol, "shape": "signature" }),
+        )
+        .await?;
+        assert!(
+            resp["error"].is_null(),
+            "{symbol} signature should succeed: {resp:?}"
+        );
+        let sig = resp["result"]["signature"]
+            .as_str()
+            .unwrap_or_else(|| panic!("signature field for {symbol}; got {resp:?}"));
+        assert!(
+            sig.contains(expected_substring),
+            "{symbol} signature wrong; expected `{expected_substring}` in {sig:?}"
+        );
+        assert!(
+            !sig.contains(forbidden_substring),
+            "{symbol} signature must strip body; expected `{forbidden_substring}` to be absent from {sig:?}"
+        );
+    }
 
     Ok(())
 }

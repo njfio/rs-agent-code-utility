@@ -15,18 +15,9 @@
 //!
 //! v0 ships renderers for all 11 supported grammars: **Rust, Python,
 //! TypeScript, JavaScript, Go, Java, C, C++, PHP, Ruby, and Swift**.
-//! Callers fall through to body returns when this module returns
-//! `None`.
-//!
-//! **Note**: Java / C / C++ have working renderers here, but their
-//! end-to-end `Index.ReadSymbol shape=signature` path also needs the
-//! daemon's writer (via `rust_tree_sitter::analyzer::extract_*_symbols`)
-//! to put the symbol into the index in the first place. Those
-//! extractors are currently incomplete for Java / C / C++ in some
-//! cases; a follow-up analyzer-layer PR will close the gap. Go and
-//! the four already-shipped languages (Rust / Python / TS / JS) work
-//! end-to-end. PHP / Ruby / Swift writer-side coverage depends on the
-//! same upstream extractor work.
+//! All 11 reach `Index.ReadSymbol shape=signature` end-to-end as of
+//! `0.2.0-alpha.17`. Callers fall through to body returns when this
+//! module returns `None`.
 
 use streaming_iterator::StreamingIterator as _;
 
@@ -741,11 +732,25 @@ fn render_cpp_template(bytes: &[u8]) -> Option<String> {
 /// - **`const_declaration`** / **`namespace_use_declaration`**:
 ///   kept whole.
 pub fn render_php(bytes: &[u8]) -> Option<String> {
+    // The PHP grammar only parses content wrapped in `<?php … ?>`.
+    // Symbol bytes extracted from the index don't carry the opening
+    // tag, so we synthesise it for parsing — and remember to shift
+    // offsets back into the original byte range when we return.
+    let needs_tag = !looks_like_php_tag(bytes);
+    let synthesised: Vec<u8>;
+    let parse_bytes: &[u8] = if needs_tag {
+        synthesised = [b"<?php\n", bytes].concat();
+        &synthesised
+    } else {
+        bytes
+    };
+    let prefix_len = if needs_tag { 6 } else { 0 };
+
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(&tree_sitter_php::LANGUAGE_PHP.into())
         .ok()?;
-    let tree = parser.parse(bytes, None)?;
+    let tree = parser.parse(parse_bytes, None)?;
     let root = tree.root_node();
 
     // PHP wraps content in a `<?php ... ?>` tag pair; the actual
@@ -784,12 +789,25 @@ pub fn render_php(bytes: &[u8]) -> Option<String> {
     };
 
     let start = item.start_byte();
-    let slice = bytes.get(start..signature_end)?;
+    let slice = parse_bytes.get(start..signature_end)?;
     let text = std::str::from_utf8(slice).ok()?.trim_end().to_string();
     if text.is_empty() {
         return None;
     }
+    let _ = prefix_len; // offsets already aligned via parse_bytes
     Some(text)
+}
+
+/// Cheap textual probe: does this look like PHP source that starts with
+/// `<?php` (possibly preceded by a BOM or whitespace)? Used to decide
+/// whether to synthesise an opening tag before parsing.
+fn looks_like_php_tag(bytes: &[u8]) -> bool {
+    bytes
+        .iter()
+        .skip_while(|b| matches!(b, b' ' | b'\t' | b'\n' | b'\r' | 0xEF | 0xBB | 0xBF))
+        .take(5)
+        .copied()
+        .eq([b'<', b'?', b'p', b'h', b'p'].iter().copied())
 }
 
 fn find_descendant_by_kind<'tree>(

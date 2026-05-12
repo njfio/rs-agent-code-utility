@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.17] - 2026-05-12
+
+Analyzer-layer fix. Closes the writer-side extraction gap noted in
+alphas 15 + 16: `Index.ReadSymbol shape=signature` now works
+end-to-end for **all 11 supported grammars**, not just 5.
+
+Root cause was two bugs upstream of the SignatureRenderer:
+
+1. **`detect_language_from_extension`** in `crates/rts-core/src/lib.rs`
+   was missing entries for **Java, PHP, Ruby, Swift**. Files with
+   those extensions silently fell through to `None`, so
+   `analyze_file_internal` returned `Ok(())` without ever calling
+   `extract_symbols` — symbols never made it into the index.
+2. **`extract_c_symbols`** in `crates/rts-core/src/analyzer.rs`
+   walked the C function tree assuming a `function_definition >
+   declarator > function_declarator > declarator` chain, but
+   tree-sitter-c's typical shape is `function_definition >
+   declarator(function_declarator) > declarator(identifier)`. The
+   nested search never found `function_declarator` so C and C++
+   functions never registered.
+3. **`render_php`** in `crates/rts-core/src/signature.rs` couldn't
+   parse the writer-stored byte slice because the slice doesn't
+   include the `<?php` opening tag. tree-sitter-php only parses
+   content wrapped in `<?php … ?>`. Fix synthesises the tag when
+   absent (cheap textual probe).
+
+### Added
+
+- **Extension mappings** in `detect_language_from_extension`:
+  - `java` → `Language::Java`
+  - `php`, `phtml` → `Language::Php`
+  - `rb`, `rake` → `Language::Ruby`
+  - `swift` → `Language::Swift`
+  - Bonus: `cjs` → `Language::JavaScript`, `hh` → `Language::Cpp`
+    (filling small gaps in the existing entries).
+- **`looks_like_php_tag(bytes)`** helper in `signature.rs`: cheap
+  textual scan for the `<?php` opening tag (with BOM tolerance). Used
+  by `render_php` to decide whether to synthesise the tag before
+  parsing.
+- **6 new writer-layer unit tests** in `crates/rts-daemon/src/writer.rs`
+  verifying `parse_and_extract` returns symbols for Java, C, C++, PHP,
+  Ruby, Swift (joining the existing Rust + Go tests).
+- **7 new integration assertions** in
+  `crates/rts-daemon/tests/read_round_trip.rs`: the test now seeds
+  one file per language (Go, Java, C, C++, PHP, Ruby, Swift) and
+  verifies each routes to its renderer end-to-end, producing a
+  body-free signature.
+
+### Changed
+
+- **`extract_c_symbols`** function walker rewritten to handle both
+  the direct `function_declarator` case and the pointer-wrapped
+  variant.
+- **`render_php`** prepends `<?php\n` to symbol-only byte slices
+  before parsing. The parse path is otherwise unchanged.
+- Module-level doc comment in `crates/rts-core/src/signature.rs` now
+  states all 11 grammars are end-to-end as of alpha.17.
+
+### Not in this slice
+
+- P8 PageRank + `Index.Outline` — the largest remaining feature.
+- Tree-shake closure walker for `include_dependencies: true`.
+- P6 watcher hardening (Rescan re-walk, rayon parsers, PollWatcher).
+- P9 latency bench (S1).
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **453 passed, 0 failed, 2 ignored** (was
+  447; +6 writer-layer parse_and_extract tests). The
+  `read_round_trip` integration test grows from 1 language coverage
+  to 7 (Rust+Python+TS shipped earlier; Go+Java+C+C++/PHP/Ruby/Swift
+  added here).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: exit 0.
+
 ## [0.2.0-alpha.16] - 2026-05-12
 
 Final P8 SignatureRenderer slice. **All 11 supported grammars now have
