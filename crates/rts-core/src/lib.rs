@@ -182,12 +182,16 @@ pub fn supported_languages() -> Vec<LanguageInfo> {
 pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
     match extension.to_lowercase().as_str() {
         "rs" => Some(Language::Rust),
-        "js" | "mjs" | "jsx" => Some(Language::JavaScript),
+        "js" | "mjs" | "jsx" | "cjs" => Some(Language::JavaScript),
         "ts" | "tsx" | "mts" | "cts" => Some(Language::TypeScript),
         "py" | "pyi" => Some(Language::Python),
         "c" | "h" => Some(Language::C),
-        "cpp" | "cxx" | "cc" | "hpp" | "hxx" => Some(Language::Cpp),
+        "cpp" | "cxx" | "cc" | "hpp" | "hxx" | "hh" => Some(Language::Cpp),
         "go" => Some(Language::Go),
+        "java" => Some(Language::Java),
+        "php" | "phtml" => Some(Language::Php),
+        "rb" | "rake" => Some(Language::Ruby),
+        "swift" => Some(Language::Swift),
         _ => None,
     }
 }

@@ -499,6 +499,78 @@ mod tests {
     }
 
     #[test]
+    fn parse_and_extract_returns_java_symbols() {
+        let pool = ParserPool::new();
+        let src = "package demo;\n\npublic class JavaTarget {\n    public int compute(int x) { return x + 1; }\n}\n";
+        let syms = pool.parse_and_extract(Language::Java, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"JavaTarget"),
+            "expected `JavaTarget` in symbols; got {names:?}"
+        );
+    }
+
+    #[test]
+    fn parse_and_extract_returns_c_symbols() {
+        let pool = ParserPool::new();
+        let src = "int c_target(int a, int b) { return a + b; }\n";
+        let syms = pool.parse_and_extract(Language::C, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"c_target"),
+            "expected `c_target` in symbols; got {names:?}"
+        );
+    }
+
+    #[test]
+    fn parse_and_extract_returns_cpp_symbols() {
+        let pool = ParserPool::new();
+        let src = "int cpp_target(int a, int b) { return a + b; }\n";
+        let syms = pool.parse_and_extract(Language::Cpp, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"cpp_target"),
+            "expected `cpp_target` in symbols; got {names:?}"
+        );
+    }
+
+    #[test]
+    fn parse_and_extract_returns_php_symbols() {
+        let pool = ParserPool::new();
+        let src = "<?php\nfunction phpTarget($a, $b) { return $a + $b; }\n";
+        let syms = pool.parse_and_extract(Language::Php, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"phpTarget"),
+            "expected `phpTarget` in symbols; got {names:?}"
+        );
+    }
+
+    #[test]
+    fn parse_and_extract_returns_ruby_symbols() {
+        let pool = ParserPool::new();
+        let src = "def ruby_target(name)\n  name.length\nend\n";
+        let syms = pool.parse_and_extract(Language::Ruby, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"ruby_target"),
+            "expected `ruby_target` in symbols; got {names:?}"
+        );
+    }
+
+    #[test]
+    fn parse_and_extract_returns_swift_symbols() {
+        let pool = ParserPool::new();
+        let src = "func swiftTarget(_ a: Int, _ b: Int) -> Int { return a + b }\n";
+        let syms = pool.parse_and_extract(Language::Swift, src).unwrap();
+        let names: Vec<_> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert!(
+            names.contains(&"swiftTarget"),
+            "expected `swiftTarget` in symbols; got {names:?}"
+        );
+    }
+
+    #[test]
     fn line_col_translation_is_consistent_with_str_bytes() {
         let content = "abc\ndef\nghij\n";
         let sym = Symbol {
