@@ -71,7 +71,8 @@ async fn mcp_round_trip_against_real_daemon() -> Result<()> {
     )?;
 
     let mut cmd = tokio::process::Command::new(rts_mcp_bin());
-    cmd.arg("--workspace").arg(workspace.path())
+    cmd.arg("--workspace")
+        .arg(workspace.path())
         .env("XDG_RUNTIME_DIR", runtime_dir.path())
         .env("XDG_STATE_HOME", state_dir.path())
         .env("HOME", home_dir.path())
@@ -127,11 +128,13 @@ async fn mcp_round_trip_against_real_daemon() -> Result<()> {
     let tools = list_resp["result"]["tools"]
         .as_array()
         .expect("tools array");
-    let tool_names: Vec<&str> = tools
-        .iter()
-        .filter_map(|t| t["name"].as_str())
-        .collect();
-    for expected in ["outline_workspace", "find_symbol", "read_symbol", "read_range"] {
+    let tool_names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+    for expected in [
+        "outline_workspace",
+        "find_symbol",
+        "read_symbol",
+        "read_range",
+    ] {
         assert!(
             tool_names.contains(&expected),
             "expected tool `{expected}` in {tool_names:?}"
@@ -171,7 +174,10 @@ async fn mcp_round_trip_against_real_daemon() -> Result<()> {
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    assert!(found, "writer never produced a build_index match through the MCP tool");
+    assert!(
+        found,
+        "writer never produced a build_index match through the MCP tool"
+    );
 
     // 4. tools/call → read_range on the seeded file
     send_request(

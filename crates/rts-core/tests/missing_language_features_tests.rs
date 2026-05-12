@@ -1,9 +1,9 @@
+use rust_tree_sitter::Parser;
 use rust_tree_sitter::error::Result;
 use rust_tree_sitter::languages::{
     c::CSyntax, go::GoSyntax, javascript::JavaScriptSyntax, python::PythonSyntax, rust::RustSyntax,
     typescript::TypeScriptSyntax,
 };
-use rust_tree_sitter::Parser;
 use std::fs;
 use tempfile::TempDir;
 
@@ -64,9 +64,11 @@ class Counter {
     // Test async functions
     let async_functions = JavaScriptSyntax::find_async_functions(&tree, js_code);
     assert!(async_functions.len() >= 1);
-    assert!(async_functions
-        .iter()
-        .any(|(name, _, _)| name == "fetchData"));
+    assert!(
+        async_functions
+            .iter()
+            .any(|(name, _, _)| name == "fetchData")
+    );
 
     // Test closures (arrow functions)
     let closures = JavaScriptSyntax::find_closures(&tree, js_code);
@@ -246,9 +248,11 @@ filter_even = lambda lst: [x for x in lst if x % 2 == 0]
     // Test async functions
     let async_functions = PythonSyntax::find_async_functions(&tree, py_code);
     assert!(async_functions.len() >= 1);
-    assert!(async_functions
-        .iter()
-        .any(|(name, _, _)| name == "fetch_data"));
+    assert!(
+        async_functions
+            .iter()
+            .any(|(name, _, _)| name == "fetch_data")
+    );
 
     // Test context managers
     let context_managers = PythonSyntax::find_context_managers(&tree, py_code);
@@ -341,9 +345,11 @@ int multiply(int a, int b) { return a * b; }
     // Test function pointers
     let function_pointers = CSyntax::find_function_pointers(&tree, c_code);
     assert!(function_pointers.len() >= 1);
-    assert!(function_pointers
-        .iter()
-        .any(|(name, _, _, _)| name == "operation_t"));
+    assert!(
+        function_pointers
+            .iter()
+            .any(|(name, _, _, _)| name == "operation_t")
+    );
 
     // Test unions
     let unions = CSyntax::find_unions(&tree, c_code);
@@ -361,16 +367,20 @@ int multiply(int a, int b) { return a * b; }
     // Test static functions
     let static_functions = CSyntax::find_static_functions(&tree, c_code);
     assert!(static_functions.len() >= 1);
-    assert!(static_functions
-        .iter()
-        .any(|(name, _, _)| name == "internal_helper"));
+    assert!(
+        static_functions
+            .iter()
+            .any(|(name, _, _)| name == "internal_helper")
+    );
 
     // Test inline functions
     let inline_functions = CSyntax::find_inline_functions(&tree, c_code);
     assert!(inline_functions.len() >= 1);
-    assert!(inline_functions
-        .iter()
-        .any(|(name, _, _)| name == "fast_add"));
+    assert!(
+        inline_functions
+            .iter()
+            .any(|(name, _, _)| name == "fast_add")
+    );
 
     Ok(())
 }
@@ -618,25 +628,33 @@ where
     // Test lifetimes
     let lifetimes = RustSyntax::find_lifetimes(&tree, rust_code);
     assert!(lifetimes.len() >= 1);
-    assert!(lifetimes
-        .iter()
-        .any(|(func_name, lifetime, _, _)| { func_name == "longest" && lifetime.contains("'a") }));
+    assert!(
+        lifetimes.iter().any(|(func_name, lifetime, _, _)| {
+            func_name == "longest" && lifetime.contains("'a")
+        })
+    );
 
     // Test associated types
     let associated_types = RustSyntax::find_associated_types(&tree, rust_code);
     assert!(associated_types.len() >= 2); // Item and Borrowed
-    assert!(associated_types
-        .iter()
-        .any(|(trait_name, type_name, _, _)| { trait_name == "Iterator" && type_name == "Item" }));
+    assert!(
+        associated_types
+            .iter()
+            .any(|(trait_name, type_name, _, _)| {
+                trait_name == "Iterator" && type_name == "Item"
+            })
+    );
 
     // Test const generics
     let const_generics = RustSyntax::find_const_generics(&tree, rust_code);
     assert!(const_generics.len() >= 1);
-    assert!(const_generics
-        .iter()
-        .any(|(struct_name, const_param, _, _)| {
-            struct_name == "Array" && const_param.contains("N: usize")
-        }));
+    assert!(
+        const_generics
+            .iter()
+            .any(|(struct_name, const_param, _, _)| {
+                struct_name == "Array" && const_param.contains("N: usize")
+            })
+    );
 
     Ok(())
 }

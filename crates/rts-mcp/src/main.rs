@@ -33,9 +33,10 @@ fn parse_args() -> Result<Args> {
     while let Some(a) = args.next() {
         match a.as_str() {
             "--workspace" | "-w" => {
-                workspace = Some(PathBuf::from(args.next().ok_or_else(|| {
-                    anyhow::anyhow!("--workspace requires a value")
-                })?));
+                workspace =
+                    Some(PathBuf::from(args.next().ok_or_else(|| {
+                        anyhow::anyhow!("--workspace requires a value")
+                    })?));
             }
             "--help" | "-h" => {
                 eprintln!("rts-mcp — MCP server bridging Claude Code/Cursor/etc. to rts-daemon.");
@@ -48,9 +49,7 @@ fn parse_args() -> Result<Args> {
                 eprintln!(
                     "  RTS_DAEMON_BIN  path to the rts-daemon binary (default: sibling of this exe)"
                 );
-                eprintln!(
-                    "  RTS_LOG         tracing filter; defaults to `rts_mcp=info,warn`."
-                );
+                eprintln!("  RTS_LOG         tracing filter; defaults to `rts_mcp=info,warn`.");
                 std::process::exit(0);
             }
             other => {

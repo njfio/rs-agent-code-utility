@@ -115,7 +115,9 @@ impl RtsServer {
         guard.call(method, params).await
     }
 
-    #[tool(description = "Return a token-budgeted structural map of this workspace — file tree, top symbols per file, signatures only. Use first when you need orientation in an unfamiliar repo or when picking which files to read next. Do not use for finding a specific known symbol — call `find_symbol` instead. Do not use for reading a file you already know — call `read_symbol` or `read_range`.")]
+    #[tool(
+        description = "Return a token-budgeted structural map of this workspace — file tree, top symbols per file, signatures only. Use first when you need orientation in an unfamiliar repo or when picking which files to read next. Do not use for finding a specific known symbol — call `find_symbol` instead. Do not use for reading a file you already know — call `read_symbol` or `read_range`."
+    )]
     async fn outline_workspace(
         &self,
         Parameters(args): Parameters<OutlineArgs>,
@@ -136,7 +138,9 @@ impl RtsServer {
         }
     }
 
-    #[tool(description = "Locate a named symbol (function, class, type, method, etc.) across the workspace. Returns a list of `matches` with definition location, signature, and `rank_score`. Use when you know the name. For partial / fuzzy / textual matches, this v1 server has no search — fall back to your shell `rg` tool.")]
+    #[tool(
+        description = "Locate a named symbol (function, class, type, method, etc.) across the workspace. Returns a list of `matches` with definition location, signature, and `rank_score`. Use when you know the name. For partial / fuzzy / textual matches, this v1 server has no search — fall back to your shell `rg` tool."
+    )]
     async fn find_symbol(
         &self,
         Parameters(args): Parameters<FindSymbolArgs>,
@@ -158,7 +162,9 @@ impl RtsServer {
         }
     }
 
-    #[tool(description = "Read the source of a named symbol. `shape=signature` returns just the declaration (cheap). `shape=body` returns the full implementation. `include_dependencies=true` adds the minimum surrounding types/imports the symbol references — use when you'll want to call/modify it without reading more. Prefer this over reading whole files.")]
+    #[tool(
+        description = "Read the source of a named symbol. `shape=signature` returns just the declaration (cheap). `shape=body` returns the full implementation. `include_dependencies=true` adds the minimum surrounding types/imports the symbol references — use when you'll want to call/modify it without reading more. Prefer this over reading whole files."
+    )]
     async fn read_symbol(
         &self,
         Parameters(args): Parameters<ReadSymbolArgs>,
@@ -192,7 +198,9 @@ impl RtsServer {
         }
     }
 
-    #[tool(description = "Read explicit line range [start_line, end_line] from a file. Use for stack-trace frames, diff hunks, and other cases where you already have an exact location. For symbol-by-name access, use `read_symbol` instead.")]
+    #[tool(
+        description = "Read explicit line range [start_line, end_line] from a file. Use for stack-trace frames, diff hunks, and other cases where you already have an exact location. For symbol-by-name access, use `read_symbol` instead."
+    )]
     async fn read_range(
         &self,
         Parameters(args): Parameters<ReadRangeArgs>,

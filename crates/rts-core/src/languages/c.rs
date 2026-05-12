@@ -1328,9 +1328,11 @@ int main() {
 
         let issues = CSyntax::check_memory_patterns(&tree, source);
         assert!(!issues.is_empty());
-        assert!(issues
-            .iter()
-            .any(|issue| issue.contains("allocations") && issue.contains("free calls")));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.contains("allocations") && issue.contains("free calls"))
+        );
         assert!(issues.iter().any(|issue| issue.contains("Array access")));
     }
 }

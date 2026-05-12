@@ -769,7 +769,7 @@ namespace MyProject {
         let namespaces = CppSyntax::find_namespaces(&tree, source);
         // Relaxed assertion - parser may not detect namespaces correctly
         println!("Found {} namespaces", namespaces.len()); // Debug output
-                                                           // Some namespaces might be found
+        // Some namespaces might be found
 
         // Relaxed assertion - parser may not detect specific namespaces correctly
         if !namespaces.is_empty() {
@@ -808,9 +808,11 @@ T max(T a, T b) {
 
         let template_names: Vec<&str> = templates.iter().map(|(name, _)| name.as_str()).collect();
         assert!(template_names.iter().any(|name| name.contains("Vector")));
-        assert!(template_names
-            .iter()
-            .any(|name| name.contains("array_function")));
+        assert!(
+            template_names
+                .iter()
+                .any(|name| name.contains("array_function"))
+        );
         assert!(template_names.iter().any(|name| name.contains("max")));
     }
 

@@ -113,16 +113,14 @@ struct RecursionAnalysis {
 }
 
 /// Performance analyzer for detecting hotspots and optimization opportunities
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceAnalyzer {
     /// Configuration for performance analysis
     pub config: PerformanceConfig,
 }
 
 /// Configuration for performance analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceConfig {
     /// Enable algorithmic complexity analysis
     pub complexity_analysis: bool,
@@ -141,8 +139,7 @@ pub struct PerformanceConfig {
 }
 
 /// Results of performance analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceAnalysisResult {
     /// Overall performance score (0-100)
     pub performance_score: u8,
@@ -169,8 +166,7 @@ pub struct PerformanceAnalysisResult {
 }
 
 /// A performance hotspot
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceHotspot {
     /// Hotspot ID
     pub id: String,
@@ -199,8 +195,7 @@ pub struct PerformanceHotspot {
 }
 
 /// Location of a performance hotspot
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HotspotLocation {
     /// File path
     pub file: String,
@@ -215,8 +210,7 @@ pub struct HotspotLocation {
 }
 
 /// Categories of performance hotspots
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HotspotCategory {
     /// Algorithmic complexity issues
     AlgorithmicComplexity,
@@ -241,8 +235,7 @@ pub enum HotspotCategory {
 }
 
 /// Performance severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PerformanceSeverity {
     Critical,
     High,
@@ -252,8 +245,7 @@ pub enum PerformanceSeverity {
 }
 
 /// Performance impact assessment
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceImpact {
     /// CPU impact (0-100)
     pub cpu_impact: u8,
@@ -268,8 +260,7 @@ pub struct PerformanceImpact {
 }
 
 /// Expected improvement from optimization
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExpectedImprovement {
     /// Performance improvement percentage
     pub performance_gain: f64,
@@ -282,8 +273,7 @@ pub struct ExpectedImprovement {
 }
 
 /// Confidence levels for performance estimates
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConfidenceLevel {
     High,
     Medium,
@@ -291,8 +281,7 @@ pub enum ConfidenceLevel {
 }
 
 /// Optimization difficulty levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OptimizationDifficulty {
     Trivial,
     Easy,
@@ -302,8 +291,7 @@ pub enum OptimizationDifficulty {
 }
 
 /// An optimization opportunity
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationOpportunity {
     /// Opportunity ID
     pub id: String,
@@ -328,8 +316,7 @@ pub struct OptimizationOpportunity {
 }
 
 /// Types of optimizations
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OptimizationType {
     /// Algorithm optimization
     Algorithm,
@@ -348,8 +335,7 @@ pub enum OptimizationType {
 }
 
 /// Optimization priority levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OptimizationPriority {
     Critical,
     High,
@@ -358,8 +344,7 @@ pub enum OptimizationPriority {
 }
 
 /// Effort estimation for optimization
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffortEstimate {
     /// Estimated hours
     pub hours: f64,
@@ -370,8 +355,7 @@ pub struct EffortEstimate {
 }
 
 /// Required expertise levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExpertiseLevel {
     Beginner,
     Intermediate,
@@ -380,8 +364,7 @@ pub enum ExpertiseLevel {
 }
 
 /// Performance metrics for a file
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilePerformanceMetrics {
     /// File path
     pub file: PathBuf,
@@ -406,8 +389,7 @@ pub struct FilePerformanceMetrics {
 }
 
 /// Algorithmic complexity analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplexityAnalysis {
     /// Average complexity across codebase
     pub average_complexity: f64,
@@ -422,8 +404,7 @@ pub struct ComplexityAnalysis {
 }
 
 /// A function with high complexity
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplexFunction {
     /// Function name
     pub name: String,
@@ -438,8 +419,7 @@ pub struct ComplexFunction {
 }
 
 /// Nested loop analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NestedLoopAnalysis {
     /// Location
     pub location: HotspotLocation,
@@ -452,8 +432,7 @@ pub struct NestedLoopAnalysis {
 }
 
 /// Recursive function analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecursiveFunction {
     /// Function name
     pub name: String,
@@ -466,8 +445,7 @@ pub struct RecursiveFunction {
 }
 
 /// Types of recursion
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RecursionType {
     Direct,
     Indirect,
@@ -476,8 +454,7 @@ pub enum RecursionType {
 }
 
 /// Optimization potential levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OptimizationPotential {
     High,
     Medium,
@@ -486,8 +463,7 @@ pub enum OptimizationPotential {
 }
 
 /// Memory usage analysis
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryAnalysis {
     /// Memory allocation hotspots
     pub allocation_hotspots: Vec<MemoryHotspot>,
@@ -500,8 +476,7 @@ pub struct MemoryAnalysis {
 }
 
 /// Memory allocation hotspot
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryHotspot {
     /// Location
     pub location: HotspotLocation,
@@ -514,8 +489,7 @@ pub struct MemoryHotspot {
 }
 
 /// Types of memory allocation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AllocationType {
     HeapAllocation,
     VectorReallocation,
@@ -525,8 +499,7 @@ pub enum AllocationType {
 }
 
 /// Allocation frequency levels
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AllocationFrequency {
     VeryHigh,
     High,
@@ -535,8 +508,7 @@ pub enum AllocationFrequency {
 }
 
 /// Size estimation for allocations
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SizeEstimate {
     Large,
     Medium,
@@ -545,8 +517,7 @@ pub enum SizeEstimate {
 }
 
 /// Memory leak risk assessment
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryLeakRisk {
     /// Location
     pub location: HotspotLocation,
@@ -561,8 +532,7 @@ pub struct MemoryLeakRisk {
 // RiskLevel is now imported from crate::constants::common
 
 /// Inefficient data structure usage
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InefficiientDataStructure {
     /// Location
     pub location: HotspotLocation,
@@ -575,8 +545,7 @@ pub struct InefficiientDataStructure {
 }
 
 /// Memory optimization opportunity
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryOptimization {
     /// Optimization title
     pub title: String,
@@ -589,8 +558,7 @@ pub struct MemoryOptimization {
 }
 
 /// Concurrency analysis results
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConcurrencyAnalysis {
     /// Parallelization opportunities
     pub parallelization_opportunities: Vec<ParallelizationOpportunity>,
@@ -603,8 +571,7 @@ pub struct ConcurrencyAnalysis {
 }
 
 /// Parallelization opportunity
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParallelizationOpportunity {
     /// Location
     pub location: HotspotLocation,
@@ -617,8 +584,7 @@ pub struct ParallelizationOpportunity {
 }
 
 /// Types of parallelization
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParallelizationType {
     DataParallelism,
     TaskParallelism,
@@ -627,8 +593,7 @@ pub enum ParallelizationType {
 }
 
 /// Synchronization issue
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SynchronizationIssue {
     /// Location
     pub location: HotspotLocation,
@@ -643,8 +608,7 @@ pub struct SynchronizationIssue {
 }
 
 /// Types of synchronization issues
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SynchronizationIssueType {
     Deadlock,
     RaceCondition,
@@ -653,8 +617,7 @@ pub enum SynchronizationIssueType {
 }
 
 /// Thread safety concern
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThreadSafetyConcern {
     /// Location
     pub location: HotspotLocation,
@@ -667,8 +630,7 @@ pub struct ThreadSafetyConcern {
 }
 
 /// Types of thread safety issues
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ThreadSafetyIssue {
     SharedMutableState,
     UnsafeAccess,
@@ -677,8 +639,7 @@ pub enum ThreadSafetyIssue {
 }
 
 /// Async/await optimization
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AsyncOptimization {
     /// Location
     pub location: HotspotLocation,
@@ -691,8 +652,7 @@ pub struct AsyncOptimization {
 }
 
 /// Types of async optimizations
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AsyncOptimizationType {
     AwaitOptimization,
     ConcurrentExecution,
@@ -701,8 +661,7 @@ pub enum AsyncOptimizationType {
 }
 
 /// Performance recommendation
-#[derive(Debug, Clone)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceRecommendation {
     /// Recommendation category
     pub category: String,
@@ -3326,7 +3285,7 @@ impl PerformanceAnalyzer {
                             risk_level: RiskLevel::Medium,
                             description: "Rc<RefCell<T>> can create reference cycles".to_string(),
                             mitigation: vec![
-                                "Consider using Weak references to break cycles".to_string()
+                                "Consider using Weak references to break cycles".to_string(),
                             ],
                         });
                     }
@@ -3342,7 +3301,9 @@ impl PerformanceAnalyzer {
                             },
                             risk_level: RiskLevel::High,
                             description: "Explicit memory leak detected".to_string(),
-                            mitigation: vec!["Ensure this is intentional and necessary".to_string()],
+                            mitigation: vec![
+                                "Ensure this is intentional and necessary".to_string(),
+                            ],
                         });
                     }
                 }

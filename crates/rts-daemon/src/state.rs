@@ -4,8 +4,8 @@
 //! and an "active connections" gauge driving the idle-shutdown timer (per
 //! `docs/protocol-v0.md` §15.2).
 
-use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::time::Instant;
 
 use crate::store::Store;
@@ -116,8 +116,7 @@ impl DaemonState {
     /// Set the watcher status. Called from the watcher's background worker;
     /// the next `Workspace.Status` call reflects the new value.
     pub fn set_watcher_status(&self, status: WatcherStatus) {
-        self.watcher_status
-            .store(status as u8, Ordering::Relaxed);
+        self.watcher_status.store(status as u8, Ordering::Relaxed);
     }
 
     /// Bump the activity timestamp. Called on connect, on every method

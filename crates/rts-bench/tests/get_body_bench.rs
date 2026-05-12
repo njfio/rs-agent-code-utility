@@ -102,7 +102,11 @@ async fn get_body_end_to_end() -> Result<()> {
     let rts_mcp_bin = sibling("rts-mcp");
     let rts_daemon_bin = sibling("rts-daemon");
     assert!(rts_mcp_bin.is_file(), "missing {}", rts_mcp_bin.display());
-    assert!(rts_daemon_bin.is_file(), "missing {}", rts_daemon_bin.display());
+    assert!(
+        rts_daemon_bin.is_file(),
+        "missing {}",
+        rts_daemon_bin.display()
+    );
 
     let report_path = out_dir.path().join("bench-test.json");
     let status = Command::new(rts_bench_bin())

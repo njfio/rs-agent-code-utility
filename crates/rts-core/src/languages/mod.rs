@@ -328,9 +328,9 @@ mod tests {
         for (lang, snippet) in snippets {
             let parser = crate::parser::Parser::new(*lang)
                 .unwrap_or_else(|e| panic!("failed to create Parser for {}: {e}", lang.name()));
-            let tree = parser.parse(snippet, None).unwrap_or_else(|e| {
-                panic!("failed to parse snippet for {}: {e}", lang.name())
-            });
+            let tree = parser
+                .parse(snippet, None)
+                .unwrap_or_else(|e| panic!("failed to parse snippet for {}: {e}", lang.name()));
             assert!(
                 !tree.root_node().is_missing(),
                 "root node missing for {}",

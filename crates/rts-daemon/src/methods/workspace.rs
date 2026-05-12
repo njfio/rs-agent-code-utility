@@ -20,7 +20,9 @@ struct MountParams {
     enable_telemetry: bool,
 }
 
-fn parse_params<T: for<'de> Deserialize<'de>>(value: serde_json::Value) -> Result<T, ProtocolError> {
+fn parse_params<T: for<'de> Deserialize<'de>>(
+    value: serde_json::Value,
+) -> Result<T, ProtocolError> {
     serde_json::from_value(value).map_err(|e| {
         ProtocolError::new(
             ErrorCode::InvalidParams,
@@ -38,10 +40,9 @@ pub async fn mount(
     let _ = p.enable_telemetry; // accepted but inert in this build
     let user_path = PathBuf::from(p.root);
 
-    let mut current = state
-        .workspace
-        .lock()
-        .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}")))?;
+    let mut current = state.workspace.lock().map_err(|e| {
+        ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+    })?;
 
     // Idempotent within a connection: a second Mount for the same canonical
     // path returns current status.
@@ -49,11 +50,7 @@ pub async fn mount(
         match workspace::canonicalize(&user_path) {
             Ok(canonical) if canonical.path == existing.canonical.path => {
                 workspace::verify_unchanged(existing)?;
-                let store_snapshot = state
-                    .store
-                    .lock()
-                    .ok()
-                    .and_then(|g| g.clone());
+                let store_snapshot = state.store.lock().ok().and_then(|g| g.clone());
                 return Ok(status_payload(existing, state, store_snapshot.as_deref()));
             }
             Ok(_other) => {
@@ -112,24 +109,30 @@ pub async fn mount(
     let payload = status_payload(&mounted, state, Some(&store));
     *current = Some(mounted);
     {
-        let mut watcher_slot = state
-            .watcher
-            .lock()
-            .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("watcher state poisoned: {e}")))?;
+        let mut watcher_slot = state.watcher.lock().map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("watcher state poisoned: {e}"),
+            )
+        })?;
         *watcher_slot = Some(watcher);
     }
     {
-        let mut store_slot = state
-            .store
-            .lock()
-            .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("store state poisoned: {e}")))?;
+        let mut store_slot = state.store.lock().map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("store state poisoned: {e}"),
+            )
+        })?;
         *store_slot = Some(store);
     }
     {
-        let mut cancel_slot = state
-            .writer_cancel
-            .lock()
-            .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("writer_cancel state poisoned: {e}")))?;
+        let mut cancel_slot = state.writer_cancel.lock().map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("writer_cancel state poisoned: {e}"),
+            )
+        })?;
         *cancel_slot = Some(writer_cancel);
     }
     state.mount_refcount.fetch_add(1, Ordering::Relaxed);
@@ -142,16 +145,11 @@ pub async fn status(
     _params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
-    let current = state
-        .workspace
-        .lock()
-        .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}")))?;
+    let current = state.workspace.lock().map_err(|e| {
+        ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+    })?;
     if let Some(mounted) = current.as_ref() {
-        let store_snapshot = state
-            .store
-            .lock()
-            .ok()
-            .and_then(|g| g.clone());
+        let store_snapshot = state.store.lock().ok().and_then(|g| g.clone());
         Ok(status_payload(mounted, state, store_snapshot.as_deref()))
     } else {
         Ok(serde_json::json!({
@@ -216,8 +214,17 @@ fn status_payload(
     // Languages the daemon's index would cover. Mirrors `rust_tree_sitter::Language::all()`
     // but listed inline so this can ship without indexing wired up yet.
     let languages = [
-        "rust", "javascript", "typescript", "python", "c", "cpp",
-        "go", "java", "php", "ruby", "swift",
+        "rust",
+        "javascript",
+        "typescript",
+        "python",
+        "c",
+        "cpp",
+        "go",
+        "java",
+        "php",
+        "ruby",
+        "swift",
     ];
     let store_stats = store.map(|s| s.stats()).unwrap_or_default();
     serde_json::json!({

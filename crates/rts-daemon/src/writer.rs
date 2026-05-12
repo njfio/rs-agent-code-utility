@@ -321,10 +321,7 @@ fn parse_and_extract(
     })
 }
 
-fn symbol_to_def(
-    sym: &Symbol,
-    content: &str,
-) -> Option<(String, DefSite, SymbolKind)> {
+fn symbol_to_def(sym: &Symbol, content: &str) -> Option<(String, DefSite, SymbolKind)> {
     if sym.name.is_empty() {
         return None;
     }

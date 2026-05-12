@@ -18,9 +18,7 @@ use anyhow::{Context, anyhow};
 use postcard::{from_bytes, to_allocvec};
 use redb::{Database, Durability, ReadableMultimapTable, ReadableTable};
 
-use schema::{
-    DEFS, FILES, FID_TO_PATH, FID_DEFS, META, NAME_TO_SID, PATH_TO_FID, SID_TO_NAME,
-};
+use schema::{DEFS, FID_DEFS, FID_TO_PATH, FILES, META, NAME_TO_SID, PATH_TO_FID, SID_TO_NAME};
 
 /// Current on-disk schema version. Bump when any table layout or value-bytes
 /// shape changes. Mismatch on open → daemon-controlled rebuild (protocol-v0
@@ -230,9 +228,7 @@ impl Store {
             for entry in upserts {
                 let path_str = entry.path.to_string_lossy().to_string();
 
-                let existing_fid = path_to_fid
-                    .get(path_str.as_str())?
-                    .map(|v| v.value());
+                let existing_fid = path_to_fid.get(path_str.as_str())?.map(|v| v.value());
                 let fid = match existing_fid {
                     Some(v) => v,
                     None => {
@@ -264,9 +260,7 @@ impl Store {
                 files.insert(&fid, meta_bytes.as_slice())?;
 
                 for (name, mut def, kind) in entry.defs {
-                    let existing_sid = name_to_sid
-                        .get(name.as_str())?
-                        .map(|v| v.value());
+                    let existing_sid = name_to_sid.get(name.as_str())?.map(|v| v.value());
                     let sid = match existing_sid {
                         Some(v) => v,
                         None => {
@@ -636,19 +630,13 @@ mod tests {
             let w = db.begin_write().unwrap();
             {
                 let mut meta = w.open_table(META).unwrap();
-                meta.insert(
-                    META_SCHEMA_VERSION,
-                    &(SCHEMA_VERSION + 1).to_le_bytes()[..],
-                )
-                .unwrap();
+                meta.insert(META_SCHEMA_VERSION, &(SCHEMA_VERSION + 1).to_le_bytes()[..])
+                    .unwrap();
             }
             w.commit().unwrap();
         }
         let err = Store::open(&path).unwrap_err();
         let msg = format!("{err:#}");
-        assert!(
-            msg.contains("newer than this daemon binary"),
-            "got {msg}"
-        );
+        assert!(msg.contains("newer than this daemon binary"), "got {msg}");
     }
 }

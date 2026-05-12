@@ -154,7 +154,10 @@ mod tests {
     fn wire_strings_are_uppercase_snake() {
         let cases = [
             (ErrorCode::InvalidFrame, "INVALID_FRAME"),
-            (ErrorCode::WorkspaceOnNetworkMount, "WORKSPACE_ON_NETWORK_MOUNT"),
+            (
+                ErrorCode::WorkspaceOnNetworkMount,
+                "WORKSPACE_ON_NETWORK_MOUNT",
+            ),
             (ErrorCode::SchemaVersionNewer, "SCHEMA_VERSION_NEWER"),
             (ErrorCode::DeadlineExceeded, "DEADLINE_EXCEEDED"),
         ];

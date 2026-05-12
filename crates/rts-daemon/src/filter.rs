@@ -108,9 +108,8 @@ fn editor_swap_regex() -> &'static Regex {
 /// agent. Other indexed files get `IndexSignatureOnly`.
 pub const BODY_ALLOWED_EXTENSIONS: &[&str] = &[
     // Code
-    "rs", "py", "ts", "tsx", "js", "jsx", "go", "java", "c", "h", "cpp", "hpp",
-    "cc", "cs", "php", "rb", "swift", "kt",
-    // Code-adjacent (config, prose)
+    "rs", "py", "ts", "tsx", "js", "jsx", "go", "java", "c", "h", "cpp", "hpp", "cc", "cs", "php",
+    "rb", "swift", "kt", // Code-adjacent (config, prose)
     "md", "toml", "yaml", "yml", "json", "xml",
 ];
 
@@ -188,17 +187,13 @@ impl PrebuiltGitignore {
         let local = workspace_root.join(".gitignore");
         if local.exists() {
             if let Some(err) = builder.add(&local) {
-                return Err(std::io::Error::other(format!(
-                    "parse .gitignore: {err}"
-                )));
+                return Err(std::io::Error::other(format!("parse .gitignore: {err}")));
             }
         }
         let rts = workspace_root.join(".rtsignore");
         if rts.exists() {
             if let Some(err) = builder.add(&rts) {
-                return Err(std::io::Error::other(format!(
-                    "parse .rtsignore: {err}"
-                )));
+                return Err(std::io::Error::other(format!("parse .rtsignore: {err}")));
             }
         }
 

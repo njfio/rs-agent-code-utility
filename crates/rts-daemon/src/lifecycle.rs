@@ -319,6 +319,9 @@ mod tests {
         let socket = tmp.path().join("daemon.sock");
         let _first = acquire_lock(&socket).expect("first acquire");
         let result = acquire_lock(&socket);
-        assert!(result.is_err(), "second acquire should fail while first held");
+        assert!(
+            result.is_err(),
+            "second acquire should fail while first held"
+        );
     }
 }

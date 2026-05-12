@@ -75,9 +75,16 @@ impl McpSession {
             cmd.env(k, v);
         }
         let mut child = cmd.spawn().with_context(|| {
-            format!("spawn {} --workspace {}", rts_mcp_bin.display(), workspace.display())
+            format!(
+                "spawn {} --workspace {}",
+                rts_mcp_bin.display(),
+                workspace.display()
+            )
         })?;
-        let stdin = child.stdin.take().ok_or_else(|| anyhow!("rts-mcp stdin closed"))?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("rts-mcp stdin closed"))?;
         let reader = BufReader::new(
             child
                 .stdout
@@ -133,9 +140,12 @@ impl McpSession {
 
     async fn recv(&mut self) -> Result<Value> {
         let mut buf = Vec::new();
-        let n = tokio::time::timeout(Duration::from_secs(10), self.reader.read_until(b'\n', &mut buf))
-            .await
-            .map_err(|_| anyhow!("timeout reading MCP response"))??;
+        let n = tokio::time::timeout(
+            Duration::from_secs(10),
+            self.reader.read_until(b'\n', &mut buf),
+        )
+        .await
+        .map_err(|_| anyhow!("timeout reading MCP response"))??;
         if n == 0 {
             return Err(anyhow!("rts-mcp closed stdout"));
         }

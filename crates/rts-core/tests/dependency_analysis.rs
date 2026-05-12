@@ -1,5 +1,5 @@
-use rust_tree_sitter::dependency_analysis::{DependencyAnalyzer, DependencyConfig, PackageManager};
 use rust_tree_sitter::CodebaseAnalyzer;
+use rust_tree_sitter::dependency_analysis::{DependencyAnalyzer, DependencyConfig, PackageManager};
 use std::fs;
 use tempfile::TempDir;
 

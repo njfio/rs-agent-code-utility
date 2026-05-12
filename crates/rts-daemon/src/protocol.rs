@@ -113,7 +113,11 @@ pub fn parse_request_line(line: &[u8]) -> Result<Request, ProtocolError> {
     if line.len() > MAX_MESSAGE_BYTES {
         return Err(ProtocolError::new(
             ErrorCode::MessageTooLarge,
-            format!("message size {} exceeds {} bytes", line.len(), MAX_MESSAGE_BYTES),
+            format!(
+                "message size {} exceeds {} bytes",
+                line.len(),
+                MAX_MESSAGE_BYTES
+            ),
         ));
     }
     if std::str::from_utf8(line).is_err() {
@@ -193,13 +197,15 @@ mod tests {
 
     #[test]
     fn parse_rejects_array_params() {
-        let err = parse_request_line(br#"{"id":"1","method":"Daemon.Ping","params":[]}"#).unwrap_err();
+        let err =
+            parse_request_line(br#"{"id":"1","method":"Daemon.Ping","params":[]}"#).unwrap_err();
         assert_eq!(err.code, ErrorCode::InvalidParams);
     }
 
     #[test]
     fn parse_rejects_empty_id() {
-        let err = parse_request_line(br#"{"id":"","method":"Daemon.Ping","params":{}}"#).unwrap_err();
+        let err =
+            parse_request_line(br#"{"id":"","method":"Daemon.Ping","params":{}}"#).unwrap_err();
         assert_eq!(err.code, ErrorCode::InvalidParams);
     }
 

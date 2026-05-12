@@ -1,8 +1,8 @@
 //! Integration tests for the rust_tree_sitter library
 
 use rust_tree_sitter::{
-    create_edit, detect_language_from_extension, detect_language_from_path, supported_languages,
-    Language, Parser, Query, QueryBuilder,
+    Language, Parser, Query, QueryBuilder, create_edit, detect_language_from_extension,
+    detect_language_from_path, supported_languages,
 };
 use tree_sitter::{InputEdit, Point};
 

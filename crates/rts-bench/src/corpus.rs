@@ -58,8 +58,8 @@ impl Corpus {
     /// Load `corpus.lock` from disk. JSON for now; a TOML variant lands when
     /// the corpus has enough entries that human-readable diffs matter.
     pub fn load(path: &Path) -> Result<Self> {
-        let bytes = std::fs::read(path)
-            .with_context(|| format!("read corpus lock {}", path.display()))?;
+        let bytes =
+            std::fs::read(path).with_context(|| format!("read corpus lock {}", path.display()))?;
         let parsed: Self = serde_json::from_slice(&bytes)
             .with_context(|| format!("parse corpus lock {}", path.display()))?;
         if parsed.version != 1 {
@@ -86,8 +86,8 @@ impl Corpus {
 /// so the security boundary is in place before the network code lands.
 #[allow(dead_code)]
 pub fn verify_sha256(tarball: &Path, expected_hex: &str) -> Result<()> {
-    let mut f = std::fs::File::open(tarball)
-        .with_context(|| format!("open {}", tarball.display()))?;
+    let mut f =
+        std::fs::File::open(tarball).with_context(|| format!("open {}", tarball.display()))?;
     let mut hasher = Sha256::new();
     let mut buf = vec![0u8; 64 * 1024];
     loop {
@@ -140,8 +140,11 @@ mod tests {
     fn sha256_mismatch_errors() {
         let dir = tempfile::tempdir().unwrap();
         let tb = write_tarball(dir.path(), "x.tgz", b"hello world");
-        let err = verify_sha256(&tb, "0000000000000000000000000000000000000000000000000000000000000000")
-            .unwrap_err();
+        let err = verify_sha256(
+            &tb,
+            "0000000000000000000000000000000000000000000000000000000000000000",
+        )
+        .unwrap_err();
         assert!(format!("{err:#}").contains("SHA256 mismatch"));
     }
 

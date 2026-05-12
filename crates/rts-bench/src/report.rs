@@ -141,8 +141,7 @@ impl BenchReport {
 
     pub fn write_to(&self, path: &Path) -> Result<()> {
         let bytes = serde_json::to_vec_pretty(self).context("encode bench report")?;
-        std::fs::write(path, bytes)
-            .with_context(|| format!("write {}", path.display()))?;
+        std::fs::write(path, bytes).with_context(|| format!("write {}", path.display()))?;
         Ok(())
     }
 }
