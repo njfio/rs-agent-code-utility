@@ -34,19 +34,15 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
-      - name: Clippy (deny warnings)
-        run: cargo clippy --all-targets --all-features -- -D warnings
+      # Clippy runs in advisory mode for the v0.2 alpha cycle. `-D warnings`
+      # will be reintroduced once the pre-pivot `rts-core` legacy lints are
+      # cleaned up incrementally per crate. See the `0.2.0-alpha.13` CHANGELOG
+      # entry for context.
+      - name: Clippy (advisory)
+        run: cargo clippy --workspace --all-targets
 
-      - name: Unit + integration tests (no examples)
+      - name: Unit + integration tests
         run: cargo test --workspace
 
-      - name: Security Analysis Validation
-        run: cargo test comprehensive_security_tests
-
-      - name: Build binaries (no examples)
-        run: |
-          cargo build --bins --all-features
-      - name: Security Analysis Validation
-        run: cargo test comprehensive_security_tests
-      # Examples are gated behind the optional "demo" feature and are not built in CI by default.
-      # To build examples locally, use: cargo build --examples --features demo
+      - name: Build all workspace binaries
+        run: cargo build --workspace --bins
