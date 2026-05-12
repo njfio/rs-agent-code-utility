@@ -13,18 +13,20 @@
 //!
 //! the signature is `pub fn build_index(workspace: &Path) -> Result<Index>`.
 //!
-//! v0 ships renderers for **Rust, Python, TypeScript, JavaScript, Go,
-//! Java, C, and C++**. The remaining 3 grammars (PHP, Ruby, Swift)
-//! land in a subsequent P8 slice. Callers fall through to body returns
-//! when this module returns `None`.
+//! v0 ships renderers for all 11 supported grammars: **Rust, Python,
+//! TypeScript, JavaScript, Go, Java, C, C++, PHP, Ruby, and Swift**.
+//! Callers fall through to body returns when this module returns
+//! `None`.
 //!
 //! **Note**: Java / C / C++ have working renderers here, but their
 //! end-to-end `Index.ReadSymbol shape=signature` path also needs the
 //! daemon's writer (via `rust_tree_sitter::analyzer::extract_*_symbols`)
 //! to put the symbol into the index in the first place. Those
 //! extractors are currently incomplete for Java / C / C++ in some
-//! cases; a follow-up analyzer-layer PR will close the gap. Go works
-//! end-to-end.
+//! cases; a follow-up analyzer-layer PR will close the gap. Go and
+//! the four already-shipped languages (Rust / Python / TS / JS) work
+//! end-to-end. PHP / Ruby / Swift writer-side coverage depends on the
+//! same upstream extractor work.
 
 use streaming_iterator::StreamingIterator as _;
 
@@ -725,6 +727,205 @@ fn render_cpp_template(bytes: &[u8]) -> Option<String> {
     Some(signature)
 }
 
+// ---------- PHP ----------
+
+/// Render the signature of a PHP top-level item.
+///
+/// - **`function_definition`** / **`method_declaration`**: drops
+///   `compound_statement`.
+/// - **`class_declaration`** / **`interface_declaration`** /
+///   **`trait_declaration`** / **`enum_declaration`**: drops
+///   `declaration_list`.
+/// - **`namespace_definition`** (with body): drops body block. A
+///   `namespace Foo;` form has no body and is kept whole.
+/// - **`const_declaration`** / **`namespace_use_declaration`**:
+///   kept whole.
+pub fn render_php(bytes: &[u8]) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_php::LANGUAGE_PHP.into())
+        .ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+
+    // PHP wraps content in a `<?php ... ?>` tag pair; the actual
+    // declarations are nested below `program > php_tag` or similar.
+    // Walk the tree to find the first item we recognise.
+    let target_kinds = [
+        "function_definition",
+        "method_declaration",
+        "class_declaration",
+        "interface_declaration",
+        "trait_declaration",
+        "enum_declaration",
+        "namespace_definition",
+        "const_declaration",
+        "namespace_use_declaration",
+        "expression_statement",
+    ];
+    let item = find_descendant_by_kind(&root, &target_kinds)?;
+
+    let signature_end = match item.kind() {
+        "function_definition" | "method_declaration" => {
+            find_body_start(&item, &["compound_statement"]).unwrap_or(item.end_byte())
+        }
+        "class_declaration"
+        | "interface_declaration"
+        | "trait_declaration"
+        | "enum_declaration" => {
+            find_body_start(&item, &["declaration_list", "enum_declaration_list"])
+                .unwrap_or(item.end_byte())
+        }
+        "namespace_definition" => {
+            find_body_start(&item, &["compound_statement", "declaration_list"])
+                .unwrap_or(item.end_byte())
+        }
+        _ => item.end_byte(),
+    };
+
+    let start = item.start_byte();
+    let slice = bytes.get(start..signature_end)?;
+    let text = std::str::from_utf8(slice).ok()?.trim_end().to_string();
+    if text.is_empty() {
+        return None;
+    }
+    Some(text)
+}
+
+fn find_descendant_by_kind<'tree>(
+    root: &tree_sitter::Node<'tree>,
+    kinds: &[&str],
+) -> Option<tree_sitter::Node<'tree>> {
+    let mut cursor = root.walk();
+    for child in root.children(&mut cursor) {
+        if kinds.contains(&child.kind()) {
+            return Some(child);
+        }
+        if let Some(found) = find_descendant_by_kind(&child, kinds) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+// ---------- Ruby ----------
+
+/// Render the signature of a Ruby top-level item.
+///
+/// Ruby's syntax doesn't use `{}` for block bodies (`do…end` or
+/// `def…end` instead), so the standard body-strip helper doesn't
+/// apply cleanly. Pragmatic approach: slice at the end of the
+/// declaration header (`parameters` / `superclass` line) — for `def`
+/// and `class`/`module` that's typically the first newline after the
+/// item starts.
+///
+/// - **`method`** (`def foo(...)`) / **`singleton_method`** (`def self.foo`):
+///   returns the header `def foo(x, y)`.
+/// - **`class`** / **`module`**: returns `class Foo` / `class Foo < Base`
+///   / `module Foo`.
+/// - Other top-level kinds: `None` (caller falls back to body).
+pub fn render_ruby(bytes: &[u8]) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_ruby::LANGUAGE.into())
+        .ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+    let item = root
+        .children(&mut root.walk())
+        .find(|n| !matches!(n.kind(), "comment"))?;
+
+    if !matches!(
+        item.kind(),
+        "method" | "singleton_method" | "class" | "module"
+    ) {
+        return None;
+    }
+
+    let start = item.start_byte();
+    let end = item.end_byte();
+    let slice = bytes.get(start..end)?;
+    let text = std::str::from_utf8(slice).ok()?;
+
+    // Header is everything before the first newline OR the first `;`
+    // (Ruby allows `def foo; … end` one-liners — rare but valid).
+    let nl = text.find('\n').unwrap_or(text.len());
+    let semi = text.find(';').unwrap_or(text.len());
+    let header_end = nl.min(semi);
+    let header = text[..header_end].trim_end().to_string();
+    if header.is_empty() {
+        return None;
+    }
+    Some(header)
+}
+
+// ---------- Swift ----------
+
+/// Render the signature of a Swift top-level item.
+///
+/// tree-sitter-swift wraps top-level items differently than the C-family
+/// grammars. The item is typically reachable directly as a child of
+/// `source_file`; the body field name is `body` for functions and
+/// kinds like `class_body` / `enum_class_body` / `protocol_body` for
+/// type declarations.
+///
+/// - **`function_declaration`** / **`init_declaration`** /
+///   **`deinit_declaration`**: drops `function_body`.
+/// - **`class_declaration`** / **`protocol_declaration`** /
+///   **`enum_declaration`**: drops the body block (first `{`).
+/// - **`property_declaration`** / **`typealias_declaration`** /
+///   **`import_declaration`**: kept whole.
+///
+/// For type declarations the first-`{` heuristic is used because the
+/// Swift grammar's body field names vary across releases.
+pub fn render_swift(bytes: &[u8]) -> Option<String> {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_swift::LANGUAGE.into())
+        .ok()?;
+    let tree = parser.parse(bytes, None)?;
+    let root = tree.root_node();
+    let item = root
+        .children(&mut root.walk())
+        .find(|n| !matches!(n.kind(), "comment" | "multiline_comment"))?;
+
+    match item.kind() {
+        "function_declaration"
+        | "init_declaration"
+        | "deinit_declaration"
+        | "class_declaration"
+        | "protocol_declaration"
+        | "enum_declaration" => {
+            // First `{` heuristic — Swift's body always starts with `{`
+            // and the function/type header has none.
+            let start = item.start_byte();
+            let end = item.end_byte();
+            let slice = bytes.get(start..end)?;
+            let text = std::str::from_utf8(slice).ok()?;
+            let header_end = text.find('{').unwrap_or(text.len());
+            let header = text[..header_end].trim_end().to_string();
+            if header.is_empty() {
+                return None;
+            }
+            Some(header)
+        }
+        "property_declaration"
+        | "typealias_declaration"
+        | "import_declaration"
+        | "operator_declaration" => {
+            let start = item.start_byte();
+            let end = item.end_byte();
+            let slice = bytes.get(start..end)?;
+            let text = std::str::from_utf8(slice).ok()?.trim_end().to_string();
+            if text.is_empty() {
+                return None;
+            }
+            Some(text)
+        }
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1253,5 +1454,145 @@ mod tests {
     #[test]
     fn cpp_empty_input_returns_none() {
         assert!(render_cpp(b"").is_none());
+    }
+
+    // ---------- PHP ----------
+
+    fn php(input: &str) -> String {
+        render_php(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a php signature for `{input}`"))
+    }
+
+    #[test]
+    fn php_fn_strips_body() {
+        let s = php("<?php\nfunction add($a, $b) {\n    return $a + $b;\n}\n");
+        assert!(s.contains("function add($a, $b)"), "got {s:?}");
+        assert!(!s.contains("return $a + $b"), "got {s:?}");
+    }
+
+    #[test]
+    fn php_class_strips_body() {
+        let s = php("<?php\nclass Widget extends Base {\n    public function greet() {}\n}\n");
+        assert!(s.contains("class Widget extends Base"), "got {s:?}");
+        assert!(!s.contains("greet"), "got {s:?}");
+    }
+
+    #[test]
+    fn php_interface_strips_body() {
+        let s =
+            php("<?php\ninterface Handler {\n    public function handle(string $x): string;\n}\n");
+        assert!(s.contains("interface Handler"), "got {s:?}");
+        assert!(!s.contains("handle("), "got {s:?}");
+    }
+
+    #[test]
+    fn php_trait_strips_body() {
+        let s = php("<?php\ntrait Greeter {\n    public function hello() {}\n}\n");
+        assert!(s.contains("trait Greeter"), "got {s:?}");
+        assert!(!s.contains("hello"), "got {s:?}");
+    }
+
+    #[test]
+    fn php_namespace_use_keeps_whole() {
+        let s = php("<?php\nuse App\\Widgets\\Box;\n");
+        assert!(s.contains("use App\\Widgets\\Box"), "got {s:?}");
+    }
+
+    #[test]
+    fn php_empty_input_returns_none() {
+        assert!(render_php(b"").is_none());
+    }
+
+    // ---------- Ruby ----------
+
+    fn rb(input: &str) -> String {
+        render_ruby(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a ruby signature for `{input}`"))
+    }
+
+    #[test]
+    fn rb_method_strips_body() {
+        let s = rb("def hello(name)\n  puts name\nend\n");
+        assert_eq!(s, "def hello(name)");
+    }
+
+    #[test]
+    fn rb_method_no_parens() {
+        let s = rb("def shout\n  puts \"hi\"\nend\n");
+        assert_eq!(s, "def shout");
+    }
+
+    #[test]
+    fn rb_singleton_method() {
+        let s = rb("def self.build(opts)\n  Widget.new(opts)\nend\n");
+        assert_eq!(s, "def self.build(opts)");
+    }
+
+    #[test]
+    fn rb_class_keeps_header() {
+        let s = rb("class Widget < Base\n  def initialize\n  end\nend\n");
+        assert_eq!(s, "class Widget < Base");
+    }
+
+    #[test]
+    fn rb_module_keeps_header() {
+        let s = rb("module Greeter\n  def hello\n  end\nend\n");
+        assert_eq!(s, "module Greeter");
+    }
+
+    #[test]
+    fn rb_empty_input_returns_none() {
+        assert!(render_ruby(b"").is_none());
+    }
+
+    // ---------- Swift ----------
+
+    fn sw(input: &str) -> String {
+        render_swift(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a swift signature for `{input}`"))
+    }
+
+    #[test]
+    fn sw_fn_strips_body() {
+        let s = sw("func add(_ a: Int, _ b: Int) -> Int {\n    return a + b\n}\n");
+        assert!(
+            s.starts_with("func add(_ a: Int, _ b: Int) -> Int"),
+            "got {s:?}"
+        );
+        assert!(!s.contains("return a + b"), "got {s:?}");
+    }
+
+    #[test]
+    fn sw_class_strips_body() {
+        let s = sw("class Widget: Base {\n    var name: String = \"\"\n}\n");
+        assert!(s.starts_with("class Widget: Base"), "got {s:?}");
+        assert!(!s.contains("var name"), "got {s:?}");
+    }
+
+    #[test]
+    fn sw_protocol_strips_body() {
+        let s = sw("protocol Handler {\n    func handle(input: String) -> String\n}\n");
+        assert!(s.starts_with("protocol Handler"), "got {s:?}");
+        assert!(!s.contains("handle"), "got {s:?}");
+    }
+
+    #[test]
+    fn sw_typealias_keeps_whole() {
+        let s = sw("typealias Result = Swift.Result<String, Error>\n");
+        assert!(
+            s.contains("typealias Result = Swift.Result<String, Error>"),
+            "got {s:?}"
+        );
+    }
+
+    #[test]
+    fn sw_import_keeps_whole() {
+        let s = sw("import Foundation\n");
+        assert_eq!(s, "import Foundation");
+    }
+
+    #[test]
+    fn sw_empty_input_returns_none() {
+        assert!(render_swift(b"").is_none());
     }
 }
