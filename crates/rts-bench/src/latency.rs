@@ -1,0 +1,427 @@
+//! Latency benchmark (S1) for the rts-mcp stack.
+//!
+//! Per plan §P9: synthetic 100k-LOC fixture, 1000 randomised queries
+//! (50% find_symbol, 30% read_symbol, 20% outline_workspace), report
+//! p50/p95/p99 cold and warm. The plan's exit criterion is **p95 warm
+//! < 10 ms** for the daemon's hot path (excluding rts-mcp + JSON-RPC
+//! overhead, which adds ~80 µs per call per the P0.1 spike).
+//!
+//! v0 ships the harness. Latency under sustained write load
+//! (architecture review recommendation 11) lands in a follow-up.
+
+use std::path::{Path, PathBuf};
+use std::time::Instant;
+
+use anyhow::{Context, Result};
+use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
+
+use crate::mcp_runner::McpSession;
+
+/// Distribution of query kinds per plan §P9.
+#[derive(Debug, Clone, Copy)]
+pub enum QueryKind {
+    FindSymbol,
+    ReadSymbol,
+    Outline,
+}
+
+impl QueryKind {
+    /// Plan-canonical mix.
+    pub const MIX: &'static [(QueryKind, u32)] = &[
+        (QueryKind::FindSymbol, 50),
+        (QueryKind::ReadSymbol, 30),
+        (QueryKind::Outline, 20),
+    ];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            QueryKind::FindSymbol => "find_symbol",
+            QueryKind::ReadSymbol => "read_symbol",
+            QueryKind::Outline => "outline",
+        }
+    }
+}
+
+/// One latency measurement.
+#[derive(Debug, Clone)]
+pub struct Sample {
+    pub kind: QueryKind,
+    pub elapsed_micros: u128,
+    pub ok: bool,
+}
+
+/// Synthesise a Rust workspace with `target_loc` lines of source spread
+/// across files. Each file defines `funcs_per_file` public functions
+/// and references one or two from the previous file — produces a chain
+/// shaped like a long DAG, which gives PageRank a meaningful graph and
+/// `find_symbol` plenty of names to hit.
+pub fn synth_workspace(root: &Path, target_loc: usize) -> Result<Vec<String>> {
+    const FUNCS_PER_FILE: usize = 10;
+    const LINES_PER_FN: usize = 4;
+    // Lines per file ≈ (FUNCS_PER_FILE × (LINES_PER_FN + 2)) + ~5 header
+    // → 65 lines. Number of files = target_loc / 65, rounded up.
+    let lines_per_file = FUNCS_PER_FILE * (LINES_PER_FN + 2) + 5;
+    let file_count = target_loc.div_ceil(lines_per_file).max(2);
+
+    let mut all_symbols: Vec<String> = Vec::with_capacity(file_count * FUNCS_PER_FILE);
+    for f in 0..file_count {
+        let mut src = String::new();
+        src.push_str(&format!("//! Generated module {f}.\n\n"));
+        for i in 0..FUNCS_PER_FILE {
+            let fn_name = format!("synth_f{f}_fn{i}");
+            all_symbols.push(fn_name.clone());
+            src.push_str(&format!(
+                "pub fn {fn_name}(x: u32) -> u32 {{\n    let _ = x + 1;\n    let _ = x.saturating_mul(2);\n    x\n}}\n\n"
+            ));
+        }
+        // Cross-file refs: every file references the first two functions
+        // of the previous file. Wraps to file_count-1 for f=0.
+        let prev = (f + file_count - 1) % file_count;
+        src.push_str(&format!(
+            "pub fn synth_f{f}_caller() {{\n    let _ = synth_f{prev}_fn0(1);\n    let _ = synth_f{prev}_fn1(2);\n}}\n"
+        ));
+        all_symbols.push(format!("synth_f{f}_caller"));
+        std::fs::write(root.join(format!("synth_f{f}.rs")), src)
+            .with_context(|| format!("write synth_f{f}.rs"))?;
+    }
+    Ok(all_symbols)
+}
+
+/// Deterministic linear-congruential PRNG. We don't want a `rand`
+/// dep just for latency-bench randomness; this is more than sufficient
+/// for picking query kinds and symbol indices.
+pub struct Lcg(u64);
+
+impl Lcg {
+    pub fn new(seed: u64) -> Self {
+        Self(seed.max(1))
+    }
+
+    pub fn next_u64(&mut self) -> u64 {
+        // Numerical Recipes constants.
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        self.0
+    }
+
+    pub fn pick_weighted<'a, T>(&mut self, choices: &'a [(T, u32)]) -> &'a T {
+        let total: u32 = choices.iter().map(|(_, w)| *w).sum();
+        let r = (self.next_u64() % total as u64) as u32;
+        let mut acc: u32 = 0;
+        for (item, w) in choices {
+            acc += *w;
+            if r < acc {
+                return item;
+            }
+        }
+        &choices.last().unwrap().0
+    }
+
+    pub fn pick_index(&mut self, len: usize) -> usize {
+        if len == 0 {
+            return 0;
+        }
+        (self.next_u64() as usize) % len
+    }
+}
+
+/// Run the latency benchmark. Returns one `Sample` per executed query.
+pub async fn run(
+    session: &mut McpSession,
+    symbols: &[String],
+    files: &[String],
+    queries: u32,
+    seed: u64,
+) -> Result<Vec<Sample>> {
+    let mut rng = Lcg::new(seed);
+    let mut out: Vec<Sample> = Vec::with_capacity(queries as usize);
+    for _ in 0..queries {
+        let kind = *rng.pick_weighted(QueryKind::MIX);
+        let sample = match kind {
+            QueryKind::FindSymbol => {
+                let name = &symbols[rng.pick_index(symbols.len())];
+                time_call(session, kind, "find_symbol", json!({ "name": name })).await?
+            }
+            QueryKind::ReadSymbol => {
+                let name = &symbols[rng.pick_index(symbols.len())];
+                time_call(
+                    session,
+                    kind,
+                    "read_symbol",
+                    json!({ "name": name, "shape": "signature" }),
+                )
+                .await?
+            }
+            QueryKind::Outline => {
+                time_call(
+                    session,
+                    kind,
+                    "outline_workspace",
+                    json!({ "token_budget": 4096 }),
+                )
+                .await?
+            }
+        };
+        let _ = files; // reserved for future read_range mix
+        out.push(sample);
+    }
+    Ok(out)
+}
+
+async fn time_call(
+    session: &mut McpSession,
+    kind: QueryKind,
+    tool: &str,
+    args: Value,
+) -> Result<Sample> {
+    let start = Instant::now();
+    let call = session.tools_call(tool, args, 0).await?;
+    let elapsed = start.elapsed();
+    Ok(Sample {
+        kind,
+        elapsed_micros: elapsed.as_micros(),
+        ok: !call.is_error,
+    })
+}
+
+/// Aggregated stats per query kind.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KindStats {
+    pub count: u32,
+    pub ok: u32,
+    pub p50_micros: u64,
+    pub p95_micros: u64,
+    pub p99_micros: u64,
+    pub max_micros: u64,
+    pub mean_micros: u64,
+}
+
+/// Latency report shape.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LatencyReport {
+    pub version: u32,
+    pub rts_bench_version: String,
+    pub workspace_path: String,
+    pub synth_loc: usize,
+    pub queries: u32,
+    pub cold_count: u32,
+    pub seed: u64,
+    /// Per-kind stats over warm samples (excludes the cold prefix).
+    pub warm: IndexMap<String, KindStats>,
+    /// Per-kind stats over the cold prefix.
+    pub cold: IndexMap<String, KindStats>,
+    /// Overall warm aggregates.
+    pub warm_all: KindStats,
+}
+
+/// Compute `KindStats` for a slice of samples. Samples are sorted in
+/// place to compute percentiles — caller owns the buffer.
+fn stats_of(samples: &mut [u128]) -> KindStats {
+    let count = samples.len() as u32;
+    if count == 0 {
+        return KindStats {
+            count: 0,
+            ok: 0,
+            p50_micros: 0,
+            p95_micros: 0,
+            p99_micros: 0,
+            max_micros: 0,
+            mean_micros: 0,
+        };
+    }
+    samples.sort_unstable();
+    // Nearest-rank percentile: idx = ceil(q × n) − 1, clamped to range.
+    // For n=100, q=0.50 → idx=49 (samples[49] from 1..=100 is 50, the
+    // textbook median).
+    let p = |q: f64| -> u64 {
+        let n = count as f64;
+        let idx = ((q * n).ceil() as usize).saturating_sub(1);
+        samples[idx.min(samples.len() - 1)] as u64
+    };
+    let sum: u128 = samples.iter().sum();
+    let mean = (sum / count as u128) as u64;
+    KindStats {
+        count,
+        ok: count,
+        p50_micros: p(0.50),
+        p95_micros: p(0.95),
+        p99_micros: p(0.99),
+        max_micros: *samples.last().unwrap() as u64,
+        mean_micros: mean,
+    }
+}
+
+/// Build the wire-shape report.
+pub fn build_report(
+    workspace_path: &Path,
+    synth_loc: usize,
+    seed: u64,
+    cold_count: u32,
+    samples: &[Sample],
+) -> LatencyReport {
+    let queries = samples.len() as u32;
+    let cold = &samples[..(cold_count as usize).min(samples.len())];
+    let warm = &samples[(cold_count as usize).min(samples.len())..];
+
+    let by_kind = |bucket: &[Sample], kind: QueryKind| -> KindStats {
+        let mut bucket_samples: Vec<u128> = bucket
+            .iter()
+            .filter(|s| matches!((s.kind, kind), (a, b) if a.as_str() == b.as_str()))
+            .map(|s| s.elapsed_micros)
+            .collect();
+        let mut stats = stats_of(&mut bucket_samples);
+        let ok = bucket
+            .iter()
+            .filter(|s| s.kind.as_str() == kind.as_str() && s.ok)
+            .count() as u32;
+        stats.ok = ok;
+        stats
+    };
+
+    let mut warm_map: IndexMap<String, KindStats> = IndexMap::new();
+    let mut cold_map: IndexMap<String, KindStats> = IndexMap::new();
+    for (kind, _w) in QueryKind::MIX {
+        let key = kind.as_str().to_string();
+        warm_map.insert(key.clone(), by_kind(warm, *kind));
+        cold_map.insert(key, by_kind(cold, *kind));
+    }
+
+    let mut all_warm: Vec<u128> = warm.iter().map(|s| s.elapsed_micros).collect();
+    let mut warm_all = stats_of(&mut all_warm);
+    warm_all.ok = warm.iter().filter(|s| s.ok).count() as u32;
+
+    LatencyReport {
+        version: 1,
+        rts_bench_version: env!("CARGO_PKG_VERSION").to_string(),
+        workspace_path: workspace_path.display().to_string(),
+        synth_loc,
+        queries,
+        cold_count,
+        seed,
+        warm: warm_map,
+        cold: cold_map,
+        warm_all,
+    }
+}
+
+/// Write a `LatencyReport` to disk as pretty JSON.
+pub fn write_report(path: &Path, report: &LatencyReport) -> Result<()> {
+    let bytes = serde_json::to_vec_pretty(report).context("encode latency report")?;
+    std::fs::write(path, bytes).with_context(|| format!("write {}", path.display()))?;
+    Ok(())
+}
+
+/// Default cold/warm split: per plan §P9, the first N queries are
+/// considered "cold" while the daemon is still warming caches.
+pub const DEFAULT_COLD_COUNT: u32 = 100;
+
+/// Resolve the workspace + symbol set for a latency run. Either
+/// synthesise (when `synth_loc` is given) or scan an existing workspace.
+/// Returns (workspace_root, symbols, files).
+pub fn prepare_workspace(
+    target: Option<&Path>,
+    synth_loc: Option<usize>,
+    tmp_root: &Path,
+) -> Result<(PathBuf, Vec<String>, Vec<String>)> {
+    match (target, synth_loc) {
+        (Some(p), _) => {
+            // Existing workspace: caller is responsible for picking real
+            // symbols. We pass an empty `symbols` slice and the runner
+            // falls back to a probe via `Index.FindSymbol` later. For v0,
+            // require a synthetic workspace when no symbols are supplied;
+            // the existing-workspace path is a v1.1 surface.
+            anyhow::bail!(
+                "running against an existing workspace at {} is a v1.1 surface; pass --synth-loc to use a synthetic fixture",
+                p.display()
+            );
+        }
+        (None, Some(loc)) => {
+            let ws = tmp_root.join("synth-workspace");
+            std::fs::create_dir_all(&ws)?;
+            let syms = synth_workspace(&ws, loc)?;
+            let files: Vec<String> = std::fs::read_dir(&ws)?
+                .filter_map(|e| e.ok())
+                .filter_map(|e| e.file_name().into_string().ok())
+                .filter(|n| n.ends_with(".rs"))
+                .collect();
+            Ok((ws, syms, files))
+        }
+        (None, None) => anyhow::bail!("--synth-loc is required when --workspace is omitted"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn synth_workspace_produces_files_and_symbols() {
+        let dir = tempfile::tempdir().unwrap();
+        let syms = synth_workspace(dir.path(), 1_000).unwrap();
+        assert!(syms.len() > 10, "expected many symbols; got {}", syms.len());
+        let entries: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
+        assert!(entries.len() >= 2, "expected ≥2 generated files");
+        // Every symbol name should appear in at least one generated file.
+        let first_sym = &syms[0];
+        let mut found = false;
+        for e in entries {
+            let e = e.unwrap();
+            if e.path().extension().and_then(|x| x.to_str()) != Some("rs") {
+                continue;
+            }
+            let content = std::fs::read_to_string(e.path()).unwrap();
+            if content.contains(first_sym) {
+                found = true;
+                break;
+            }
+        }
+        assert!(found, "first symbol `{first_sym}` not found in any file");
+    }
+
+    #[test]
+    fn lcg_picks_weighted_in_distribution() {
+        let mut rng = Lcg::new(42);
+        let choices: &[(&str, u32)] = &[("a", 99), ("b", 1)];
+        let mut a = 0;
+        let mut b = 0;
+        for _ in 0..1000 {
+            match *rng.pick_weighted(choices) {
+                "a" => a += 1,
+                "b" => b += 1,
+                _ => unreachable!(),
+            }
+        }
+        // With weight 99:1, expect "a" ≫ "b". Allow some slack.
+        assert!(a > 900, "a count {a} should be > 900");
+        assert!(b < 100, "b count {b} should be < 100");
+    }
+
+    #[test]
+    fn stats_of_basic_percentiles() {
+        let mut s: Vec<u128> = (1..=100).collect();
+        let stats = stats_of(&mut s);
+        assert_eq!(stats.count, 100);
+        // p50 = sample at index ceil((100-1)*0.5) = 50 → value 50.
+        assert_eq!(stats.p50_micros, 50);
+        // p95 ≈ index 94 → value 95.
+        assert!(
+            stats.p95_micros >= 94 && stats.p95_micros <= 96,
+            "got {}",
+            stats.p95_micros
+        );
+        assert_eq!(stats.p99_micros, 99);
+        assert_eq!(stats.max_micros, 100);
+    }
+
+    #[test]
+    fn stats_of_empty_is_zero() {
+        let mut s: Vec<u128> = Vec::new();
+        let stats = stats_of(&mut s);
+        assert_eq!(stats.count, 0);
+        assert_eq!(stats.p95_micros, 0);
+    }
+}
