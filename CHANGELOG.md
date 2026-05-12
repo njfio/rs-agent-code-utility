@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.19] - 2026-05-12
+
+P9 latency bench (S1) ships. First p50/p95/p99 measurements are on the
+board.
+
+Smoke result on a tiny 2000-LOC synth fixture, 50 queries / 10 cold:
+
+| query           | p50    | p95    | p99    | n  |
+|-----------------|-------:|-------:|-------:|---:|
+| find_symbol     |  945µs | 1.29ms | 1.29ms | 19 |
+| read_symbol     | 1.58ms | 5.67ms | 8.22ms | 12 |
+| outline         |   29ms |   45ms |   45ms |  9 |
+
+`find_symbol` and `read_symbol` are well under the plan's 10ms p95
+warm target. `outline_workspace` is over — the v0 PageRank path
+recomputes the file→file ref graph from scratch on every call. The
+push-flow incremental PageRank patch (Andersen et al. 2006, plan
+§"Aider repo-map algorithm") is the right fix; deferred to a follow-up.
+
+### Added
+
+- **`crates/rts-bench/src/latency.rs`**: synth fixture generator +
+  latency runner + p50/p95/p99 stats.
+  - `synth_workspace(root, target_loc)`: programmatic Rust workspace
+    with `target_loc / 65` files, each defining 10 public fns plus a
+    cross-file caller. Wraps the last file's references back to file
+    0 so PageRank has a real graph.
+  - `Lcg`: deterministic LCG PRNG (no `rand` dep), used to pick query
+    kinds and symbol indices reproducibly via the `--seed` flag.
+  - `QueryKind::MIX`: plan-canonical 50% find_symbol / 30% read_symbol
+    / 20% outline_workspace distribution.
+  - `KindStats`: count, ok, p50, p95, p99, max, mean — all in
+    microseconds. Nearest-rank percentile formula:
+    `idx = ceil(q × n) - 1`.
+  - `LatencyReport`: wire-stable JSON shape with per-kind stats split
+    cold (first N queries) vs warm + overall warm aggregates.
+- **`rts-bench latency` subcommand** with flags:
+  - `--synth-loc N` (default 100,000) — total LOC to generate
+  - `--queries N` (default 1000)
+  - `--cold-count N` (default 100) — cold-warm split
+  - `--seed N` (default 0xC0FFEE) — PRNG seed
+  - `--out FILE` (default `bench-latency-<sha>.json`)
+  - `--dry-run`
+- **`crates/rts-bench/tests/latency_smoke.rs`**: smoke test that
+  exercises the latency harness end-to-end on a 1000-LOC / 20-query
+  fixture and verifies the report shape.
+
+### Changed
+
+- **`tempfile`** moved from `[dev-dependencies]` to runtime
+  `[dependencies]` in `crates/rts-bench/Cargo.toml` — the latency
+  subcommand uses it at run time for the synth workspace.
+
+### Not in this slice
+
+- "Queries under sustained write load" variant (plan
+  §P9 architecture-review recommendation 11) — concurrent latency
+  measurement while a git-checkout storm hits the watcher.
+- Incremental PageRank patch (push-flow local PR) to bring
+  `outline_workspace` under the 10ms p95 target on large workspaces.
+- Footprint bench (S3) — peak RSS, on-disk index size, build time.
+- P9 prebuilt-binaries release GH Action.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **471 passed, 0 failed, 3 ignored** (was
+  466; +4 unit tests + 1 integration smoke test).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: exit 0.
+- Smoke: `rts-bench latency --synth-loc 2000 --queries 50` produces
+  the numbers in the table above.
+
 ## [0.2.0-alpha.18] - 2026-05-12
 
 **P8 PageRank + `Index.Outline`.** The largest remaining feature from

@@ -19,6 +19,7 @@ use serde_json::json;
 
 mod baseline;
 mod corpus;
+mod latency;
 mod mcp_runner;
 mod report;
 mod tasks;
@@ -46,6 +47,31 @@ enum Cmd {
     Fixture {
         #[command(subcommand)]
         sub: FixtureCmd,
+    },
+    /// Latency benchmark (S1): synth fixture + p50/p95/p99 over a
+    /// query mix.
+    Latency {
+        /// Total lines of synthetic Rust source to generate. Defaults
+        /// to 100,000 per plan §P9.
+        #[arg(long, default_value_t = 100_000)]
+        synth_loc: usize,
+        /// Number of queries to run. Defaults to 1000.
+        #[arg(long, default_value_t = 1000)]
+        queries: u32,
+        /// Cold-warm split — first N queries treated as cold-cache
+        /// warmup. Defaults to 100.
+        #[arg(long, default_value_t = 100)]
+        cold_count: u32,
+        /// PRNG seed for query selection. Stable runs use the same
+        /// seed.
+        #[arg(long, default_value_t = 0xC0FFEE_u64)]
+        seed: u64,
+        /// Where to write the JSON report.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Skip writing the report.
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -132,7 +158,101 @@ async fn main() -> Result<()> {
                     corpus_root,
                 },
         } => restore_fixtures(corpus_lock, corpus_root).await,
+        Cmd::Latency {
+            synth_loc,
+            queries,
+            cold_count,
+            seed,
+            out,
+            dry_run,
+        } => run_latency(synth_loc, queries, cold_count, seed, out, dry_run).await,
     }
+}
+
+async fn run_latency(
+    synth_loc: usize,
+    queries: u32,
+    cold_count: u32,
+    seed: u64,
+    out: Option<PathBuf>,
+    dry_run: bool,
+) -> Result<()> {
+    let rts_mcp_bin = resolve_bin("rts-mcp")?;
+    let rts_daemon_bin = resolve_bin("rts-daemon")?;
+
+    // Use a workspace-scoped tmpdir for both the synth fixture and the
+    // daemon's runtime/state dirs so concurrent latency runs on the
+    // same machine don't fight over /tmp's default socket.
+    let tmp_root = tempfile::tempdir().context("tempdir for latency run")?;
+    let (workspace, symbols, files) =
+        latency::prepare_workspace(None, Some(synth_loc), tmp_root.path())?;
+    let runtime_dir = tmp_root.path().join("runtime");
+    let state_dir = tmp_root.path().join("state");
+    std::fs::create_dir_all(&runtime_dir)?;
+    std::fs::create_dir_all(&state_dir)?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(&runtime_dir, std::fs::Permissions::from_mode(0o700));
+
+    let extra_env: Vec<(&str, &str)> = vec![
+        ("XDG_RUNTIME_DIR", runtime_dir.to_str().unwrap_or("")),
+        ("XDG_STATE_HOME", state_dir.to_str().unwrap_or("")),
+        ("HOME", tmp_root.path().to_str().unwrap_or("")),
+        ("RTS_IDLE_SHUTDOWN_SECS", "300"),
+    ];
+    let mut session =
+        crate::mcp_runner::McpSession::spawn(&rts_mcp_bin, &rts_daemon_bin, &workspace, &extra_env)
+            .await?;
+
+    // Wait for the writer to commit at least one symbol (initial walk
+    // completed). `tools_call`'s retry loop handles INDEX_NOT_READY,
+    // so a single call here is enough — when it returns the index is
+    // hot enough to query.
+    let probe = &symbols[0];
+    let _ = session
+        .tools_call("find_symbol", serde_json::json!({ "name": probe }), 30)
+        .await?;
+
+    println!(
+        "latency: workspace={} files={} symbols={} queries={} cold_count={}",
+        workspace.display(),
+        files.len(),
+        symbols.len(),
+        queries,
+        cold_count,
+    );
+
+    let samples = latency::run(&mut session, &symbols, &files, queries, seed).await?;
+    session.close().await?;
+
+    let report = latency::build_report(&workspace, synth_loc, seed, cold_count, &samples);
+    println!(
+        "warm p50={}µs p95={}µs p99={}µs max={}µs (n={})",
+        report.warm_all.p50_micros,
+        report.warm_all.p95_micros,
+        report.warm_all.p99_micros,
+        report.warm_all.max_micros,
+        report.warm_all.count,
+    );
+    for (kind, s) in &report.warm {
+        println!(
+            "  {kind:>16}: p50={:>5}µs p95={:>5}µs p99={:>5}µs (n={})",
+            s.p50_micros, s.p95_micros, s.p99_micros, s.count
+        );
+    }
+
+    if dry_run {
+        return Ok(());
+    }
+
+    let out_path = out.unwrap_or_else(|| {
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(format!("bench-latency-{}.json", git_short_sha()))
+    });
+    latency::write_report(&out_path, &report)?;
+    println!("wrote {}", out_path.display());
+    Ok(())
 }
 
 async fn run_one(

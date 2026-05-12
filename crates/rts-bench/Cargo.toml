@@ -46,5 +46,6 @@ ignore = "0.4"
 # Pretty-printing the JSON report.
 indexmap = { version = "2", features = ["serde"] }
 
-[dev-dependencies]
+# Synthetic workspace generation for the latency bench (S1) lives in
+# the main binary path; move tempfile to runtime deps.
 tempfile = "3"
