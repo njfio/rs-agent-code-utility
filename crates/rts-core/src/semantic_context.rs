@@ -1770,7 +1770,7 @@ mod tests {
     fn test_constant_value_variants() {
         let string_val = ConstantValue::String("test".to_string());
         let int_val = ConstantValue::Integer(42);
-        let float_val = ConstantValue::Float(3.14);
+        let float_val = ConstantValue::Float(1.234);
         let bool_val = ConstantValue::Boolean(true);
         let null_val = ConstantValue::Null;
         let unknown_val = ConstantValue::Unknown;
@@ -1786,7 +1786,7 @@ mod tests {
         }
 
         match float_val {
-            ConstantValue::Float(f) => assert!((f - 3.14).abs() < f64::EPSILON),
+            ConstantValue::Float(f) => assert!((f - 1.234).abs() < f64::EPSILON),
             _ => panic!("Expected float value"),
         }
 
