@@ -4,6 +4,173 @@ This file is the canonical project-coding-standards reference. Treat it
 as the source of truth when conventions diverge from anything you find
 in pre-pivot artifacts under `archive/`.
 
+AGENTS.md — 12-rule template
+These rules apply to every task in this project unless explicitly overridden.
+Bias: caution over speed on non-trivial work. Use judgment on trivial tasks.
+
+Rule 1 — Think Before Coding
+State assumptions explicitly. If uncertain, ask rather than guess.
+Present multiple interpretations when ambiguity exists.
+Push back when a simpler approach exists.
+Stop when confused. Name what's unclear.
+
+Rule 2 — Simplicity First
+Minimum code that solves the problem. Nothing speculative.
+No features beyond what was asked. No abstractions for single-use code.
+Test: would a senior engineer say this is overcomplicated? If yes, simplify.
+
+Rule 3 — Surgical Changes
+Touch only what you must. Clean up only your own mess.
+Don't "improve" adjacent code, comments, or formatting.
+Don't refactor what isn't broken. Match existing style.
+
+Rule 4 — Goal-Driven Execution
+Define success criteria. Loop until verified.
+Don't follow steps. Define success and iterate.
+Strong success criteria let you loop independently.
+
+Rule 5 — Use the Model Only for Judgment Calls
+Use me for: classification, drafting, summarization, extraction.
+Do NOT use me for: routing, retries, deterministic transforms.
+If code can answer, code answers.
+
+Rule 6 — Token Budgets Are Not Advisory
+Per-task: 4,000 tokens. Per-session: 30,000 tokens.
+If approaching budget, summarize and start fresh.
+Surface the breach. Do not silently overrun.
+
+Rule 7 — Surface Conflicts, Don't Average Them
+If two patterns contradict, pick one (more recent / more tested).
+Explain why. Flag the other for cleanup.
+Don't blend conflicting patterns.
+
+Rule 8 — Read Before You Write
+Before adding code, read exports, immediate callers, shared utilities.
+"Looks orthogonal" is dangerous. If unsure why code is structured a way, ask.
+
+Rule 9 — Tests Verify Intent, Not Just Behavior
+Tests must encode WHY behavior matters, not just WHAT it does.
+A test that can't fail when business logic changes is wrong.
+
+Rule 10 — Checkpoint After Every Significant Step
+Summarize what was done, what's verified, what's left.
+Don't continue from a state you can't describe back.
+If you lose track, stop and restate.
+
+Rule 11 — Match the Codebase's Conventions, Even If You Disagree
+Conformance > taste inside the codebase.
+If you genuinely think a convention is harmful, surface it. Don't fork silently.
+
+Rule 12 — Fail Loud
+"Completed" is wrong if anything was skipped silently.
+"Tests pass" is wrong if any were skipped.
+Default to surfacing uncertainty, not hiding it.
+
+Git Workflow
+Branches
+main is always deployable. Never commit directly to it.
+
+Branch from main for every change:
+
+feat/<short-description> — new feature
+
+fix/<short-description> — bug fix
+
+docs/<short-description> — documentation only
+
+refactor/<short-description> — code restructuring, no behavior change
+
+test/<short-description> — adding or fixing tests
+
+chore/<short-description> — maintenance (deps, config, tooling)
+
+Keep branches short-lived. One feature or fix per branch.
+
+Delete the branch after merging.
+
+Commits
+Follow Conventional Commits:
+
+text
+<type>(<optional-scope>): <imperative subject, ≤72 chars>
+
+<optional body: what and WHY, not how>
+Types: feat, fix, docs, style, refactor, test, chore
+
+Rules:
+
+Use imperative mood: "Add login endpoint" not "Added login endpoint"
+
+Each commit is one logical, self-contained unit of work (atomic)
+
+The build must not be broken by any individual commit
+
+Never commit secrets, credentials, or machine-local paths
+
+Use git add -p to stage selectively when a change touches multiple concerns
+
+Examples:
+
+text
+feat(auth): add JWT refresh token endpoint
+fix(api): handle null response from payment gateway
+test(cart): add edge case for zero-quantity items
+docs: update README with local dev setup steps
+Pull Requests
+Open a PR before merging any branch into main
+
+PR title must follow the same Conventional Commits format as commit messages
+
+Keep PRs small and focused — one concern per PR
+
+PR description must include:
+
+What — what changed and why
+
+How to test — steps to verify the change manually or via tests
+
+Checklist — tests pass, no secrets committed, lint clean
+
+Require at least one reviewer approval before merging
+
+Rebase onto main (or squash) before merge to keep history linear and clean
+
+Delete the remote branch after merge
+
+Tags & Releases
+Tag releases on main using semantic versioning: v<MAJOR>.<MINOR>.<PATCH>
+
+Annotated tags only: git tag -a v1.2.0 -m "Release v1.2.0"
+
+Never move or delete tags that have been pushed
+
+What Requires Approval Before Running
+The agent must ask before executing any of the following:
+
+git push (any branch)
+
+git commit (if not in an explicitly approved auto-commit session)
+
+git rebase, git merge, git reset --hard
+
+Deleting branches locally or remotely
+
+Installing or removing packages
+
+Modifying CI/CD configuration
+
+Never
+Never force-push to main
+
+Never commit directly to main or any protected branch
+
+Never commit .env, secrets, API keys, or credentials
+
+Never leave merge conflict markers (<<<<<<<) in committed code
+
+Never rebase commits already pushed and shared with others
+
+
 ## Project layout (post-pivot)
 
 Cargo workspace with `resolver = "3"`, Rust 2024 edition, MSRV 1.85.
