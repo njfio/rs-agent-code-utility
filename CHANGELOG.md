@@ -7,6 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.26] - 2026-05-13
+
+**Daemon CLI mode ships.** Closes the dogfooding-gap for callers that
+can't easily configure an MCP client — including this Claude Code
+session itself, which can't re-configure its MCP server list
+mid-conversation.
+
+### What's new
+
+```sh
+rts-bench query find-symbol  --pattern "make_*"
+rts-bench query find-symbol  --name make_widget
+rts-bench query read-symbol  --name make_widget --shape signature
+rts-bench query read-symbol  --name make_widget --deps  # closure walk
+rts-bench query read-symbol-at --file src/lib.rs --line 42
+rts-bench query outline      --token-budget 4096
+rts-bench query read-range   --file src/lib.rs --start-line 1 --end-line 20
+```
+
+Each subcommand spawns `rts-mcp` + the daemon, calls the requested
+tool, prints the JSON response to stdout, exits. Pipe to `jq` for
+scripting. Exit codes: 0 = OK, 1 = daemon error (the body JSON
+describes which code fired), 2 = subprocess/decode failure.
+
+### Why this matters
+
+After alpha.23 I did an honest self-eval: "I built this tool but I'm
+not using it." One of the gaps was that `rts-mcp` requires an MCP
+client (Claude Code, Cursor, etc.). Shell-only callers — including
+me when working in a Bash-driven session — had no way in.
+
+`rts-bench query` closes that gap. With this slice, an agent (or a
+human, or a CI script) can pipe queries through Bash:
+
+```sh
+# Find every fn whose name starts with `parse_`
+rts-bench query find-symbol --pattern "parse_*" | jq '.matches[].qualified_name'
+
+# Get the signature of the fn at a compiler-error site
+rts-bench query read-symbol-at --file src/parser.rs --line 142 --shape signature \
+  | jq -r '.signature'
+```
+
+This is the surface I'll use to actually dogfood the daemon on
+upcoming slices. Concrete behavior-change from the eval, not just
+documentation.
+
+### Added
+
+- **`crates/rts-bench/src/main.rs`**: `Cmd::Query` variant with five
+  sub-subcommands matching the daemon's tool surface
+  (`find-symbol`, `read-symbol`, `read-symbol-at`, `outline`,
+  `read-range`). `run_query` orchestrator + `build_query` JSON
+  marshaller. Reuses the existing `McpSession::spawn` machinery from
+  the bench harness — no new daemon-side code.
+- **`crates/rts-bench/tests/query_cli.rs`** (new): two integration
+  tests. `query_subcommand_exercises_all_five_tools` runs each of
+  the five tools against a seeded workspace and asserts the JSON
+  shape. `query_returns_nonzero_on_daemon_error` confirms exit-code
+  contract on `SYMBOL_NOT_FOUND`.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **510 passed, 0 failed, 3 ignored** (was
+  508 in alpha.25; +2 integration tests).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new hits.
+- Manual dogfood on a 3-file fixture:
+  - `find-symbol --pattern "make_*"` → 2 AST-precise matches
+  - `read-symbol --name make_widget --shape signature` → `pub fn make_widget(id: u32) -> u32` (12 tokens)
+  - `read-symbol-at --file hub.rs --line 2` → `make_circle`
+  - `outline --token-budget 256` → 1 file considered, 1 included, 37 tokens
+
 ## [0.2.0-alpha.25] - 2026-05-13
 
 **P6 watcher hardening ships.** Closes the last originally-planned v0.2
