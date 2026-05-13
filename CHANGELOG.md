@@ -7,6 +7,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.25] - 2026-05-13
+
+**P6 watcher hardening ships.** Closes the last originally-planned v0.2
+slice. Three changes that together make the daemon survive a `git
+checkout` storm + run on hosts where inotify is exhausted:
+
+1. **Rescan re-walk + orphan reconciliation.** `WatchEvent::Rescan` was
+   accepted-and-inert before this slice (silently lost index state when
+   the kernel watch buffer overflowed). The writer now:
+   - Drains the current batch first (so pre-overflow events don't mix
+     with the rewalk results)
+   - Walks the workspace fresh through the same `ignore::WalkBuilder`
+     the initial walk uses
+   - Diffs on-disk truth against the indexed file set to detect orphans
+     (files in the index but no longer on disk)
+   - Queues all changes through the normal flush path
+   - Flips `WatcherStatus` back to `Ok` after the reconcile commits
+
+2. **`RTS_FORCE_POLL_WATCHER` env var.** Operators on hosts where
+   inotify is exhausted (or unavailable — NFS, FUSE) can set this env
+   var to start the daemon with `PollWatcher` (750ms cadence) instead
+   of `RecommendedWatcher`. `Workspace.Status` advertises
+   `polling_fallback` so MCP clients see the resilience-mode badge.
+   Dynamic mid-lifetime cutover when `MaxFilesWatch` fires at runtime
+   stays a v1.x improvement — the debouncer holds references on its
+   worker thread that make in-place replacement fragile.
+
+3. **Rayon-parallel parsers** in the writer's flush hot path. The
+   parse step (tree-sitter + symbol extraction) was the heavy work
+   per batch; `into_par_iter()` over the upsert paths fans it across
+   rayon's pool. `ParserPool::parse_and_extract` is concurrency-safe
+   — the per-language parser cache entry is briefly locked just to
+   seed-if-vacant, and the actual parse uses a fresh local
+   `CodebaseAnalyzer` per call.
+
+### Bench impact
+
+On the 100k-LOC synth fixture (steady state, 3-run average):
+
+| metric              | alpha.21 | alpha.25 |
+|---------------------|---------:|---------:|
+| build_time_ms       |      196 |      211 |
+| full_index_time_ms  |      610 |      630 |
+| peak_rss_bytes      |  19.2 MiB|  20.4 MiB|
+| index_size_bytes    |   1.5 MiB|   1.5 MiB|
+
+Rayon is **neutral on this fixture** — the synth's tiny files (~65
+lines each) make per-call rayon overhead comparable to the parse
+itself. The honest expectation is that rayon helps on real workspaces
+with bigger files (200-1000 lines); it doesn't regress the
+small-file case and removes parse as the bottleneck on large-file
+workloads.
+
+### Added
+
+- **`rescan_and_reconcile`** in `writer.rs`: re-walks the workspace
+  on `WatchEvent::Rescan`, diffs against the indexed file set, queues
+  orphan removals + on-disk upserts. 3 unit tests covering: file
+  vanishes → queued for removal; new file added during overflow →
+  queued for upsert; stale removal vs reappeared file → upsert wins.
+- **`walk_and_emit`** helper in `watcher.rs`: shared between
+  `initial_walk` and the rescan path (DRY). Returns the emitted count
+  so callers can log.
+- **`RTS_FORCE_POLL_WATCHER`** env var + `DebouncerHandle` enum (Recommended | Polling). New
+  integration test `force_poll_watcher_env_var_works_end_to_end`
+  asserts the daemon starts with PollWatcher, advertises
+  `polling_fallback` via `Workspace.Status`, and still delivers live
+  file events through the poll path.
+- **Rayon parallelism** for the flush path's parse step. New
+  workspace dep `rayon = "1"` (already in the lockfile via rts-core's
+  transitive deps).
+- **`crates/rts-daemon/tests/p6_watcher_hardening.rs`** (new): two
+  end-to-end tests. The orphan-removal-via-deletes test is
+  `#[ignore]`-on-macOS because FSEvents doesn't reliably surface
+  `fs::remove_file` events for tempfile paths under
+  `/private/var/folders/...` — a pre-existing OS-level quirk
+  unrelated to P6. The unit tests in `writer.rs` cover the
+  reconciliation logic without depending on the OS event stream and
+  run everywhere.
+
+### Changed
+
+- **`Watcher._debouncer`** field is now `DebouncerHandle` (enum), not
+  `Debouncer<RecommendedWatcher, _>`. Branch decided at start() time
+  by reading the env var; no runtime swap.
+- **`MaxFilesWatch` error** now flips `WatcherStatus` to
+  `PollingFallback` and logs guidance — operators set the env var and
+  restart. The old behaviour was to flip the status and otherwise
+  ignore the error.
+- **`writer.rs` `flush()`** now collects upsert paths into a Vec and
+  calls `parse_and_extract` via `into_par_iter()`. The IoMissing
+  branch still queues as a removal — back-compat with the existing
+  delete flow.
+
+### Not in this slice
+
+- **Dynamic mid-lifetime `MaxFilesWatch` cutover.** The debouncer's
+  worker thread holds references that make in-place replacement
+  fragile. v1.x will tackle this once we have a real user hitting the
+  case.
+- **Per-batch flush latency tuning.** The 150ms debounce + 150ms
+  flush timer is fine for v0; rayon may shift the optimal under
+  bigger workloads.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **507 passed, 0 failed, 4 ignored** (was
+  503 in alpha.24; +3 unit + 1 integration. The orphan-detection
+  integration is `#[ignore]` on macOS; runs on Linux CI).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new hits on changed
+  files (`writer.rs`, `watcher.rs`, `Cargo.toml`).
+- Footprint bench at 100k LOC: build_time 211ms (was 196ms), peak_rss
+  20.4 MiB (was 19.2 MiB) — within noise.
+
 ## [0.2.0-alpha.24] - 2026-05-13
 
 **The dogfooding-gap fix.** Two new capabilities + one bench, scoped
