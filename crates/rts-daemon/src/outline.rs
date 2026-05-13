@@ -363,7 +363,10 @@ fn glob_match(path: &str, glob: &str) -> bool {
 /// here are runs of `[A-Za-z_][A-Za-z0-9_]*`. This is intentionally
 /// language-agnostic — we filter against the known-defs set later,
 /// so noise (keywords, locals, etc.) just doesn't match.
-fn extract_identifiers(content: &str) -> impl Iterator<Item = &str> + '_ {
+///
+/// `pub(crate)` so the closure walker (`crate::closure`) can share
+/// this without duplicating the tokenizer logic.
+pub(crate) fn extract_identifiers(content: &str) -> impl Iterator<Item = &str> + '_ {
     let bytes = content.as_bytes();
     let mut idx = 0;
     std::iter::from_fn(move || {

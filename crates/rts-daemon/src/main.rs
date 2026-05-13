@@ -9,6 +9,7 @@
 
 #![deny(unsafe_code)]
 
+mod closure;
 mod error;
 mod filter;
 mod lifecycle;
