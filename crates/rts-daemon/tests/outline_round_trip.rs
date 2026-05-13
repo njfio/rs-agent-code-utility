@@ -204,6 +204,45 @@ async fn outline_ranks_hub_file_highest() -> anyhow::Result<()> {
         "outline_text should list hub.rs + hub_compute; got {text:?}"
     );
 
+    // Second identical call should be served from the outline cache.
+    // We can't observe the cache directly over the wire, but we can
+    // assert the response is byte-identical to the first one — that's
+    // the contract clients rely on for stable `tokens_returned` budgets.
+    let outline2 = round_trip(
+        &mut stream,
+        "11",
+        "Index.Outline",
+        json!({ "token_budget": 4096 }),
+    )
+    .await?;
+    assert!(
+        outline2["error"].is_null(),
+        "second outline failed: {outline2:?}"
+    );
+    assert_eq!(
+        outline["result"], outline2["result"],
+        "back-to-back Index.Outline with identical params must yield identical results"
+    );
+
+    // Changing the budget produces a fresh compute (different cache
+    // key). The shape stays consistent — at minimum, files_considered
+    // matches and the rank order is preserved.
+    let outline3 = round_trip(
+        &mut stream,
+        "12",
+        "Index.Outline",
+        json!({ "token_budget": 8192 }),
+    )
+    .await?;
+    assert!(
+        outline3["error"].is_null(),
+        "third outline failed: {outline3:?}"
+    );
+    assert_eq!(
+        outline["result"]["files_considered"], outline3["result"]["files_considered"],
+        "files_considered shouldn't depend on token_budget"
+    );
+
     Ok(())
 }
 

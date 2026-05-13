@@ -8,6 +8,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::time::Instant;
 
+use crate::outline::OutlineCache;
 use crate::store::Store;
 use crate::watcher::Watcher;
 use crate::workspace::MountedWorkspace;
@@ -90,6 +91,11 @@ pub struct DaemonState {
     pub index_generation: AtomicU64,
     /// File-watcher health for `Workspace.Status.watcher_status` (§7.4).
     watcher_status: AtomicU8,
+    /// Single-slot memoization cache for `Index.Outline`. Keyed by
+    /// `(index_generation, params)` — writer commits bump the generation
+    /// and invalidate the entry implicitly on the next lookup. See
+    /// `outline.rs` module docs for the rationale.
+    pub outline_cache: OutlineCache,
 }
 
 impl DaemonState {
@@ -105,6 +111,7 @@ impl DaemonState {
             started_at: Instant::now(),
             index_generation: AtomicU64::new(0),
             watcher_status: AtomicU8::new(WatcherStatus::NoWatcher as u8),
+            outline_cache: OutlineCache::new(),
         }
     }
 

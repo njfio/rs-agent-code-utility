@@ -599,6 +599,12 @@ struct OutlineParamsWire {
 /// PageRank per the plan's §"Aider repo-map algorithm" recipe, and
 /// returns a token-budgeted outline (dotted plain text + structured
 /// sidecar).
+///
+/// Repeat calls with the same params against an unchanged index are
+/// served from `state.outline_cache`. The cache key bakes in
+/// `state.index_generation`, which the writer bumps on every commit —
+/// so cache invalidation is automatic and correctness-preserving (see
+/// `outline.rs` module docs).
 pub async fn outline(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
@@ -607,28 +613,60 @@ pub async fn outline(
     let budget = check_budget(p.token_budget)?;
 
     let (root, store_arc) = snapshot(state)?;
-    let store = store_arc.clone();
-    let glob_owned = p.glob.clone();
-    // PageRank + content reads can be heavy on large workspaces;
-    // delegate to a blocking task so we don't hog the daemon's
-    // single-threaded async runtime.
-    let result = tokio::task::spawn_blocking(move || {
-        let outline_params = crate::outline::OutlineParams {
-            glob: glob_owned.as_deref(),
+
+    // Build the cache key up front. We snapshot the generation *before*
+    // spawning the compute task — any writer commit that lands while
+    // we're computing will bump the counter further, so the result we
+    // store is the right answer for the generation we observed.
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let cache_key = {
+        let params_borrow = crate::outline::OutlineParams {
+            glob: p.glob.as_deref(),
             token_budget: budget,
             mentioned_files: &p.mentioned_files,
             mentioned_idents: &p.mentioned_idents,
         };
-        crate::outline::compute(&root, &store, &outline_params)
-    })
-    .await
-    .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("outline join error: {e}")))?
-    .map_err(|e| {
-        ProtocolError::new(
-            ErrorCode::InternalError,
-            format!("outline compute error: {e:#}"),
-        )
-    })?;
+        crate::outline::OutlineCacheKey::from_params(generation, &params_borrow)
+    };
+
+    let result = if let Some(hit) = state.outline_cache.get(&cache_key) {
+        tracing::debug!(target: "rts_daemon::outline", gen = generation, "cache hit");
+        hit
+    } else {
+        let store = store_arc.clone();
+        let glob_owned = p.glob.clone();
+        let mentioned_files = p.mentioned_files.clone();
+        let mentioned_idents = p.mentioned_idents.clone();
+        // PageRank + content reads can be heavy on large workspaces;
+        // delegate to a blocking task so we don't hog the daemon's
+        // single-threaded async runtime.
+        let computed = tokio::task::spawn_blocking(move || {
+            let outline_params = crate::outline::OutlineParams {
+                glob: glob_owned.as_deref(),
+                token_budget: budget,
+                mentioned_files: &mentioned_files,
+                mentioned_idents: &mentioned_idents,
+            };
+            crate::outline::compute(&root, &store, &outline_params)
+        })
+        .await
+        .map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("outline join error: {e}"))
+        })?
+        .map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("outline compute error: {e:#}"),
+            )
+        })?;
+        let computed = std::sync::Arc::new(computed);
+        // Store under the generation we observed. If a commit raced and
+        // bumped the counter, the next call sees a key mismatch and
+        // recomputes — no torn read.
+        state.outline_cache.put(cache_key, computed.clone());
+        tracing::debug!(target: "rts_daemon::outline", gen = generation, "cache miss → recomputed");
+        computed
+    };
 
     Ok(serde_json::json!({
         "outline_text":     result.outline_text,
