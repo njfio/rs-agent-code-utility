@@ -16,11 +16,10 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use redb::Durability;
-use rust_tree_sitter::{Language, Parser, Symbol};
+use rust_tree_sitter::{Language, Symbol};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
@@ -555,74 +554,39 @@ fn lang_tag(language: Language) -> u8 {
     }
 }
 
-/// Per-language `Parser` cache. tree-sitter `Parser` is not `Sync` for
-/// concurrent parses (P0.3 finding); we lock per language so single-writer
-/// flushes serialise fine. The rayon thread-local refinement is a later
-/// P6 perf step.
-struct ParserPool {
-    by_lang: Mutex<HashMap<Language, Parser>>,
-}
+/// Per-call parser facade. v0 created a fresh `CodebaseAnalyzer` per
+/// call and round-tripped the content through a tempfile via
+/// `analyzer.analyze_file`; the alpha.29 perf reviewer audit (H1)
+/// flagged that as the writer's biggest hot-path waste — tree-sitter
+/// accepts content directly through `analyze_content`, no tempfile
+/// or re-read needed.
+///
+/// The type is kept around (vs an inline call) for two reasons:
+///
+/// 1. The writer's `flush()` rayon `into_par_iter().map(...)` closure
+///    captures `&ParserPool` (originally for the mutex-protected
+///    parser cache). Keeping the type lets us extend it later with
+///    rayon-thread-local analyzer storage, when/if benches show that
+///    `CodebaseAnalyzer::new()` per call is itself measurable.
+/// 2. Tests in the writer module exercise this surface via
+///    `ParserPool::new().parse_and_extract(...)`.
+struct ParserPool;
 
 impl ParserPool {
     fn new() -> Self {
-        Self {
-            by_lang: Mutex::new(HashMap::new()),
-        }
+        Self
     }
 
-    /// Parse `content` for `language` and return the extracted symbols via
-    /// the per-language extractor from rts-core's `CodebaseAnalyzer`.
+    /// Parse `content` for `language` and return the extracted symbols.
+    ///
+    /// Bypasses the filesystem entirely — content goes straight into
+    /// `CodebaseAnalyzer::analyze_content`, which parses with
+    /// tree-sitter and runs the per-language symbol extractor. No
+    /// tempfile, no disk round-trip.
     fn parse_and_extract(&self, language: Language, content: &str) -> anyhow::Result<Vec<Symbol>> {
-        // Borrow / create a `Parser` for this language. We use a single
-        // `CodebaseAnalyzer` per call to keep its `&mut self` contract local;
-        // the analyzer's symbol-extraction methods are pure functions of the
-        // tree + content, so this is cheap.
         use rust_tree_sitter::CodebaseAnalyzer;
-
-        // Trigger the parser-pool insert so the lock is held only for the
-        // brief check; the actual parse uses a fresh local analyzer per call.
-        {
-            let mut pool = self
-                .by_lang
-                .lock()
-                .map_err(|e| anyhow::anyhow!("parser pool poisoned: {e}"))?;
-            if let std::collections::hash_map::Entry::Vacant(e) = pool.entry(language) {
-                e.insert(Parser::new(language)?);
-            }
-        }
-
         let mut analyzer = CodebaseAnalyzer::new()?;
-        let tmp = tempfile::NamedTempFile::new()
-            .map_err(|e| anyhow::anyhow!("could not create tempfile for parse: {e}"))?;
-        // Suffix the tempfile so analyzer's extension-based language detection
-        // routes to the right extractor. NamedTempFile doesn't easily let us
-        // pick the suffix, so we manually rename inside its dir.
-        let target = tmp.path().with_extension(default_extension(language));
-        std::fs::write(&target, content)?;
-        let result = analyzer.analyze_file(&target)?;
-        let _ = std::fs::remove_file(&target);
-        let symbols = result
-            .files
-            .into_iter()
-            .flat_map(|f| f.symbols.into_iter())
-            .collect();
-        Ok(symbols)
-    }
-}
-
-fn default_extension(language: Language) -> &'static str {
-    match language {
-        Language::Rust => "rs",
-        Language::JavaScript => "js",
-        Language::TypeScript => "ts",
-        Language::Python => "py",
-        Language::C => "c",
-        Language::Cpp => "cpp",
-        Language::Go => "go",
-        Language::Java => "java",
-        Language::Php => "php",
-        Language::Ruby => "rb",
-        Language::Swift => "swift",
+        Ok(analyzer.analyze_content(content, language)?)
     }
 }
 

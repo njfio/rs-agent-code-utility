@@ -7,6 +7,126 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.29] - 2026-05-13
+
+**Reviewer follow-up batch.** Four concrete fixes from the alpha.27
+audit: two perf wins the perf-oracle flagged "before v1.0," two
+security gates the security-sentinel flagged as defense-in-depth.
+
+### What landed
+
+**H1: Bypass tempfile in the writer's parse path.** The writer's
+`ParserPool::parse_and_extract` used to:
+
+```
+1. write content → tempfile
+2. CodebaseAnalyzer::analyze_file(tempfile) ← re-reads from disk
+3. extract symbols
+4. remove tempfile
+```
+
+Tree-sitter accepts content directly. The new
+`CodebaseAnalyzer::analyze_content(content, language)` API (added in
+rts-core) skips the write+read round-trip entirely. The reviewer
+predicted "doubles or triples per-parse cost on real-world workspaces
+with ~500-line files" — synth bench is neutral (tiny files), real
+workspaces should see the bigger win.
+
+As a bonus the ParserPool's mutex-protected parser cache (which was
+never actually read — analyzer constructs its own) drops out. The
+type stays for tests + future rayon-thread-local extension, but the
+mutex is gone.
+
+**H2: Process-wide `Query` cache per language.** `Query::new` is
+expensive (recompiles the tags.scm query DSL). The outline path
+called it once per file per call — a 1000-file Rust workspace cold
+outline did 1000 query compilations. New
+`crate::language::cached_refs_query(info)` returns a `&'static Query`
+via `OnceLock<Option<Query>>` per language. Latency bench shows:
+
+| query | alpha.20 baseline | alpha.29 |
+|---|---:|---:|
+| outline warm p95 | 137 µs | 122 µs (-11%) |
+| outline cold p95 | 177 µs | 148 µs (-16%) |
+
+Modest on the small bench fixture; larger win expected on real repos
+where Query::new dominates cold-call latency.
+
+**M1: closure.rs file reads now go through the same path-validation
+gate the read handlers use.** Previously the closure walker read dep
+files via `workspace_root.join(&def.file)` with no re-validation —
+currently safe (writer stores relative paths) but the security audit
+correctly noted that defense-in-depth wants every file read on the
+same code path. Now everything routes through
+`crate::path::resolve_workspace_path`.
+
+**M2: Reject leaf symlinks in the read handlers.** After resolving a
+workspace-relative path, `symlink_metadata` it and refuse with
+`OUT_OF_ROOT` if the resolved entry is a symlink. Per the trust
+model (protocol-v0 §1: agents are not trusted), an agent driving a
+read at a workspace-internal symlink to e.g. `/etc/passwd` should
+fail loudly rather than read the symlink target.
+
+The walker already runs with `follow_links(false)` so symlinked
+files aren't indexed; this gate covers the documented attack: agent
+supplies a file path that's actually a symlink. One `stat` syscall
+per call; the read that follows is much more expensive.
+
+### Added
+
+- **`rust_tree_sitter::CodebaseAnalyzer::analyze_content`** (new
+  public API in rts-core): `(content, language) → Vec<Symbol>`,
+  bypassing the filesystem.
+- **`crates/rts-daemon/src/path.rs`** (new module): shared
+  `resolve_workspace_path` with the symlink check. 6 unit tests
+  covering empty, parent-dir, outside-absolute, missing-file,
+  symlink-rejection, and regular-file paths.
+- **`crate::language::cached_refs_query`** + 4 `OnceLock<Option<Query>>`
+  statics. Returns `Option<&'static Query>` — process-wide, lock-free
+  after first init.
+
+### Changed
+
+- **`writer::ParserPool::parse_and_extract`** rewritten to call
+  `analyzer.analyze_content` directly. ~30 LOC simpler. No more
+  `tempfile::NamedTempFile`, no more `default_extension` table.
+- **`writer::ParserPool`** is now a unit struct — the mutex-protected
+  parser cache was dead weight (the reviewer's perf finding M1).
+  Kept the type for tests + future rayon-thread-local storage.
+- **`refs::extract_references`** signature changed from `(Language,
+  &str, &str)` to `(Language, &Query, &str)` — the query is now passed
+  in pre-compiled by the cache dispatcher.
+- **`methods::index::resolve_workspace_path`** moved to
+  `crate::path::resolve_workspace_path`. The old private fn deleted;
+  the methods module imports it from the new home.
+- **`closure::compute`** now routes dep-file reads through
+  `path::resolve_workspace_path`. Same gate as `read_symbol` and
+  `read_range`.
+
+### Not in this slice
+
+- **Realistic-workspace latency bench.** The reviewer noted the synth
+  fixture is too uniform to surface H1's biggest wins. A `--realistic`
+  mode pointing at a real repo lands in a follow-up.
+- **Footprint bench tmpfile counter.** Would have caught H1's
+  tmpfile-thrash if we'd had it. Defer.
+- **Architecture reviewer's `crate::cache` + `rts-cli` suggestions.**
+  Still deferred from alpha.28.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **528 passed, 0 failed, 3 ignored** (was
+  524 in alpha.28; +6 `path::tests` + 1 smoke - 3 deleted duplicates).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: 94 warnings (was 93 in
+  alpha.28; +1 in pre-existing library code, none on touched files).
+- Footprint bench at 100k LOC: build_time 204-223ms, full_index
+  699-708ms, peak_rss 21-23 MiB. Within noise of alpha.25 baseline;
+  H1 is neutral on tiny-file synth as predicted.
+- Latency bench at 10k LOC: outline cold p95 177→148µs (-16%), warm
+  p95 137→122µs (-11%). H2 win measurable even on the small fixture.
+
 ## [0.2.0-alpha.28] - 2026-05-13
 
 **Architecture refactor: `crate::language` is the single source of truth for
