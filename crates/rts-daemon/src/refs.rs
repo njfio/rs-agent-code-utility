@@ -173,6 +173,78 @@ def caller():
     }
 
     #[test]
+    fn javascript_references_capture_calls_and_new() {
+        let src = "
+function caller(input) {
+    let local = input + 1;
+    targetFn(local);
+    obj.methodName();
+    const x = new Widget(local);
+    return x;
+}
+";
+        let (lang, q) = refs_query_for("a.js").unwrap();
+        let refs = extract_references(lang, q, src).expect("js has a query");
+        assert!(refs.contains(&"targetFn".to_string()), "got {refs:?}");
+        assert!(refs.contains(&"methodName".to_string()), "got {refs:?}");
+        assert!(refs.contains(&"Widget".to_string()), "got {refs:?}");
+        assert!(
+            !refs.contains(&"local".to_string()),
+            "local var should not be a ref; got {refs:?}"
+        );
+        assert!(
+            !refs.contains(&"caller".to_string()),
+            "caller is a def, not a ref; got {refs:?}"
+        );
+    }
+
+    #[test]
+    fn typescript_references_capture_calls_and_new() {
+        let src = "
+function caller(input: number): number {
+    const local = input + 1;
+    targetFn(local);
+    obj.methodName();
+    const x = new Widget(local);
+    return x.value;
+}
+";
+        let (lang, q) = refs_query_for("a.ts").unwrap();
+        let refs = extract_references(lang, q, src).expect("ts has a query");
+        assert!(refs.contains(&"targetFn".to_string()), "got {refs:?}");
+        assert!(refs.contains(&"methodName".to_string()), "got {refs:?}");
+        assert!(refs.contains(&"Widget".to_string()), "got {refs:?}");
+        assert!(
+            !refs.contains(&"local".to_string()),
+            "local var should not be a ref; got {refs:?}"
+        );
+        assert!(
+            !refs.contains(&"caller".to_string()),
+            "caller is a def, not a ref; got {refs:?}"
+        );
+    }
+
+    #[test]
+    fn typescript_tsx_alias_uses_same_query() {
+        // .tsx routes to TypeScript; same call_expression shape; same
+        // refs. (TypeScript grammar accepts JSX syntax natively.)
+        let src = "
+function caller(): JSX.Element {
+    targetFn();
+    return <Widget />;
+}
+";
+        let (lang, q) = refs_query_for("a.tsx").unwrap();
+        let refs = extract_references(lang, q, src).expect("tsx has a query");
+        // JSX `<Widget />` isn't a call_expression; only `targetFn()` is.
+        // This pins the boundary: agents using TSX get function call
+        // refs but not JSX element refs (which would be a v1.1 surface
+        // anyway — closure-walking a React component's JSX is a
+        // bigger question).
+        assert!(refs.contains(&"targetFn".to_string()));
+    }
+
+    #[test]
     fn references_for_path_falls_back_to_regex_on_unknown_lang() {
         // .lua is not in our supported set; the fallback regex
         // tokenizer should return identifier-shaped tokens.
