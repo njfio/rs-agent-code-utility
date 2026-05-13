@@ -7,6 +7,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.27] - 2026-05-13
+
+**Tags.scm precision upgrade.** Outline + closure walker now use
+tree-sitter's `@reference.*` query captures instead of the regex
+identifier tokenizer for Rust/Python/Go/Ruby. Eliminates false-positive
+deps from local variables that shadow def names, identifier mentions in
+comments, and trait/type-position identifiers that aren't call sites.
+
+### Concrete precision win
+
+The new `closure_walker_excludes_local_shadowing_a_def_name` integration
+test seeds:
+
+```rust
+// hub.rs
+pub fn real_callee(id: u32) -> u32 { id + 1 }
+pub fn decoy_target(id: u32) -> u32 { id + 2 }
+
+// caller.rs — `decoy_target` is a LOCAL, not a call site
+pub fn caller(x: u32) -> u32 {
+    let decoy_target = x.saturating_add(10);  // ← regex would surface this
+    real_callee(decoy_target)                  // ← only this is a real call
+}
+```
+
+Pre-alpha.27: `Index.ReadSymbol(caller, include_dependencies=true)` returned
+`[real_callee, decoy_target]` — the local variable bleed-through.
+
+Post-alpha.27: returns `[real_callee]` only — tree-sitter's
+`@reference.call` capture sees only the actual call expression. The
+local binding `let decoy_target = ...` is correctly ignored.
+
+The win compounds across the closure walker (cleaner agent-facing
+`dependencies` lists) and PageRank-driven outline (files that *call*
+a symbol now outrank files that just *mention* it).
+
+### Scope (v0)
+
+AST-precise reference extraction is wired for **Rust, Python, Go, Ruby**
+— the four languages whose upstream `tree-sitter-*/queries/tags.scm`
+ships clean `@reference.call` (and `@reference.implementation` for Rust)
+captures with `@name` sub-captures.
+
+For **C, C++, Java, JavaScript, TypeScript, PHP, Swift**, upstream
+tags.scm either omits `@reference.*` captures or uses different
+conventions. Those fall through to the existing regex tokenizer —
+**no regression** vs alpha.26. A v1.1 slice adds locally-authored
+query overrides for the remaining languages once a concrete user
+asks.
+
+### Added
+
+- **`crates/rts-daemon/src/refs.rs`** (new):
+  `references_for_path(rel_path, content)` → `Vec<String>` dispatcher,
+  `extract_references(language, content)` core that runs a per-language
+  tags.scm-derived query via `rust_tree_sitter::query::Query`. Inlined
+  query strings (Rust/Python/Go/Ruby) sourced verbatim from upstream
+  tags.scm `@reference.*` blocks. 6 unit tests covering Rust call
+  sites + macros + method calls, Python calls, fallback for unknown
+  extensions, fallback for unsupported-but-recognised languages.
+- **`crates/rts-daemon/tests/closure_precision.rs`** (new): end-to-end
+  integration test asserting the local-variable false positive is
+  dropped. Pins the precision contract — if a future regression makes
+  the closure walker re-surface local-name shadows, this test catches
+  it.
+
+### Changed
+
+- **`crates/rts-daemon/src/closure.rs::compute`** now calls
+  `refs::references_for_path(&anchor.file, anchor_body)` instead of
+  `outline::extract_identifiers(anchor_body)`. The path-driven
+  dispatcher picks tags.scm or regex per file extension; the closure
+  walker doesn't need to know which.
+- **`crates/rts-daemon/src/outline.rs::compute`** does the same swap
+  in the file-level reference loop. PageRank edges now weight call
+  sites, not text-occurring identifiers.
+
+### Not in this slice
+
+- **JS/TS reference queries.** Upstream tags.scm for both doesn't
+  ship `@reference.*` captures; we'd need to author them locally.
+  Worth doing when there's a user asking. v1.1.
+- **C/C++/Java/PHP/Swift reference queries.** Same — upstream
+  conventions vary; defer until concrete need.
+- **Closure walker `mentioned_idents` personalization.** The
+  closure walker's input `anchor_body` is parsed in isolation; we
+  don't yet exploit the cross-file PageRank ranks in dep ordering.
+  v1.1.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **517 passed, 0 failed, 3 ignored** (was
+  510 in alpha.26; +6 unit tests + 1 integration).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new hits on changed
+  files (after one local fix: `c.name().as_deref()` → `c.name()`).
+- Manual: existing `outline_round_trip` + `closure_round_trip` +
+  `fuzzy_and_at_round_trip` tests all green; new `closure_precision`
+  test passes locally.
+
 ## [0.2.0-alpha.26] - 2026-05-13
 
 **Daemon CLI mode ships.** Closes the dogfooding-gap for callers that
