@@ -32,13 +32,29 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use notify::{EventKind, RecommendedWatcher, RecursiveMode};
-use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
+use notify::{Config as NotifyConfig, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode};
+use notify_debouncer_full::{
+    DebounceEventResult, Debouncer, RecommendedCache, new_debouncer, new_debouncer_opt,
+};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
 use crate::filter::{FilterDecision, PrebuiltGitignore, classify};
 use crate::state::{DaemonState, WatcherStatus};
+
+/// Env var that forces the watcher to start with `PollWatcher` from the
+/// outset. Set this on hosts where inotify is exhausted by other tools
+/// or where the workspace is on a filesystem that doesn't support
+/// inotify (NFS, FUSE under some configurations). Dynamic mid-lifetime
+/// cutover when `MaxFilesWatch` fires at runtime is a v1.x improvement;
+/// this env var is the v0 escape hatch.
+pub const FORCE_POLL_ENV: &str = "RTS_FORCE_POLL_WATCHER";
+
+/// Default poll interval for `PollWatcher` when forced via the env var.
+/// 750 ms matches the same range as `notify`'s default poll cadence and
+/// keeps the trade-off explicit: poll mode trades event latency for
+/// resilience against inotify limits.
+const POLL_INTERVAL: Duration = Duration::from_millis(750);
 
 /// Default debounce window per protocol-v0 §9.3 / P0.3 spike (`first batch
 /// latency ~94-188 ms` measured at 150 ms).
@@ -70,6 +86,14 @@ pub enum WatchEvent {
     Rescan,
 }
 
+/// Backing debouncer kind. Either the platform's `RecommendedWatcher`
+/// (inotify/FSEvents/ReadDirectoryChangesW) or `PollWatcher` for hosts
+/// where the kernel watcher is unavailable or exhausted.
+enum DebouncerHandle {
+    Recommended(Debouncer<RecommendedWatcher, RecommendedCache>),
+    Polling(Debouncer<PollWatcher, RecommendedCache>),
+}
+
 /// Running watcher handle. Drop it to stop watching.
 ///
 /// The internal debouncer is held in a field so its background thread isn't
@@ -77,8 +101,9 @@ pub enum WatchEvent {
 /// returned alongside `Watcher::start`; only one consumer is supported.
 pub struct Watcher {
     /// Hold the debouncer alive. `notify-debouncer-full` runs its own thread;
-    /// dropping this stops the watcher.
-    _debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
+    /// dropping the variant stops the underlying watcher. Variant is decided
+    /// at `Watcher::start` time based on `RTS_FORCE_POLL_WATCHER`.
+    _debouncer: DebouncerHandle,
     /// Workspace root for path-rebasing in log messages.
     root: PathBuf,
 }
@@ -118,40 +143,73 @@ impl Watcher {
         let state_for_handler = state.clone();
         let gitignore_for_handler = gitignore.clone();
         let root_for_handler = root.to_path_buf();
-        let debouncer =
-            new_debouncer(
+        let event_handler = move |res: DebounceEventResult| match res {
+            Ok(events) => {
+                handle_batch(
+                    events,
+                    &gitignore_for_handler,
+                    &root_for_handler,
+                    &tx_for_handler,
+                    &state_for_handler,
+                );
+            }
+            Err(errs) => {
+                for e in errs {
+                    warn!(error = %e, "notify watcher error");
+                    if let notify::ErrorKind::MaxFilesWatch = e.kind {
+                        // v0: surface the status but don't auto-cut-over.
+                        // Operators set `RTS_FORCE_POLL_WATCHER=1` and
+                        // restart the daemon. Dynamic mid-lifetime
+                        // swap-in is a v1.x improvement — the debouncer
+                        // holds references on its worker thread that
+                        // make in-place replacement fragile.
+                        state_for_handler.set_watcher_status(WatcherStatus::PollingFallback);
+                    }
+                }
+            }
+        };
+
+        // Branch on the force-poll env var. We accept anything other than
+        // empty / "0" / "false" as "yes, use polling" so users don't have
+        // to remember an exact spelling.
+        let force_poll = std::env::var(FORCE_POLL_ENV)
+            .ok()
+            .map(|v| !matches!(v.as_str(), "" | "0" | "false" | "FALSE"))
+            .unwrap_or(false);
+
+        let debouncer = if force_poll {
+            info!(
+                "RTS_FORCE_POLL_WATCHER set; starting with PollWatcher (interval={:?})",
+                POLL_INTERVAL
+            );
+            state.set_watcher_status(WatcherStatus::PollingFallback);
+            let mut deb = new_debouncer_opt::<_, PollWatcher, _>(
                 DEBOUNCE_WINDOW,
                 None,
-                move |res: DebounceEventResult| match res {
-                    Ok(events) => {
-                        handle_batch(
-                            events,
-                            &gitignore_for_handler,
-                            &root_for_handler,
-                            &tx_for_handler,
-                            &state_for_handler,
-                        );
-                    }
-                    Err(errs) => {
-                        for e in errs {
-                            warn!(error = %e, "notify watcher error");
-                            if let notify::ErrorKind::MaxFilesWatch = e.kind {
-                                state_for_handler
-                                    .set_watcher_status(WatcherStatus::PollingFallback);
-                            }
-                        }
-                    }
-                },
+                event_handler,
+                RecommendedCache::new(),
+                NotifyConfig::default().with_poll_interval(POLL_INTERVAL),
             )
-            .map_err(|e| std::io::Error::other(format!("new_debouncer: {e}")))?;
+            .map_err(|e| std::io::Error::other(format!("new_debouncer_opt(poll): {e}")))?;
+            deb.watch(root, RecursiveMode::Recursive)
+                .map_err(|e| std::io::Error::other(format!("debouncer.watch(poll): {e}")))?;
+            DebouncerHandle::Polling(deb)
+        } else {
+            let mut deb = new_debouncer(DEBOUNCE_WINDOW, None, event_handler)
+                .map_err(|e| std::io::Error::other(format!("new_debouncer: {e}")))?;
+            deb.watch(root, RecursiveMode::Recursive)
+                .map_err(|e| std::io::Error::other(format!("debouncer.watch: {e}")))?;
+            // Only flip to Ok on the recommended path — the polling path
+            // already flipped to PollingFallback above.
+            state.set_watcher_status(WatcherStatus::Ok);
+            DebouncerHandle::Recommended(deb)
+        };
 
-        let mut debouncer = debouncer;
-        debouncer
-            .watch(root, RecursiveMode::Recursive)
-            .map_err(|e| std::io::Error::other(format!("debouncer.watch: {e}")))?;
-
-        state.set_watcher_status(WatcherStatus::Ok);
-        info!(root = %root.display(), "watcher started");
+        info!(
+            root = %root.display(),
+            force_poll,
+            "watcher started"
+        );
 
         Ok((
             Watcher {
@@ -177,6 +235,33 @@ fn initial_walk(
     tx: &mpsc::Sender<WatchEvent>,
     state: &Arc<DaemonState>,
 ) -> std::io::Result<()> {
+    let emitted = walk_and_emit(root, gitignore, tx, Some(state))?;
+    debug!(emitted, "initial walk done");
+    Ok(())
+}
+
+/// Walk `root` once with the v0 filter chain (gitignore + `.rtsignore` +
+/// secrets blocklist + extension allowlist) and emit one `WatchEvent::Touched`
+/// per surviving file. Returns the number of files emitted.
+///
+/// Used for both the cold initial walk (`initial_walk`) and the rescan
+/// re-walk fired when the kernel watch buffer overflows (`rescan_walk`).
+/// Sharing the walker keeps the filter behaviour identical across the two
+/// code paths — without this, an overflow rewalk could see a different
+/// file set than the original walk, which is exactly the kind of silent
+/// inconsistency the rescan flow is meant to prevent.
+///
+/// `state_for_backpressure` is the bridge into the writer-overflow signal:
+/// when present, an mpsc-full failure flips `WatcherStatus` and bails
+/// early so the consumer can catch up. `None` lets callers (notably the
+/// rescan path) opt out — the rescan caller surfaces backpressure
+/// differently because the writer drained recently.
+pub(crate) fn walk_and_emit(
+    root: &Path,
+    gitignore: &PrebuiltGitignore,
+    tx: &mpsc::Sender<WatchEvent>,
+    state_for_backpressure: Option<&Arc<DaemonState>>,
+) -> std::io::Result<u64> {
     let walker = ignore::WalkBuilder::new(root)
         .standard_filters(true)
         .git_ignore(true)
@@ -192,7 +277,7 @@ fn initial_walk(
         let entry = match entry {
             Ok(e) => e,
             Err(e) => {
-                warn!(error = %e, "initial walk error; continuing");
+                warn!(error = %e, "walk error; continuing");
                 continue;
             }
         };
@@ -203,10 +288,10 @@ fn initial_walk(
         let decision = classify(&path, gitignore);
         match decision {
             FilterDecision::IndexFull | FilterDecision::IndexSignatureOnly => {
-                // try_send: never block on the initial walk. If the channel
-                // fills (consumer is slow / not yet attached), drop events
-                // and rely on the consumer to do a fresh walk on attach. The
-                // watcher's overall `WatcherStatus` covers this.
+                // try_send: never block. If the channel fills (consumer is
+                // slow / not yet attached / already mid-rescan), drop the
+                // event and bail. The caller's `state_for_backpressure` is
+                // the place we surface the overflow status.
                 if tx
                     .try_send(WatchEvent::Touched {
                         path: path.clone(),
@@ -214,16 +299,17 @@ fn initial_walk(
                     })
                     .is_err()
                 {
-                    state.set_watcher_status(WatcherStatus::OverflowedRewalking);
-                    return Ok(()); // bail out of walk; consumer will catch up via rewalk
+                    if let Some(state) = state_for_backpressure {
+                        state.set_watcher_status(WatcherStatus::OverflowedRewalking);
+                    }
+                    return Ok(emitted);
                 }
                 emitted += 1;
             }
             FilterDecision::Skip(_) => {}
         }
     }
-    debug!(emitted, "initial walk done");
-    Ok(())
+    Ok(emitted)
 }
 
 fn handle_batch(

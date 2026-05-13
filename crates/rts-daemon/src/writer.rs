@@ -132,10 +132,48 @@ async fn run(
                         }
                     }
                     Some(WatchEvent::Rescan) => {
-                        // Surface to status; the actual rewalk is the watcher's
-                        // job. We currently just log; the writer's redb state is
-                        // self-consistent as soon as the watcher catches up.
-                        info!("writer received rescan signal");
+                        // Kernel watch buffer overflowed; index state may be
+                        // stale. Drain the current batch first so we don't
+                        // mix pre-overflow events with the rewalk's results,
+                        // then run a fresh walk + orphan detection against
+                        // the store. This is the recovery path P6 ships.
+                        info!("writer received rescan signal; running re-walk");
+                        let _ = flush(
+                            &store,
+                            &state,
+                            &parsers,
+                            &workspace_root,
+                            &mut upserts,
+                            &mut removals,
+                            Durability::Immediate,
+                        );
+                        match rescan_and_reconcile(
+                            &workspace_root,
+                            &store,
+                            &mut upserts,
+                            &mut removals,
+                        ) {
+                            Ok(stats) => info!(
+                                target: "rts_daemon::writer",
+                                touched = stats.touched,
+                                orphans = stats.orphans,
+                                "rescan reconciled with on-disk truth"
+                            ),
+                            Err(e) => warn!(error = %e, "rescan reconciliation failed"),
+                        }
+                        // Force a flush so the post-rescan state lands
+                        // durably and the watcher_status flip back to Ok
+                        // reflects committed truth.
+                        let _ = flush(
+                            &store,
+                            &state,
+                            &parsers,
+                            &workspace_root,
+                            &mut upserts,
+                            &mut removals,
+                            Durability::Immediate,
+                        );
+                        state.set_watcher_status(crate::state::WatcherStatus::Ok);
                     }
                     None => {
                         // Channel closed.
@@ -192,9 +230,24 @@ fn flush(
         return Ok(());
     }
 
-    let mut batch: Vec<FileBatchEntry> = Vec::with_capacity(upserts.len());
-    for (path, _) in upserts.drain() {
-        match parse_and_extract(parsers, workspace_root, &path) {
+    // Fan parses out across rayon's pool. The parse step is the heavy
+    // work in a flush (tree-sitter parse + symbol extraction +
+    // tempfile-driven analyzer call), and `ParserPool::parse_and_extract`
+    // is safe to call concurrently — the per-language parser cache
+    // entry is short-locked just to seed-if-vacant, and the actual
+    // parse uses a fresh local `CodebaseAnalyzer` per call.
+    use rayon::prelude::*;
+    let paths: Vec<PathBuf> = upserts.drain().map(|(p, _)| p).collect();
+    let results: Vec<(PathBuf, Result<FileBatchEntry, ParseRejected>)> = paths
+        .into_par_iter()
+        .map(|p| {
+            let r = parse_and_extract(parsers, workspace_root, &p);
+            (p, r)
+        })
+        .collect();
+    let mut batch: Vec<FileBatchEntry> = Vec::with_capacity(results.len());
+    for (path, result) in results {
+        match result {
             Ok(entry) => batch.push(entry),
             Err(ParseRejected::IoMissing) => {
                 // File vanished between event and parse. Treat as removal.
@@ -205,9 +258,22 @@ fn flush(
             }
         }
     }
+    // The store keys files by workspace-relative paths (upserts go
+    // through parse_and_extract which strips the prefix). Watcher
+    // events ship absolute paths, and our in-process queues key by
+    // absolute. Rebase here so the store lookup actually finds the
+    // file. Caught by the P6 integration test on alpha.25 — prior to
+    // the test the delete path was silently a no-op for the
+    // absolute-vs-relative mismatch.
     let removal_vec: Vec<FileBatchRemoval> = removals
         .drain()
-        .map(|(path, _)| FileBatchRemoval { path })
+        .map(|(path, _)| {
+            let rel = path
+                .strip_prefix(workspace_root)
+                .map(|p| p.to_path_buf())
+                .unwrap_or(path);
+            FileBatchRemoval { path: rel }
+        })
         .collect();
 
     let upserted = store.commit_batch(batch, removal_vec, durability)?;
@@ -217,6 +283,101 @@ fn flush(
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
     Ok(())
+}
+
+/// Summary of one rescan reconciliation pass. Surfaced in tracing so
+/// operators reviewing overflow incidents can see whether the rewalk
+/// found churn or just confirmed quiet.
+#[derive(Debug, Default)]
+struct RescanStats {
+    /// Number of on-disk files queued for re-parse.
+    touched: u64,
+    /// Number of indexed files that no longer exist on disk (orphans
+    /// from the overflow window).
+    orphans: u64,
+}
+
+/// Re-walk the workspace, queue every on-disk file as a `Touched`-style
+/// upsert, and queue index-resident files that no longer exist on disk
+/// as removals. Called from the writer's `WatchEvent::Rescan` arm.
+///
+/// This is the correctness backbone of P6 watcher hardening: when the
+/// kernel watch buffer overflows during a `git checkout` storm, we
+/// can't trust the event stream alone — files may have been created,
+/// modified, or deleted while events were being dropped. The rewalk
+/// reconciles the index against on-disk truth.
+fn rescan_and_reconcile(
+    workspace_root: &Path,
+    store: &Arc<Store>,
+    upserts: &mut HashMap<PathBuf, ()>,
+    removals: &mut HashMap<PathBuf, ()>,
+) -> anyhow::Result<RescanStats> {
+    let gitignore = crate::filter::PrebuiltGitignore::build(workspace_root)
+        .map_err(|e| anyhow::anyhow!("rebuild gitignore: {e}"))?;
+
+    // Walk the workspace once and collect the *current* set of paths
+    // that pass the v0 filter. We use the same WalkBuilder shape as
+    // the initial walk so behaviour stays identical.
+    let mut on_disk: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+    let walker = ignore::WalkBuilder::new(workspace_root)
+        .standard_filters(true)
+        .git_ignore(true)
+        .git_global(true)
+        .git_exclude(true)
+        .ignore(true)
+        .add_custom_ignore_filename(".rtsignore")
+        .follow_links(false)
+        .build();
+    let mut touched_count: u64 = 0;
+    for entry in walker {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                warn!(error = %e, "rescan walk error; continuing");
+                continue;
+            }
+        };
+        if !entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+            continue;
+        }
+        let path = entry.into_path();
+        match crate::filter::classify(&path, &gitignore) {
+            crate::filter::FilterDecision::IndexFull
+            | crate::filter::FilterDecision::IndexSignatureOnly => {
+                on_disk.insert(path.clone());
+                // Removal supersession: if a path was queued for removal
+                // before the rescan but re-appeared, the rescan wins.
+                removals.remove(&path);
+                upserts.insert(path, ());
+                touched_count = touched_count.saturating_add(1);
+            }
+            crate::filter::FilterDecision::Skip(_) => {}
+        }
+    }
+
+    // Orphan detection: anything in the store that's no longer on disk
+    // (per the walk above) is queued for removal. `list_files_with_defs`
+    // returns workspace-relative paths; we rebase to absolute for the
+    // store comparison.
+    let indexed = store
+        .list_files_with_defs()
+        .map_err(|e| anyhow::anyhow!("list_files_with_defs: {e:#}"))?;
+    let mut orphan_count: u64 = 0;
+    for f in &indexed {
+        let abs = workspace_root.join(&f.path);
+        if !on_disk.contains(&abs) {
+            // Don't override an upsert that came in during the rescan
+            // itself — that would be a race we can't recover from.
+            upserts.remove(&abs);
+            removals.insert(abs, ());
+            orphan_count = orphan_count.saturating_add(1);
+        }
+    }
+
+    Ok(RescanStats {
+        touched: touched_count,
+        orphans: orphan_count,
+    })
 }
 
 #[derive(Debug)]
@@ -611,5 +772,115 @@ mod tests {
         // Line 3 starts at byte 8; col 3 → byte 11.
         assert_eq!(start, 5);
         assert_eq!(end, 11);
+    }
+
+    /// Build a store seeded with one indexed file. Returns (store, root).
+    /// The seeded file is `seeded.rs` with a `pub fn seeded()` symbol.
+    fn seed_store_with_one_file() -> (Arc<Store>, tempfile::TempDir) {
+        let tmp = tempfile::tempdir().unwrap();
+        let state_dir = tempfile::tempdir().unwrap();
+        // Drop state_dir on store-builder return; redb file already opened.
+        let _ = state_dir;
+
+        std::fs::write(
+            tmp.path().join("seeded.rs"),
+            "pub fn seeded() -> u32 { 1 }\n",
+        )
+        .unwrap();
+
+        // Open a fresh store (not on disk in any tracked location — just
+        // a tempfile for the redb file).
+        let db_path = tmp.path().join("_index").join("db.redb");
+        std::fs::create_dir_all(db_path.parent().unwrap()).unwrap();
+        let store = Arc::new(Store::open(&db_path).unwrap());
+
+        // Seed via parse_and_extract + commit_batch, mirroring the
+        // writer's normal flow.
+        let parsers = ParserPool::new();
+        let abs = tmp.path().join("seeded.rs");
+        let entry = parse_and_extract(&parsers, tmp.path(), &abs).expect("parse seed");
+        store
+            .commit_batch(vec![entry], vec![], redb::Durability::Immediate)
+            .expect("commit seed");
+        (store, tmp)
+    }
+
+    #[test]
+    fn rescan_queues_orphan_for_removal_when_file_vanishes() {
+        let (store, tmp) = seed_store_with_one_file();
+        // Sanity: the seeded symbol is queryable.
+        assert!(
+            !store.find_symbol("seeded").unwrap().is_empty(),
+            "seed should be in the store"
+        );
+
+        // Make the file disappear. The watcher didn't see it (we never
+        // started one); the rescan path is responsible for catching up.
+        std::fs::remove_file(tmp.path().join("seeded.rs")).unwrap();
+
+        let mut upserts: HashMap<PathBuf, ()> = HashMap::new();
+        let mut removals: HashMap<PathBuf, ()> = HashMap::new();
+        let stats = rescan_and_reconcile(tmp.path(), &store, &mut upserts, &mut removals)
+            .expect("reconcile");
+
+        assert_eq!(stats.touched, 0, "no on-disk files left");
+        assert_eq!(stats.orphans, 1, "the vanished file should be one orphan");
+        assert_eq!(removals.len(), 1, "removals should have the orphan path");
+        assert!(
+            upserts.is_empty(),
+            "no upserts when there are no on-disk files"
+        );
+    }
+
+    #[test]
+    fn rescan_picks_up_new_files_added_outside_event_stream() {
+        let (store, tmp) = seed_store_with_one_file();
+        // A file that arrived while we were "deaf" to events.
+        std::fs::write(
+            tmp.path().join("late.rs"),
+            "pub fn arrived_late() -> u32 { 7 }\n",
+        )
+        .unwrap();
+
+        let mut upserts: HashMap<PathBuf, ()> = HashMap::new();
+        let mut removals: HashMap<PathBuf, ()> = HashMap::new();
+        let stats = rescan_and_reconcile(tmp.path(), &store, &mut upserts, &mut removals)
+            .expect("reconcile");
+
+        // Both files are present, neither orphaned.
+        assert_eq!(stats.touched, 2, "two on-disk files now");
+        assert_eq!(stats.orphans, 0);
+        assert_eq!(upserts.len(), 2);
+        assert!(removals.is_empty());
+        // Both absolute paths should be queued.
+        let queued_basenames: std::collections::HashSet<_> = upserts
+            .keys()
+            .map(|p| p.file_name().unwrap().to_owned())
+            .collect();
+        assert!(queued_basenames.contains(std::ffi::OsStr::new("seeded.rs")));
+        assert!(queued_basenames.contains(std::ffi::OsStr::new("late.rs")));
+    }
+
+    #[test]
+    fn rescan_supersedes_pending_removal_when_file_reappears() {
+        let (store, tmp) = seed_store_with_one_file();
+
+        // Pre-queue a removal (as if some event said "seeded.rs is gone"),
+        // then run the rescan. The file is *still on disk*, so the
+        // rescan should win and the removal should be cleared.
+        let abs_seeded = tmp.path().join("seeded.rs");
+        let mut upserts: HashMap<PathBuf, ()> = HashMap::new();
+        let mut removals: HashMap<PathBuf, ()> = HashMap::new();
+        removals.insert(abs_seeded.clone(), ());
+
+        let stats = rescan_and_reconcile(tmp.path(), &store, &mut upserts, &mut removals)
+            .expect("reconcile");
+        assert_eq!(stats.touched, 1);
+        assert_eq!(stats.orphans, 0);
+        assert!(
+            !removals.contains_key(&abs_seeded),
+            "stale removal should be cleared by the rescan upsert; got {removals:?}"
+        );
+        assert!(upserts.contains_key(&abs_seeded));
     }
 }

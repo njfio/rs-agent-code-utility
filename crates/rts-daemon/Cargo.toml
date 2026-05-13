@@ -66,6 +66,12 @@ dirs = "5"
 # macOS path NFC normalisation (per protocol-v0.md §5.1)
 unicode-normalization = "0.1"
 
+# Parallel parse fan-out in the writer's flush hot path. tree-sitter `Parser`
+# isn't `Sync`, but our `ParserPool::parse_and_extract` uses a fresh local
+# `CodebaseAnalyzer` per call — the parser-pool lock just seeds an unused
+# cache entry, so the heavy work runs concurrently.
+rayon = "1"
+
 tempfile = "3"
 
 [dev-dependencies]
