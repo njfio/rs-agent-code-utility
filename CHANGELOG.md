@@ -7,6 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.22] - 2026-05-13
+
+**`Index.ReadSymbol` closure walker ships.** The `include_dependencies: true`
+field on protocol-v0 §7.7 is no longer accepted-and-inert — agents now get
+a transitive dep slice in one round trip instead of N follow-up
+`Index.FindSymbol` + `Index.ReadSymbol` calls.
+
+### What this unlocks
+
+Concrete agent loop before this slice:
+```
+ReadSymbol(name="process")        → text of process()
+FindSymbol(name="make_widget")    → 1 match
+ReadSymbol(name="make_widget", shape="signature")
+FindSymbol(name="format_widget")  → 1 match
+ReadSymbol(name="format_widget", shape="signature")
+```
+Five round trips. After this slice:
+```
+ReadSymbol(name="process", include_dependencies=true)
+  → text of process() + signatures of make_widget + format_widget
+```
+One round trip. Each saved round trip is ~80µs of MCP overhead + a
+context-window snapshot for the agent's tool-call/result pair.
+
+### Scope (v0)
+
+- **Depth 1.** Identifier-shaped tokens in the anchor body are filtered
+  against the workspace-wide def name set (via `Store::all_defined_names`)
+  and surfaced as one entry per unique referenced symbol. We do NOT
+  recursively walk each dep's body — agents that want depth > 1 can
+  re-call `Index.ReadSymbol` on each entry.
+- **First-match disambiguation.** Same policy as the anchor path:
+  lowest `(file, start_byte)` wins. The anchor's own def is filtered
+  out so a recursive function doesn't surface itself.
+- **Budget-aware.** Caller passes `token_budget`; the body fills first
+  (always the priority), the closure fills the remainder. Greedy-pack
+  by ascending dep-cost — 20 short signature deps beat 3 full-bodied
+  ones for agent utility. Anything that didn't fit surfaces in
+  `truncated_symbols` and flips `closure_truncated: true`.
+- **All 11 SignatureRenderer languages.** The walker reuses
+  `methods::index::render_signature_for_path`, so deps in Rust, Python,
+  TS/JS, Go, Java, C, C++, PHP, Ruby, and Swift all get rendered
+  signatures (or `signature: null` on parse failure).
+
+Push-flow PageRank locality, multi-hop closures, and full type-graph
+walking are deferred to v1.1. The current depth-1 surface is what the
+plan calls "tree-shaken closure" — sufficient for the §P9 baseline
+tasks (`get_body`, `find_callers`, `summarize_module`).
+
+### Added
+
+- **`crates/rts-daemon/src/closure.rs`** (new): `DependencyEntry`
+  + `ClosureResult` + `compute()` orchestrator + `to_wire_value()`
+  renderer. 4 unit tests covering empty result, cost calculation,
+  wire shape, and identifier extraction.
+- **`crates/rts-daemon/tests/closure_round_trip.rs`** (new): hub-spoke
+  integration test that asserts (a) bare `Index.ReadSymbol` keeps
+  `dependencies: []` and `closure_truncated: false`, (b) with
+  `include_dependencies: true` both hub functions surface with their
+  rendered signatures, (c) wire fields (`qualified_name`, `kind`,
+  `file`, `range`, `signature`) are all present, and (d) squeezing
+  the budget triggers `closure_truncated`.
+
+### Changed
+
+- **`crates/rts-daemon/src/outline.rs`**: `extract_identifiers` is now
+  `pub(crate)` so the closure walker can share the same identifier
+  tokenizer outline uses for its PageRank graph — keeps the heuristic
+  consistent across surfaces.
+- **`crates/rts-daemon/src/methods/mod.rs`**: `mod index` is now
+  `pub(crate)` so the closure walker can call
+  `render_signature_for_path`. The function itself is also
+  `pub(crate)`.
+- **`crates/rts-daemon/src/methods/index.rs::read_symbol`**: when
+  `include_dependencies: true`, the handler now spawns a blocking
+  task that runs `closure::compute()` after the anchor body is read,
+  then merges the result into the wire response. `tokens_returned`
+  sums anchor body tokens plus closure tokens. `truncated_symbols`
+  surfaces both ambiguous-anchor extras and budget-dropped deps.
+
+### Not in this slice
+
+- Multi-hop closure walking (depth > 1) — v1.1.
+- Type-graph navigation (struct field types, return types) — v1.1.
+- Push-flow incremental closure updates — v1.1.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **491 passed, 0 failed, 3 ignored** (was
+  486; +4 closure unit tests + 1 integration test).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no warnings on changed
+  files (`closure.rs`, `methods/mod.rs`, `methods/index.rs`,
+  `outline.rs`, `main.rs`).
+
 ## [0.2.0-alpha.21] - 2026-05-12
 
 **Footprint bench (S3) ships.** Companion to alpha.19's S1 latency bench;

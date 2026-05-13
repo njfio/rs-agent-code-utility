@@ -433,8 +433,10 @@ pub async fn read_range(
 ///
 /// v0 ships `shape: "body"` (default). `signature`/`both` accept the param but
 /// only return what the body slice carries until the P8 `SignatureRenderer`
-/// lands. `include_dependencies` is accepted-and-inert (P8 closure walker is
-/// what would populate it).
+/// lands. `include_dependencies` walks the anchor's body for known def names
+/// and surfaces each as a `{qualified_name, kind, file, range, signature}`
+/// entry under `dependencies`; the walk is depth-1 and budget-aware. See
+/// `crate::closure` for the rationale + scope.
 ///
 /// Disambiguation policy: when multiple defs match (and no `file`/`kind`
 /// filter pins them), the daemon returns the first match plus
@@ -459,7 +461,7 @@ pub async fn read_symbol(
             "`shape` must be one of body, signature, both",
         ));
     }
-    let _ = p.include_dependencies; // v1: closure walker, deferred to P8
+    let include_deps = p.include_dependencies;
     let budget = check_budget(p.token_budget)?;
 
     let (root, store_arc) = snapshot(state)?;
@@ -541,7 +543,7 @@ pub async fn read_symbol(
     let budget_bytes = budget.saturating_mul(3) as usize;
     let (text_kept, budget_truncated) = truncate_utf8(text_kept, budget_bytes);
     let body_truncated = byte_truncated || budget_truncated;
-    let tokens_returned = approx_tokens(text_kept.len());
+    let body_tokens = approx_tokens(text_kept.len());
 
     let cv = content_version(
         &bytes,
@@ -553,6 +555,49 @@ pub async fn read_symbol(
         Some(s) => Value::String(s),
         None => Value::Null,
     };
+
+    // Closure walk (when requested). The walker reads each dep's
+    // body from disk for signature rendering, so we delegate to a
+    // blocking task. The budget passed in is what's left after the
+    // anchor body's tokens are spent — body always wins, deps fill
+    // the remainder, and `closure_truncated` fires if any didn't fit.
+    let (deps_value, closure_truncated, deps_truncated_names, dep_tokens) = if include_deps {
+        let remaining_budget = budget.saturating_sub(body_tokens);
+        let root_owned = root.clone();
+        let store_arc = store_arc.clone();
+        let chosen_clone = chosen.clone();
+        let body_owned = body_text.to_string();
+        let walk = tokio::task::spawn_blocking(move || {
+            crate::closure::compute(
+                &root_owned,
+                &store_arc,
+                &chosen_clone,
+                &body_owned,
+                remaining_budget,
+            )
+        })
+        .await
+        .map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("closure join error: {e}"))
+        })?;
+        let value = crate::closure::to_wire_value(&walk.dependencies);
+        (
+            value,
+            walk.closure_truncated,
+            walk.truncated_symbols,
+            walk.tokens_used,
+        )
+    } else {
+        (serde_json::Value::Array(vec![]), false, Vec::new(), 0u64)
+    };
+    let tokens_returned = body_tokens.saturating_add(dep_tokens);
+
+    // `truncated_symbols` blends two sources per §7.7: ambiguous
+    // anchor matches (extra files) and closure deps that didn't fit
+    // (deps_truncated_names). Both let the agent re-request
+    // individually.
+    let mut truncated_symbols = extra;
+    truncated_symbols.extend(deps_truncated_names);
 
     Ok(serde_json::json!({
         "qualified_name": chosen.name,
@@ -571,12 +616,11 @@ pub async fn read_symbol(
         "content_version": cv,
         "tokens_returned": tokens_returned,
         "token_counter":   TOKEN_COUNTER,
-        // v0: dependency walker is P8.
-        "dependencies":      serde_json::Value::Array(vec![]),
-        "closure_truncated": false,
+        "dependencies":      deps_value,
+        "closure_truncated": closure_truncated,
         // Disambiguation surface per §7.7.
         "truncated":         ambiguous || body_truncated,
-        "truncated_symbols": extra,
+        "truncated_symbols": truncated_symbols,
     }))
 }
 
@@ -681,7 +725,11 @@ pub async fn outline(
 /// Dispatch to the right per-language signature renderer based on the
 /// file extension. Returns `None` for languages without a renderer yet —
 /// the caller falls back to the full body.
-fn render_signature_for_path(rel_path: &str, body: &[u8]) -> Option<String> {
+///
+/// `pub(crate)` so the closure walker (`crate::closure`) can render
+/// per-dep signatures without re-implementing the extension-to-renderer
+/// dispatch table.
+pub(crate) fn render_signature_for_path(rel_path: &str, body: &[u8]) -> Option<String> {
     let ext = std::path::Path::new(rel_path)
         .extension()
         .and_then(|e| e.to_str())
