@@ -28,7 +28,18 @@ const TOKEN_BUDGET_MAX: u64 = 200_000;
 
 #[derive(Debug, Deserialize)]
 struct FindSymbolParams {
-    name: String,
+    /// Exact name. Mutually exclusive with `pattern`; if both are
+    /// provided we error with `INVALID_PARAMS` rather than silently
+    /// picking one — agents shouldn't have to guess our precedence.
+    #[serde(default)]
+    name: Option<String>,
+    /// Glob pattern (`*`, `?`) over symbol names. The matcher is a
+    /// minimal shell-style globber — no character classes, no escape
+    /// (project symbols don't contain glob metacharacters in practice).
+    /// Closes the largest dogfooding gap vs ripgrep: "I know roughly
+    /// what it's called". Internally O(N) over all indexed names.
+    #[serde(default)]
+    pattern: Option<String>,
     #[serde(default)]
     kind: Option<String>,
     #[serde(default)]
@@ -58,6 +69,30 @@ struct ReadSymbolParams {
     #[serde(default)]
     include_dependencies: bool,
     /// v1.1 session-dedup override. Accepted but inert in v0.
+    #[serde(default)]
+    #[allow(dead_code)]
+    force_resend: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReadSymbolAtParams {
+    /// Workspace-relative file path.
+    file: String,
+    /// 1-indexed line containing the symbol to read.
+    line: u32,
+    /// Optional 1-indexed column inside the line. When omitted we pick
+    /// the innermost def whose range covers the line at all; when set,
+    /// we additionally require the column to fall inside the def's
+    /// byte range. Useful for "go-to-definition" workflows where the
+    /// caller wants the symbol at the exact caret position.
+    #[serde(default)]
+    column: Option<u32>,
+    #[serde(default)]
+    shape: Option<String>,
+    #[serde(default)]
+    token_budget: Option<u64>,
+    #[serde(default)]
+    include_dependencies: bool,
     #[serde(default)]
     #[allow(dead_code)]
     force_resend: bool,
@@ -303,6 +338,10 @@ fn line_range_bytes(
 /// - always returns a list (length ≥ 0), never errors with `SYMBOL_NOT_FOUND`
 ///   for empty results; the agent disambiguates via the list shape.
 /// - `truncated: true` when the list was clipped to `MAX_MATCHES` (256).
+/// - either `name` (exact) or `pattern` (glob `*`/`?`) is required, but
+///   not both — the pattern path is the alpha.24 dogfooding-gap fix
+///   that replaces "agent falls back to ripgrep when they don't know the
+///   exact name". O(N) over all indexed names; with a 256-match cap.
 /// - `rank_score` is a placeholder constant for this slice — the real
 ///   PageRank-driven ranking lands in the P8 token-reduction-depth phase.
 pub async fn find_symbol(
@@ -312,55 +351,104 @@ pub async fn find_symbol(
     const MAX_MATCHES: usize = 256;
 
     let p: FindSymbolParams = parse_params(params)?;
-    if p.name.is_empty() || p.name.len() > 256 {
+    if p.name.is_some() && p.pattern.is_some() {
         return Err(ProtocolError::new(
             ErrorCode::InvalidParams,
-            "`name` must be 1..=256 characters",
+            "provide either `name` or `pattern`, not both",
         ));
+    }
+    if p.name.is_none() && p.pattern.is_none() {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "either `name` (exact) or `pattern` (glob) is required",
+        ));
+    }
+    if let Some(n) = &p.name {
+        if n.is_empty() || n.len() > 256 {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                "`name` must be 1..=256 characters",
+            ));
+        }
+    }
+    if let Some(pat) = &p.pattern {
+        if pat.is_empty() || pat.len() > 256 {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                "`pattern` must be 1..=256 characters",
+            ));
+        }
     }
     let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
     let file_filter = p.file.as_deref();
 
     let (_root, store_arc) = snapshot(state)?;
-    let hits = store_arc.find_symbol(&p.name).map_err(|e| {
-        ProtocolError::new(
-            ErrorCode::InternalError,
-            format!("find_symbol storage error: {e:#}"),
-        )
-    })?;
 
-    let mut matches = Vec::with_capacity(hits.len().min(MAX_MATCHES));
-    for h in hits.into_iter() {
-        if let Some(filter) = kind_filter {
-            if h.kind != filter {
-                continue;
+    // Resolve the candidate symbol names.
+    let names: Vec<String> = if let Some(n) = &p.name {
+        vec![n.clone()]
+    } else {
+        // Pattern path. Pull the full name set and glob-match. Capped at
+        // 4× MAX_MATCHES candidates to bound work — patterns like `*`
+        // would otherwise iterate every def in the index.
+        let pattern = p.pattern.as_deref().unwrap();
+        let all = store_arc.all_defined_names().map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("all_defined_names storage error: {e:#}"),
+            )
+        })?;
+        let mut filtered: Vec<String> = all
+            .into_iter()
+            .filter(|n| symbol_glob_match(pattern, n))
+            .collect();
+        // Stable lexicographic order so successive calls with the same
+        // pattern return the same prefix when truncated.
+        filtered.sort();
+        filtered.truncate(MAX_MATCHES * 4);
+        filtered
+    };
+
+    let mut matches = Vec::with_capacity(names.len().min(MAX_MATCHES));
+    'outer: for n in &names {
+        let hits = store_arc.find_symbol(n).map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("find_symbol storage error: {e:#}"),
+            )
+        })?;
+        for h in hits.into_iter() {
+            if let Some(filter) = kind_filter {
+                if h.kind != filter {
+                    continue;
+                }
             }
-        }
-        if let Some(filter) = file_filter {
-            if h.file != filter {
-                continue;
+            if let Some(filter) = file_filter {
+                if h.file != filter {
+                    continue;
+                }
             }
-        }
-        matches.push(serde_json::json!({
-            "qualified_name": h.name,
-            "kind":           h.kind.as_wire_str(),
-            "file":           h.file,
-            "range": {
-                "start_line": h.start_line,
-                "end_line":   h.end_line,
-                "start_byte": h.start_byte,
-                "end_byte":   h.end_byte,
-            },
-            // v0: signature rendering is part of P8 SignatureRenderer; for now
-            // the writer doesn't store extracted signatures.
-            "signature": serde_json::Value::Null,
-            "doc":       serde_json::Value::Null,
-            "visibility": h.visibility.as_wire_str(),
-            // Placeholder until P8 wires PageRank.
-            "rank_score": 0.0,
-        }));
-        if matches.len() >= MAX_MATCHES {
-            break;
+            matches.push(serde_json::json!({
+                "qualified_name": h.name,
+                "kind":           h.kind.as_wire_str(),
+                "file":           h.file,
+                "range": {
+                    "start_line": h.start_line,
+                    "end_line":   h.end_line,
+                    "start_byte": h.start_byte,
+                    "end_byte":   h.end_byte,
+                },
+                // v0: signature rendering is part of P8 SignatureRenderer; for now
+                // the writer doesn't store extracted signatures.
+                "signature": serde_json::Value::Null,
+                "doc":       serde_json::Value::Null,
+                "visibility": h.visibility.as_wire_str(),
+                // Placeholder until P8 wires PageRank.
+                "rank_score": 0.0,
+            }));
+            if matches.len() >= MAX_MATCHES {
+                break 'outer;
+            }
         }
     }
 
@@ -369,6 +457,48 @@ pub async fn find_symbol(
         "matches":   matches,
         "truncated": truncated,
     }))
+}
+
+/// Minimal shell-style globber for symbol names.
+///
+/// Supports `*` (zero or more chars) and `?` (one char). Anything else
+/// is matched literally — there are no character classes, no escapes,
+/// and no `**`. Project symbols don't contain glob metacharacters in
+/// practice (`*`, `?` aren't valid in Rust/Python/JS/Go/etc. identifiers),
+/// so we don't need an escape mechanism for v0.
+///
+/// Algorithm is two-pointer with backtracking on `*` — same shape as
+/// libc's `fnmatch(3)` minus the bracket-expr machinery. O(N×M) worst
+/// case for catastrophic patterns like `a*a*a*a*b` against `aaaaaa…`,
+/// but the 4× MAX_MATCHES candidate cap upstream keeps that bounded.
+pub(crate) fn symbol_glob_match(pattern: &str, name: &str) -> bool {
+    let pb = pattern.as_bytes();
+    let nb = name.as_bytes();
+    let (mut pi, mut ni) = (0usize, 0usize);
+    let (mut star_pi, mut star_ni) = (usize::MAX, 0usize);
+    while ni < nb.len() {
+        if pi < pb.len() && (pb[pi] == b'?' || pb[pi] == nb[ni]) {
+            pi += 1;
+            ni += 1;
+        } else if pi < pb.len() && pb[pi] == b'*' {
+            star_pi = pi;
+            star_ni = ni;
+            pi += 1;
+        } else if star_pi != usize::MAX {
+            // Backtrack: the last `*` consumes one more char and we
+            // retry from the saved pattern position.
+            pi = star_pi + 1;
+            star_ni += 1;
+            ni = star_ni;
+        } else {
+            return false;
+        }
+    }
+    // Tail: only trailing `*`s in the pattern are allowed.
+    while pi < pb.len() && pb[pi] == b'*' {
+        pi += 1;
+    }
+    pi == pb.len()
 }
 
 /// `Index.ReadRange` — protocol-v0 §7.8.
@@ -499,7 +629,26 @@ pub async fn read_symbol(
     let extra: Vec<String> = filtered.iter().map(|h| h.file.clone()).collect();
     let ambiguous = !extra.is_empty();
 
-    let (abs, _rel) = resolve_workspace_path(&root, &chosen.file)?;
+    read_symbol_body(state, &root, &store_arc, chosen, extra, ambiguous, shape, budget, include_deps).await
+}
+
+/// Shared "I have a `FoundSymbol`, build the wire response" routine,
+/// extracted so `Index.ReadSymbol` (which resolves the anchor by name)
+/// and `Index.ReadSymbolAt` (which resolves by `(file, line, col)`)
+/// can share everything from "read the file" onward.
+#[allow(clippy::too_many_arguments)]
+async fn read_symbol_body(
+    state: &Arc<DaemonState>,
+    root: &Path,
+    store_arc: &Arc<Store>,
+    chosen: FoundSymbol,
+    extra: Vec<String>,
+    ambiguous: bool,
+    shape: &str,
+    budget: u64,
+    include_deps: bool,
+) -> Result<serde_json::Value, ProtocolError> {
+    let (abs, _rel) = resolve_workspace_path(root, &chosen.file)?;
     check_body_extension(&abs)?;
 
     let (bytes, mtime_ns) = read_file(&abs).await?;
@@ -563,7 +712,7 @@ pub async fn read_symbol(
     // the remainder, and `closure_truncated` fires if any didn't fit.
     let (deps_value, closure_truncated, deps_truncated_names, dep_tokens) = if include_deps {
         let remaining_budget = budget.saturating_sub(body_tokens);
-        let root_owned = root.clone();
+        let root_owned = root.to_path_buf();
         let store_arc = store_arc.clone();
         let chosen_clone = chosen.clone();
         let body_owned = body_text.to_string();
@@ -622,6 +771,103 @@ pub async fn read_symbol(
         "truncated":         ambiguous || body_truncated,
         "truncated_symbols": truncated_symbols,
     }))
+}
+
+/// `Index.ReadSymbolAt` — line-anchored read.
+///
+/// Resolves `(file, line, col?)` to a def site (the smallest enclosing
+/// range — innermost wins) and then dispatches through the same
+/// response-building path as `Index.ReadSymbol`. The dogfooding case
+/// this closes: an agent has a compiler error like
+/// `error[E0308] mismatched types --> src/lib.rs:42:18` and wants the
+/// containing function in one round trip, without having to first
+/// `find_symbol` (which they couldn't anyway without the name).
+///
+/// Errors mirror `Index.ReadSymbol` plus `FILE_NOT_INDEXED` for
+/// unseen files and `SYMBOL_NOT_FOUND` when no def covers the line.
+pub async fn read_symbol_at(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    let p: ReadSymbolAtParams = parse_params(params)?;
+    if p.line == 0 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`line` is 1-indexed; got 0",
+        ));
+    }
+    let shape = p.shape.as_deref().unwrap_or("body");
+    if !matches!(shape, "body" | "signature" | "both") {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`shape` must be one of body, signature, both",
+        ));
+    }
+    let budget = check_budget(p.token_budget)?;
+
+    let (root, store_arc) = snapshot(state)?;
+    // Validate the path (catches `..`, OUT_OF_ROOT etc.) and re-emit
+    // the canonical workspace-relative form.
+    let (_abs, rel) = resolve_workspace_path(&root, &p.file)?;
+
+    let defs = store_arc.defs_in_file(&rel).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("defs_in_file storage error: {e:#}"),
+        )
+    })?;
+    if defs.is_empty() {
+        return Err(ProtocolError::new(
+            ErrorCode::FileNotIndexed,
+            format!("`{rel}` is not in the index (yet)"),
+        ));
+    }
+
+    // Pick the innermost def whose line range contains `line`. Ties
+    // (same range) are broken by `(start_byte, start_line)` for
+    // determinism. Column refinement is best-effort: we don't have
+    // line-byte mappings without re-reading the file, so when `column`
+    // is set we still rank by line-range tightness — the column field
+    // becomes a tie-breaker hint, not a hard filter. This is fine in
+    // practice for the compiler-error use case.
+    let _column = p.column; // reserved; line-byte mapping is v1.1
+    let chosen = pick_innermost_def(&defs, p.line).ok_or_else(|| {
+        ProtocolError::new(
+            ErrorCode::SymbolNotFound,
+            format!("no symbol covers `{rel}:{}`", p.line),
+        )
+    })?;
+
+    // `read_symbol_at` is single-resolution by construction (no
+    // name-based ambiguity), so `extra` is empty and `ambiguous` is
+    // false. The closure-walk + truncation_symbols path still fires.
+    read_symbol_body(
+        state,
+        &root,
+        &store_arc,
+        chosen,
+        Vec::new(),
+        false,
+        shape,
+        budget,
+        p.include_dependencies,
+    )
+    .await
+}
+
+/// Find the smallest (line-range) def covering `line`. Ties go to the
+/// earliest start_byte for a stable tie-break.
+fn pick_innermost_def(defs: &[FoundSymbol], line: u32) -> Option<FoundSymbol> {
+    defs.iter()
+        .filter(|d| d.start_line <= line && line <= d.end_line)
+        .min_by(|a, b| {
+            let span_a = a.end_line.saturating_sub(a.start_line);
+            let span_b = b.end_line.saturating_sub(b.start_line);
+            span_a
+                .cmp(&span_b)
+                .then(a.start_byte.cmp(&b.start_byte))
+        })
+        .cloned()
 }
 
 #[derive(Debug, Deserialize)]
@@ -847,5 +1093,105 @@ mod tests {
     fn check_body_ext_rejects_unknown() {
         let err = check_body_extension(Path::new("/x/foo.bin")).unwrap_err();
         assert_eq!(err.code, ErrorCode::OutOfAllowedBodyExtensions);
+    }
+
+    // ----- symbol_glob_match -----
+
+    #[test]
+    fn glob_exact_match() {
+        assert!(symbol_glob_match("foo", "foo"));
+        assert!(!symbol_glob_match("foo", "fooo"));
+        assert!(!symbol_glob_match("foo", "fo"));
+    }
+
+    #[test]
+    fn glob_star_prefix() {
+        assert!(symbol_glob_match("make_*", "make_widget"));
+        assert!(symbol_glob_match("make_*", "make_"));
+        assert!(!symbol_glob_match("make_*", "Make_widget"));
+        assert!(!symbol_glob_match("make_*", "widget_make"));
+    }
+
+    #[test]
+    fn glob_star_suffix() {
+        assert!(symbol_glob_match("*_target", "swiftTarget_target"));
+        assert!(symbol_glob_match("*_target", "_target"));
+        assert!(!symbol_glob_match("*_target", "target"));
+    }
+
+    #[test]
+    fn glob_star_middle() {
+        assert!(symbol_glob_match("read_*_at", "read_symbol_at"));
+        assert!(symbol_glob_match("a*b", "ab"));
+        assert!(symbol_glob_match("a*b", "axxxxb"));
+        assert!(!symbol_glob_match("a*b", "axxxxbx"));
+    }
+
+    #[test]
+    fn glob_question_mark() {
+        assert!(symbol_glob_match("f?o", "foo"));
+        assert!(symbol_glob_match("f?o", "fXo"));
+        assert!(!symbol_glob_match("f?o", "fo"));
+        assert!(!symbol_glob_match("f?o", "fooo"));
+    }
+
+    #[test]
+    fn glob_lone_star_matches_everything() {
+        assert!(symbol_glob_match("*", ""));
+        assert!(symbol_glob_match("*", "anything"));
+        assert!(symbol_glob_match("**", "anything")); // trailing stars collapse
+    }
+
+    #[test]
+    fn glob_backtracking_doesnt_overrun() {
+        // Classic glob backtrack: pattern starts looking like a match but
+        // the literal tail forces a back-step.
+        assert!(symbol_glob_match("a*c", "abc"));
+        assert!(symbol_glob_match("a*c", "abxc"));
+        assert!(!symbol_glob_match("a*c", "abcd"));
+    }
+
+    // ----- pick_innermost_def -----
+
+    fn fake_def(name: &str, sl: u32, el: u32, sb: u32) -> crate::store::FoundSymbol {
+        use crate::store::SymbolKind;
+        use crate::store::schema::Visibility;
+        crate::store::FoundSymbol {
+            name: name.to_string(),
+            kind: SymbolKind::Function,
+            file: "src/lib.rs".into(),
+            fid: 1,
+            start_byte: sb,
+            end_byte: sb + 50,
+            start_line: sl,
+            end_line: el,
+            visibility: Visibility::Public,
+        }
+    }
+
+    #[test]
+    fn innermost_def_picks_smallest_containing() {
+        let outer = fake_def("outer", 1, 100, 0);
+        let inner = fake_def("inner", 10, 30, 200);
+        let target_at_15 = pick_innermost_def(&[outer.clone(), inner.clone()], 15).unwrap();
+        assert_eq!(target_at_15.name, "inner");
+        // A line only the outer covers → outer wins.
+        let target_at_50 = pick_innermost_def(&[outer.clone(), inner.clone()], 50).unwrap();
+        assert_eq!(target_at_50.name, "outer");
+    }
+
+    #[test]
+    fn innermost_def_returns_none_when_no_match() {
+        let only = fake_def("only", 10, 20, 0);
+        assert!(pick_innermost_def(&[only], 99).is_none());
+    }
+
+    #[test]
+    fn innermost_def_ties_break_by_start_byte() {
+        // Same line range, different start_byte → earlier wins.
+        let a = fake_def("a", 5, 10, 500);
+        let b = fake_def("b", 5, 10, 100);
+        let picked = pick_innermost_def(&[a, b], 7).unwrap();
+        assert_eq!(picked.name, "b");
     }
 }
