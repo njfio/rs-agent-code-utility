@@ -10,7 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0-alpha.25] - 2026-05-13
 
 **P6 watcher hardening ships.** Closes the last originally-planned v0.2
-slice. Three changes that together make the daemon survive a `git
+slice. Three resilience changes + one latent bug fix the new integration
+tests surfaced.
+
+### Bug caught and fixed during dev (worth calling out)
+
+The new integration test `rescan_drops_orphan_files_from_index` failed
+on first run with `alpha_target still indexed after 15s`. Tracing
+revealed: deletes via the watcher were reaching the writer's `removals`
+queue, but `commit_batch`'s removal loop was a no-op because the
+`HashMap` queued **absolute** paths while `path_to_fid` keys files
+by **workspace-relative** paths. Upserts dodged the bug because
+`parse_and_extract` strips the workspace prefix before returning a
+`FileBatchEntry`; removals had no such pass.
+
+The bug had been there since the v0.2 store landed but no prior test
+exercised delete-via-watcher (the existing `read_handlers_round_trip`
+test covers re-upsert but not deletion). Fix: rebase removal paths in
+`flush()` before building the `FileBatchRemoval` vec. After the fix
+the integration test passes on both macOS and Linux — what looked
+like an FSEvents quirk was actually a daemon-side bug, and the
+integration test for P6 hardening doubled as the bug-catcher for the
+delete flow.
+
+### Three resilience changes that together make the daemon survive a `git
 checkout` storm + run on hosts where inotify is exhausted:
 
 1. **Rescan re-walk + orphan reconciliation.** `WatchEvent::Rescan` was
@@ -79,13 +102,8 @@ workloads.
   workspace dep `rayon = "1"` (already in the lockfile via rts-core's
   transitive deps).
 - **`crates/rts-daemon/tests/p6_watcher_hardening.rs`** (new): two
-  end-to-end tests. The orphan-removal-via-deletes test is
-  `#[ignore]`-on-macOS because FSEvents doesn't reliably surface
-  `fs::remove_file` events for tempfile paths under
-  `/private/var/folders/...` — a pre-existing OS-level quirk
-  unrelated to P6. The unit tests in `writer.rs` cover the
-  reconciliation logic without depending on the OS event stream and
-  run everywhere.
+  end-to-end tests covering force-poll + rescan-via-delete. Both
+  pass on macOS and Linux after the absolute-vs-relative path fix.
 
 ### Changed
 
@@ -99,7 +117,9 @@ workloads.
 - **`writer.rs` `flush()`** now collects upsert paths into a Vec and
   calls `parse_and_extract` via `into_par_iter()`. The IoMissing
   branch still queues as a removal — back-compat with the existing
-  delete flow.
+  delete flow. **Also rebases removal paths to workspace-relative**
+  before building the `FileBatchRemoval` vec — fixes the latent
+  delete-is-a-no-op bug described above.
 
 ### Not in this slice
 
@@ -114,9 +134,10 @@ workloads.
 ### Verification
 
 - `cargo build --workspace`: green.
-- `cargo test --workspace`: **507 passed, 0 failed, 4 ignored** (was
-  503 in alpha.24; +3 unit + 1 integration. The orphan-detection
-  integration is `#[ignore]` on macOS; runs on Linux CI).
+- `cargo test --workspace`: **508 passed, 0 failed, 3 ignored** (was
+  503 in alpha.24; +3 unit + 2 integration). After the path-rebase
+  fix, the orphan-detection integration test passes on macOS too —
+  what looked like an FSEvents quirk was the daemon-side bug.
 - `cargo fmt --all --check`: exit 0.
 - `cargo clippy --workspace --all-targets`: no new hits on changed
   files (`writer.rs`, `watcher.rs`, `Cargo.toml`).

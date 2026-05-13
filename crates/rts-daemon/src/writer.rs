@@ -258,9 +258,22 @@ fn flush(
             }
         }
     }
+    // The store keys files by workspace-relative paths (upserts go
+    // through parse_and_extract which strips the prefix). Watcher
+    // events ship absolute paths, and our in-process queues key by
+    // absolute. Rebase here so the store lookup actually finds the
+    // file. Caught by the P6 integration test on alpha.25 — prior to
+    // the test the delete path was silently a no-op for the
+    // absolute-vs-relative mismatch.
     let removal_vec: Vec<FileBatchRemoval> = removals
         .drain()
-        .map(|(path, _)| FileBatchRemoval { path })
+        .map(|(path, _)| {
+            let rel = path
+                .strip_prefix(workspace_root)
+                .map(|p| p.to_path_buf())
+                .unwrap_or(path);
+            FileBatchRemoval { path: rel }
+        })
         .collect();
 
     let upserted = store.commit_batch(batch, removal_vec, durability)?;

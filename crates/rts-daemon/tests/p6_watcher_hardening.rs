@@ -198,15 +198,15 @@ async fn force_poll_watcher_env_var_works_end_to_end() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Deletes-via-watcher are intentionally only asserted on Linux. On
-/// macOS FSEvents doesn't reliably surface `fs::remove_file` events for
-/// recently-created tempfile paths under `/private/var/folders/...` —
-/// this is a pre-existing OS-level quirk unrelated to P6 hardening.
-/// The reconciliation logic itself is covered by the unit tests in
-/// `writer.rs` (`rescan_queues_orphan_for_removal_when_file_vanishes`
-/// et al), which exercise the same `rescan_and_reconcile` function
-/// without depending on the OS event stream.
-#[cfg_attr(target_os = "macos", ignore)]
+/// Deletes-via-watcher land in the index. Asserts the writer's
+/// removal path (which the P6 fix made workspace-relative — see the
+/// `absolute-vs-relative` mismatch fix in `flush()`).
+///
+/// Note: on macOS this can be flaky in CI sandboxes where FSEvents
+/// has higher latency for tempfile-path deletes; we give it generous
+/// wall-clock budget. The reconciliation *logic* is also covered by
+/// unit tests in `writer.rs` (`rescan_queues_orphan_*` et al) which
+/// don't depend on the OS event stream.
 #[tokio::test(flavor = "current_thread")]
 async fn rescan_drops_orphan_files_from_index() -> anyhow::Result<()> {
     let runtime_dir = tempfile::tempdir()?;
