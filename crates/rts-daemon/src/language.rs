@@ -109,6 +109,50 @@ const RUBY_REFS: &str = r#"
 (call method: (identifier) @name) @reference.call
 "#;
 
+/// JavaScript reference patterns. The upstream tree-sitter-javascript
+/// tags.scm ships `@reference.call` and `@reference.class` captures —
+/// our alpha.27 scoping pass missed this and deferred them. Fixed in
+/// alpha.30.
+///
+/// Note the upstream `(#not-match? @name "^(require)$")` predicate on
+/// bare-identifier call expressions is dropped here: for the closure
+/// walker, an explicit `require(...)` call IS a reference (the agent's
+/// dep is whatever `require` resolves to), and filtering it would just
+/// hide a real edge. The build-system-vs-user-symbol distinction the
+/// upstream predicate cares about isn't ours to make.
+const JAVASCRIPT_REFS: &str = r#"
+(call_expression
+    function: (identifier) @name) @reference.call
+
+(call_expression
+    function: (member_expression
+        property: (property_identifier) @name)
+    arguments: (_)) @reference.call
+
+(new_expression
+    constructor: (identifier) @name) @reference.class
+"#;
+
+/// TypeScript reference patterns. The upstream tree-sitter-typescript
+/// tags.scm only ships `@reference.type` (type annotations) and
+/// `@reference.class` (new expressions) — no `@reference.call`.
+/// Locally authored here to mirror the JavaScript shape; the
+/// tree-sitter-typescript grammar accepts the same `call_expression` +
+/// `member_expression` nodes JS does, so the same patterns work (and
+/// catch all TS-source call sites since TS is a superset of JS).
+const TYPESCRIPT_REFS: &str = r#"
+(call_expression
+    function: (identifier) @name) @reference.call
+
+(call_expression
+    function: (member_expression
+        property: (property_identifier) @name)
+    arguments: (_)) @reference.call
+
+(new_expression
+    constructor: (identifier) @name) @reference.class
+"#;
+
 /// Path → [`LanguageInfo`]. The canonical extension table.
 ///
 /// `.tsx` is intentionally routed to the same TypeScript renderer as
@@ -137,16 +181,12 @@ pub fn info_for_path(rel_path: &str) -> Option<LanguageInfo> {
         "ts" | "tsx" => Some(LanguageInfo {
             language: Language::TypeScript,
             signature_renderer: Some(rust_tree_sitter::signature::render_typescript),
-            // Upstream tree-sitter-typescript tags.scm doesn't ship
-            // `@reference.*` captures; locally-authored override is
-            // v1.1 work.
-            refs_query: None,
+            refs_query: Some(TYPESCRIPT_REFS),
         }),
         "js" | "jsx" | "mjs" | "cjs" => Some(LanguageInfo {
             language: Language::JavaScript,
             signature_renderer: Some(rust_tree_sitter::signature::render_javascript),
-            // Same v1.1 deferral as TypeScript.
-            refs_query: None,
+            refs_query: Some(JAVASCRIPT_REFS),
         }),
         "go" => Some(LanguageInfo {
             language: Language::Go,
@@ -206,6 +246,8 @@ static RUST_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 static PYTHON_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 static GO_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 static RUBY_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static JAVASCRIPT_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static TYPESCRIPT_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 
 /// Cached `Query` for `language`. Returns `Some` if the language has a
 /// tags.scm-derived `@reference.*` query *and* construction succeeded;
@@ -219,6 +261,8 @@ pub fn cached_refs_query(info: &LanguageInfo) -> Option<&'static Query> {
         Language::Python => &PYTHON_QUERY,
         Language::Go => &GO_QUERY,
         Language::Ruby => &RUBY_QUERY,
+        Language::JavaScript => &JAVASCRIPT_QUERY,
+        Language::TypeScript => &TYPESCRIPT_QUERY,
         _ => return None,
     };
     let query_src = info.refs_query?;
@@ -239,9 +283,9 @@ mod tests {
     }
 
     #[test]
-    fn typescript_has_renderer_but_no_refs_query_in_v0() {
-        // .tsx and .ts both route to TypeScript; both have a renderer.
-        // Neither has a refs query in v0 (deferred to v1.1).
+    fn typescript_has_renderer_and_refs_query() {
+        // .tsx and .ts both route to TypeScript with both renderer and
+        // refs query (alpha.30 closed the alpha.27 deferral).
         for ext in ["src/a.ts", "src/a.tsx"] {
             let info = info_for_path(ext).expect("ts/tsx supported");
             assert_eq!(info.language, Language::TypeScript);
@@ -249,8 +293,44 @@ mod tests {
                 info.signature_renderer.is_some(),
                 "{ext} should have renderer"
             );
-            assert!(info.refs_query.is_none(), "{ext} v0 refs query is None");
+            assert!(
+                info.refs_query.is_some(),
+                "{ext} should have refs query after alpha.30"
+            );
         }
+    }
+
+    #[test]
+    fn javascript_has_renderer_and_refs_query() {
+        for ext in ["a.js", "a.jsx", "a.mjs", "a.cjs"] {
+            let info = info_for_path(ext).expect("js supported");
+            assert_eq!(info.language, Language::JavaScript);
+            assert!(info.signature_renderer.is_some());
+            assert!(info.refs_query.is_some());
+        }
+    }
+
+    #[test]
+    fn js_ts_cached_queries_construct_without_panic() {
+        // Constructing a `Query` from a hand-written query string can
+        // fail if it doesn't typecheck against the grammar's node
+        // names. This test forces the OnceLock init on JS + TS so
+        // any breakage from grammar bumps surfaces here at test time
+        // (not at first `outline_workspace` call in production).
+        let js_info = info_for_path("a.js").unwrap();
+        let q = cached_refs_query(&js_info);
+        assert!(
+            q.is_some(),
+            "JavaScript refs query failed to construct — \
+             check JAVASCRIPT_REFS against the current grammar"
+        );
+        let ts_info = info_for_path("a.ts").unwrap();
+        let q = cached_refs_query(&ts_info);
+        assert!(
+            q.is_some(),
+            "TypeScript refs query failed to construct — \
+             check TYPESCRIPT_REFS against the current grammar"
+        );
     }
 
     #[test]

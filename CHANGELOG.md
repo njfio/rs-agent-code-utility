@@ -7,6 +7,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.30] - 2026-05-13
+
+**JS/TS reference queries.** Closes the alpha.27 language-coverage
+gap — outline + closure walker now use AST-precise reference extraction
+for JavaScript and TypeScript on top of Rust/Python/Go/Ruby.
+
+### Honest correction from alpha.27
+
+I scoped alpha.27 saying upstream tags.scm for JS/TS didn't ship
+`@reference.*` captures. **I was wrong about JavaScript** — its
+upstream tags.scm has `@reference.call` for both bare-identifier
+calls and method calls, plus `@reference.class` for `new` expressions.
+I missed them on first read. Alpha.30 wires them up.
+
+For TypeScript, upstream tags.scm really doesn't have
+`@reference.call` (only `@reference.type` + `@reference.class`).
+Authored locally — the TypeScript grammar accepts the same
+`call_expression` + `member_expression` node shapes JS does, so the
+same patterns work and would catch all TS-source call sites since
+TS is a superset of JS.
+
+### Coverage after this slice
+
+| language | refs query |
+|---|---|
+| Rust, Python, Go, Ruby | ✅ tags.scm (alpha.27) |
+| **JavaScript** | ✅ upstream tags.scm (this slice) |
+| **TypeScript / TSX** | ✅ locally authored (this slice) |
+| C, C++, Java, PHP, Swift | regex fallback |
+
+5 of 11 languages now have AST precision. The remaining 5 fall through
+to the regex tokenizer (no regression) — they're the languages where
+upstream tags.scm uses different conventions and a clean
+locally-authored query needs more research per language.
+
+### One intentional divergence from upstream JS
+
+The upstream JS tags.scm filters out `require()` calls via
+`(#not-match? @name "^(require)$")`. We drop that predicate — for the
+closure walker, an explicit `require(...)` call IS a reference (the
+agent's dep is whatever `require` resolves to). The
+build-system-vs-user-symbol distinction the upstream predicate cares
+about isn't ours to make. Documented inline in `JAVASCRIPT_REFS`.
+
+### Added
+
+- **`crate::language::JAVASCRIPT_REFS` + `TYPESCRIPT_REFS`**: tags.scm
+  `@reference.*` query strings. JS sourced from upstream
+  tree-sitter-javascript (minus the require predicate); TS locally
+  authored to mirror.
+- **`crate::language::JAVASCRIPT_QUERY` + `TYPESCRIPT_QUERY`**:
+  `OnceLock<Option<Query>>` statics. Dispatched via
+  `cached_refs_query` per alpha.29's caching contract.
+- **3 new unit tests in `refs::tests`** covering JS calls/methods/new,
+  TS calls/methods/new, and TSX alias routing.
+- **2 new tests in `language::tests`**: `typescript_has_renderer_and_refs_query`
+  (replaces the old "no refs query in v0" assertion),
+  `javascript_has_renderer_and_refs_query`, and a
+  `js_ts_cached_queries_construct_without_panic` guard so grammar
+  bumps surface at test time, not at first `outline_workspace` call
+  in production.
+
+### Changed
+
+- **`language::info_for_path`**: TS/TSX and JS/JSX/MJS/CJS arms now
+  return `Some(refs_query)`. The "deferred to v1.1" comments on those
+  arms are gone.
+
+### Not in this slice
+
+- **C/C++/Java/PHP/Swift refs queries.** Upstream tags.scm for these
+  has different conventions (e.g. C uses `call_expression function:
+  (identifier) @name` which works but covers a smaller fraction of
+  call shapes). Wiring them up requires per-language research; defer
+  until a concrete user.
+- **JSX/TSX element references.** TSX `<Widget />` isn't a
+  `call_expression` — it's a `jsx_element`. The closure walker
+  currently doesn't treat JSX elements as references; that's a v1.1
+  surface (closure-walking a React component's JSX is a bigger
+  design question than just adding one more capture).
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **533 passed, 0 failed, 3 ignored** (was
+  528 in alpha.29; +3 refs JS/TS + 2 language module).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: 94 warnings, unchanged
+  from alpha.29.
+
 ## [0.2.0-alpha.29] - 2026-05-13
 
 **Reviewer follow-up batch.** Four concrete fixes from the alpha.27
