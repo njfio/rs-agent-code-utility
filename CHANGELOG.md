@@ -7,6 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.23] - 2026-05-13
+
+**Prebuilt-binaries release workflow (P9) ships.** Tagging `v*` now
+produces a draft GitHub release with cross-platform tarballs for the
+v0.2 daemon stack. Users no longer need a Rust toolchain to try the
+agentic-retrieval MCP server.
+
+### Build matrix
+
+All native runners (no `cross` / Docker / QEMU gymnastics):
+
+| target                       | runner            |
+|------------------------------|-------------------|
+| `x86_64-unknown-linux-gnu`   | ubuntu-latest     |
+| `aarch64-unknown-linux-gnu`  | ubuntu-24.04-arm  |
+| `x86_64-apple-darwin`        | macos-13          |
+| `aarch64-apple-darwin`       | macos-latest      |
+
+Windows is intentionally out — the daemon uses `std::os::unix` (Unix
+sockets + permissions) and the watcher's fs path is inotify/fsevents.
+A Windows port is a separate v1.x slice.
+
+Each matrix entry produces one tarball:
+```
+rts-${VERSION}-${TARGET}.tar.gz
+└── rts-${VERSION}-${TARGET}/
+    ├── rts-daemon
+    ├── rts-mcp
+    ├── rts-bench
+    ├── LICENSE-MIT
+    ├── LICENSE-APACHE
+    └── README.md
+```
+
+A separate `aggregate-checksums` job concatenates per-artifact
+`.sha256` sidecars into a single `SHA256SUMS` file on the draft
+release so users can verify with `sha256sum -c SHA256SUMS`.
+
+### Why `draft: true` on the release
+
+The release is created in draft state so the maintainer can spot-check
+each artifact before flipping to "published" via the GitHub UI.
+Prevents an accidental tag from publishing broken binaries to users
+who would otherwise pin against the release URL.
+
+### Added
+
+- **`.github/workflows/release.yml`**: 4-way native build matrix,
+  release-profile build with `CARGO_PROFILE_RELEASE_STRIP=symbols`
+  (~30% smaller artifacts), `--version` smoke test on each built
+  binary, tarball packaging with license files + README, SHA256
+  sidecar per artifact, `softprops/action-gh-release@v2` upload as
+  draft, aggregate `SHA256SUMS` job. Also supports
+  `workflow_dispatch` for dry-run testing before tagging.
+- **`--version` / `-V` flag** on all three binaries:
+  - `rts-daemon`: hand-rolled (`std::env::args().nth(1)`), matches
+    the existing `rts-mcp` zero-clap idiom. Also gained `--help`
+    that documents the env-var-only config surface.
+  - `rts-mcp`: hand-rolled, added next to the existing `--help` arm.
+  - `rts-bench`: clap derive, single attribute (`version` reads
+    `CARGO_PKG_VERSION` automatically).
+  - All three emit `<name> <SEMVER>` — stable wire shape for the
+    release smoke test and operator diagnostics.
+- **README install section**: split "Option A: prebuilt tarballs"
+  vs "Option B: build from source", with a `curl | tar` snippet,
+  per-platform target table, `--version` verification, and a
+  `SHA256SUMS` integrity-check example.
+
+### Not in this slice
+
+- musl-libc static builds for distroless/alpine. Easy to add as a
+  fifth matrix entry once we have a user asking — current entries
+  cover glibc-2.31+ which is wide enough for "regular Linux".
+- Windows port — daemon's Unix-only deps need a separate refactor.
+- Auto-publish (vs draft). The maintainer-in-the-loop check is the
+  right default for an alpha line; we can flip to auto-publish at
+  v1.0.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **491 passed, 0 failed, 3 ignored**
+  (unchanged from alpha.22 — pure-tooling slice).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: **91 warnings** (was
+  92 in alpha.22; the `while let` → `if let` fix on the daemon's
+  arg parser closed one).
+- Manual `--version` smoke against all three local release binaries
+  passes; `--help` documents the env-var surface for the daemon.
+- `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"`
+  validates the workflow YAML.
+
 ## [0.2.0-alpha.22] - 2026-05-13
 
 **`Index.ReadSymbol` closure walker ships.** The `include_dependencies: true`
