@@ -52,17 +52,14 @@ pub async fn run(ctx: &TaskContext<'_>) -> Result<TaskOutcome> {
         .to_string();
     let line = ctx.task_inputs["line"]
         .as_u64()
-        .ok_or_else(|| anyhow!("`line` required for scenario_compiler_fix"))?
-        as u32;
+        .ok_or_else(|| anyhow!("`line` required for scenario_compiler_fix"))? as u32;
     // The symbol the agent wants to follow up on after seeing the
     // containing fn. A real agent picks this from the dependency
     // closure; the bench hardcodes it as input so the two paths
     // measure the same workload.
     let referenced_symbol = ctx.task_inputs["referenced_symbol"]
         .as_str()
-        .ok_or_else(|| {
-            anyhow!("`referenced_symbol` required for scenario_compiler_fix")
-        })?
+        .ok_or_else(|| anyhow!("`referenced_symbol` required for scenario_compiler_fix"))?
         .to_string();
 
     let description = format!(

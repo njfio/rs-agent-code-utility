@@ -629,7 +629,18 @@ pub async fn read_symbol(
     let extra: Vec<String> = filtered.iter().map(|h| h.file.clone()).collect();
     let ambiguous = !extra.is_empty();
 
-    read_symbol_body(state, &root, &store_arc, chosen, extra, ambiguous, shape, budget, include_deps).await
+    read_symbol_body(
+        state,
+        &root,
+        &store_arc,
+        chosen,
+        extra,
+        ambiguous,
+        shape,
+        budget,
+        include_deps,
+    )
+    .await
 }
 
 /// Shared "I have a `FoundSymbol`, build the wire response" routine,
@@ -863,9 +874,7 @@ fn pick_innermost_def(defs: &[FoundSymbol], line: u32) -> Option<FoundSymbol> {
         .min_by(|a, b| {
             let span_a = a.end_line.saturating_sub(a.start_line);
             let span_b = b.end_line.saturating_sub(b.start_line);
-            span_a
-                .cmp(&span_b)
-                .then(a.start_byte.cmp(&b.start_byte))
+            span_a.cmp(&span_b).then(a.start_byte.cmp(&b.start_byte))
         })
         .cloned()
 }

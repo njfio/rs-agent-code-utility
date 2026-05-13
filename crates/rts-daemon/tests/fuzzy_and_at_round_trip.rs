@@ -250,13 +250,7 @@ async fn fuzzy_search_and_read_symbol_at() -> anyhow::Result<()> {
     );
 
     // ---- 6. neither-given error path ----
-    let neither = round_trip(
-        &mut stream,
-        "15",
-        "Index.FindSymbol",
-        json!({}),
-    )
-    .await?;
+    let neither = round_trip(&mut stream, "15", "Index.FindSymbol", json!({})).await?;
     assert_eq!(
         neither["error"]["code"], "INVALID_PARAMS",
         "no name or pattern should error; got {neither:?}"
@@ -272,7 +266,10 @@ async fn fuzzy_search_and_read_symbol_at() -> anyhow::Result<()> {
         json!({ "file": "widget.rs", "line": 2 }),
     )
     .await?;
-    assert!(at_line["error"].is_null(), "read_symbol_at failed: {at_line:?}");
+    assert!(
+        at_line["error"].is_null(),
+        "read_symbol_at failed: {at_line:?}"
+    );
     assert_eq!(at_line["result"]["qualified_name"], "make_widget");
     assert_eq!(at_line["result"]["kind"], "fn");
     let body = at_line["result"]["text"].as_str().expect("body text");
