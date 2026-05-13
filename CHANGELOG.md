@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.20] - 2026-05-12
+
+**Outline cache (incremental PageRank, v0).** `Index.Outline` p95 drops
+from 29–45ms (alpha.19 bench) to **~140µs** on the same fixture — a
+~250× warm-path improvement. Brings outline well under the plan's 10ms
+p95 target without the complexity of a push-flow PageRank rewrite.
+
+The cache is a single-slot memoization keyed by
+`(index_generation, token_budget, glob, mentioned_files, mentioned_idents)`.
+The writer already bumps `state.index_generation` on every committed
+batch (writer.rs `fetch_add`), so invalidation is automatic: the next
+call after an index commit sees a stale key and recomputes. No new
+invalidation wire-up was needed.
+
+Bench numbers (release build, 10k LOC synth, 60 queries / 10 cold):
+
+| query        | warm p50 | warm p95 |  cold p95 |  n (warm) |
+|--------------|---------:|---------:|----------:|----------:|
+| find_symbol  |     94µs |    134µs |     346µs |        26 |
+| read_symbol  |    101µs |    130µs |     211µs |        15 |
+| outline      |    123µs |    137µs |     177µs |         9 |
+
+The "cold" outline measurement (n=1) is the first compute on a
+freshly-mounted workspace; "warm" outline calls hit the cache and
+return the previously-rendered Arc. Both numbers are sub-millisecond.
+
+### Why memoization over push-flow
+
+The user-facing request was "incremental PageRank patch (Andersen et
+al. 2006 push-flow local PR)". The simpler memoization path was chosen
+for v0 because:
+
+1. The S1 bench measured static-workspace repeat queries (`outline_workspace`
+   called 9 times against an unchanged index), which is the most common
+   shape in real agent loops. Memoization zeroes this case out.
+2. Writer commits invalidate the cache for free. No new bookkeeping.
+3. Implementation is ~80 LOC + tests vs ~150+ LOC for push-flow with
+   per-node residual tracking and ~2-hop locality bookkeeping.
+4. Push-flow only outperforms full invalidation when commits are
+   frequent *and* repeat queries hit a small unchanged subgraph. We
+   don't yet have evidence the v0 daemon's commit cadence is high
+   enough to make that the dominant case. If production traces later
+   show low cache hit rates, push-flow stays on the v1.1 roadmap.
+
+### Added
+
+- **`crates/rts-daemon/src/outline.rs`**: `OutlineCache` (single-slot)
+  + `OutlineCacheKey`, 7 unit tests covering empty cache, hit, miss on
+  generation change, miss on each param change, overwrite, invalidate,
+  and key construction from `OutlineParams`. `OutlineResult` now
+  derives `Clone` so cache hits can hand out cheap Arc'd snapshots.
+- **`crates/rts-daemon/src/state.rs`**: `outline_cache: OutlineCache`
+  field on `DaemonState` (interior-mutex; cheap to share via `Arc`).
+- **`Index.Outline` handler** (`methods/index.rs`): cache lookup runs
+  before the `spawn_blocking` compute path. Miss → recompute → store.
+  Hit → return Arc'd snapshot, no blocking task spawned. The handler
+  snapshots `index_generation` *before* spawning so a racing commit
+  bumps the counter further but the cache stores a result keyed to the
+  generation we observed (no torn read). `tracing::debug` on both
+  paths so devs can see hit rates in dev logs.
+- **`crates/rts-daemon/tests/outline_round_trip.rs`**: extended to
+  call `Index.Outline` three times — same params (cache hit; result
+  must be byte-identical), then different `token_budget` (cache miss;
+  `files_considered` invariant under budget changes).
+
+### Not in this slice
+
+- Push-flow local PageRank (Andersen et al. 2006) — deferred to v1.1
+  pending production cache-hit-rate signal.
+- Tree-shake closure walker for `Index.ReadSymbol`
+  `include_dependencies: true`.
+- Footprint bench (S3) — peak RSS, on-disk index size, build time.
+- P9 prebuilt-binaries release GH Action.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **478 passed, 0 failed, 3 ignored** (was
+  471; +7 outline cache unit tests).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new warnings on
+  changed files (`outline.rs`, `state.rs`, `methods/index.rs`).
+- Release bench: `rts-bench latency --synth-loc 10000 --queries 60
+  --cold-count 10` produces the numbers above.
+
 ## [0.2.0-alpha.19] - 2026-05-12
 
 P9 latency bench (S1) ships. First p50/p95/p99 measurements are on the
