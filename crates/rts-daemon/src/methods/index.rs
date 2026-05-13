@@ -685,7 +685,9 @@ async fn read_symbol_body(
     // body. Falls through gracefully when the slice doesn't parse as a
     // single top-level item.
     let signature: Option<String> = if matches!(shape, "signature" | "both") {
-        render_signature_for_path(&chosen.file, body_text.as_bytes())
+        crate::language::info_for_path(&chosen.file)
+            .and_then(|info| info.signature_renderer)
+            .and_then(|render| render(body_text.as_bytes()))
     } else {
         None
     };
@@ -975,45 +977,6 @@ pub async fn outline(
         "files_considered": result.files_considered,
         "files_included":   result.files_included,
     }))
-}
-
-/// Dispatch to the right per-language signature renderer based on the
-/// file extension. Returns `None` for languages without a renderer yet —
-/// the caller falls back to the full body.
-///
-/// `pub(crate)` so the closure walker (`crate::closure`) can render
-/// per-dep signatures without re-implementing the extension-to-renderer
-/// dispatch table.
-pub(crate) fn render_signature_for_path(rel_path: &str, body: &[u8]) -> Option<String> {
-    let ext = std::path::Path::new(rel_path)
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|s| s.to_ascii_lowercase());
-    match ext.as_deref() {
-        Some("rs") => rust_tree_sitter::signature::render_rust(body),
-        Some("py") => rust_tree_sitter::signature::render_python(body),
-        // TypeScript grammar handles `.ts`; `.tsx` is intentionally
-        // routed here too — the grammar accepts both and the agent's
-        // signature shape is identical.
-        Some("ts") | Some("tsx") => rust_tree_sitter::signature::render_typescript(body),
-        Some("js") | Some("jsx") | Some("mjs") | Some("cjs") => {
-            rust_tree_sitter::signature::render_javascript(body)
-        }
-        Some("go") => rust_tree_sitter::signature::render_go(body),
-        Some("java") => rust_tree_sitter::signature::render_java(body),
-        // C headers (.h) routed to the C renderer — C++ headers are
-        // typically .hpp/.hh/.hxx and parse fine under the C++ grammar,
-        // which is a superset of C for the patterns the renderer cares
-        // about.
-        Some("c") | Some("h") => rust_tree_sitter::signature::render_c(body),
-        Some("cpp") | Some("cc") | Some("cxx") | Some("hpp") | Some("hh") | Some("hxx") => {
-            rust_tree_sitter::signature::render_cpp(body)
-        }
-        Some("php") | Some("phtml") => rust_tree_sitter::signature::render_php(body),
-        Some("rb") | Some("rake") => rust_tree_sitter::signature::render_ruby(body),
-        Some("swift") => rust_tree_sitter::signature::render_swift(body),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

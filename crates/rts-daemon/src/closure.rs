@@ -34,7 +34,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::store::{FoundSymbol, Store, SymbolKind};
+use crate::store::{FoundSymbol, Store};
 
 /// One dep entry, ready for the wire shape. Fields mirror
 /// protocol-v0 §7.7 example: `qualified_name`, `kind`, `file`,
@@ -173,7 +173,9 @@ pub fn compute(
         } else {
             &body_bytes[..]
         };
-        let signature = crate::methods::index::render_signature_for_path(&def.file, slice);
+        let signature = crate::language::info_for_path(&def.file)
+            .and_then(|info| info.signature_renderer)
+            .and_then(|render| render(slice));
         rendered.push(DependencyEntry {
             qualified_name: def.name.clone(),
             kind: def.kind.as_wire_str().to_string(),
@@ -287,22 +289,6 @@ pub fn to_wire_value(deps: &[DependencyEntry]) -> serde_json::Value {
     )
 }
 
-/// Suppress the unused-import warning when the closure walker compiles
-/// without exercising the symbol-kind enum directly. (We pull it in
-/// via `def.kind.as_wire_str()` which the linter sometimes misses.)
-#[allow(dead_code)]
-const _SYMBOL_KIND_REF: fn(SymbolKind) -> &'static str = SymbolKind::as_wire_str;
-
-/// Public for tests in the integration round-trip — the dep walker
-/// is the only consumer of `extract_identifiers` outside `outline.rs`,
-/// and tests want to assert the dep-name set the walker would see.
-#[cfg(test)]
-pub(crate) fn extracted_identifiers_for_test(s: &str) -> std::collections::HashSet<String> {
-    crate::outline::extract_identifiers(s)
-        .map(|s| s.to_string())
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,7 +337,14 @@ mod tests {
 
     #[test]
     fn extracted_identifiers_round_trip() {
-        let ids = extracted_identifiers_for_test("fn foo(x: u32) -> bar::Baz { call() }");
+        // The closure walker piggybacks on outline::extract_identifiers
+        // for the regex fallback path; this test pins the tokenizer's
+        // shape against the patterns closure needs (Rust-style paths,
+        // calls, type names).
+        let ids: std::collections::HashSet<String> =
+            crate::outline::extract_identifiers("fn foo(x: u32) -> bar::Baz { call() }")
+                .map(|s| s.to_string())
+                .collect();
         assert!(ids.contains("foo"));
         assert!(ids.contains("bar"));
         assert!(ids.contains("Baz"));

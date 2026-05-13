@@ -40,70 +40,23 @@
 
 use rust_tree_sitter::{Language, Parser, query::Query};
 
-/// Tree-sitter query: capture `@name` nodes that are the *callee*
-/// identifier in a call expression, the method name in a method call,
-/// the macro name in a macro invocation, or the trait/type in an impl
-/// block. Sourced verbatim from `tree-sitter-rust-0.23.3/queries/tags.scm`,
-/// `@reference.*` subset only.
-const RUST_REFS: &str = r#"
-(call_expression
-    function: (identifier) @name) @reference.call
-
-(call_expression
-    function: (field_expression
-        field: (field_identifier) @name)) @reference.call
-
-(macro_invocation
-    macro: (identifier) @name) @reference.call
-
-(impl_item
-    trait: (type_identifier) @name) @reference.implementation
-
-(impl_item
-    type: (type_identifier) @name
-    !trait) @reference.implementation
-"#;
-
-const PYTHON_REFS: &str = r#"
-(call
-  function: [
-      (identifier) @name
-      (attribute
-        attribute: (identifier) @name)
-  ]) @reference.call
-"#;
-
-const GO_REFS: &str = r#"
-(call_expression
-  function: [
-    (identifier) @name
-    (parenthesized_expression (identifier) @name)
-    (selector_expression field: (field_identifier) @name)
-    (parenthesized_expression (selector_expression field: (field_identifier) @name))
-  ]) @reference.call
-"#;
-
-const RUBY_REFS: &str = r#"
-(call method: (identifier) @name) @reference.call
-"#;
-
 /// Extract the set of *referenced* symbol names from `content` parsed
-/// as `language`. Order is the source-order in which tree-sitter
-/// captures them; callers that need deduplication should collect into
-/// a `HashSet`. Returns `None` when the language has no tags.scm
+/// as `language`. Returns `None` when the language has no tags.scm
 /// query — callers fall back to [`crate::outline::extract_identifiers`].
+///
+/// The per-language query string lives in
+/// [`crate::language::info_for_path`]'s registry; this function takes
+/// it as a parameter so the dispatcher in [`references_for_path`] can
+/// pull both the `Language` and the query from the same place.
 ///
 /// Errors during parse or query construction return `None`; this is a
 /// best-effort precision improvement and the regex fallback is always
 /// available.
-pub(crate) fn extract_references(language: Language, content: &str) -> Option<Vec<String>> {
-    let query_src = match language {
-        Language::Rust => RUST_REFS,
-        Language::Python => PYTHON_REFS,
-        Language::Go => GO_REFS,
-        Language::Ruby => RUBY_REFS,
-        _ => return None,
-    };
+pub(crate) fn extract_references(
+    language: Language,
+    query_src: &str,
+    content: &str,
+) -> Option<Vec<String>> {
     let parser = Parser::new(language).ok()?;
     let tree = parser.parse(content, None).ok()?;
     let query = Query::new(language, query_src).ok()?;
@@ -121,18 +74,23 @@ pub(crate) fn extract_references(language: Language, content: &str) -> Option<Ve
     Some(out)
 }
 
-/// Heuristic dispatcher used by `outline` + `closure` for each file
-/// they walk. Tries AST-precise extraction first; falls back to the
-/// regex tokenizer for languages without a query.
+/// Dispatcher used by `outline` + `closure` for each file they walk.
+/// Tries AST-precise extraction first; falls back to the regex
+/// tokenizer for languages without a query.
 ///
 /// The fallback path is a stable owned-`Vec<String>` shape so callers
 /// don't have to branch on `Option`. We allocate either way; the
 /// AST-precise path is the win, not the allocation profile.
+///
+/// Both the `Language` enum variant and the tags.scm query string come
+/// from [`crate::language::info_for_path`] — the single source of truth
+/// for per-language facts. See `crate::language` for the registry.
 pub(crate) fn references_for_path(rel_path: &str, content: &str) -> Vec<String> {
-    let lang = language_for_path(rel_path);
-    if let Some(lang) = lang {
-        if let Some(refs) = extract_references(lang, content) {
-            return refs;
+    if let Some(info) = crate::language::info_for_path(rel_path) {
+        if let Some(query_src) = info.refs_query {
+            if let Some(refs) = extract_references(info.language, query_src, content) {
+                return refs;
+            }
         }
     }
     crate::outline::extract_identifiers(content)
@@ -140,36 +98,16 @@ pub(crate) fn references_for_path(rel_path: &str, content: &str) -> Vec<String> 
         .collect()
 }
 
-/// Path-to-Language mapping. Mirrors the dispatch in
-/// `methods::index::render_signature_for_path` but expressed in terms
-/// of `rust_tree_sitter::Language` rather than the per-language
-/// signature renderer.
-fn language_for_path(rel_path: &str) -> Option<Language> {
-    let ext = std::path::Path::new(rel_path)
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|s| s.to_ascii_lowercase());
-    match ext.as_deref() {
-        Some("rs") => Some(Language::Rust),
-        Some("py") => Some(Language::Python),
-        Some("go") => Some(Language::Go),
-        Some("rb") | Some("rake") => Some(Language::Ruby),
-        // Languages without an @reference.* query in this slice fall
-        // through. Returning None makes `references_for_path` use the
-        // regex fallback.
-        Some("ts") | Some("tsx") | Some("js") | Some("jsx") | Some("mjs") | Some("cjs") => None,
-        Some("c") | Some("h") => None,
-        Some("cpp") | Some("cc") | Some("cxx") | Some("hpp") | Some("hh") | Some("hxx") => None,
-        Some("java") => None,
-        Some("php") | Some("phtml") => None,
-        Some("swift") => None,
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Helper: look up the per-language query in the central registry
+    /// so tests don't have to know which file holds the query strings.
+    fn refs_query_for(rel_path: &str) -> Option<(Language, &'static str)> {
+        let info = crate::language::info_for_path(rel_path)?;
+        Some((info.language, info.refs_query?))
+    }
 
     #[test]
     fn rust_references_capture_call_sites_only() {
@@ -181,7 +119,8 @@ fn caller() {
     let local_var = 0;
     target_fn(local_var);
 }";
-        let refs = extract_references(Language::Rust, src).expect("rust has a query");
+        let (lang, q) = refs_query_for("a.rs").unwrap();
+        let refs = extract_references(lang, q, src).expect("rust has a query");
         assert!(
             refs.contains(&"target_fn".to_string()),
             "expected target_fn (call site); got {refs:?}"
@@ -204,14 +143,8 @@ fn caller() {
     println!(\"{}\", s);
     s.push_str(\"x\");
 }";
-        let refs = extract_references(Language::Rust, src).expect("rust has a query");
-        // String::new is a path-based call — the `function: (identifier)`
-        // capture matches `new` (the call target is a scoped identifier
-        // path, but the field/method ident is `new`).
-        // The macro invocation `println!` gets captured.
-        // The method call `push_str` gets captured.
-        // (Different upstream conventions about what gets captured per
-        // call shape — our test asserts the most common cases.)
+        let (lang, q) = refs_query_for("a.rs").unwrap();
+        let refs = extract_references(lang, q, src).expect("rust has a query");
         assert!(
             refs.iter().any(|n| n == "println"),
             "println! should be captured; got {refs:?}"
@@ -230,7 +163,8 @@ def caller():
     target_fn(local)
     obj.method_name()
 ";
-        let refs = extract_references(Language::Python, src).expect("python has a query");
+        let (lang, q) = refs_query_for("a.py").unwrap();
+        let refs = extract_references(lang, q, src).expect("python has a query");
         assert!(refs.contains(&"target_fn".to_string()));
         assert!(refs.contains(&"method_name".to_string()));
         assert!(

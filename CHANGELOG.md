@@ -7,6 +7,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.28] - 2026-05-13
+
+**Architecture refactor: `crate::language` is the single source of truth for
+per-language dispatch.** Closes the #1 coupling smell from the alpha.27
+architecture review, plus the ~80 LOC of dead code the simplicity reviewer
+flagged.
+
+### What changed
+
+Before alpha.28, three modules each had their own ext→something tables:
+
+- `methods::index::render_signature_for_path` (ext → renderer fn)
+- `refs::language_for_path` (ext → `Language` enum)
+- `writer::detect_language_from_path` (ext → `Language` enum)
+
+These had already drifted: `.tsx` routed to TypeScript in the renderer
+dispatcher but returned `None` in the refs dispatcher (defensible —
+no TS refs query yet — but the asymmetry was buried). And `closure.rs`
+had to reach across into `methods::index::render_signature_for_path`,
+which forced `mod index` to be `pub(crate)` — a coupling smell where
+a domain module (closure) depended on a wire-dispatch module (methods).
+
+The new `crate::language::info_for_path(rel_path)` returns a
+`LanguageInfo { language, signature_renderer, refs_query }` —
+consumers pick the field they need. **Adding a language is a one-line
+change to one match arm now.** The whole table fits in one file with
+its own tests.
+
+After this refactor:
+
+- `methods::index::render_signature_for_path` deleted (~30 LOC)
+- `refs::language_for_path` deleted (~25 LOC)
+- `writer::detect_language_from_path` deleted (~4 LOC)
+- `methods/mod.rs::mod index` back to private (the `pub(crate)` from
+  alpha.22 is no longer needed — closure.rs reaches `crate::language`
+  directly)
+- Three test sites in `refs.rs` updated to call the unified
+  dispatcher via a `refs_query_for` helper
+
+### Dead-code cleanups bundled in
+
+From the alpha.27 simplicity reviewer audit (~80 LOC deleted):
+
+- `closure.rs::_SYMBOL_KIND_REF` decoy const (-5 LOC)
+- `closure.rs::extracted_identifiers_for_test` helper + inlined into
+  the one test that used it (-8 LOC)
+- `outline::OutlineCache::invalidate()` unused method + its test
+  (-15 LOC)
+- `outline::resolve()` unused helper (-5 LOC)
+- `Watcher::root()` accessor with stale "reserved for writer-drain"
+  rationale (-7 LOC; writer never used it)
+- `SymbolKind` import in `closure.rs` unused after `_SYMBOL_KIND_REF`
+  deletion (-1 LOC)
+
+### Added
+
+- **`crates/rts-daemon/src/language.rs`** (new, 232 LOC): single
+  per-language registry. `LanguageInfo` struct carries `Language`,
+  optional `signature_renderer: fn(&[u8]) -> Option<String>`, and
+  optional `refs_query: &'static str`. 8 unit tests covering each
+  language alias group, case-insensitivity, and invokable
+  signature-renderer round-trip.
+
+### Changed
+
+- **`refs.rs::extract_references`** signature changed from
+  `(Language, &str)` to `(Language, query_src: &str, &str)` — the
+  query string is now passed in by the dispatcher rather than looked
+  up internally. Net effect: one less `match` and the query strings
+  live exactly once (in `language.rs`).
+- **`closure.rs`**, **`methods/index.rs::read_symbol_body`**, and
+  **`writer.rs::parse_and_extract`** all now call
+  `language::info_for_path(rel_path)` and pull the field they need.
+  No more dispatch logic in those modules.
+- **`watcher.rs::DebouncerHandle`** gains `#[allow(dead_code)]` — the
+  variant fields are held purely for `Drop` semantics (the
+  background worker thread stops when the variant drops). Clippy's
+  `dead_code` lint would otherwise fire; the comment now explains
+  why the fields look unused.
+
+### Not in this slice
+
+- **JS/TS reference queries** (from alpha.27): still N/A in the
+  registry. Same v1.1 deferral.
+- **`crate::cache` extraction** (from alpha.27 review): `DaemonState`
+  still owns `outline_cache` directly. Defer until there's a second
+  cache to share the module with.
+- **`rts-cli` crate split** (from alpha.27 review): defer to v0.3.
+  The `rts-bench query` surface stays where it is.
+- **Wire-protocol re-spec** (from alpha.27 review): `docs/protocol-v0.md`
+  is still pre-alpha.24. Worth a docs-only PR next.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **524 passed, 0 failed, 3 ignored** (was
+  517 in alpha.27; +8 language unit tests, -1 deleted
+  `cache_invalidate_clears_slot` test).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: **93 latent warnings,
+  unchanged from alpha.27 baseline.** No new hits on changed files
+  (`language.rs`, `refs.rs`, `closure.rs`, `methods/index.rs`,
+  `methods/mod.rs`, `writer.rs`, `watcher.rs`, `outline.rs`).
+
 ## [0.2.0-alpha.27] - 2026-05-13
 
 **Tags.scm precision upgrade.** Outline + closure walker now use

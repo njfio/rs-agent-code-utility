@@ -23,7 +23,7 @@
 //! and pushes p95 well under the 10 ms target.
 
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use anyhow::Context;
@@ -120,16 +120,6 @@ impl OutlineCache {
     pub fn put(&self, key: OutlineCacheKey, result: Arc<OutlineResult>) {
         if let Ok(mut g) = self.inner.lock() {
             *g = Some(CachedEntry { key, result });
-        }
-    }
-
-    /// Drop any cached entry. Currently only used in tests, but a
-    /// future writer path may want to invalidate eagerly (e.g. on
-    /// schema upgrade) instead of relying on the generation counter.
-    #[allow(dead_code)]
-    pub fn invalidate(&self) {
-        if let Ok(mut g) = self.inner.lock() {
-            *g = None;
         }
     }
 }
@@ -397,14 +387,6 @@ pub(crate) fn extract_identifiers(content: &str) -> impl Iterator<Item = &str> +
     })
 }
 
-/// Resolve a path the way the daemon's read handlers do — workspace-relative
-/// only. Returns the absolute path inside the root. Unused here but
-/// kept colocated for clarity.
-#[allow(dead_code)]
-fn resolve(workspace_root: &Path, rel: &str) -> PathBuf {
-    workspace_root.join(rel)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,14 +491,6 @@ mod tests {
         c.put(key(8), Arc::new(fake_result("second")));
         assert!(c.get(&key(7)).is_none());
         assert_eq!(c.get(&key(8)).unwrap().outline_text, "second");
-    }
-
-    #[test]
-    fn cache_invalidate_clears_slot() {
-        let c = OutlineCache::new();
-        c.put(key(7), Arc::new(fake_result("v7")));
-        c.invalidate();
-        assert!(c.get(&key(7)).is_none());
     }
 
     #[test]

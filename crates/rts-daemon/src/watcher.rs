@@ -89,6 +89,13 @@ pub enum WatchEvent {
 /// Backing debouncer kind. Either the platform's `RecommendedWatcher`
 /// (inotify/FSEvents/ReadDirectoryChangesW) or `PollWatcher` for hosts
 /// where the kernel watcher is unavailable or exhausted.
+///
+/// The contained `Debouncer<...>` is held purely for its `Drop` impl
+/// (which stops the background worker thread). It's never read after
+/// construction — clippy's `dead_code` lint would otherwise fire on
+/// the unused fields, but they're load-bearing for the watcher
+/// lifecycle.
+#[allow(dead_code)]
 enum DebouncerHandle {
     Recommended(Debouncer<RecommendedWatcher, RecommendedCache>),
     Polling(Debouncer<PollWatcher, RecommendedCache>),
@@ -218,14 +225,6 @@ impl Watcher {
             },
             rx,
         ))
-    }
-
-    /// Workspace root this watcher is bound to. Reserved for the writer-drain
-    /// task (lands in a later P6 phase) which uses it for path-rebasing in
-    /// telemetry spans.
-    #[allow(dead_code)]
-    pub fn root(&self) -> &Path {
-        &self.root
     }
 }
 
