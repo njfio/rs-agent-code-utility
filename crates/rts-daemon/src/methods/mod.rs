@@ -7,9 +7,7 @@ use crate::error::{ErrorCode, ProtocolError};
 use crate::state::DaemonState;
 
 mod daemon;
-// `pub(crate)` so the closure walker (`crate::closure`) can call
-// `index::render_signature_for_path` for per-dep signature rendering.
-pub(crate) mod index;
+mod index;
 mod session;
 mod workspace;
 

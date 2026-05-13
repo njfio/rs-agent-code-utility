@@ -434,7 +434,15 @@ fn parse_and_extract(
         });
     }
 
-    let language = match detect_language_from_path(abs_path) {
+    // Dispatch via the central registry. The path is absolute at this
+    // point but `info_for_path` only inspects the extension, so it
+    // doesn't matter whether the workspace-relative or absolute form
+    // is passed.
+    let language = match abs_path
+        .to_str()
+        .and_then(crate::language::info_for_path)
+        .map(|info| info.language)
+    {
         Some(l) => l,
         None => return Err(ParseRejected::UnsupportedLanguage),
     };
@@ -526,11 +534,6 @@ fn line_col_to_byte_range(content: &str, sym: &Symbol) -> (u32, u32) {
     let end = (line_start(sym.end_line) + sym.end_column).min(bytes.len()) as u32;
     let end = end.max(start);
     (start, end)
-}
-
-fn detect_language_from_path(path: &Path) -> Option<Language> {
-    let ext = path.extension().and_then(|e| e.to_str())?;
-    rust_tree_sitter::detect_language_from_extension(ext)
 }
 
 /// Stable numeric tag for each `Language` variant — stored in `FileMeta.lang`
