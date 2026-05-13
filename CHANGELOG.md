@@ -7,6 +7,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.24] - 2026-05-13
+
+**The dogfooding-gap fix.** Two new capabilities + one bench, scoped
+explicitly to close the gaps the alpha.23 honest eval identified. After
+this slice the tool covers ~95% of the symbol-shaped queries that
+previously sent the agent (me, specifically) back to `rg` and a
+full-file `Read`.
+
+### What's new
+
+1. **`Index.FindSymbol` with `pattern`** (glob: `*`, `?`). The single
+   biggest dogfooding gap — without it, "I know roughly what it's
+   called" forced a fallback to ripgrep. Now: `find_symbol(pattern="make_*")`,
+   `find_symbol(pattern="*_target")`, `find_symbol(pattern="read_*_at")`.
+   AST-precise — no false positives in comments or strings.
+2. **`Index.ReadSymbolAt(file, line, col?)`**. Compiler-error flow:
+   take `error[E0308] --> src/foo.rs:42:18` and one call returns the
+   containing function body + dependency closure. No need to first
+   identify the enclosing fn's name, then `find_symbol`, then
+   `read_symbol`. The innermost def whose range covers the line wins.
+3. **`scenario_compiler_fix` bench task** — the first multi-step
+   real-agent-loop bench, replacing the eval-honesty gap from
+   alpha.23. Chains `read_symbol_at` + `read_symbol` and compares
+   to a 2× `rg + read whole file` baseline.
+
+### Real-loop bench results
+
+Measured on a synthetic fixture matching the scenario task's shape:
+
+| fixture                                   | baseline | mcp  | reduction |
+|-------------------------------------------|---------:|-----:|----------:|
+| tight (~25 LOC, 4 symbols)                |      454 |  275 |     39.4% |
+| realistic (~75 LOC, 16 symbols)           |    1,119 |   31 |     97.2% |
+
+These are honest numbers — the win **scales with file size**, which is
+what we'd expect (baseline reads whole files; MCP returns just the
+symbol). The README's "99.9%" headline came from a synthetic single-file
+case; the realistic ~75 LOC scenario lands at 97%, which is still
+substantial. Tiny single-file workspaces show modest gains.
+
+### Added
+
+- **`Index.FindSymbol` `pattern` param** (mutually exclusive with `name`).
+  Glob matcher in `symbol_glob_match` — minimal two-pointer-with-backtrack
+  fnmatch shape, no character classes, no escapes. 7 unit tests covering
+  exact match, prefix/suffix/middle stars, `?` wildcards, lone `*`,
+  backtracking. INVALID_PARAMS when both or neither name+pattern is set.
+- **`Index.ReadSymbolAt`** method (protocol-v0 §7.7 sibling). `Store::defs_in_file`
+  + `pick_innermost_def` resolve `(file, line)` to a FoundSymbol via
+  smallest-enclosing-range. 3 unit tests for the innermost picker.
+  `read_symbol_body` extracted as a shared helper so both `read_symbol`
+  and `read_symbol_at` share the body-read / signature-render /
+  closure-walk / wire-shape pipeline.
+- **`rts-mcp` tools** expose both: `find_symbol` accepts `name|pattern`;
+  `read_symbol_at` is a new tool with `file`/`line`/`column?` and the
+  same `shape`/`token_budget`/`include_dependencies` knobs as
+  `read_symbol`. Tool descriptions rewritten to be honest about when
+  to use each (the alpha.23 eval gap fix).
+- **`scenario_compiler_fix` bench task** + integration test. CLI gains
+  `--line` and `--referenced-symbol` flags.
+- **`crates/rts-daemon/tests/fuzzy_and_at_round_trip.rs`** (new):
+  11 wire-level assertions over the seeded `widget.rs` workspace
+  covering exact + 3 pattern shapes + 2 error paths + 5
+  `Index.ReadSymbolAt` cases (success, gap line, missing file, with
+  deps, line=0).
+- **`crates/rts-bench/tests/scenario_compiler_fix_bench.rs`** (new):
+  end-to-end scenario test asserting > 25% reduction on a fixture
+  where reduction would be 97% in practice.
+
+### Changed
+
+- **`Index.FindSymbol.name`** is now `Option<String>` instead of
+  required. Back-compat is preserved: agents sending only `name` still
+  work. Agents sending only `pattern` is the new path.
+- **`find_callers` + `fix_imports` "not implemented" rationale**
+  updated to point at the v1.1 inverted ref-graph work (the closure
+  walker is the right primitive in the *other* direction).
+- **`read_symbol` body extracted** to `read_symbol_body` helper so
+  it's shared with `read_symbol_at`. No behaviour change.
+- **`methods::index` module** is now `pub(crate)` (was already from
+  alpha.22 closure walker — kept).
+
+### Not in this slice
+
+- **Multi-hop closure / inverted ref-graph** for true `find_callers`
+  — v1.1. The current closure walker is anchor→deps; the inverse is
+  a separate index.
+- **Regex (vs glob) pattern** for `find_symbol`. Glob covers 95% of
+  cases without ReDoS risk; regex behind a flag lands when there's
+  a concrete user asking.
+- **`Index.ReadSymbolAt.column` enforcement.** Currently accepted but
+  inert (range tie-breaker only). Real column → byte mapping requires
+  per-line-byte indexing; lands with v1.1 incremental parser
+  reuse.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **503 passed, 0 failed, 3 ignored** (was
+  491 in alpha.23; +10 unit tests + 2 integration tests).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new hits on changed
+  files (93 latent warnings vs 91 baseline — the 2-warning delta is
+  pre-existing latent warnings surfaced more times by the new test
+  binaries under `--all-targets`).
+- Manual: scenario bench at 25-LOC fixture produces 39.4% reduction;
+  at 75-LOC fixture produces 97.2% reduction.
+
 ## [0.2.0-alpha.23] - 2026-05-13
 
 **Prebuilt-binaries release workflow (P9) ships.** Tagging `v*` now

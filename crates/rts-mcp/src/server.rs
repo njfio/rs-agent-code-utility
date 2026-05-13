@@ -38,9 +38,16 @@ pub struct OutlineArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct FindSymbolArgs {
-    /// The symbol name to find — exact match only. For partial / fuzzy
-    /// search, fall back to the shell `rg` tool.
-    pub name: String,
+    /// Exact name to find. Mutually exclusive with `pattern`. Use this
+    /// when you know the symbol's name.
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Glob pattern over symbol names (`*` = any chars, `?` = one char).
+    /// Mutually exclusive with `name`. Examples: `make_*`, `*_target`,
+    /// `read_*_at`, `*`. Use this when you only know roughly what the
+    /// symbol is called — replaces the "fall back to shell rg" workaround.
+    #[serde(default)]
+    pub pattern: Option<String>,
     /// Optional `kind` filter: `fn`, `struct`, `enum`, `type`, `trait`,
     /// `const`, `static`, `impl`, `method`, `class`, `interface`, `module`.
     #[serde(default)]
@@ -75,6 +82,29 @@ pub struct ReadSymbolArgs {
     /// v1.1 session-dedup override. Accepted but inert in v0.
     #[serde(default)]
     pub force_resend: bool,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReadSymbolAtArgs {
+    /// Workspace-relative file path.
+    pub file: String,
+    /// 1-indexed line containing the symbol to read. Compiler-error
+    /// flow: take the `:LINE` from `error[E0308] --> path:LINE:COL`.
+    pub line: u32,
+    /// Optional 1-indexed column inside the line.
+    #[serde(default)]
+    pub column: Option<u32>,
+    /// `signature` returns just the declaration; `body` (default) returns
+    /// the full implementation; `both` returns both.
+    #[serde(default)]
+    pub shape: Option<String>,
+    /// Token budget for the response. Range: 50..=200000.
+    #[serde(default)]
+    pub token_budget: Option<u64>,
+    /// When `true`, also include the minimum surrounding types/imports
+    /// the symbol references (tree-shaken closure).
+    #[serde(default)]
+    pub include_dependencies: bool,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -139,14 +169,19 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Locate a named symbol (function, class, type, method, etc.) across the workspace. Returns a list of `matches` with definition location, signature, and `rank_score`. Use when you know the name. For partial / fuzzy / textual matches, this v1 server has no search — fall back to your shell `rg` tool."
+        description = "Locate symbols (function, class, type, method, etc.) across the workspace. Either `name` (exact) or `pattern` (glob: `*` and `?`) is required. Use `name` when you know it; use `pattern` (e.g. `make_*`, `*_target`, `read_*_at`) when you only know roughly what it's called. Returns a list of `matches` with definition location, signature, and `rank_score`. Prefer this over shell `rg` for any symbol-shaped query — it's AST-precise (no comment/string false positives) and returns structured byte ranges."
     )]
     async fn find_symbol(
         &self,
         Parameters(args): Parameters<FindSymbolArgs>,
     ) -> Result<CallToolResult, McpError> {
         let mut params = serde_json::Map::new();
-        params.insert("name".into(), Value::String(args.name));
+        if let Some(n) = args.name {
+            params.insert("name".into(), Value::String(n));
+        }
+        if let Some(p) = args.pattern {
+            params.insert("pattern".into(), Value::String(p));
+        }
         if let Some(k) = args.kind {
             params.insert("kind".into(), Value::String(k));
         }
@@ -155,6 +190,37 @@ impl RtsServer {
         }
         match self
             .call_daemon("Index.FindSymbol", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(daemon_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Read the source of the symbol containing a given line in a file. Use this when you have a location (file + line) but not the name — e.g. from a compiler error like `error[E0308] --> src/lib.rs:42:18`. Returns the innermost enclosing definition with the same wire shape as `read_symbol`, including optional `include_dependencies` closure walking. Faster than: read the file, scroll to the line, identify the enclosing function, then `read_symbol`."
+    )]
+    async fn read_symbol_at(
+        &self,
+        Parameters(args): Parameters<ReadSymbolAtArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("file".into(), Value::String(args.file));
+        params.insert("line".into(), Value::Number(args.line.into()));
+        if let Some(c) = args.column {
+            params.insert("column".into(), Value::Number(c.into()));
+        }
+        if let Some(s) = args.shape {
+            params.insert("shape".into(), Value::String(s));
+        }
+        if let Some(b) = args.token_budget {
+            params.insert("token_budget".into(), Value::Number(b.into()));
+        }
+        if args.include_dependencies {
+            params.insert("include_dependencies".into(), Value::Bool(true));
+        }
+        match self
+            .call_daemon("Index.ReadSymbolAt", Value::Object(params))
             .await
         {
             Ok(v) => Ok(success_json(&v)),

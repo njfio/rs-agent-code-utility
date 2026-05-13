@@ -102,7 +102,7 @@ enum TaskCmd {
     /// Run one task end-to-end. Writes `<out>` (default `bench-<sha>.json`).
     Run {
         /// Task id. One of: locate_def, get_body, find_callers,
-        /// summarize_module, fix_imports.
+        /// summarize_module, fix_imports, scenario_compiler_fix.
         id: String,
         /// Workspace root to bench against.
         #[arg(long)]
@@ -110,9 +110,16 @@ enum TaskCmd {
         /// Symbol name to look up (locate_def, get_body).
         #[arg(long)]
         symbol: Option<String>,
-        /// Workspace-relative file path (summarize_module, fix_imports).
+        /// Workspace-relative file path (summarize_module, fix_imports,
+        /// scenario_compiler_fix).
         #[arg(long)]
         file: Option<String>,
+        /// Line number for `scenario_compiler_fix` (1-indexed).
+        #[arg(long)]
+        line: Option<u32>,
+        /// Referenced symbol to follow up on in `scenario_compiler_fix`.
+        #[arg(long)]
+        referenced_symbol: Option<String>,
         /// Line budget for the summary head (summarize_module). Defaults
         /// to 50.
         #[arg(long)]
@@ -166,11 +173,26 @@ async fn main() -> Result<()> {
                     workspace,
                     symbol,
                     file,
+                    line,
+                    referenced_symbol,
                     line_budget,
                     out,
                     dry_run,
                 },
-        } => run_one(id, workspace, symbol, file, line_budget, out, dry_run).await,
+        } => {
+            run_one(
+                id,
+                workspace,
+                symbol,
+                file,
+                line,
+                referenced_symbol,
+                line_budget,
+                out,
+                dry_run,
+            )
+            .await
+        }
         Cmd::Fixture {
             sub:
                 FixtureCmd::Restore {
@@ -333,11 +355,14 @@ async fn run_latency(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_one(
     id: String,
     workspace: PathBuf,
     symbol: Option<String>,
     file: Option<String>,
+    line: Option<u32>,
+    referenced_symbol: Option<String>,
     line_budget: Option<u32>,
     out: Option<PathBuf>,
     dry_run: bool,
@@ -347,7 +372,14 @@ async fn run_one(
     let rts_mcp_bin = resolve_bin("rts-mcp")?;
     let rts_daemon_bin = resolve_bin("rts-daemon")?;
 
-    let inputs = build_task_inputs(&id, symbol.as_deref(), file.as_deref(), line_budget)?;
+    let inputs = build_task_inputs(
+        &id,
+        symbol.as_deref(),
+        file.as_deref(),
+        line,
+        referenced_symbol.as_deref(),
+        line_budget,
+    )?;
 
     let ctx = TaskContext {
         workspace: &workspace,
@@ -426,6 +458,8 @@ fn build_task_inputs(
     id: &str,
     symbol: Option<&str>,
     file: Option<&str>,
+    line: Option<u32>,
+    referenced_symbol: Option<&str>,
     line_budget: Option<u32>,
 ) -> Result<serde_json::Value> {
     let mut obj = serde_json::Map::new();
@@ -434,6 +468,12 @@ fn build_task_inputs(
     }
     if let Some(f) = file {
         obj.insert("file".into(), json!(f));
+    }
+    if let Some(l) = line {
+        obj.insert("line".into(), json!(l));
+    }
+    if let Some(r) = referenced_symbol {
+        obj.insert("referenced_symbol".into(), json!(r));
     }
     if let Some(n) = line_budget {
         obj.insert("line_budget".into(), json!(n));
@@ -450,6 +490,15 @@ fn build_task_inputs(
             if file.is_none() {
                 return Err(anyhow!(
                     "task `summarize_module` requires --file (workspace-relative path)"
+                ));
+            }
+        }
+        "scenario_compiler_fix" => {
+            if file.is_none() || line.is_none() || referenced_symbol.is_none() {
+                return Err(anyhow!(
+                    "task `scenario_compiler_fix` requires --file, --line, and \
+                     --referenced-symbol (the symbol an agent would follow up on \
+                     from the closure walk)"
                 ));
             }
         }

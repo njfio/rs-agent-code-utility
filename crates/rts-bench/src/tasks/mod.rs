@@ -15,6 +15,7 @@ use crate::mcp_runner::McpRun;
 
 pub mod get_body;
 pub mod locate_def;
+pub mod scenario_compiler_fix;
 pub mod summarize_module;
 
 /// Stable identifiers used on the CLI (`rts-bench task <id>`) and in
@@ -25,6 +26,7 @@ pub const TASK_IDS: &[&str] = &[
     "find_callers",
     "summarize_module",
     "fix_imports",
+    "scenario_compiler_fix",
 ];
 
 /// Outcome of running one task.
@@ -63,11 +65,17 @@ pub async fn run_task(id: &str, ctx: &TaskContext<'_>) -> Result<TaskOutcome> {
         "locate_def" => locate_def::run(ctx).await,
         "get_body" => get_body::run(ctx).await,
         "summarize_module" => summarize_module::run(ctx).await,
+        "scenario_compiler_fix" => scenario_compiler_fix::run(ctx).await,
         "find_callers" => Ok(TaskOutcome::NotImplemented {
-            reason: "task `find_callers` needs the P8 reference graph; defer".into(),
+            reason: "task `find_callers` needs an inverted ref-graph (closure walker is \
+                     anchor→deps; this is the inverse). Defer to v1.1 alongside multi-hop \
+                     closure."
+                .into(),
         }),
         "fix_imports" => Ok(TaskOutcome::NotImplemented {
-            reason: "task `fix_imports` needs the P8 reference graph; defer".into(),
+            reason: "task `fix_imports` needs the same inverted ref-graph; defer with \
+                     find_callers."
+                .into(),
         }),
         other => anyhow::bail!("unknown task id: {other}; valid ids: {TASK_IDS:?}"),
     }

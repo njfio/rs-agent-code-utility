@@ -359,6 +359,55 @@ impl Store {
         Ok(out)
     }
 
+    /// Defs in one workspace-relative file, surfaced as `FoundSymbol`.
+    /// Used by `Index.ReadSymbolAt` to convert `(file, line)` into a
+    /// concrete def site by picking the innermost enclosing range.
+    ///
+    /// Returns `Ok(Vec::new())` when the file isn't indexed — caller
+    /// surfaces this as `FILE_NOT_INDEXED`. Order is arbitrary; the
+    /// `ReadSymbolAt` handler sorts by range to find the innermost
+    /// containing def.
+    pub fn defs_in_file(&self, path: &str) -> anyhow::Result<Vec<FoundSymbol>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let path_to_fid = txn.open_table(PATH_TO_FID)?;
+        let fid: u32 = match path_to_fid.get(path)? {
+            Some(v) => v.value(),
+            None => return Ok(Vec::new()),
+        };
+        let fid_defs = txn.open_multimap_table(FID_DEFS)?;
+        let sid_to_name = txn.open_table(SID_TO_NAME)?;
+        let defs = txn.open_multimap_table(DEFS)?;
+        let mut out: Vec<FoundSymbol> = Vec::new();
+        let mut sid_it = fid_defs.get(&fid)?;
+        while let Some(sid_row) = sid_it.next() {
+            let sid = sid_row?.value();
+            let name = match sid_to_name.get(&sid)? {
+                Some(v) => v.value().to_string(),
+                None => continue,
+            };
+            let mut def_it = defs.get(&sid)?;
+            while let Some(def_row) = def_it.next() {
+                let bytes = def_row?.value().to_vec();
+                if let Ok(d) = from_bytes::<DefSite>(&bytes) {
+                    if d.fid == fid {
+                        out.push(FoundSymbol {
+                            name: name.clone(),
+                            kind: d.kind,
+                            file: path.to_string(),
+                            fid: d.fid,
+                            start_byte: d.start,
+                            end_byte: d.end,
+                            start_line: d.start_line,
+                            end_line: d.end_line,
+                            visibility: d.visibility,
+                        });
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
     /// All symbol names defined anywhere in the workspace, as a set.
     /// Used by `Index.Outline` to filter raw identifier references
     /// down to "actual symbol references" before building the graph.
