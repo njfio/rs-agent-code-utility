@@ -41,25 +41,21 @@
 use rust_tree_sitter::{Language, Parser, query::Query};
 
 /// Extract the set of *referenced* symbol names from `content` parsed
-/// as `language`. Returns `None` when the language has no tags.scm
-/// query — callers fall back to [`crate::outline::extract_identifiers`].
+/// as `language`, using the supplied pre-compiled `Query`. The query
+/// is built once per language (cached via `OnceLock` in
+/// [`crate::language::cached_refs_query`]) and reused for every call —
+/// `Query::new` is expensive (recompiles the query DSL on each call)
+/// and the outline path runs this per file.
 ///
-/// The per-language query string lives in
-/// [`crate::language::info_for_path`]'s registry; this function takes
-/// it as a parameter so the dispatcher in [`references_for_path`] can
-/// pull both the `Language` and the query from the same place.
-///
-/// Errors during parse or query construction return `None`; this is a
-/// best-effort precision improvement and the regex fallback is always
-/// available.
+/// Errors during parse return `None`; this is a best-effort precision
+/// improvement and the regex fallback is always available.
 pub(crate) fn extract_references(
     language: Language,
-    query_src: &str,
+    query: &Query,
     content: &str,
 ) -> Option<Vec<String>> {
     let parser = Parser::new(language).ok()?;
     let tree = parser.parse(content, None).ok()?;
-    let query = Query::new(language, query_src).ok()?;
     let captures = query.captures(&tree).ok()?;
     let mut out: Vec<String> = Vec::with_capacity(captures.len());
     for c in captures {
@@ -82,13 +78,14 @@ pub(crate) fn extract_references(
 /// don't have to branch on `Option`. We allocate either way; the
 /// AST-precise path is the win, not the allocation profile.
 ///
-/// Both the `Language` enum variant and the tags.scm query string come
-/// from [`crate::language::info_for_path`] — the single source of truth
-/// for per-language facts. See `crate::language` for the registry.
+/// Both the `Language` enum variant and the pre-compiled tags.scm
+/// query come from [`crate::language`] — the single source of truth
+/// for per-language facts. `cached_refs_query` returns a process-wide
+/// `&'static Query` so we don't recompile per call.
 pub(crate) fn references_for_path(rel_path: &str, content: &str) -> Vec<String> {
     if let Some(info) = crate::language::info_for_path(rel_path) {
-        if let Some(query_src) = info.refs_query {
-            if let Some(refs) = extract_references(info.language, query_src, content) {
+        if let Some(query) = crate::language::cached_refs_query(&info) {
+            if let Some(refs) = extract_references(info.language, query, content) {
                 return refs;
             }
         }
@@ -102,11 +99,13 @@ pub(crate) fn references_for_path(rel_path: &str, content: &str) -> Vec<String> 
 mod tests {
     use super::*;
 
-    /// Helper: look up the per-language query in the central registry
-    /// so tests don't have to know which file holds the query strings.
-    fn refs_query_for(rel_path: &str) -> Option<(Language, &'static str)> {
+    /// Helper: look up the per-language cached query in the central
+    /// registry. Tests don't have to know which file holds the query
+    /// strings or whether the cache has been populated yet.
+    fn refs_query_for(rel_path: &str) -> Option<(Language, &'static Query)> {
         let info = crate::language::info_for_path(rel_path)?;
-        Some((info.language, info.refs_query?))
+        let q = crate::language::cached_refs_query(&info)?;
+        Some((info.language, q))
     }
 
     #[test]

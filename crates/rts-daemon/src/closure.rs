@@ -157,9 +157,24 @@ pub fn compute(
     // Render each entry (read body bytes + dispatch the per-language
     // signature renderer). I/O or render failures degrade gracefully
     // to `signature: None`.
+    //
+    // alpha.29 M1: route dep file reads through the same
+    // `path::resolve_workspace_path` gate the read handlers use.
+    // Today this is defense-in-depth (the writer always stores
+    // workspace-relative paths, so `def.file` couldn't be malicious
+    // in practice). But the security review flagged that closure was
+    // the one file-read surface that didn't share the gate, and a
+    // future writer bug or stale db.redb could surface garbage. M2's
+    // symlink rejection rides for free now.
     let mut rendered: Vec<DependencyEntry> = Vec::with_capacity(resolved.len());
     for (_name, def) in &resolved {
-        let abs = workspace_root.join(&def.file);
+        let abs = match crate::path::resolve_workspace_path(workspace_root, &def.file) {
+            Ok((abs, _rel)) => abs,
+            Err(_) => {
+                rendered.push(entry_without_signature(def));
+                continue;
+            }
+        };
         let (start, end) = (def.start_byte as usize, def.end_byte as usize);
         let body_bytes = match std::fs::read(&abs) {
             Ok(b) => b,

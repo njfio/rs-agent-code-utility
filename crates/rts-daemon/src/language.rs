@@ -36,7 +36,9 @@
 //!
 //! No other module changes. The whole dispatch is one file.
 
-use rust_tree_sitter::Language;
+use std::sync::OnceLock;
+
+use rust_tree_sitter::{Language, query::Query};
 
 /// Function pointer for a signature renderer. All renderers in
 /// `rust_tree_sitter::signature` share this shape:
@@ -183,6 +185,45 @@ pub fn info_for_path(rel_path: &str) -> Option<LanguageInfo> {
         }),
         _ => None,
     }
+}
+
+// ---- Cached `Query` objects per language ----
+//
+// `Query::new` is expensive (tree-sitter recompiles the query DSL,
+// interns capture names, etc.). The alpha.27 outline path calls
+// `references_for_path` once per file in the workspace; a 1000-file
+// Rust workspace would rebuild the same query 1000 times per cold
+// `Index.Outline` call.
+//
+// One `OnceLock<Option<Query>>` per language with a `@reference.*`
+// query. `Option` lets us absorb construction errors (e.g. tree-sitter
+// rejects the query string) and fall through to the regex tokenizer.
+// `OnceLock` is thread-safe, lock-free after first init, and lets the
+// Query live for the lifetime of the process (intentional — we never
+// invalidate).
+
+static RUST_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static PYTHON_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static GO_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static RUBY_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+
+/// Cached `Query` for `language`. Returns `Some` if the language has a
+/// tags.scm-derived `@reference.*` query *and* construction succeeded;
+/// `None` otherwise (caller falls back to the regex tokenizer).
+///
+/// First call per language pays the `Query::new` cost; subsequent calls
+/// are an atomic load + pointer deref.
+pub fn cached_refs_query(info: &LanguageInfo) -> Option<&'static Query> {
+    let cell = match info.language {
+        Language::Rust => &RUST_QUERY,
+        Language::Python => &PYTHON_QUERY,
+        Language::Go => &GO_QUERY,
+        Language::Ruby => &RUBY_QUERY,
+        _ => return None,
+    };
+    let query_src = info.refs_query?;
+    cell.get_or_init(|| Query::new(info.language, query_src).ok())
+        .as_ref()
 }
 
 #[cfg(test)]

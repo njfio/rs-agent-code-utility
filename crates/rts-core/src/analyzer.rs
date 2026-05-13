@@ -318,6 +318,26 @@ impl CodebaseAnalyzer {
         })
     }
 
+    /// Analyze in-memory `content` for `language` and return the extracted
+    /// symbols. Bypasses the filesystem entirely — no temp files, no
+    /// disk round-trip, no `AnalysisResult` envelope.
+    ///
+    /// Use this when you already have the content in memory and only
+    /// need the symbol list. Callers that need file metadata, line
+    /// counts, or other `AnalysisResult` fields should still use
+    /// `analyze_file`.
+    ///
+    /// Originally added for `rts-daemon`'s writer hot path (alpha.29):
+    /// the previous `analyze_file`-driven path wrote content to a
+    /// tempfile, then re-read it to parse. On real workspaces this
+    /// doubled or tripled per-parse cost. This entry point removes
+    /// both round-trips.
+    pub fn analyze_content(&mut self, content: &str, language: Language) -> Result<Vec<Symbol>> {
+        let parser = self.get_parser(language)?;
+        let tree = parser.parse(content, None)?;
+        self.extract_symbols(&tree, content, language)
+    }
+
     /// Analyze a single file and return structured results
     pub fn analyze_file<P: AsRef<Path>>(&mut self, file_path: P) -> Result<AnalysisResult> {
         let file_path = file_path.as_ref();

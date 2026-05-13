@@ -161,48 +161,7 @@ fn check_budget(budget: Option<u64>) -> Result<u64, ProtocolError> {
     Ok(b)
 }
 
-/// Resolve a workspace-relative `file` argument to an absolute path inside
-/// `root`. Enforces protocol-v0 §6.2 (per-read prefix check) + §6.3 (no `..`).
-///
-/// Absolute paths are accepted only if they already start with `root` (the
-/// MCP server may forward absolute paths from agent-side editors); anything
-/// else surfaces as `OUT_OF_ROOT`.
-fn resolve_workspace_path(root: &Path, raw: &str) -> Result<(PathBuf, String), ProtocolError> {
-    if raw.is_empty() {
-        return Err(ProtocolError::new(
-            ErrorCode::InvalidParams,
-            "`file` must be non-empty",
-        ));
-    }
-    let p = Path::new(raw);
-    if p.components().any(|c| matches!(c, Component::ParentDir)) {
-        return Err(ProtocolError::new(
-            ErrorCode::PathTraversal,
-            "`..` segment in path",
-        ));
-    }
-    let abs = if p.is_absolute() {
-        if !p.starts_with(root) {
-            return Err(ProtocolError::new(
-                ErrorCode::OutOfRoot,
-                "absolute path is outside workspace root",
-            ));
-        }
-        p.to_path_buf()
-    } else {
-        root.join(p)
-    };
-    let rel = match abs.strip_prefix(root) {
-        Ok(r) => r.to_string_lossy().into_owned(),
-        Err(_) => {
-            return Err(ProtocolError::new(
-                ErrorCode::OutOfRoot,
-                "resolved path is outside workspace root",
-            ));
-        }
-    };
-    Ok((abs, rel))
-}
+use crate::path::resolve_workspace_path;
 
 /// Body-extension check per §13.4. Returns `OUT_OF_ALLOWED_BODY_EXTENSIONS` when
 /// a body read is requested for a file whose extension isn't on the allowlist.
@@ -1034,23 +993,14 @@ mod tests {
         assert_eq!(parts[2], "47");
     }
 
+    // `resolve_workspace_path` tests moved to `crate::path::tests` in
+    // alpha.29 when the fn was extracted. The richer suite there covers
+    // these cases plus the M2 symlink-rejection contract.
     #[test]
-    fn resolve_rejects_parent_dir() {
+    #[allow(dead_code)]
+    fn resolve_smoke() {
         let root = Path::new("/tmp/ws");
-        let err = resolve_workspace_path(root, "../etc/passwd").unwrap_err();
-        assert_eq!(err.code, ErrorCode::PathTraversal);
-    }
-
-    #[test]
-    fn resolve_rejects_outside_absolute() {
-        let root = Path::new("/tmp/ws");
-        let err = resolve_workspace_path(root, "/etc/passwd").unwrap_err();
-        assert_eq!(err.code, ErrorCode::OutOfRoot);
-    }
-
-    #[test]
-    fn resolve_joins_relative() {
-        let root = Path::new("/tmp/ws");
+        // Quick smoke; full coverage lives in path::tests.
         let (abs, rel) = resolve_workspace_path(root, "src/lib.rs").unwrap();
         assert_eq!(abs, Path::new("/tmp/ws/src/lib.rs"));
         assert_eq!(rel, "src/lib.rs");
