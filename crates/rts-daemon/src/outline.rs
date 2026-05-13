@@ -176,9 +176,15 @@ pub fn compute(
         }
     }
 
-    // For each file, parse-light: walk its source text and collect
-    // identifier-shaped tokens that match a known def name. Each
-    // (referencer_file → definer_file) becomes an edge.
+    // For each file, parse and pull AST-precise references via
+    // tags.scm (Rust/Python/Go/Ruby) — or the regex tokenizer fallback
+    // for languages without a query. Each (referencer_file →
+    // definer_file) tuple becomes an edge in the PageRank graph.
+    //
+    // The tags.scm path eliminates false-positive edges from local
+    // variables that shadow def names, comment mentions, and
+    // identifier appearances in trait/type bounds. PageRank ranks
+    // files that *call* a symbol over files that *mention* it.
     let mut edges: Vec<Edge> = Vec::new();
     let mut ref_counts: HashMap<(usize, usize, String), u32> = HashMap::new();
     for (src_idx, f) in files.iter().enumerate() {
@@ -187,17 +193,17 @@ pub fn compute(
             Ok(s) => s,
             Err(_) => continue,
         };
-        for ident in extract_identifiers(&content) {
-            if !all_def_names.contains(ident) {
+        for ident in crate::refs::references_for_path(&f.path, &content) {
+            if !all_def_names.contains(&ident) {
                 continue;
             }
-            if let Some(dst_files) = def_map.get(ident) {
+            if let Some(dst_files) = def_map.get(&ident) {
                 for &dst_idx in dst_files {
                     if dst_idx == src_idx {
                         continue;
                     }
                     *ref_counts
-                        .entry((src_idx, dst_idx, ident.to_string()))
+                        .entry((src_idx, dst_idx, ident.clone()))
                         .or_insert(0) += 1;
                 }
             }

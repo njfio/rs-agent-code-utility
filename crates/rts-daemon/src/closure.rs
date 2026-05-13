@@ -106,13 +106,20 @@ pub fn compute(
         Ok(s) => s,
         Err(_) => return ClosureResult::empty(),
     };
+    // Pull references via tags.scm where available (Rust/Python/Go/Ruby
+    // as of alpha.27); fall through to the regex tokenizer for other
+    // languages. Tags.scm precision eliminates false positives from
+    // local-variable shadowing + identifier mentions in comments. The
+    // call-site filter (`@reference.call`) drops trait/type-position
+    // identifiers too, which the regex would have surfaced as deps.
+    let refs = crate::refs::references_for_path(&anchor.file, anchor_body);
     let mut candidates: BTreeSet<String> = BTreeSet::new();
-    for ident in crate::outline::extract_identifiers(anchor_body) {
+    for ident in refs {
         if ident == anchor.name {
             continue; // skip self-reference
         }
-        if all_def_names.contains(ident) {
-            candidates.insert(ident.to_string());
+        if all_def_names.contains(&ident) {
+            candidates.insert(ident);
         }
     }
     if candidates.is_empty() {

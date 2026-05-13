@@ -16,6 +16,7 @@ mod lifecycle;
 mod methods;
 mod outline;
 mod protocol;
+mod refs;
 mod socket;
 mod state;
 mod store;
