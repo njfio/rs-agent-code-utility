@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs
+
+- **`docs/protocol-v0.md` re-spec at alpha.30 baseline** (U0 of the v0.3
+  code-graph KB plan). The doc was last updated pre-alpha.24 and drifted
+  from the shipped wire surface across 8 alphas. This pass:
+  - Updates the Status line from "Draft 1, design-only" → "Draft 2,
+    alpha.30 baseline" and refreshes `Daemon.Ping`'s example version
+    (`0.2.0-alpha.3` → `0.2.0-alpha.30`).
+  - Documents `Index.ReadSymbolAt` (new method, alpha.24) at §7.7b
+    with full param shape + error catalog + §18.4b JSON Schema.
+  - Documents `Index.FindSymbol` `pattern` (glob) param + `name`
+    being optional + mutual-exclusion rule (alpha.24) at §7.6 and
+    §18.3.
+  - Adds the alpha.22 (`closure_walker`), alpha.24
+    (`read_symbol_at`, `fuzzy_match`), alpha.18
+    (`pagerank_filewise`), and alpha.25 (`polling_fallback`)
+    capability strings to the §4.1 canonical advertisement list.
+  - Updates the §7 method catalog (10 → 11 methods + 1 notification)
+    and the architecture diagram (4 tools → 5).
+  - Reserves the four v0.3 capability strings (`find_callers`,
+    `impact_of`, `read_symbol.include_callers`, `pagerank_symbolwise`)
+    in §4.2 so client implementations can branch on them as the v0.3
+    PR series lands.
+  - Adds **Appendix F — Wire-shape evolution by alpha**, a table of
+    every additive change since Draft 1 plus a workflow for the
+    extension protocol the v0.3 PRs (U1-U5) will follow.
+- **Adds CLAUDE.md ↔ AGENTS.md parity hint not required** — no agent
+  guidance changed; the doc-baseline catch-up is purely about the
+  daemon's wire contract.
+
+### Why
+
+The alpha.28 entry called this out explicitly ("Wire-protocol re-spec
+… `docs/protocol-v0.md` is still pre-alpha.24. Worth a docs-only PR
+next"); the v0.3 plan's Deepening §C5 reinforced it ("v0.3's additive
+contract holds *only if* protocol-v0.md is current"). Without this PR,
+v0.3 PRs would compound the drift instead of removing it.
+
+No code changes; no alpha bump.
+
 ## [0.2.0-alpha.30] - 2026-05-13
 
 **JS/TS reference queries.** Closes the alpha.27 language-coverage

@@ -1,6 +1,6 @@
 # `protocol-v0` — Daemon ↔ MCP wire protocol
 
-**Status**: Draft 1, design-only. P5 deliverable of the agentic-retrieval MCP pivot (see [docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md](plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md)).
+**Status**: Draft 2 — **alpha.30 baseline (2026-05-13)**. Originally P5 deliverable of the agentic-retrieval MCP pivot (see [docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md](plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md)); this draft tracks the **shipped** wire surface as of `v0.2.0-alpha.30`. See [Appendix F](#appendix-f--wire-shape-evolution-by-alpha) for per-alpha additive changes since Draft 1. The next pre-v0.3 addition is the v0.3 code-graph KB extension (see [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)).
 **Audience**: anyone implementing `rts-daemon` (P6) or `rts-mcp` (P7), and anyone reviewing the cross-process contract between them.
 **Scope**: the wire protocol between **one `rts-daemon`** (background service, one per workspace) and **N `rts-mcp` clients** (per-agent stdio MCP server processes that talk to the daemon over a Unix-domain socket / named pipe). The MCP surface that *agents* see is governed by the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25) and is not redefined here — this document covers only the daemon's private side.
 
@@ -32,8 +32,9 @@ Coding agent (Claude Code, Cursor, Cline, Aider, Continue, ...)
       ▼
 ┌──────────────────┐
 │ rts-mcp          │  per-agent process, rmcp 1.6
-│ (stdio binary)   │  exposes the 4 tools: outline_workspace, find_symbol,
-└─────────┬────────┘  read_symbol, read_range + rts://capabilities resource
+│ (stdio binary)   │  exposes 5 tools: outline_workspace, find_symbol,
+└─────────┬────────┘  read_symbol, read_symbol_at, read_range
+                     + rts://capabilities resource
           │
           │   protocol-v0  (this document)
           │   newline-delimited JSON over a Unix domain socket
@@ -165,10 +166,12 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
   "id": "1",
   "result": {
     "protocol":     "0",                          // semver-style major; v1 is the breaking re-cut
-    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.3", "git_sha": "c9465aa..." },
-    "capabilities": ["outline", "find_symbol", "read_symbol", "read_range",
+    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.30", "git_sha": "756f5cc..." },
+    "capabilities": ["outline", "find_symbol", "read_symbol", "read_symbol_at", "read_range",
                      "rank_score", "tree_shake", "partial_responses",
-                     "content_version", "secrets_blocklist"],
+                     "content_version", "secrets_blocklist",
+                     "closure_walker", "fuzzy_match", "pagerank_filewise",
+                     "polling_fallback"],
     "uptime_ms":    123456
   }
 }
@@ -181,10 +184,17 @@ The client MUST NOT depend on capabilities that aren't in the advertised list. T
 These strings are reserved and MUST NOT be advertised by `protocol-v0` daemons unless the corresponding code is implemented:
 
 - `session_dedup` — R6 deferred to v1.1 (§9.5).
-- `incremental_pagerank` — P8 token-reduction depth.
+- `incremental_pagerank` — P8 push-flow ranking (deferred from alpha.20 memoization).
 - `safe_edits` — v2 `edit_symbol` / `apply_patch`.
 - `structured_search` — v2 semantic + lexical search.
-- `call_graph` — v2 callers/callees/blast-radius.
+
+Reserved for the **v0.3 code-graph KB** extension (see [v0.3 plan](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)). Each is advertised independently when its implementing PR lands:
+
+- `find_callers` — direct-callers lookup (v0.3 U2').
+- `impact_of` — transitive caller closure (v0.3 U5).
+- `read_symbol.include_callers` — extends `Index.ReadSymbol` to compose with `include_dependencies` (v0.3 U2').
+- `pagerank_symbolwise` — symbol-level PageRank fills `rank_score`; `find_symbol` results sort by descending rank when advertised. Clients without this capability MAY request `sort: "lexical"` to retain pre-v0.3 ordering.
+- `call_graph` (umbrella; reserved but **not advertised by itself** — agents should branch on the four fine-grained strings above).
 
 ### 4.3 Version mismatch
 
@@ -292,10 +302,10 @@ The v0 method namespace is `^[A-Z][a-z]+\.[A-Z][A-Za-z]+$`. Methods are grouped 
 |---|---|---|
 | `Daemon.*`   | `Ping`, `Telemetry` (notification) | always |
 | `Workspace.*` | `Mount`, `Unmount`, `Status` | always |
-| `Index.*`    | `Outline`, `FindSymbol`, `ReadSymbol`, `ReadRange` | `outline`, `find_symbol`, `read_symbol`, `read_range` |
+| `Index.*`    | `Outline`, `FindSymbol`, `ReadSymbol`, `ReadSymbolAt`, `ReadRange` | `outline`, `find_symbol` (+ `fuzzy_match` for `pattern`), `read_symbol` (+ `closure_walker` for `include_dependencies`), `read_symbol_at`, `read_range` |
 | `Session.*`  | `Open`, `Close` | always; **v1.1**: `MarkDeduped` under `session_dedup` |
 
-Total v0 surface: **10 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.ReadSymbol`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.)
+Total v0 surface as of alpha.30: **11 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.ReadSymbol`, `Index.ReadSymbolAt`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.) `Index.ReadSymbolAt` shipped in alpha.24; see [Appendix F](#appendix-f--wire-shape-evolution-by-alpha).
 
 `Daemon.Cancel` is **not** part of v0. Per-request cancellation is handled by the daemon noticing the connection closed (drop) or by Tokio `select!` against a soft deadline on the request future; both don't need a wire-level verb. v2 may introduce `Daemon.Cancel(request_id)` if mid-closure cancellation becomes worthwhile.
 
@@ -404,16 +414,19 @@ Errors: `INDEX_NOT_READY` (only when `partial: false` was implicitly assumed; se
 
 ### 7.6 `Index.FindSymbol`
 
-AST-precise definition + references + signature for a named symbol. Always returns a **list** (length ≥ 0), never silently top-1; the agent disambiguates.
+AST-precise definition + references + signature for a named or pattern-matched symbol. Always returns a **list** (length ≥ 0), never silently top-1; the agent disambiguates.
 
-**`params`**:
+**`params`** (one of `name` or `pattern` is required; both is `INVALID_PARAMS`):
 ```jsonc
 {
-  "name":   "build_index",          // required
-  "kind":   "fn",                   // optional; one of: fn, struct, enum, type, trait, const, static, impl, method, class, interface, module
-  "file":   "src/index/mod.rs"      // optional; filter
+  "name":    "build_index",          // optional; exact match
+  "pattern": "build_*",              // optional; glob: `*` (any run, including empty) and `?` (single char). Mutually exclusive with name. Capability: `fuzzy_match` (alpha.24+).
+  "kind":    "fn",                   // optional; one of: fn, struct, enum, type, trait, const, static, impl, method, class, interface, module
+  "file":    "src/index/mod.rs"      // optional; filter
 }
 ```
+
+The glob matcher has **no character classes** and **no escapes** — `*` and `?` only. Agents that need regex-like expressivity (e.g. character classes) should compose multiple `pattern` queries client-side; a flagged regex mode is on the v1.1 candidate list pending a concrete user request.
 
 **`result`**:
 ```jsonc
@@ -491,6 +504,26 @@ Read source for a named symbol. Optionally walks the tree-shaken closure of type
 ```
 
 Errors: `INDEX_NOT_READY`, `SYMBOL_NOT_FOUND`, `AMBIGUOUS_SYMBOL` (force the agent to disambiguate via `file` or `kind` — alternatively the daemon MAY return the top-K and a `truncated: true` flag; that path is preferred), `OUT_OF_ROOT`, `BUDGET_TOO_SMALL`.
+
+### 7.7b `Index.ReadSymbolAt`
+
+Read source for the symbol whose def-range covers `(file, line)`. The **compiler-error flow** primitive: take a diagnostic like `error[E0308] --> src/foo.rs:42:18` and one call returns the containing function body + (optional) dependency closure. Avoids the two-call "find then read" pattern when the agent already has a precise location. Capability: `read_symbol_at` (alpha.24+).
+
+**`params`**:
+```jsonc
+{
+  "file":                 "src/foo.rs",     // required, workspace-relative
+  "line":                 42,                // required, 1-based
+  "column":               18,                // optional; 1-based; tie-breaker only in v0 (inert without column→byte mapping). Lands with v1.1 incremental parser reuse.
+  "shape":                "body",            // "signature" | "body" | "both"  (default "body")
+  "token_budget":         4096,              // optional; default 4096
+  "include_dependencies": false              // closure walk; same semantics as §7.7
+}
+```
+
+**`result`**: same wire shape as §7.7 `Index.ReadSymbol` (body or session-deduped variant). `qualified_name` is the innermost enclosing def whose def-range covers the line; range tie-breakers prefer smaller ranges (innermost wins). When no def covers the line — e.g. a blank gap, a comment-only region, a top-level statement outside any function — returns `SYMBOL_NOT_FOUND` with `data: { "file", "line" }`.
+
+Errors: `INDEX_NOT_READY`, `SYMBOL_NOT_FOUND` (no def covers the line), `OUT_OF_ROOT`, `FILE_NOT_INDEXED`, `RANGE_OUT_OF_BOUNDS` (line > file LOC), `INVALID_PARAMS` (line < 1).
 
 ### 7.8 `Index.ReadRange`
 
@@ -873,16 +906,22 @@ These are normative for `params` validation. The daemon SHOULD reject schema-non
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
-    "kind": { "type": "string", "enum": ["fn", "struct", "enum", "type", "trait",
-                                          "const", "static", "impl", "method",
-                                          "class", "interface", "module"] },
-    "file": { "type": "string" }
+    "name":    { "type": "string", "minLength": 1, "maxLength": 256 },
+    "pattern": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "kind":    { "type": "string", "enum": ["fn", "struct", "enum", "type", "trait",
+                                             "const", "static", "impl", "method",
+                                             "class", "interface", "module"] },
+    "file":    { "type": "string" }
   },
-  "required": ["name"],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "oneOf": [
+    { "required": ["name"],    "not": { "required": ["pattern"] } },
+    { "required": ["pattern"], "not": { "required": ["name"] } }
+  ]
 }
 ```
+
+`name` and `pattern` are mutually exclusive; daemons reject "neither" and "both" with `INVALID_PARAMS`. `pattern` glob syntax: `*` (zero-or-more chars) and `?` (one char); no character classes, no escapes.
 
 ### 18.4 `Index.ReadSymbol.params`
 
@@ -907,6 +946,28 @@ These are normative for `params` validation. The daemon SHOULD reject schema-non
   "additionalProperties": false
 }
 ```
+
+### 18.4b `Index.ReadSymbolAt.params`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "file":                 { "type": "string", "minLength": 1 },
+    "line":                 { "type": "integer", "minimum": 1 },
+    "column":               { "type": "integer", "minimum": 1 },
+    "shape":                { "type": "string", "enum": ["signature","body","both"],
+                              "default": "body" },
+    "token_budget":         { "type": "integer", "minimum": 50, "maximum": 200000 },
+    "include_dependencies": { "type": "boolean", "default": false }
+  },
+  "required": ["file", "line"],
+  "additionalProperties": false
+}
+```
+
+`column` is accepted but inert in v0 (tie-breaker only). Lands with v1.1 incremental parser reuse.
 
 ### 18.5 `Index.ReadRange.params`
 
@@ -1095,4 +1156,38 @@ The daemon MUST NOT advertise `protocol: "1"` until a v1 spec exists and the dae
 
 ---
 
-*This document is the source of truth for the daemon-side wire protocol. The MCP-facing surface (`outline_workspace`, `find_symbol`, `read_symbol`, `read_range`, `rts://capabilities`) is governed by [docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md](plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md) and the MCP 2025-11-25 spec; future MCP-tool changes should land in that plan, not here.*
+## Appendix F — Wire-shape evolution by alpha
+
+This appendix tracks every additive wire-shape change between Draft 1 (P5 deliverable, pre-implementation) and Draft 2 (this revision, alpha.30 baseline). Each entry lists the alpha that shipped the change, the capability string that advertises it, and the spec section(s) that document the resulting shape. Entries are additive per Appendix E — clients that ignored an unknown field before still work after.
+
+| Alpha | Capability | Wire-shape change | Doc sections |
+|---|---|---|---|
+| `alpha.18` | `pagerank_filewise` | `Index.FindSymbol.result.matches[*].rank_score` and `Index.Outline` PageRank personalisation via `mentioned_files`/`mentioned_idents` | §7.5, §7.6 |
+| `alpha.20` | (none — internal) | OutlineCache memoization; no wire change | — |
+| `alpha.22` | `closure_walker` | `Index.ReadSymbol.params.include_dependencies: bool`; `result.dependencies[]`, `result.closure_truncated: bool`, `result.truncated_symbols[]` | §7.7 |
+| `alpha.24` | `read_symbol_at`, `fuzzy_match` | New method `Index.ReadSymbolAt(file, line, column?)`; `Index.FindSymbol.params.name` made optional; new `Index.FindSymbol.params.pattern` (glob) | §7.6, §7.7b, §18.3, §18.4b |
+| `alpha.25` | `polling_fallback` | `Workspace.Status.result.watcher_status` enum extended with `polling_fallback` and `overflowed_rewalking` | §7.4 |
+| `alpha.26` | (none — internal) | `rts-bench query` CLI subcommand; talks to daemon over the same socket using existing methods. No wire-shape change. | — |
+| `alpha.27` | (none — internal) | tags.scm reference precision in `closure_walker`'s identifier filter. Same wire shape; better-quality contents. | — |
+| `alpha.28` | (none — internal) | `crate::language` per-language dispatcher refactor. No wire change. | — |
+| `alpha.29` | (none — internal) | OnceLock query cache + signature renderer perf. No wire change. | — |
+| `alpha.30` | (none — internal) | JS/TS tags.scm reference queries (extends alpha.27 to JS/TS). Same wire shape; better-quality contents on JS/TS workspaces. | — |
+
+Capability strings present in `Daemon.Ping.result.capabilities` after alpha.30 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_symbol_at`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `closure_walker`, `fuzzy_match`, `pagerank_filewise`, `polling_fallback`.
+
+**Pending v0.3** (reserved in §4.2, not advertised at alpha.30): `find_callers`, `impact_of`, `read_symbol.include_callers`, `pagerank_symbolwise`.
+
+### How to extend protocol-v0 in a future alpha
+
+When an alpha PR adds a new wire field, method, capability, or error code:
+
+1. Add the change to the appropriate spec section (§3–§18) with a `(capability: <string>, alpha.NN+)` annotation in the prose.
+2. Append a row to the table above with the alpha number, capability string, and section pointers.
+3. Update the capability list in §4.1 if the new string becomes advertised.
+4. Update §4.2 if the new string was previously reserved.
+
+The PR description SHOULD link to the section(s) it changed so reviewers can verify the wire-shape contract.
+
+---
+
+*This document is the source of truth for the daemon-side wire protocol. The MCP-facing surface (`outline_workspace`, `find_symbol`, `read_symbol`, `read_symbol_at`, `read_range`, `rts://capabilities`) is governed by [docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md](plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md) and the MCP 2025-11-25 spec; future MCP-tool changes should land in that plan, not here. The v0.3 code-graph KB extension lives in [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md).*
