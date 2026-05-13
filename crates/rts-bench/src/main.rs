@@ -93,6 +93,99 @@ enum Cmd {
         #[arg(long)]
         dry_run: bool,
     },
+    /// One-shot daemon queries from the shell. Spawns rts-mcp + the
+    /// daemon, runs the requested tool, prints the JSON response to
+    /// stdout, exits. Useful for: dogfooding the daemon from Bash
+    /// pipelines, `jq`-driven scripts, or any non-MCP-aware caller
+    /// (including this very Claude Code session, which can't easily
+    /// re-configure its MCP server list mid-conversation).
+    Query {
+        #[command(subcommand)]
+        sub: QueryCmd,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum QueryCmd {
+    /// `find_symbol` — exact name or glob pattern. Mutually exclusive.
+    FindSymbol {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        /// Exact symbol name.
+        #[arg(long, conflicts_with = "pattern")]
+        name: Option<String>,
+        /// Glob pattern (`*` / `?` wildcards). E.g. `make_*`.
+        #[arg(long, conflicts_with = "name")]
+        pattern: Option<String>,
+        #[arg(long)]
+        kind: Option<String>,
+        #[arg(long)]
+        file: Option<String>,
+    },
+    /// `read_symbol` — read by name, optional shape + closure walk.
+    ReadSymbol {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        file: Option<String>,
+        #[arg(long)]
+        kind: Option<String>,
+        /// `body` (default), `signature`, or `both`.
+        #[arg(long)]
+        shape: Option<String>,
+        #[arg(long)]
+        token_budget: Option<u64>,
+        /// Walk the symbol's referenced-symbol closure (depth 1).
+        #[arg(long)]
+        deps: bool,
+    },
+    /// `read_symbol_at` — read by `(file, line)`; line-anchored lookup.
+    /// The compiler-error flow: take `error[E0308] --> src/lib.rs:42:18`
+    /// and one call returns the containing fn body + dep closure.
+    ReadSymbolAt {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        #[arg(long)]
+        file: String,
+        #[arg(long)]
+        line: u32,
+        #[arg(long)]
+        column: Option<u32>,
+        #[arg(long)]
+        shape: Option<String>,
+        #[arg(long)]
+        token_budget: Option<u64>,
+        #[arg(long)]
+        deps: bool,
+    },
+    /// `outline_workspace` — token-budgeted structural map. Use first
+    /// when orienting in an unfamiliar repo.
+    Outline {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        /// Optional glob to restrict the outline (e.g. `src/**`).
+        #[arg(long)]
+        glob: Option<String>,
+        #[arg(long)]
+        token_budget: Option<u64>,
+    },
+    /// `read_range` — explicit `[start_line, end_line]` slice. For
+    /// stack-trace frames + diff hunks where you already have the
+    /// exact location.
+    ReadRange {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        #[arg(long)]
+        file: String,
+        #[arg(long)]
+        start_line: u32,
+        #[arg(long)]
+        end_line: u32,
+        #[arg(long)]
+        token_budget: Option<u64>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -213,6 +306,197 @@ async fn main() -> Result<()> {
             out,
             dry_run,
         } => run_footprint(synth_loc, out, dry_run).await,
+        Cmd::Query { sub } => run_query(sub).await,
+    }
+}
+
+/// One-shot query against the daemon. Spawns rts-mcp + the daemon,
+/// calls the requested tool, prints the JSON response to stdout.
+///
+/// Exit codes:
+///   0 — tool returned a non-error response
+///   1 — tool returned `is_error=true` (daemon-level error; the body
+///       JSON describes which error code fired)
+///   2 — subprocess / JSON-decode failure
+///
+/// Output: pretty JSON to stdout. The `result_body` from McpCall is
+/// what gets printed — the daemon's structured response, not the MCP
+/// envelope. For raw envelope debugging, set `RTS_BENCH_LOG=debug`.
+async fn run_query(cmd: QueryCmd) -> Result<()> {
+    let rts_mcp_bin = resolve_bin("rts-mcp")?;
+    let rts_daemon_bin = resolve_bin("rts-daemon")?;
+
+    // Each variant carries an optional workspace; default to $PWD.
+    // We canonicalise so the daemon's mount check accepts the path.
+    let (workspace, tool, args) = build_query(&cmd)?;
+    let workspace = workspace
+        .canonicalize()
+        .with_context(|| format!("canonicalize workspace {}", workspace.display()))?;
+
+    let mut session =
+        crate::mcp_runner::McpSession::spawn(&rts_mcp_bin, &rts_daemon_bin, &workspace, &[])
+            .await?;
+
+    // 30 retries × 120ms = up to ~3.6s for INDEX_NOT_READY. Real
+    // workspaces with thousands of files may need longer; for now
+    // matching the bench/runner default.
+    let call = session.tools_call(tool, args, 30).await?;
+    session.close().await?;
+
+    // Pretty-print the daemon's result body. Falls back to a minimal
+    // shape when the body wasn't JSON (shouldn't happen for v0
+    // tools, but defensive).
+    let body = call
+        .result_body
+        .clone()
+        .unwrap_or_else(|| serde_json::json!({"is_error": call.is_error, "raw": null}));
+    println!("{}", serde_json::to_string_pretty(&body)?);
+
+    if call.is_error {
+        // Body already carries the error code; agents pipe to `jq`
+        // for details. We just need the exit code so shell scripts
+        // can branch.
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+/// Lower the typed `QueryCmd` into `(workspace, tool_name, args_json)`.
+/// Keeps the network shape colocated with the CLI surface for easy
+/// review when adding new tools.
+fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Value)> {
+    fn default_workspace(ws: &Option<PathBuf>) -> Result<PathBuf> {
+        match ws {
+            Some(p) => Ok(p.clone()),
+            None => std::env::current_dir().context("$PWD lookup"),
+        }
+    }
+    fn opt_str(
+        o: &Option<String>,
+        args: &mut serde_json::Map<String, serde_json::Value>,
+        key: &str,
+    ) {
+        if let Some(v) = o {
+            args.insert(key.into(), serde_json::Value::String(v.clone()));
+        }
+    }
+    fn opt_num(o: Option<u64>, args: &mut serde_json::Map<String, serde_json::Value>, key: &str) {
+        if let Some(v) = o {
+            args.insert(key.into(), serde_json::Value::Number(v.into()));
+        }
+    }
+    match cmd {
+        QueryCmd::FindSymbol {
+            workspace,
+            name,
+            pattern,
+            kind,
+            file,
+        } => {
+            if name.is_none() && pattern.is_none() {
+                return Err(anyhow!(
+                    "query find_symbol requires either --name or --pattern"
+                ));
+            }
+            let mut a = serde_json::Map::new();
+            opt_str(name, &mut a, "name");
+            opt_str(pattern, &mut a, "pattern");
+            opt_str(kind, &mut a, "kind");
+            opt_str(file, &mut a, "file");
+            Ok((
+                default_workspace(workspace)?,
+                "find_symbol",
+                serde_json::Value::Object(a),
+            ))
+        }
+        QueryCmd::ReadSymbol {
+            workspace,
+            name,
+            file,
+            kind,
+            shape,
+            token_budget,
+            deps,
+        } => {
+            let mut a = serde_json::Map::new();
+            a.insert("name".into(), serde_json::Value::String(name.clone()));
+            opt_str(file, &mut a, "file");
+            opt_str(kind, &mut a, "kind");
+            opt_str(shape, &mut a, "shape");
+            opt_num(*token_budget, &mut a, "token_budget");
+            if *deps {
+                a.insert("include_dependencies".into(), serde_json::Value::Bool(true));
+            }
+            Ok((
+                default_workspace(workspace)?,
+                "read_symbol",
+                serde_json::Value::Object(a),
+            ))
+        }
+        QueryCmd::ReadSymbolAt {
+            workspace,
+            file,
+            line,
+            column,
+            shape,
+            token_budget,
+            deps,
+        } => {
+            let mut a = serde_json::Map::new();
+            a.insert("file".into(), serde_json::Value::String(file.clone()));
+            a.insert("line".into(), serde_json::Value::Number((*line).into()));
+            if let Some(c) = column {
+                a.insert("column".into(), serde_json::Value::Number((*c).into()));
+            }
+            opt_str(shape, &mut a, "shape");
+            opt_num(*token_budget, &mut a, "token_budget");
+            if *deps {
+                a.insert("include_dependencies".into(), serde_json::Value::Bool(true));
+            }
+            Ok((
+                default_workspace(workspace)?,
+                "read_symbol_at",
+                serde_json::Value::Object(a),
+            ))
+        }
+        QueryCmd::Outline {
+            workspace,
+            glob,
+            token_budget,
+        } => {
+            let mut a = serde_json::Map::new();
+            opt_str(glob, &mut a, "glob");
+            opt_num(*token_budget, &mut a, "token_budget");
+            Ok((
+                default_workspace(workspace)?,
+                "outline_workspace",
+                serde_json::Value::Object(a),
+            ))
+        }
+        QueryCmd::ReadRange {
+            workspace,
+            file,
+            start_line,
+            end_line,
+            token_budget,
+        } => {
+            let mut a = serde_json::Map::new();
+            a.insert("file".into(), serde_json::Value::String(file.clone()));
+            a.insert(
+                "start_line".into(),
+                serde_json::Value::Number((*start_line).into()),
+            );
+            a.insert(
+                "end_line".into(),
+                serde_json::Value::Number((*end_line).into()),
+            );
+            opt_num(*token_budget, &mut a, "token_budget");
+            Ok((
+                default_workspace(workspace)?,
+                "read_range",
+                serde_json::Value::Object(a),
+            ))
+        }
     }
 }
 
