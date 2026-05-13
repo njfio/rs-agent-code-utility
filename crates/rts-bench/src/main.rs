@@ -19,6 +19,7 @@ use serde_json::json;
 
 mod baseline;
 mod corpus;
+mod footprint;
 mod latency;
 mod mcp_runner;
 mod report;
@@ -66,6 +67,21 @@ enum Cmd {
         /// seed.
         #[arg(long, default_value_t = 0xC0FFEE_u64)]
         seed: u64,
+        /// Where to write the JSON report.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Skip writing the report.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Footprint benchmark (S3): build time, peak RSS, on-disk index
+    /// size on a synthetic workspace. Companion to `latency` for the
+    /// "is this production-ready?" question.
+    Footprint {
+        /// Total lines of synthetic Rust source to generate. Defaults
+        /// to 100,000 per plan §P9.
+        #[arg(long, default_value_t = footprint::DEFAULT_TARGET_LOC)]
+        synth_loc: usize,
         /// Where to write the JSON report.
         #[arg(long)]
         out: Option<PathBuf>,
@@ -166,6 +182,64 @@ async fn main() -> Result<()> {
             out,
             dry_run,
         } => run_latency(synth_loc, queries, cold_count, seed, out, dry_run).await,
+        Cmd::Footprint {
+            synth_loc,
+            out,
+            dry_run,
+        } => run_footprint(synth_loc, out, dry_run).await,
+    }
+}
+
+async fn run_footprint(synth_loc: usize, out: Option<PathBuf>, dry_run: bool) -> Result<()> {
+    let rts_mcp_bin = resolve_bin("rts-mcp")?;
+    let rts_daemon_bin = resolve_bin("rts-daemon")?;
+
+    // Workspace-scoped tmpdir for both the synth fixture and the
+    // daemon's runtime/state dirs — matches the latency bench so a
+    // local `footprint` and `latency` run don't share state.
+    let tmp_root = tempfile::tempdir().context("tempdir for footprint run")?;
+    let report = footprint::run(&rts_mcp_bin, &rts_daemon_bin, synth_loc, tmp_root.path()).await?;
+
+    println!(
+        "footprint: workspace={} files={} symbols={}",
+        report.workspace_path, report.files, report.symbols,
+    );
+    println!(
+        "  build_time={}ms full_index={}ms peak_rss={} index_size={} bytes/symbol={}",
+        report.build_time_ms,
+        report.full_index_time_ms,
+        human_bytes(report.peak_rss_bytes),
+        human_bytes(report.index_size_bytes),
+        report.bytes_per_symbol,
+    );
+
+    if dry_run {
+        return Ok(());
+    }
+    let out_path = out.unwrap_or_else(|| {
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(format!("bench-footprint-{}.json", git_short_sha()))
+    });
+    footprint::write_report(&out_path, &report)?;
+    println!("wrote {}", out_path.display());
+    Ok(())
+}
+
+/// Compact "1.2 MiB" style for the bench summary line. Operator-facing
+/// only; the JSON report keeps raw bytes for downstream dashboards.
+fn human_bytes(n: u64) -> String {
+    const KIB: u64 = 1024;
+    const MIB: u64 = KIB * 1024;
+    const GIB: u64 = MIB * 1024;
+    if n >= GIB {
+        format!("{:.2} GiB", n as f64 / GIB as f64)
+    } else if n >= MIB {
+        format!("{:.2} MiB", n as f64 / MIB as f64)
+    } else if n >= KIB {
+        format!("{:.2} KiB", n as f64 / KIB as f64)
+    } else {
+        format!("{n} B")
     }
 }
 

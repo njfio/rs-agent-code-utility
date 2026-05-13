@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.21] - 2026-05-12
+
+**Footprint bench (S3) ships.** Companion to alpha.19's S1 latency bench;
+together they answer "is this daemon production-ready for my repo size?".
+
+Three numbers operators care about, all measured against a synthetic
+workspace of N LOC:
+
+| metric              | target (100k LOC) | measured (100k LOC) |
+|---------------------|------------------:|--------------------:|
+| `build_time_ms`     |           < 30000 |                 196 |
+| `full_index_time_ms`|        (new field)|                 610 |
+| `peak_rss_bytes`    |        < 1 000 MB |             19.2 MB |
+| `index_size_bytes`  |          < 200 MB |              1.5 MB |
+
+`build_time_ms` is "time until the daemon answers a query" — this is what
+agents care about for startup latency. `full_index_time_ms` is "time
+until the writer is done with the initial walk" — 3× larger than
+build_time on these numbers because the writer keeps ingesting in the
+background after the first symbol becomes queryable. The peak RSS sampler
+runs across the full window, so it now captures the high-water mark
+during background indexing — not just the time-to-first-query.
+
+### Caught a measurement bug during dev
+
+Initial implementation stopped the RSS sampler at first-query-ok. At
+100k LOC, this *underreported* peak RSS (16.9 MiB) vs the 10k LOC run
+(18.8 MiB) — because the harness stopped sooner on the larger fixture
+even though the daemon kept working. Fix: poll `outline_workspace.
+files_considered` until it stops growing across two consecutive 200ms
+checks. Peak RSS at 100k LOC jumped from 16.9 → 19.2 MiB after the fix,
+correctly reflecting the true high-water mark.
+
+### Added
+
+- **`crates/rts-bench/src/footprint.rs`**: full module —
+  `FootprintReport` wire shape, `run()` orchestrator, peak-RSS sampler
+  loop, `pgrep`-driven daemon PID discovery, `/proc/<pid>/status:VmHWM`
+  fallback for Linux, `db.redb` locator, and `wait_for_index_settled`
+  poll loop. 7 unit tests covering: ps RSS for current process,
+  `db.redb` location (positive + negative), `linux_vm_hwm_bytes`
+  optionality, serialization stability, `extract_files_considered`
+  (positive + negative).
+- **`rts-bench footprint` subcommand** with flags:
+  - `--synth-loc N` (default 100_000) — total LOC to generate
+  - `--out FILE` (default `bench-footprint-<sha>.json`)
+  - `--dry-run`
+- **`crates/rts-bench/tests/footprint_smoke.rs`**: end-to-end smoke
+  test that exercises the harness on a 1000-LOC fixture and verifies
+  the wire-stable report shape, including the
+  `full_index_time_ms >= build_time_ms` invariant.
+
+### Changed
+
+- **`crates/rts-bench/src/mcp_runner.rs`**: `McpCall` now exposes
+  `result_body: Option<Value>` — the parsed JSON object from the first
+  text content item. Consumers that need to read response fields beyond
+  `tokens_returned` (the footprint bench polls
+  `outline_workspace.files_considered`) reach into this. `McpSession`
+  gains `child_pid() -> Option<u32>` for callers that need to walk the
+  process tree.
+
+### Not in this slice
+
+- Footprint under churn (re-indexing after `git checkout` of a
+  different ref) — v1.1 surface.
+- Real-corpus footprint runs against the pinned corpus.lock fixtures
+  (deferred behind tarball-download in §P9).
+- Multi-language synth fixtures — the synth workspace is Rust-only
+  today; a TypeScript/Python variant lands when the corpus pipeline
+  does.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **486 passed, 0 failed, 3 ignored** (was
+  478; +7 footprint unit tests + 1 smoke test).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new warnings on changed
+  files (`footprint.rs`, `mcp_runner.rs`, `main.rs`).
+- Release bench: `rts-bench footprint --synth-loc 100000` produces the
+  numbers in the table above on a developer macOS (M-series).
+
 ## [0.2.0-alpha.20] - 2026-05-12
 
 **Outline cache (incremental PageRank, v0).** `Index.Outline` p95 drops

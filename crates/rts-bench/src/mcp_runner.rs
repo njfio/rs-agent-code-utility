@@ -33,6 +33,11 @@ pub struct McpCall {
     pub elapsed_ms: u128,
     /// `result.isError` from the response, if present.
     pub is_error: bool,
+    /// Parsed JSON body of the first `Content::text` item, when it
+    /// decoded as a JSON object. Consumers (e.g. the footprint bench
+    /// polling `outline_workspace.files_considered`) reach into this
+    /// directly. `None` for non-JSON bodies or empty responses.
+    pub result_body: Option<Value>,
 }
 
 /// Result of an MCP retrieval session — n tool calls plus the workspace
@@ -188,6 +193,7 @@ impl McpSession {
             response_text_len: 0,
             elapsed_ms: start.elapsed().as_millis(),
             is_error: true,
+            result_body: None,
         }))
     }
 
@@ -196,6 +202,13 @@ impl McpSession {
         drop(self.stdin);
         let _ = tokio::time::timeout(Duration::from_secs(5), self.child.wait()).await;
         Ok(())
+    }
+
+    /// PID of the spawned `rts-mcp` child. Returns `None` if the child
+    /// already exited. The footprint bench uses this to walk down to
+    /// the `rts-daemon` grandchild via `pgrep -P`.
+    pub fn child_pid(&self) -> Option<u32> {
+        self.child.id()
     }
 }
 
@@ -218,11 +231,15 @@ fn parse_tools_call_response(resp: &Value, elapsed_ms: u128) -> McpCall {
         .unwrap_or_default();
     let mut tokens: u64 = 0;
     let mut response_text_len: usize = 0;
-    for item in &content {
+    let mut result_body: Option<Value> = None;
+    for (i, item) in content.iter().enumerate() {
         if let Some(text) = item["text"].as_str() {
             response_text_len += text.len();
             // Prefer the daemon's reported `tokens_returned` when present.
             if let Ok(parsed) = serde_json::from_str::<Value>(text) {
+                if i == 0 && parsed.is_object() {
+                    result_body = Some(parsed.clone());
+                }
                 if let Some(t) = parsed["tokens_returned"].as_u64() {
                     tokens += t;
                     continue;
@@ -237,6 +254,7 @@ fn parse_tools_call_response(resp: &Value, elapsed_ms: u128) -> McpCall {
         response_text_len,
         elapsed_ms,
         is_error,
+        result_body,
     }
 }
 
