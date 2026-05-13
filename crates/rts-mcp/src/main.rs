@@ -52,6 +52,13 @@ fn parse_args() -> Result<Args> {
                 eprintln!("  RTS_LOG         tracing filter; defaults to `rts_mcp=info,warn`.");
                 std::process::exit(0);
             }
+            "--version" | "-V" => {
+                // Stable wire shape for the release-bench smoke test
+                // and `which rts-mcp; rts-mcp --version` diagnostics:
+                // `rts-mcp <SEMVER>`.
+                println!("rts-mcp {}", env!("CARGO_PKG_VERSION"));
+                std::process::exit(0);
+            }
             other => {
                 anyhow::bail!("unknown argument: {other}");
             }

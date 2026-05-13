@@ -65,8 +65,50 @@ binary release).
 The MCP server auto-spawns the daemon on first connect. There is no
 daemon for the user to start by hand.
 
+### Option A: prebuilt tarballs (no Rust toolchain required)
+
+Released on tag push under [Releases](https://github.com/njfio/rs-agent-code-utility/releases).
+Each tarball contains `rts-daemon`, `rts-mcp`, `rts-bench`, both
+license files, and this README. Available targets:
+
+| target | runner |
+|---|---|
+| `x86_64-unknown-linux-gnu` | most Linux distros (Ubuntu 20.04+, Debian 11+, RHEL 9+) |
+| `aarch64-unknown-linux-gnu` | ARM Linux (Raspberry Pi 64-bit, AWS Graviton) |
+| `x86_64-apple-darwin` | Intel Mac |
+| `aarch64-apple-darwin` | Apple Silicon Mac |
+
+Windows is not yet supported — the daemon uses Unix sockets (a Windows
+port lands in v1.x).
+
 ```sh
-# Build
+# Pick the right target for your platform
+VERSION=0.2.0-alpha.23
+TARGET=aarch64-apple-darwin
+URL="https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz"
+
+curl -fsSL "$URL" | tar -xz
+sudo install rts-${VERSION}-${TARGET}/{rts-daemon,rts-mcp,rts-bench} /usr/local/bin/
+
+# Verify (each binary's `--version` should print `<name> ${VERSION}`)
+rts-daemon --version
+rts-mcp    --version
+rts-bench  --version
+
+# Wire into Claude Code
+claude mcp add rts -- rts-mcp --workspace .
+```
+
+Each release ships a `SHA256SUMS` file you can verify against:
+
+```sh
+curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/SHA256SUMS" -o SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+### Option B: build from source
+
+```sh
 cargo build --workspace --release
 
 # Wire into Claude Code (the canonical client)

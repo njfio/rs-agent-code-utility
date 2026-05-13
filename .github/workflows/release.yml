@@ -1,0 +1,215 @@
+# Release workflow — publishes prebuilt tarballs for the v0.2 daemon
+# stack so users can install without a Rust toolchain.
+#
+# Triggers:
+#   - push tag `v*`     → real release; uploads tarballs as a draft
+#                          (so the maintainer can spot-check before
+#                          flipping to "published" via the UI).
+#   - workflow_dispatch  → manual run from the Actions tab; useful for
+#                          dry-running the build matrix on a feature
+#                          branch before tagging.
+#
+# Coverage:
+#   - x86_64-unknown-linux-gnu     (ubuntu-latest, native)
+#   - aarch64-unknown-linux-gnu    (ubuntu-24.04-arm, native)
+#   - x86_64-apple-darwin          (macos-13, native Intel)
+#   - aarch64-apple-darwin         (macos-latest, native M-series)
+#
+# Windows is intentionally out — the daemon uses `std::os::unix` (Unix
+# sockets + permissions) and the watcher's fs path is inotify/fsevents.
+# A Windows port is a separate v1.x slice.
+#
+# Each matrix entry produces one tarball:
+#   rts-${VERSION}-${TARGET}.tar.gz
+# containing:
+#   rts-${VERSION}-${TARGET}/
+#     rts-daemon, rts-mcp, rts-bench,
+#     LICENSE-MIT, LICENSE-APACHE, README.md
+#
+# SHA256SUMS file aggregates checksums for all tarballs. The upload step
+# uses softprops/action-gh-release@v2 which creates the release on first
+# matrix entry and appends assets for subsequent entries.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build artifacts but skip the GitHub release upload"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write  # required to create/upload to GitHub Releases
+
+env:
+  CARGO_TERM_COLOR: always
+  # Strip debug symbols from release binaries for ~30% smaller artifacts.
+  # Operators tarball this onto end-user laptops; debug syms are dead
+  # weight unless they're running gdb against the daemon, which is rare.
+  CARGO_PROFILE_RELEASE_STRIP: "symbols"
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false  # one target failing shouldn't kill the others
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            archive_ext: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+            archive_ext: tar.gz
+          - target: x86_64-apple-darwin
+            runner: macos-13
+            archive_ext: tar.gz
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+            archive_ext: tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          # Cache key is per-target so cross-target builds don't poison
+          # each other's `target/` directories.
+          key: ${{ matrix.target }}-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.target }}-release-
+
+      - name: Build release binaries
+        run: |
+          cargo build \
+            --release \
+            --target ${{ matrix.target }} \
+            -p rts-daemon \
+            -p rts-mcp \
+            -p rts-bench
+
+      - name: Smoke test built binaries
+        # Confirm each binary built, is executable, and reports the
+        # expected `<name> <semver>` shape via `--version`. Catches
+        # the "binary built but won't run on this libc" failure mode
+        # before we ship the tarball to a real user.
+        run: |
+          set -euo pipefail
+          BIN_DIR="target/${{ matrix.target }}/release"
+          for b in rts-daemon rts-mcp rts-bench; do
+            test -x "$BIN_DIR/$b" || (echo "missing $b"; exit 1)
+            file "$BIN_DIR/$b"
+            out=$("$BIN_DIR/$b" --version)
+            echo "$out"
+            # Sanity: starts with the binary name. Catches a silent
+            # accidental wire-format change in --version.
+            echo "$out" | grep -q "^$b " || (echo "unexpected version output: $out"; exit 1)
+          done
+
+      - name: Resolve version
+        id: version
+        # On tag push: use the tag (e.g. `v0.2.0-alpha.23` → `0.2.0-alpha.23`).
+        # On workflow_dispatch: use the workspace version + short SHA so
+        # multiple dry-runs don't collide.
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            base=$(grep -m1 '^version' Cargo.toml | head -1 | sed -E 's/.*"(.*)".*/\1/')
+            v="${base}-dev.$(git rev-parse --short HEAD)"
+          fi
+          echo "value=$v" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $v"
+
+      - name: Package tarball
+        id: package
+        run: |
+          set -euo pipefail
+          V="${{ steps.version.outputs.value }}"
+          T="${{ matrix.target }}"
+          STAGE="rts-${V}-${T}"
+          BIN_DIR="target/${T}/release"
+          mkdir -p "$STAGE"
+          cp "$BIN_DIR/rts-daemon" "$BIN_DIR/rts-mcp" "$BIN_DIR/rts-bench" "$STAGE/"
+          cp LICENSE-MIT LICENSE-APACHE README.md "$STAGE/"
+          tar -czf "${STAGE}.tar.gz" "$STAGE"
+          # Per-artifact SHA256 to a sidecar file the aggregate step
+          # collects below.
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${STAGE}.tar.gz" > "${STAGE}.tar.gz.sha256"
+          else
+            shasum -a 256 "${STAGE}.tar.gz" > "${STAGE}.tar.gz.sha256"
+          fi
+          echo "tarball=${STAGE}.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "checksum=${STAGE}.tar.gz.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact (always — workflow_dispatch consumes these too)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            ${{ steps.package.outputs.tarball }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload to GitHub release (tag push only)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          # `draft: true` is deliberate — the maintainer flips to
+          # published after spot-checking each artifact. Prevents an
+          # accidental tag from publishing broken binaries.
+          draft: true
+          files: |
+            ${{ steps.package.outputs.tarball }}
+            ${{ steps.package.outputs.checksum }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+  aggregate-checksums:
+    name: Aggregate SHA256SUMS
+    needs: build
+    # Run on tag push so the aggregated SHA256SUMS file lands in the
+    # draft release alongside the individual sidecars. workflow_dispatch
+    # skips this — it's only relevant for actual releases.
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all checksums
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Concatenate SHA256SUMS
+        run: |
+          set -euo pipefail
+          find artifacts -name '*.tar.gz.sha256' -print0 \
+            | xargs -0 cat \
+            | sort \
+            > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload SHA256SUMS to draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: SHA256SUMS
+          fail_on_unmatched_files: true

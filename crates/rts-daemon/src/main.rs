@@ -32,6 +32,47 @@ use tracing::{error, info};
 /// multi-thread.
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> anyhow::Result<()> {
+    // Cheap CLI flags handled before any setup — operators running
+    // `rts-daemon --version` shouldn't pay tracing/preflight cost.
+    // No `clap` dep: two flags, two arms.
+    // The daemon takes no positional args. We accept exactly one
+    // optional flag (--version / --help / -V / -h); anything else is
+    // an error. Looking at only `args.nth(1)` is intentional — there's
+    // no flag that takes a value, so any second arg is ambiguous.
+    if let Some(a) = std::env::args().nth(1) {
+        match a.as_str() {
+            "--version" | "-V" => {
+                // Wire shape: `rts-daemon <SEMVER>`. Stable so the
+                // release-build smoke test + operator diagnostics
+                // (`which rts-daemon; rts-daemon --version`) can parse
+                // it unambiguously.
+                println!("rts-daemon {}", env!("CARGO_PKG_VERSION"));
+                return Ok(());
+            }
+            "--help" | "-h" => {
+                eprintln!(
+                    "rts-daemon — persistent local code-retrieval daemon for AI coding agents."
+                );
+                eprintln!();
+                eprintln!("Usage: rts-daemon");
+                eprintln!();
+                eprintln!(
+                    "The daemon takes no positional arguments. All configuration is via env:"
+                );
+                eprintln!("  RTS_LOG                  tracing filter; defaults to `info`.");
+                eprintln!("  RTS_IDLE_SHUTDOWN_SECS   idle window before self-exit; default 600.");
+                eprintln!(
+                    "  XDG_RUNTIME_DIR / HOME   socket location (per platform XDG fallback)."
+                );
+                eprintln!("  XDG_STATE_HOME           index DB location (defaults under $HOME).");
+                return Ok(());
+            }
+            other => {
+                anyhow::bail!("unknown argument: {other}");
+            }
+        }
+    }
+
     // Stderr-only tracing (stdout is reserved for the MCP server, never the
     // daemon — but it costs nothing to also forbid stdout writes here).
     tracing_subscriber::fmt()

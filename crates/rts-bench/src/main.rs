@@ -31,7 +31,11 @@ use report::BenchReport;
 use tasks::{TaskContext, TaskOutcome, run_task};
 
 #[derive(Parser, Debug)]
-#[command(name = "rts-bench", about = "Bench harness for the rts-mcp stack")]
+#[command(
+    name = "rts-bench",
+    version, // clap reads CARGO_PKG_VERSION; wires up `--version`/`-V`
+    about = "Bench harness for the rts-mcp stack"
+)]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
