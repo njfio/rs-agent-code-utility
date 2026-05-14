@@ -7,6 +7,140 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.34] - 2026-05-14
+
+**Symbol-level PageRank fills `rank_score` (v0.3 U4).** The
+`rank_score` placeholder field in `Index.FindSymbol` and
+`Index.FindCallers` responses — `0.0` since alpha.18 — now carries
+the real symbol-level PageRank value, computed over the persistent
+call graph from U1. `Index.FindSymbol.matches[]` sorts by descending
+rank by default, making `find_symbol(pattern="*")` the de-facto
+"top symbols in this workspace" query without a new endpoint.
+
+### Added
+
+- **`crates/rts-daemon/src/symbol_pagerank.rs`** (new module): graph
+  builder over workspace-defined sids (nodes) + `SID_REFS_OUT`
+  edges, weighted via Aider's recipe (×10 well-named compound names,
+  ×0.1 leading-underscore privates, ×0.1 ubiquitous symbols defined
+  in >5 files). Reuses `rust_tree_sitter::pagerank::compute` with
+  NetworkX defaults (α=0.85, max_iter=100, tol=1e-6).
+- **`SymbolPagerankCache`** (single-slot mutex, generation-keyed) at
+  `symbol_pagerank::SymbolPagerankCache`. Mirrors alpha.20's
+  `OutlineCache` shape. First `find_symbol` after a generation bump
+  pays the compute cost; subsequent calls within the same generation
+  are O(1).
+- **`Store::iter_workspace_sids()`** — enumerates `(sid, name, def_count)`
+  for every sid with at least one DEFS entry. External-only sids
+  (referenced but not defined) are naturally absent per Deepening §F1.
+- **`Index.FindSymbol.params.sort: Option<String>`** — accepts
+  `"rank"` (default) and `"lexical"`. Lexical opts out for tooling
+  pinned to v0.2's alphabetical-by-`(file, start_byte)` ordering.
+- **`pagerank_symbolwise` capability string** advertised via
+  `Daemon.Ping.result.capabilities` (canonical list grows 16 → 17).
+  Also: full canonical capability list now matches protocol-v0.md §4.1
+  — `DAEMON_CAPABILITIES` had drifted across alpha.18-33 and never
+  advertised `pagerank_filewise`, `closure_walker`, `read_symbol_at`,
+  `fuzzy_match`, `polling_fallback`, `find_callers`, or
+  `read_symbol.include_callers`. All landed in this PR.
+- **`crates/rts-daemon/tests/symbol_pagerank_round_trip.rs`** (new):
+  5-symbol hub-spoke fixture (4 callers around 1 hub). Asserts
+  (a) `pagerank_symbolwise` advertised via `Daemon.Ping`;
+  (b) `find_symbol(pattern="*")` puts `hub_compute` first (top of
+  rank-sorted list);
+  (c) each `rank_score > 0`; hub's rank exceeds the average caller rank;
+  (d) `sort: "lexical"` opt-out restores alphabetical order;
+  (e) `find_callers` fills `rank_score` per CallerEntry.
+- Two new module unit tests: `empty_workspace_returns_empty_ranks`,
+  `cache_stores_and_invalidates_by_generation`.
+
+### Changed
+
+- **`Index.FindSymbol` handler** (`methods/index.rs::find_symbol`):
+  reads `state.index_generation` *before* opening any read txn
+  (Deepening §C cache TOCTOU invariant); looks up ranks via the new
+  `symbol_ranks_lazy` helper; collects matches into typed tuples,
+  sorts (by descending rank or lexical), then truncates at 256.
+  Pre-U4 the code truncated mid-iteration which could drop higher-rank
+  matches in pattern queries.
+- **`CallerEntry`** (`find_callers` + `read_symbol.include_callers`):
+  `rank_score` field now carries the enclosing caller's PageRank
+  (was `0.0` constant in U2'). File-scope refs (no caller_sid)
+  still get `0.0`.
+- **`DaemonState`** gains a `symbol_pagerank_cache: SymbolPagerankCache`
+  field, initialised on construction. Drops automatically when the
+  daemon's `DaemonState` is dropped (idle shutdown).
+- **`Cargo.toml`** workspace version 0.2.0-alpha.33 → 0.2.0-alpha.34.
+
+### Performance
+
+- **First find_symbol after a writer commit pays the PageRank
+  compute cost.** Plan §G3 / Deepening §C3 estimates 150-450ms on a
+  100k-LOC workspace (~20-40k sids × ~100-300k edges). Plan §G1's
+  warm-call target (<5ms) is unaffected once the cache is filled.
+- **No stale-rank-during-recompute path yet** (Deepening §C3
+  optimization). Cold compute is synchronous; the
+  `find_symbol`/`find_callers` call that triggers it blocks. If
+  bench shows this dominates real-agent loops, the stale-serving
+  path lands as a follow-up.
+- **No sorted-edge-vec collapse yet** (also §C3). `pagerank::compute`'s
+  `HashMap<(u32,u32), f64>` shape is shared with the file-level
+  ranker (alpha.18). A follow-up perf-pass alongside benchmarks.
+- **Aider edge multipliers** applied at edge-construction time per
+  Deepening §D. Compound well-named symbols (≥ 8 chars, snake_case
+  or camelCase) get ×10 inbound weight, leading-underscore privates
+  get ×0.1, and ubiquitous symbols (>5 defs across the workspace)
+  get ×0.1 dampening.
+
+### Wire-contract notes
+
+**Additive but with a default-sort behavior change.** Clients that
+ignored `rank_score: 0.0` and didn't rely on the previous insertion
+order see no observable change. Clients that *did* rely on the
+previous ordering should:
+- branch on the `pagerank_symbolwise` capability in `Daemon.Ping`
+  before calling `Index.FindSymbol`, OR
+- pass `sort: "lexical"` explicitly (works on every alpha — older
+  daemons silently ignore unknown params).
+
+Per Deepening §G4, the default-change was deliberate: the plan §R5
+specifies that "results sort by descending rank" once rank is real,
+and gating behind the capability-string AND a sort opt-out covers
+both the ranked-default + lexical-back-compat paths.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **544 passed, 0 failed, 0 ignored**
+  (was 541 in alpha.33; +3 = 2 unit + 1 integration).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new warnings on
+  changed files.
+- New integration test `symbol_pagerank_ranks_hub_above_callers`
+  pins the hub-above-callers expectation, capability advertisement,
+  and `sort: "lexical"` opt-out behavior.
+
+### Not in this slice
+
+- **`Index.ImpactOf` (transitive callers)** — v0.3 U5, last unit of
+  the v0.3 plan. New BFS over reverse edges + depth + token budget
+  + `scenario_refactor_impact` bench fixture.
+- **Stale-rank serving during recompute** (Deepening §C3): cold
+  recompute currently blocks. Bench-driven; defer until measured.
+- **Aider edge-weight `mentioned_idents` / `chat_files` multipliers**:
+  the underlying `pagerank::edge_weight` function accepts them, but
+  symbol-level PageRank doesn't surface a way to pass user-provided
+  "interesting symbols" yet. Could land as a `find_symbol.params.bias_idents`
+  follow-up if a real consumer asks.
+
+### Refs
+
+- v0.3 plan §Phase 5 / Deepening §C3, §D, §G4:
+  [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)
+- Prereqs: [#29 (U1)](https://github.com/njfio/rs-agent-code-utility/pull/29) +
+  [#30 (U2')](https://github.com/njfio/rs-agent-code-utility/pull/30) +
+  [#32 (U3)](https://github.com/njfio/rs-agent-code-utility/pull/32)
+
 ## [0.2.0-alpha.33] - 2026-05-14
 
 **Closure walker reads indexed edges (v0.3 U3).** The alpha.22 closure

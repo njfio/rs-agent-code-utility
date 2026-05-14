@@ -166,13 +166,16 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
   "id": "1",
   "result": {
     "protocol":     "0",                          // semver-style major; v1 is the breaking re-cut
-    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.32", "git_sha": "dd290c7..." },
-    "capabilities": ["outline", "find_symbol", "find_callers", "read_symbol", "read_symbol_at", "read_range",
+    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.34", "git_sha": "368bc97..." },
+    "capabilities": ["outline", "find_symbol", "read_symbol", "read_range",
                      "rank_score", "tree_shake", "partial_responses",
                      "content_version", "secrets_blocklist",
-                     "closure_walker", "fuzzy_match", "pagerank_filewise",
+                     "pagerank_filewise",
+                     "closure_walker",
+                     "read_symbol_at", "fuzzy_match",
                      "polling_fallback",
-                     "read_symbol.include_callers"],
+                     "find_callers", "read_symbol.include_callers",
+                     "pagerank_symbolwise"],
     "uptime_ms":    123456
   }
 }
@@ -194,7 +197,7 @@ Reserved for the **v0.3 code-graph KB** extension (see [v0.3 plan](plans/2026-05
 - ~~`find_callers`~~ — **advertised** as of `v0.2.0-alpha.32` (U2'). `Index.FindCallers` returns direct callers of a named symbol; see §7.7c.
 - `impact_of` — transitive caller closure (v0.3 U5).
 - ~~`read_symbol.include_callers`~~ — **advertised** as of `v0.2.0-alpha.32` (U2'). `Index.ReadSymbol.params.include_callers: bool` composes with `include_dependencies`; see §7.7.
-- `pagerank_symbolwise` — symbol-level PageRank fills `rank_score`; `find_symbol` results sort by descending rank when advertised. Clients without this capability MAY request `sort: "lexical"` to retain pre-v0.3 ordering.
+- ~~`pagerank_symbolwise`~~ — **advertised** as of `v0.2.0-alpha.34` (U4). Symbol-level PageRank fills `rank_score` in `Index.FindSymbol` + `Index.FindCallers` responses; `find_symbol` results sort by descending rank by default. Clients pinned to v0.2 insertion-order ordering can pass `sort: "lexical"` on `Index.FindSymbol.params` to opt out.
 - `call_graph` (umbrella; reserved but **not advertised by itself** — agents should branch on the four fine-grained strings above).
 
 ### 4.3 Version mismatch
@@ -423,11 +426,14 @@ AST-precise definition + references + signature for a named or pattern-matched s
   "name":    "build_index",          // optional; exact match
   "pattern": "build_*",              // optional; glob: `*` (any run, including empty) and `?` (single char). Mutually exclusive with name. Capability: `fuzzy_match` (alpha.24+).
   "kind":    "fn",                   // optional; one of: fn, struct, enum, type, trait, const, static, impl, method, class, interface, module
-  "file":    "src/index/mod.rs"      // optional; filter
+  "file":    "src/index/mod.rs",     // optional; filter
+  "sort":    "rank"                  // optional; "rank" (default; descending rank_score) | "lexical" (alphabetical-by-file). Capability: `pagerank_symbolwise` (alpha.34+).
 }
 ```
 
 The glob matcher has **no character classes** and **no escapes** — `*` and `?` only. Agents that need regex-like expressivity (e.g. character classes) should compose multiple `pattern` queries client-side; a flagged regex mode is on the v1.1 candidate list pending a concrete user request.
+
+**Sort order (alpha.34+, capability `pagerank_symbolwise`):** `matches[]` is sorted by descending `rank_score` (symbol-level PageRank over the workspace call graph) by default. Pass `sort: "lexical"` for back-compat with v0.2's alphabetical-by-`(file, start_byte)` ordering. The 256-entry cap applies *after* sorting, so `pattern="*"` with rank sort returns the top-K most-central symbols. Clients that don't advertise the capability still receive the new default sort — daemons advertising `pagerank_symbolwise` use ranked order unless `sort: "lexical"` is explicit.
 
 **`result`**:
 ```jsonc
@@ -960,7 +966,8 @@ These are normative for `params` validation. The daemon SHOULD reject schema-non
     "kind":    { "type": "string", "enum": ["fn", "struct", "enum", "type", "trait",
                                              "const", "static", "impl", "method",
                                              "class", "interface", "module"] },
-    "file":    { "type": "string" }
+    "file":    { "type": "string" },
+    "sort":    { "type": "string", "enum": ["rank", "lexical"], "default": "rank" }
   },
   "additionalProperties": false,
   "oneOf": [
@@ -1244,10 +1251,12 @@ This appendix tracks every additive wire-shape change between Draft 1 (P5 delive
 | `alpha.30` | (none — internal) | JS/TS tags.scm reference queries (extends alpha.27 to JS/TS). Same wire shape; better-quality contents on JS/TS workspaces. | — |
 | `alpha.31` | (none — internal) | **v0.3 U1**: persistent reference graph (REFS / FID_REFS / SID_REFS_OUT tables; SCHEMA_VERSION 1→2). `outline::compute` reads indexed edges. Same wire shape; no agent-visible changes. | — |
 | `alpha.32` | `find_callers`, `read_symbol.include_callers` | **v0.3 U2'**: new method `Index.FindCallers(name, kind?, file?)` returns direct callers. `Index.ReadSymbol.params.include_callers: bool` composes callers into the existing response with a separate `callers_truncated` flag. | §7.7, §7.7c, §18.4, §18.4b, §18.4c |
+| `alpha.33` | (none — internal) | **v0.3 U3**: `closure::compute` swaps from at-query-time tree-sitter parsing to reading `SID_REFS_OUT`. Same wire shape; faster cold calls. Also fixed a latent local-variable bug in U1's `enclosing_caller_sid` that under-populated `SID_REFS_OUT`. | — |
+| `alpha.34` | `pagerank_symbolwise` | **v0.3 U4**: symbol-level PageRank fills `rank_score` in `Index.FindSymbol` and `Index.FindCallers` responses (was a `0.0` placeholder). `Index.FindSymbol.matches[]` sorts by descending rank by default; `sort: "lexical"` opts out. Single-slot generation-keyed cache mirroring `OutlineCache` (alpha.20). | §4.1, §4.2, §7.6, §18.3 |
 
-Capability strings present in `Daemon.Ping.result.capabilities` after alpha.32 (canonical list, in advertisement order): `outline`, `find_symbol`, `find_callers`, `read_symbol`, `read_symbol_at`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `closure_walker`, `fuzzy_match`, `pagerank_filewise`, `polling_fallback`, `read_symbol.include_callers`.
+Capability strings present in `Daemon.Ping.result.capabilities` after alpha.34 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`.
 
-**Pending v0.3** (reserved in §4.2, not advertised at alpha.32): `impact_of` (U5), `pagerank_symbolwise` (U4).
+**Pending v0.3** (reserved in §4.2, not advertised at alpha.34): `impact_of` (U5).
 
 ### How to extend protocol-v0 in a future alpha
 

@@ -22,6 +22,7 @@ mod refs;
 mod socket;
 mod state;
 mod store;
+mod symbol_pagerank;
 mod watcher;
 mod workspace;
 mod writer;

@@ -14,6 +14,7 @@ use crate::error::{ErrorCode, ProtocolError};
 use crate::filter::BODY_ALLOWED_EXTENSIONS;
 use crate::state::DaemonState;
 use crate::store::{FoundSymbol, Store, SymbolKind};
+use crate::symbol_pagerank::{SymbolRanks, compute_symbol_ranks};
 
 /// `Index.ReadSymbol`/`Index.ReadRange` clamp at 4 MiB of returned text. The
 /// 16 MiB wire cap (§3.3) is the hard ceiling; the 4 MiB cap leaves room for
@@ -44,6 +45,17 @@ struct FindSymbolParams {
     kind: Option<String>,
     #[serde(default)]
     file: Option<String>,
+    /// v0.3 U4 (alpha.34+, cap: `pagerank_symbolwise`) — sort order
+    /// for the `matches` array. Accepted values:
+    /// - `"rank"` (default when the capability is advertised) —
+    ///   descending `rank_score` (symbol-level PageRank). Use this
+    ///   to get the top-K most central matches first.
+    /// - `"lexical"` — back-compat alphabetical order by `file` then
+    ///   `start_byte`. Opt out for tooling that pinned to v0.2's
+    ///   insertion-shape ordering.
+    /// Unknown values are accepted and treated as `"rank"`.
+    #[serde(default)]
+    sort: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -316,6 +328,69 @@ fn line_range_bytes(
     Ok((s, e))
 }
 
+/// Sort modes for `Index.FindSymbol.matches`. v0.3 U4 (alpha.34+).
+/// `Rank` is the default when the `pagerank_symbolwise` capability
+/// is advertised; `Lexical` is opt-in for tooling pinned to v0.2's
+/// insertion-shape ordering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SortMode {
+    Rank,
+    Lexical,
+}
+
+impl SortMode {
+    fn from_param(s: Option<&str>) -> Self {
+        match s.map(|x| x.trim().to_ascii_lowercase()) {
+            Some(ref v) if v == "lexical" => SortMode::Lexical,
+            Some(ref v) if v == "rank" => SortMode::Rank,
+            _ => SortMode::Rank, // unknown / unset → default
+        }
+    }
+}
+
+/// Fetch the symbol-level PageRank for the current generation. On a
+/// cache hit (warm), returns the cached `Arc<SymbolRanks>` cheaply.
+/// On a miss (cold or post-commit), runs `compute_symbol_ranks` on a
+/// blocking thread (the compute is CPU-bound; spawn_blocking keeps
+/// the tokio runtime responsive for other concurrent requests),
+/// stores the result, and hands it back.
+///
+/// Returns `Ok(None)` only when no workspace symbols exist yet
+/// (cold start). In that case `find_symbol` proceeds with all
+/// `rank_score: 0.0` — the wire shape stays consistent.
+///
+/// **Cache TOCTOU invariant (Deepening §C):** the caller must read
+/// `state.index_generation` *before* opening any read transaction
+/// against the store. Passing `generation` in (rather than reading
+/// it here) makes that ordering explicit.
+fn symbol_ranks_lazy(
+    state: &Arc<DaemonState>,
+    store: &Arc<Store>,
+    generation: u64,
+) -> Result<Option<Arc<SymbolRanks>>, ProtocolError> {
+    if let Some(hit) = state.symbol_pagerank_cache.get(generation) {
+        return Ok(Some(hit));
+    }
+    // Miss: synchronously compute. First cut per the plan; the
+    // stale-rank-during-recompute optimization from Deepening §C3 is
+    // a follow-up if perf bench shows this dominates.
+    let ranks = compute_symbol_ranks(store, generation).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("symbol_pagerank compute error: {e:#}"),
+        )
+    })?;
+    if ranks.sid_to_rank.is_empty() {
+        return Ok(None);
+    }
+    state.symbol_pagerank_cache.put(ranks.clone());
+    // Re-fetch through the cache so callers get an `Arc<SymbolRanks>`
+    // instead of cloning the map. The cache's mutex guarantees the
+    // value we just put is the one we read back (no other writer
+    // could race against this thread between put and get).
+    Ok(state.symbol_pagerank_cache.get(generation))
+}
+
 /// `Index.FindSymbol` — protocol-v0 §7.6.
 ///
 /// v0 contract:
@@ -326,8 +401,11 @@ fn line_range_bytes(
 ///   not both — the pattern path is the alpha.24 dogfooding-gap fix
 ///   that replaces "agent falls back to ripgrep when they don't know the
 ///   exact name". O(N) over all indexed names; with a 256-match cap.
-/// - `rank_score` is a placeholder constant for this slice — the real
-///   PageRank-driven ranking lands in the P8 token-reduction-depth phase.
+/// - **v0.3 U4** (alpha.34+, capability `pagerank_symbolwise`):
+///   `rank_score` is filled with the symbol-level PageRank value
+///   and results sort by descending rank. The `sort: "lexical"`
+///   param opts out for tooling that pinned to v0.2's
+///   insertion-order ordering.
 pub async fn find_symbol(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
@@ -365,8 +443,16 @@ pub async fn find_symbol(
     }
     let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
     let file_filter = p.file.as_deref();
+    let sort_mode = SortMode::from_param(p.sort.as_deref());
 
     let (_root, store_arc) = snapshot(state)?;
+
+    // Read the index generation BEFORE opening any read transaction
+    // for rank lookup. Deepening §C invariant: the cache key must be
+    // observed *before* the data the cache describes, never after,
+    // to avoid storing pre-commit ranks under a post-commit key.
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
 
     // Resolve the candidate symbol names.
     let names: Vec<String> = if let Some(n) = &p.name {
@@ -393,14 +479,24 @@ pub async fn find_symbol(
         filtered
     };
 
-    let mut matches = Vec::with_capacity(names.len().min(MAX_MATCHES));
-    'outer: for n in &names {
+    // Collect typed `(FoundSymbol, rank_score)` tuples so we can sort
+    // before building the wire JSON. The 256-entry cap applies after
+    // sorting (per Deepening §G: rank-then-truncate gives the
+    // top-K-by-rank, not the top-K-by-encounter).
+    let mut typed: Vec<(crate::store::FoundSymbol, f64)> =
+        Vec::with_capacity(names.len().min(MAX_MATCHES));
+    for n in &names {
         let hits = store_arc.find_symbol(n).map_err(|e| {
             ProtocolError::new(
                 ErrorCode::InternalError,
                 format!("find_symbol storage error: {e:#}"),
             )
         })?;
+        // Resolve this name's sid once per name (all hits share it).
+        let rank_for_name = match store_arc.sid_for_name(n) {
+            Ok(Some(sid)) => ranks.as_ref().map(|r| r.rank_for(sid)).unwrap_or(0.0),
+            _ => 0.0,
+        };
         for h in hits.into_iter() {
             if let Some(filter) = kind_filter {
                 if h.kind != filter {
@@ -412,7 +508,34 @@ pub async fn find_symbol(
                     continue;
                 }
             }
-            matches.push(serde_json::json!({
+            typed.push((h, rank_for_name));
+        }
+    }
+
+    // Apply sort. Default = descending rank when ranks are available;
+    // explicit "lexical" opts out. Stable secondary sort by
+    // (file, start_byte) keeps the order deterministic across ties.
+    match sort_mode {
+        SortMode::Lexical => typed.sort_by(|a, b| {
+            a.0.file
+                .cmp(&b.0.file)
+                .then(a.0.start_byte.cmp(&b.0.start_byte))
+        }),
+        SortMode::Rank => typed.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.0.file.cmp(&b.0.file))
+                .then(a.0.start_byte.cmp(&b.0.start_byte))
+        }),
+    }
+
+    let pre_truncate_len = typed.len();
+    typed.truncate(MAX_MATCHES);
+
+    let matches: Vec<serde_json::Value> = typed
+        .into_iter()
+        .map(|(h, rank)| {
+            serde_json::json!({
                 "qualified_name": h.name,
                 "kind":           h.kind.as_wire_str(),
                 "file":           h.file,
@@ -422,21 +545,19 @@ pub async fn find_symbol(
                     "start_byte": h.start_byte,
                     "end_byte":   h.end_byte,
                 },
-                // v0: signature rendering is part of P8 SignatureRenderer; for now
+                // v0: signature rendering is part of P8 SignatureRenderer;
                 // the writer doesn't store extracted signatures.
                 "signature": serde_json::Value::Null,
                 "doc":       serde_json::Value::Null,
                 "visibility": h.visibility.as_wire_str(),
-                // Placeholder until P8 wires PageRank.
-                "rank_score": 0.0,
-            }));
-            if matches.len() >= MAX_MATCHES {
-                break 'outer;
-            }
-        }
-    }
+                // v0.3 U4: real PageRank score when ranks are loaded;
+                // 0.0 fallback during cold start / torn read.
+                "rank_score": rank,
+            })
+        })
+        .collect();
 
-    let truncated = matches.len() == MAX_MATCHES;
+    let truncated = pre_truncate_len > MAX_MATCHES;
     Ok(serde_json::json!({
         "matches":   matches,
         "truncated": truncated,
@@ -491,6 +612,10 @@ pub async fn find_callers(
 
     let (_root, store_arc) = snapshot(state)?;
 
+    // v0.3 U4: read generation BEFORE any redb txn (Deepening §C).
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+
     let callee_sid = match store_arc.sid_for_name(&p.name).map_err(|e| {
         ProtocolError::new(
             ErrorCode::InternalError,
@@ -515,7 +640,7 @@ pub async fn find_callers(
 
     let mut callers: Vec<serde_json::Value> = Vec::with_capacity(sites.len().min(MAX_CALLERS));
     for site in &sites {
-        let entry = match build_caller_entry(&store_arc, site)? {
+        let entry = match build_caller_entry(&store_arc, site, ranks.as_deref())? {
             Some(e) => e,
             None => continue, // path lookup failed (torn read); skip
         };
@@ -573,6 +698,10 @@ struct CallerEntry {
     call_end_line: u32,
     /// Enclosing def's range — present when caller_sid is Some.
     def_range: Option<(u32, u32, u32, u32)>, // (start_byte, end_byte, start_line, end_line)
+    /// v0.3 U4: rank of the enclosing caller fn. `0.0` for
+    /// file-scope refs (no caller_sid) and on cold-start before
+    /// ranks have been computed.
+    rank_score: f64,
 }
 
 impl CallerEntry {
@@ -603,8 +732,8 @@ impl CallerEntry {
                 "end_line":   self.call_end_line,
             },
             "enclosing_def_range": enclosing_def_range,
-            // Placeholder until v0.3 U4 wires symbol-level PageRank.
-            "rank_score": 0.0,
+            // v0.3 U4: PageRank of the enclosing caller fn.
+            "rank_score": self.rank_score,
         })
     }
 }
@@ -613,9 +742,13 @@ impl CallerEntry {
 /// `caller_def_info`. Returns `Ok(None)` only when the fid path lookup
 /// fails (torn read or stale fid) — file-scope refs (caller_sid==None)
 /// return a `CallerEntry` with the caller fields cleared.
+///
+/// `ranks` is `None` during cold-start (no PageRank computed yet) or
+/// for empty workspaces; in that case every entry gets `rank_score = 0.0`.
 fn build_caller_entry(
     store: &Arc<Store>,
     site: &crate::store::RefSite,
+    ranks: Option<&SymbolRanks>,
 ) -> Result<Option<CallerEntry>, ProtocolError> {
     let file = match store.path_for_fid(site.fid).map_err(|e| {
         ProtocolError::new(
@@ -647,6 +780,12 @@ fn build_caller_entry(
         },
         None => (None, None, None),
     };
+    // Caller rank: use the enclosing fn's sid → ranks lookup. File-scope
+    // refs (no caller_sid) get 0.0; cold-start (ranks is None) also gets 0.0.
+    let rank_score = match (site.caller_sid, ranks) {
+        (Some(sid), Some(r)) => r.rank_for(sid),
+        _ => 0.0,
+    };
     Ok(Some(CallerEntry {
         enclosing_qualified_name,
         kind,
@@ -656,6 +795,7 @@ fn build_caller_entry(
         call_start_line: site.start_line,
         call_end_line: site.end_line,
         def_range,
+        rank_score,
     }))
 }
 
@@ -972,6 +1112,11 @@ async fn read_symbol_body(
             .saturating_sub(dep_tokens);
         let max_callers_by_budget = remaining_budget / APPROX_TOKENS_PER_CALLER;
 
+        // v0.3 U4: rank lookup for the caller entries' rank_score
+        // field. Read generation BEFORE the read txn (Deepening §C).
+        let generation = state.index_generation.load(Ordering::Relaxed);
+        let ranks = symbol_ranks_lazy(state, store_arc, generation)?;
+
         // Anchor is workspace-defined (we just read its body) so a
         // sid is virtually guaranteed; if it's missing (torn read on
         // a just-removed file), surface an empty callers list rather
@@ -998,7 +1143,7 @@ async fn read_symbol_body(
 
             let mut entries: Vec<serde_json::Value> = Vec::with_capacity(kept_sites.len());
             for site in &kept_sites {
-                if let Some(entry) = build_caller_entry(store_arc, site)? {
+                if let Some(entry) = build_caller_entry(store_arc, site, ranks.as_deref())? {
                     entries.push(entry.to_wire_value());
                 }
             }

@@ -10,6 +10,7 @@ use std::time::Instant;
 
 use crate::outline::OutlineCache;
 use crate::store::Store;
+use crate::symbol_pagerank::SymbolPagerankCache;
 use crate::watcher::Watcher;
 use crate::workspace::MountedWorkspace;
 
@@ -96,6 +97,12 @@ pub struct DaemonState {
     /// and invalidate the entry implicitly on the next lookup. See
     /// `outline.rs` module docs for the rationale.
     pub outline_cache: OutlineCache,
+    /// Single-slot cache for symbol-level PageRank (v0.3 U4). Keyed by
+    /// `index_generation` — writer commits bump the generation and the
+    /// next `find_symbol` triggers a recompute. Mirrors `outline_cache`'s
+    /// shape; see `symbol_pagerank.rs` for the algorithm + Deepening §C3
+    /// for the perf budget.
+    pub symbol_pagerank_cache: SymbolPagerankCache,
 }
 
 impl DaemonState {
@@ -112,6 +119,7 @@ impl DaemonState {
             index_generation: AtomicU64::new(0),
             watcher_status: AtomicU8::new(WatcherStatus::NoWatcher as u8),
             outline_cache: OutlineCache::new(),
+            symbol_pagerank_cache: SymbolPagerankCache::new(),
         }
     }
 

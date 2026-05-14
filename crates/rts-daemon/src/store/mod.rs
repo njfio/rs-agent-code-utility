@@ -552,6 +552,47 @@ impl Store {
     }
 
     /// All references *into* a symbol — "who calls X, and where?"
+    /// Enumerate every workspace-defined sid plus its name and the
+    /// number of files that define it. Used by `symbol_pagerank` (v0.3
+    /// U4) to build the rank-graph node set + apply the "ubiquitous"
+    /// edge-weight multiplier (>5 def sites → ×0.1).
+    ///
+    /// A sid is "workspace-defined" iff it has at least one DEFS row.
+    /// External symbols (referenced but not defined in the workspace)
+    /// are filtered at commit time per Deepening §F1, so they have no
+    /// NAME_TO_SID entry and are naturally absent here.
+    ///
+    /// Returns `(sid, name, def_count)` tuples in arbitrary order;
+    /// the caller assigns dense indices for PageRank input.
+    pub fn iter_workspace_sids(&self) -> anyhow::Result<Vec<(u32, String, u32)>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let sid_to_name = txn.open_table(SID_TO_NAME)?;
+        let defs = txn.open_multimap_table(DEFS)?;
+
+        let mut out: Vec<(u32, String, u32)> = Vec::new();
+        let iter = sid_to_name.iter()?;
+        for row in iter {
+            let row = row?;
+            let sid = row.0.value();
+            let name = row.1.value().to_string();
+
+            // Skip sids with no DEFS entry — they're external symbols
+            // that got interned for ref tracking but aren't actually
+            // workspace-defined. (Shouldn't happen given §F1, but
+            // defensive.)
+            let mut def_count: u32 = 0;
+            let it = defs.get(&sid)?;
+            for _ in it {
+                def_count = def_count.saturating_add(1);
+            }
+            if def_count == 0 {
+                continue;
+            }
+            out.push((sid, name, def_count));
+        }
+        Ok(out)
+    }
+
     /// Resolve `sid` → workspace symbol name via `SID_TO_NAME`. The
     /// inverse of `sid_for_name`. Returns `Ok(None)` for unknown sids
     /// (shouldn't happen with committed data). Used by `closure::compute`
