@@ -30,6 +30,74 @@ makes spec-faithful G5 measurement possible. **Note: G5 itself is not
 yet ✅ — see the bench-validity finding below for why the side-by-side
 numbers I collected this session are not yet reliable.**
 
+### `rts-bench latency` — cold gate + `.ok`-only percentiles (bench validity fix)
+
+The post-session-2026-05-14 follow-up on the read_symbol .ok-rate
+finding. Two bench-side changes:
+
+1. **Cold gate replaced.** The pre-existing single-symbol probe
+   (`find_symbol(symbols[0]).await`) only proved one symbol was
+   indexed before the warm run started — the walker could still be
+   mid-walk. New gate polls `outline_workspace.files_considered`
+   every 200 ms and waits for two consecutive stable rounds (same
+   signal `rts-bench footprint` uses for `full_index_time_ms`).
+2. **Percentiles compute over `.ok` samples only.** The pre-existing
+   `stats_of` included error responses (mostly fast `SYMBOL_NOT_FOUND`
+   returns) in the percentile distribution, silently dragging p50/p95
+   downward. `count` still reports attempted; `ok` reports successful;
+   `p50/p95/p99/max/mean` now describe successful responses only.
+
+New regression test `percentiles_exclude_errored_samples` pins the
+new invariant: a mix of four 1–4 ms real responses and four
+microsecond errors must report p50=2 ms (over the real subset), not
+~15 µs (the pre-fix value).
+
+#### What spec-faithful G5 looks like with both fixes applied
+
+Side-by-side `rts-bench latency --synth-loc 100000 --queries 5000
+--cold-count 500 --deps --seed 12648430` against v0.3 (this commit's
+parent merge `c08f665`) and a tag-built `v0.2.0-alpha.30` daemon
+worktree (217 successful samples each, deterministic):
+
+| Bucket | v0.3 | alpha.30 | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 1403 µs | 798 µs | **v0.3 is 1.76× slower** |
+| `read_symbol` p95 | 2553 µs | 1018 µs | **v0.3 is 2.51× slower** |
+| `read_symbol` p99 | 5095 µs | 1141 µs | **v0.3 is 4.47× slower** |
+
+**G5 conclusion: spec target not met on this synth fixture.** The
+plan target was "closure-walker cold p95 ≥ 50 % faster than
+alpha.30 (1000-file real Rust workspace)." The structural fix is
+real (the parse + filter loop in alpha.30's read_symbol is replaced
+by one `SID_REFS_OUT` multimap read in v0.3), but on the synth
+fixture's 3-line function bodies the parse cost it replaced is so
+small that v0.3's other per-call additions (rank_score lookup,
+content_version computation, expanded response payload) net
+*slower*. Honest read: **G5 stays 🟡 with a regression risk noted**
+for v0.3.2 to investigate.
+
+The spec said "real Rust workspace, not synth"; this synth fixture
+may simply be the wrong instrument for G5. A 100-file real-Rust
+workspace with 20–50 line function bodies would shift the
+comparison: alpha.30's per-call parse cost grows linearly in body
+size, v0.3's stays constant. At some body size, v0.3 wins. Filed:
+extend `rts-bench latency` to accept `--workspace <path>` for real
+fixtures (currently v1.1, see `prepare_workspace`).
+
+#### Daemon-side walker plateau (separate v0.3.2 bug surfaced)
+
+While running this measurement I observed that
+`outline_workspace.files_considered` plateaus at **256 files** on
+the 1539-file 100k-LOC synth fixture, on **both** v0.3 and alpha.30.
+That's why the read_symbol bucket reports `ok ≈ 17 %` (≈ 256/1539
+files indexed → ≈ 17 % of random symbol picks land in an indexed
+file). Identical plateau on both binaries means the comparison
+above is fair (same input distribution on both sides), but
+**something in the writer or notify chain stops processing files
+after the first 256 on workspaces this size**. The G3 footprint
+number (`full_index = 1.4 s` on 100k LOC) describes time-to-plateau,
+not time-to-fully-indexed. Filed as a separate v0.3.2 daemon bug.
+
 ### Honest dogfooding finding — `rts-bench latency` read_symbol .ok rate
 
 While running `rts-bench latency --deps` against both v0.3 and a tag-
