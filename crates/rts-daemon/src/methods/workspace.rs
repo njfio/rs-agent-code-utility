@@ -40,30 +40,35 @@ pub async fn mount(
     let _ = p.enable_telemetry; // accepted but inert in this build
     let user_path = PathBuf::from(p.root);
 
-    let mut current = state.workspace.lock().map_err(|e| {
-        ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
-    })?;
-
     // Idempotent within a connection: a second Mount for the same canonical
-    // path returns current status.
-    if let Some(existing) = current.as_ref() {
-        match workspace::canonicalize(&user_path) {
-            Ok(canonical) if canonical.path == existing.canonical.path => {
-                workspace::verify_unchanged(existing)?;
-                let store_snapshot = state.store.lock().ok().and_then(|g| g.clone());
-                return Ok(status_payload(existing, state, store_snapshot.as_deref()));
+    // path returns current status. Held in its own scope so the lock is
+    // released before we await the initial walk further down (the
+    // `MutexGuard` is `!Send` and would otherwise prevent this future
+    // from running on the multi-threaded runtime).
+    {
+        let current = state.workspace.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+        })?;
+        if let Some(existing) = current.as_ref() {
+            match workspace::canonicalize(&user_path) {
+                Ok(canonical) if canonical.path == existing.canonical.path => {
+                    workspace::verify_unchanged(existing)?;
+                    let store_snapshot = state.store.lock().ok().and_then(|g| g.clone());
+                    return Ok(status_payload(existing, state, store_snapshot.as_deref()));
+                }
+                Ok(_other) => {
+                    return Err(ProtocolError::new(
+                        ErrorCode::WorkspaceMismatch,
+                        "daemon is already pinned to a different workspace on this socket. \
+                         Per protocol-v0 §5.3 the socket path is per-workspace-hash; \
+                         connect via the correct socket, or start a fresh daemon for the \
+                         other workspace (auto-spawn handles this for new paths).",
+                    ));
+                }
+                Err(e) => return Err(e),
             }
-            Ok(_other) => {
-                return Err(ProtocolError::new(
-                    ErrorCode::WorkspaceMismatch,
-                    "daemon is already pinned to a different workspace on this socket. \
-                     Per protocol-v0 §5.3 the socket path is per-workspace-hash; \
-                     connect via the correct socket, or start a fresh daemon for the \
-                     other workspace (auto-spawn handles this for new paths).",
-                ));
-            }
-            Err(e) => return Err(e),
         }
+        // No existing mount; fall through. `current` drops here.
     }
 
     let mounted = workspace::mount(&user_path)?;
@@ -116,15 +121,71 @@ pub async fn mount(
         mounted.canonical.path.clone(),
     );
 
-    // Now run the initial walk. Fire-and-forget — the join handle is
-    // dropped because we don't gate `Mount`'s response on the walk
-    // completing (the writer-drain reports progress through redb
-    // stats, which Workspace.Status surfaces, and rts-bench's
-    // `cold_gate_wait_for_walk_settled` polls that signal).
-    drop(initial.spawn());
+    // Run the initial walk and AWAIT it before returning `Mount`'s
+    // response. The walk is on a `spawn_blocking` task with
+    // `blocking_send` (backpressure flows from writer→walker). Pre-fix
+    // the walker ran synchronously inside `Watcher::start`, so all
+    // observable file events landed before mount returned — multiple
+    // callers (including the bench test suite's
+    // `query_subcommand_exercises_all_five_tools`) depend on that
+    // semantic: a single `find_symbol` immediately after `Mount`
+    // returns symbols, not an empty list. Awaiting here preserves
+    // that contract while keeping the structural fix (writer drains
+    // throughout the walk, so the channel never overflows).
+    //
+    // The writer's per-batch flush still drains asynchronously, so
+    // an `await` here unblocks as soon as the walk emits its final
+    // event — not after every file is committed to redb. The
+    // remaining time-to-fully-indexed (a few hundred ms on 100k LOC
+    // per the G3 number) is what `Workspace.Status.progress` and
+    // the bench's cold-probe surface.
+    //
+    // The double-mount check above already released its lock. Await
+    // is now safe — no `!Send` guards are held.
+    //
+    // Wait for both the walker to finish emitting AND the writer to
+    // commit at least one batch. The walker returns when its last
+    // file goes into the channel; the writer drains async on its own
+    // task with a 150 ms batch-flush timer. Without waiting on the
+    // writer, callers that issue `find_symbol` immediately after
+    // `Mount` see an empty index (the `query_subcommand_exercises_…`
+    // bench test, every fresh-daemon shell flow, etc.).
+    //
+    // We bound the wait at 5 s — enough for any conceivable initial
+    // walk to flush at least once on a real workspace — and fall
+    // through on timeout so genuinely broken writers don't hang
+    // `Mount` forever. The writer continues to drain in the
+    // background regardless; this gate only guarantees the FIRST
+    // batch is committed before `Mount` responds. Subsequent batches
+    // land async per `BATCH_FLUSH_INTERVAL`, visible via
+    // `Workspace.Status.progress`.
+    let emitted = match initial.spawn().await {
+        Ok(Ok(n)) => n,
+        Ok(Err(e)) => {
+            tracing::warn!(error = %e, "initial walk returned an error; mount continues");
+            0
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "initial walk task panicked; mount continues");
+            0
+        }
+    };
+    let drain_deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while emitted > 0 && std::time::Instant::now() < drain_deadline {
+        let indexed = store.stats().files_indexed;
+        if indexed >= emitted {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
 
     let payload = status_payload(&mounted, state, Some(&store));
-    *current = Some(mounted);
+    {
+        let mut current = state.workspace.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+        })?;
+        *current = Some(mounted);
+    }
     {
         let mut watcher_slot = state.watcher.lock().map_err(|e| {
             ProtocolError::new(
