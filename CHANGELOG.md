@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-14
+
+**v0.3 release: rts-daemon is now a persistent code knowledge graph.**
+
+Consolidates alpha.31 through alpha.35 (the v0.3 plan, U0-U5) into a
+single release. The reference half of the call graph that v0.2
+computed at query time and threw away is now persisted in the redb
+index; three new agent-visible methods (`Index.FindCallers`,
+`Index.ImpactOf`, `Index.ReadSymbol.include_callers`) and one
+behavior upgrade (`rank_score` filled by symbol-level PageRank;
+default sort descending by rank) turn it into a queryable
+knowledge graph.
+
+### Headline capabilities shipped in v0.3
+
+| Method | What it answers | Latency (warm p95, 100k LOC) |
+|---|---|---|
+| `Index.FindCallers(name)` | Who calls X? | 2.7 ms (same shape as find_symbol) |
+| `Index.ImpactOf(name)` | Transitive callers — refactor blast radius | < 50 ms (wall-clock cap; bounded by depth, nodes, tokens) |
+| `Index.ReadSymbol.include_callers` | Symbol + body + deps + callers in one round trip | structurally equivalent to find_callers + read_symbol combined |
+| `Index.FindSymbol.rank_score` | Top-K most-central symbols | real PageRank value (was 0.0 placeholder pre-v0.3) |
+| `closure::compute` reads `SID_REFS_OUT` | What does X reference? | one redb multimap read (was per-call tree-sitter parse) |
+
+### Measured success-gate numbers
+
+See "v0.3 success-gate measurements" entry under [Unreleased] for the
+detailed table + raw bench output. Headline:
+
+- **G1**: find_symbol warm p95 = 2.7 ms (target < 5 ms) ✅
+- **G2**: scenario_refactor_impact = 97.5 % token reduction (target ≥ 70 %) ✅
+- **G3**: first-mount on 100k LOC = 902 ms (target ≤ 1500 ms) ✅
+- **G4**: PageRank top-20 algorithm correct; plan expectation misaligned with call-graph scope (type-position symbols don't surface) 🟡
+- **G5**: closure-walker structural improvement verified (closure_round_trip pass); spec-faithful p95 number requires a dedicated bench task (v0.3.1) 🟡
+
+### Wire-protocol additions
+
+All additive — v0.2 clients see no observable change unless they branch on the new capability strings.
+
+- 4 new advertised capabilities: `find_callers`, `impact_of`, `read_symbol.include_callers`, `pagerank_symbolwise`
+- 1 new error code: `WORKSPACE_MISMATCH` (split out from the overloaded `WORKSPACE_VANISHED`)
+- 1 new param: `Index.FindSymbol.sort` (`"rank"` default, `"lexical"` opt-out)
+- 2 new methods: `Index.FindCallers`, `Index.ImpactOf`
+- 1 new param: `Index.ReadSymbol.include_callers` (composes with `include_dependencies`)
+- 18 capability strings advertised total (was 7 at alpha.30)
+
+### Schema migration
+
+`SCHEMA_VERSION` bumped 1 → 2. The existing `Store::open` rebuild-on-mismatch path triggers automatically; no migration code needed. First mount of a v0.2 `db.redb` wipes and rebuilds; the index is a derived cache per protocol-v0 §15.4. The `INDEX_NOT_READY` retry in `rts-mcp` covers the rebuild window.
+
+### Per-alpha trail (for posterity)
+
+- **alpha.31 (U0 + U1):** protocol-v0 re-spec at alpha.30 baseline (#27); persistent ref graph — REFS + FID_REFS + SID_REFS_OUT tables + writer ref extraction + outline switch (#29).
+- **alpha.32 (U2'):** `Index.FindCallers` + `Index.ReadSymbol.include_callers` (#30).
+- **alpha.33 (U3):** closure walker reads indexed `SID_REFS_OUT`; surfaced + fixed a local-variable caller_sid bug in U1's writer (#32).
+- **alpha.34 (U4):** symbol-level PageRank fills `rank_score`; `find_symbol` sorts by descending rank with `sort: "lexical"` opt-out (#33).
+- **alpha.35 (U5, FINAL):** `Index.ImpactOf` transitive caller closure + `scenario_refactor_impact` bench (#34).
+
+### Test count
+
+550 passed, 0 failed (was 533 at alpha.30 baseline; +17 across v0.3).
+
+### Known limitations (v0.4+ candidates)
+
+Documented in [README.md](README.md#known-limitations):
+
+- PageRank graph is over call edges, not type edges (Scope Boundary)
+- Rust prelude artifacts (`Ok`, `Some`) reliably surface at the top
+- Single workspace per daemon process (workspace-pinned per protocol-v0 §5.5)
+- No Windows yet (Unix sockets; named-pipe port is v1.x)
+
+### v0.3.1 follow-ups (already filed in Unreleased)
+
+- Dedicated `rts-bench latency` query mix with `include_dependencies=true` for spec-faithful G5 measurement
+- Decision on whether to filter `Ok`/`Some` from PageRank node-set (G4 noise reduction) or document the artifact (currently documented in README)
+
 ### v0.3 success-gate measurements (post-alpha.35, pre-v0.3.0 tag)
 
 End-to-end measurements collected on 2026-05-14 against the
