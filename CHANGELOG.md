@@ -22,7 +22,7 @@ builds (`cargo build --workspace --release`) on Apple Silicon
 | **G2** scenario_refactor_impact token reduction | ≥ 70 % | `parse → {parse_file_content, create_syntax_tree}` on `rts-core`: baseline 164,624 tokens → MCP 4,050 tokens → **97.5 %** reduction | ✅ |
 | **G3** first-mount on 100k LOC ≤ 1500 ms | ≤ 1500 ms | build_time = **438 ms**, full_index = **902 ms**, peak RSS 26.67 MiB, on-disk index 1.52 MiB (93 bytes/symbol) | ✅ (40 % headroom) |
 | **G4** PageRank top-20 on rts-core includes central symbols | "CodebaseAnalyzer, Parser, Language in top-20" | **Partial.** Top-20 surfaces real call-central code (`find_nodes_by_kind`, `child_by_field_name`, `child_count`, `children`, `end_byte`, `end_position` — tree-sitter wrapper methods, all genuinely central). `CodebaseAnalyzer` / `Parser` / `Language` do **not** appear — they're types used in type positions, and the v0.3 graph is over *call* edges per Scope Boundaries ("type-relationship edges deferred"). Plan §G4's expectation was misaligned with the algorithm; the top-K is plausible and useful, just not what the plan predicted. | 🟡 (algorithm works; plan expectation was wrong) |
-| **G5** closure-walker cold p95 ≥ 50 % faster than alpha.30 (1000-file real Rust workspace) | ≥ 50 % faster | **Not directly measured** post-merge — requires side-by-side `read_symbol --deps` cold-call vs an alpha.30 binary. Structurally a per-call tree-sitter parse + filter (alpha.22-32) was replaced by one redb multimap read + N name-resolution joins (alpha.33). The `closure_round_trip` integration test pins functional behavior. Numeric speedup lands as a follow-up bench task before the v0.3.0 release tag is cut. | ⚪ Deferred |
+| **G5** closure-walker cold p95 ≥ 50 % faster than alpha.30 (1000-file real Rust workspace) | ≥ 50 % faster | **Mixed signal.** Side-by-side bench against alpha.30 binary on identical 100k-LOC synth: the standard latency mix doesn't exercise `include_dependencies=true`, so it can't directly measure the closure walker. The aggregate `read_symbol` p99 dropped 33 ms → 4.5 ms (86 % reduction) which is suggestive but spans the whole read path. End-to-end `query read-symbol --deps` on rts-core (~50 files) shows both binaries at ~16-19 ms median — bench-harness overhead (`rts-bench` + `rts-mcp` process spawn + auto-spawn handshake) dominates the daemon-side delta. Structural improvement is verified (parse + filter loop replaced by one redb multimap read; `closure_round_trip` passes); the spec'd p95 number requires a dedicated `read_symbol_deps` query mix in `rts-bench latency` that isn't built this session. **v0.3.1 work.** | 🟡 Structural ✅, p95 number deferred |
 
 #### G1 detail — `rts-bench latency --dry-run`
 
@@ -73,6 +73,67 @@ target/release/rts-bench task run scenario_compiler_fix \
 
 task scenario_compiler_fix: baseline=53267 tokens, mcp=350 tokens, reduction=99.3%
 ```
+
+#### G5 detail — side-by-side `rts-bench latency` (alpha.30 vs alpha.35)
+
+Built alpha.30 binary from the `v0.2.0-alpha.30` tag in a `git
+worktree` with a sidecar `CARGO_TARGET_DIR` to avoid contaminating
+the alpha.35 release build. Ran both against identical 100k-LOC
+synth fixtures (1539 files, 16929 symbols, 1000-query mix, 100-cold
+warmup).
+
+| query | alpha.30 p50 | alpha.30 p95 | alpha.30 p99 | alpha.35 p50 | alpha.35 p95 | alpha.35 p99 |
+|---|---:|---:|---:|---:|---:|---:|
+| `find_symbol` | 1100 µs | 2795 µs | 6438 µs | 1067 µs | 2701 µs | 4407 µs |
+| `read_symbol` | 1142 µs | 3350 µs | 33 119 µs | 1150 µs | 3244 µs | 4545 µs |
+| `outline`     | 9842 µs | 18 471 µs | 81 278 µs | 9938 µs | 19 266 µs | 57 384 µs |
+
+**Headline:** `read_symbol` p99 dropped from 33 ms (alpha.30) to
+4.5 ms (alpha.35), an **86 % reduction in the tail**. This spans
+the entire read path though — the standard query mix in
+`rts-bench latency` doesn't set `include_dependencies=true`, so
+this number doesn't directly attribute the win to the closure
+walker swap.
+
+**Direct closure-walker timing** via repeated
+`query read-symbol --deps`:
+
+```
+$ time rts-bench (alpha.30) query read-symbol --name parse --deps --workspace ./crates/rts-core
+real    0m0.016s  0m0.016s  0m0.017s  (3 runs, median 16 ms)
+
+$ time rts-bench (alpha.35) query read-symbol --name parse --deps --workspace ./crates/rts-core
+real    0m0.017s  0m0.018s  0m0.019s  (3 runs, median 17 ms)
+```
+
+End-to-end medians are within noise. The bench-harness overhead
+(`rts-bench` process spawn + `rts-mcp` startup + daemon auto-spawn
+handshake + Mount + query + tear-down) is roughly 15-18 ms on this
+hardware, which is much larger than the closure-walker delta
+(estimated ~1-5 ms on small fn bodies, larger on big ones).
+
+**What this means:**
+
+1. Structural improvement is real: alpha.33 replaced
+   `parse anchor_body via tree-sitter + filter against
+   all_def_names` with one `store.refs_from_symbol(anchor_sid)` +
+   N name resolutions. The `closure_round_trip` +
+   `closure_precision` integration tests pin functional behavior.
+2. The win is largest on **cold + large fn bodies** — the bench's
+   worst-case (p99 33 ms → 4.5 ms in alpha.30 → alpha.35
+   read_symbol) is consistent with "the tree-sitter parse was
+   sometimes slow when the fn body was big."
+3. For typical agent loops on normal-sized functions the absolute
+   savings are sub-millisecond. The closure walker is no longer a
+   per-call CPU bottleneck.
+4. A spec-faithful G5 measurement (closure-walker p95 specifically,
+   on a real 1000-file Rust workspace, ≥ 50 % faster) requires:
+   - A new `rts-bench latency` query mix that explicitly sets
+     `include_dependencies=true` (currently the bench uses
+     `shape: "signature"` with no deps)
+   - A real 1000-file Rust workspace (not just the 100k-LOC synth
+     fixture)
+   This is v0.3.1 work — not a v0.3.0 blocker.
 
 #### G4 detail — `query find-symbol --pattern '*' --workspace ./crates/rts-core`
 
@@ -138,9 +199,12 @@ edges.
 
 ### What's still TODO before v0.3.0 release tag
 
-- **G5 side-by-side bench** vs an alpha.30 binary on a real 1000-file
-  Rust workspace. The closure-walker swap is correct (tested) but
-  the numeric speedup target is unmeasured.
+- **G5 dedicated closure-walker bench.** The side-by-side run vs
+  alpha.30 happened (see G5 row + detail below), but the standard
+  latency mix doesn't exercise `include_dependencies=true`, so the
+  spec'd p95 number lives behind a new query mix that's v0.3.1
+  work. Structural improvement is verified; the absolute number is
+  deferred.
 - **G4 top-K cleanup**: filter `Ok`/`Some` (and other prelude
   builtins) at PageRank node-set construction to reduce noise at
   the top of the rank, OR document the artifact clearly in user-facing
