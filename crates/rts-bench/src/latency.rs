@@ -385,7 +385,11 @@ pub fn write_report(path: &Path, report: &LatencyReport) -> Result<()> {
 pub const DEFAULT_COLD_COUNT: u32 = 100;
 
 /// Resolve the workspace + symbol set for a latency run. Either
-/// synthesise (when `synth_loc` is given) or scan an existing workspace.
+/// synthesise (when `synth_loc` is given) or use an existing workspace
+/// path (`target`). For a real workspace the returned `symbols` is
+/// empty — the caller fills it post-mount by querying `find_symbol`
+/// (since the daemon is the only thing that knows which names are
+/// indexable on a workspace it doesn't synthesise).
 /// Returns (workspace_root, symbols, files).
 pub fn prepare_workspace(
     target: Option<&Path>,
@@ -393,16 +397,18 @@ pub fn prepare_workspace(
     tmp_root: &Path,
 ) -> Result<(PathBuf, Vec<String>, Vec<String>)> {
     match (target, synth_loc) {
-        (Some(p), _) => {
-            // Existing workspace: caller is responsible for picking real
-            // symbols. We pass an empty `symbols` slice and the runner
-            // falls back to a probe via `Index.FindSymbol` later. For v0,
-            // require a synthetic workspace when no symbols are supplied;
-            // the existing-workspace path is a v1.1 surface.
-            anyhow::bail!(
-                "running against an existing workspace at {} is a v1.1 surface; pass --synth-loc to use a synthetic fixture",
-                p.display()
-            );
+        (Some(p), Some(_)) => anyhow::bail!("pass either --workspace or --synth-loc, not both"),
+        (Some(p), None) => {
+            let canonical = p
+                .canonicalize()
+                .with_context(|| format!("canonicalize {}", p.display()))?;
+            if !canonical.is_dir() {
+                anyhow::bail!("workspace path {} is not a directory", canonical.display());
+            }
+            // Symbols + files are discovered post-mount in `main.rs:
+            // run_latency`. Return empty Vecs as the signal to that
+            // path.
+            Ok((canonical, Vec::new(), Vec::new()))
         }
         (None, Some(loc)) => {
             let ws = tmp_root.join("synth-workspace");
@@ -415,7 +421,9 @@ pub fn prepare_workspace(
                 .collect();
             Ok((ws, syms, files))
         }
-        (None, None) => anyhow::bail!("--synth-loc is required when --workspace is omitted"),
+        (None, None) => {
+            anyhow::bail!("--synth-loc is required when --workspace is omitted")
+        }
     }
 }
 
@@ -480,6 +488,45 @@ mod tests {
         );
         assert_eq!(stats.p99_micros, 99);
         assert_eq!(stats.max_micros, 100);
+    }
+
+    #[test]
+    fn prepare_workspace_real_path_returns_empty_symbols() {
+        // Real-workspace mode: caller passes a path, we canonicalise
+        // it and return an empty symbols Vec (caller fills via
+        // find_symbol post-mount). Validates the v0.3.2 surface.
+        let tmp = tempfile::tempdir().unwrap();
+        // Make it look real: at least one file present.
+        std::fs::write(tmp.path().join("dummy.rs"), "pub fn x() {}").unwrap();
+        let tmp_root = tempfile::tempdir().unwrap();
+        let (ws, syms, files) = prepare_workspace(Some(tmp.path()), None, tmp_root.path()).unwrap();
+        assert_eq!(ws, tmp.path().canonicalize().unwrap());
+        assert!(syms.is_empty(), "real-workspace path returns no symbols");
+        assert!(files.is_empty(), "real-workspace path returns no files");
+    }
+
+    #[test]
+    fn prepare_workspace_rejects_both_workspace_and_synth_loc() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tmp_root = tempfile::tempdir().unwrap();
+        let err = prepare_workspace(Some(tmp.path()), Some(1_000), tmp_root.path()).unwrap_err();
+        assert!(
+            format!("{err}").contains("not both"),
+            "expected mutual-exclusion error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn prepare_workspace_rejects_non_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("not-a-dir.txt");
+        std::fs::write(&f, "x").unwrap();
+        let tmp_root = tempfile::tempdir().unwrap();
+        let err = prepare_workspace(Some(&f), None, tmp_root.path()).unwrap_err();
+        assert!(
+            format!("{err}").contains("not a directory"),
+            "expected non-directory error, got: {err}"
+        );
     }
 
     #[test]
