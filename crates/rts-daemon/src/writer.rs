@@ -430,6 +430,7 @@ fn parse_and_extract(
                 oversize: true,
             },
             defs: Vec::new(),
+            refs: Vec::new(),
         });
     }
 
@@ -467,6 +468,7 @@ fn parse_and_extract(
                     oversize: false,
                 },
                 defs: Vec::new(),
+                refs: Vec::new(),
             });
         }
     };
@@ -475,6 +477,17 @@ fn parse_and_extract(
         .into_iter()
         .filter_map(|sym| symbol_to_def(&sym, &content))
         .collect();
+
+    // v0.3 (U1): extract reference sites alongside defs so the
+    // store's REFS/FID_REFS/SID_REFS_OUT tables get populated on
+    // every commit. `references_with_ranges` returns one `RefHit`
+    // per AST-precise call/reference (Rust/Python/Go/Ruby/JS/TS via
+    // tags.scm; regex fallback for the remaining languages with no
+    // byte ranges — we synthesize empty ranges so the schema stays
+    // populated even on fallback paths). Filtering of external
+    // (non-workspace-defined) names happens at commit time inside
+    // `Store::commit_batch` where the def universe is known.
+    let refs = crate::refs::references_with_ranges(rel_path.to_string_lossy().as_ref(), &content);
 
     Ok(FileBatchEntry {
         path: rel_path.to_path_buf(),
@@ -486,6 +499,7 @@ fn parse_and_extract(
             oversize: false,
         },
         defs,
+        refs,
     })
 }
 
