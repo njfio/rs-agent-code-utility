@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### G5 measurement infrastructure — `rts-bench latency --deps`
+
+New `--deps` flag on `rts-bench latency` switches the 30 % `read_symbol`
+bucket from `shape=signature` (historical default) to `shape=body,
+include_dependencies=true`. This is the only mix that exercises the
+v0.3 U3 closure walker; without it, the read_symbol bucket measures
+just the signature renderer + redb lookup, not the parse-vs-multimap
+change that G5 was specified against.
+
+The new `LatencyReport.read_symbol_mode` field records `"signature"`
+or `"body_with_deps"` so a downstream reader (or future bench-trend
+tool) can tell which mix produced a given JSON report.
+
+Tests:
+
+- `read_symbol_mode_as_str_is_stable` — on-wire string contract
+- `report_records_read_symbol_mode` — round-trips through serde
+
+This was filed as a v0.3.1 follow-up in the v0.3.0 release notes; it
+makes spec-faithful G5 measurement possible. **Note: G5 itself is not
+yet ✅ — see the bench-validity finding below for why the side-by-side
+numbers I collected this session are not yet reliable.**
+
+### Honest dogfooding finding — `rts-bench latency` read_symbol .ok rate
+
+While running `rts-bench latency --deps` against both v0.3 and a tag-
+built alpha.30 daemon (worktree at `v0.2.0-alpha.30`), I observed
+that **the read_symbol bucket has a 48/281 (≈17 %) success rate** on
+both binaries with the same seed. The other buckets are 444/444
+(`find_symbol`) and ~175/175 (`outline`).
+
+This is **not** new in v0.3 or in this PR's `--deps` flag — verified
+by inspecting the pre-existing `bench-latency-*.json` reports in
+`/tmp/g5-signature-bench.json` (signature mode, no `--deps`): same
+48/281 .ok rate. Re-running with `--deps` just made the pattern
+visible, because deps-mode read_symbols are slower (genuine work
+when they succeed) so the latency mix wasn't dominated by fast error
+responses.
+
+**Implication:** Every `read_symbol` percentile in the published
+G1/G5 numbers is computed over **a mix of 17 % real responses and
+83 % error responses** (`SYMBOL_NOT_FOUND` returns in microseconds).
+The headline "find_symbol warm p95 = 2.7 ms ✅" is correct
+(`find_symbol` is fully OK), but the read_symbol p99 deltas
+attributed to "v0.3 closure walker improvement" in the v0.3.0
+release notes are not what we thought they were — they're partly
+"how fast does each binary return SYMBOL_NOT_FOUND," not "how fast
+does the closure walker run."
+
+**Root cause hypothesis:** the latency bench's cold probe
+(`tools_call("find_symbol", probe_name, 30)` at
+`crates/rts-bench/src/main.rs:704`) waits only for the probe
+symbol's def to be indexed, not for the full 100k-LOC walk to
+complete. Subsequent warm queries pick random symbols from a 16,929-
+symbol pool; many of those symbols still aren't indexed when the
+query runs. For the synthetic fixture specifically, the failure
+pattern is correlated with file ordering (`synth_f0_*` ranks return
+empty; high-numbered file ranks like `synth_f1238_*` succeed). This
+is a fixture/walker race, not a daemon correctness bug — the daemon
+correctly returns `SYMBOL_NOT_FOUND` for sids it hasn't seen yet.
+
+**Action filed for v0.3.2:** before claiming G5 ✅, fix the cold
+probe to wait for **full** walk completion (e.g., poll
+`Workspace.Status.progress.files_done == files_total`), then re-run
+the side-by-side with the new `--deps` mix. The infrastructure for
+the measurement is now in place; what's missing is a reliable cold
+gate.
+
+**What this means for existing published G-numbers:**
+
+- **G1 (find_symbol warm p95)** ✅ — unaffected, find_symbol is 444/444 OK
+- **G2 (refactor token reduction)** ✅ — unaffected, measured on real
+  `rts-core` workspace via `task run scenario_refactor_impact`, not the synth latency mix
+- **G3 (first-mount on 100k LOC)** ✅ — unaffected, measured by
+  `rts-bench footprint`, not the latency mix
+- **G4 (PageRank top-K)** ✅ on Rust (post the prelude filter shipped above)
+- **G5 (closure-walker speedup)** 🟡 still — the prior "structural improvement
+  verified" claim stands (the `closure_round_trip` test passes); the absolute
+  speedup vs alpha.30 awaits the cold-probe fix above
+
 ### G4 noise reduction — Rust prelude filter
 
 Filter `Ok`, `Err`, `Some`, `None` from the PageRank node-set in

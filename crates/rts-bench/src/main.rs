@@ -71,6 +71,13 @@ enum Cmd {
         /// seed.
         #[arg(long, default_value_t = 0xC0FFEE_u64)]
         seed: u64,
+        /// Exercise the v0.3 U3 closure walker in the 30% read_symbol
+        /// bucket — sends `shape=body, include_dependencies=true`
+        /// instead of `shape=signature`. Required for the G5 spec
+        /// (closure-walker p95 ≥ 50 % faster than alpha.30); off by
+        /// default to preserve historical mix.
+        #[arg(long)]
+        deps: bool,
         /// Where to write the JSON report.
         #[arg(long)]
         out: Option<PathBuf>,
@@ -355,9 +362,10 @@ async fn main() -> Result<()> {
             queries,
             cold_count,
             seed,
+            deps,
             out,
             dry_run,
-        } => run_latency(synth_loc, queries, cold_count, seed, out, dry_run).await,
+        } => run_latency(synth_loc, queries, cold_count, seed, deps, out, dry_run).await,
         Cmd::Footprint {
             synth_loc,
             out,
@@ -666,9 +674,15 @@ async fn run_latency(
     queries: u32,
     cold_count: u32,
     seed: u64,
+    deps: bool,
     out: Option<PathBuf>,
     dry_run: bool,
 ) -> Result<()> {
+    let read_symbol_mode = if deps {
+        latency::ReadSymbolMode::BodyWithDeps
+    } else {
+        latency::ReadSymbolMode::Signature
+    };
     let rts_mcp_bin = resolve_bin("rts-mcp")?;
     let rts_daemon_bin = resolve_bin("rts-daemon")?;
 
@@ -706,18 +720,34 @@ async fn run_latency(
         .await?;
 
     println!(
-        "latency: workspace={} files={} symbols={} queries={} cold_count={}",
+        "latency: workspace={} files={} symbols={} queries={} cold_count={} read_symbol_mode={}",
         workspace.display(),
         files.len(),
         symbols.len(),
         queries,
         cold_count,
+        read_symbol_mode.as_str(),
     );
 
-    let samples = latency::run(&mut session, &symbols, &files, queries, seed).await?;
+    let samples = latency::run(
+        &mut session,
+        &symbols,
+        &files,
+        queries,
+        seed,
+        read_symbol_mode,
+    )
+    .await?;
     session.close().await?;
 
-    let report = latency::build_report(&workspace, synth_loc, seed, cold_count, &samples);
+    let report = latency::build_report(
+        &workspace,
+        synth_loc,
+        seed,
+        cold_count,
+        read_symbol_mode,
+        &samples,
+    );
     println!(
         "warm p50={}µs p95={}µs p99={}µs max={}µs (n={})",
         report.warm_all.p50_micros,
