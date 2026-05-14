@@ -7,6 +7,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.32] - 2026-05-14
+
+**Direct callers + `Index.FindCallers` (v0.3 U2').** The persistent
+reference graph from alpha.31 (U1) now has its first agent-visible
+consumer: `Index.FindCallers` returns the set of direct callers of a
+named symbol in one redb lookup, and `Index.ReadSymbol` gains an
+`include_callers: bool` parameter that composes callers into the
+existing body+deps response.
+
+This merged unit lands U2 + U3 from the original v0.3 plan as a
+single PR per Deepening §F2 — both shapes share the `CallerEntry`
+schema, handler logic, MCP tool descriptor, and CLI scaffolding.
+
+### Added
+
+- **`Index.FindCallers(name, kind?, file?)`** — new daemon method
+  at `methods/index.rs::find_callers`. Returns
+  `{ callers: [...], truncated: bool }` with 256-entry cap; results
+  sorted by `(file, range.start_byte)` for stable wire ordering.
+  Each entry carries `enclosing_qualified_name` + `kind` +
+  call-site `range` + `enclosing_def_range` + a `rank_score: 0.0`
+  placeholder (U4 fills it). File-scope refs (no enclosing def)
+  surface `enclosing_qualified_name: null` and pass through the
+  `kind` / `enclosing_def_range` filters as nulls.
+- **`Index.ReadSymbol.include_callers: bool`** at
+  `methods/index.rs::ReadSymbolParams` — when true, the response
+  gains a `callers: [...]` array (same `CallerEntry` shape as
+  `Index.FindCallers`) plus `callers_truncated: bool`. Token-budget
+  priority: body wins first, then deps, then callers fill what's
+  left. Mirrored on `Index.ReadSymbolAt`.
+- **Three new Store helpers** on `crate::store::Store`:
+  - `sid_for_name(name)` — `NAME_TO_SID` lookup
+  - `path_for_fid(fid)` — `FID_TO_PATH` lookup
+  - `caller_def_info(caller_sid, fid)` — joins `SID_TO_NAME` +
+    `DEFS` to resolve a `(caller_sid, fid)` pair into the caller's
+    own name + kind + def range. Returns `Ok(None)` on torn-read
+    races where the def is being concurrently removed.
+- **`CallerDefInfo`** surface struct alongside `FoundSymbol`.
+- **`rts-mcp` tool**: `find_callers(name, kind?, file?)` with
+  explicit when-to-use disambiguation in the description
+  (callers-only vs `read_symbol --include-callers` vs `impact_of`
+  per agent-native review §G2).
+- **`rts-mcp` arg** on `read_symbol` + `read_symbol_at`:
+  `include_callers: bool`.
+- **`rts-bench query find-callers --name X [--kind K] [--file F]`** —
+  new query subcommand.
+- **`--callers` flag** on `rts-bench query read-symbol` +
+  `read-symbol-at`.
+- **`crates/rts-daemon/tests/find_callers_round_trip.rs`** (new):
+  hub-spoke integration test. Asserts (a)
+  `Index.FindCallers(hub_compute)` returns 2 callers with correct
+  enclosing names; (b) `file=` filter narrows to 1; (c) unknown
+  name returns SYMBOL_NOT_FOUND; (d) `Index.ReadSymbol --include-callers`
+  returns body + same 2 callers; (e) default `Index.ReadSymbol`
+  preserves v0.2 wire shape (`callers: []`, `callers_truncated: false`).
+
+### Changed
+
+- **`Daemon.Ping` advertises** `find_callers` and
+  `read_symbol.include_callers` capability strings (alpha.32+); see
+  protocol-v0 §4.1 and Appendix F. Total capability count:
+  14 → 16.
+- **Method surface**: 11 → 12 methods + 1 notification.
+- **`docs/protocol-v0.md` §7.7c `Index.FindCallers`** documents the
+  new method's params, result shape, errors, and "when to use which
+  caller-shaped method" disambiguation. **§18.4c** adds the JSON
+  Schema. §7.7 documents `include_callers` on `Index.ReadSymbol`;
+  §18.4 + §18.4b update the schemas.
+- **`docs/protocol-v0.md` §4.2** marks `find_callers` and
+  `read_symbol.include_callers` as **advertised** (strikethrough on
+  the previously-reserved entries) and adds the alpha.32 row to
+  **Appendix F — Wire-shape evolution by alpha**.
+- **`rts-bench task find_callers`** (legacy stub, never
+  implemented) updated its `NotImplemented` message to point at the
+  new `query find-callers` subcommand. Resolves agent-native review
+  §G5's naming-collision concern between the `task` and `query`
+  namespaces — operators now see clear guidance.
+- **`Cargo.toml`** workspace version bumped 0.2.0-alpha.31 → 0.2.0-alpha.32.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **540 passed, 0 failed, 0 ignored**
+  (was 539 in alpha.31; +1 from `find_callers_round_trip`).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new warnings on
+  changed files. The new Store helpers
+  (`sid_for_name`/`path_for_fid`/`caller_def_info`) are consumed
+  by the new handler so no `#[allow(dead_code)]` needed — they
+  replace the U1 forward-looking annotations.
+
+### Wire-contract notes
+
+- **Additive only.** Existing v0.2 wire shapes are unchanged.
+  Clients that ignore the new `callers` + `callers_truncated`
+  fields in `Index.ReadSymbol` responses see no observable
+  difference. Clients that branch on
+  `Daemon.Ping.result.capabilities` should now check for
+  `find_callers` and `read_symbol.include_callers` before calling
+  the new surfaces; daemons advertising those strings honor them.
+- **`callers_truncated` is separate from `closure_truncated`** per
+  Deepening §C4 — silent overload of the existing flag was
+  rejected in review.
+
+### Not in this slice
+
+- **`Index.ImpactOf` (transitive callers)** — v0.3 U5.
+- **Closure walker switch to indexed `SID_REFS_OUT`** — v0.3 U3.
+  The alpha.22 closure walker still re-parses; the U3 PR will swap
+  it to read `store.refs_from_symbol`.
+- **Symbol-level PageRank** — v0.3 U4. `rank_score` remains a
+  `0.0` placeholder in `find_callers.callers[*]` / `find_symbol`
+  responses. The `pagerank_symbolwise` capability is still
+  reserved.
+- **External-symbol callers** — per plan §F1, refs to non-workspace
+  names are filtered at commit time. `Index.FindCallers(Vec)`
+  therefore returns "workspace callers only." Adding back later is
+  purely additive (no schema bump).
+
+### Refs
+
+- v0.3 plan §"Phase 2/3" (merged into U2' per Deepening §F2):
+  [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)
+- v0.3 U1 (this PR's prerequisite): [`feat(rts-daemon): 0.2.0-alpha.31`](https://github.com/njfio/rs-agent-code-utility/pull/29)
+
 ## [0.2.0-alpha.31] - 2026-05-14
 
 **Persistent reference graph + outline switch (v0.3 U1).** The reference

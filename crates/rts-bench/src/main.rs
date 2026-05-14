@@ -122,7 +122,7 @@ enum QueryCmd {
         #[arg(long)]
         file: Option<String>,
     },
-    /// `read_symbol` — read by name, optional shape + closure walk.
+    /// `read_symbol` — read by name, optional shape + closure walk + callers.
     ReadSymbol {
         #[arg(long)]
         workspace: Option<PathBuf>,
@@ -140,6 +140,12 @@ enum QueryCmd {
         /// Walk the symbol's referenced-symbol closure (depth 1).
         #[arg(long)]
         deps: bool,
+        /// Include direct callers (v0.3 U2'). Same shape as
+        /// `query find-callers.callers[]`. Token budget shared with
+        /// body + deps; body wins first, deps fill the remainder,
+        /// callers fill what's left.
+        #[arg(long)]
+        callers: bool,
     },
     /// `read_symbol_at` — read by `(file, line)`; line-anchored lookup.
     /// The compiler-error flow: take `error[E0308] --> src/lib.rs:42:18`
@@ -159,6 +165,26 @@ enum QueryCmd {
         token_budget: Option<u64>,
         #[arg(long)]
         deps: bool,
+        /// Include direct callers (v0.3 U2').
+        #[arg(long)]
+        callers: bool,
+    },
+    /// `find_callers` — direct callers of a symbol (v0.3 U2'). One redb
+    /// lookup; returns the call sites + each caller's enclosing fn name.
+    /// AST-precise; avoids ripgrep false positives. Distinct from the
+    /// legacy `task find_callers` (now removed) — this is a one-shot
+    /// query, not a baseline-bench scenario task.
+    FindCallers {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        #[arg(long)]
+        name: String,
+        /// Filter callers by the enclosing def's kind (fn/method/etc).
+        #[arg(long)]
+        kind: Option<String>,
+        /// Filter callers to a single workspace-relative file.
+        #[arg(long)]
+        file: Option<String>,
     },
     /// `outline_workspace` — token-budgeted structural map. Use first
     /// when orienting in an unfamiliar repo.
@@ -417,6 +443,7 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             shape,
             token_budget,
             deps,
+            callers,
         } => {
             let mut a = serde_json::Map::new();
             a.insert("name".into(), serde_json::Value::String(name.clone()));
@@ -426,6 +453,9 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             opt_num(*token_budget, &mut a, "token_budget");
             if *deps {
                 a.insert("include_dependencies".into(), serde_json::Value::Bool(true));
+            }
+            if *callers {
+                a.insert("include_callers".into(), serde_json::Value::Bool(true));
             }
             Ok((
                 default_workspace(workspace)?,
@@ -441,6 +471,7 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             shape,
             token_budget,
             deps,
+            callers,
         } => {
             let mut a = serde_json::Map::new();
             a.insert("file".into(), serde_json::Value::String(file.clone()));
@@ -453,9 +484,28 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             if *deps {
                 a.insert("include_dependencies".into(), serde_json::Value::Bool(true));
             }
+            if *callers {
+                a.insert("include_callers".into(), serde_json::Value::Bool(true));
+            }
             Ok((
                 default_workspace(workspace)?,
                 "read_symbol_at",
+                serde_json::Value::Object(a),
+            ))
+        }
+        QueryCmd::FindCallers {
+            workspace,
+            name,
+            kind,
+            file,
+        } => {
+            let mut a = serde_json::Map::new();
+            a.insert("name".into(), serde_json::Value::String(name.clone()));
+            opt_str(kind, &mut a, "kind");
+            opt_str(file, &mut a, "file");
+            Ok((
+                default_workspace(workspace)?,
+                "find_callers",
                 serde_json::Value::Object(a),
             ))
         }

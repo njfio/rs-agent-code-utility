@@ -32,8 +32,8 @@ Coding agent (Claude Code, Cursor, Cline, Aider, Continue, ...)
       ▼
 ┌──────────────────┐
 │ rts-mcp          │  per-agent process, rmcp 1.6
-│ (stdio binary)   │  exposes 5 tools: outline_workspace, find_symbol,
-└─────────┬────────┘  read_symbol, read_symbol_at, read_range
+│ (stdio binary)   │  exposes 6 tools: outline_workspace, find_symbol,
+└─────────┬────────┘  find_callers, read_symbol, read_symbol_at, read_range
                      + rts://capabilities resource
           │
           │   protocol-v0  (this document)
@@ -166,12 +166,13 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
   "id": "1",
   "result": {
     "protocol":     "0",                          // semver-style major; v1 is the breaking re-cut
-    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.30", "git_sha": "756f5cc..." },
-    "capabilities": ["outline", "find_symbol", "read_symbol", "read_symbol_at", "read_range",
+    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.32", "git_sha": "dd290c7..." },
+    "capabilities": ["outline", "find_symbol", "find_callers", "read_symbol", "read_symbol_at", "read_range",
                      "rank_score", "tree_shake", "partial_responses",
                      "content_version", "secrets_blocklist",
                      "closure_walker", "fuzzy_match", "pagerank_filewise",
-                     "polling_fallback"],
+                     "polling_fallback",
+                     "read_symbol.include_callers"],
     "uptime_ms":    123456
   }
 }
@@ -190,9 +191,9 @@ These strings are reserved and MUST NOT be advertised by `protocol-v0` daemons u
 
 Reserved for the **v0.3 code-graph KB** extension (see [v0.3 plan](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)). Each is advertised independently when its implementing PR lands:
 
-- `find_callers` — direct-callers lookup (v0.3 U2').
+- ~~`find_callers`~~ — **advertised** as of `v0.2.0-alpha.32` (U2'). `Index.FindCallers` returns direct callers of a named symbol; see §7.7c.
 - `impact_of` — transitive caller closure (v0.3 U5).
-- `read_symbol.include_callers` — extends `Index.ReadSymbol` to compose with `include_dependencies` (v0.3 U2').
+- ~~`read_symbol.include_callers`~~ — **advertised** as of `v0.2.0-alpha.32` (U2'). `Index.ReadSymbol.params.include_callers: bool` composes with `include_dependencies`; see §7.7.
 - `pagerank_symbolwise` — symbol-level PageRank fills `rank_score`; `find_symbol` results sort by descending rank when advertised. Clients without this capability MAY request `sort: "lexical"` to retain pre-v0.3 ordering.
 - `call_graph` (umbrella; reserved but **not advertised by itself** — agents should branch on the four fine-grained strings above).
 
@@ -302,10 +303,10 @@ The v0 method namespace is `^[A-Z][a-z]+\.[A-Z][A-Za-z]+$`. Methods are grouped 
 |---|---|---|
 | `Daemon.*`   | `Ping`, `Telemetry` (notification) | always |
 | `Workspace.*` | `Mount`, `Unmount`, `Status` | always |
-| `Index.*`    | `Outline`, `FindSymbol`, `ReadSymbol`, `ReadSymbolAt`, `ReadRange` | `outline`, `find_symbol` (+ `fuzzy_match` for `pattern`), `read_symbol` (+ `closure_walker` for `include_dependencies`), `read_symbol_at`, `read_range` |
+| `Index.*`    | `Outline`, `FindSymbol`, `FindCallers`, `ReadSymbol`, `ReadSymbolAt`, `ReadRange` | `outline`, `find_symbol` (+ `fuzzy_match` for `pattern`), `find_callers`, `read_symbol` (+ `closure_walker` for `include_dependencies`, + `read_symbol.include_callers` for `include_callers`), `read_symbol_at`, `read_range` |
 | `Session.*`  | `Open`, `Close` | always; **v1.1**: `MarkDeduped` under `session_dedup` |
 
-Total v0 surface as of alpha.30: **11 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.ReadSymbol`, `Index.ReadSymbolAt`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.) `Index.ReadSymbolAt` shipped in alpha.24; see [Appendix F](#appendix-f--wire-shape-evolution-by-alpha).
+Total v0 surface as of alpha.32: **12 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.FindCallers`, `Index.ReadSymbol`, `Index.ReadSymbolAt`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.) `Index.ReadSymbolAt` shipped in alpha.24; `Index.FindCallers` and `Index.ReadSymbol.include_callers` ship in alpha.32. See [Appendix F](#appendix-f--wire-shape-evolution-by-alpha).
 
 `Daemon.Cancel` is **not** part of v0. Per-request cancellation is handled by the daemon noticing the connection closed (drop) or by Tokio `select!` against a soft deadline on the request future; both don't need a wire-level verb. v2 may introduce `Daemon.Cancel(request_id)` if mid-closure cancellation becomes worthwhile.
 
@@ -461,9 +462,12 @@ Read source for a named symbol. Optionally walks the tree-shaken closure of type
   "shape":                "body",                   // "signature" | "body" | "both"  (default "body")
   "token_budget":         4096,                     // optional; default 4096
   "include_dependencies": false,                    // tree-shake closure walk?
+  "include_callers":      false,                    // v0.3 (alpha.32+, cap: read_symbol.include_callers)
   "force_resend":         false                     // v1.1: override the session-dedup `body_omitted` short-circuit
 }
 ```
+
+When `include_callers: true`, the response carries a `callers: [...]` array with the same entry shape as §7.7c `Index.FindCallers.callers[]`, plus a `callers_truncated: bool` flag (separate from `closure_truncated` to preserve v0.2 wire semantics). Token-budget priority: body fills first, then `dependencies` (when requested), then `callers`. Capability: `read_symbol.include_callers`.
 
 **`result`** (full body):
 ```jsonc
@@ -524,6 +528,51 @@ Read source for the symbol whose def-range covers `(file, line)`. The **compiler
 **`result`**: same wire shape as §7.7 `Index.ReadSymbol` (body or session-deduped variant). `qualified_name` is the innermost enclosing def whose def-range covers the line; range tie-breakers prefer smaller ranges (innermost wins). When no def covers the line — e.g. a blank gap, a comment-only region, a top-level statement outside any function — returns `SYMBOL_NOT_FOUND` with `data: { "file", "line" }`.
 
 Errors: `INDEX_NOT_READY`, `SYMBOL_NOT_FOUND` (no def covers the line), `OUT_OF_ROOT`, `FILE_NOT_INDEXED`, `RANGE_OUT_OF_BOUNDS` (line > file LOC), `INVALID_PARAMS` (line < 1).
+
+### 7.7c `Index.FindCallers`
+
+Return the direct callers of a named symbol. One redb lookup over the persistent ref graph (v0.3 U1) — no per-file re-parsing. Backs the `find_callers` MCP tool. Capability: `find_callers` (alpha.32+).
+
+**`params`**:
+```jsonc
+{
+  "name":   "build_index",          // required, exact match
+  "kind":   "fn",                   // optional; filter on the *enclosing* def's kind (fn / method / etc.)
+  "file":   "src/index/mod.rs"      // optional; filter to callers originating from one file
+}
+```
+
+**`result`**:
+```jsonc
+{
+  "callers": [
+    {
+      "enclosing_qualified_name": "rts_core::cli::main",      // null when caller_sid is None (file-scope call)
+      "kind":                     "fn",                       // null when caller_sid is None
+      "file":                     "src/cli.rs",
+      "range": {                                              // the call site
+        "start_byte": 4520, "end_byte": 4531,
+        "start_line": 142,  "end_line":  142
+      },
+      "enclosing_def_range": {                                // the caller's own def range (null when caller_sid is None)
+        "start_byte": 4400, "end_byte": 5200,
+        "start_line": 138,  "end_line":  160
+      },
+      "rank_score": 0.0                                       // placeholder until v0.3 U4 (cap: `pagerank_symbolwise`)
+    }
+  ],
+  "truncated": false                                          // true when more than 256 callers existed
+}
+```
+
+Result is sorted by `(file, range.start_byte)` for stable output across calls; capped at 256 entries (mirrors `Index.FindSymbol`'s `MAX_MATCHES`).
+
+Errors: `INDEX_NOT_READY`, `SYMBOL_NOT_FOUND` (no `NAME_TO_SID` entry — symbol is not workspace-defined or never indexed; mirrors `Index.FindSymbol` error path), `INVALID_PARAMS` (`name` empty or >256 chars; unknown `kind` value).
+
+**When to use vs related methods:**
+- Use `find_callers` for callers-only (cheap; no body read).
+- Use `read_symbol --include-callers` when you also want the symbol's body in the same round trip.
+- Use `impact_of` (v0.3 U5) for *transitive* callers (refactor blast radius).
 
 ### 7.8 `Index.ReadRange`
 
@@ -940,7 +989,26 @@ These are normative for `params` validation. The daemon SHOULD reject schema-non
                               "default": "body" },
     "token_budget":         { "type": "integer", "minimum": 50, "maximum": 200000 },
     "include_dependencies": { "type": "boolean", "default": false },
+    "include_callers":      { "type": "boolean", "default": false },
     "force_resend":         { "type": "boolean", "default": false }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}
+```
+
+### 18.4c `Index.FindCallers.params`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "kind": { "type": "string", "enum": ["fn", "struct", "enum", "type", "trait",
+                                          "const", "static", "impl", "method",
+                                          "class", "interface", "module"] },
+    "file": { "type": "string" }
   },
   "required": ["name"],
   "additionalProperties": false
@@ -960,7 +1028,8 @@ These are normative for `params` validation. The daemon SHOULD reject schema-non
     "shape":                { "type": "string", "enum": ["signature","body","both"],
                               "default": "body" },
     "token_budget":         { "type": "integer", "minimum": 50, "maximum": 200000 },
-    "include_dependencies": { "type": "boolean", "default": false }
+    "include_dependencies": { "type": "boolean", "default": false },
+    "include_callers":      { "type": "boolean", "default": false }
   },
   "required": ["file", "line"],
   "additionalProperties": false
@@ -968,6 +1037,7 @@ These are normative for `params` validation. The daemon SHOULD reject schema-non
 ```
 
 `column` is accepted but inert in v0 (tie-breaker only). Lands with v1.1 incremental parser reuse.
+`include_callers` (alpha.32+) mirrors `Index.ReadSymbol.params.include_callers`.
 
 ### 18.5 `Index.ReadRange.params`
 
@@ -1172,10 +1242,12 @@ This appendix tracks every additive wire-shape change between Draft 1 (P5 delive
 | `alpha.28` | (none — internal) | `crate::language` per-language dispatcher refactor. No wire change. | — |
 | `alpha.29` | (none — internal) | OnceLock query cache + signature renderer perf. No wire change. | — |
 | `alpha.30` | (none — internal) | JS/TS tags.scm reference queries (extends alpha.27 to JS/TS). Same wire shape; better-quality contents on JS/TS workspaces. | — |
+| `alpha.31` | (none — internal) | **v0.3 U1**: persistent reference graph (REFS / FID_REFS / SID_REFS_OUT tables; SCHEMA_VERSION 1→2). `outline::compute` reads indexed edges. Same wire shape; no agent-visible changes. | — |
+| `alpha.32` | `find_callers`, `read_symbol.include_callers` | **v0.3 U2'**: new method `Index.FindCallers(name, kind?, file?)` returns direct callers. `Index.ReadSymbol.params.include_callers: bool` composes callers into the existing response with a separate `callers_truncated` flag. | §7.7, §7.7c, §18.4, §18.4b, §18.4c |
 
-Capability strings present in `Daemon.Ping.result.capabilities` after alpha.30 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_symbol_at`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `closure_walker`, `fuzzy_match`, `pagerank_filewise`, `polling_fallback`.
+Capability strings present in `Daemon.Ping.result.capabilities` after alpha.32 (canonical list, in advertisement order): `outline`, `find_symbol`, `find_callers`, `read_symbol`, `read_symbol_at`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `closure_walker`, `fuzzy_match`, `pagerank_filewise`, `polling_fallback`, `read_symbol.include_callers`.
 
-**Pending v0.3** (reserved in §4.2, not advertised at alpha.30): `find_callers`, `impact_of`, `read_symbol.include_callers`, `pagerank_symbolwise`.
+**Pending v0.3** (reserved in §4.2, not advertised at alpha.32): `impact_of` (U5), `pagerank_symbolwise` (U4).
 
 ### How to extend protocol-v0 in a future alpha
 
@@ -1190,4 +1262,4 @@ The PR description SHOULD link to the section(s) it changed so reviewers can ver
 
 ---
 
-*This document is the source of truth for the daemon-side wire protocol. The MCP-facing surface (`outline_workspace`, `find_symbol`, `read_symbol`, `read_symbol_at`, `read_range`, `rts://capabilities`) is governed by [docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md](plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md) and the MCP 2025-11-25 spec; future MCP-tool changes should land in that plan, not here. The v0.3 code-graph KB extension lives in [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md).*
+*This document is the source of truth for the daemon-side wire protocol. The MCP-facing surface (`outline_workspace`, `find_symbol`, `find_callers`, `read_symbol`, `read_symbol_at`, `read_range`, `rts://capabilities`) is governed by [docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md](plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md) and the MCP 2025-11-25 spec; future MCP-tool changes should land in that plan, not here. The v0.3 code-graph KB extension lives in [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md).*

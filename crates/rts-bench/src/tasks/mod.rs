@@ -57,9 +57,12 @@ pub struct TaskContext<'a> {
 }
 
 /// Run one task by id. v0 implements `locate_def`, `get_body`, and
-/// `summarize_module`. `find_callers` + `fix_imports` need the P8
-/// reference-graph that isn't built yet — they return `NotImplemented`
-/// with a pointer to the later slice.
+/// `summarize_module`. `find_callers` (the legacy stub) was superseded
+/// by `rts-bench query find-callers` once v0.3 U2' shipped the
+/// underlying `Index.FindCallers` daemon method; the baseline-bench
+/// version of the same workflow will reland as `scenario_find_callers`
+/// alongside U5's `scenario_refactor_impact`. `fix_imports` still
+/// needs work the v0.3 plan doesn't cover.
 pub async fn run_task(id: &str, ctx: &TaskContext<'_>) -> Result<TaskOutcome> {
     match id {
         "locate_def" => locate_def::run(ctx).await,
@@ -67,14 +70,16 @@ pub async fn run_task(id: &str, ctx: &TaskContext<'_>) -> Result<TaskOutcome> {
         "summarize_module" => summarize_module::run(ctx).await,
         "scenario_compiler_fix" => scenario_compiler_fix::run(ctx).await,
         "find_callers" => Ok(TaskOutcome::NotImplemented {
-            reason: "task `find_callers` needs an inverted ref-graph (closure walker is \
-                     anchor→deps; this is the inverse). Defer to v1.1 alongside multi-hop \
-                     closure."
+            reason: "the underlying `Index.FindCallers` method ships in v0.3 alpha.31+; \
+                     for one-shot queries use `rts-bench query find-callers --name <X>`. \
+                     The baseline-bench variant of this task will reland as \
+                     `scenario_find_callers` alongside `scenario_refactor_impact` (v0.3 U5)."
                 .into(),
         }),
         "fix_imports" => Ok(TaskOutcome::NotImplemented {
-            reason: "task `fix_imports` needs the same inverted ref-graph; defer with \
-                     find_callers."
+            reason: "task `fix_imports` is out of scope for v0.3; revisit once a real user \
+                     has asked. The closure walker + persisted ref graph are the \
+                     primitives it would build on."
                 .into(),
         }),
         other => anyhow::bail!("unknown task id: {other}; valid ids: {TASK_IDS:?}"),

@@ -547,6 +547,66 @@ impl Store {
     }
 
     /// All references *into* a symbol — "who calls X, and where?"
+    /// Resolve `name` → `callee_sid` via `NAME_TO_SID`. Returns
+    /// `Ok(None)` for unknown names (external symbols / unindexed).
+    /// Used by `Index.FindCallers` (U2') to convert the wire-level
+    /// name into the integer key needed for `refs_to_symbol`.
+    pub fn sid_for_name(&self, name: &str) -> anyhow::Result<Option<u32>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let name_to_sid = txn.open_table(NAME_TO_SID)?;
+        Ok(name_to_sid.get(name)?.map(|v| v.value()))
+    }
+
+    /// Resolve `fid` → workspace-relative path. Returns `Ok(None)` for
+    /// unknown fids. Used by `Index.FindCallers` (U2') to convert each
+    /// `RefSite.fid` into the path the caller wants to see.
+    pub fn path_for_fid(&self, fid: u32) -> anyhow::Result<Option<String>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let fid_to_path = txn.open_table(FID_TO_PATH)?;
+        Ok(fid_to_path.get(&fid)?.map(|v| v.value().to_string()))
+    }
+
+    /// Resolve a `(caller_sid, fid)` pair into the caller's own def
+    /// info — the enclosing symbol's name + kind + range. Used by
+    /// `Index.FindCallers` (U2') to surface `enclosing_qualified_name`
+    /// + `kind` alongside the call-site range from the `RefSite`.
+    ///
+    /// Returns `Ok(None)` when SID_TO_NAME has no entry for
+    /// `caller_sid` (shouldn't happen for an indexed sid) or when no
+    /// DEFS row for this sid matches the given fid (which only fires
+    /// during a torn-read race — the writer always pairs `caller_sid`
+    /// with a def in the same file at commit time).
+    pub fn caller_def_info(
+        &self,
+        caller_sid: u32,
+        fid: u32,
+    ) -> anyhow::Result<Option<CallerDefInfo>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let sid_to_name = txn.open_table(SID_TO_NAME)?;
+        let name = match sid_to_name.get(&caller_sid)? {
+            Some(v) => v.value().to_string(),
+            None => return Ok(None),
+        };
+        let defs = txn.open_multimap_table(DEFS)?;
+        for row in defs.get(&caller_sid)? {
+            let bytes = row?.value().to_vec();
+            if let Ok(d) = from_bytes::<DefSite>(&bytes) {
+                if d.fid == fid {
+                    return Ok(Some(CallerDefInfo {
+                        name,
+                        kind: d.kind,
+                        def_start_byte: d.start,
+                        def_end_byte: d.end,
+                        def_start_line: d.start_line,
+                        def_end_line: d.end_line,
+                    }));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// All references *into* a symbol — "who calls X, and where?"
     /// One entry per call site. The caller (FindCallers handler, v0.3
     /// U2') resolves `caller_sid` → qualified name via SID_TO_NAME +
     /// DEFS lookup. Returns `Ok(Vec::new())` for symbols with no
@@ -555,7 +615,6 @@ impl Store {
     /// Order: insertion order within each `(callee_sid)` multimap
     /// key, which is arbitrary. Callers that want stable ordering
     /// should sort by `(fid, start)`.
-    #[allow(dead_code)] // consumed by v0.3 U2' (Index.FindCallers)
     pub fn refs_to_symbol(&self, callee_sid: u32) -> anyhow::Result<Vec<RefSite>> {
         let txn = self.db.begin_read().context("begin_read")?;
         let refs_t = txn.open_multimap_table(REFS)?;
@@ -731,6 +790,21 @@ pub struct FoundSymbol {
     pub start_line: u32,
     pub end_line: u32,
     pub visibility: schema::Visibility,
+}
+
+/// Surface struct for v0.3 U2'+. Resolved info for a caller's *own*
+/// def, returned by [`Store::caller_def_info`]. The wire-shape
+/// `enclosing_qualified_name` + `kind` + `enclosing_def_range` fields
+/// in `Index.FindCallers.callers[]` are built from one of these per
+/// `RefSite`.
+#[derive(Debug, Clone)]
+pub struct CallerDefInfo {
+    pub name: String,
+    pub kind: SymbolKind,
+    pub def_start_byte: u32,
+    pub def_end_byte: u32,
+    pub def_start_line: u32,
+    pub def_end_line: u32,
 }
 
 // Long arg list is the cost of operating on six redb tables in one

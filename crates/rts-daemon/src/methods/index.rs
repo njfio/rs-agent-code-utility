@@ -68,10 +68,32 @@ struct ReadSymbolParams {
     token_budget: Option<u64>,
     #[serde(default)]
     include_dependencies: bool,
+    /// v0.3 U2' — when true, the response carries a `callers` array
+    /// of direct callers (one redb lookup per anchor, same shape as
+    /// `Index.FindCallers.callers[]`). Token budget is shared with
+    /// body + deps; callers fill the remainder. Defaults to false to
+    /// preserve v0.2 wire shape.
+    #[serde(default)]
+    include_callers: bool,
     /// v1.1 session-dedup override. Accepted but inert in v0.
     #[serde(default)]
     #[allow(dead_code)]
     force_resend: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct FindCallersParams {
+    /// Name of the symbol whose callers we want. Required.
+    name: String,
+    /// Optional filter: only return callers whose enclosing-def's
+    /// `kind` matches. Accepts the same loose-string form as
+    /// `Index.FindSymbol.kind`.
+    #[serde(default)]
+    kind: Option<String>,
+    /// Optional filter: only return callers from this workspace-relative
+    /// file. Useful for "who calls X in foo.rs?".
+    #[serde(default)]
+    file: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,6 +115,9 @@ struct ReadSymbolAtParams {
     token_budget: Option<u64>,
     #[serde(default)]
     include_dependencies: bool,
+    /// v0.3 U2' — direct callers. Mirrors `ReadSymbolParams.include_callers`.
+    #[serde(default)]
+    include_callers: bool,
     #[serde(default)]
     #[allow(dead_code)]
     force_resend: bool,
@@ -418,6 +443,222 @@ pub async fn find_symbol(
     }))
 }
 
+/// `Index.FindCallers(name)` — direct callers of a symbol. v0.3 U2'.
+///
+/// Wire shape:
+/// ```jsonc
+/// {
+///   "callers": [
+///     {
+///       "enclosing_qualified_name": "rts_core::index::build_index", // null when caller_sid is None (file-scope ref)
+///       "kind":  "fn",                                                // null when caller_sid is None
+///       "file":  "src/index/mod.rs",
+///       "range": { "start_line": 142, "end_line": 142,
+///                  "start_byte": 4520, "end_byte": 4540 },           // the call site
+///       "enclosing_def_range": {                                      // the caller's def range (null when caller_sid is None)
+///         "start_line": 138, "end_line": 160,
+///         "start_byte": 4400, "end_byte": 5200
+///       },
+///       "rank_score": 0.0                                             // placeholder until v0.3 U4
+///     }
+///   ],
+///   "truncated": false
+/// }
+/// ```
+///
+/// Errors: `SYMBOL_NOT_FOUND` when no `NAME_TO_SID` entry; mirrors
+/// `Index.FindSymbol`'s shape. Result is sorted by `(file, start_byte)`
+/// for stable output across calls. The 256-entry cap (`MAX_CALLERS`)
+/// matches `MAX_MATCHES` from `find_symbol`.
+///
+/// Capability: `find_callers` (advertised in `Daemon.Ping` from
+/// alpha.32 onward).
+pub async fn find_callers(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    const MAX_CALLERS: usize = 256;
+
+    let p: FindCallersParams = parse_params(params)?;
+    if p.name.is_empty() || p.name.len() > 256 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`name` must be 1..=256 characters",
+        ));
+    }
+    let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
+    let file_filter = p.file.as_deref();
+
+    let (_root, store_arc) = snapshot(state)?;
+
+    let callee_sid = match store_arc.sid_for_name(&p.name).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("sid_for_name storage error: {e:#}"),
+        )
+    })? {
+        Some(s) => s,
+        None => {
+            return Err(ProtocolError::new(
+                ErrorCode::SymbolNotFound,
+                format!("no symbol named `{}` is indexed", p.name),
+            ));
+        }
+    };
+
+    let sites = store_arc.refs_to_symbol(callee_sid).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("refs_to_symbol storage error: {e:#}"),
+        )
+    })?;
+
+    let mut callers: Vec<serde_json::Value> = Vec::with_capacity(sites.len().min(MAX_CALLERS));
+    for site in &sites {
+        let entry = match build_caller_entry(&store_arc, site)? {
+            Some(e) => e,
+            None => continue, // path lookup failed (torn read); skip
+        };
+
+        // Filter by file (workspace-relative match).
+        if let Some(filter) = file_filter {
+            if entry.file != filter {
+                continue;
+            }
+        }
+        // Filter by kind. File-scope refs (caller_sid==None) have no
+        // kind and are excluded when a kind filter is set.
+        if let Some(filter) = kind_filter {
+            if entry.kind != Some(filter) {
+                continue;
+            }
+        }
+        callers.push(entry.to_wire_value());
+    }
+
+    // Stable order: (file, start_byte). Matches the FindSymbol
+    // convention of "predictable wire ordering across calls."
+    callers.sort_by(|a, b| {
+        let (af, ab) = (
+            a["file"].as_str().unwrap_or(""),
+            a["range"]["start_byte"].as_u64().unwrap_or(0),
+        );
+        let (bf, bb) = (
+            b["file"].as_str().unwrap_or(""),
+            b["range"]["start_byte"].as_u64().unwrap_or(0),
+        );
+        (af, ab).cmp(&(bf, bb))
+    });
+
+    let truncated = callers.len() > MAX_CALLERS;
+    callers.truncate(MAX_CALLERS);
+
+    Ok(serde_json::json!({
+        "callers":   callers,
+        "truncated": truncated,
+    }))
+}
+
+/// Internal struct used by `find_callers` (and U2's `read_symbol`
+/// `include_callers` branch) to build the wire-level caller entry.
+/// Filter steps run against the typed form before serialization.
+struct CallerEntry {
+    enclosing_qualified_name: Option<String>,
+    kind: Option<SymbolKind>,
+    file: String,
+    /// Call-site range — the RefSite.
+    call_start_byte: u32,
+    call_end_byte: u32,
+    call_start_line: u32,
+    call_end_line: u32,
+    /// Enclosing def's range — present when caller_sid is Some.
+    def_range: Option<(u32, u32, u32, u32)>, // (start_byte, end_byte, start_line, end_line)
+}
+
+impl CallerEntry {
+    fn to_wire_value(&self) -> serde_json::Value {
+        let enclosing_def_range = match self.def_range {
+            Some((sb, eb, sl, el)) => serde_json::json!({
+                "start_byte": sb,
+                "end_byte":   eb,
+                "start_line": sl,
+                "end_line":   el,
+            }),
+            None => serde_json::Value::Null,
+        };
+        serde_json::json!({
+            "enclosing_qualified_name": match &self.enclosing_qualified_name {
+                Some(n) => serde_json::Value::String(n.clone()),
+                None => serde_json::Value::Null,
+            },
+            "kind": match self.kind {
+                Some(k) => serde_json::Value::String(k.as_wire_str().to_string()),
+                None => serde_json::Value::Null,
+            },
+            "file": self.file,
+            "range": {
+                "start_byte": self.call_start_byte,
+                "end_byte":   self.call_end_byte,
+                "start_line": self.call_start_line,
+                "end_line":   self.call_end_line,
+            },
+            "enclosing_def_range": enclosing_def_range,
+            // Placeholder until v0.3 U4 wires symbol-level PageRank.
+            "rank_score": 0.0,
+        })
+    }
+}
+
+/// Resolve a `RefSite` into a `CallerEntry`. Joins `path_for_fid` and
+/// `caller_def_info`. Returns `Ok(None)` only when the fid path lookup
+/// fails (torn read or stale fid) — file-scope refs (caller_sid==None)
+/// return a `CallerEntry` with the caller fields cleared.
+fn build_caller_entry(
+    store: &Arc<Store>,
+    site: &crate::store::RefSite,
+) -> Result<Option<CallerEntry>, ProtocolError> {
+    let file = match store.path_for_fid(site.fid).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("path_for_fid storage error: {e:#}"),
+        )
+    })? {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    let (enclosing_qualified_name, kind, def_range) = match site.caller_sid {
+        Some(sid) => match store.caller_def_info(sid, site.fid).map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("caller_def_info storage error: {e:#}"),
+            )
+        })? {
+            Some(info) => (
+                Some(info.name),
+                Some(info.kind),
+                Some((
+                    info.def_start_byte,
+                    info.def_end_byte,
+                    info.def_start_line,
+                    info.def_end_line,
+                )),
+            ),
+            None => (None, None, None),
+        },
+        None => (None, None, None),
+    };
+    Ok(Some(CallerEntry {
+        enclosing_qualified_name,
+        kind,
+        file,
+        call_start_byte: site.start,
+        call_end_byte: site.end,
+        call_start_line: site.start_line,
+        call_end_line: site.end_line,
+        def_range,
+    }))
+}
+
 /// Minimal shell-style globber for symbol names.
 ///
 /// Supports `*` (zero or more chars) and `?` (one char). Anything else
@@ -551,6 +792,7 @@ pub async fn read_symbol(
         ));
     }
     let include_deps = p.include_dependencies;
+    let include_callers = p.include_callers;
     let budget = check_budget(p.token_budget)?;
 
     let (root, store_arc) = snapshot(state)?;
@@ -598,6 +840,7 @@ pub async fn read_symbol(
         shape,
         budget,
         include_deps,
+        include_callers,
     )
     .await
 }
@@ -617,6 +860,7 @@ async fn read_symbol_body(
     shape: &str,
     budget: u64,
     include_deps: bool,
+    include_callers: bool,
 ) -> Result<serde_json::Value, ProtocolError> {
     let (abs, _rel) = resolve_workspace_path(root, &chosen.file)?;
     check_body_extension(&abs)?;
@@ -711,12 +955,87 @@ async fn read_symbol_body(
     } else {
         (serde_json::Value::Array(vec![]), false, Vec::new(), 0u64)
     };
-    let tokens_returned = body_tokens.saturating_add(dep_tokens);
+
+    // v0.3 U2': callers branch. Parallel to the dep walk above.
+    // Budget priority: body wins first, deps fill the remainder,
+    // callers fill what's left after deps. Callers use a separate
+    // truncation flag (`callers_truncated`) to keep the v0.2
+    // `closure_truncated` semantics intact (Deepening §C4 — silent
+    // overload of the existing flag was rejected).
+    //
+    // Per-entry budget cost is `bytes_div_3` of the JSON entry size;
+    // we approximate this as a constant 60 tokens per entry (matches
+    // the average CallerEntry serialization with all string fields
+    // populated). Cheaper than serializing each entry to measure
+    // exactly; agents have the `tokens_returned` field for precision.
+    let (callers_value, callers_truncated, caller_tokens) = if include_callers {
+        const APPROX_TOKENS_PER_CALLER: u64 = 60;
+        let remaining_budget = budget
+            .saturating_sub(body_tokens)
+            .saturating_sub(dep_tokens);
+        let max_callers_by_budget = remaining_budget / APPROX_TOKENS_PER_CALLER;
+
+        // Anchor is workspace-defined (we just read its body) so a
+        // sid is virtually guaranteed; if it's missing (torn read on
+        // a just-removed file), surface an empty callers list rather
+        // than failing the whole call.
+        let callee_sid_opt = store_arc.sid_for_name(&chosen.name).map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("sid_for_name storage error: {e:#}"),
+            )
+        })?;
+        if let Some(callee_sid) = callee_sid_opt {
+            let sites = store_arc.refs_to_symbol(callee_sid).map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InternalError,
+                    format!("refs_to_symbol storage error: {e:#}"),
+                )
+            })?;
+            let total_sites = sites.len() as u64;
+            let kept_sites: Vec<_> = sites
+                .into_iter()
+                .take(max_callers_by_budget as usize)
+                .collect();
+            let truncated = (kept_sites.len() as u64) < total_sites;
+
+            let mut entries: Vec<serde_json::Value> = Vec::with_capacity(kept_sites.len());
+            for site in &kept_sites {
+                if let Some(entry) = build_caller_entry(store_arc, site)? {
+                    entries.push(entry.to_wire_value());
+                }
+            }
+            // Stable order: (file, start_byte). Same as Index.FindCallers.
+            entries.sort_by(|a, b| {
+                let (af, ab) = (
+                    a["file"].as_str().unwrap_or(""),
+                    a["range"]["start_byte"].as_u64().unwrap_or(0),
+                );
+                let (bf, bb) = (
+                    b["file"].as_str().unwrap_or(""),
+                    b["range"]["start_byte"].as_u64().unwrap_or(0),
+                );
+                (af, ab).cmp(&(bf, bb))
+            });
+            let tokens = (entries.len() as u64).saturating_mul(APPROX_TOKENS_PER_CALLER);
+            (serde_json::Value::Array(entries), truncated, tokens)
+        } else {
+            (serde_json::Value::Array(vec![]), false, 0u64)
+        }
+    } else {
+        (serde_json::Value::Array(vec![]), false, 0u64)
+    };
+
+    let tokens_returned = body_tokens
+        .saturating_add(dep_tokens)
+        .saturating_add(caller_tokens);
 
     // `truncated_symbols` blends two sources per §7.7: ambiguous
     // anchor matches (extra files) and closure deps that didn't fit
     // (deps_truncated_names). Both let the agent re-request
-    // individually.
+    // individually. Callers truncation is signalled separately via
+    // `callers_truncated` per Deepening §C4 (separate flag rather
+    // than overloading `closure_truncated`).
     let mut truncated_symbols = extra;
     truncated_symbols.extend(deps_truncated_names);
 
@@ -739,6 +1058,8 @@ async fn read_symbol_body(
         "token_counter":   TOKEN_COUNTER,
         "dependencies":      deps_value,
         "closure_truncated": closure_truncated,
+        "callers":           callers_value,
+        "callers_truncated": callers_truncated,
         // Disambiguation surface per §7.7.
         "truncated":         ambiguous || body_truncated,
         "truncated_symbols": truncated_symbols,
@@ -823,6 +1144,7 @@ pub async fn read_symbol_at(
         shape,
         budget,
         p.include_dependencies,
+        p.include_callers,
     )
     .await
 }
