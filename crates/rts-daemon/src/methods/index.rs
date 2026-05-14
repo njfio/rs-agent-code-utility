@@ -931,15 +931,12 @@ async fn read_symbol_body(
         let root_owned = root.to_path_buf();
         let store_arc = store_arc.clone();
         let chosen_clone = chosen.clone();
-        let body_owned = body_text.to_string();
+        // v0.3 U3 (alpha.33): closure::compute no longer needs the
+        // anchor body — outgoing refs come from the indexed
+        // SID_REFS_OUT table populated at commit time. body_text
+        // stays in scope for the body-text return.
         let walk = tokio::task::spawn_blocking(move || {
-            crate::closure::compute(
-                &root_owned,
-                &store_arc,
-                &chosen_clone,
-                &body_owned,
-                remaining_budget,
-            )
+            crate::closure::compute(&root_owned, &store_arc, &chosen_clone, remaining_budget)
         })
         .await
         .map_err(|e| {
