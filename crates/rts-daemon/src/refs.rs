@@ -40,6 +40,8 @@
 
 use rust_tree_sitter::{Language, Parser, query::Query};
 
+use crate::store::RefHit;
+
 /// Extract the set of *referenced* symbol names from `content` parsed
 /// as `language`, using the supplied pre-compiled `Query`. The query
 /// is built once per language (cached via `OnceLock` in
@@ -70,6 +72,48 @@ pub(crate) fn extract_references(
     Some(out)
 }
 
+/// Like [`extract_references`] but emits one [`RefHit`] per call site
+/// (carrying the byte range and 1-based inclusive line range of the
+/// `@name` capture). Used by the writer to populate the v0.3
+/// `REFS`/`FID_REFS`/`SID_REFS_OUT` tables; the at-query-time outline
+/// loop and the closure walker both switch to reading those indexed
+/// edges instead of re-extracting per call.
+///
+/// Returns `None` on parser failure — callers should fall back to a
+/// language-agnostic shape (e.g. an empty Vec when the daemon
+/// supports the language but parsing failed).
+pub(crate) fn extract_references_with_ranges(
+    language: Language,
+    query: &Query,
+    content: &str,
+) -> Option<Vec<RefHit>> {
+    let parser = Parser::new(language).ok()?;
+    let tree = parser.parse(content, None).ok()?;
+    let captures = query.captures(&tree).ok()?;
+    let mut out: Vec<RefHit> = Vec::with_capacity(captures.len());
+    for c in captures {
+        if c.name() == Some("name") {
+            let node = c.node();
+            if let Ok(text) = node.text() {
+                let start_byte = node.start_byte() as u32;
+                let end_byte = node.end_byte() as u32;
+                // tree-sitter rows are 0-based; protocol-v0 line
+                // ranges are 1-based inclusive (matching DefSite).
+                let start_row = node.start_position().row as u32 + 1;
+                let end_row = node.end_position().row as u32 + 1;
+                out.push(RefHit {
+                    name: text.to_string(),
+                    start: start_byte,
+                    end: end_byte,
+                    start_line: start_row,
+                    end_line: end_row,
+                });
+            }
+        }
+    }
+    Some(out)
+}
+
 /// Dispatcher used by `outline` + `closure` for each file they walk.
 /// Tries AST-precise extraction first; falls back to the regex
 /// tokenizer for languages without a query.
@@ -92,6 +136,40 @@ pub(crate) fn references_for_path(rel_path: &str, content: &str) -> Vec<String> 
     }
     crate::outline::extract_identifiers(content)
         .map(|s| s.to_string())
+        .collect()
+}
+
+/// Range-carrying variant of [`references_for_path`]. Used by the
+/// writer (v0.3 U1) to populate the persistent ref graph.
+///
+/// For languages with a tags.scm reference query (Rust, Python, Go,
+/// Ruby, JavaScript, TypeScript), each hit carries a precise byte
+/// range from the `@name` capture. For fallback-regex languages
+/// (C, C++, Java, PHP, Swift) we synthesize the byte range as
+/// `start = end = 0` and 1-based `start_line = end_line = 1` —
+/// enough to populate the index for "who calls X?" queries but not
+/// precise enough for "show me the call site." This trade-off
+/// matches v0.2 behavior: those languages already use the regex
+/// path for closure-walker identifier extraction.
+pub(crate) fn references_with_ranges(rel_path: &str, content: &str) -> Vec<RefHit> {
+    if let Some(info) = crate::language::info_for_path(rel_path) {
+        if let Some(query) = crate::language::cached_refs_query(&info) {
+            if let Some(refs) = extract_references_with_ranges(info.language, query, content) {
+                return refs;
+            }
+        }
+    }
+    // Regex fallback: identifier-shaped tokens with no precise range.
+    // The store can still answer "who calls X" but the RefSite range
+    // will be 0..0 / line 1..1.
+    crate::outline::extract_identifiers(content)
+        .map(|s| RefHit {
+            name: s.to_string(),
+            start: 0,
+            end: 0,
+            start_line: 1,
+            end_line: 1,
+        })
         .collect()
 }
 

@@ -7,45 +7,168 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Docs
+## [0.2.0-alpha.31] - 2026-05-14
 
-- **`docs/protocol-v0.md` re-spec at alpha.30 baseline** (U0 of the v0.3
-  code-graph KB plan). The doc was last updated pre-alpha.24 and drifted
-  from the shipped wire surface across 8 alphas. This pass:
-  - Updates the Status line from "Draft 1, design-only" → "Draft 2,
-    alpha.30 baseline" and refreshes `Daemon.Ping`'s example version
-    (`0.2.0-alpha.3` → `0.2.0-alpha.30`).
-  - Documents `Index.ReadSymbolAt` (new method, alpha.24) at §7.7b
-    with full param shape + error catalog + §18.4b JSON Schema.
-  - Documents `Index.FindSymbol` `pattern` (glob) param + `name`
-    being optional + mutual-exclusion rule (alpha.24) at §7.6 and
-    §18.3.
-  - Adds the alpha.22 (`closure_walker`), alpha.24
-    (`read_symbol_at`, `fuzzy_match`), alpha.18
-    (`pagerank_filewise`), and alpha.25 (`polling_fallback`)
-    capability strings to the §4.1 canonical advertisement list.
-  - Updates the §7 method catalog (10 → 11 methods + 1 notification)
-    and the architecture diagram (4 tools → 5).
-  - Reserves the four v0.3 capability strings (`find_callers`,
-    `impact_of`, `read_symbol.include_callers`, `pagerank_symbolwise`)
-    in §4.2 so client implementations can branch on them as the v0.3
-    PR series lands.
-  - Adds **Appendix F — Wire-shape evolution by alpha**, a table of
-    every additive change since Draft 1 plus a workflow for the
-    extension protocol the v0.3 PRs (U1-U5) will follow.
-- **Adds CLAUDE.md ↔ AGENTS.md parity hint not required** — no agent
-  guidance changed; the doc-baseline catch-up is purely about the
-  daemon's wire contract.
+**Persistent reference graph + outline switch (v0.3 U1).** The reference
+half of the call graph that v0.2 computed at query time and threw away is
+now persisted in the redb index. Three new tables (REFS, FID_REFS,
+SID_REFS_OUT) populated by the writer on every commit; `outline::compute`
+reads them instead of re-parsing every file. First land in the v0.3 plan
+([docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md));
+unblocks `Index.FindCallers` (U2'), `Index.ImpactOf` (U5), and
+symbol-level PageRank (U4).
 
-### Why
+### Schema
 
-The alpha.28 entry called this out explicitly ("Wire-protocol re-spec
-… `docs/protocol-v0.md` is still pre-alpha.24. Worth a docs-only PR
-next"); the v0.3 plan's Deepening §C5 reinforced it ("v0.3's additive
-contract holds *only if* protocol-v0.md is current"). Without this PR,
-v0.3 PRs would compound the drift instead of removing it.
+- **`SCHEMA_VERSION` bumped to 2** at `crates/rts-daemon/src/store/mod.rs:36`.
+  First mount of any v0.2 `db.redb` triggers the existing
+  rebuild-on-mismatch path in `Store::open` (mod.rs:124-178) — no
+  migration code needed. The `INDEX_NOT_READY` retry in `rts-mcp`
+  covers the rebuild window. New `v1_to_v2_schema_mismatch_triggers_rebuild`
+  test asserts the round-trip.
+- **`REFS: MultimapTableDefinition<u32 /* callee_sid */, &[u8] /* postcard(RefSite) */>`**.
+  Mirrors the existing `DEFS` shape; one entry per call site so
+  `REFS[X]` answers "who calls X, and where?" in one lookup.
+- **`FID_REFS: MultimapTableDefinition<u32 /* fid */, u32 /* callee_sid */>`**.
+  Symmetric to `FID_DEFS`; enables O(1) per-file ref invalidation in
+  `drop_file_entries`. Deduplicates per (file, callee) — three call
+  sites in the same file produce one `FID_REFS` row but three
+  `REFS` rows.
+- **`SID_REFS_OUT: MultimapTableDefinition<u32 /* caller_sid */, u32 /* callee_sid */>`**.
+  The *outgoing* direction. Per v0.3 deepening §B1, landed in U1
+  (not U4) to avoid a second SCHEMA_VERSION bump when the closure
+  walker switches. Without this table, "what does X reference?"
+  would scan all REFS rows. With it, one multimap lookup.
+- **`RefSite` postcard struct** carries `(fid, byte_range, line_range,
+  caller_sid: Option<u32>)`. `caller_sid` is the smallest enclosing
+  def whose byte range covers the call site; `None` for top-level /
+  file-scope references. Typical postcard size ~12 bytes (varint u32s).
 
-No code changes; no alpha bump.
+### Writer
+
+- **Two-pass `commit_batch`.** Pass 1 processes all defs across all
+  files in the batch (assigning sids + writing DEFS/FID_DEFS). Pass 2
+  processes all refs, now with every same-batch callee resolved.
+  Fixes an intra-batch ordering bug where callers in a file processed
+  earlier than their callee's file would have refs filtered as
+  "external."
+- **`parse_and_extract` extracts refs alongside defs** via the new
+  `refs::references_with_ranges` (range-carrying sibling of the
+  existing `references_for_path`). AST-precise via tags.scm for the 6
+  languages with reference queries (Rust/Python/Go/Ruby/JS/TS);
+  fallback-regex languages get name-only refs with synthetic 0..0
+  byte ranges.
+- **External-symbol filter at commit time.** Names with no
+  `NAME_TO_SID` entry after Pass 1 are skipped per v0.3 plan §F1.
+  Avoids cross-language name-collision risk in NAME_TO_SID (e.g.
+  Rust `Vec` vs hypothetical Python `Vec` would have collided).
+  `Index.FindCallers(Vec)` is therefore "workspace callers only";
+  external-symbol diagnostics can land as a separate purely-additive
+  PR later.
+- **`drop_file_entries` extended** with the filter-by-fid algorithm
+  for REFS + a rebuild-from-surviving-rows pass for SID_REFS_OUT
+  (since SID_REFS_OUT is u32→u32 with no embedded fid, we can't
+  surgically remove rows by file — we re-derive from REFS instead).
+  Critical correctness invariant: when file A and file B both ref C,
+  dropping A leaves B's ref to C intact. Tested by the new
+  `refs_invalidate_when_referring_file_dropped` integration test.
+
+### Outline
+
+- **`outline::compute` reads indexed edges** via
+  `store.refs_for_file_resolved(fid)` instead of calling
+  `crate::refs::references_for_path` per file. The PageRank graph
+  builds from the persistent REFS table; no at-query-time parsing.
+  Same external behavior — `outline_round_trip` integration test
+  (alpha.18) passes unchanged after the swap.
+
+### Store helpers
+
+- **`refs_to_symbol(callee_sid)`** — "who calls X" (returns RefSites
+  with `caller_sid` populated). Consumed by U2' `Index.FindCallers`.
+- **`refs_from_symbol(caller_sid)`** — "what does X reference"
+  (returns the set of callee sids X has outgoing edges to).
+  Consumed by U3 closure walker.
+- **`refs_for_file(fid)`** — raw callee-sid set per file (multimap
+  deduped). Production code uses `refs_for_file_resolved` for the
+  name + per-callsite-count form `outline::compute` needs.
+- **`refs_for_file_resolved(fid)`** — per-file outgoing refs with
+  callee names resolved + per-callsite counts. Used by outline.
+
+### Tests
+
+- 6 new store unit tests in `store::tests`:
+  - `refs_round_trip_writes_all_three_tables` — two-file fixture asserts
+    `REFS`/`FID_REFS`/`SID_REFS_OUT` all populated with correct
+    `caller_sid` resolution.
+  - `refs_external_symbol_filtered_at_commit` — references to
+    non-workspace names get no NAME_TO_SID entry (per §F1).
+  - `refs_invalidate_when_referring_file_dropped` — multi-file
+    invalidation: drop A, B's ref to C survives.
+  - `refs_invalidate_on_re_upsert` — re-save a file with different refs
+    clears prior contributions.
+  - `refs_for_file_resolved_returns_per_file_callsite_count` — three
+    call sites in one file ⇒ `("callee", 3)`.
+  - `v1_to_v2_schema_mismatch_triggers_rebuild` — first exercise of
+    the schema-mismatch rebuild path since v0.2 alpha.1 introduced it.
+- Existing `outline_round_trip` + `closure_round_trip` integration
+  tests pass unchanged after the writer/outline swap.
+
+### Wire surface
+
+- **Zero new wire surface** in U1 per the plan. v0.3 capability
+  strings (`find_callers`, `impact_of`, `read_symbol.include_callers`,
+  `pagerank_symbolwise`) remain reserved in protocol-v0 §4.2 until
+  U2'+ ship.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **539 passed, 0 failed, 0 ignored**
+  (was 533 in alpha.30; +6 = 5 new ref-graph store tests + 1 v1→v2
+  migration test).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new warnings on
+  changed files. The three new Store helpers
+  (`refs_to_symbol`/`refs_from_symbol`/`refs_for_file`) are
+  `#[allow(dead_code)]`-annotated until U2'+ consume them.
+
+### Not in this slice
+
+- **`Index.FindCallers` method** (U2'): direct callers + composes
+  with `Index.ReadSymbol.include_callers`. Next PR.
+- **Closure walker switch to `refs_from_symbol`** (U3): the alpha.22
+  closure walker still re-parses; U3 swaps it to read SID_REFS_OUT.
+- **Symbol-level PageRank** (U4): the `rank_score` placeholder
+  becomes real once the graph builder lands.
+- **`Index.ImpactOf` method** (U5): transitive caller closure with
+  depth + token budget.
+- **External-symbol diagnostics**: per §F1, external refs are
+  filtered at commit time. Adding back later is purely additive
+  (extract-time filter relaxes); no schema bump needed.
+
+### Refs
+
+- v0.3 plan: [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)
+- v0.3 brainstorm: [docs/brainstorms/2026-05-13-v0.3-code-graph-kb-requirements.md](docs/brainstorms/2026-05-13-v0.3-code-graph-kb-requirements.md)
+- Stacked on U0 (PR #27) which re-specced `protocol-v0.md` at the
+  alpha.30 wire-shape baseline.
+
+### Docs (carried from U0 PR #27)
+
+- **`docs/protocol-v0.md` re-spec at alpha.30 baseline.** The doc
+  was last updated pre-alpha.24 and drifted from the shipped wire
+  surface across 8 alphas. This pass updates the Status line
+  ("Draft 1, design-only" → "Draft 2, alpha.30 baseline"), refreshes
+  `Daemon.Ping`'s example version (`0.2.0-alpha.3` →
+  `0.2.0-alpha.30`), documents `Index.ReadSymbolAt` (alpha.24) at
+  §7.7b + §18.4b, documents `Index.FindSymbol` `pattern` + name-optional
+  at §7.6 + §18.3, advertises closure_walker / fuzzy_match /
+  read_symbol_at / pagerank_filewise / polling_fallback capability
+  strings in §4.1, reserves the four v0.3 strings in §4.2, updates
+  the §7 method catalog to 11 methods + 1 notification, and adds
+  **Appendix F — Wire-shape evolution by alpha** tracking every
+  additive change since Draft 1 plus an extension workflow for U1-U5.
 
 ## [0.2.0-alpha.30] - 2026-05-13
 

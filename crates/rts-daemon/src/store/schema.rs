@@ -25,6 +25,50 @@ pub const DEFS: MultimapTableDefinition<u32, &[u8]> = MultimapTableDefinition::n
 /// Inverse fan-out for cheap per-file invalidation: `file_id` → set of `sid`s
 /// it defines.
 pub const FID_DEFS: MultimapTableDefinition<u32, u32> = MultimapTableDefinition::new("fid_defs");
+
+// ---------- v0.3 reference-graph tables (SCHEMA_VERSION=2; U1 of v0.3 plan) ----------
+//
+// Three tables form the call-graph half of the index. v0.2 computed
+// references at query time and threw them away; v0.3 persists them so
+// `Index.FindCallers`, `Index.ImpactOf`, and symbol-level PageRank
+// (`rank_score`) become O(1) lookups instead of O(workspace) scans.
+//
+// Shape rationale (see v0.3 plan §"Architecture" + deepening §B1):
+//   * Multimap blob-of-postcard for REFS mirrors DEFS. Bytes-equal
+//     entries dedupe; the secondary B-tree handles per-key fan-out
+//     without rewriting the whole vec on each update.
+//   * FID_REFS gives O(1) per-file ref invalidation symmetric to
+//     FID_DEFS — `drop_file_entries` extends naturally.
+//   * SID_REFS_OUT gives the *outgoing* direction ("what does X
+//     reference?") cheaply. Without it, the closure walker would
+//     have to scan all REFS to find rows where caller_sid == X.
+//     Landed in U1 (not U4) to avoid a second SCHEMA_VERSION bump.
+
+/// Multimap `callee_sid (u32)` → postcard(`RefSite`). One entry per
+/// individual call site, so `REFS[X]` answers "who calls X, and
+/// where?" with one lookup. Used by `Index.FindCallers` (v0.3 U2').
+pub const REFS: MultimapTableDefinition<u32, &[u8]> = MultimapTableDefinition::new("refs");
+
+/// Multimap `file_id (u32)` → set of `callee_sid (u32)`s referenced
+/// in that file. Used by `outline::compute` to enumerate outgoing
+/// refs per file (replacing the at-query-time parse loop). Also the
+/// invalidation key for `drop_file_entries`: when a file is removed,
+/// FID_REFS[fid] enumerates which REFS rows need a filter-by-fid
+/// rewrite.
+///
+/// Multimap dedupes — if file F references callee C three times,
+/// only one row `(F → C)` is stored. The three individual call
+/// sites all live in REFS[C].
+pub const FID_REFS: MultimapTableDefinition<u32, u32> = MultimapTableDefinition::new("fid_refs");
+
+/// Multimap `caller_sid (u32)` → set of `callee_sid (u32)`s the
+/// caller references. Used by `closure::compute` (v0.3 U3) to answer
+/// "what does symbol X call?" without re-parsing the anchor file.
+/// File-scope refs (callsites not inside any def) are excluded —
+/// they have no caller_sid to key on.
+pub const SID_REFS_OUT: MultimapTableDefinition<u32, u32> =
+    MultimapTableDefinition::new("sid_refs_out");
+
 /// Small key-value table for daemon-internal metadata (schema_version,
 /// next_fid, next_sid, workspace_fingerprint, …).
 pub const META: TableDefinition<&str, &[u8]> = TableDefinition::new("meta");
@@ -65,6 +109,29 @@ pub struct DefSite {
     pub end_line: u32,
     pub visibility: Visibility,
     pub kind: SymbolKind,
+}
+
+/// A single reference site: where one symbol is called from. Used as
+/// the value type for the `REFS` multimap, keyed by `callee_sid`.
+///
+/// `caller_sid` is the SID of the smallest enclosing def whose range
+/// covers `start`. `None` when the call site is outside any def
+/// (e.g. a top-level expression statement, a static initializer at
+/// module scope, or a JavaScript top-level call).
+///
+/// Postcard varint-encodes u32s, so a typical RefSite serializes to
+/// ~12 bytes (5 u32s in the 1-2 byte range + 1-byte enum tag for
+/// caller_sid `Option`). Worst case is 26 bytes when every field is
+/// > 2^28. The redb B-tree sorts by *key* (callee_sid), not by
+/// blob bytes; insertion order within a multimap key is arbitrary.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct RefSite {
+    pub fid: u32,
+    pub start: u32,
+    pub end: u32,
+    pub start_line: u32,
+    pub end_line: u32,
+    pub caller_sid: Option<u32>,
 }
 
 /// Cross-language symbol kind. Coarse-grained on purpose; per-language
