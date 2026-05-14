@@ -107,6 +107,30 @@ pub struct FindCallersArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct ImpactOfArgs {
+    /// Exact name of the symbol whose transitive callers we want.
+    pub name: String,
+    /// BFS depth. Default 2; hard cap 4. Higher values produce
+    /// exponentially more nodes; the `max_nodes` cap is the real
+    /// signal/noise gate past depth 3.
+    #[serde(default)]
+    pub depth: Option<u32>,
+    /// Token budget for the response. Default 4096.
+    #[serde(default)]
+    pub token_budget: Option<u64>,
+    /// Max distinct caller entries returned. Default 200. Hard
+    /// ceiling 10000.
+    #[serde(default)]
+    pub max_nodes: Option<u32>,
+    /// When `true` (default), skip callers whose enclosing file
+    /// looks like a test file (`/tests/`, `_test.rs`, `.spec.ts`,
+    /// etc.). The single biggest noise reducer on real
+    /// refactor-impact queries.
+    #[serde(default)]
+    pub exclude_test_paths: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReadSymbolAtArgs {
     /// Workspace-relative file path.
     pub file: String,
@@ -224,7 +248,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Find direct callers of a symbol — where else in the workspace does code call into this function/method? Cheap (one redb lookup; no parsing). Use for: refactor impact preview at depth-1, 'is this function dead?', 'who depends on this API?'. Returns `callers[]` with each call site's file/range plus the enclosing function's `qualified_name` and `kind`. \n\nWhen to use which: this tool returns callers ONLY (no body). Use `read_symbol --include-callers` when you also need the symbol's own body. Use `impact_of` (when v0.3 U5 ships) for *transitive* callers (whole blast radius). Avoid shell `rg` for caller queries — it has high false-positive noise from local variables, comments, and string mentions; this is AST-precise via the indexed reference graph."
+        description = "Find direct callers of a symbol — where else in the workspace does code call into this function/method? Cheap (one redb lookup; no parsing). Use for: refactor impact preview at depth-1, 'is this function dead?', 'who depends on this API?'. Returns `callers[]` with each call site's file/range plus the enclosing function's `qualified_name` and `kind`. \n\nWhen to use which: this tool returns callers ONLY (no body). Use `read_symbol --include-callers` when you also need the symbol's own body. Use `impact_of` for *transitive* callers (whole blast radius). Avoid shell `rg` for caller queries — it has high false-positive noise from local variables, comments, and string mentions; this is AST-precise via the indexed reference graph."
     )]
     async fn find_callers(
         &self,
@@ -240,6 +264,36 @@ impl RtsServer {
         }
         match self
             .call_daemon("Index.FindCallers", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(daemon_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Transitive caller closure — the full refactor blast radius of a symbol. BFS over the reverse reference graph; returns every function that directly or indirectly calls the named symbol, bounded by depth (default 2, max 4), token budget, node count (default 200), and a 50ms wall-clock cap. Each entry carries its BFS `depth` and `rank_score` so agents can prioritize the most-central callers. Results sort by (depth ascending, rank_score descending). \n\nWhen to use which: `find_callers` is depth-1 (direct callers only) — cheaper and more focused. `impact_of` is depth-N with bounds — use when you're about to refactor a public function and want to know everything that touches it. Test-path filter (`/tests/`, `_test.rs`, `.spec.ts`) is on by default; pass `exclude_test_paths: false` to include test callers (e.g. when deciding which tests to update). \n\nTruncation: four independent flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell you *why* a result is partial. Hub symbols often hit `node_count_truncated` first; raise `max_nodes` if you can tolerate the noise."
+    )]
+    async fn impact_of(
+        &self,
+        Parameters(args): Parameters<ImpactOfArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("name".into(), Value::String(args.name));
+        if let Some(d) = args.depth {
+            params.insert("depth".into(), Value::Number(d.into()));
+        }
+        if let Some(b) = args.token_budget {
+            params.insert("token_budget".into(), Value::Number(b.into()));
+        }
+        if let Some(m) = args.max_nodes {
+            params.insert("max_nodes".into(), Value::Number(m.into()));
+        }
+        if let Some(e) = args.exclude_test_paths {
+            params.insert("exclude_test_paths".into(), Value::Bool(e));
+        }
+        match self
+            .call_daemon("Index.ImpactOf", Value::Object(params))
             .await
         {
             Ok(v) => Ok(success_json(&v)),

@@ -16,6 +16,7 @@ use crate::mcp_runner::McpRun;
 pub mod get_body;
 pub mod locate_def;
 pub mod scenario_compiler_fix;
+pub mod scenario_refactor_impact;
 pub mod summarize_module;
 
 /// Stable identifiers used on the CLI (`rts-bench task <id>`) and in
@@ -27,6 +28,7 @@ pub const TASK_IDS: &[&str] = &[
     "summarize_module",
     "fix_imports",
     "scenario_compiler_fix",
+    "scenario_refactor_impact",
 ];
 
 /// Outcome of running one task.
@@ -69,6 +71,7 @@ pub async fn run_task(id: &str, ctx: &TaskContext<'_>) -> Result<TaskOutcome> {
         "get_body" => get_body::run(ctx).await,
         "summarize_module" => summarize_module::run(ctx).await,
         "scenario_compiler_fix" => scenario_compiler_fix::run(ctx).await,
+        "scenario_refactor_impact" => scenario_refactor_impact::run(ctx).await,
         "find_callers" => Ok(TaskOutcome::NotImplemented {
             reason: "the underlying `Index.FindCallers` method ships in v0.3 alpha.31+; \
                      for one-shot queries use `rts-bench query find-callers --name <X>`. \

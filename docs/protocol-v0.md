@@ -32,8 +32,9 @@ Coding agent (Claude Code, Cursor, Cline, Aider, Continue, ...)
       ▼
 ┌──────────────────┐
 │ rts-mcp          │  per-agent process, rmcp 1.6
-│ (stdio binary)   │  exposes 6 tools: outline_workspace, find_symbol,
-└─────────┬────────┘  find_callers, read_symbol, read_symbol_at, read_range
+│ (stdio binary)   │  exposes 7 tools: outline_workspace, find_symbol,
+└─────────┬────────┘  find_callers, impact_of, read_symbol,
+                     read_symbol_at, read_range
                      + rts://capabilities resource
           │
           │   protocol-v0  (this document)
@@ -166,7 +167,7 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
   "id": "1",
   "result": {
     "protocol":     "0",                          // semver-style major; v1 is the breaking re-cut
-    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.34", "git_sha": "368bc97..." },
+    "daemon":       { "name": "rts-daemon", "version": "0.2.0-alpha.35", "git_sha": "c12e525..." },
     "capabilities": ["outline", "find_symbol", "read_symbol", "read_range",
                      "rank_score", "tree_shake", "partial_responses",
                      "content_version", "secrets_blocklist",
@@ -175,7 +176,8 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "read_symbol_at", "fuzzy_match",
                      "polling_fallback",
                      "find_callers", "read_symbol.include_callers",
-                     "pagerank_symbolwise"],
+                     "pagerank_symbolwise",
+                     "impact_of"],
     "uptime_ms":    123456
   }
 }
@@ -195,10 +197,10 @@ These strings are reserved and MUST NOT be advertised by `protocol-v0` daemons u
 Reserved for the **v0.3 code-graph KB** extension (see [v0.3 plan](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)). Each is advertised independently when its implementing PR lands:
 
 - ~~`find_callers`~~ — **advertised** as of `v0.2.0-alpha.32` (U2'). `Index.FindCallers` returns direct callers of a named symbol; see §7.7c.
-- `impact_of` — transitive caller closure (v0.3 U5).
+- ~~`impact_of`~~ — **advertised** as of `v0.2.0-alpha.35` (U5). `Index.ImpactOf` returns transitive caller closure via BFS over reverse edges, bounded by depth + token + node-count + wall-clock; see §7.7d.
 - ~~`read_symbol.include_callers`~~ — **advertised** as of `v0.2.0-alpha.32` (U2'). `Index.ReadSymbol.params.include_callers: bool` composes with `include_dependencies`; see §7.7.
 - ~~`pagerank_symbolwise`~~ — **advertised** as of `v0.2.0-alpha.34` (U4). Symbol-level PageRank fills `rank_score` in `Index.FindSymbol` + `Index.FindCallers` responses; `find_symbol` results sort by descending rank by default. Clients pinned to v0.2 insertion-order ordering can pass `sort: "lexical"` on `Index.FindSymbol.params` to opt out.
-- `call_graph` (umbrella; reserved but **not advertised by itself** — agents should branch on the four fine-grained strings above).
+- `call_graph` (umbrella; reserved but **not advertised by itself** — agents should branch on the four fine-grained strings above; **all four now advertised**).
 
 ### 4.3 Version mismatch
 
@@ -306,10 +308,10 @@ The v0 method namespace is `^[A-Z][a-z]+\.[A-Z][A-Za-z]+$`. Methods are grouped 
 |---|---|---|
 | `Daemon.*`   | `Ping`, `Telemetry` (notification) | always |
 | `Workspace.*` | `Mount`, `Unmount`, `Status` | always |
-| `Index.*`    | `Outline`, `FindSymbol`, `FindCallers`, `ReadSymbol`, `ReadSymbolAt`, `ReadRange` | `outline`, `find_symbol` (+ `fuzzy_match` for `pattern`), `find_callers`, `read_symbol` (+ `closure_walker` for `include_dependencies`, + `read_symbol.include_callers` for `include_callers`), `read_symbol_at`, `read_range` |
+| `Index.*`    | `Outline`, `FindSymbol`, `FindCallers`, `ImpactOf`, `ReadSymbol`, `ReadSymbolAt`, `ReadRange` | `outline`, `find_symbol` (+ `fuzzy_match` for `pattern`), `find_callers`, `impact_of`, `read_symbol` (+ `closure_walker` for `include_dependencies`, + `read_symbol.include_callers` for `include_callers`), `read_symbol_at`, `read_range` |
 | `Session.*`  | `Open`, `Close` | always; **v1.1**: `MarkDeduped` under `session_dedup` |
 
-Total v0 surface as of alpha.32: **12 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.FindCallers`, `Index.ReadSymbol`, `Index.ReadSymbolAt`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.) `Index.ReadSymbolAt` shipped in alpha.24; `Index.FindCallers` and `Index.ReadSymbol.include_callers` ship in alpha.32. See [Appendix F](#appendix-f--wire-shape-evolution-by-alpha).
+Total v0 surface as of alpha.35: **13 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.FindCallers`, `Index.ImpactOf`, `Index.ReadSymbol`, `Index.ReadSymbolAt`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.) `Index.ReadSymbolAt` shipped in alpha.24; `Index.FindCallers` and `Index.ReadSymbol.include_callers` shipped in alpha.32; `Index.ImpactOf` ships in alpha.35. See [Appendix F](#appendix-f--wire-shape-evolution-by-alpha).
 
 `Daemon.Cancel` is **not** part of v0. Per-request cancellation is handled by the daemon noticing the connection closed (drop) or by Tokio `select!` against a soft deadline on the request future; both don't need a wire-level verb. v2 may introduce `Daemon.Cancel(request_id)` if mid-closure cancellation becomes worthwhile.
 
@@ -578,7 +580,60 @@ Errors: `INDEX_NOT_READY`, `SYMBOL_NOT_FOUND` (no `NAME_TO_SID` entry — symbol
 **When to use vs related methods:**
 - Use `find_callers` for callers-only (cheap; no body read).
 - Use `read_symbol --include-callers` when you also want the symbol's body in the same round trip.
-- Use `impact_of` (v0.3 U5) for *transitive* callers (refactor blast radius).
+- Use `impact_of` for *transitive* callers (refactor blast radius); see §7.7d.
+
+### 7.7d `Index.ImpactOf`
+
+Return the transitive caller closure of a named symbol — every function that directly or indirectly calls it. BFS over the reverse reference graph, bounded by depth, token budget, node count, and a wall-clock cap. Capability: `impact_of` (alpha.35+).
+
+The refactor blast-radius query: "if I change `X`'s signature, what touches it?" — surfaces all the functions an agent needs to update, prioritised by depth (direct first) and PageRank (most-central first).
+
+**`params`**:
+```jsonc
+{
+  "name":               "build_index",   // required, exact match
+  "depth":              2,                // optional; BFS depth cap (1..=4). Default 2.
+  "token_budget":       4096,             // optional; standard §16 50..=200000 window. Default 4096.
+  "max_nodes":          200,              // optional; max distinct caller entries (1..=10000). Default 200.
+  "exclude_test_paths": true              // optional; filter callers in test-shaped files. Default true.
+}
+```
+
+**`result`**:
+```jsonc
+{
+  "impact": [
+    {
+      "qualified_name":   "rts_core::cli::run",
+      "kind":             "fn",
+      "file":             "src/cli.rs",
+      "range": {                          // the *caller's def* range (not the call site)
+        "start_byte": 4400, "end_byte": 5200,
+        "start_line": 138,  "end_line":  160
+      },
+      "depth":      1,                    // 1-based BFS depth (direct callers = 1)
+      "rank_score": 0.012                 // symbol-level PageRank of the caller (alpha.34+)
+    }
+  ],
+  "closure_truncated":    false,          // token budget exhausted while BFS still had entries
+  "wall_clock_truncated": false,          // 50ms wall-clock cap fired
+  "depth_truncated":      false,          // at least one frontier hit max_depth with unvisited callers
+  "node_count_truncated": false,          // max_nodes cap fired
+  "tokens_returned":      1247,
+  "token_counter":        "bytes_div_3"
+}
+```
+
+Result is sorted by `(depth ASC, rank_score DESC, file ASC, start_byte ASC)` — direct callers first, then most-central callers within each depth tier, then deterministic tiebreakers. The four truncation flags are independent so agents can tell *why* the result is partial.
+
+**Wire-shape trim** (per [v0.3 plan Deepening §F3](plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)): the original 9-field per-entry shape was trimmed to 6 — `signature` and nested `callers[]` arrays were YAGNI'd. Agents who need a caller's signature follow up with `read_symbol(name=qualified_name, shape="signature")`; agents who need *that* caller's callers follow up with `find_callers` or another `impact_of`.
+
+Errors: `INDEX_NOT_READY`, `SYMBOL_NOT_FOUND` (mirrors `Index.FindCallers`), `BUDGET_TOO_SMALL`/`BUDGET_TOO_LARGE` per §16, `INVALID_PARAMS` (`name` empty or >256 chars).
+
+**When to use vs related methods:**
+- Use `find_callers` for depth-1 only (cheaper, more focused).
+- Use `impact_of` when you're about to refactor a public function and want the whole blast radius.
+- `exclude_test_paths: true` (default) skips callers in `/tests/`, `_test.rs`, `.spec.ts` etc. — the single biggest noise reducer for refactor flows. Pass `false` when deciding which tests to update.
 
 ### 7.8 `Index.ReadRange`
 
@@ -1022,6 +1077,26 @@ These are normative for `params` validation. The daemon SHOULD reject schema-non
 }
 ```
 
+### 18.4d `Index.ImpactOf.params`
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name":               { "type": "string", "minLength": 1, "maxLength": 256 },
+    "depth":              { "type": "integer", "minimum": 1, "maximum": 4 },
+    "token_budget":       { "type": "integer", "minimum": 50, "maximum": 200000 },
+    "max_nodes":          { "type": "integer", "minimum": 1, "maximum": 10000 },
+    "exclude_test_paths": { "type": "boolean", "default": true }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}
+```
+
+Out-of-window `depth` / `max_nodes` values are clamped (not rejected) — daemons running an older alpha won't `INVALID_PARAMS` on a request that targets a tighter future window.
+
 ### 18.4b `Index.ReadSymbolAt.params`
 
 ```json
@@ -1253,10 +1328,11 @@ This appendix tracks every additive wire-shape change between Draft 1 (P5 delive
 | `alpha.32` | `find_callers`, `read_symbol.include_callers` | **v0.3 U2'**: new method `Index.FindCallers(name, kind?, file?)` returns direct callers. `Index.ReadSymbol.params.include_callers: bool` composes callers into the existing response with a separate `callers_truncated` flag. | §7.7, §7.7c, §18.4, §18.4b, §18.4c |
 | `alpha.33` | (none — internal) | **v0.3 U3**: `closure::compute` swaps from at-query-time tree-sitter parsing to reading `SID_REFS_OUT`. Same wire shape; faster cold calls. Also fixed a latent local-variable bug in U1's `enclosing_caller_sid` that under-populated `SID_REFS_OUT`. | — |
 | `alpha.34` | `pagerank_symbolwise` | **v0.3 U4**: symbol-level PageRank fills `rank_score` in `Index.FindSymbol` and `Index.FindCallers` responses (was a `0.0` placeholder). `Index.FindSymbol.matches[]` sorts by descending rank by default; `sort: "lexical"` opts out. Single-slot generation-keyed cache mirroring `OutlineCache` (alpha.20). | §4.1, §4.2, §7.6, §18.3 |
+| `alpha.35` | `impact_of` | **v0.3 U5** (final): new method `Index.ImpactOf(name, depth?, token_budget?, max_nodes?, exclude_test_paths?)` returns the transitive caller closure via BFS over reverse edges. Four independent truncation flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell the agent why a result is partial. Test-path exclusion (`/tests/`, `_test.rs`, `.spec.ts`) is on by default. Wire shape trimmed from the plan's 9 fields to 6 per Deepening §F3 (no `signature`, no nested `callers[]`). | §4.1, §4.2, §7, §7.7d, §18.4d |
 
-Capability strings present in `Daemon.Ping.result.capabilities` after alpha.34 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`.
+Capability strings present in `Daemon.Ping.result.capabilities` after alpha.35 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`.
 
-**Pending v0.3** (reserved in §4.2, not advertised at alpha.34): `impact_of` (U5).
+**v0.3 plan complete:** all four code-graph KB capability strings (`find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`) advertised. The `call_graph` umbrella reserved string remains unused — agents branch on the four fine-grained strings instead.
 
 ### How to extend protocol-v0 in a future alpha
 
