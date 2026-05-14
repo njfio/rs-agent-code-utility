@@ -215,6 +215,21 @@ sibling binaries to be built first. `cargo test --workspace` handles
 this correctly; per-crate `cargo test -p` may need an explicit
 `cargo build --workspace` first.
 
+### Pre-push hook (optional)
+
+`lefthook.yml` at the repo root runs `cargo fmt --check` and a scoped
+`cargo clippy` on `git push`, matching what CI enforces, so format /
+lint drift is caught locally instead of via a CI round-trip + force-push.
+
+```sh
+# One-time, if you don't already use lefthook globally:
+brew install lefthook    # or: go install github.com/evilmartians/lefthook@latest
+lefthook install         # writes pre-push into .git/hooks
+```
+
+Bypass for a single push with `LEFTHOOK=0 git push`. Contributors who
+don't install lefthook are unaffected; CI is still the source of truth.
+
 ## Coding style
 
 - **Edition**: Rust 2024.
