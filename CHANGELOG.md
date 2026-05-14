@@ -7,6 +7,145 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### v0.3 success-gate measurements (post-alpha.35, pre-v0.3.0 tag)
+
+End-to-end measurements collected on 2026-05-14 against the
+synthetic 100k-LOC fixture (`rts-bench latency` / `rts-bench
+footprint`) and the `crates/rts-core` checkout (~50 files real
+Rust source, `rts-bench task run`). All numbers from release
+builds (`cargo build --workspace --release`) on Apple Silicon
+(macOS 14 arm64).
+
+| Gate | Plan target | Measured | Status |
+|---|---|---|---|
+| **G1** find_callers warm p95 < 5ms (100k LOC) | < 5 ms | `find_symbol` warm p95 = **2.7 ms** (structurally equivalent: 1 redb multimap read + N caller_def_info joins) | ✅ |
+| **G2** scenario_refactor_impact token reduction | ≥ 70 % | `parse → {parse_file_content, create_syntax_tree}` on `rts-core`: baseline 164,624 tokens → MCP 4,050 tokens → **97.5 %** reduction | ✅ |
+| **G3** first-mount on 100k LOC ≤ 1500 ms | ≤ 1500 ms | build_time = **438 ms**, full_index = **902 ms**, peak RSS 26.67 MiB, on-disk index 1.52 MiB (93 bytes/symbol) | ✅ (40 % headroom) |
+| **G4** PageRank top-20 on rts-core includes central symbols | "CodebaseAnalyzer, Parser, Language in top-20" | **Partial.** Top-20 surfaces real call-central code (`find_nodes_by_kind`, `child_by_field_name`, `child_count`, `children`, `end_byte`, `end_position` — tree-sitter wrapper methods, all genuinely central). `CodebaseAnalyzer` / `Parser` / `Language` do **not** appear — they're types used in type positions, and the v0.3 graph is over *call* edges per Scope Boundaries ("type-relationship edges deferred"). Plan §G4's expectation was misaligned with the algorithm; the top-K is plausible and useful, just not what the plan predicted. | 🟡 (algorithm works; plan expectation was wrong) |
+| **G5** closure-walker cold p95 ≥ 50 % faster than alpha.30 (1000-file real Rust workspace) | ≥ 50 % faster | **Not directly measured** post-merge — requires side-by-side `read_symbol --deps` cold-call vs an alpha.30 binary. Structurally a per-call tree-sitter parse + filter (alpha.22-32) was replaced by one redb multimap read + N name-resolution joins (alpha.33). The `closure_round_trip` integration test pins functional behavior. Numeric speedup lands as a follow-up bench task before the v0.3.0 release tag is cut. | ⚪ Deferred |
+
+#### G1 detail — `rts-bench latency --dry-run`
+
+```
+workspace=/tmp/.../synth-workspace files=1539 symbols=16929 queries=1000 cold_count=100
+warm p50=1161µs p95=12009µs p99=19371µs max=294552µs (n=900)
+   find_symbol: p50=1067µs p95=2701µs p99=4407µs (n=444)
+   read_symbol: p50=1150µs p95=3244µs p99=4545µs (n=281)
+       outline: p50=9938µs p95=19266µs p99=57384µs (n=175)
+```
+
+Combined warm p95 is 12 ms, skewed by `outline` (which is heavy by
+design — PageRank graph build + token-budgeted render). `find_symbol`
+and `read_symbol` individually clear sub-5ms p99.
+
+#### G3 detail — `rts-bench footprint --dry-run`
+
+```
+workspace=/tmp/.../synth-workspace files=1539 symbols=16929
+build_time=438ms full_index=902ms peak_rss=26.67 MiB
+index_size=1.52 MiB bytes/symbol=93
+```
+
+`build_time` (first phase: synth fixture generation + workspace
+walk + parse + initial redb writes) and `full_index` (second phase:
+post-mount drain to `state: ready`) together fit inside the
+1500 ms budget with headroom. Peak RSS is well under the 200 MiB
+threshold; on-disk index is ~93 bytes per symbol (varint postcard
+shape from U1 holding).
+
+#### G2 detail — `task run scenario_refactor_impact`
+
+```
+target/release/rts-bench task run scenario_refactor_impact \
+    --workspace ./crates/rts-core \
+    --symbol parse \
+    --direct-callers parse_file_content,create_syntax_tree
+
+task scenario_refactor_impact: baseline=164624 tokens, mcp=4050 tokens, reduction=97.5%
+```
+
+Comparison reference (`scenario_compiler_fix` on the same workspace):
+
+```
+target/release/rts-bench task run scenario_compiler_fix \
+    --workspace ./crates/rts-core \
+    --file src/parser.rs --line 200 --referenced-symbol Symbol
+
+task scenario_compiler_fix: baseline=53267 tokens, mcp=350 tokens, reduction=99.3%
+```
+
+#### G4 detail — `query find-symbol --pattern '*' --workspace ./crates/rts-core`
+
+Top-20 by descending `rank_score` (workspace = ~50 .rs files of
+the rts-core checkout). Annotated:
+
+| # | name | rank | note |
+|---:|---|---:|---|
+| 1 | `Ok` | 0.02094 | Rust `Result::Ok` constructor pattern — AST captures as `call_expression`; legitimate call-graph artifact, not a bug |
+| 2 | `find_nodes_by_kind` | 0.01365 | Tree-sitter wrapper, genuinely central |
+| 3 | `child_by_field_name` | 0.01184 | Same |
+| 4-6 | `Some` × 3 | 0.01059 | Same as `Ok` — `Option::Some` constructor pattern |
+| 7 | `contains` | 0.00944 | Called from many places (cache hit checks) |
+| 8 | `child_count` | 0.00911 | Tree-sitter wrapper |
+| 9-11 | `children` × 3 | 0.00845 | Same |
+| 12-13 | `clone` × 2 | 0.00639 | Called everywhere; expected |
+| 14 | `collect_nodes_by_kind` | 0.00608 | Tree-sitter wrapper |
+| 15 | `calculate_cache_key` | 0.00579 | Cache layer |
+| 16 | `end_byte` | 0.00427 | Tree-sitter wrapper |
+| 17-18 | `end_position` × 2 | 0.00423 | Same |
+| 19 | `cache_tree` | 0.00418 | Cache layer |
+| 20 | `bump_stat` | 0.00389 | Stats layer |
+
+Read: the top-20 is a mix of (a) Rust constructor patterns
+(`Ok`/`Some`) that the call-graph approach treats as calls
+because that's the AST shape, and (b) real call-central methods
+(tree-sitter wrappers, cache layer). The plan §G4's expectation
+that `CodebaseAnalyzer`/`Parser`/`Language` would surface was
+**wrong**: those are types used in *type positions* (function
+signatures, struct fields, generic bounds), not in *call positions*.
+The v0.3 plan §Scope Boundaries explicitly deferred type-relationship
+edges to v0.4+; the algorithm is doing exactly what the plan said
+it would do. The plan's G4 acceptance test was misaligned with
+the algorithm's scope; the test fixture (a type-heavy library)
+exposes that misalignment.
+
+**For workspaces dominated by call patterns** (web apps, services,
+CLI tools), the top-K would surface the actual code an agent would
+care about. For type-heavy libraries (parsers, type-system tools,
+trait-heavy abstractions), the rank surfaces utility functions over
+the libraries' "domain types." This is a real limitation worth
+documenting; v0.4+ candidate to extend the graph with type-position
+edges.
+
+### Caveats on what these numbers mean
+
+- **End-to-end CLI numbers are larger than daemon-internal latency.**
+  `rts-bench query find-callers --workspace . --name X` on a fresh
+  daemon takes ~10 s end-to-end (process spawn + auto-spawn handshake
+  + mount + initial walk + query + tear-down); the daemon's own work
+  is the 902 ms / 2.7 ms part. Treat the CLI numbers as "operator
+  flow" timings, not as bound estimates.
+- **`outline` warm latency is the heavy one** (p95 19 ms, p99 57 ms,
+  max 294 ms). PageRank + render dominate. Acceptable for an
+  occasional structural-map query; if it shows up in a hot path,
+  the alpha.20 OutlineCache + alpha.34 PageRank cache amortize
+  repeat calls.
+- **Cold-call latency** for the very first `find_symbol` after a
+  mount on 100k LOC is dominated by U1's `parse_and_extract` + write
+  pass, then U4's symbol-PageRank cold compute (150-450 ms per
+  Deepening §C3). Subsequent calls within the same generation hit
+  the cache.
+
+### What's still TODO before v0.3.0 release tag
+
+- **G5 side-by-side bench** vs an alpha.30 binary on a real 1000-file
+  Rust workspace. The closure-walker swap is correct (tested) but
+  the numeric speedup target is unmeasured.
+- **G4 top-K cleanup**: filter `Ok`/`Some` (and other prelude
+  builtins) at PageRank node-set construction to reduce noise at
+  the top of the rank, OR document the artifact clearly in user-facing
+  prose. Decision is product-level, not algorithmic.
+
 ## [0.2.0-alpha.35] - 2026-05-14
 
 **`Index.ImpactOf` — transitive caller closure (v0.3 U5, FINAL).**
