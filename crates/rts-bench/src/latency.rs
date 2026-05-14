@@ -129,16 +129,53 @@ impl Lcg {
     }
 }
 
+/// Read-symbol mode for the bench mix.
+///
+/// `Signature` calls `read_symbol` with `shape: "signature"` and no
+/// dependency walk — the historical bench default, exercises only the
+/// signature renderer + redb lookup.
+///
+/// `BodyWithDeps` calls `read_symbol` with `shape: "body"` and
+/// `include_dependencies: true` — the only path that exercises v0.3
+/// U3's closure walker (the alpha.30 → v0.3 change replaced the
+/// per-call parse + filter loop with one `SID_REFS_OUT` multimap
+/// read). G5's spec-faithful p95 measurement requires this mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadSymbolMode {
+    Signature,
+    BodyWithDeps,
+}
+
+impl ReadSymbolMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ReadSymbolMode::Signature => "signature",
+            ReadSymbolMode::BodyWithDeps => "body_with_deps",
+        }
+    }
+}
+
 /// Run the latency benchmark. Returns one `Sample` per executed query.
+///
+/// `read_symbol_mode` controls how the 30% read_symbol bucket is
+/// executed. `Signature` is the historical default; `BodyWithDeps`
+/// exercises v0.3 U3's closure walker for G5 measurement.
 pub async fn run(
     session: &mut McpSession,
     symbols: &[String],
     files: &[String],
     queries: u32,
     seed: u64,
+    read_symbol_mode: ReadSymbolMode,
 ) -> Result<Vec<Sample>> {
     let mut rng = Lcg::new(seed);
     let mut out: Vec<Sample> = Vec::with_capacity(queries as usize);
+    let read_args = match read_symbol_mode {
+        ReadSymbolMode::Signature => json!({ "shape": "signature" }),
+        ReadSymbolMode::BodyWithDeps => {
+            json!({ "shape": "body", "include_dependencies": true })
+        }
+    };
     for _ in 0..queries {
         let kind = *rng.pick_weighted(QueryKind::MIX);
         let sample = match kind {
@@ -148,13 +185,12 @@ pub async fn run(
             }
             QueryKind::ReadSymbol => {
                 let name = &symbols[rng.pick_index(symbols.len())];
-                time_call(
-                    session,
-                    kind,
-                    "read_symbol",
-                    json!({ "name": name, "shape": "signature" }),
-                )
-                .await?
+                // Merge the per-call name onto the per-mode template.
+                let mut args = read_args.clone();
+                if let Value::Object(ref mut m) = args {
+                    m.insert("name".to_string(), Value::String(name.clone()));
+                }
+                time_call(session, kind, "read_symbol", args).await?
             }
             QueryKind::Outline => {
                 time_call(
@@ -210,6 +246,13 @@ pub struct LatencyReport {
     pub queries: u32,
     pub cold_count: u32,
     pub seed: u64,
+    /// Which `read_symbol` shape the 30% bucket exercised. Either
+    /// `"signature"` (historical default) or `"body_with_deps"` (G5
+    /// closure-walker mode). Stable on-the-wire field; older reports
+    /// pre-v0.3.1 will deserialise with this `None` and downstream
+    /// tools should treat that as `"signature"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_symbol_mode: Option<String>,
     /// Per-kind stats over warm samples (excludes the cold prefix).
     pub warm: IndexMap<String, KindStats>,
     /// Per-kind stats over the cold prefix.
@@ -261,6 +304,7 @@ pub fn build_report(
     synth_loc: usize,
     seed: u64,
     cold_count: u32,
+    read_symbol_mode: ReadSymbolMode,
     samples: &[Sample],
 ) -> LatencyReport {
     let queries = samples.len() as u32;
@@ -302,6 +346,7 @@ pub fn build_report(
         queries,
         cold_count,
         seed,
+        read_symbol_mode: Some(read_symbol_mode.as_str().to_string()),
         warm: warm_map,
         cold: cold_map,
         warm_all,
@@ -415,6 +460,39 @@ mod tests {
         );
         assert_eq!(stats.p99_micros, 99);
         assert_eq!(stats.max_micros, 100);
+    }
+
+    #[test]
+    fn read_symbol_mode_as_str_is_stable() {
+        // The string is on-the-wire in the JSON report. Don't change
+        // these without bumping the report version.
+        assert_eq!(ReadSymbolMode::Signature.as_str(), "signature");
+        assert_eq!(ReadSymbolMode::BodyWithDeps.as_str(), "body_with_deps");
+    }
+
+    #[test]
+    fn report_records_read_symbol_mode() {
+        // Build a tiny report and check the mode appears in the JSON.
+        let samples = vec![Sample {
+            kind: QueryKind::ReadSymbol,
+            elapsed_micros: 1234,
+            ok: true,
+        }];
+        let report = build_report(
+            Path::new("/tmp/synth"),
+            1_000,
+            42,
+            0,
+            ReadSymbolMode::BodyWithDeps,
+            &samples,
+        );
+        assert_eq!(
+            report.read_symbol_mode.as_deref(),
+            Some("body_with_deps"),
+            "G5 deps-mode runs must record body_with_deps in the JSON report"
+        );
+        let json = serde_json::to_value(&report).unwrap();
+        assert_eq!(json["read_symbol_mode"], "body_with_deps");
     }
 
     #[test]
