@@ -805,12 +805,22 @@ const COLD_GATE_TIMEOUT_SECS: u64 = 60;
 /// the bench on a pathological workspace, the latency stats reported
 /// describe real responses rather than a mix of real responses + fast
 /// errors.
+/// Number of consecutive identical readings that count as "settled".
+/// Footprint historically used 1 (one stable poll), but the writer
+/// flushes in bursts and the count can plateau within a single
+/// parse-commit cycle (200 ms poll falls inside one batch) before
+/// jumping again. 3 consecutive matches means ~600 ms of true
+/// stability is required — catches inter-batch lulls without an
+/// excessive pre-roll.
+const COLD_GATE_STABLE_ROUNDS: u32 = 3;
+
 async fn cold_gate_wait_for_walk_settled(
     session: &mut crate::mcp_runner::McpSession,
 ) -> Result<()> {
     let deadline =
         std::time::Instant::now() + std::time::Duration::from_secs(COLD_GATE_TIMEOUT_SECS);
     let mut last_seen: i64 = -1;
+    let mut stable_streak: u32 = 0;
     let mut round = 0u32;
     loop {
         round += 1;
@@ -830,17 +840,24 @@ async fn cold_gate_wait_for_walk_settled(
                 .unwrap_or(-1)
         };
         if files_considered > 0 && files_considered == last_seen {
-            eprintln!("cold gate: walk settled at {files_considered} files (round {round})");
-            return Ok(());
+            stable_streak += 1;
+            if stable_streak >= COLD_GATE_STABLE_ROUNDS {
+                eprintln!(
+                    "cold gate: walk settled at {files_considered} files \
+                     (round {round}, {stable_streak} consecutive stable polls)"
+                );
+                return Ok(());
+            }
+        } else {
+            stable_streak = 0;
         }
         last_seen = files_considered;
         if std::time::Instant::now() >= deadline {
             eprintln!(
                 "cold gate: timed out at {COLD_GATE_TIMEOUT_SECS}s, last \
                  files_considered={files_considered}. Continuing anyway — the \
-                 latency report's per-bucket `.ok` count will show whether the \
-                 warm queries hit real symbols. (See CHANGELOG entry for the \
-                 walk-truncation bug surfaced in session-2026-05-14.)"
+                 latency report's per-bucket `.ok` count will show whether \
+                 the warm queries hit real symbols."
             );
             return Ok(());
         }

@@ -7,6 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Daemon walker fix — initial walk no longer truncates at channel capacity
+
+Root-cause fix for the "256-file plateau" surfaced in PR #42's
+dogfooding writeup. The initial walk ran **synchronously inside
+`Watcher::start`, before the writer-drain task was spawned**, and
+emitted events into a 256-capacity mpsc with `try_send`. When the
+channel filled (which happened on any workspace > 256 files), the
+walker bailed silently — flipping `WatcherStatus::OverflowedRewalking`
+but never re-walking the truncated files. The workspace stayed
+permanently partially indexed for the lifetime of the daemon.
+
+Restructure:
+
+1. **`Watcher::start` no longer runs the initial walk.** It returns
+   an `InitialWalkHandle` alongside the watcher + receiver so the
+   caller can sequence work.
+2. **`workspace::mount` spawns the writer-drain task FIRST**, then
+   calls `initial.spawn()` to run the walk on a `spawn_blocking`
+   task with `tx.blocking_send` — proper backpressure on the cold
+   path. The walker now slows to the writer's drain rate instead
+   of overflowing.
+
+**Verification on `rts-bench latency --synth-loc 100000 --queries
+5000 --cold-count 500 --deps`:**
+
+| | Before fix | After fix |
+|---|---|---|
+| `outline_workspace.files_considered` | plateaus at 256 of 1539 | settles at full **1539** ✅ |
+| `read_symbol` `.ok` rate | 217/1376 (≈ 17 %) | **1376/1376 (100 %)** ✅ |
+
+The cold gate in `rts-bench latency` also got a small tune: it now
+requires **3 consecutive stable polls** of `files_considered` (not 1)
+before declaring the walk settled. The 1-poll heuristic fired
+prematurely inside a single writer parse-commit cycle on bursty
+workloads; 3 polls × 200 ms = ~600 ms of true stability before warm
+queries begin.
+
+#### Honest G5 verdict with the walker fix applied
+
+Side-by-side on a 10k-LOC synth fixture (154 files, well under
+alpha.30's broken channel cap so **both** binaries fully index;
+1376/1376 samples each, deterministic seed):
+
+| Bucket | v0.3 (post-fix) | alpha.30 | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 1332 µs | 583 µs | v0.3 is 2.3× slower |
+| `read_symbol` p95 | **2003 µs** | **2030 µs** | **statistical tie (1 %)** |
+| `read_symbol` p99 | 3305 µs | 3215 µs | v0.3 is 2.8 % slower |
+
+**G5 final read on synth: structural ✅, absolute speedup is a wash
+at p95.** The plan target ("≥ 50 % faster than alpha.30") is not met
+on synth fixtures because the parse cost v0.3 eliminated (alpha.30's
+read_symbol body-parse + filter loop) is small on 3-line function
+bodies. v0.3's other per-call additions (rank_score lookup,
+content_version, larger payload) offset the structural win on this
+fixture shape.
+
+The spec said "real Rust workspace" — synth bodies remain the wrong
+instrument. Real Rust functions are 20–50 lines; alpha.30's parse
+cost grows linearly in body size while v0.3's stays constant, so
+the win is real on larger bodies. Extending `rts-bench latency` to
+accept `--workspace <path>` is the next v0.3.2 item that would
+close G5 definitively.
+
+#### What's still pending on G5
+
+- v0.3.2 candidate **A**: backport the walker fix to alpha.30 for an
+  apples-to-apples comparison on the 100k-LOC fixture (currently
+  alpha.30 still plateaus at ~256 files on 100k; only 10k LOC is a
+  fair test).
+- v0.3.2 candidate **B**: real-workspace bench (`rts-bench latency
+  --workspace <path>`) so G5 can be measured on representative Rust
+  function-body sizes.
+
 ### G5 measurement infrastructure — `rts-bench latency --deps`
 
 New `--deps` flag on `rts-bench latency` switches the 30 % `read_symbol`

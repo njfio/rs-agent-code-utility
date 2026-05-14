@@ -131,16 +131,28 @@ impl Watcher {
     pub fn start(
         root: &Path,
         state: Arc<DaemonState>,
-    ) -> std::io::Result<(Watcher, mpsc::Receiver<WatchEvent>)> {
+    ) -> std::io::Result<(Watcher, mpsc::Receiver<WatchEvent>, InitialWalkHandle)> {
         let gitignore = PrebuiltGitignore::build(root)?;
         let gitignore = Arc::new(gitignore);
         let (tx, rx) = mpsc::channel::<WatchEvent>(CHANNEL_CAPACITY);
 
-        // Initial walk: emit a `Touched` for every survivor. The walker
-        // itself is gitignore-aware (cheap path-component matching done in
-        // libignore's C-ish core); we re-classify each survivor through our
-        // filter so the secrets blocklist + extension allowlist apply too.
-        initial_walk(root, &gitignore, &tx, &state)?;
+        // The initial walk used to run synchronously here, before the
+        // writer-drain task was spawned. The walker would emit a
+        // `Touched` per file into a 256-capacity channel and a `try_send`
+        // failure once the channel filled — which it did on any workspace
+        // larger than 256 files (≈1.5k files on a 100k-LOC Rust synth).
+        // The walker bailed silently and the workspace was permanently
+        // partially indexed. We now hand a `InitialWalkHandle` back to
+        // the caller (workspace::mount) so it can spawn the writer first
+        // and only then drive the walk through `blocking_send` — proper
+        // backpressure on the cold path. See CHANGELOG entry under
+        // [Unreleased]: "Daemon writer plateau".
+        let initial = InitialWalkHandle {
+            root: root.to_path_buf(),
+            gitignore: gitignore.clone(),
+            tx_for_walk: tx.clone(),
+            state_for_walk: state.clone(),
+        };
 
         // Construct the debouncer. The closure runs on the debouncer's own
         // worker thread; we forward to the async mpsc with `try_send` so a
@@ -224,42 +236,53 @@ impl Watcher {
                 root: root.to_path_buf(),
             },
             rx,
+            initial,
         ))
     }
 }
 
-fn initial_walk(
+/// Carries everything needed to drive the cold initial walk. Held by
+/// `workspace::mount` long enough to spawn the writer-drain task first,
+/// then handed off (via `spawn_initial_walk`) to a blocking task that
+/// pushes events with proper backpressure.
+pub struct InitialWalkHandle {
+    root: PathBuf,
+    gitignore: Arc<PrebuiltGitignore>,
+    tx_for_walk: mpsc::Sender<WatchEvent>,
+    state_for_walk: Arc<DaemonState>,
+}
+
+impl InitialWalkHandle {
+    /// Run the initial walk on a blocking task. Sends events with
+    /// `blocking_send` so backpressure flows from the writer back to
+    /// the walker — the walker slows to the writer's drain rate rather
+    /// than overflowing the channel and bailing.
+    ///
+    /// Returns a `JoinHandle` so the caller can await completion when
+    /// needed (e.g. for tests). In production we fire-and-forget; the
+    /// `WatcherStatus::Ok` flip already happened in `start`, and the
+    /// initial walk's emit count appears in tracing logs.
+    pub fn spawn(self) -> tokio::task::JoinHandle<std::io::Result<u64>> {
+        tokio::task::spawn_blocking(move || {
+            walk_and_emit_blocking(
+                &self.root,
+                &self.gitignore,
+                &self.tx_for_walk,
+                &self.state_for_walk,
+            )
+        })
+    }
+}
+
+/// Blocking-send variant of `walk_and_emit` for the cold initial walk.
+/// Uses `tx.blocking_send` so backpressure propagates from the writer.
+/// If the channel is permanently closed (writer task dropped) we surface
+/// `OverflowedRewalking` and bail, same as the non-blocking path.
+fn walk_and_emit_blocking(
     root: &Path,
     gitignore: &PrebuiltGitignore,
     tx: &mpsc::Sender<WatchEvent>,
     state: &Arc<DaemonState>,
-) -> std::io::Result<()> {
-    let emitted = walk_and_emit(root, gitignore, tx, Some(state))?;
-    debug!(emitted, "initial walk done");
-    Ok(())
-}
-
-/// Walk `root` once with the v0 filter chain (gitignore + `.rtsignore` +
-/// secrets blocklist + extension allowlist) and emit one `WatchEvent::Touched`
-/// per surviving file. Returns the number of files emitted.
-///
-/// Used for both the cold initial walk (`initial_walk`) and the rescan
-/// re-walk fired when the kernel watch buffer overflows (`rescan_walk`).
-/// Sharing the walker keeps the filter behaviour identical across the two
-/// code paths — without this, an overflow rewalk could see a different
-/// file set than the original walk, which is exactly the kind of silent
-/// inconsistency the rescan flow is meant to prevent.
-///
-/// `state_for_backpressure` is the bridge into the writer-overflow signal:
-/// when present, an mpsc-full failure flips `WatcherStatus` and bails
-/// early so the consumer can catch up. `None` lets callers (notably the
-/// rescan path) opt out — the rescan caller surfaces backpressure
-/// differently because the writer drained recently.
-pub(crate) fn walk_and_emit(
-    root: &Path,
-    gitignore: &PrebuiltGitignore,
-    tx: &mpsc::Sender<WatchEvent>,
-    state_for_backpressure: Option<&Arc<DaemonState>>,
 ) -> std::io::Result<u64> {
     let walker = ignore::WalkBuilder::new(root)
         .standard_filters(true)
@@ -287,20 +310,20 @@ pub(crate) fn walk_and_emit(
         let decision = classify(&path, gitignore);
         match decision {
             FilterDecision::IndexFull | FilterDecision::IndexSignatureOnly => {
-                // try_send: never block. If the channel fills (consumer is
-                // slow / not yet attached / already mid-rescan), drop the
-                // event and bail. The caller's `state_for_backpressure` is
-                // the place we surface the overflow status.
+                // blocking_send: parks until the consumer pulls. This
+                // is the whole point of the restructure — the walker
+                // backpressures on the writer-drain rate instead of
+                // overflowing the 256-capacity channel.
                 if tx
-                    .try_send(WatchEvent::Touched {
+                    .blocking_send(WatchEvent::Touched {
                         path: path.clone(),
                         decision,
                     })
                     .is_err()
                 {
-                    if let Some(state) = state_for_backpressure {
-                        state.set_watcher_status(WatcherStatus::OverflowedRewalking);
-                    }
+                    // Channel closed (writer dropped). Flag the status
+                    // for parity with the old try_send-bail path.
+                    state.set_watcher_status(WatcherStatus::OverflowedRewalking);
                     return Ok(emitted);
                 }
                 emitted += 1;
@@ -308,6 +331,7 @@ pub(crate) fn walk_and_emit(
             FilterDecision::Skip(_) => {}
         }
     }
+    debug!(emitted, "initial walk done");
     Ok(emitted)
 }
 
@@ -422,7 +446,8 @@ mod tests {
         std::fs::write(tmp.path().join("a.rs.swp"), "swap").unwrap();
 
         let state = fresh_state();
-        let (_watcher, mut rx) = Watcher::start(tmp.path(), state).unwrap();
+        let (_watcher, mut rx, initial) = Watcher::start(tmp.path(), state).unwrap();
+        let _ = initial.spawn();
 
         let mut seen = std::collections::HashSet::new();
         for _ in 0..3 {
@@ -447,7 +472,9 @@ mod tests {
     async fn live_create_surfaces_through_debouncer() {
         let tmp = tempfile::tempdir().unwrap();
         let state = fresh_state();
-        let (_watcher, mut rx) = Watcher::start(tmp.path(), state.clone()).unwrap();
+        let (_watcher, mut rx, initial) = Watcher::start(tmp.path(), state.clone()).unwrap();
+        // Run initial walk now that the receiver is owned by the test.
+        let _ = initial.spawn();
 
         // Drain anything from the (empty) initial walk.
         while let Ok(Some(_)) = tokio::time::timeout(Duration::from_millis(100), rx.recv()).await {}
@@ -474,7 +501,8 @@ mod tests {
     async fn live_create_of_secrets_file_is_filtered() {
         let tmp = tempfile::tempdir().unwrap();
         let state = fresh_state();
-        let (_watcher, mut rx) = Watcher::start(tmp.path(), state).unwrap();
+        let (_watcher, mut rx, initial) = Watcher::start(tmp.path(), state).unwrap();
+        let _ = initial.spawn();
 
         // Drain initial walk.
         while let Ok(Some(_)) = tokio::time::timeout(Duration::from_millis(100), rx.recv()).await {}

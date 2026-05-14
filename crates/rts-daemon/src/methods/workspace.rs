@@ -90,16 +90,23 @@ pub async fn mount(
         ProtocolError::new(code, msg)
     })?);
 
-    // Start the file watcher. Events go to an internal mpsc; the writer-drain
-    // task (spawned below) consumes them and writes into redb.
-    let (watcher, rx) = Watcher::start(&mounted.canonical.path, state.clone()).map_err(|e| {
-        ProtocolError::new(
-            ErrorCode::InternalError,
-            format!("could not start file watcher: {e}"),
-        )
-    })?;
+    // Start the file watcher. This subscribes to the filesystem for
+    // incremental events but does NOT yet run the initial walk — that's
+    // deferred to `initial.spawn()` below so the writer-drain task can
+    // start consuming from the channel first. See watcher.rs comment on
+    // `InitialWalkHandle` for the 256-file plateau bug this restructure
+    // fixes.
+    let (watcher, rx, initial) =
+        Watcher::start(&mounted.canonical.path, state.clone()).map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("could not start file watcher: {e}"),
+            )
+        })?;
 
-    // Spawn the writer-drain task.
+    // Spawn the writer-drain task before running the initial walk so
+    // the channel has a consumer from event #1. The walker's
+    // `blocking_send` will then propagate backpressure correctly.
     let writer_cancel = tokio_util::sync::CancellationToken::new();
     let _writer_handle = writer::spawn(
         rx,
@@ -108,6 +115,13 @@ pub async fn mount(
         writer_cancel.clone(),
         mounted.canonical.path.clone(),
     );
+
+    // Now run the initial walk. Fire-and-forget — the join handle is
+    // dropped because we don't gate `Mount`'s response on the walk
+    // completing (the writer-drain reports progress through redb
+    // stats, which Workspace.Status surfaces, and rts-bench's
+    // `cold_gate_wait_for_walk_settled` polls that signal).
+    drop(initial.spawn());
 
     let payload = status_payload(&mounted, state, Some(&store));
     *current = Some(mounted);
