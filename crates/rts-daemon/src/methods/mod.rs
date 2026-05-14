@@ -26,6 +26,7 @@ pub async fn dispatch(
         "Session.Close" => session::close(params, state).await,
 
         "Index.FindSymbol" => index::find_symbol(params, state).await,
+        "Index.FindCallers" => index::find_callers(params, state).await,
         "Index.ReadRange" => index::read_range(params, state).await,
         "Index.ReadSymbol" => index::read_symbol(params, state).await,
         "Index.ReadSymbolAt" => index::read_symbol_at(params, state).await,
