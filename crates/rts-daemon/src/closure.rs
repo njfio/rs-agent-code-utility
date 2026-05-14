@@ -46,7 +46,7 @@
 //! `compute` recursively.
 
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
@@ -197,6 +197,16 @@ pub fn compute(
     // the one file-read surface that didn't share the gate, and a
     // future writer bug or stale db.redb could surface garbage. M2's
     // symlink rejection rides for free now.
+    // Per-call file cache: multiple deps frequently live in the same
+    // file (e.g. tree-sitter wrapper methods on `SyntaxTree` all live
+    // in `tree.rs`). Reading the file once and reusing the buffer
+    // across deps avoids N full `read()` syscalls when the resolved
+    // set has N deps in 1-2 files. On `crates/rts-core` reads where
+    // deps cluster, this is the per-call hot path. Sized to
+    // `resolved.len()` upper bound; in practice files-per-call is much
+    // smaller (typically 1-5 distinct files).
+    let mut file_cache: std::collections::HashMap<PathBuf, Option<Vec<u8>>> =
+        std::collections::HashMap::with_capacity(resolved.len().min(8));
     let mut rendered: Vec<DependencyEntry> = Vec::with_capacity(resolved.len());
     for (_name, def) in &resolved {
         let abs = match crate::path::resolve_workspace_path(workspace_root, &def.file) {
@@ -206,18 +216,32 @@ pub fn compute(
                 continue;
             }
         };
-        let (start, end) = (def.start_byte as usize, def.end_byte as usize);
-        let body_bytes = match std::fs::read(&abs) {
-            Ok(b) => b,
-            Err(_) => {
-                rendered.push(entry_without_signature(def));
-                continue;
+        // Reuse cached bytes when this dep's file has already been
+        // read for an earlier dep in this same call. `None` cached
+        // values flag an earlier I/O failure so we don't retry per dep.
+        let body_bytes_ref: Option<&[u8]> = if let Some(cached) = file_cache.get(&abs) {
+            cached.as_deref()
+        } else {
+            match std::fs::read(&abs) {
+                Ok(b) => {
+                    file_cache.insert(abs.clone(), Some(b));
+                    file_cache.get(&abs).and_then(|c| c.as_deref())
+                }
+                Err(_) => {
+                    file_cache.insert(abs.clone(), None);
+                    None
+                }
             }
         };
+        let Some(body_bytes) = body_bytes_ref else {
+            rendered.push(entry_without_signature(def));
+            continue;
+        };
+        let (start, end) = (def.start_byte as usize, def.end_byte as usize);
         let slice = if end > start && end <= body_bytes.len() {
             &body_bytes[start..end]
         } else {
-            &body_bytes[..]
+            body_bytes
         };
         let signature = crate::language::info_for_path(&def.file)
             .and_then(|info| info.signature_renderer)

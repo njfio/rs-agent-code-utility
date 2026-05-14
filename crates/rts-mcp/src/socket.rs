@@ -101,7 +101,19 @@ pub async fn connect_with_auto_spawn(daemon_bin: &std::path::Path) -> Result<Uni
     let mut cmd = tokio::process::Command::new(daemon_bin);
     cmd.stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null());
+        // RTS_INHERIT_DAEMON_STDERR=1 surfaces daemon logs to our
+        // stderr (which is the agent harness's stderr). Useful for
+        // debugging; default to null so production runs aren't noisy.
+        .stderr(
+            if std::env::var("RTS_INHERIT_DAEMON_STDERR")
+                .map(|v| !v.is_empty() && v != "0")
+                .unwrap_or(false)
+            {
+                std::process::Stdio::inherit()
+            } else {
+                std::process::Stdio::null()
+            },
+        );
     // Inherit XDG_RUNTIME_DIR / HOME / XDG_STATE_HOME so the daemon writes to
     // the same socket directory we just probed.
     let child = cmd

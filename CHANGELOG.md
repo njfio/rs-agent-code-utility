@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Read-symbol perf investigation — debug infrastructure + closure file-cache
+
+Picking up the v0.3.2 follow-up filed in PR #44 (v0.3 read_symbol p95
+is 7× slower than alpha.30 on real workspaces). This change ships
+the **debugging infrastructure that enables root-cause investigation**
+rather than a full fix — the regression is multi-source and a
+proper bisect needs flame-graph tooling. Concrete output:
+
+1. **`RTS_PROFILE_READ_SYMBOL=1`** — section-level timing inside
+   `read_symbol_body`. Prints `path_resolve+check`, `read_file`,
+   `content_version`, `closure_walk` microsecond elapsed to stderr.
+   No-op when unset; zero overhead on normal builds.
+2. **`RTS_INHERIT_DAEMON_STDERR=1`** in `rts-mcp` — pipes daemon
+   stderr through (default null'd). Pairs with
+   `RTS_BENCH_INHERIT_STDERR=1` in `rts-bench` to surface daemon logs
+   through the full bench → mcp → daemon process chain.
+3. **Per-call file cache in `closure::compute`** — multiple deps
+   frequently live in the same file (e.g. tree-sitter wrapper
+   methods all live in `tree.rs`). The pre-fix code read the file
+   fresh for each dep via `std::fs::read(&abs)`; now a small
+   `HashMap<PathBuf, Option<Vec<u8>>>` deduplicates within a single
+   closure walk. Marginal on `crates/rts-core` (deps cluster
+   weakly), more impactful on workspaces with utility modules
+   referenced from many call sites. Correctness improvement
+   regardless: avoids N file reads when N deps share a file.
+
+**What profiling revealed.** A single warm `read_symbol(deps=true)`
+on a typical `crates/rts-core` symbol (`find_nodes_by_kind` with 2
+deps) breaks down as:
+
+| Section | µs |
+|---|---:|
+| `path_resolve+check` | 42 |
+| `read_file` | 111 |
+| `content_version` (blake3) | 18 |
+| `closure_walk` (spawn_blocking + 2 deps) | 246 |
+| **Total** | **~417** |
+
+That total matches alpha.30's p95 (974 µs) closely. The bench's
+v0.3 p95 of 7023 µs is the **tail** — symbols with many deps,
+where `closure_walk` dominates non-linearly. The file-read cache
+addresses one of several contributing factors; the other tail-driver
+candidates need flame-graph tooling to pin down precisely:
+
+- `spawn_blocking` overhead per call (each `closure::compute` runs
+  on the blocking pool — for hot paths with many short calls,
+  this can dominate)
+- Sequential redb operations per dep (`refs_from_symbol` →
+  `name_for_sid` × N → `find_symbol` × N → `defs` walk × N)
+- `chosen.clone()` before spawn_blocking
+- Tree-sitter signature renderer cost per dep
+
+#### Filed for next v0.3.x session (now actionable)
+
+1. Hook `cargo flamegraph` or `samply` to the bench harness — the
+   profile harness above gives section totals; a flame graph gives
+   the per-line attribution needed to fix the tail
+2. Try `closure::compute` without `spawn_blocking` for small dep
+   counts (the spawn cost may dominate for the common case)
+3. Re-measure G5 with these in place
+
 ### `rts-bench latency --workspace <path>` — real-workspace benchmarks
 
 Adds the v0.3.2 follow-up `--workspace` flag mutually exclusive with

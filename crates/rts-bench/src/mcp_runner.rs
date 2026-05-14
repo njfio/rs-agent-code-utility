@@ -74,7 +74,19 @@ impl McpSession {
             .env("RTS_DAEMON_BIN", rts_daemon_bin)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            // RTS_BENCH_INHERIT_STDERR=1 surfaces daemon + mcp logs
+            // for debugging. Default to null so normal bench runs
+            // aren't noisy.
+            .stderr(
+                if std::env::var("RTS_BENCH_INHERIT_STDERR")
+                    .map(|v| !v.is_empty() && v != "0")
+                    .unwrap_or(false)
+                {
+                    Stdio::inherit()
+                } else {
+                    Stdio::null()
+                },
+            )
             .kill_on_drop(true);
         for (k, v) in extra_env {
             cmd.env(k, v);

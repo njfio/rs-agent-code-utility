@@ -1132,10 +1132,36 @@ async fn read_symbol_body(
     include_deps: bool,
     include_callers: bool,
 ) -> Result<serde_json::Value, ProtocolError> {
+    // Timing harness (RTS_PROFILE_READ_SYMBOL=1) — prints µs per
+    // section to stderr. Useful for chasing the v0.3 deps-mode
+    // regression filed in v0.3.2; the env var lives long enough to
+    // root-cause then comes back out.
+    let profile = std::env::var("RTS_PROFILE_READ_SYMBOL")
+        .map(|v| !v.is_empty() && v != "0")
+        .unwrap_or(false);
+    macro_rules! mark {
+        ($t:ident, $label:literal) => {
+            if profile {
+                eprintln!(
+                    "read_symbol:{:>22} = {:>6} µs",
+                    $label,
+                    $t.elapsed().as_micros()
+                );
+                #[allow(unused_assignments)]
+                {
+                    $t = std::time::Instant::now();
+                }
+            }
+        };
+    }
+    let mut t_section = std::time::Instant::now();
+
     let (abs, _rel) = resolve_workspace_path(root, &chosen.file)?;
     check_body_extension(&abs)?;
+    mark!(t_section, "path_resolve+check");
 
     let (bytes, mtime_ns) = read_file(&abs).await?;
+    mark!(t_section, "read_file");
     let start = chosen.start_byte as usize;
     let end = (chosen.end_byte as usize).min(bytes.len());
     if start > bytes.len() {
@@ -1185,6 +1211,7 @@ async fn read_symbol_body(
         mtime_ns,
         state.index_generation.load(Ordering::Relaxed),
     );
+    mark!(t_section, "content_version");
 
     let signature_value = match signature {
         Some(s) => Value::String(s),
@@ -1212,6 +1239,7 @@ async fn read_symbol_body(
         .map_err(|e| {
             ProtocolError::new(ErrorCode::InternalError, format!("closure join error: {e}"))
         })?;
+        mark!(t_section, "closure_walk");
         let value = crate::closure::to_wire_value(&walk.dependencies);
         (
             value,
