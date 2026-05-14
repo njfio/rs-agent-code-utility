@@ -359,7 +359,7 @@ Establish (or join) the workspace this connection will operate on.
 }
 ```
 
-Errors: `INVALID_WORKSPACE_PATH`, `MOUNT_HAS_SYMLINK`, `WORKSPACE_VANISHED`, `WORKSPACE_ON_NETWORK_MOUNT`, `OUT_OF_ROOT` (if the path resolves outside the daemon's filesystem), `STORAGE_FULL` (if `${XDG_STATE_HOME}/rts/` is unwritable).
+Errors: `INVALID_WORKSPACE_PATH`, `MOUNT_HAS_SYMLINK`, `WORKSPACE_VANISHED`, **`WORKSPACE_MISMATCH`** (alpha.36+), `WORKSPACE_ON_NETWORK_MOUNT`, `OUT_OF_ROOT` (if the path resolves outside the daemon's filesystem), `STORAGE_FULL` (if `${XDG_STATE_HOME}/rts/` is unwritable).
 
 After `Workspace.Mount` returns, the connection is bound to that workspace; subsequent `Index.*` calls operate on it. A connection MUST `Mount` exactly once.
 
@@ -866,7 +866,8 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 | `INVALID_PARAMS` | params object failed schema validation | No (without param fix) |
 | `INVALID_WORKSPACE_PATH` | non-UTF-8 / non-existent / non-canonicalisable path | No |
 | `MOUNT_HAS_SYMLINK` | any path component was a symlink | No (resolve outside, pass canonical) |
-| `WORKSPACE_VANISHED` | `(dev, inode)` mismatch on remount | No |
+| `WORKSPACE_VANISHED` | `(dev, inode)` mismatch on remount — symlink swap, mount move, or dir replaced under the daemon | No (workspace went away) |
+| `WORKSPACE_MISMATCH` (alpha.36+) | second `Workspace.Mount` from the same connection asked for a different canonical path than this daemon is already pinned to. Use a fresh daemon socket for the other path (auto-spawn handles this if the path hash differs) | No (connect via the correct socket) |
 | `WORKSPACE_ON_NETWORK_MOUNT` | path is on NFS/SMB/etc. | No |
 | `OUT_OF_ROOT` | path resolved outside the mounted workspace | No |
 | `PATH_TRAVERSAL` | `..` segment in a client-provided path | No |

@@ -162,6 +162,56 @@ including the four v0.3 ones (`find_callers`, `impact_of`,
 `read_symbol.include_callers`, `pagerank_symbolwise`) — are documented
 in [docs/protocol-v0.md](docs/protocol-v0.md) §4.1 + Appendix F.
 
+## Known limitations
+
+### The PageRank graph is over *call* edges, not *type* edges
+
+v0.3's symbol-level PageRank ranks symbols by how often they're called
+(via tree-sitter's `@reference.call` capture and friends). It does
+**not** rank symbols by how often they appear in type positions
+(function signatures, struct fields, generic bounds, trait impls).
+Per the v0.3 plan's Scope Boundaries, type-relationship edges are
+deferred to v0.4+.
+
+**Consequence:** running `find_symbol(pattern="*")` on a type-heavy
+library (parser, type-system tool, trait-heavy abstraction) surfaces
+utility functions and tree-sitter wrappers in the top-K, not the
+library's "domain types." On `crates/rts-core` itself, the top-20
+includes `find_nodes_by_kind`, `child_by_field_name`, `children`,
+etc. — all genuinely call-central — but **not** `CodebaseAnalyzer`,
+`Parser`, `Language` (which are types referenced from type positions
+across the workspace, not call targets).
+
+For workspaces dominated by call patterns (web apps, services, CLI
+tools), the top-K closely matches "what's central in this codebase."
+For type-heavy libraries, the top-K is "what's the busiest helper
+machinery" — useful but not the same answer.
+
+### Rust prelude artifacts at the top of the rank
+
+On Rust workspaces, `Ok` and `Some` reliably appear near the top of
+`find_symbol(pattern="*")`. They're the AST-visible variant
+constructors in `Result::Ok(x)` and `Option::Some(x)`, which
+tree-sitter's `call_expression` pattern captures as call-shaped. They
+*are* genuinely high-fan-in (every function that returns a Result
+"calls" `Ok` to construct one), so the algorithm is correct.
+Filtering them at PageRank node-set construction would be language-
+specific noise reduction; v0.4+ candidate.
+
+### Single workspace per daemon process
+
+`rts-daemon` is workspace-pinned (protocol-v0 §5.5). Cross-repo
+queries require multiple daemon processes — one per workspace hash —
+each on its own socket. `rts-mcp` auto-spawns the right one given
+a workspace path; agents wiring multiple repos need multiple
+`claude mcp add rts-foo --workspace /foo/path` entries.
+
+### Windows is not yet supported
+
+The daemon uses Unix sockets. A Windows port using named pipes is on
+the v1.x candidate list — search "Windows" in
+[docs/protocol-v0.md](docs/protocol-v0.md) for the design sketch.
+
 ## Crate layout
 
 ```
