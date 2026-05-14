@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### `rts-bench latency --workspace <path>` — real-workspace benchmarks
+
+Adds the v0.3.2 follow-up `--workspace` flag mutually exclusive with
+`--synth-loc`. Mounts an existing workspace and discovers symbols
+post-cold-gate via `find_symbol(pattern="*")` (top-256 by rank). For
+cross-daemon fair comparison the discovered names are sorted
+lexically + deduped so v0.3's PageRank-ordered top-256 and
+alpha.30's placeholder-ranked top-256 converge on a shared subset.
+
+Tests:
+
+- `prepare_workspace_real_path_returns_empty_symbols` — real-workspace
+  arm of `prepare_workspace` returns empty symbol/file Vecs (filled
+  post-mount in `main.rs`)
+- `prepare_workspace_rejects_both_workspace_and_synth_loc` — mutual
+  exclusion contract
+- `prepare_workspace_rejects_non_directory` — bad-path guard
+
+This was filed as a v0.3.2 follow-up in PR #43. Closes that item.
+
+#### G5 real-workspace measurement — v0.3 IS A REGRESSION
+
+Side-by-side on `crates/rts-core` (~55 files, 130–170 indexable
+top-K symbols depending on daemon, 546 successful read_symbol
+samples each, deterministic seed, both binaries fully indexed
+post-walker-fix):
+
+| Bucket | v0.3 | alpha.30 | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 (deps) | 3207 µs | 755 µs | **v0.3 is 4.25× slower** |
+| `read_symbol` p95 (deps) | **7023 µs** | **974 µs** | **v0.3 is 7.21× slower** ❌ |
+| `read_symbol` p99 (deps) | 11877 µs | 1377 µs | **v0.3 is 8.62× slower** |
+
+**G5 final read: not just "spec target missed" — v0.3 is a
+read_symbol performance regression vs alpha.30 on real Rust
+workspaces.** The closure-walker structural fix (one `SID_REFS_OUT`
+multimap read in v0.3 replaces alpha.30's parse + filter loop) is
+real, but on actual function-body sizes the parse cost it replaced
+was small, while v0.3 added other per-call overhead that dominates:
+
+- `rank_score` filled per result (PageRank cache lookup × N matches)
+- `content_version` field (file-hash computation)
+- `callers` field plumbing even when `include_callers=false`
+- Larger response payload (more fields → more serialisation cost)
+
+The v0.3 plan §G5 hypothesis ("closure-walker p95 ≥ 50 % faster
+than alpha.30") was based on the *structural argument* (one redb
+read should beat parse+walk) without measuring actual throughput.
+Now that we have a real-workspace bench, the measurement contradicts
+the hypothesis.
+
+Even accounting for the symbol-discovery confound (v0.3 surfaces
+141 unique names post-dedup, alpha.30 surfaces 173; the bench's
+random picks drive different subsets), 7× is too large to be
+discovery-confound alone — both subsets overlap heavily, and the
+median latency gap (3207 µs vs 755 µs = 4.25×) confirms a real
+per-call regression.
+
+#### Filed for v0.3.x: investigate read_symbol regression
+
+Highest-priority post-G5 work:
+
+1. **Profile v0.3 `read_symbol(deps=true)` to find the dominant
+   cost.** Top candidates per the list above; first measurement
+   should be flame-graph or step-by-step timing of one warm call.
+2. **Decide which v0.3 additions are paying for themselves.** If
+   `rank_score` adds 2 ms per call but agents rarely sort by it,
+   make it opt-in. If `content_version` adds 1 ms but the bench
+   benefits from cache invalidation, accept the cost but document
+   it.
+3. **Add a `--symbols-file <path>` flag** to `rts-bench latency` so
+   future cross-daemon comparisons use an identical name list (this
+   PR's lex-sort + dedup is a partial fix; a saved name list is
+   stricter).
+
 ### Daemon walker fix — initial walk no longer truncates at channel capacity
 
 Root-cause fix for the "256-file plateau" surfaced in PR #42's

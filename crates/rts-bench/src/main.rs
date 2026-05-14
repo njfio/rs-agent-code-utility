@@ -56,8 +56,23 @@ enum Cmd {
     /// Latency benchmark (S1): synth fixture + p50/p95/p99 over a
     /// query mix.
     Latency {
+        /// Real workspace path to bench against. Mutually exclusive
+        /// with `--synth-loc`. The bench mounts this workspace, waits
+        /// for the cold-walk to settle, then enumerates indexable
+        /// symbols via `find_symbol(pattern="*")` (top-N by rank,
+        /// capped at the daemon's MAX_MATCHES = 256). Use this when
+        /// the synth fixture's tiny function bodies aren't
+        /// representative of the real workload — closure-walker p95
+        /// is the canonical case: alpha.30's body-parse cost grows
+        /// linearly in body size while v0.3's stays constant, so the
+        /// structural win shows on real Rust function lengths (20–50
+        /// lines) but vanishes on the synth's 3-line bodies. Required
+        /// for the G5 spec ("real Rust workspace") per the v0.3 plan.
+        #[arg(long, conflicts_with = "synth_loc")]
+        workspace: Option<PathBuf>,
         /// Total lines of synthetic Rust source to generate. Defaults
-        /// to 100,000 per plan §P9.
+        /// to 100,000 per plan §P9. Mutually exclusive with
+        /// `--workspace`.
         #[arg(long, default_value_t = 100_000)]
         synth_loc: usize,
         /// Number of queries to run. Defaults to 1000.
@@ -358,6 +373,7 @@ async fn main() -> Result<()> {
                 },
         } => restore_fixtures(corpus_lock, corpus_root).await,
         Cmd::Latency {
+            workspace,
             synth_loc,
             queries,
             cold_count,
@@ -365,7 +381,12 @@ async fn main() -> Result<()> {
             deps,
             out,
             dry_run,
-        } => run_latency(synth_loc, queries, cold_count, seed, deps, out, dry_run).await,
+        } => {
+            run_latency(
+                workspace, synth_loc, queries, cold_count, seed, deps, out, dry_run,
+            )
+            .await
+        }
         Cmd::Footprint {
             synth_loc,
             out,
@@ -669,7 +690,9 @@ fn human_bytes(n: u64) -> String {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_latency(
+    workspace_arg: Option<PathBuf>,
     synth_loc: usize,
     queries: u32,
     cold_count: u32,
@@ -690,8 +713,19 @@ async fn run_latency(
     // daemon's runtime/state dirs so concurrent latency runs on the
     // same machine don't fight over /tmp's default socket.
     let tmp_root = tempfile::tempdir().context("tempdir for latency run")?;
-    let (workspace, symbols, files) =
-        latency::prepare_workspace(None, Some(synth_loc), tmp_root.path())?;
+    // `--workspace <path>` and `--synth-loc <N>` are mutually exclusive
+    // at the clap layer. Pick the right `prepare_workspace` arm based
+    // on which is set. For real workspaces, `synth_loc` is recorded in
+    // the report as 0 to flag "not synthetic".
+    let (workspace, mut symbols, files) = match workspace_arg.as_ref() {
+        Some(path) => latency::prepare_workspace(Some(path), None, tmp_root.path())?,
+        None => latency::prepare_workspace(None, Some(synth_loc), tmp_root.path())?,
+    };
+    let synth_loc_for_report = if workspace_arg.is_some() {
+        0
+    } else {
+        synth_loc
+    };
     let runtime_dir = tmp_root.path().join("runtime");
     let state_dir = tmp_root.path().join("state");
     std::fs::create_dir_all(&runtime_dir)?;
@@ -719,6 +753,57 @@ async fn run_latency(
     // See CHANGELOG `[Unreleased]` for the discovery writeup.
     cold_gate_wait_for_walk_settled(&mut session).await?;
 
+    // For real workspaces, `prepare_workspace` returned an empty
+    // symbols Vec — the bench needs names from the actual index, not
+    // from a generator. Pull the top-K by rank via
+    // `find_symbol(pattern="*")` post-cold-gate. The daemon caps that
+    // response at 256 names (MAX_MATCHES); for the bench's random-pick
+    // loop, 256 is more than enough to avoid degenerate repetition
+    // even at --queries 5000.
+    if symbols.is_empty() {
+        let call = session
+            .tools_call("find_symbol", serde_json::json!({ "pattern": "*" }), 5)
+            .await?;
+        if call.is_error {
+            anyhow::bail!(
+                "find_symbol(pattern='*') failed after cold gate — the workspace \
+                 is mounted but no symbols are indexed. Either the workspace has \
+                 no Rust/JS/Python/etc files, or the writer panicked. Re-run with \
+                 RTS_LOG=debug for daemon-side diagnostics."
+            );
+        }
+        if let Some(body) = call.result_body.as_ref() {
+            if let Some(matches) = body.get("matches").and_then(|m| m.as_array()) {
+                symbols = matches
+                    .iter()
+                    .filter_map(|m| m.get("qualified_name").and_then(|n| n.as_str()))
+                    .map(|s| s.to_string())
+                    .collect();
+            }
+        }
+        anyhow::ensure!(
+            !symbols.is_empty(),
+            "find_symbol(pattern='*') returned no matches on real workspace {} — \
+             the workspace may not contain any indexable source files",
+            workspace.display(),
+        );
+        // Normalize ordering. `find_symbol` returns up to 256 results
+        // sorted by rank_score descending; v0.3's PageRank rank differs
+        // from alpha.30's 0.0-placeholder rank, so the same call against
+        // each daemon picks a different top-K subset. For an
+        // apples-to-apples bench comparison, sort + dedup lexically so
+        // both daemons end up driving the bench against the same name
+        // set (modulo the symbol-table contents the daemons agree on).
+        symbols.sort();
+        symbols.dedup();
+        eprintln!(
+            "discovered {} symbols from real workspace {} (sorted lexically \
+             for cross-daemon stability)",
+            symbols.len(),
+            workspace.display()
+        );
+    }
+
     println!(
         "latency: workspace={} files={} symbols={} queries={} cold_count={} read_symbol_mode={}",
         workspace.display(),
@@ -742,7 +827,7 @@ async fn run_latency(
 
     let report = latency::build_report(
         &workspace,
-        synth_loc,
+        synth_loc_for_report,
         seed,
         cold_count,
         read_symbol_mode,
