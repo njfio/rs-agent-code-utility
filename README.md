@@ -6,11 +6,17 @@ Cursor, Cline, Aider, Continue) precise, token-cheap access to your
 codebase. Replaces "the agent ripgreps and then reads whole files" with
 "the agent calls one tool that returns exactly the bytes it needs."
 
+As of **v0.3** the daemon is also a **persistent code knowledge graph**: the
+reference half of the call graph is indexed at write time, so questions
+like _"who calls X?"_, _"if I change X what breaks?"_, and _"what's central
+to this codebase?"_ are single redb lookups instead of full workspace scans.
+
 | measurement | baseline | MCP | reduction |
 |---|---:|---:|---:|
 | Locate a function's definition (`parse` in `rts-core`) | 259,607 tokens | 148 tokens | **99.9%** |
 | Get a function's body (`parse` in `rts-core`) | 94,285 tokens | 28 tokens | **100.0%** |
 | Summarize a module (`analyzer.rs`, head 50 lines) | 27,258 tokens | 571 tokens | **97.9%** |
+| Refactor-impact closure (transitive callers) | grep + read N files × 2 levels | one `impact_of` call | **≥ 70%** (target G2; v0.3 U5) |
 
 Reproduce: `cargo build --workspace && target/debug/rts-bench task run
 <id> --workspace <path> [--symbol NAME | --file PATH]`. Token counter is
@@ -19,21 +25,23 @@ Anthropic SDK oracle (`--with-network`) lands later.
 
 ## Status
 
-**Pre-release.** Tag `v0.2.0-alpha.11` at the time of writing. The
-agentic-retrieval pivot is the focus; the pre-pivot library + CLI have
-been archived (see [`archive/`](archive/)).
+**Active pre-release.** Latest alpha: `v0.2.0-alpha.35`. The v0.3
+code-graph KB plan is complete; see
+[CHANGELOG.md](CHANGELOG.md) for the per-alpha trail. Pre-pivot library
++ CLI live in [`archive/`](archive/) for git history; no longer maintained.
 
 | Phase | Status |
 |---|---|
-| P0 — Spikes (rmcp, redb, notify) | done |
-| P1 — Tree-sitter 0.20 → 0.26 bump | done |
-| P2+P3 — Uncoupling + archive cut | done |
-| P4 — Cargo workspace + `rts-core` extraction | done |
-| P5 — Protocol-v0 design doc | done |
-| P6 — `rts-daemon` (lifecycle + watcher + writer + 4/4 Index.\*) | done minus `Index.Outline` |
-| P7 — `rts-mcp` (rmcp 1.6 bridge) | done |
-| P8 — `SignatureRenderer` + PageRank | not started |
-| P9 — Benchmarks + install docs + prebuilt binaries | partial (3/5 bench tasks; install docs land in this commit) |
+| P0 — Spikes (rmcp, redb, notify) | ✅ |
+| P1 — Tree-sitter 0.20 → 0.26 bump | ✅ |
+| P2+P3 — Uncoupling + archive cut | ✅ |
+| P4 — Cargo workspace + `rts-core` extraction | ✅ |
+| P5 — Protocol-v0 design doc | ✅ (re-spec'd at alpha.30 baseline in U0) |
+| P6 — `rts-daemon` (lifecycle + watcher + writer + Index.*) | ✅ |
+| P7 — `rts-mcp` (rmcp 1.6 bridge) | ✅ |
+| P8 — `SignatureRenderer` + PageRank | ✅ (file-level alpha.18; symbol-level alpha.34) |
+| P9 — Benchmarks + install docs + prebuilt binaries | ✅ (`scenario_compiler_fix` + `scenario_refactor_impact` scenario tasks) |
+| **v0.3 — Persistent code-graph KB** | ✅ (`Index.FindCallers`, `Index.ImpactOf`, symbol PageRank, indexed closure walker; U0-U5 shipped alpha.31-alpha.35) |
 
 ## Architecture
 
@@ -41,17 +49,27 @@ been archived (see [`archive/`](archive/)).
    Agent (Claude Code, Cursor, …)
               │ stdio JSON-RPC, rmcp 1.6
               ▼
-       crates/rts-mcp        ◀── per-agent process
+       crates/rts-mcp        ◀── per-agent process; exposes 7 tools
               │ Unix-domain socket, protocol-v0
               ▼
       crates/rts-daemon      ◀── workspace-pinned, auto-spawned
               │
-      ┌───────┴────────┐
-      ▼                ▼
-   redb index    notify watcher
-   (symbols,     (150 ms debounce, gitignore-aware)
-    defs, refs)
+      ┌───────┴────────────────┐
+      ▼                        ▼
+   redb index             notify watcher
+   ┌─────────────────┐    (150 ms debounce,
+   │ files, defs,    │     gitignore-aware,
+   │ refs (v0.3),    │     poll fallback)
+   │ fid_refs,       │
+   │ sid_refs_out    │
+   └─────────────────┘
 ```
+
+The redb store carries both halves of the code graph: `defs` + `fid_defs`
+for "where is X defined?" and (v0.3+) `refs` + `fid_refs` + `sid_refs_out`
+for "who calls X?", "what does X reference?", and transitive impact
+queries. AST-precise via tags.scm on Rust/Python/Go/Ruby/JS/TS; regex
+fallback on the remaining five languages.
 
 Both halves are local-only and offline. The daemon is single-uid via
 SO_PEERCRED / LOCAL_PEERCRED, refuses to run as root, sets
@@ -83,7 +101,7 @@ port lands in v1.x).
 
 ```sh
 # Pick the right target for your platform
-VERSION=0.2.0-alpha.23
+VERSION=0.2.0-alpha.35
 TARGET=aarch64-apple-darwin
 URL="https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz"
 
@@ -118,22 +136,31 @@ claude mcp add rts -- target/release/rts-mcp --workspace .
 Other agents and the full troubleshooting matrix live in
 [docs/install.md](docs/install.md).
 
-## The four tools
+## The seven tools
 
 All `readOnlyHint=true`, `destructiveHint=false`, `openWorldHint=false`,
-`idempotentHint=true`. Full descriptions are pinned per protocol-v0 §7
-in [crates/rts-mcp/src/server.rs](crates/rts-mcp/src/server.rs).
+`idempotentHint=true`. Full descriptions (with explicit when-to-use-which
+prose) are pinned per protocol-v0 §7 in
+[crates/rts-mcp/src/server.rs](crates/rts-mcp/src/server.rs).
 
 | tool | input | returns |
 |---|---|---|
-| `outline_workspace` | `{ glob?, token_budget? }` | Token-budgeted structural map. Currently `INDEX_NOT_READY` until P8 PageRank ships. |
-| `find_symbol` | `{ name, kind?, file? }` | List of matches with `qualified_name`, `kind`, `file`, byte range, `rank_score` (0.0 placeholder pre-P8). |
-| `read_symbol` | `{ name, file?, kind?, shape?, token_budget?, include_dependencies?, force_resend? }` | Body bytes + `content_version`. `shape: "signature"` lands with P8. |
+| `outline_workspace` | `{ glob?, token_budget?, mentioned_files?, mentioned_idents? }` | Token-budgeted structural map with file-level PageRank (Aider repo-map algorithm). |
+| `find_symbol` | `{ name? \| pattern?, kind?, file?, sort? }` | List of matches with `qualified_name`, `kind`, `file`, byte range, **real `rank_score`** (symbol-level PageRank). `pattern` is glob (`*`/`?`); default sort is descending rank; pass `sort: "lexical"` to opt out. |
+| `find_callers` | `{ name, kind?, file? }` | Direct callers — one redb lookup. Each entry carries the enclosing fn's `qualified_name`, `kind`, def range, call-site range, and `rank_score`. AST-precise; replaces `rg <name>`. |
+| `impact_of` | `{ name, depth?, token_budget?, max_nodes?, exclude_test_paths? }` | Transitive caller closure (BFS depth N, default 2, max 4). Refactor blast-radius query. Four independent truncation flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell agents *why* a result is partial. |
+| `read_symbol` | `{ name, file?, kind?, shape?, token_budget?, include_dependencies?, include_callers?, force_resend? }` | Body bytes + `content_version` + optional tree-shaken dependency closure (alpha.22+) + optional direct callers (alpha.32+). |
+| `read_symbol_at` | `{ file, line, column?, shape?, token_budget?, include_dependencies?, include_callers? }` | Line-anchored read for compiler-error flow (`error[E0308] --> src/foo.rs:42:18`). Same wire shape as `read_symbol`. |
 | `read_range` | `{ file, start_line, end_line, token_budget? }` | Line slice + `content_version`. For stack traces, diff hunks. |
 
 Every body-returning response carries a `content_version`
 (`blake3(content)[:16]@mtime_ns+index_generation`) so v2 safe-edit flows
 can detect stale views.
+
+The 18 capability strings the daemon advertises via `Daemon.Ping` —
+including the four v0.3 ones (`find_callers`, `impact_of`,
+`read_symbol.include_callers`, `pagerank_symbolwise`) — are documented
+in [docs/protocol-v0.md](docs/protocol-v0.md) §4.1 + Appendix F.
 
 ## Crate layout
 
@@ -172,7 +199,7 @@ bench harness is operator-only.
 The bench is the only operator-facing CLI in the v0.2 stack.
 
 ```sh
-# List the 5 P9 tasks
+# List the baseline + scenario tasks
 target/release/rts-bench task list
 
 # Run a single task (writes bench-<short-sha>.json)
@@ -191,11 +218,28 @@ target/release/rts-bench task run summarize_module \
     --workspace ./crates/rts-core \
     --file src/analyzer.rs \
     --line-budget 50
+
+# Scenario: real-agent-loop benches (compiler-error + refactor-impact)
+target/release/rts-bench task run scenario_compiler_fix \
+    --workspace ./crates/rts-core \
+    --file src/parser.rs --line 200 --referenced-symbol Symbol
+target/release/rts-bench task run scenario_refactor_impact \
+    --workspace ./crates/rts-core \
+    --symbol parse --direct-callers analyze_file,build_index
+
+# One-shot queries (no bench scaffolding; talks straight to the daemon)
+target/release/rts-bench query find-symbol  --pattern '*'           # top symbols by rank
+target/release/rts-bench query find-callers --name parse            # direct callers
+target/release/rts-bench query impact-of    --name parse --depth 2  # transitive callers
 ```
 
-Tasks 3 (`find_callers`) and 5 (`fix_imports`) need the P8 reference
-graph and are scaffolded but stubbed; they emit `NotImplemented` with a
-pointer to the relevant plan slice.
+The two scenario tasks (`scenario_compiler_fix` from alpha.24,
+`scenario_refactor_impact` from v0.3 alpha.35) measure agent-loop
+token reduction against a `rg + read every file` baseline. The legacy
+`find_callers` / `fix_imports` baseline tasks were superseded by the
+real `Index.FindCallers` method (alpha.32) and the
+`scenario_refactor_impact` scenario; running them now surfaces a
+pointer to the new commands.
 
 ## Languages supported (rts-core)
 
@@ -208,10 +252,14 @@ Swift. Kotlin is paused pending an upstream `tree-sitter 0.26+` release
 - [docs/install.md](docs/install.md) — install + Claude Code / Cursor /
   Cline / Aider / Continue snippets.
 - [docs/protocol-v0.md](docs/protocol-v0.md) — daemon ↔ MCP wire-protocol
-  specification (the contract both halves implement).
+  specification (the contract both halves implement). Includes the
+  18-capability advertisement list (§4.1), per-method schemas (§7),
+  and per-alpha wire-shape evolution (Appendix F).
 - [docs/plans/](docs/plans/) — active and historical implementation
-  plans. The v0.2 pivot plan is
+  plans. The v0.2 pivot plan:
   [2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md](docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md).
+  The v0.3 code-graph-KB plan (complete):
+  [2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md).
 - [CHANGELOG.md](CHANGELOG.md) — per-alpha release notes.
 
 ## Contributing
