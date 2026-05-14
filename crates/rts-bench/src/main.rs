@@ -710,14 +710,14 @@ async fn run_latency(
         crate::mcp_runner::McpSession::spawn(&rts_mcp_bin, &rts_daemon_bin, &workspace, &extra_env)
             .await?;
 
-    // Wait for the writer to commit at least one symbol (initial walk
-    // completed). `tools_call`'s retry loop handles INDEX_NOT_READY,
-    // so a single call here is enough — when it returns the index is
-    // hot enough to query.
-    let probe = &symbols[0];
-    let _ = session
-        .tools_call("find_symbol", serde_json::json!({ "name": probe }), 30)
-        .await?;
+    // Cold gate: wait until the writer's initial walk plateaus on
+    // `outline_workspace.files_considered`. Matches the signal
+    // `rts-bench footprint` uses for `full_index_time_ms`. The
+    // previous single-symbol probe only proved ONE symbol was
+    // indexed; subsequent random warm picks could (and did) hit
+    // `SYMBOL_NOT_FOUND` and silently drag the measured p95 downward.
+    // See CHANGELOG `[Unreleased]` for the discovery writeup.
+    cold_gate_wait_for_walk_settled(&mut session).await?;
 
     println!(
         "latency: workspace={} files={} symbols={} queries={} cold_count={} read_symbol_mode={}",
@@ -775,6 +775,77 @@ async fn run_latency(
     latency::write_report(&out_path, &report)?;
     println!("wrote {}", out_path.display());
     Ok(())
+}
+
+/// Poll interval for the cold gate. Indexing is bursty (writer drains
+/// in 200 ms batches per protocol-v0 §15.6), so polling tighter than
+/// this wastes daemon CPU on hot-loop calls.
+const COLD_GATE_POLL_MS: u64 = 200;
+
+/// Hard ceiling on the cold-gate wait. Indexing 100k LOC finishes
+/// in ~1.4 s per `rts-bench footprint`, so 60 s is ample headroom.
+const COLD_GATE_TIMEOUT_SECS: u64 = 60;
+
+/// Wait for the writer to settle on its initial walk. Uses the same
+/// stability signal as `rts-bench footprint`: poll
+/// `outline_workspace.files_considered` every 200 ms and return when
+/// two consecutive rounds report the same non-zero count.
+///
+/// **Why this matters for measurement validity.** The pre-existing
+/// single-symbol cold probe at this site (find_symbol on
+/// `symbols[0]`) only proved that ONE symbol was indexed — the
+/// walker could still be mid-walk when warm queries began, and
+/// subsequent random picks would hit `SYMBOL_NOT_FOUND` (a
+/// microsecond-fast error response) that silently dragged the
+/// measured p50/p95 downward. The session-2026-05-14 dogfooding
+/// writeup in the CHANGELOG documents the discovery.
+///
+/// The matching change in `latency::build_report` computes
+/// percentiles over `.ok` samples only, so even if the writer races
+/// the bench on a pathological workspace, the latency stats reported
+/// describe real responses rather than a mix of real responses + fast
+/// errors.
+async fn cold_gate_wait_for_walk_settled(
+    session: &mut crate::mcp_runner::McpSession,
+) -> Result<()> {
+    let deadline =
+        std::time::Instant::now() + std::time::Duration::from_secs(COLD_GATE_TIMEOUT_SECS);
+    let mut last_seen: i64 = -1;
+    let mut round = 0u32;
+    loop {
+        round += 1;
+        let call = session
+            .tools_call(
+                "outline_workspace",
+                serde_json::json!({ "token_budget": 256 }),
+                30,
+            )
+            .await?;
+        let files_considered = if call.is_error {
+            -1
+        } else {
+            call.result_body
+                .as_ref()
+                .and_then(|v| v.get("files_considered").and_then(|x| x.as_i64()))
+                .unwrap_or(-1)
+        };
+        if files_considered > 0 && files_considered == last_seen {
+            eprintln!("cold gate: walk settled at {files_considered} files (round {round})");
+            return Ok(());
+        }
+        last_seen = files_considered;
+        if std::time::Instant::now() >= deadline {
+            eprintln!(
+                "cold gate: timed out at {COLD_GATE_TIMEOUT_SECS}s, last \
+                 files_considered={files_considered}. Continuing anyway — the \
+                 latency report's per-bucket `.ok` count will show whether the \
+                 warm queries hit real symbols. (See CHANGELOG entry for the \
+                 walk-truncation bug surfaced in session-2026-05-14.)"
+            );
+            return Ok(());
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(COLD_GATE_POLL_MS)).await;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

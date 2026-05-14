@@ -312,17 +312,30 @@ pub fn build_report(
     let warm = &samples[(cold_count as usize).min(samples.len())..];
 
     let by_kind = |bucket: &[Sample], kind: QueryKind| -> KindStats {
+        // Percentiles describe response latency — they only make sense
+        // over successful responses. Including error responses (e.g.
+        // `SYMBOL_NOT_FOUND` returns in microseconds) silently drags
+        // p50/p95/p99 downward and corrupts comparisons. The CHANGELOG
+        // entry "Honest dogfooding finding — read_symbol .ok rate"
+        // documents how this masked a real bench-validity issue.
+        //
+        // `count` still reflects the total attempted, and `ok` reports
+        // how many of those succeeded. A caller seeing `ok` << `count`
+        // knows the per-bucket numbers describe a small sub-sample,
+        // not a corrupted mix.
         let mut bucket_samples: Vec<u128> = bucket
             .iter()
-            .filter(|s| matches!((s.kind, kind), (a, b) if a.as_str() == b.as_str()))
+            .filter(|s| s.kind.as_str() == kind.as_str() && s.ok)
             .map(|s| s.elapsed_micros)
             .collect();
-        let mut stats = stats_of(&mut bucket_samples);
-        let ok = bucket
+        let attempted = bucket
             .iter()
-            .filter(|s| s.kind.as_str() == kind.as_str() && s.ok)
+            .filter(|s| s.kind.as_str() == kind.as_str())
             .count() as u32;
-        stats.ok = ok;
+        let mut stats = stats_of(&mut bucket_samples);
+        stats.count = attempted;
+        // `stats_of` set `stats.ok = bucket_samples.len()` already;
+        // that's exactly the count of successful samples in this bucket.
         stats
     };
 
@@ -334,9 +347,16 @@ pub fn build_report(
         cold_map.insert(key, by_kind(cold, *kind));
     }
 
-    let mut all_warm: Vec<u128> = warm.iter().map(|s| s.elapsed_micros).collect();
+    // Same .ok-only invariant for the aggregate: warm_all percentiles
+    // describe successful warm responses, not a mix of real responses
+    // and fast errors.
+    let mut all_warm: Vec<u128> = warm
+        .iter()
+        .filter(|s| s.ok)
+        .map(|s| s.elapsed_micros)
+        .collect();
     let mut warm_all = stats_of(&mut all_warm);
-    warm_all.ok = warm.iter().filter(|s| s.ok).count() as u32;
+    warm_all.count = warm.len() as u32;
 
     LatencyReport {
         version: 1,
@@ -468,6 +488,55 @@ mod tests {
         // these without bumping the report version.
         assert_eq!(ReadSymbolMode::Signature.as_str(), "signature");
         assert_eq!(ReadSymbolMode::BodyWithDeps.as_str(), "body_with_deps");
+    }
+
+    #[test]
+    fn percentiles_exclude_errored_samples() {
+        // Eight samples, four genuine (1, 2, 3, 4 ms) and four
+        // microsecond-fast errors (the SYMBOL_NOT_FOUND shape). The
+        // pre-fix code computed percentiles over all eight and
+        // reported a p50 around 500 µs — completely fictional.
+        // Post-fix, percentiles describe only the four real responses.
+        let real = [1_000u128, 2_000, 3_000, 4_000];
+        let errs = [10u128, 12, 15, 20];
+        let samples: Vec<Sample> = real
+            .iter()
+            .map(|&us| Sample {
+                kind: QueryKind::ReadSymbol,
+                elapsed_micros: us,
+                ok: true,
+            })
+            .chain(errs.iter().map(|&us| Sample {
+                kind: QueryKind::ReadSymbol,
+                elapsed_micros: us,
+                ok: false,
+            }))
+            .collect();
+        let report = build_report(
+            Path::new("/tmp/synth"),
+            1_000,
+            42,
+            0, // no cold prefix — all eight are "warm"
+            ReadSymbolMode::BodyWithDeps,
+            &samples,
+        );
+        let rs = report.warm.get("read_symbol").unwrap();
+        assert_eq!(rs.count, 8, "count reports attempted samples");
+        assert_eq!(rs.ok, 4, "ok reports successful samples");
+        // p50 over [1000, 2000, 3000, 4000] = 2000 (nearest-rank: idx
+        // ceil(0.5*4)-1 = 1, value 2000). Pre-fix this was ~15 (the
+        // median of all eight).
+        assert_eq!(
+            rs.p50_micros, 2_000,
+            "p50 should describe real responses (2 ms), not be diluted \
+             by SYMBOL_NOT_FOUND errors"
+        );
+        // p95 over [1000..=4000] = 4000 (idx ceil(0.95*4)-1 = 3).
+        assert_eq!(rs.p95_micros, 4_000);
+        // warm_all aggregate also follows the .ok-only rule.
+        assert_eq!(report.warm_all.count, 8);
+        assert_eq!(report.warm_all.ok, 4);
+        assert_eq!(report.warm_all.p50_micros, 2_000);
     }
 
     #[test]
