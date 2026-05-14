@@ -1,0 +1,20 @@
+# Local quality-of-life hook: catch fmt + clippy drift before CI does.
+# Pre-push only — interim commits are fine to ship.
+#
+# Activation:
+#   - If `lefthook` is on PATH and you use a global git hooks path (or
+#     have run `lefthook install`), this fires automatically.
+#   - To bypass for a single push: `LEFTHOOK=0 git push`.
+#   - To skip one command:        `LEFTHOOK_EXCLUDE=clippy git push`.
+#
+# Clippy is scoped to the actively-developed v0.2 crates; the legacy
+# `rts-core` lib has known latent warnings that the CI workflow also
+# runs in advisory mode (see .github/workflows/ci.yml).
+
+pre-push:
+  parallel: false
+  commands:
+    fmt:
+      run: cargo fmt --all -- --check
+    clippy:
+      run: cargo clippy -p rts-daemon -p rts-mcp -p rts-bench --all-targets
