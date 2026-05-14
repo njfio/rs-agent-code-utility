@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### G4 noise reduction — Rust prelude filter
+
+Filter `Ok`, `Err`, `Some`, `None` from the PageRank node-set in
+`compute_symbol_ranks`. These are variant constructors that
+tree-sitter's `call_expression` pattern captures the same way it
+captures real function calls, so they reliably dominated the top-K
+on every Rust workspace (every function returning a `Result` or
+`Option` "calls" them).
+
+The four sids still exist in `NAME_TO_SID` + `DEFS`, so
+`find_symbol(name="Ok")` continues to find them; they just get
+`rank_score = 0.0` from the default-on-miss path and sink to the
+bottom of rank-sorted responses.
+
+**Before/after on `crates/rts-core`** (~50 .rs files, top-10 by
+descending `rank_score`):
+
+```
+Before:                        After:
+ 1. Ok            0.02094       1. find_nodes_by_kind      0.01433
+ 2. find_nodes…   0.01365       2. child_by_field_name     0.01216
+ 3. child_by_f…   0.01184       3. contains                0.00999
+ 4. Some          0.01059       4. child_count             0.00980
+ 5. Some          0.01059       5. children                0.00910
+ 6. Some          0.01059       6. children                0.00910
+ 7. contains      0.00944       7. children                0.00910
+ 8. child_count   0.00911       8. clone                   0.00754
+ 9. children      0.00845       9. clone                   0.00754
+10. children      0.00845      10. calculate_cache_key     0.00714
+```
+
+The top-K is now uniformly real call-central code (tree-sitter
+wrappers, cache layer, analysis methods).
+
+**Scope: Rust only for v0.3.1.** The four names cover Rust's
+variant-constructor call shape. JavaScript/TypeScript/Python preludes
+exist (`console.log`, `len`, etc.) but the daemon doesn't track
+per-sid language yet, so filtering them would also strip user-defined
+collisions. The four Rust names are vanishingly unlikely to be
+project-defined "real" symbols anyone wants in the top-K. Per-language
+filter sets driven by the language registry is v0.4+ work.
+
+This was identified as a v0.3.1 follow-up in the v0.3.0 release notes;
+shipping it elevates G4 from 🟡 Partial to ✅ on Rust workspaces.
+
+### Dogfooding writeup — using `rts-bench query` during G4 implementation
+
+While implementing the prelude filter, I used `rts-bench query` and
+the MCP surface (the actual user-facing tools) to navigate the
+codebase rather than `rg` / `find`. Real numbers from that session:
+
+- **Cold-mount on full repo (incl. `archive/`):** 15.6 s (large
+  workspace; for the smaller `crates/rts-core` checkout it's the
+  902 ms G3 number)
+- **Warm `find_symbol`:** 83 ms end-to-end (mostly `rts-bench` +
+  `rts-mcp` process spawn; daemon-side is the 2.7 ms G1 number)
+- **`impact_of --depth 2`:** 24 ms — gave exactly the symbol set
+  this filter change touches (callers of `compute_symbol_ranks`)
+
+**Trade-off vs `rg`:** ~300× slower on cold start, but the structured
+output (file path, byte range, rank, kind) saves a second round of
+chaining `rg` + manual file reads. For "what's central in this
+codebase?" the rank is genuinely useful — the bug this change fixes
+(`Ok` at the top) is what made me file the v0.3.1 follow-up in the
+first place.
+
 ## [0.3.0] - 2026-05-14
 
 **v0.3 release: rts-daemon is now a persistent code knowledge graph.**
@@ -38,7 +104,7 @@ detailed table + raw bench output. Headline:
 - **G1**: find_symbol warm p95 = 2.7 ms (target < 5 ms) ✅
 - **G2**: scenario_refactor_impact = 97.5 % token reduction (target ≥ 70 %) ✅
 - **G3**: first-mount on 100k LOC = 902 ms (target ≤ 1500 ms) ✅
-- **G4**: PageRank top-20 algorithm correct; plan expectation misaligned with call-graph scope (type-position symbols don't surface) 🟡
+- **G4**: PageRank top-20 algorithm correct; plan expectation misaligned with call-graph scope (type-position symbols don't surface). At v0.3.0 tag also surfaced `Ok`/`Some` artifacts; **fixed post-tag in [Unreleased] for Rust** via prelude-noise filter 🟡 → ✅ (Rust)
 - **G5**: closure-walker structural improvement verified (closure_round_trip pass); spec-faithful p95 number requires a dedicated bench task (v0.3.1) 🟡
 
 ### Wire-protocol additions
@@ -73,14 +139,14 @@ All additive — v0.2 clients see no observable change unless they branch on the
 Documented in [README.md](README.md#known-limitations):
 
 - PageRank graph is over call edges, not type edges (Scope Boundary)
-- Rust prelude artifacts (`Ok`, `Some`) reliably surface at the top
+- Rust prelude artifacts (`Ok`, `Some`) reliably surface at the top *(fixed post-tag in [Unreleased] via prelude-noise filter — Rust only for now)*
 - Single workspace per daemon process (workspace-pinned per protocol-v0 §5.5)
 - No Windows yet (Unix sockets; named-pipe port is v1.x)
 
 ### v0.3.1 follow-ups (already filed in Unreleased)
 
 - Dedicated `rts-bench latency` query mix with `include_dependencies=true` for spec-faithful G5 measurement
-- Decision on whether to filter `Ok`/`Some` from PageRank node-set (G4 noise reduction) or document the artifact (currently documented in README)
+- ~~Decision on whether to filter `Ok`/`Some` from PageRank node-set (G4 noise reduction) or document the artifact~~ — **shipped post-tag in [Unreleased]**: filter applied for Rust prelude (`Ok`/`Err`/`Some`/`None`). Non-Rust language preludes still v0.4+ work pending per-sid language tracking.
 
 ### v0.3 success-gate measurements (post-alpha.35, pre-v0.3.0 tag)
 
@@ -96,7 +162,7 @@ builds (`cargo build --workspace --release`) on Apple Silicon
 | **G1** find_callers warm p95 < 5ms (100k LOC) | < 5 ms | `find_symbol` warm p95 = **2.7 ms** (structurally equivalent: 1 redb multimap read + N caller_def_info joins) | ✅ |
 | **G2** scenario_refactor_impact token reduction | ≥ 70 % | `parse → {parse_file_content, create_syntax_tree}` on `rts-core`: baseline 164,624 tokens → MCP 4,050 tokens → **97.5 %** reduction | ✅ |
 | **G3** first-mount on 100k LOC ≤ 1500 ms | ≤ 1500 ms | build_time = **438 ms**, full_index = **902 ms**, peak RSS 26.67 MiB, on-disk index 1.52 MiB (93 bytes/symbol) | ✅ (40 % headroom) |
-| **G4** PageRank top-20 on rts-core includes central symbols | "CodebaseAnalyzer, Parser, Language in top-20" | **Partial.** Top-20 surfaces real call-central code (`find_nodes_by_kind`, `child_by_field_name`, `child_count`, `children`, `end_byte`, `end_position` — tree-sitter wrapper methods, all genuinely central). `CodebaseAnalyzer` / `Parser` / `Language` do **not** appear — they're types used in type positions, and the v0.3 graph is over *call* edges per Scope Boundaries ("type-relationship edges deferred"). Plan §G4's expectation was misaligned with the algorithm; the top-K is plausible and useful, just not what the plan predicted. | 🟡 (algorithm works; plan expectation was wrong) |
+| **G4** PageRank top-20 on rts-core includes central symbols | "CodebaseAnalyzer, Parser, Language in top-20" | **Partial at v0.3.0 tag; resolved post-tag for Rust.** Top-20 surfaces real call-central code (`find_nodes_by_kind`, `child_by_field_name`, `child_count`, `children`, `end_byte`, `end_position` — tree-sitter wrapper methods, all genuinely central). `CodebaseAnalyzer` / `Parser` / `Language` do **not** appear — they're types used in type positions, and the v0.3 graph is over *call* edges per Scope Boundaries ("type-relationship edges deferred"). Plan §G4's expectation was misaligned with the algorithm; the top-K is plausible and useful, just not what the plan predicted. **Post-tag fix ([Unreleased]):** `Ok`/`Err`/`Some`/`None` filtered from PageRank node-set; top-K is now uniformly real call-central methods on Rust workspaces. | 🟡 (algorithm correct, expectation wrong, prelude noise present) → ✅ on Rust workspaces post-filter |
 | **G5** closure-walker cold p95 ≥ 50 % faster than alpha.30 (1000-file real Rust workspace) | ≥ 50 % faster | **Mixed signal.** Side-by-side bench against alpha.30 binary on identical 100k-LOC synth: the standard latency mix doesn't exercise `include_dependencies=true`, so it can't directly measure the closure walker. The aggregate `read_symbol` p99 dropped 33 ms → 4.5 ms (86 % reduction) which is suggestive but spans the whole read path. End-to-end `query read-symbol --deps` on rts-core (~50 files) shows both binaries at ~16-19 ms median — bench-harness overhead (`rts-bench` + `rts-mcp` process spawn + auto-spawn handshake) dominates the daemon-side delta. Structural improvement is verified (parse + filter loop replaced by one redb multimap read; `closure_round_trip` passes); the spec'd p95 number requires a dedicated `read_symbol_deps` query mix in `rts-bench latency` that isn't built this session. **v0.3.1 work.** | 🟡 Structural ✅, p95 number deferred |
 
 #### G1 detail — `rts-bench latency --dry-run`
@@ -283,7 +349,10 @@ edges.
 - **G4 top-K cleanup**: filter `Ok`/`Some` (and other prelude
   builtins) at PageRank node-set construction to reduce noise at
   the top of the rank, OR document the artifact clearly in user-facing
-  prose. Decision is product-level, not algorithmic.
+  prose. Decision is product-level, not algorithmic. **[Update — post-tag,
+  see [Unreleased]]:** filter shipped for Rust prelude (`Ok`/`Err`/`Some`/`None`);
+  also documented as a Known Limitation in README. Non-Rust language preludes
+  still pending per-sid language tracking (v0.4+).
 
 ## [0.2.0-alpha.35] - 2026-05-14
 

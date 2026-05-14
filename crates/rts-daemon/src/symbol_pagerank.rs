@@ -144,14 +144,49 @@ impl std::fmt::Debug for SymbolPagerankCache {
     }
 }
 
+/// Names that should be excluded from the PageRank node-set. The
+/// algorithm is over *call edges*, and tree-sitter's `call_expression`
+/// pattern captures variant constructors like `Ok(x)` and `Some(x)`
+/// the same way it captures real function calls. That makes them
+/// reliably dominate the top-K rank on Rust workspaces — they're
+/// "called" by every function that returns a Result or Option, which
+/// is most of them.
+///
+/// Filtering at the node-set means the sid still exists in
+/// `NAME_TO_SID` + `DEFS` (so `find_symbol(Ok)` still works) but the
+/// PageRank graph doesn't include them as nodes; they get `0.0`
+/// from the `rank_for` default and sink to the bottom of any
+/// rank-sorted response.
+///
+/// Scope (v0.3.1):
+/// - **Rust only** for now. JavaScript/TypeScript/Python preludes are
+///   real but we'd need per-language filtering (currently the daemon
+///   doesn't track per-sid language). A user-defined `Ok` or `Some`
+///   in non-Rust code would still get filtered — acceptable trade-off
+///   for v0.3.1; the four names are vanishingly unlikely to be
+///   project-defined "real" symbols anyone wants in the top-K.
+/// - The four variant constructors are the only AST-visible call-shape
+///   prelude items. Container types (`Vec`, `String`, etc.) appear in
+///   *type* positions, not call positions, so the call-graph doesn't
+///   include them anyway.
+///
+/// Documented as a known limitation in the README; future v0.4+ work
+/// extends this to per-language filter sets driven by the language
+/// registry.
+const RUST_PRELUDE_NOISE: &[&str] = &["Ok", "Err", "Some", "None"];
+
+fn is_prelude_noise_name(name: &str) -> bool {
+    RUST_PRELUDE_NOISE.contains(&name)
+}
+
 /// Compute symbol-level PageRank by enumerating workspace-defined
 /// sids, building the edge set from `SID_REFS_OUT`, applying Aider's
 /// edge-weight recipe, and running [`pagerank_compute`].
 ///
 /// Returns the ranks keyed by sid; sids absent from this map have
-/// rank 0 by convention (e.g. they're external, unindexed, or
-/// belong to a future generation). Empty workspaces return an empty
-/// map without error.
+/// rank 0 by convention (e.g. they're external, unindexed, prelude
+/// noise per [`is_prelude_noise_name`], or belong to a future
+/// generation). Empty workspaces return an empty map without error.
 ///
 /// `generation` is folded into the result so cache writers can pair
 /// the ranks with the generation they were computed against. The
@@ -162,7 +197,19 @@ pub fn compute_symbol_ranks(store: &Store, generation: u64) -> anyhow::Result<Sy
     // Enumerate workspace-defined sids and their per-sid def counts.
     // The def count drives the "ubiquitous" edge-weight multiplier
     // (>5 defs across the workspace → ×0.1 dampening).
-    let sid_info = collect_workspace_sids(store).context("collect_workspace_sids")?;
+    //
+    // v0.3.1: filter Rust prelude noise (Ok/Err/Some/None) from the
+    // node-set. These reliably dominate the top-K on Rust workspaces
+    // because variant constructors parse as call_expression and
+    // every function that returns a Result/Option "calls" them.
+    // Excluded sids still exist in NAME_TO_SID + DEFS — `find_symbol`
+    // still finds them; they just get rank_score = 0.0 from the
+    // default and sink to the bottom of rank-sorted responses.
+    let all_sids = collect_workspace_sids(store).context("collect_workspace_sids")?;
+    let sid_info: Vec<(u32, String, u32)> = all_sids
+        .into_iter()
+        .filter(|(_sid, name, _def_count)| !is_prelude_noise_name(name))
+        .collect();
     if sid_info.is_empty() {
         return Ok(SymbolRanks {
             generation,
@@ -300,6 +347,25 @@ fn count_calls_between(store: &Store, caller_sid: u32, callee_sid: u32) -> anyho
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn prelude_noise_filter_matches_variant_constructors() {
+        // The four AST-visible variant constructors that
+        // call_expression captures from Rust source.
+        for n in &["Ok", "Err", "Some", "None"] {
+            assert!(
+                is_prelude_noise_name(n),
+                "{n} should be filtered as prelude noise"
+            );
+        }
+        // Non-prelude names pass through.
+        for n in &["foo", "bar", "Result", "Option", "compute_symbol_ranks"] {
+            assert!(
+                !is_prelude_noise_name(n),
+                "{n} should NOT be filtered (we only filter the 4 variant constructors)"
+            );
+        }
+    }
 
     #[test]
     fn empty_workspace_returns_empty_ranks() {

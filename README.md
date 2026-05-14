@@ -187,16 +187,30 @@ tools), the top-K closely matches "what's central in this codebase."
 For type-heavy libraries, the top-K is "what's the busiest helper
 machinery" — useful but not the same answer.
 
-### Rust prelude artifacts at the top of the rank
+### Language-prelude artifacts (Rust filtered; others pending)
 
-On Rust workspaces, `Ok` and `Some` reliably appear near the top of
-`find_symbol(pattern="*")`. They're the AST-visible variant
-constructors in `Result::Ok(x)` and `Option::Some(x)`, which
-tree-sitter's `call_expression` pattern captures as call-shaped. They
-*are* genuinely high-fan-in (every function that returns a Result
-"calls" `Ok` to construct one), so the algorithm is correct.
-Filtering them at PageRank node-set construction would be language-
-specific noise reduction; v0.4+ candidate.
+Tree-sitter's `call_expression` pattern captures variant constructors
+the same way it captures real function calls. `Ok(x)`, `Err(e)`,
+`Some(x)`, `None` (used as a unit-variant constructor) all parse as
+calls, so they used to dominate the top-K of `find_symbol(pattern="*")`
+on Rust workspaces — every function returning a `Result` or `Option`
+"calls" them.
+
+**Fixed for Rust** (post-v0.3.0 [Unreleased]): the four Rust prelude
+names are filtered out of the PageRank node-set in
+`compute_symbol_ranks`. They still exist in the symbol table, so
+`find_symbol(name="Ok")` still finds them; they just get
+`rank_score = 0.0` and sink to the bottom of rank-sorted responses.
+The top-K on `crates/rts-core` now starts with `find_nodes_by_kind`,
+`child_by_field_name`, `contains`, `child_count`, `children`, etc. —
+uniformly real call-central methods.
+
+**Other languages: not yet filtered.** JavaScript / TypeScript /
+Python / etc. have analogous artifacts (`console.log`, `len`,
+`Promise.resolve`, etc.), but the daemon doesn't track per-sid
+language yet, so filtering them naively would also strip user-defined
+collisions. Per-language filter sets driven by the language registry
+is v0.4+ work.
 
 ### Single workspace per daemon process
 
