@@ -1238,31 +1238,33 @@ async fn read_symbol_body(
     // the remainder, and `closure_truncated` fires if any didn't fit.
     let (deps_value, closure_truncated, deps_truncated_names, dep_tokens) = if include_deps {
         let remaining_budget = budget.saturating_sub(body_tokens);
-        let root_owned = root.to_path_buf();
-        let store_arc = store_arc.clone();
-        let chosen_clone = chosen.clone();
-        // v0.3 U3 (alpha.33): closure::compute no longer needs the
-        // anchor body — outgoing refs come from the indexed
-        // SID_REFS_OUT table populated at commit time. body_text
-        // stays in scope for the body-text return.
+        // v0.3.x perf fix: removed `spawn_blocking` for the closure
+        // walk. The walk does redb reads (single-digit µs each), at
+        // most a few `std::fs::metadata` + `std::fs::read` calls
+        // (cached after the file_cache hit on first read in this
+        // call), and tree-sitter signature renders (CPU-bound but
+        // short — and now signature-cached across calls).
         //
-        // Clone the Arc into the blocking task so the signature
-        // cache survives across calls (Arc::clone is cheap; the
-        // Mutex inside is shared, not duplicated).
-        let state_cloned = state.clone();
-        let walk = tokio::task::spawn_blocking(move || {
-            crate::closure::compute(
-                &root_owned,
-                &store_arc,
-                &chosen_clone,
-                remaining_budget,
-                &state_cloned.signature_cache,
-            )
-        })
-        .await
-        .map_err(|e| {
-            ProtocolError::new(ErrorCode::InternalError, format!("closure join error: {e}"))
-        })?;
+        // Pre-fix: each call cost ~50-100 µs of spawn_blocking
+        // handoff (thread pool scheduling + Arc<JoinHandle> setup +
+        // await). On the warm path (bench measures), that's pure
+        // overhead — the underlying work doesn't block long enough
+        // to justify moving off the runtime. For a 200 µs closure
+        // walk, 50 µs of overhead is 25%.
+        //
+        // The trade-off: a true cold-disk read on the first call
+        // for a file could in principle block the runtime worker.
+        // In practice the OS page cache + the file_cache + the
+        // signature cache keep this rare; the daemon's other
+        // concurrent work (writer task) runs on its own task and
+        // doesn't share this thread's scheduler frame anyway.
+        let walk = crate::closure::compute(
+            root,
+            store_arc,
+            &chosen,
+            remaining_budget,
+            &state.signature_cache,
+        );
         mark!(t_section, "closure_walk");
         let value = crate::closure::to_wire_value(&walk.dependencies);
         (

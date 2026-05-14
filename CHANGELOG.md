@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Read-symbol perf — remove `spawn_blocking` from closure walk (additional 21% p95 win)
+
+Follow-up to the content_version + signature caches. With those in,
+profiling showed `closure_walk` was still spending ~50-100 µs per
+call on `tokio::task::spawn_blocking` overhead (thread pool handoff
++ `JoinHandle` setup + `await`). On the warm bench path, that's
+pure overhead — the underlying work (redb reads + occasional
+`std::fs::read` + tree-sitter renders) doesn't block long enough
+to justify moving off the runtime.
+
+**Change:** `read_symbol`'s closure walk now calls
+`crate::closure::compute` synchronously instead of through
+`spawn_blocking`. The caller (`read_symbol`'s `dispatch` task) is
+already its own per-connection tokio task — blocking here doesn't
+starve the runtime, it just stops one in-flight request from
+yielding mid-walk.
+
+**Trade-off accepted:** a true cold-disk read on the first call
+for a file could in principle block the runtime worker. In practice:
+
+- The file cache + the OS page cache + the signature cache keep
+  cold reads rare
+- The daemon's other concurrent work (writer task) runs on its own
+  tokio task and doesn't share this scheduler frame
+- 21% p95 win across all warm calls outweighs the worst-case cold-
+  read latency cost (still bounded by the per-request 30 s deadline)
+
+**Measured impact** on the same bench harness
+(`rts-bench latency --workspace crates/rts-core --queries 5000 --cold-count 500 --deps`):
+
+| Metric | With spawn_blocking | Sync (this change) | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 2269 µs | **2023 µs** | **−11 %** |
+| `read_symbol` p95 | 5829 µs | **4618 µs** | **−21 %** |
+| `read_symbol` p99 | 10831 µs | **8307 µs** | **−23 %** |
+
+**Cumulative session progress** (v0.3.0 release → now):
+
+| Metric | v0.3.0 release | After all fixes | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 3207 µs | **2023 µs** | **−37 %** |
+| `read_symbol` p95 | 7023 µs | **4618 µs** | **−34 %** |
+| `read_symbol` p99 | 11877 µs | **8307 µs** | **−30 %** |
+
+**Remaining gap to alpha.30:** alpha.30 read_symbol p95 = 974 µs.
+Post-fix v0.3 = 4618 µs. **Still 4.7× slower** (down from 7.2×
+pre-fix). Remaining structural gaps:
+
+- `find_symbol_resolve_loop` at 168 µs avg (N sequential redb reads
+  per dep — could batch)
+- Larger v0.3 JSON response shape (rank_score, content_version,
+  callers fields plumbed even when empty)
+
+The same `spawn_blocking` pattern is still used by
+`Index.ImpactOf` (BFS over the caller graph, line 792 in
+`methods/index.rs`) and `find_callers`'s rank computation (line
+1549). Those have larger per-call work, so the overhead matters
+less proportionally — left in for now; convert if profiling
+shows them on a hot path.
+
+Tests: 129 unit + 24 integration pass; no test changes needed.
+
 ### Read-symbol perf — content_version + signature caches (root-cause fix)
 
 Following the profile harness shipped in PR #45, this pass identifies
