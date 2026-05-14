@@ -283,7 +283,7 @@ impl Store {
             // We carry `(fid, file_defs)` between passes so the caller_sid
             // resolution in Pass 2 still has access to the file's own def
             // ranges.
-            let mut staged: Vec<(u32, Vec<(u32, u32, u32)>, Vec<RefHit>)> =
+            let mut staged: Vec<(u32, Vec<(u32, u32, u32, SymbolKind)>, Vec<RefHit>)> =
                 Vec::with_capacity(upserts.len());
 
             // Pass 1.
@@ -330,10 +330,15 @@ impl Store {
                 let meta_bytes = to_allocvec(&entry.meta).context("encode FileMeta")?;
                 files.insert(&fid, meta_bytes.as_slice())?;
 
-                // Track each def's (sid, range) so we can compute caller_sid
-                // for ref sites in this file. Smallest enclosing range wins
-                // — same policy as `pick_innermost_def` in `methods/index`.
-                let mut file_defs: Vec<(u32, u32, u32)> = Vec::with_capacity(entry.defs.len());
+                // Track each def's (sid, byte_range, kind) so we can
+                // compute caller_sid for ref sites in this file.
+                // `enclosing_caller_sid` filters by kind (only Function/
+                // Method/Module count as callers) so local-variable
+                // defs emitted alongside fn defs don't "steal" the
+                // innermost-enclosing lookup. See is_call_bearing_kind
+                // for the rationale.
+                let mut file_defs: Vec<(u32, u32, u32, SymbolKind)> =
+                    Vec::with_capacity(entry.defs.len());
 
                 for (name, mut def, kind) in entry.defs {
                     let existing_sid = name_to_sid.get(name.as_str())?.map(|v| v.value());
@@ -351,7 +356,7 @@ impl Store {
                     let def_bytes = to_allocvec(&def).context("encode DefSite")?;
                     defs.insert(&sid, def_bytes.as_slice())?;
                     fid_defs.insert(&fid, &sid)?;
-                    file_defs.push((sid, def.start, def.end));
+                    file_defs.push((sid, def.start, def.end, kind));
                 }
 
                 staged.push((fid, file_defs, entry.refs));
@@ -547,6 +552,17 @@ impl Store {
     }
 
     /// All references *into* a symbol — "who calls X, and where?"
+    /// Resolve `sid` → workspace symbol name via `SID_TO_NAME`. The
+    /// inverse of `sid_for_name`. Returns `Ok(None)` for unknown sids
+    /// (shouldn't happen with committed data). Used by `closure::compute`
+    /// (v0.3 U3) to resolve outgoing-edge callee sids back to names for
+    /// the wire shape.
+    pub fn name_for_sid(&self, sid: u32) -> anyhow::Result<Option<String>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let sid_to_name = txn.open_table(SID_TO_NAME)?;
+        Ok(sid_to_name.get(&sid)?.map(|v| v.value().to_string()))
+    }
+
     /// Resolve `name` → `callee_sid` via `NAME_TO_SID`. Returns
     /// `Ok(None)` for unknown names (external symbols / unindexed).
     /// Used by `Index.FindCallers` (U2') to convert the wire-level
@@ -954,14 +970,38 @@ fn drop_file_entries(
     Ok(())
 }
 
-/// Find the smallest enclosing def whose byte range covers `byte`.
-/// Returns the sid of the innermost containing def, or `None` when
-/// the byte is outside every def (file-scope statement). The list
-/// is the file's own defs as `(sid, start, end)` triples; smallest
-/// range (end - start) wins on ties.
-fn enclosing_caller_sid(file_defs: &[(u32, u32, u32)], byte: u32) -> Option<u32> {
+/// Find the smallest enclosing def whose byte range covers `byte`
+/// AND whose kind is "call-bearing" (Function, Method, Module —
+/// kinds that have a body which can contain call expressions).
+///
+/// **v0.3 U3 fix:** the rts-core analyzer emits local-variable
+/// defs (e.g. `let w = make_widget(...)`) as Symbols with byte
+/// ranges covering their RHS. Without a kind filter, those tiny
+/// variable ranges win the innermost-enclosing lookup and "steal"
+/// the caller_sid from the actual containing function. The fix
+/// restricts candidates to kinds that can plausibly contain a
+/// call site:
+///
+/// - `Function` / `Method` — the obvious cases.
+/// - `Module` — top-level statements at module scope. The
+///   analyzer doesn't always emit module-scope kinds in v0, so
+///   most file-scope calls still end up with `caller_sid = None`.
+///
+/// Non-call-bearing kinds explicitly excluded: `Struct`, `Enum`,
+/// `Trait`, `Type`, `Const`, `Static`, `Class`, and `Other` (which
+/// covers `Variable` and anything from the parser the SymbolKind
+/// enum doesn't map cleanly).
+///
+/// Returns `None` when no call-bearing def covers the byte — the
+/// caller stores `caller_sid: None` in the `RefSite`, and the ref
+/// won't appear in `SID_REFS_OUT` (correct: a file-scope ref has
+/// no caller to key on).
+fn enclosing_caller_sid(file_defs: &[(u32, u32, u32, SymbolKind)], byte: u32) -> Option<u32> {
     let mut best: Option<(u32, u32)> = None; // (sid, range_size)
-    for &(sid, start, end) in file_defs {
+    for &(sid, start, end, kind) in file_defs {
+        if !is_call_bearing_kind(kind) {
+            continue;
+        }
         if byte >= start && byte < end {
             let span = end.saturating_sub(start);
             if best.map(|(_, b)| span < b).unwrap_or(true) {
@@ -970,6 +1010,17 @@ fn enclosing_caller_sid(file_defs: &[(u32, u32, u32)], byte: u32) -> Option<u32>
         }
     }
     best.map(|(sid, _)| sid)
+}
+
+/// Whether a `SymbolKind` represents something that can *contain*
+/// call expressions in its body. Used by `enclosing_caller_sid` to
+/// filter out local-variable / type-alias / const defs that the
+/// analyzer happens to emit alongside fn defs.
+fn is_call_bearing_kind(kind: SymbolKind) -> bool {
+    matches!(
+        kind,
+        SymbolKind::Function | SymbolKind::Method | SymbolKind::Module
+    )
 }
 
 fn u32_from_le_slice(slice: &[u8]) -> Option<u32> {
@@ -1173,6 +1224,48 @@ mod tests {
             visibility: Visibility::Public,
             kind: SymbolKind::Function,
         }
+    }
+
+    #[test]
+    fn enclosing_caller_sid_skips_non_call_bearing_kinds() {
+        // Regression test for the v0.3 U3 bug: the rts-core analyzer
+        // emits local-variable defs (e.g. `let w = make_widget(...)`)
+        // as Symbols with byte ranges covering their RHS. Before the
+        // is_call_bearing_kind filter, those tiny variable ranges
+        // would "steal" the innermost-enclosing lookup from the
+        // actual containing function — the ref's caller_sid would
+        // point at the let-binding instead of the enclosing fn, and
+        // SID_REFS_OUT[fn_sid] would silently drop the edge.
+        //
+        // Setup:
+        //   fn_def:  sid=10, bytes [0..100), kind=Function
+        //   var_def: sid=20, bytes [40..60), kind=Other (the let)
+        // A ref at byte 50 should attribute to fn_def (sid=10),
+        // *not* the let-binding (sid=20), even though the let's
+        // range is smaller.
+        let file_defs: Vec<(u32, u32, u32, SymbolKind)> = vec![
+            (10, 0, 100, SymbolKind::Function),
+            (20, 40, 60, SymbolKind::Other), // local let-binding shape
+        ];
+        let caller = enclosing_caller_sid(&file_defs, 50);
+        assert_eq!(
+            caller,
+            Some(10),
+            "non-call-bearing kinds must not steal caller_sid"
+        );
+
+        // A ref outside any def returns None.
+        assert_eq!(enclosing_caller_sid(&file_defs, 200), None);
+
+        // Methods + Modules also count as callers.
+        let nested: Vec<(u32, u32, u32, SymbolKind)> = vec![
+            (1, 0, 100, SymbolKind::Module),
+            (2, 10, 80, SymbolKind::Method),
+        ];
+        // Innermost: Method at [10..80) beats Module at [0..100) for a ref at 50.
+        assert_eq!(enclosing_caller_sid(&nested, 50), Some(2));
+        // For a ref at byte 5 (inside Module only), the Module wins.
+        assert_eq!(enclosing_caller_sid(&nested, 5), Some(1));
     }
 
     #[test]

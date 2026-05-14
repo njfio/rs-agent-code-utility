@@ -7,6 +7,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.33] - 2026-05-14
+
+**Closure walker reads indexed edges (v0.3 U3).** The alpha.22 closure
+walker re-parsed the anchor body on every call to extract identifier
+references. With the persistent ref graph from U1 (`SID_REFS_OUT`),
+outgoing edges are already indexed at write time — closure::compute
+now just reads `store.refs_from_symbol(anchor_sid)`. Same external
+behavior; one redb lookup replaces a tree-sitter parse + filter.
+
+### Bug fix: local-var defs no longer steal `caller_sid`
+
+While swapping the closure walker to the indexed path, the
+`closure_round_trip` integration test caught a latent bug introduced
+in U1's commit_batch: the rts-core analyzer emits local-variable defs
+(e.g. `let w = make_widget(...)`) as Symbols whose byte range covers
+their RHS. When the writer computed `caller_sid` for refs at commit
+time, `enclosing_caller_sid` picked the tiny let-binding range as the
+innermost-enclosing def — so refs inside that range got `caller_sid =
+let_w_sid` instead of `caller_sid = enclosing_fn_sid`.
+
+The bug was invisible in alpha.31 + alpha.32 because outline +
+FindCallers don't use SID_REFS_OUT (outline uses FID_REFS;
+FindCallers uses REFS keyed by callee). The closure walker is the
+first consumer of SID_REFS_OUT, and the broken edges manifested as
+missing entries in `ReadSymbol(include_dependencies=true)` responses.
+
+The fix filters `enclosing_caller_sid` candidates to "call-bearing"
+kinds: `Function`, `Method`, `Module`. Local-variable / type / const
+/ struct defs no longer compete for the innermost-enclosing lookup.
+
+### Added
+
+- **`Store::name_for_sid(sid)`** — inverse of `sid_for_name`. Resolves
+  `SID_TO_NAME[sid]` for closure walker's callee → name lookup.
+- **`store::tests::enclosing_caller_sid_skips_non_call_bearing_kinds`**
+  — regression test pinning the kind filter. Asserts (a) Function
+  beats Other-kind let-binding even when the let's range is smaller;
+  (b) refs outside any def return `None`; (c) Method beats Module
+  when both contain the ref.
+
+### Changed
+
+- **`crates/rts-daemon/src/closure.rs::compute`** — signature drops
+  the `anchor_body: &str` parameter (no longer needed; refs come
+  from the index). Reads `store.refs_from_symbol(anchor_sid)` and
+  resolves callee sids back to names via `store.name_for_sid`.
+  Behavior preserves the v0.2 wire shape; existing
+  `closure_round_trip` + `closure_precision` tests pass unchanged.
+- **`crates/rts-daemon/src/methods/index.rs::read_symbol_body`** —
+  call to `closure::compute` no longer passes `&body_owned`; one
+  fewer move + one less String allocation per closure walk.
+- **`crates/rts-daemon/src/store/mod.rs::enclosing_caller_sid`** —
+  signature changes from `(file_defs: &[(u32, u32, u32)], byte)` to
+  `(file_defs: &[(u32, u32, u32, SymbolKind)], byte)` to support the
+  call-bearing-kind filter. Internal helper; not part of the public
+  surface.
+- **`commit_batch`** carries the `(sid, start, end, kind)` quadruple
+  in the Pass 1 `staged` vector instead of the prior triple. No
+  behavioral change for fn/method-only files; **rebuilds the call
+  graph correctly** for files with local-variable defs (which v0.2
+  workspaces did *not* exercise via SID_REFS_OUT — first time U3
+  consumes it).
+
+### Performance
+
+- **`closure::compute` no longer parses the anchor body.** Pre-U3
+  cost per closure walk: `tree-sitter parse + tags.scm captures +
+  filter against all_def_names` (~1-5 ms for typical fn bodies).
+  Post-U3 cost: one multimap read on SID_REFS_OUT + one SID_TO_NAME
+  lookup per callee. Should drop closure-walker latency materially
+  on cold calls (plan G5 target: ≥ 50% faster than alpha.30; bench
+  validation lands with the alpha.34 perf-pass).
+- **No write-amp delta.** SID_REFS_OUT was already populated by U1
+  at commit time. U3 changes how it's *read*.
+
+### Wire-contract notes
+
+**Zero new wire surface.** Same response shape from
+`Index.ReadSymbol(include_dependencies=true)` — same fields, same
+`closure_truncated` flag, same `truncated_symbols` semantics. Agents
+that ignored the implementation detail (which they should) see no
+change. Capability strings unchanged.
+
+The latent local-var bug means some v0.3 alpha.31/32 daemons may
+have shipped incomplete SID_REFS_OUT data (anything indexed *before*
+this fix landed). The fix triggers automatically: any file the
+writer re-commits after upgrade picks up the corrected caller_sid.
+Workspaces that mount fresh after the alpha.33 binary upgrade are
+fully consistent. **Operators upgrading mid-session can force-rebuild
+the index** by deleting `$XDG_STATE_HOME/rts/<workspace_id>/db.redb`
+— the index is a derived cache per protocol-v0 §15.4. The
+SCHEMA_VERSION bump (v0.3 alpha.31 already did this) means no
+agent-visible failure if you don't rebuild; just an underpopulated
+`include_dependencies` response on files indexed pre-fix.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **541 passed, 0 failed, 0 ignored**
+  (was 540 in alpha.32; +1 from the new enclosing_caller_sid
+  regression test).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new warnings on
+  changed files.
+- `closure_round_trip` integration test (which broke during the U3
+  swap until the kind filter landed) now passes — both `make_widget`
+  and `format_widget` correctly appear as dependencies of `process`.
+
+### Not in this slice
+
+- **Symbol-level PageRank → `rank_score`** (U4): the `rank_score`
+  field in `find_symbol` and `find_callers` responses remains a
+  `0.0` placeholder. `pagerank_symbolwise` capability still
+  reserved in §4.2.
+- **`Index.ImpactOf` (transitive callers)** (U5): the closure
+  walker is depth-1 by design; transitive callers go through
+  ImpactOf which adds BFS over reverse edges.
+- **Bench-driven perf validation** of the G5 closure-cold-call
+  speedup target: deferred to a follow-up perf-pass alongside U4 /
+  U5 implementations.
+
+### Refs
+
+- v0.3 plan §Phase 4 / Deepening §C1: [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)
+- Prereq: PRs [#29 (U1)](https://github.com/njfio/rs-agent-code-utility/pull/29) + [#30 (U2')](https://github.com/njfio/rs-agent-code-utility/pull/30)
+
 ## [0.2.0-alpha.32] - 2026-05-14
 
 **Direct callers + `Index.FindCallers` (v0.3 U2').** The persistent

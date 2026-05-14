@@ -3,20 +3,33 @@
 //!
 //! ### What this does
 //!
-//! Given an anchor symbol the agent asked for, walk its body for
-//! identifier references and surface each referenced symbol as a
-//! lightweight dep entry: `qualified_name`, `kind`, `file`, `range`,
-//! and a rendered `signature`. This lets agents do their work in one
-//! round trip instead of N `Index.FindSymbol` + `Index.ReadSymbol`
-//! follow-ups — a measurable token-reduction win on the §P9 baseline
-//! tasks (`get_body`, `find_callers`, `summarize_module`).
+//! Given an anchor symbol the agent asked for, look up its outgoing
+//! references via the persistent ref graph (alpha.31 U1) and surface
+//! each referenced symbol as a lightweight dep entry:
+//! `qualified_name`, `kind`, `file`, `range`, and a rendered
+//! `signature`. This lets agents do their work in one round trip
+//! instead of N `Index.FindSymbol` + `Index.ReadSymbol` follow-ups —
+//! a measurable token-reduction win on the §P9 baseline tasks
+//! (`get_body`, `summarize_module`, etc.).
+//!
+//! ### v0.3 U3 — indexed-edge swap
+//!
+//! Before alpha.33, this module re-parsed the anchor body on every
+//! call via `crate::refs::references_for_path` and filtered against
+//! the workspace-wide def-name set. The U1 ref graph means we can
+//! now read the outgoing edges from `SID_REFS_OUT` directly — one
+//! redb lookup instead of a tree-sitter parse + filter. Same
+//! external behavior; the `closure_round_trip` + `closure_precision`
+//! integration tests pass unchanged.
 //!
 //! ### Scope (v0)
 //!
-//! - **Depth 1.** We extract identifiers from the anchor body, filter
-//!   to known def names, and return one entry per unique referenced
-//!   symbol. We do not recursively walk the deps' bodies. Agents that
-//!   want depth > 1 can re-call `Index.ReadSymbol` on each entry.
+//! - **Depth 1.** We enumerate the anchor's outgoing edges from the
+//!   indexed graph and return one entry per unique referenced
+//!   symbol. We do not recursively walk the deps' edges. Agents that
+//!   want depth > 1 can re-call `Index.ReadSymbol` on each entry, or
+//!   use `Index.ImpactOf` (v0.3 U5) for the transitive *caller*
+//!   direction.
 //! - **First-match disambiguation.** When a name has multiple defs,
 //!   we pick the first by `(file, start_byte)` — same policy as the
 //!   anchor in `read_symbol`. The caller can re-resolve with a
@@ -28,6 +41,9 @@
 //!   surfaces in `truncated_symbols` and flips `closure_truncated`.
 //!
 //! Push-flow / multi-hop / type-graph walking is deferred to v1.1.
+//! Index.ImpactOf (v0.3 U5) provides multi-hop in the caller
+//! direction; multi-hop in the dependency direction would re-call
+//! `compute` recursively.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -84,43 +100,58 @@ impl ClosureResult {
     }
 }
 
-/// Walk the closure of `anchor` against `anchor_body` and return the
-/// dep entries that fit in `remaining_budget_tokens`.
+/// Walk the closure of `anchor` and return the dep entries that fit
+/// in `remaining_budget_tokens`.
 ///
 /// `workspace_root` is needed to read each dep's file contents for
 /// signature rendering. I/O failures on a single dep don't fail the
 /// whole call — that dep just gets `signature: None` and we move on.
+///
+/// v0.3 U3 (alpha.33): outgoing refs now come from the indexed
+/// `SID_REFS_OUT` table (populated by the writer in U1). No more
+/// re-parsing the anchor body. The candidate set is implicitly
+/// filtered to workspace-defined names because the writer's
+/// commit-time external-symbol filter (§F1) only interns
+/// workspace-defined callees into NAME_TO_SID.
 pub fn compute(
     workspace_root: &Path,
     store: &Store,
     anchor: &FoundSymbol,
-    anchor_body: &str,
     remaining_budget_tokens: u64,
 ) -> ClosureResult {
-    // Build the set of identifiers referenced by the anchor body
-    // that look like *symbols* (filtered against the workspace-wide
-    // def name set). This piggybacks on the same heuristic
-    // `crate::outline` uses for its PageRank graph, so behaviour is
-    // consistent across the two surfaces.
-    let all_def_names = match store.all_defined_names() {
-        Ok(s) => s,
+    // Resolve the anchor's sid so we can look up its outgoing edges.
+    // The anchor came from `Store::find_symbol(name)` or
+    // `Store::defs_in_file(path)`, so by construction the name has a
+    // NAME_TO_SID entry — but bail gracefully on a torn read.
+    let anchor_sid = match store.sid_for_name(&anchor.name) {
+        Ok(Some(s)) => s,
+        _ => return ClosureResult::empty(),
+    };
+    // Pull outgoing edges from the indexed graph. The writer's
+    // smallest-enclosing-def resolution at commit time (U1) means
+    // each edge's caller_sid is the def whose byte range covers the
+    // call site — so `refs_from_symbol(anchor_sid)` returns exactly
+    // the callees of the anchor's body, deduplicated by callee sid.
+    //
+    // File-scope refs (caller_sid == None) within the anchor's file
+    // are correctly excluded — they have no caller to key the
+    // SID_REFS_OUT edge on, so they wouldn't be in the closure even
+    // under the v0.2 behavior (which extracted from the anchor body
+    // alone, not the whole file).
+    let callee_sids = match store.refs_from_symbol(anchor_sid) {
+        Ok(v) => v,
         Err(_) => return ClosureResult::empty(),
     };
-    // Pull references via tags.scm where available (Rust/Python/Go/Ruby
-    // as of alpha.27); fall through to the regex tokenizer for other
-    // languages. Tags.scm precision eliminates false positives from
-    // local-variable shadowing + identifier mentions in comments. The
-    // call-site filter (`@reference.call`) drops trait/type-position
-    // identifiers too, which the regex would have surfaced as deps.
-    let refs = crate::refs::references_for_path(&anchor.file, anchor_body);
     let mut candidates: BTreeSet<String> = BTreeSet::new();
-    for ident in refs {
-        if ident == anchor.name {
-            continue; // skip self-reference
+    for callee_sid in callee_sids {
+        if callee_sid == anchor_sid {
+            continue; // skip self-reference (mutual recursion would land here too)
         }
-        if all_def_names.contains(&ident) {
-            candidates.insert(ident);
-        }
+        let name = match store.name_for_sid(callee_sid) {
+            Ok(Some(n)) => n,
+            _ => continue, // torn read or unknown sid; skip
+        };
+        candidates.insert(name);
     }
     if candidates.is_empty() {
         return ClosureResult::empty();
@@ -352,10 +383,14 @@ mod tests {
 
     #[test]
     fn extracted_identifiers_round_trip() {
-        // The closure walker piggybacks on outline::extract_identifiers
-        // for the regex fallback path; this test pins the tokenizer's
-        // shape against the patterns closure needs (Rust-style paths,
-        // calls, type names).
+        // Sanity test for the regex tokenizer used by
+        // `refs::references_with_ranges` for languages without a
+        // tags.scm query (C, C++, Java, PHP, Swift). v0.3 U3 no
+        // longer routes the closure walker through this path —
+        // the walker now reads `store.refs_from_symbol` directly
+        // (which itself is fed by the same regex fallback at
+        // write time for those languages). The test stays because
+        // `extract_identifiers` is still the underlying tokenizer.
         let ids: std::collections::HashSet<String> =
             crate::outline::extract_identifiers("fn foo(x: u32) -> bar::Baz { call() }")
                 .map(|s| s.to_string())
