@@ -29,7 +29,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::Context;
 use serde_json::{Value, json};
 
-use crate::store::{FileWithDefs, Store};
+use crate::store::{FileId, FileWithDefs, Store};
 use rust_tree_sitter::pagerank::{self, Edge};
 
 /// Outline render targets.
@@ -133,10 +133,16 @@ impl std::fmt::Debug for OutlineCache {
     }
 }
 
-/// Compute the outline. `workspace_root` is needed to read the actual
-/// file contents for reference extraction.
+/// Compute the outline.
+///
+/// `_workspace_root` is retained in the signature for back-compat
+/// with callers; v0.3 (U1) reads pre-extracted reference edges from
+/// the persistent index (`store.refs_for_file_resolved`) instead of
+/// re-parsing files at query time, so the workspace root is no
+/// longer dereferenced by this path. The closure walker still uses
+/// it via its own code path (v0.3 U3 will swap it too).
 pub fn compute(
-    workspace_root: &Path,
+    _workspace_root: &Path,
     store: &Store,
     params: &OutlineParams<'_>,
 ) -> anyhow::Result<OutlineResult> {
@@ -152,7 +158,6 @@ pub fn compute(
         return Ok(empty_result(files_considered));
     }
 
-    let all_def_names = store.all_defined_names().context("all defined names")?;
     let mentioned_idents_set: HashSet<&str> =
         params.mentioned_idents.iter().map(|s| s.as_str()).collect();
     let mentioned_files_set: HashSet<&str> =
@@ -166,35 +171,39 @@ pub fn compute(
         }
     }
 
-    // For each file, parse and pull AST-precise references via
-    // tags.scm (Rust/Python/Go/Ruby) — or the regex tokenizer fallback
-    // for languages without a query. Each (referencer_file →
-    // definer_file) tuple becomes an edge in the PageRank graph.
+    // For each file, read the persistent ref graph (v0.3 U1).
+    // `refs_for_file_resolved` returns `(callee_name, count)` tuples
+    // where the count is the number of individual call sites in this
+    // file — exactly what the Aider edge-weight recipe needs.
     //
-    // The tags.scm path eliminates false-positive edges from local
-    // variables that shadow def names, comment mentions, and
-    // identifier appearances in trait/type bounds. PageRank ranks
-    // files that *call* a symbol over files that *mention* it.
+    // Externals (names not workspace-defined) are filtered at commit
+    // time in `Store::commit_batch`, so we don't need a redundant
+    // `all_def_names` filter here. We still filter via `def_map` to
+    // honour the `glob` param (which may exclude some workspace
+    // files from `files`, and thus their defs from `def_map`).
+    //
+    // Pre-v0.3 this loop re-parsed every file and called
+    // `refs::references_for_path`. The new path is a single redb
+    // read per file instead.
     let mut edges: Vec<Edge> = Vec::new();
     let mut ref_counts: HashMap<(usize, usize, String), u32> = HashMap::new();
     for (src_idx, f) in files.iter().enumerate() {
-        let abs = workspace_root.join(&f.path);
-        let content = match std::fs::read_to_string(&abs) {
-            Ok(s) => s,
-            Err(_) => continue,
+        let fid = match store.get_file_meta(&f.path)? {
+            Some((FileId(v), _)) => v,
+            None => continue, // file isn't indexed yet (mount-time race)
         };
-        for ident in crate::refs::references_for_path(&f.path, &content) {
-            if !all_def_names.contains(&ident) {
-                continue;
-            }
-            if let Some(dst_files) = def_map.get(&ident) {
+        let resolved = store
+            .refs_for_file_resolved(fid)
+            .context("refs_for_file_resolved")?;
+        for (callee_name, count) in resolved {
+            if let Some(dst_files) = def_map.get(&callee_name) {
                 for &dst_idx in dst_files {
                     if dst_idx == src_idx {
                         continue;
                     }
                     *ref_counts
-                        .entry((src_idx, dst_idx, ident.clone()))
-                        .or_insert(0) += 1;
+                        .entry((src_idx, dst_idx, callee_name.clone()))
+                        .or_insert(0) += count;
                 }
             }
         }
