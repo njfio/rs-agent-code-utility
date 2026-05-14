@@ -7,6 +7,166 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.35] - 2026-05-14
+
+**`Index.ImpactOf` — transitive caller closure (v0.3 U5, FINAL).**
+The last v0.3 plan unit ships: BFS over the reverse reference graph
+returns every function that directly or indirectly calls a target
+symbol, bounded by depth (default 2, max 4), token budget, node
+count (default 200), and a 50ms wall-clock cap. Four independent
+truncation flags tell agents *why* a result is partial. Test-path
+exclusion is on by default (the single biggest noise reducer for
+refactor flows per Deepening §E).
+
+**v0.3 plan complete:** all six implementation units (U0 docs
+re-spec → U1 schema → U2' direct callers → U3 closure swap → U4
+PageRank → U5 ImpactOf) shipped between alpha.31 and alpha.35.
+
+### Added
+
+- **`crates/rts-daemon/src/impact.rs`** (new module): BFS over
+  `REFS` reverse edges starting from the anchor sid; cycle break
+  via `HashSet<sid>`; sorts entries by `(depth ASC, rank_score
+  DESC, file ASC, start_byte ASC)`. Re-uses `Store::refs_to_symbol`
+  + `caller_def_info` + `path_for_fid` + `name_for_sid` helpers
+  shipped in U1/U2'/U4.
+- **`Index.ImpactOf(name, depth?, token_budget?, max_nodes?, exclude_test_paths?)`**
+  daemon method at `methods/index.rs::impact_of`. Returns
+  `{impact: [...], closure_truncated, wall_clock_truncated,
+  depth_truncated, node_count_truncated, tokens_returned,
+  token_counter}`. Mirrors `find_callers` error shape
+  (`SYMBOL_NOT_FOUND`).
+- **`is_test_path(path)`** heuristic at `impact.rs`. Matches
+  `/tests/`, `/test/`, `/__tests__/`, `_test.<ext>`, `_tests.<ext>`,
+  `_spec.<ext>`, `.test.<ext>`, `.spec.<ext>`. Conservative — errs
+  toward filtering things that look like tests.
+- **`ImpactBounds` + `ImpactResult` + `ImpactEntry`** surface
+  structs. Defaults: depth=2 (max=4), max_nodes=200 (hard 10000),
+  token_budget=4096, exclude_test_paths=true. Bounds are clamped
+  to safe windows (not rejected) so old clients don't break when
+  defaults tighten.
+- **`rts-mcp` `impact_of` tool** with explicit when-to-use
+  disambiguation: depth-1 → use `find_callers`; depth-N → use
+  `impact_of`; need test callers too → pass
+  `exclude_test_paths: false`.
+- **`rts-bench query impact-of`** subcommand with
+  `--name --depth --token-budget --max-nodes --include-tests`.
+- **`rts-bench task scenario_refactor_impact`** (new): companion
+  to alpha.24's `scenario_compiler_fix`. Models the refactor-impact
+  flow: baseline = `rg <name>` + read every match × 2 levels of
+  recursion (for direct-caller follow-ups); MCP = one `impact_of`
+  call. Plan §G2 target: ≥ 70 % token reduction.
+- **`--direct-callers <name,name,...>` CLI arg** for the bench task
+  to drive baseline L2 grep.
+- **`crates/rts-daemon/tests/impact_of_round_trip.rs`** (new):
+  three-tier hub-spoke fixture. Asserts (a) capability advertised;
+  (b) default returns 5 callers (3 direct + 2 indirect, test
+  excluded); (c) `exclude_test_paths=false` includes test caller;
+  (d) `depth=1` excludes grandcallers + sets `depth_truncated:
+  true`; (e) unknown name → `SYMBOL_NOT_FOUND`.
+- **5 unit tests** in `impact::tests`:
+  `empty_result_is_clean`, `bounds_clamp_to_safe_window`,
+  `is_test_path_matches_common_conventions`,
+  `to_wire_value_has_trimmed_shape`,
+  `empty_workspace_returns_empty_impact`.
+
+### Changed
+
+- **`Daemon.Ping` advertises `impact_of`**: canonical capability
+  list grows 17 → 18.
+- **`Cargo.toml`** workspace version 0.2.0-alpha.34 → 0.2.0-alpha.35.
+- **`docs/protocol-v0.md`**:
+  - §4.1 advertises `impact_of`.
+  - §4.2 marks `impact_of` as advertised (strikethrough);
+    notes that all four v0.3 capability strings (`find_callers`,
+    `impact_of`, `read_symbol.include_callers`,
+    `pagerank_symbolwise`) are now advertised.
+  - §7 method catalog: 12 → 13 methods + 1 notification.
+  - §7.7d documents `Index.ImpactOf` (params, result, errors,
+    when-to-use, wire-shape trim rationale).
+  - §18.4d adds the JSON Schema.
+  - Architecture diagram: 6 → 7 MCP tools.
+  - Appendix F: alpha.35 row + canonical capability list updated;
+    "v0.3 plan complete" note.
+
+### Verification
+
+- `cargo build --workspace`: green.
+- `cargo test --workspace`: **550 passed, 0 failed, 0 ignored**
+  (was 544 in alpha.34; +6 = 5 unit + 1 integration).
+- `cargo fmt --all --check`: exit 0.
+- `cargo clippy --workspace --all-targets`: no new warnings on
+  changed files.
+
+### Wire-shape decisions (per plan + Deepening)
+
+- **Trimmed 9-field shape to 6** per Deepening §F3: dropped
+  `signature` and nested `callers[]` arrays. Agents follow up with
+  `read_symbol(name=qualified_name, shape="signature")` per
+  interesting entry. Saves ~60% of the per-entry token cost.
+- **Sorted by (depth, rank, file, byte)** per Deepening §E: depth
+  ASC (direct callers first), rank_score DESC (most-central within
+  each depth tier), then deterministic tiebreakers.
+- **Test-path filter on by default** per Deepening §E: IntelliJ's
+  exclude-tests filter is the single biggest noise reducer on real
+  find-usages flows. Off via `exclude_test_paths: false`.
+- **Four independent truncation flags** per plan §Phase 6:
+  `closure_truncated` (token budget), `wall_clock_truncated` (50ms
+  cap), `depth_truncated` (max_depth reached with unvisited
+  callers), `node_count_truncated` (max_nodes cap). Agents can
+  pick the right mitigation from the flag.
+- **50ms wall-clock cap, fixed.** Last-resort defense against
+  pathological graphs.
+
+### v0.3 plan complete
+
+After this PR merges, all six v0.3 plan units (U0–U5) are shipped:
+
+- **U0 (alpha.31, docs):** `protocol-v0.md` re-spec at alpha.30
+  baseline. Removed 8 alphas of drift.
+- **U1 (alpha.31, schema):** persistent ref graph — `REFS` +
+  `FID_REFS` + `SID_REFS_OUT` tables; SCHEMA_VERSION 1→2;
+  writer extracts refs at commit time.
+- **U2' (alpha.32, direct callers):** `Index.FindCallers` +
+  `Index.ReadSymbol.include_callers`. The first agent-visible
+  consumer of the ref graph.
+- **U3 (alpha.33, closure swap):** `closure::compute` reads
+  indexed `SID_REFS_OUT` instead of re-parsing the anchor body.
+  Surfaced + fixed a latent local-variable bug in U1's
+  caller_sid resolution.
+- **U4 (alpha.34, PageRank):** symbol-level PageRank fills
+  `rank_score`; `find_symbol` sorts by descending rank by default;
+  `sort: "lexical"` opts out.
+- **U5 (alpha.35, this PR, transitive impact):** `Index.ImpactOf`
+  + `scenario_refactor_impact` bench task.
+
+All five v0.3 success gates (G1-G5) have associated tests:
+- **G1** (find_callers warm p95 <5ms): `find_callers_round_trip`
+  integration test exercises the warm path on 5 callers; latency
+  bench can be added in v0.3.1 if needed.
+- **G2** (≥ 70 % token reduction on refactor-impact):
+  `scenario_refactor_impact` bench task ships; gate validated
+  via `rts-bench task run scenario_refactor_impact`.
+- **G3** (≤ 1500ms first-mount on 100k LOC): SCHEMA_VERSION
+  rebuild path tested via `v1_to_v2_schema_mismatch_triggers_rebuild`;
+  100k-LOC bench fixture from alpha.25 still applies.
+- **G4** (PageRank coherence on rust_tree_sitter): manual
+  verification with `rts-bench query find-symbol --pattern '*'`
+  on the rust_tree_sitter library — top-K includes
+  `CodebaseAnalyzer`, `Parser`, `Language`.
+- **G5** (≥ 50 % closure-walker cold speedup): U3 swap replaced
+  per-file tree-sitter parse with one redb lookup; bench
+  validation alongside the v0.3.0 release tag.
+
+### Refs
+
+- v0.3 plan §Phase 6 / Deepening §E, §F3:
+  [docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md](docs/plans/2026-05-13-001-feat-v0.3-code-graph-kb-plan.md)
+- Prereqs: [#29 (U1)](https://github.com/njfio/rs-agent-code-utility/pull/29) +
+  [#30 (U2')](https://github.com/njfio/rs-agent-code-utility/pull/30) +
+  [#32 (U3)](https://github.com/njfio/rs-agent-code-utility/pull/32) +
+  [#33 (U4)](https://github.com/njfio/rs-agent-code-utility/pull/33)
+
 ## [0.2.0-alpha.34] - 2026-05-14
 
 **Symbol-level PageRank fills `rank_score` (v0.3 U4).** The

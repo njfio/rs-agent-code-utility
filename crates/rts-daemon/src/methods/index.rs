@@ -109,6 +109,32 @@ struct FindCallersParams {
 }
 
 #[derive(Debug, Deserialize)]
+struct ImpactOfParams {
+    /// Name of the symbol whose transitive callers we want. Required.
+    name: String,
+    /// BFS depth cap. Default 2 per Deepening §E (JetBrains
+    /// practitioner guidance for IntelliJ call-hierarchy). Hard
+    /// max 4; values outside [1, 4] are clamped, not rejected.
+    #[serde(default)]
+    depth: Option<u32>,
+    /// Token budget for the response. Default 4096; validated
+    /// against the standard 50..=200000 §16 window.
+    #[serde(default)]
+    token_budget: Option<u64>,
+    /// Max distinct caller entries. Default 200. Hard ceiling
+    /// 10_000 — past that, the impact result is noise rather than
+    /// signal.
+    #[serde(default)]
+    max_nodes: Option<u32>,
+    /// Whether to filter callers whose enclosing file matches
+    /// `is_test_path`. Default `true` (per Deepening §E:
+    /// IntelliJ's exclude-tests filter is the biggest noise
+    /// reducer on real find-usages flows).
+    #[serde(default)]
+    exclude_test_paths: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
 struct ReadSymbolAtParams {
     /// Workspace-relative file path.
     file: String,
@@ -681,6 +707,110 @@ pub async fn find_callers(
     Ok(serde_json::json!({
         "callers":   callers,
         "truncated": truncated,
+    }))
+}
+
+/// `Index.ImpactOf(name, depth?, token_budget?, max_nodes?, exclude_test_paths?)`
+/// — v0.3 U5 transitive caller closure. BFS over the reverse
+/// reference graph (`REFS`/`SID_REFS_OUT` populated by U1) to
+/// enumerate every symbol that directly or indirectly calls `name`,
+/// bounded by depth + token + node-count + wall-clock.
+///
+/// Wire shape (per Deepening §F3 trim):
+/// ```jsonc
+/// {
+///   "impact": [
+///     { "qualified_name": "...", "kind": "fn", "file": "...",
+///       "range": { ... }, "depth": 1, "rank_score": 0.012 }
+///   ],
+///   "closure_truncated":    false,
+///   "wall_clock_truncated": false,
+///   "depth_truncated":      false,
+///   "node_count_truncated": false,
+///   "tokens_returned":      1247,
+///   "token_counter":        "bytes_div_3"
+/// }
+/// ```
+///
+/// Each truncation flag is independent so agents can tell *why*
+/// the result is partial (and pick a mitigation: deeper depth,
+/// bigger budget, raise max_nodes, accept the wall-clock wins).
+///
+/// Errors: `SYMBOL_NOT_FOUND` when no `NAME_TO_SID` entry, mirrors
+/// `Index.FindCallers`. `BUDGET_TOO_SMALL`/`BUDGET_TOO_LARGE` per
+/// the standard §16 window. `INVALID_PARAMS` on empty/oversize
+/// name.
+///
+/// Capability: `impact_of` (advertised from alpha.35).
+pub async fn impact_of(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    let p: ImpactOfParams = parse_params(params)?;
+    if p.name.is_empty() || p.name.len() > 256 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`name` must be 1..=256 characters",
+        ));
+    }
+    let token_budget = check_budget(p.token_budget)?;
+
+    let bounds = crate::impact::ImpactBounds {
+        max_depth: p.depth.unwrap_or(crate::impact::DEFAULT_DEPTH),
+        max_nodes: p.max_nodes.unwrap_or(crate::impact::DEFAULT_MAX_NODES),
+        token_budget,
+        exclude_test_paths: p.exclude_test_paths.unwrap_or(true),
+    };
+
+    let (_root, store_arc) = snapshot(state)?;
+
+    // v0.3 U4 invariant: read generation BEFORE any read txn.
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+
+    let anchor_sid = match store_arc.sid_for_name(&p.name).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("sid_for_name storage error: {e:#}"),
+        )
+    })? {
+        Some(s) => s,
+        None => {
+            return Err(ProtocolError::new(
+                ErrorCode::SymbolNotFound,
+                format!("no symbol named `{}` is indexed", p.name),
+            ));
+        }
+    };
+
+    // Delegate to the spawn_blocking-friendly compute function. BFS
+    // is CPU-bound (multiple redb reads), so we run it on a blocking
+    // thread to keep the tokio runtime responsive — matches the
+    // alpha.22 closure walker's posture.
+    let store_clone = store_arc.clone();
+    let ranks_clone = ranks.clone();
+    let walk = tokio::task::spawn_blocking(move || {
+        crate::impact::compute(&store_clone, anchor_sid, bounds, ranks_clone.as_deref())
+    })
+    .await
+    .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("impact join error: {e}")))?
+    .map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("impact compute error: {e:#}"),
+        )
+    })?;
+
+    let impact_value = crate::impact::to_wire_value(&walk.impact);
+
+    Ok(serde_json::json!({
+        "impact":               impact_value,
+        "closure_truncated":    walk.closure_truncated,
+        "wall_clock_truncated": walk.wall_clock_truncated,
+        "depth_truncated":      walk.depth_truncated,
+        "node_count_truncated": walk.node_count_truncated,
+        "tokens_returned":      walk.tokens_used,
+        "token_counter":        TOKEN_COUNTER,
     }))
 }
 

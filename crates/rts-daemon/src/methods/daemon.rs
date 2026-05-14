@@ -43,6 +43,8 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // v0.3 alpha.34 — symbol-level PageRank fills rank_score; default
     // sort is descending rank (lexical opt-out via `sort: "lexical"`).
     "pagerank_symbolwise",
+    // v0.3 alpha.35 — Index.ImpactOf transitive caller closure.
+    "impact_of",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

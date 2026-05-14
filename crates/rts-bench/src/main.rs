@@ -186,6 +186,27 @@ enum QueryCmd {
         #[arg(long)]
         file: Option<String>,
     },
+    /// `impact_of` — transitive caller closure (v0.3 U5). BFS over
+    /// reverse refs with depth + node-count + token + wall-clock
+    /// bounds. Use for refactor blast radius queries.
+    ImpactOf {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        #[arg(long)]
+        name: String,
+        /// BFS depth cap. Default 2 (server-side); hard max 4.
+        #[arg(long)]
+        depth: Option<u32>,
+        /// Token budget. Default 4096 (server-side).
+        #[arg(long)]
+        token_budget: Option<u64>,
+        /// Max distinct caller entries. Default 200 (server-side).
+        #[arg(long)]
+        max_nodes: Option<u32>,
+        /// Pass `--include-tests` to disable the default test-path filter.
+        #[arg(long)]
+        include_tests: bool,
+    },
     /// `outline_workspace` — token-budgeted structural map. Use first
     /// when orienting in an unfamiliar repo.
     Outline {
@@ -221,12 +242,14 @@ enum TaskCmd {
     /// Run one task end-to-end. Writes `<out>` (default `bench-<sha>.json`).
     Run {
         /// Task id. One of: locate_def, get_body, find_callers,
-        /// summarize_module, fix_imports, scenario_compiler_fix.
+        /// summarize_module, fix_imports, scenario_compiler_fix,
+        /// scenario_refactor_impact.
         id: String,
         /// Workspace root to bench against.
         #[arg(long)]
         workspace: PathBuf,
-        /// Symbol name to look up (locate_def, get_body).
+        /// Symbol name to look up (locate_def, get_body,
+        /// scenario_refactor_impact's target).
         #[arg(long)]
         symbol: Option<String>,
         /// Workspace-relative file path (summarize_module, fix_imports,
@@ -239,6 +262,12 @@ enum TaskCmd {
         /// Referenced symbol to follow up on in `scenario_compiler_fix`.
         #[arg(long)]
         referenced_symbol: Option<String>,
+        /// Comma-separated direct-caller names for
+        /// `scenario_refactor_impact`'s baseline L2 grep. Real agents
+        /// discover these from the L1 grep; the bench takes them as
+        /// input so both paths measure the same workload.
+        #[arg(long, value_delimiter = ',')]
+        direct_callers: Option<Vec<String>>,
         /// Line budget for the summary head (summarize_module). Defaults
         /// to 50.
         #[arg(long)]
@@ -294,6 +323,7 @@ async fn main() -> Result<()> {
                     file,
                     line,
                     referenced_symbol,
+                    direct_callers,
                     line_budget,
                     out,
                     dry_run,
@@ -306,6 +336,7 @@ async fn main() -> Result<()> {
                 file,
                 line,
                 referenced_symbol,
+                direct_callers,
                 line_budget,
                 out,
                 dry_run,
@@ -509,6 +540,33 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
                 serde_json::Value::Object(a),
             ))
         }
+        QueryCmd::ImpactOf {
+            workspace,
+            name,
+            depth,
+            token_budget,
+            max_nodes,
+            include_tests,
+        } => {
+            let mut a = serde_json::Map::new();
+            a.insert("name".into(), serde_json::Value::String(name.clone()));
+            if let Some(d) = depth {
+                a.insert("depth".into(), serde_json::Value::Number((*d).into()));
+            }
+            opt_num(*token_budget, &mut a, "token_budget");
+            if let Some(m) = max_nodes {
+                a.insert("max_nodes".into(), serde_json::Value::Number((*m).into()));
+            }
+            // `--include-tests` disables the default test-path filter.
+            if *include_tests {
+                a.insert("exclude_test_paths".into(), serde_json::Value::Bool(false));
+            }
+            Ok((
+                default_workspace(workspace)?,
+                "impact_of",
+                serde_json::Value::Object(a),
+            ))
+        }
         QueryCmd::Outline {
             workspace,
             glob,
@@ -690,6 +748,7 @@ async fn run_latency(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 async fn run_one(
     id: String,
     workspace: PathBuf,
@@ -697,6 +756,7 @@ async fn run_one(
     file: Option<String>,
     line: Option<u32>,
     referenced_symbol: Option<String>,
+    direct_callers: Option<Vec<String>>,
     line_budget: Option<u32>,
     out: Option<PathBuf>,
     dry_run: bool,
@@ -712,6 +772,7 @@ async fn run_one(
         file.as_deref(),
         line,
         referenced_symbol.as_deref(),
+        direct_callers.as_deref(),
         line_budget,
     )?;
 
@@ -788,12 +849,14 @@ async fn restore_fixtures(corpus_lock: PathBuf, corpus_root: Option<PathBuf>) ->
 /// Validate + assemble the per-task `task_inputs` JSON. Per-task required
 /// args are checked here so the CLI fails fast with a clear message before
 /// any subprocess is spawned.
+#[allow(clippy::too_many_arguments)]
 fn build_task_inputs(
     id: &str,
     symbol: Option<&str>,
     file: Option<&str>,
     line: Option<u32>,
     referenced_symbol: Option<&str>,
+    direct_callers: Option<&[String]>,
     line_budget: Option<u32>,
 ) -> Result<serde_json::Value> {
     let mut obj = serde_json::Map::new();
@@ -808,6 +871,9 @@ fn build_task_inputs(
     }
     if let Some(r) = referenced_symbol {
         obj.insert("referenced_symbol".into(), json!(r));
+    }
+    if let Some(cs) = direct_callers {
+        obj.insert("direct_callers".into(), json!(cs));
     }
     if let Some(n) = line_budget {
         obj.insert("line_budget".into(), json!(n));
@@ -833,6 +899,16 @@ fn build_task_inputs(
                     "task `scenario_compiler_fix` requires --file, --line, and \
                      --referenced-symbol (the symbol an agent would follow up on \
                      from the closure walk)"
+                ));
+            }
+        }
+        "scenario_refactor_impact" => {
+            if symbol.is_none() {
+                return Err(anyhow!(
+                    "task `scenario_refactor_impact` requires --symbol (the target \
+                     fn being refactored). Optionally pass --direct-callers \
+                     <name,name,...> to drive the baseline L2 grep — without it, \
+                     the baseline is L1-only and underestimates the wins."
                 ));
             }
         }
