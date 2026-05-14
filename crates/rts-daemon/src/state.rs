@@ -103,6 +103,185 @@ pub struct DaemonState {
     /// shape; see `symbol_pagerank.rs` for the algorithm + Deepening §C3
     /// for the perf budget.
     pub symbol_pagerank_cache: SymbolPagerankCache,
+    /// LRU cache for rendered signatures, keyed by
+    /// `(path, start_byte, end_byte, mtime_ns)`. v0.3 closure walks
+    /// hit the tree-sitter signature renderer once per dep; the bench
+    /// observed `render_loop_total` averaging 1248 µs (max 10529 µs)
+    /// on `crates/rts-core` deps-mode reads, dominating
+    /// `read_symbol(deps=true)` after `content_version` got its own
+    /// cache. Same shape: invalidates implicitly when mtime changes.
+    pub signature_cache: SignatureCache,
+    /// LRU cache for `content_version` (blake3-hash-of-file-bytes).
+    /// Keyed by `(path, mtime_ns, generation)`. Without this, every
+    /// `read_symbol` re-hashes the entire file body — 100k-LOC
+    /// workspace bench saw `content_version` averaging 904 µs per
+    /// call and peaking at 2325 µs (single biggest cost on the
+    /// G5 read_symbol regression hot path). With the cache, repeat
+    /// reads on the same file resolve in tens of ns. Invalidates
+    /// implicitly when mtime or generation changes.
+    pub content_version_cache: ContentVersionCache,
+}
+
+/// Per-(path, start_byte, end_byte, mtime) cache for rendered
+/// signatures. Each closure walker call hits the tree-sitter
+/// renderer once per dep; profiling on `crates/rts-core` showed
+/// `render_loop_total` averaging 1248 µs per closure call (max
+/// 10529 µs) — the dominant remaining cost after the content_version
+/// cache. Same FIFO eviction + invalidate-via-mtime shape.
+#[derive(Default, Debug)]
+pub struct SignatureCache {
+    inner: Mutex<SignatureCacheInner>,
+}
+
+#[derive(Default, Debug)]
+struct SignatureCacheInner {
+    order: std::collections::VecDeque<SignatureKey>,
+    map: std::collections::HashMap<SignatureKey, Option<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct SignatureKey {
+    path: std::path::PathBuf,
+    start_byte: u32,
+    end_byte: u32,
+    mtime_ns: i128,
+}
+
+impl SignatureCache {
+    /// Cap sized larger than ContentVersionCache because a single
+    /// file may host many defs; a typical workspace has thousands
+    /// of distinct def sites. 4096 is enough for `crates/rts-core`'s
+    /// full symbol set + headroom; eviction is FIFO.
+    const MAX_ENTRIES: usize = 4096;
+
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Get-or-compute. `None` signature values (renderer returned
+    /// `None` because the file's language has no renderer or the
+    /// slice didn't parse cleanly) are cached too — repeated calls
+    /// on the same dep don't re-try a renderer that already failed.
+    pub fn get_or_compute(
+        &self,
+        path: &std::path::Path,
+        start_byte: u32,
+        end_byte: u32,
+        mtime_ns: i128,
+        f: impl FnOnce() -> Option<String>,
+    ) -> Option<String> {
+        let key = SignatureKey {
+            path: path.to_path_buf(),
+            start_byte,
+            end_byte,
+            mtime_ns,
+        };
+        if let Ok(g) = self.inner.lock() {
+            if let Some(v) = g.map.get(&key) {
+                return v.clone();
+            }
+        }
+        let value = f();
+        if let Ok(mut g) = self.inner.lock() {
+            while g.order.len() >= Self::MAX_ENTRIES {
+                if let Some(oldest) = g.order.pop_front() {
+                    g.map.remove(&oldest);
+                } else {
+                    break;
+                }
+            }
+            g.map.insert(key.clone(), value.clone());
+            g.order.push_back(key);
+        }
+        value
+    }
+
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.inner.lock().map(|g| g.map.len()).unwrap_or(0)
+    }
+}
+
+/// Per-(path, mtime, generation) cache for `content_version`. Sized
+/// to the workspace's hot-file working set; v0.3 ships a fixed cap
+/// of 256 distinct files (matches the find_symbol MAX_MATCHES cap
+/// so the worst-case bench never thrashes), evicted FIFO. Concurrent
+/// reads share one mutex; if contention shows up in profiling, swap
+/// for a sharded LRU later.
+#[derive(Default, Debug)]
+pub struct ContentVersionCache {
+    inner: Mutex<ContentVersionCacheInner>,
+}
+
+#[derive(Default, Debug)]
+struct ContentVersionCacheInner {
+    /// FIFO order — oldest-first — for eviction. Bounded to
+    /// `MAX_ENTRIES`.
+    order: std::collections::VecDeque<ContentVersionKey>,
+    map: std::collections::HashMap<ContentVersionKey, String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct ContentVersionKey {
+    path: std::path::PathBuf,
+    mtime_ns: i128,
+    generation: u64,
+}
+
+impl ContentVersionCache {
+    /// Cap. 256 matches the find_symbol MAX_MATCHES so the worst-case
+    /// bench (every result triggers a read_symbol) never thrashes.
+    const MAX_ENTRIES: usize = 256;
+
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Get-or-compute. Computes via `f` only on cache miss. The
+    /// closure receives no args — caller has already gathered the
+    /// bytes; we only cache the resulting `String`. Returns the
+    /// (cached or freshly-computed) version string.
+    pub fn get_or_compute(
+        &self,
+        path: &std::path::Path,
+        mtime_ns: i128,
+        generation: u64,
+        f: impl FnOnce() -> String,
+    ) -> String {
+        let key = ContentVersionKey {
+            path: path.to_path_buf(),
+            mtime_ns,
+            generation,
+        };
+        if let Ok(g) = self.inner.lock() {
+            if let Some(v) = g.map.get(&key) {
+                return v.clone();
+            }
+        }
+        // Miss path: compute, then insert. Hold lock just for the
+        // insert so the (cpu-bound) compute doesn't block other
+        // readers.
+        let value = f();
+        if let Ok(mut g) = self.inner.lock() {
+            // Evict oldest if at cap. Wrap in if-let so a poisoned
+            // lock degrades to "no caching" instead of panicking.
+            while g.order.len() >= Self::MAX_ENTRIES {
+                if let Some(oldest) = g.order.pop_front() {
+                    g.map.remove(&oldest);
+                } else {
+                    break;
+                }
+            }
+            g.map.insert(key.clone(), value.clone());
+            g.order.push_back(key);
+        }
+        value
+    }
+
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.inner.lock().map(|g| g.map.len()).unwrap_or(0)
+    }
 }
 
 impl DaemonState {
@@ -120,6 +299,8 @@ impl DaemonState {
             watcher_status: AtomicU8::new(WatcherStatus::NoWatcher as u8),
             outline_cache: OutlineCache::new(),
             symbol_pagerank_cache: SymbolPagerankCache::new(),
+            signature_cache: SignatureCache::new(),
+            content_version_cache: ContentVersionCache::new(),
         }
     }
 
@@ -176,6 +357,61 @@ mod tests {
         state.active_connections.store(0, Ordering::Relaxed);
         std::thread::sleep(Duration::from_millis(10));
         assert!(state.is_idle(Duration::from_millis(1)));
+    }
+
+    #[test]
+    fn content_version_cache_returns_first_value_on_repeat() {
+        let cache = ContentVersionCache::new();
+        let path = std::path::Path::new("/tmp/dummy.rs");
+        let mut call_count = 0u32;
+        let v1 = cache.get_or_compute(path, 100, 1, || {
+            call_count += 1;
+            "first".to_string()
+        });
+        let v2 = cache.get_or_compute(path, 100, 1, || {
+            call_count += 1;
+            "should-not-call".to_string()
+        });
+        assert_eq!(v1, "first");
+        assert_eq!(v2, "first", "repeat call must hit cache, not recompute");
+        assert_eq!(call_count, 1, "compute closure should run exactly once");
+    }
+
+    #[test]
+    fn content_version_cache_keys_on_mtime_and_generation() {
+        let cache = ContentVersionCache::new();
+        let path = std::path::Path::new("/tmp/dummy.rs");
+        let _ = cache.get_or_compute(path, 100, 1, || "mtime=100,gen=1".to_string());
+        // Same path, different mtime → fresh compute.
+        let v_mtime = cache.get_or_compute(path, 200, 1, || "mtime=200,gen=1".to_string());
+        assert_eq!(v_mtime, "mtime=200,gen=1");
+        // Same path + mtime, different generation → fresh compute.
+        let v_gen = cache.get_or_compute(path, 100, 2, || "mtime=100,gen=2".to_string());
+        assert_eq!(v_gen, "mtime=100,gen=2");
+        assert_eq!(cache.len(), 3, "all three distinct keys should be stored");
+    }
+
+    #[test]
+    fn content_version_cache_evicts_at_cap() {
+        let cache = ContentVersionCache::new();
+        // Insert MAX_ENTRIES + 5 entries; first 5 should evict FIFO.
+        for i in 0..(ContentVersionCache::MAX_ENTRIES + 5) {
+            let path = std::path::PathBuf::from(format!("/tmp/file{i}.rs"));
+            cache.get_or_compute(&path, 0, 0, || format!("v{i}"));
+        }
+        assert_eq!(
+            cache.len(),
+            ContentVersionCache::MAX_ENTRIES,
+            "cache should cap at MAX_ENTRIES"
+        );
+        // First 5 keys should be evicted; check that touching one of
+        // them re-computes (call_count would bump in real code).
+        let mut recomputed = false;
+        let _ = cache.get_or_compute(std::path::Path::new("/tmp/file0.rs"), 0, 0, || {
+            recomputed = true;
+            "v0-fresh".to_string()
+        });
+        assert!(recomputed, "FIFO-evicted entry must re-compute");
     }
 
     #[test]

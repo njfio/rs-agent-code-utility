@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Read-symbol perf — content_version + signature caches (root-cause fix)
+
+Following the profile harness shipped in PR #45, this pass identifies
+and fixes the two dominant cost drivers in v0.3's `read_symbol(deps=true)`
+on real Rust workspaces.
+
+#### What the profile showed
+
+Per-call timing on a typical `crates/rts-core` `read_symbol(deps=true)`
+warm run (34 samples, `crates/rts-core` workspace):
+
+| Section | avg µs | max µs |
+|---|---:|---:|
+| `path_resolve+check` | 29 | 156 |
+| `read_file` | 221 | 622 |
+| **`content_version`** | **904** | **2325** |
+| **`closure_walk → render_loop_total`** | **1248** | **10529** |
+
+`content_version` was blake3-hashing the **full file** on every call;
+`render_loop_total` was the tree-sitter signature renderer invoked
+once per dep without memoization. The two together accounted for
+~80 % of v0.3's per-call read_symbol cost.
+
+#### Two new caches
+
+1. **`ContentVersionCache`** — keyed by `(path, mtime_ns, generation)`.
+   FIFO-evicted at 256 entries (matches `find_symbol`'s MAX_MATCHES so
+   the worst-case bench never thrashes). Same workspace, same file,
+   same mtime → instant cache hit instead of re-hashing.
+
+2. **`SignatureCache`** — keyed by `(path, start_byte, end_byte, mtime_ns)`.
+   FIFO at 4096 entries (sized for a real workspace's full symbol
+   table + headroom). Caches both `Some(rendered)` AND `None` (no
+   renderer / parse failure) so repeat lookups don't retry a known-bad
+   render.
+
+Closure walker now also tracks `mtime` alongside file bytes so the
+signature cache can invalidate per-file. One `std::fs::metadata` per
+*distinct file* per closure call (typically 1-5 files per dep
+walk).
+
+#### Measured impact
+
+On `rts-bench latency --workspace crates/rts-core --queries 5000 --cold-count 500 --deps`:
+
+| Metric | Pre-fix | Post-fix | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 3207 µs | **2269 µs** | **−29 %** |
+| `read_symbol` p95 | 7023 µs | **5829 µs** | **−17 %** |
+| `read_symbol` p99 | 11877 µs | 10831 µs | −9 % |
+| `content_version` profile avg | 904 µs | **205 µs** | **−77 %** |
+| `render_loop_total` profile avg | 1248 µs | **815 µs** | **−35 %** |
+
+Tests: 129 unit + 24 integration pass; +5 new cache tests; no
+behavioral changes to wire shape.
+
+#### Remaining gap to alpha.30
+
+Alpha.30's `read_symbol` p95 on the same workload is 974 µs.
+Post-fix v0.3 is 5829 µs — still **6.0× slower** (vs 7.21× pre-fix).
+The remaining gap is structural, not blake3- or render-cache-shaped:
+
+- **`spawn_blocking` overhead** per `closure::compute` call (~50-100 µs).
+  Trying it without `spawn_blocking` for small dep counts is the next
+  win.
+- **`find_symbol_resolve_loop`** at 168 µs avg — N sequential redb
+  `find_symbol` calls per dep. Could batch into a single multimap walk.
+- **JSON serialization** of the larger v0.3 response shape (rank_score,
+  content_version, callers fields plumbed even when empty).
+
+Filed for v0.3.x:
+
+1. Try `closure::compute` synchronously for dep counts ≤ 5 (most cases)
+2. Batch the per-dep `find_symbol` lookups into one redb scan
+3. Trim the v0.3 response shape where fields are always-empty
+
 ### Read-symbol perf investigation — debug infrastructure + closure file-cache
 
 Picking up the v0.3.2 follow-up filed in PR #44 (v0.3 read_symbol p95
