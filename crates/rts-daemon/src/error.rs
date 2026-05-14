@@ -23,8 +23,19 @@ pub enum ErrorCode {
     InvalidWorkspacePath,
     /// A component of the mounted path was a symlink (security: refuse-symlink rule).
     MountHasSymlink,
-    /// `(dev, inode)` of the workspace path changed since the last mount.
+    /// `(dev, inode)` of the workspace path changed since the last mount
+    /// (symlink swap detected, mount move, dir replaced). Per
+    /// protocol-v0 §5.2 + §14.
     WorkspaceVanished,
+    /// A second `Workspace.Mount` from the same connection asked for a
+    /// different canonical path than the daemon is already pinned to.
+    /// Distinct from `WorkspaceVanished` (which is about a single
+    /// workspace whose underlying inode changed). Operator action:
+    /// either re-use the existing daemon for its pinned workspace, or
+    /// connect a fresh daemon process (sockets are per-workspace per
+    /// protocol-v0 §5.3, so this happens automatically when the path
+    /// hash differs).
+    WorkspaceMismatch,
     /// Path resolves to an NFS / SMB / fuse mount (unsupported in v0).
     WorkspaceOnNetworkMount,
     /// Path resolved outside the mounted workspace root.
@@ -73,6 +84,7 @@ impl ErrorCode {
             ErrorCode::InvalidWorkspacePath => "INVALID_WORKSPACE_PATH",
             ErrorCode::MountHasSymlink => "MOUNT_HAS_SYMLINK",
             ErrorCode::WorkspaceVanished => "WORKSPACE_VANISHED",
+            ErrorCode::WorkspaceMismatch => "WORKSPACE_MISMATCH",
             ErrorCode::WorkspaceOnNetworkMount => "WORKSPACE_ON_NETWORK_MOUNT",
             ErrorCode::OutOfRoot => "OUT_OF_ROOT",
             ErrorCode::PathTraversal => "PATH_TRAVERSAL",

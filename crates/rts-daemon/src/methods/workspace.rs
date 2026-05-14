@@ -55,8 +55,11 @@ pub async fn mount(
             }
             Ok(_other) => {
                 return Err(ProtocolError::new(
-                    ErrorCode::WorkspaceVanished,
-                    "daemon is pinned to a different workspace; mount a fresh daemon for another path",
+                    ErrorCode::WorkspaceMismatch,
+                    "daemon is already pinned to a different workspace on this socket. \
+                     Per protocol-v0 §5.3 the socket path is per-workspace-hash; \
+                     connect via the correct socket, or start a fresh daemon for the \
+                     other workspace (auto-spawn handles this for new paths).",
                 ));
             }
             Err(e) => return Err(e),
