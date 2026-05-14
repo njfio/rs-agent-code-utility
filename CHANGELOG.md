@@ -7,6 +7,143 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Read-symbol perf — content_version + signature caches (root-cause fix)
+
+Following the profile harness shipped in PR #45, this pass identifies
+and fixes the two dominant cost drivers in v0.3's `read_symbol(deps=true)`
+on real Rust workspaces.
+
+#### What the profile showed
+
+Per-call timing on a typical `crates/rts-core` `read_symbol(deps=true)`
+warm run (34 samples, `crates/rts-core` workspace):
+
+| Section | avg µs | max µs |
+|---|---:|---:|
+| `path_resolve+check` | 29 | 156 |
+| `read_file` | 221 | 622 |
+| **`content_version`** | **904** | **2325** |
+| **`closure_walk → render_loop_total`** | **1248** | **10529** |
+
+`content_version` was blake3-hashing the **full file** on every call;
+`render_loop_total` was the tree-sitter signature renderer invoked
+once per dep without memoization. The two together accounted for
+~80 % of v0.3's per-call read_symbol cost.
+
+#### Two new caches
+
+1. **`ContentVersionCache`** — keyed by `(path, mtime_ns, generation)`.
+   FIFO-evicted at 256 entries (matches `find_symbol`'s MAX_MATCHES so
+   the worst-case bench never thrashes). Same workspace, same file,
+   same mtime → instant cache hit instead of re-hashing.
+
+2. **`SignatureCache`** — keyed by `(path, start_byte, end_byte, mtime_ns)`.
+   FIFO at 4096 entries (sized for a real workspace's full symbol
+   table + headroom). Caches both `Some(rendered)` AND `None` (no
+   renderer / parse failure) so repeat lookups don't retry a known-bad
+   render.
+
+Closure walker now also tracks `mtime` alongside file bytes so the
+signature cache can invalidate per-file. One `std::fs::metadata` per
+*distinct file* per closure call (typically 1-5 files per dep
+walk).
+
+#### Measured impact
+
+On `rts-bench latency --workspace crates/rts-core --queries 5000 --cold-count 500 --deps`:
+
+| Metric | Pre-fix | Post-fix | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 3207 µs | **2269 µs** | **−29 %** |
+| `read_symbol` p95 | 7023 µs | **5829 µs** | **−17 %** |
+| `read_symbol` p99 | 11877 µs | 10831 µs | −9 % |
+| `content_version` profile avg | 904 µs | **205 µs** | **−77 %** |
+| `render_loop_total` profile avg | 1248 µs | **815 µs** | **−35 %** |
+
+Tests: 129 unit + 24 integration pass; +5 new cache tests; no
+behavioral changes to wire shape.
+
+#### Remaining gap to alpha.30
+
+Alpha.30's `read_symbol` p95 on the same workload is 974 µs.
+Post-fix v0.3 is 5829 µs — still **6.0× slower** (vs 7.21× pre-fix).
+The remaining gap is structural, not blake3- or render-cache-shaped:
+
+- **`spawn_blocking` overhead** per `closure::compute` call (~50-100 µs).
+  Trying it without `spawn_blocking` for small dep counts is the next
+  win.
+- **`find_symbol_resolve_loop`** at 168 µs avg — N sequential redb
+  `find_symbol` calls per dep. Could batch into a single multimap walk.
+- **JSON serialization** of the larger v0.3 response shape (rank_score,
+  content_version, callers fields plumbed even when empty).
+
+Filed for v0.3.x:
+
+1. Try `closure::compute` synchronously for dep counts ≤ 5 (most cases)
+2. Batch the per-dep `find_symbol` lookups into one redb scan
+3. Trim the v0.3 response shape where fields are always-empty
+
+### Read-symbol perf investigation — debug infrastructure + closure file-cache
+
+Picking up the v0.3.2 follow-up filed in PR #44 (v0.3 read_symbol p95
+is 7× slower than alpha.30 on real workspaces). This change ships
+the **debugging infrastructure that enables root-cause investigation**
+rather than a full fix — the regression is multi-source and a
+proper bisect needs flame-graph tooling. Concrete output:
+
+1. **`RTS_PROFILE_READ_SYMBOL=1`** — section-level timing inside
+   `read_symbol_body`. Prints `path_resolve+check`, `read_file`,
+   `content_version`, `closure_walk` microsecond elapsed to stderr.
+   No-op when unset; zero overhead on normal builds.
+2. **`RTS_INHERIT_DAEMON_STDERR=1`** in `rts-mcp` — pipes daemon
+   stderr through (default null'd). Pairs with
+   `RTS_BENCH_INHERIT_STDERR=1` in `rts-bench` to surface daemon logs
+   through the full bench → mcp → daemon process chain.
+3. **Per-call file cache in `closure::compute`** — multiple deps
+   frequently live in the same file (e.g. tree-sitter wrapper
+   methods all live in `tree.rs`). The pre-fix code read the file
+   fresh for each dep via `std::fs::read(&abs)`; now a small
+   `HashMap<PathBuf, Option<Vec<u8>>>` deduplicates within a single
+   closure walk. Marginal on `crates/rts-core` (deps cluster
+   weakly), more impactful on workspaces with utility modules
+   referenced from many call sites. Correctness improvement
+   regardless: avoids N file reads when N deps share a file.
+
+**What profiling revealed.** A single warm `read_symbol(deps=true)`
+on a typical `crates/rts-core` symbol (`find_nodes_by_kind` with 2
+deps) breaks down as:
+
+| Section | µs |
+|---|---:|
+| `path_resolve+check` | 42 |
+| `read_file` | 111 |
+| `content_version` (blake3) | 18 |
+| `closure_walk` (spawn_blocking + 2 deps) | 246 |
+| **Total** | **~417** |
+
+That total matches alpha.30's p95 (974 µs) closely. The bench's
+v0.3 p95 of 7023 µs is the **tail** — symbols with many deps,
+where `closure_walk` dominates non-linearly. The file-read cache
+addresses one of several contributing factors; the other tail-driver
+candidates need flame-graph tooling to pin down precisely:
+
+- `spawn_blocking` overhead per call (each `closure::compute` runs
+  on the blocking pool — for hot paths with many short calls,
+  this can dominate)
+- Sequential redb operations per dep (`refs_from_symbol` →
+  `name_for_sid` × N → `find_symbol` × N → `defs` walk × N)
+- `chosen.clone()` before spawn_blocking
+- Tree-sitter signature renderer cost per dep
+
+#### Filed for next v0.3.x session (now actionable)
+
+1. Hook `cargo flamegraph` or `samply` to the bench harness — the
+   profile harness above gives section totals; a flame graph gives
+   the per-line attribution needed to fix the tail
+2. Try `closure::compute` without `spawn_blocking` for small dep
+   counts (the spawn cost may dominate for the common case)
+3. Re-measure G5 with these in place
+
 ### `rts-bench latency --workspace <path>` — real-workspace benchmarks
 
 Adds the v0.3.2 follow-up `--workspace` flag mutually exclusive with

@@ -1004,11 +1004,12 @@ pub async fn read_range(
     let truncated = byte_truncated || budget_truncated;
     let tokens_returned = approx_tokens(text_kept.len());
 
-    let cv = content_version(
-        &bytes,
-        mtime_ns,
-        state.index_generation.load(Ordering::Relaxed),
-    );
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let cv = state
+        .content_version_cache
+        .get_or_compute(&abs, mtime_ns, generation, || {
+            content_version(&bytes, mtime_ns, generation)
+        });
 
     Ok(serde_json::json!({
         "qualified_name": serde_json::Value::Null,
@@ -1132,10 +1133,36 @@ async fn read_symbol_body(
     include_deps: bool,
     include_callers: bool,
 ) -> Result<serde_json::Value, ProtocolError> {
+    // Timing harness (RTS_PROFILE_READ_SYMBOL=1) — prints µs per
+    // section to stderr. Useful for chasing the v0.3 deps-mode
+    // regression filed in v0.3.2; the env var lives long enough to
+    // root-cause then comes back out.
+    let profile = std::env::var("RTS_PROFILE_READ_SYMBOL")
+        .map(|v| !v.is_empty() && v != "0")
+        .unwrap_or(false);
+    macro_rules! mark {
+        ($t:ident, $label:literal) => {
+            if profile {
+                eprintln!(
+                    "read_symbol:{:>22} = {:>6} µs",
+                    $label,
+                    $t.elapsed().as_micros()
+                );
+                #[allow(unused_assignments)]
+                {
+                    $t = std::time::Instant::now();
+                }
+            }
+        };
+    }
+    let mut t_section = std::time::Instant::now();
+
     let (abs, _rel) = resolve_workspace_path(root, &chosen.file)?;
     check_body_extension(&abs)?;
+    mark!(t_section, "path_resolve+check");
 
     let (bytes, mtime_ns) = read_file(&abs).await?;
+    mark!(t_section, "read_file");
     let start = chosen.start_byte as usize;
     let end = (chosen.end_byte as usize).min(bytes.len());
     if start > bytes.len() {
@@ -1158,9 +1185,20 @@ async fn read_symbol_body(
     // body. Falls through gracefully when the slice doesn't parse as a
     // single top-level item.
     let signature: Option<String> = if matches!(shape, "signature" | "both") {
-        crate::language::info_for_path(&chosen.file)
-            .and_then(|info| info.signature_renderer)
-            .and_then(|render| render(body_text.as_bytes()))
+        // Cache key is (path, byte range, mtime). The bench's seeded
+        // RNG picks the same anchor many times across queries; without
+        // this cache, tree-sitter re-parses the slice every call.
+        state.signature_cache.get_or_compute(
+            &abs,
+            chosen.start_byte,
+            chosen.end_byte,
+            mtime_ns,
+            || {
+                crate::language::info_for_path(&chosen.file)
+                    .and_then(|info| info.signature_renderer)
+                    .and_then(|render| render(body_text.as_bytes()))
+            },
+        )
     } else {
         None
     };
@@ -1180,11 +1218,13 @@ async fn read_symbol_body(
     let body_truncated = byte_truncated || budget_truncated;
     let body_tokens = approx_tokens(text_kept.len());
 
-    let cv = content_version(
-        &bytes,
-        mtime_ns,
-        state.index_generation.load(Ordering::Relaxed),
-    );
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let cv = state
+        .content_version_cache
+        .get_or_compute(&abs, mtime_ns, generation, || {
+            content_version(&bytes, mtime_ns, generation)
+        });
+    mark!(t_section, "content_version");
 
     let signature_value = match signature {
         Some(s) => Value::String(s),
@@ -1205,13 +1245,25 @@ async fn read_symbol_body(
         // anchor body — outgoing refs come from the indexed
         // SID_REFS_OUT table populated at commit time. body_text
         // stays in scope for the body-text return.
+        //
+        // Clone the Arc into the blocking task so the signature
+        // cache survives across calls (Arc::clone is cheap; the
+        // Mutex inside is shared, not duplicated).
+        let state_cloned = state.clone();
         let walk = tokio::task::spawn_blocking(move || {
-            crate::closure::compute(&root_owned, &store_arc, &chosen_clone, remaining_budget)
+            crate::closure::compute(
+                &root_owned,
+                &store_arc,
+                &chosen_clone,
+                remaining_budget,
+                &state_cloned.signature_cache,
+            )
         })
         .await
         .map_err(|e| {
             ProtocolError::new(ErrorCode::InternalError, format!("closure join error: {e}"))
         })?;
+        mark!(t_section, "closure_walk");
         let value = crate::closure::to_wire_value(&walk.dependencies);
         (
             value,

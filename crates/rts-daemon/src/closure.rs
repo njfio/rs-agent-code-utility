@@ -46,7 +46,7 @@
 //! `compute` recursively.
 
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
@@ -118,7 +118,32 @@ pub fn compute(
     store: &Store,
     anchor: &FoundSymbol,
     remaining_budget_tokens: u64,
+    signature_cache: &crate::state::SignatureCache,
 ) -> ClosureResult {
+    // Fine-grained timing — same env-var gate as the outer
+    // `RTS_PROFILE_READ_SYMBOL`. Lets us see WHICH sub-section of
+    // closure_walk dominates on the regression tail.
+    let profile = std::env::var("RTS_PROFILE_READ_SYMBOL")
+        .map(|v| !v.is_empty() && v != "0")
+        .unwrap_or(false);
+    macro_rules! cmark {
+        ($t:ident, $label:literal, $count:expr) => {
+            if profile {
+                eprintln!(
+                    "closure:{:>26} = {:>6} µs  (n={})",
+                    $label,
+                    $t.elapsed().as_micros(),
+                    $count,
+                );
+                #[allow(unused_assignments)]
+                {
+                    $t = std::time::Instant::now();
+                }
+            }
+        };
+    }
+    let mut t = std::time::Instant::now();
+
     // Resolve the anchor's sid so we can look up its outgoing edges.
     // The anchor came from `Store::find_symbol(name)` or
     // `Store::defs_in_file(path)`, so by construction the name has a
@@ -127,6 +152,7 @@ pub fn compute(
         Ok(Some(s)) => s,
         _ => return ClosureResult::empty(),
     };
+    cmark!(t, "anchor_sid_lookup", 1);
     // Pull outgoing edges from the indexed graph. The writer's
     // smallest-enclosing-def resolution at commit time (U1) means
     // each edge's caller_sid is the def whose byte range covers the
@@ -142,6 +168,8 @@ pub fn compute(
         Ok(v) => v,
         Err(_) => return ClosureResult::empty(),
     };
+    let callee_count = callee_sids.len();
+    cmark!(t, "refs_from_symbol", callee_count);
     let mut candidates: BTreeSet<String> = BTreeSet::new();
     for callee_sid in callee_sids {
         if callee_sid == anchor_sid {
@@ -153,6 +181,7 @@ pub fn compute(
         };
         candidates.insert(name);
     }
+    cmark!(t, "name_for_sid_loop", candidates.len());
     if candidates.is_empty() {
         return ClosureResult::empty();
     }
@@ -184,6 +213,7 @@ pub fn compute(
         };
         resolved.push((name.clone(), chosen));
     }
+    cmark!(t, "find_symbol_resolve_loop", resolved.len());
 
     // Render each entry (read body bytes + dispatch the per-language
     // signature renderer). I/O or render failures degrade gracefully
@@ -197,6 +227,19 @@ pub fn compute(
     // the one file-read surface that didn't share the gate, and a
     // future writer bug or stale db.redb could surface garbage. M2's
     // symlink rejection rides for free now.
+    // Per-call file cache: multiple deps frequently live in the same
+    // file (e.g. tree-sitter wrapper methods on `SyntaxTree` all live
+    // in `tree.rs`). Reading the file once and reusing the buffer
+    // across deps avoids N full `read()` syscalls when the resolved
+    // set has N deps in 1-2 files. On `crates/rts-core` reads where
+    // deps cluster, this is the per-call hot path. Sized to
+    // `resolved.len()` upper bound; in practice files-per-call is much
+    // smaller (typically 1-5 distinct files).
+    // Each cache value is `(bytes, mtime_ns)` — mtime is the
+    // signature cache's invalidation key, fetched once per file
+    // via `std::fs::metadata` alongside the read.
+    let mut file_cache: std::collections::HashMap<PathBuf, Option<(Vec<u8>, i128)>> =
+        std::collections::HashMap::with_capacity(resolved.len().min(8));
     let mut rendered: Vec<DependencyEntry> = Vec::with_capacity(resolved.len());
     for (_name, def) in &resolved {
         let abs = match crate::path::resolve_workspace_path(workspace_root, &def.file) {
@@ -206,22 +249,55 @@ pub fn compute(
                 continue;
             }
         };
-        let (start, end) = (def.start_byte as usize, def.end_byte as usize);
-        let body_bytes = match std::fs::read(&abs) {
-            Ok(b) => b,
-            Err(_) => {
-                rendered.push(entry_without_signature(def));
-                continue;
+        // Reuse cached bytes when this dep's file has already been
+        // read for an earlier dep in this same call. `None` cached
+        // values flag an earlier I/O failure so we don't retry per dep.
+        let body_with_mtime: Option<(&[u8], i128)> = if let Some(cached) = file_cache.get(&abs) {
+            cached.as_ref().map(|(b, m)| (b.as_slice(), *m))
+        } else {
+            let result = std::fs::read(&abs).and_then(|b| {
+                let m = std::fs::metadata(&abs)?;
+                let mtime_ns = m
+                    .modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_nanos() as i128)
+                    .unwrap_or(0);
+                Ok((b, mtime_ns))
+            });
+            match result {
+                Ok((b, m)) => {
+                    file_cache.insert(abs.clone(), Some((b, m)));
+                    file_cache
+                        .get(&abs)
+                        .and_then(|c| c.as_ref())
+                        .map(|(b, m)| (b.as_slice(), *m))
+                }
+                Err(_) => {
+                    file_cache.insert(abs.clone(), None);
+                    None
+                }
             }
         };
+        let Some((body_bytes, mtime_ns)) = body_with_mtime else {
+            rendered.push(entry_without_signature(def));
+            continue;
+        };
+        let (start, end) = (def.start_byte as usize, def.end_byte as usize);
         let slice = if end > start && end <= body_bytes.len() {
             &body_bytes[start..end]
         } else {
-            &body_bytes[..]
+            body_bytes
         };
-        let signature = crate::language::info_for_path(&def.file)
-            .and_then(|info| info.signature_renderer)
-            .and_then(|render| render(slice));
+        // Tree-sitter signature renders are expensive (1248 µs avg
+        // per-call on `crates/rts-core` deps walks); cache per
+        // `(path, byte_range, mtime)`.
+        let signature =
+            signature_cache.get_or_compute(&abs, def.start_byte, def.end_byte, mtime_ns, || {
+                crate::language::info_for_path(&def.file)
+                    .and_then(|info| info.signature_renderer)
+                    .and_then(|render| render(slice))
+            });
         rendered.push(DependencyEntry {
             qualified_name: def.name.clone(),
             kind: def.kind.as_wire_str().to_string(),
@@ -233,6 +309,7 @@ pub fn compute(
             signature,
         });
     }
+    cmark!(t, "render_loop_total", rendered.len());
 
     // Greedy-pack by ascending cost. The protocol cares about
     // *getting useful work done in one call*, so showing 20 short
