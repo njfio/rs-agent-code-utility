@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Semantic baseline: decompose + stem + dedupe (post-harness iteration)
+
+First iteration on the graph-only baseline ranker shipped in PR #55.
+Three cheap changes; all in `crates/rts-bench/src/semantic.rs`, no
+daemon changes:
+
+1. **`decompose_name(name)`** — splits identifiers on `snake_case`
+   / `kebab-case` / `camelCase` boundaries. `find_nodes_by_kind`
+   and `findNodesByKind` both produce `["find", "nodes", "by",
+   "kind"]`. Sub-tokens are scored independently.
+
+2. **`stem(token)`** — drops common English suffixes (`-ing`, `-ed`,
+   `-er`, `-es`, `-tion`, `-s`, plus a trailing-`e` normalizer).
+   `parsing` / `parse` / `parsed` / `parses` all collapse to `pars`.
+   Naive — not a Porter stemmer — just enough to bridge the natural-
+   language ↔ identifier gap (`parsing` ↔ `parse_file_content`).
+
+3. **Dedupe candidates by qualified_name.** `find_symbol(*)` returns
+   one row per occurrence; without dedupe, a popular symbol like
+   `analyzer` returned 10× in a row and crowded out everything else.
+   Keep the first (highest-rank) occurrence per name.
+
+Scoring updated: exact full-name match (raw or stemmed) +10, exact
+stemmed sub-token match +6, substring in name +3, substring in file
+path +1, plus `rank_score`.
+
+#### Numbers on the rts-core corpus
+
+| Metric                   | Baseline (PR #55) | This PR    | Δ          |
+|--------------------------|-------------------|------------|------------|
+| MRR                      | 0.189             | 0.197      | +4.2%      |
+| Coverage (all 13 q)      | 30.8%             | 38.5%      | +7.7pp     |
+| Answerable coverage      | 40.0% (4/10)      | 50.0% (5/10) | +10pp     |
+| Precision@10             | 0.085             | 0.069      | −0.016 (*) |
+
+(*) Precision@10 dropped because duplicates no longer inflate
+per-query hit counts. The new value is more honest — counts unique
+correct symbols in top-10, not occurrences.
+
+New report field: `answerable_coverage` — the metric to track when
+comparing rankers (excludes negative-control queries with empty
+`expected_top_k`, which can never hit by definition).
+
+#### Honest finding: scoring isn't the bottleneck — retrieval is
+
+After this PR, 5 of 10 answerable queries still miss. Direct probe of
+the candidate pool (`find_symbol(pattern="*")` → 141 unique symbols
+after dedupe) shows that **the expected names for every remaining
+miss aren't in the pool at all**: `SyntaxTree`, `detect_language`,
+`Visibility`, `is_public`, `count_symbols`, `SymbolKind`,
+`render_signature` — all rank below the daemon's MAX_MATCHES (256)
+cap by PageRank.
+
+A per-token retrieval expansion (`find_symbol(pattern="*<token>*")`
+for each query token) was tried and reverted: it grew the pool but
+introduced scoring noise — bare matches like `cache` / `pool` /
+`handler` tied with specific names like `calculate_cache_key` on
+sub-token scoring and won on tiebreak. Filed for a follow-up that
+pairs retrieval expansion with name-specificity scoring (longer,
+more-distinctive symbols should outrank short generic ones at equal
+token-match count).
+
+The PageRank pool cap is now the next clear lever.
+
+#### Test coverage
+
++4 new tests in `semantic::tests`:
+- `decompose_name_handles_snake_camel_and_kebab`
+- `stem_collapses_common_inflections`
+- `score_candidate_sub_token_match_after_stemming`
+- `answerable_coverage_excludes_negative_controls`
+
+Existing `score_candidate_exact_name_dominates_substring` updated to
+also assert the new "stemmed sub-token > raw substring" ordering.
+578 workspace tests pass.
+
 ### `rts-bench semantic` — eval harness for graph-only ranking
 
 New subcommand:

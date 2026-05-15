@@ -32,12 +32,18 @@
 //!    word boundaries).
 //! 2. Issues `find_symbol(pattern="*")` against the daemon to
 //!    pull the top-256 by PageRank.
-//! 3. Scores each candidate symbol against the query tokens:
-//!    - exact-name match: +10.0
+//! 3. Decomposes each candidate's qualified_name into sub-tokens
+//!    on snake_case / kebab-case / camelCase boundaries, and applies
+//!    naive English stemming (drops common suffixes, normalizes
+//!    trailing `e`) so `parsing`/`parse`/`parsed` collapse to the
+//!    same stem.
+//! 4. Scores each candidate symbol against the query tokens:
+//!    - exact-name match (raw or stemmed): +10.0
+//!    - exact sub-token match (stemmed): +6.0
 //!    - substring match in qualified_name: +3.0
 //!    - substring match in file path: +1.0
 //!    - + the candidate's own rank_score (already 0..1, normalize)
-//! 4. Returns the top-K by combined score.
+//! 5. Returns the top-K by combined score.
 //!
 //! This is intentionally a simple ranker — its job is to be a
 //! *reproducible baseline*, not a state-of-the-art system. The
@@ -119,8 +125,14 @@ pub struct Report {
     pub query_count: usize,
     /// Mean reciprocal rank across queries.
     pub mrr: f64,
-    /// Fraction of queries with at least one expected name in top-K.
+    /// Fraction of queries with at least one expected name in top-K
+    /// (denominator = all queries, including negative controls).
     pub coverage: f64,
+    /// Fraction of *answerable* queries (non-empty expected_top_k)
+    /// with at least one expected name in top-K. Negative-control
+    /// queries are excluded from both numerator and denominator.
+    /// This is the metric to track when comparing ranker variants.
+    pub answerable_coverage: f64,
     /// Mean precision@K: average of `hits_in_top_k / top_k` per query.
     pub mean_precision_at_k: f64,
     pub queries: Vec<QueryResult>,
@@ -237,7 +249,86 @@ pub fn tokens_of(query: &str) -> Vec<String> {
         .collect()
 }
 
+/// Split an identifier into its component words.
+///
+/// Handles `snake_case`, `kebab-case`, and `camelCase` boundaries.
+/// Returns lowercased components; drops empties and 1-char fragments
+/// (they're noise — almost always loop counters or generic params).
+///
+/// Examples:
+/// - `find_nodes_by_kind` → `["find", "nodes", "by", "kind"]`
+/// - `findNodesByKind`    → `["find", "nodes", "by", "kind"]`
+/// - `MyClass`            → `["my", "class"]`
+/// - `parse_v2`           → `["parse", "v2"]`
+pub fn decompose_name(name: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut current = String::new();
+    let mut prev_lower = false;
+    for c in name.chars() {
+        if c.is_alphanumeric() {
+            if c.is_uppercase() && prev_lower {
+                // camelCase boundary.
+                if !current.is_empty() {
+                    out.push(current.clone());
+                    current.clear();
+                }
+            }
+            current.push(c.to_ascii_lowercase());
+            prev_lower = c.is_lowercase();
+        } else {
+            // Separator: `_`, `-`, `:`, `.`, etc.
+            if !current.is_empty() {
+                out.push(current.clone());
+                current.clear();
+            }
+            prev_lower = false;
+        }
+    }
+    if !current.is_empty() {
+        out.push(current);
+    }
+    out.into_iter().filter(|s| s.len() > 1).collect()
+}
+
+/// Drop common English suffixes so different inflections collapse
+/// to the same root. Intentionally simple — not a Porter stemmer,
+/// just enough to map `parsing`/`parse`/`parsed`/`parses` →`pars` and
+/// `nodes`/`node` → `nod`.
+///
+/// Two passes:
+/// 1. Strip the first matching suffix from a fixed list (if the
+///    resulting stem is still ≥ 3 chars).
+/// 2. Drop a final trailing `e` (so `parse` after the no-suffix path
+///    still lands on `pars`).
+pub fn stem(token: &str) -> String {
+    let mut t = token.to_string();
+    // Longest first so e.g. `connection` matches `tion` before `s`.
+    let suffixes: &[&str] = &[
+        "ations", "ization", "tions", "sions", "ation", "tion", "sion", "ings", "ers", "ies",
+        "ing", "ed", "er", "es", "ly", "s",
+    ];
+    for suf in suffixes {
+        if t.ends_with(suf) {
+            let stem_len = t.len() - suf.len();
+            if stem_len >= 3 {
+                t.truncate(stem_len);
+                break;
+            }
+        }
+    }
+    if t.ends_with('e') && t.len() > 3 {
+        t.pop();
+    }
+    t
+}
+
 /// Score one candidate symbol against a token set.
+///
+/// The candidate's qualified_name is decomposed into sub-tokens and
+/// stemmed up front; each query token is stemmed once and tested
+/// against (a) the full name, (b) the stemmed full name, (c) the
+/// stemmed sub-token set, (d) raw substring fallback. File-path
+/// substring stays unchanged.
 pub fn score_candidate(
     candidate_name: &str,
     candidate_file: &str,
@@ -246,10 +337,22 @@ pub fn score_candidate(
 ) -> f64 {
     let name_lower = candidate_name.to_lowercase();
     let file_lower = candidate_file.to_lowercase();
+    let name_stem = stem(&name_lower);
+    // Decompose + stem the candidate once per scoring call.
+    let sub_stems: Vec<String> = decompose_name(candidate_name)
+        .into_iter()
+        .map(|t| stem(&t))
+        .collect();
     let mut score = candidate_rank; // baseline: PageRank already 0..1
     for tok in tokens {
-        if name_lower == *tok {
-            score += 10.0; // exact-name match dominates
+        let tok_stem = stem(tok);
+        if name_lower == *tok || name_stem == tok_stem {
+            // Exact full-name match (raw or stemmed) dominates.
+            score += 10.0;
+        } else if sub_stems.contains(&tok_stem) {
+            // Exact stemmed sub-token match — bridges the natural-
+            // language ↔ identifier gap (`parsing` ↔ `parse_file`).
+            score += 6.0;
         } else if name_lower.contains(tok) {
             score += 3.0;
         }
@@ -267,8 +370,15 @@ pub async fn run(
     top_k: usize,
 ) -> Result<Vec<QueryResult>> {
     // Pull the workspace's top symbols once via find_symbol(pattern="*").
-    // 256 is the daemon's MAX_MATCHES; that's the full set we have
-    // to score against.
+    // After dedupe by qualified_name this is ~141 unique symbols on
+    // rts-core — the entire universe of "things the PageRank graph
+    // considers central." A known limitation: niche symbols whose
+    // PageRank ranks below the daemon's MAX_MATCHES (256) cap won't
+    // appear here. Per-token retrieval expansion was tried; it grew
+    // the pool but introduced scoring noise (bare matches like
+    // `cache` and `pool` outranked specific names like
+    // `calculate_cache_key`). Filed for a follow-up that pairs
+    // expansion with name-specificity scoring.
     let candidates = fetch_candidates(session).await?;
     let mut out: Vec<QueryResult> = Vec::with_capacity(corpus.queries.len());
     for q in &corpus.queries {
@@ -324,7 +434,9 @@ pub struct Candidate {
 
 /// Pull the top-256 by PageRank as the candidate set the baseline
 /// ranker will re-score. This is the entire universe of "things the
-/// graph thinks are central."
+/// graph thinks are central." Dedupes by qualified_name — the daemon
+/// returns one row per occurrence, so popular names show up many
+/// times without dedupe and crowd the top-K.
 pub async fn fetch_candidates(session: &mut McpSession) -> Result<Vec<Candidate>> {
     let resp = session
         .tools_call("find_symbol", json!({ "pattern": "*" }), 5)
@@ -340,19 +452,33 @@ pub async fn fetch_candidates(session: &mut McpSession) -> Result<Vec<Candidate>
         .get("matches")
         .and_then(|m| m.as_array())
         .ok_or_else(|| anyhow::anyhow!("find_symbol response missing matches array"))?;
-    Ok(matches
-        .iter()
-        .filter_map(|m| {
-            let name = m.get("qualified_name")?.as_str()?.to_string();
-            let file = m
-                .get("file")
-                .and_then(|f| f.as_str())
-                .unwrap_or("")
-                .to_string();
-            let rank = m.get("rank_score").and_then(|r| r.as_f64()).unwrap_or(0.0);
-            Some(Candidate { name, file, rank })
-        })
-        .collect())
+    // Dedupe by qualified_name. `find_symbol` returns one row per
+    // occurrence, so popular names show up many times — without
+    // dedupe, a single symbol can monopolize the top-K and crowd
+    // out genuinely-relevant alternatives. Keep the first (highest-
+    // rank, since the daemon returns by descending rank) occurrence.
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut out: Vec<Candidate> = Vec::new();
+    for m in matches.iter() {
+        let Some(name) = m.get("qualified_name").and_then(|n| n.as_str()) else {
+            continue;
+        };
+        if !seen.insert(name.to_string()) {
+            continue;
+        }
+        let file = m
+            .get("file")
+            .and_then(|f| f.as_str())
+            .unwrap_or("")
+            .to_string();
+        let rank = m.get("rank_score").and_then(|r| r.as_f64()).unwrap_or(0.0);
+        out.push(Candidate {
+            name: name.to_string(),
+            file,
+            rank,
+        });
+    }
+    Ok(out)
 }
 
 /// Load and parse a TOML corpus.
@@ -386,6 +512,19 @@ pub fn build_report(
     } else {
         0.0
     };
+    let answerable: Vec<&QueryResult> = results
+        .iter()
+        .filter(|r| !r.expected_top_k.is_empty())
+        .collect();
+    let answerable_coverage = if !answerable.is_empty() {
+        answerable
+            .iter()
+            .filter(|r| r.first_hit_rank.is_some())
+            .count() as f64
+            / answerable.len() as f64
+    } else {
+        0.0
+    };
     let mean_precision_at_k = if n > 0.0 && top_k > 0 {
         results
             .iter()
@@ -404,6 +543,7 @@ pub fn build_report(
         query_count: results.len(),
         mrr,
         coverage,
+        answerable_coverage,
         mean_precision_at_k,
         queries: results,
     }
@@ -447,10 +587,76 @@ mod tests {
     fn score_candidate_exact_name_dominates_substring() {
         let toks = vec!["mount".to_string()];
         let exact = score_candidate("mount", "src/lib.rs", 0.001, &toks);
-        let substring = score_candidate("workspace_mount", "src/lib.rs", 0.001, &toks);
+        let sub_token = score_candidate("workspace_mount", "src/lib.rs", 0.001, &toks);
         assert!(
-            exact > substring,
-            "exact name match should outrank substring match (+10 vs +3)"
+            exact > sub_token,
+            "exact full-name match should outrank sub-token match (+10 vs +6)"
+        );
+        // And sub-token match should outrank mere substring (which
+        // is what `workspacemount` would have been before decompose).
+        let raw_substring = score_candidate("workspacemount", "src/lib.rs", 0.001, &toks);
+        assert!(
+            sub_token > raw_substring,
+            "stemmed sub-token match should outrank raw substring match (+6 vs +3)"
+        );
+    }
+
+    #[test]
+    fn decompose_name_handles_snake_camel_and_kebab() {
+        assert_eq!(
+            decompose_name("find_nodes_by_kind"),
+            vec!["find", "nodes", "by", "kind"]
+        );
+        assert_eq!(
+            decompose_name("findNodesByKind"),
+            vec!["find", "nodes", "by", "kind"]
+        );
+        assert_eq!(decompose_name("MyClass"), vec!["my", "class"]);
+        assert_eq!(
+            decompose_name("kebab-case-thing"),
+            vec!["kebab", "case", "thing"]
+        );
+        // 1-char fragments dropped.
+        assert_eq!(decompose_name("a_useful_name"), vec!["useful", "name"]);
+    }
+
+    #[test]
+    fn stem_collapses_common_inflections() {
+        // All four forms of `parse` should land on the same root so a
+        // query like "parsing" can match a symbol called `parse_*`.
+        let root = stem("parsing");
+        assert_eq!(stem("parse"), root, "parse should match parsing");
+        assert_eq!(stem("parsed"), root, "parsed should match parsing");
+        assert_eq!(stem("parser"), root, "parser should match parsing");
+        // Plurals.
+        assert_eq!(stem("node"), stem("nodes"));
+        assert_eq!(stem("symbol"), stem("symbols"));
+        // -tion gets stripped, even though our naive stemmer can't
+        // reunite `connection` with `connect` (Porter handles that;
+        // we don't). The point of this assertion is just to verify
+        // the suffix fires.
+        assert_ne!(stem("connection"), "connection");
+        assert!(stem("connection").len() < "connection".len());
+        // Short words don't get over-stripped.
+        assert_eq!(stem("is"), "is");
+        assert_eq!(stem("do"), "do");
+    }
+
+    #[test]
+    fn score_candidate_sub_token_match_after_stemming() {
+        // "parsing" query should hit candidate `parse_file_content`
+        // even though there's no substring/exact overlap.
+        let toks = vec!["parsing".to_string()];
+        let hit = score_candidate("parse_file_content", "src/parser.rs", 0.001, &toks);
+        let miss = score_candidate("unrelated_function", "src/other.rs", 0.001, &toks);
+        // Hit gets at least the +6 sub-token bonus plus a file-path
+        // +1 (the file is "parser.rs" which contains "parsing"? no it
+        // doesn't, but stemming isn't applied to the path). The
+        // important assertion is that hit > miss by a wide margin.
+        assert!(
+            hit > miss + 5.0,
+            "stemmed sub-token match should fire (`parsing` → `pars` matches `parse`): \
+             hit={hit}, miss={miss}"
         );
     }
 
@@ -498,6 +704,44 @@ mod tests {
         assert!((report.mrr - 0.5).abs() < 1e-9);
         // Coverage = 2 / 3 (two queries had a hit)
         assert!((report.coverage - 2.0 / 3.0).abs() < 1e-9);
+        // All three queries have non-empty expected_top_k, so
+        // answerable_coverage equals coverage.
+        assert!((report.answerable_coverage - 2.0 / 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn answerable_coverage_excludes_negative_controls() {
+        // 2 answerable queries (1 hit, 1 miss) + 1 negative control.
+        // Plain coverage = 1/3; answerable coverage = 1/2.
+        let queries = vec![
+            QueryResult {
+                query: "answerable hit".into(),
+                expected_top_k: vec!["a".into()],
+                returned_top_k: vec!["a".into()],
+                first_hit_rank: Some(0),
+                hits_in_top_k: 1,
+                reciprocal_rank: 1.0,
+            },
+            QueryResult {
+                query: "answerable miss".into(),
+                expected_top_k: vec!["x".into()],
+                returned_top_k: vec!["b".into()],
+                first_hit_rank: None,
+                hits_in_top_k: 0,
+                reciprocal_rank: 0.0,
+            },
+            QueryResult {
+                query: "negative control".into(),
+                expected_top_k: vec![],
+                returned_top_k: vec!["b".into()],
+                first_hit_rank: None,
+                hits_in_top_k: 0,
+                reciprocal_rank: 0.0,
+            },
+        ];
+        let report = build_report(Path::new("/tmp"), Path::new("/tmp/c.toml"), 10, queries);
+        assert!((report.coverage - 1.0 / 3.0).abs() < 1e-9);
+        assert!((report.answerable_coverage - 0.5).abs() < 1e-9);
     }
 
     #[test]

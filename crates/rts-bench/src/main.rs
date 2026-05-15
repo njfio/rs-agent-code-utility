@@ -471,9 +471,10 @@ async fn run_semantic(
 
     let report = semantic::build_report(&workspace, &corpus_path, top_k, results);
     println!(
-        "semantic: mrr={:.3} coverage={:.1}% precision@{}={:.3}",
+        "semantic: mrr={:.3} coverage={:.1}% answerable_coverage={:.1}% precision@{}={:.3}",
         report.mrr,
         report.coverage * 100.0,
+        report.answerable_coverage * 100.0,
         report.top_k,
         report.mean_precision_at_k,
     );
