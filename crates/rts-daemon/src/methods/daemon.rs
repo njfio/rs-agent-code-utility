@@ -49,6 +49,11 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // Used by `rts-bench semantic` to pull the full ranked candidate
     // pool when scoring corpus queries; agents should leave at default.
     "find_symbol_limit_param",
+    // v0.5 — Index.FindSymbol response carries real `doc` field
+    // populated from indexed `///` / `//!` Rust doc comments. Pre-v0.5
+    // daemons always returned `null` for this field. C/JS/Python doc
+    // extraction filed as follow-up.
+    "find_symbol_doc_field",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

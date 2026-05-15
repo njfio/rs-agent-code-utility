@@ -73,6 +73,21 @@ pub const SID_REFS_OUT: MultimapTableDefinition<u32, u32> =
 /// next_fid, next_sid, workspace_fingerprint, …).
 pub const META: TableDefinition<&str, &[u8]> = TableDefinition::new("meta");
 
+/// Multimap `symbol_id (u32)` → postcard(`DocBlob`). One entry per
+/// `(symbol, file)` pair where the symbol has an attached doc comment
+/// (Rust `///` / `//!`, eventually other languages). Empty doc text
+/// is never stored — absence is "no docs."
+///
+/// Multimap because `pub use` re-exports or trait-impl forwarding can
+/// give the same symbol name multiple doc-attached def sites across
+/// files. Readers either take the first match or filter by `fid` to
+/// match a specific occurrence.
+///
+/// Sidecar design (vs extending `DefSite`): keeps existing on-disk
+/// data format unchanged so v0.4.1 stores open cleanly under newer
+/// daemons. Doc text only populates as files are re-indexed.
+pub const SID_DOCS: MultimapTableDefinition<u32, &[u8]> = MultimapTableDefinition::new("sid_docs");
+
 // ---------- Value types ----------
 
 /// Whether the parser succeeded, partially succeeded, or errored on the file.
@@ -109,6 +124,24 @@ pub struct DefSite {
     pub end_line: u32,
     pub visibility: Visibility,
     pub kind: SymbolKind,
+}
+
+/// A doc-comment blob attached to a symbol definition. Value type for
+/// the `SID_DOCS` multimap, keyed by `sid`. Stored only when the
+/// extracted text is non-empty.
+///
+/// `fid` lets readers disambiguate when the same symbol name has
+/// multiple definition sites; the first matching `(sid, fid)` pair
+/// is normally the right one to surface in `find_symbol`.
+///
+/// `text` is the raw concatenated doc-comment body (one line per
+/// `///` source line, joined with `\n`), already stripped of the
+/// leading `/// ` / `//! ` markers but otherwise untouched —
+/// downstream consumers handle markdown rendering or token-budgeting.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocBlob {
+    pub fid: u32,
+    pub text: String,
 }
 
 /// A single reference site: where one symbol is called from. Used as

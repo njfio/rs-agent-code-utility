@@ -8,7 +8,7 @@
 
 pub mod schema;
 
-pub use schema::{DefSite, FileId, FileMeta, ParseStatus, RefSite, SymbolKind};
+pub use schema::{DefSite, DocBlob, FileId, FileMeta, ParseStatus, RefSite, SymbolKind};
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -19,7 +19,7 @@ use postcard::{from_bytes, to_allocvec};
 use redb::{Database, Durability, ReadableMultimapTable, ReadableTable};
 
 use schema::{
-    DEFS, FID_DEFS, FID_REFS, FID_TO_PATH, FILES, META, NAME_TO_SID, PATH_TO_FID, REFS,
+    DEFS, FID_DEFS, FID_REFS, FID_TO_PATH, FILES, META, NAME_TO_SID, PATH_TO_FID, REFS, SID_DOCS,
     SID_REFS_OUT, SID_TO_NAME,
 };
 
@@ -86,6 +86,12 @@ pub struct FileBatchEntry {
     /// `commit_batch` filters external references (names with no
     /// `NAME_TO_SID` entry after batch interning) per v0.3 plan §F1.
     pub refs: Vec<RefHit>,
+    /// Doc-comment text attached to defs in this file. One entry per
+    /// `(symbol_name, doc_text)` pair where the extractor produced
+    /// non-empty docs. Names align with `defs[]` after batch
+    /// interning. Symbols without docs are simply absent — no
+    /// placeholder entry needed.
+    pub docs: Vec<(String, String)>,
 }
 
 /// A removal entry for files that disappeared since last index.
@@ -195,6 +201,8 @@ impl Store {
                 let _ = w.open_multimap_table(REFS)?;
                 let _ = w.open_multimap_table(FID_REFS)?;
                 let _ = w.open_multimap_table(SID_REFS_OUT)?;
+                // v0.5 (back-compat additive table): doc comments.
+                let _ = w.open_multimap_table(SID_DOCS)?;
                 let _ = w.open_table(META)?;
             }
             w.commit().context("commit table init")?;
@@ -247,6 +255,7 @@ impl Store {
             let mut refs_t = txn.open_multimap_table(REFS)?;
             let mut fid_refs = txn.open_multimap_table(FID_REFS)?;
             let mut sid_refs_out = txn.open_multimap_table(SID_REFS_OUT)?;
+            let mut sid_docs = txn.open_multimap_table(SID_DOCS)?;
             let mut meta = txn.open_table(META)?;
 
             // Removals first (rare relative to upserts; cheap to scan).
@@ -263,6 +272,7 @@ impl Store {
                     &mut fid_refs,
                     &mut refs_t,
                     &mut sid_refs_out,
+                    &mut sid_docs,
                     fid,
                 )?;
                 path_to_fid.remove(path_str.as_ref())?;
@@ -324,6 +334,7 @@ impl Store {
                     &mut fid_refs,
                     &mut refs_t,
                     &mut sid_refs_out,
+                    &mut sid_docs,
                     fid,
                 )?;
 
@@ -357,6 +368,24 @@ impl Store {
                     defs.insert(&sid, def_bytes.as_slice())?;
                     fid_defs.insert(&fid, &sid)?;
                     file_defs.push((sid, def.start, def.end, kind));
+                }
+
+                // Doc-comment writes. Each `(name, text)` pair from
+                // the extractor is resolved against `NAME_TO_SID`
+                // (defs above just interned the names) and stored as
+                // a DocBlob. Empty text is filtered upstream by the
+                // writer, but defend in depth here too.
+                for (name, text) in entry.docs {
+                    if text.is_empty() {
+                        continue;
+                    }
+                    let sid = match name_to_sid.get(name.as_str())? {
+                        Some(v) => v.value(),
+                        None => continue, // doc for a name that didn't make it into defs; skip
+                    };
+                    let blob = DocBlob { fid, text };
+                    let bytes = to_allocvec(&blob).context("encode DocBlob")?;
+                    sid_docs.insert(&sid, bytes.as_slice())?;
                 }
 
                 staged.push((fid, file_defs, entry.refs));
@@ -530,6 +559,74 @@ impl Store {
         for row in iter {
             let row = row?;
             out.insert(row.0.value().to_string());
+        }
+        Ok(out)
+    }
+
+    /// Doc-comment blobs for a symbol. Multiple entries possible when
+    /// the same name has docs attached in more than one file (e.g.
+    /// `pub use` re-exports, trait-impl forwarding). Order is
+    /// arbitrary; readers either take the first, or filter by
+    /// `fid` to match a specific occurrence. Returns empty when the
+    /// symbol has no docs.
+    pub fn doc_for_sid(&self, sid: u32) -> anyhow::Result<Vec<DocBlob>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let sid_docs = txn.open_multimap_table(SID_DOCS)?;
+        let mut out = Vec::new();
+        let it = sid_docs.get(&sid)?;
+        for row in it {
+            let bytes = row?.value().to_vec();
+            if let Ok(blob) = from_bytes::<DocBlob>(&bytes) {
+                out.push(blob);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Batched doc lookup. Resolves each name → sid → first DocBlob
+    /// (filtered by `fid` when the corresponding entry in `fids` is
+    /// `Some`) in a single read transaction — for `find_symbol`
+    /// which already has the (name, fid) pairs from its match
+    /// resolution. Names with no docs are absent from the result.
+    ///
+    /// Returns parallel `Vec` indexed the same as the input — `None`
+    /// at position i means name[i] had no doc match.
+    pub fn docs_for_names_with_fid(
+        &self,
+        names: &[String],
+        fids: &[u32],
+    ) -> anyhow::Result<Vec<Option<String>>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let name_to_sid = txn.open_table(NAME_TO_SID)?;
+        let sid_docs = txn.open_multimap_table(SID_DOCS)?;
+        let mut out = vec![None; names.len()];
+        for (i, name) in names.iter().enumerate() {
+            let sid = match name_to_sid.get(name.as_str())? {
+                Some(v) => v.value(),
+                None => continue,
+            };
+            let want_fid = fids.get(i).copied();
+            let mut best: Option<DocBlob> = None;
+            let it = sid_docs.get(&sid)?;
+            for row in it {
+                let bytes = row?.value().to_vec();
+                if let Ok(blob) = from_bytes::<DocBlob>(&bytes) {
+                    match want_fid {
+                        Some(target) if blob.fid == target => {
+                            best = Some(blob);
+                            break; // exact fid match wins; stop scanning
+                        }
+                        _ => {
+                            if best.is_none() {
+                                best = Some(blob);
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some(blob) = best {
+                out[i] = Some(blob.text);
+            }
         }
         Ok(out)
     }
@@ -962,6 +1059,7 @@ fn drop_file_entries(
     fid_refs: &mut redb::MultimapTable<'_, u32, u32>,
     refs_t: &mut redb::MultimapTable<'_, u32, &[u8]>,
     sid_refs_out: &mut redb::MultimapTable<'_, u32, u32>,
+    sid_docs: &mut redb::MultimapTable<'_, u32, &[u8]>,
     fid: u32,
 ) -> anyhow::Result<()> {
     // Drop the file row itself.
@@ -1091,6 +1189,30 @@ fn drop_file_entries(
                     }
                 }
             }
+        }
+    }
+
+    // Doc-comment cleanup. SID_DOCS is keyed by sid and the value
+    // carries fid, mirroring DEFS. Reuse the touched-sid set from
+    // `prior_def_sids` since docs can only attach to symbols that
+    // were defined in this file.
+    for sid in &prior_def_sids {
+        let kept: Vec<Vec<u8>> = {
+            let mut v = Vec::new();
+            let it = sid_docs.get(sid)?;
+            for row in it {
+                let bytes = row?.value().to_vec();
+                if let Ok(d) = from_bytes::<DocBlob>(&bytes) {
+                    if d.fid != fid {
+                        v.push(bytes);
+                    }
+                }
+            }
+            v
+        };
+        sid_docs.remove_all(sid)?;
+        for v in kept {
+            sid_docs.insert(sid, v.as_slice())?;
         }
     }
     Ok(())
@@ -1227,6 +1349,7 @@ mod tests {
                 ),
             ],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         let n = store
             .commit_batch(vec![entry], vec![], Durability::Immediate)
@@ -1282,6 +1405,7 @@ mod tests {
                 ),
             ],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![entry], vec![], Durability::Immediate)
@@ -1353,6 +1477,7 @@ mod tests {
                 SymbolKind::Function,
             )],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![entry], vec![], Durability::Immediate)
@@ -1396,6 +1521,7 @@ mod tests {
                 SymbolKind::Function,
             )],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![v1], vec![], Durability::Immediate)
@@ -1419,6 +1545,7 @@ mod tests {
                 SymbolKind::Function,
             )],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![v2], vec![], Durability::Immediate)
@@ -1450,6 +1577,7 @@ mod tests {
                 SymbolKind::Function,
             )],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![entry], vec![], Durability::Immediate)
@@ -1545,6 +1673,7 @@ mod tests {
                 SymbolKind::Function,
             )],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
 
         let call_entry = FileBatchEntry {
@@ -1562,6 +1691,7 @@ mod tests {
                 start_line: 3,
                 end_line: 3,
             }],
+            docs: Vec::new(),
         };
 
         store
@@ -1638,6 +1768,7 @@ mod tests {
                 start_line: 2,
                 end_line: 2,
             }],
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![entry], vec![], Durability::Immediate)
@@ -1664,6 +1795,7 @@ mod tests {
             meta: rust_meta(blake3::hash(b"c").into()),
             defs: vec![("C".to_string(), fn_def(0, 10, 1, 2), SymbolKind::Function)],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         let a = FileBatchEntry {
             path: std::path::PathBuf::from("a.rs"),
@@ -1676,6 +1808,7 @@ mod tests {
                 start_line: 5,
                 end_line: 5,
             }],
+            docs: Vec::new(),
         };
         let b = FileBatchEntry {
             path: std::path::PathBuf::from("b.rs"),
@@ -1688,6 +1821,7 @@ mod tests {
                 start_line: 6,
                 end_line: 6,
             }],
+            docs: Vec::new(),
         };
 
         store
@@ -1742,12 +1876,14 @@ mod tests {
             meta: rust_meta(blake3::hash(b"c").into()),
             defs: vec![("C".to_string(), fn_def(0, 10, 1, 2), SymbolKind::Function)],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         let def_d = FileBatchEntry {
             path: std::path::PathBuf::from("d.rs"),
             meta: rust_meta(blake3::hash(b"d").into()),
             defs: vec![("D".to_string(), fn_def(0, 10, 1, 2), SymbolKind::Function)],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         let a_v1 = FileBatchEntry {
             path: std::path::PathBuf::from("a.rs"),
@@ -1760,6 +1896,7 @@ mod tests {
                 start_line: 5,
                 end_line: 5,
             }],
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![def_c, def_d, a_v1], vec![], Durability::Immediate)
@@ -1787,6 +1924,7 @@ mod tests {
                 start_line: 7,
                 end_line: 7,
             }],
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![a_v2], vec![], Durability::Immediate)
@@ -1818,6 +1956,7 @@ mod tests {
                 SymbolKind::Function,
             )],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         let call_entry = FileBatchEntry {
             path: std::path::PathBuf::from("call.rs"),
@@ -1850,6 +1989,7 @@ mod tests {
                     end_line: 9,
                 },
             ],
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![def_entry, call_entry], vec![], Durability::Immediate)
@@ -1912,6 +2052,7 @@ mod tests {
             meta: rust_meta(blake3::hash(b"fresh").into()),
             defs: vec![("X".to_string(), fn_def(0, 10, 1, 2), SymbolKind::Function)],
             refs: Vec::new(),
+            docs: Vec::new(),
         };
         store
             .commit_batch(vec![entry], vec![], Durability::Immediate)
@@ -1928,6 +2069,144 @@ mod tests {
             .unwrap();
         assert_eq!(stored, SCHEMA_VERSION);
         assert_eq!(stored, 2);
+    }
+
+    #[test]
+    fn doc_for_sid_round_trips_through_commit_batch() {
+        let (_tmp, store) = temp_store();
+        let h = blake3::hash(b"docs").into();
+
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("lib.rs"),
+            meta: rust_meta(h),
+            defs: vec![(
+                "documented_fn".to_string(),
+                DefSite {
+                    fid: 0,
+                    start: 0,
+                    end: 10,
+                    start_line: 1,
+                    end_line: 3,
+                    visibility: Visibility::Public,
+                    kind: SymbolKind::Function,
+                },
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: vec![(
+                "documented_fn".to_string(),
+                "Does an important thing.\nReturns a useful value.".to_string(),
+            )],
+        };
+        store
+            .commit_batch(vec![entry], vec![], Durability::Immediate)
+            .unwrap();
+
+        let hits = store.find_symbol("documented_fn").unwrap();
+        assert_eq!(hits.len(), 1);
+        // Look up by sid via the name→sid path.
+        let sid = store.sid_for_name("documented_fn").unwrap().unwrap();
+        let docs = store.doc_for_sid(sid).unwrap();
+        assert_eq!(docs.len(), 1, "expected 1 doc blob; got {docs:?}");
+        assert_eq!(
+            docs[0].text,
+            "Does an important thing.\nReturns a useful value."
+        );
+        assert_eq!(docs[0].fid, hits[0].fid);
+    }
+
+    #[test]
+    fn doc_for_sid_returns_empty_when_no_docs_attached() {
+        let (_tmp, store) = temp_store();
+        let h = blake3::hash(b"no-docs").into();
+
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("lib.rs"),
+            meta: rust_meta(h),
+            defs: vec![(
+                "undocumented_fn".to_string(),
+                DefSite {
+                    fid: 0,
+                    start: 0,
+                    end: 10,
+                    start_line: 1,
+                    end_line: 1,
+                    visibility: Visibility::Private,
+                    kind: SymbolKind::Function,
+                },
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![entry], vec![], Durability::Immediate)
+            .unwrap();
+
+        let sid = store.sid_for_name("undocumented_fn").unwrap().unwrap();
+        let docs = store.doc_for_sid(sid).unwrap();
+        assert!(docs.is_empty(), "expected no doc blobs; got {docs:?}");
+    }
+
+    #[test]
+    fn doc_for_sid_is_dropped_on_file_removal() {
+        let (_tmp, store) = temp_store();
+        let h = blake3::hash(b"to-drop").into();
+
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("lib.rs"),
+            meta: rust_meta(h),
+            defs: vec![(
+                "transient".to_string(),
+                DefSite {
+                    fid: 0,
+                    start: 0,
+                    end: 10,
+                    start_line: 1,
+                    end_line: 1,
+                    visibility: Visibility::Public,
+                    kind: SymbolKind::Function,
+                },
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: vec![("transient".to_string(), "will be gone".to_string())],
+        };
+        store
+            .commit_batch(vec![entry], vec![], Durability::Immediate)
+            .unwrap();
+        let sid = store.sid_for_name("transient").unwrap().unwrap();
+        assert!(!store.doc_for_sid(sid).unwrap().is_empty());
+
+        // Now re-upsert the file with NO docs. Old DocBlob row should
+        // be dropped (drop_file_entries cleans SID_DOCS by fid).
+        let entry2 = FileBatchEntry {
+            path: std::path::PathBuf::from("lib.rs"),
+            meta: rust_meta(blake3::hash(b"to-drop-v2").into()),
+            defs: vec![(
+                "transient".to_string(),
+                DefSite {
+                    fid: 0,
+                    start: 0,
+                    end: 10,
+                    start_line: 1,
+                    end_line: 1,
+                    visibility: Visibility::Public,
+                    kind: SymbolKind::Function,
+                },
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![entry2], vec![], Durability::Immediate)
+            .unwrap();
+        let docs = store.doc_for_sid(sid).unwrap();
+        assert!(
+            docs.is_empty(),
+            "expected docs to be dropped after re-upsert with no docs; got {docs:?}"
+        );
     }
 
     #[test]

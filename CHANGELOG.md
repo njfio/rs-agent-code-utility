@@ -7,6 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Doc-comment indexing (Rust) — executes plan #64 end-to-end
+
+Implements all 4 units from the doc-comment indexing plan (PR #64).
+Extracts Rust `///` and `//!` comments during the parse pass, stores
+them in a new sidecar table, exposes them through the existing
+`"doc": null` placeholder in `Index.FindSymbol` / `Index.ReadSymbol`,
+and adds doc-text matching to the bench scorer.
+
+**U1 — Storage (`store/schema.rs` + `store/mod.rs`):**
+- New `SID_DOCS: MultimapTable<u32, &[u8]>` keyed by symbol ID
+- New `DocBlob { fid: u32, text: String }` value type
+- `Store::doc_for_sid(sid)` and `Store::docs_for_names_with_fid()`
+  for single and batched reads
+- Sidecar design (vs extending `DefSite`) keeps v0.4.1 on-disk
+  format unchanged — existing redb stores open cleanly under v0.5
+  daemons; new doc data populates as files re-index
+- `drop_file_entries` extended to invalidate per-file doc rows
+- 3 new round-trip tests covering write, empty-case, and re-upsert
+  deletion
+
+**U2 — Writer plumbing (`writer.rs`):**
+- `FileBatchEntry` gains a `docs: Vec<(String, String)>` field
+- Extractor pass-through: rts-core's `Symbol::documentation` field
+  was *already* populated by `extract_rust_doc_comments` but the
+  writer was dropping it in `symbol_to_def()`. Pulled the doc out
+  ahead of the def conversion and threaded it through to commit
+
+**U3 — Wire shape (`methods/index.rs`):**
+- `Index.FindSymbol` response `"doc"` field now carries real text
+  when the symbol has a Rust doc comment, `null` when it doesn't.
+  The placeholder was already in place since v0.2.
+- Capability `find_symbol_doc_field` advertised in `Daemon.Ping`
+- Single batched read per `find_symbol` call (one txn for all
+  matches, not one per match) — no measurable latency change
+
+**U4 — Bench scorer (`crates/rts-bench/src/semantic.rs`):**
+- `Candidate` gains `Option<String> doc` field
+- `score_candidate` matches query-token stems against word-stems
+  extracted from the doc text. Doc is tokenized with `tokens_of()`
+  and stemmed — same pipeline as query tokens, so the shared
+  stopword list filters common words
+- Weight: `+1.0 * IDF` per matching token stem (equal to file-path
+  tier; conservative because doc text uses full natural-language
+  vocabulary which is noisy by nature)
+
+#### Numbers (with doc indexing enabled)
+
+| Corpus           | Pre-doc (v0.4.1)   | With doc (this PR) | Δ          |
+|------------------|--------------------|---------------------|------------|
+| v1 audited (13q) | 100% / 0.441       | 100% / 0.381        | parity     |
+| v1 P@10          | 0.200              | 0.215               | +7.5%      |
+| blind-v2 (15q)   | 80% / 0.273        | 80% / 0.169         | parity-MRR↓|
+
+**Coverage parity on both corpora.** Precision@10 on v1 went up
+(more expected names land in top-10 because doc text surfaces
+additional relevant candidates). MRR slipped because doc-text
+matches sometimes elevate candidates whose docs incidentally use
+query words; the corrective signal (sub-token name match, +6) still
+wins on the corpora's clearest answers.
+
+#### Honest tradeoff
+
+The doc-comment matching has a known weakness on this corpus:
+
+- "what cleans up after analysis?" still misses `clear_cache` (doc:
+  "Clear the file cache") because the corpus uses "clean" but the
+  docs use "clear" — synonym handling, not doc indexing, is what
+  bridges this.
+
+Ship with conservative +1 weight; future ranker work (doc-IDF
+computed separately from name-IDF, synonym tables, query
+expansion) can tune. The *infrastructure* is the real win — future
+bench/ranker iterations have doc text to work with.
+
+#### What stays back-compatible
+
+- v0.4.1 redb stores open cleanly under v0.5 (sidecar table is
+  empty on first open; populates as files re-index).
+- Pre-v0.5 daemons returning `"doc": null` continue to work — the
+  bench treats `null` as "no doc" and falls back to identifier-only
+  scoring.
+- Default `find_symbol` agent calls add a single batched read; no
+  measurable latency change.
+
+#### Out of scope (filed for follow-up)
+
+- C, JavaScript, Python, Go, Swift doc-comment extraction
+- `outline_workspace` exposing docs (token budget there is tight)
+- Doc-IDF computed separately from name-IDF
+- Synonym tables for noun↔verb pairs the stemmer can't unify
+
 ### CI semantic-baseline regression guard
 
 `rts-bench semantic` now accepts `--check-coverage <FLOAT>`. When

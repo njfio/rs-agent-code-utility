@@ -609,9 +609,24 @@ pub async fn find_symbol(
     let pre_truncate_len = typed.len();
     typed.truncate(limit);
 
+    // v0.5: batched doc-comment lookup. One read txn for all matches.
+    // The result is parallel to `typed[i]`; positions with no doc
+    // become JSON `null` (back-compat with pre-v0.5 wire shape).
+    let names_for_docs: Vec<String> = typed.iter().map(|(h, _)| h.name.clone()).collect();
+    let fids_for_docs: Vec<u32> = typed.iter().map(|(h, _)| h.fid).collect();
+    let docs = store_arc
+        .docs_for_names_with_fid(&names_for_docs, &fids_for_docs)
+        .map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("docs_for_names_with_fid storage error: {e:#}"),
+            )
+        })?;
+
     let matches: Vec<serde_json::Value> = typed
         .into_iter()
-        .map(|(h, rank)| {
+        .zip(docs)
+        .map(|((h, rank), doc)| {
             serde_json::json!({
                 "qualified_name": h.name,
                 "kind":           h.kind.as_wire_str(),
@@ -625,7 +640,15 @@ pub async fn find_symbol(
                 // v0: signature rendering is part of P8 SignatureRenderer;
                 // the writer doesn't store extracted signatures.
                 "signature": serde_json::Value::Null,
-                "doc":       serde_json::Value::Null,
+                // v0.5: real doc text when the writer extracted any;
+                // null when the symbol has no doc comment. Capability
+                // `find_symbol_doc_field` advertises that the daemon
+                // populates this field rather than leaving the
+                // pre-v0.5 placeholder.
+                "doc":       match doc {
+                    Some(t) => serde_json::Value::String(t),
+                    None    => serde_json::Value::Null,
+                },
                 "visibility": h.visibility.as_wire_str(),
                 // v0.3 U4: real PageRank score when ranks are loaded;
                 // 0.0 fallback during cold start / torn read.
