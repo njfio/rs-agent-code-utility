@@ -46,3 +46,22 @@ jobs:
 
       - name: Build all workspace binaries
         run: cargo build --workspace --bins
+
+      # Semantic-baseline regression guard. Runs the bench against the
+      # rts-core corpus and fails CI if `answerable_coverage` falls
+      # below 0.90 (the honest combined-corpus baseline from v0.4.1+
+      # blind-v2). Catches ranker / retrieval regressions on every PR.
+      #
+      # Cost: ~30-60s extra per CI run (cold-mount + indexing on a
+      # small workspace + 10 queries). Worth it — without this, the
+      # 100%/90% numbers in CHANGELOG are snapshots, not invariants.
+      - name: Semantic baseline (regression guard)
+        run: |
+          RTS_MCP_BIN=$PWD/target/debug/rts-mcp \
+          RTS_DAEMON_BIN=$PWD/target/debug/rts-daemon \
+          ./target/debug/rts-bench semantic \
+            --corpus corpus/semantic-eval-rts-core.toml \
+            --workspace crates/rts-core \
+            --top-k 10 \
+            --dry-run \
+            --check-coverage 0.95
