@@ -45,6 +45,10 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     "pagerank_symbolwise",
     // v0.3 alpha.35 — Index.ImpactOf transitive caller closure.
     "impact_of",
+    // v0.4.1 — Index.FindSymbol.limit param (1..=4096, default 256).
+    // Used by `rts-bench semantic` to pull the full ranked candidate
+    // pool when scoring corpus queries; agents should leave at default.
+    "find_symbol_limit_param",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

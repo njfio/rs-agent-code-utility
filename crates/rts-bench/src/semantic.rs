@@ -30,8 +30,10 @@
 //! 1. Extracts content-bearing tokens from the query text
 //!    (drops stopwords + question words; lowercases; splits on
 //!    word boundaries).
-//! 2. Issues `find_symbol(pattern="*")` against the daemon to
-//!    pull the top-256 by PageRank.
+//! 2. Issues `find_symbol(pattern="*", limit=4096)` against the
+//!    daemon to pull the full ranked candidate pool (capability
+//!    `find_symbol_limit_param`, v0.4.1+). On workspaces with fewer
+//!    than 4096 distinct symbols this returns the entire universe.
 //! 3. Decomposes each candidate's qualified_name into sub-tokens
 //!    on snake_case / kebab-case / camelCase boundaries, and applies
 //!    naive English stemming (drops common suffixes, normalizes
@@ -432,16 +434,21 @@ pub struct Candidate {
     pub rank: f64,
 }
 
-/// Pull the top-256 by PageRank as the candidate set the baseline
-/// ranker will re-score. This is the entire universe of "things the
-/// graph thinks are central." Dedupes by qualified_name — the daemon
+/// Pull the workspace's full ranked candidate set via
+/// `find_symbol(pattern="*", limit=4096)`. The 4096 cap is the
+/// daemon's MAX_LIMIT (v0.4.1+); on workspaces smaller than that
+/// it returns everything. Dedupes by qualified_name — the daemon
 /// returns one row per occurrence, so popular names show up many
 /// times without dedupe and crowd the top-K.
+///
+/// Note: pre-v0.4.1 daemons silently ignored the `limit` parameter
+/// and capped at 256. Running the bench against an older daemon
+/// will work but the pool size limits coverage.
 pub async fn fetch_candidates(session: &mut McpSession) -> Result<Vec<Candidate>> {
     let resp = session
-        .tools_call("find_symbol", json!({ "pattern": "*" }), 5)
+        .tools_call("find_symbol", json!({ "pattern": "*", "limit": 4096 }), 5)
         .await
-        .context("fetch candidates via find_symbol(pattern='*')")?;
+        .context("fetch candidates via find_symbol(pattern='*', limit=4096)")?;
     if resp.is_error {
         anyhow::bail!("find_symbol(pattern='*') errored");
     }

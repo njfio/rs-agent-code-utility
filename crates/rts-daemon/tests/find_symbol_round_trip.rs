@@ -217,3 +217,139 @@ impl Drop for KillOnDrop<'_> {
         let _ = self.0.wait();
     }
 }
+
+/// v0.4.1: `Index.FindSymbol.limit` parameter.
+///
+/// Verifies:
+/// - `limit` caps the returned `matches` array and sets `truncated: true`.
+/// - `limit` above the count returns everything with `truncated: false`.
+/// - `limit: 0` is rejected with INVALID_PARAMS.
+/// - `limit: 5000` (above MAX_LIMIT 4096) is rejected with INVALID_PARAMS.
+#[tokio::test(flavor = "current_thread")]
+async fn find_symbol_limit_param_caps_results() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // Seed with 8 distinct top-level functions so pattern="*" returns
+    // a known-cardinality candidate pool.
+    let mut src = String::new();
+    for i in 0..8 {
+        src.push_str(&format!("pub fn limit_test_fn_{i:02}() {{}}\n"));
+    }
+    std::fs::write(workspace.path().join("lib.rs"), src)?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount should succeed: {mount:?}");
+
+    // Wait for indexing to complete via a known-name poll.
+    let _ = poll_for_match(&mut stream, "limit_test_fn_00", Duration::from_secs(5)).await?;
+
+    // Case 1: limit=3 caps the matches and sets truncated=true.
+    let capped = round_trip(
+        &mut stream,
+        "10",
+        "Index.FindSymbol",
+        json!({ "pattern": "limit_test_fn_*", "limit": 3 }),
+    )
+    .await?;
+    let matches = capped["result"]["matches"].as_array().cloned().unwrap();
+    assert_eq!(matches.len(), 3, "limit=3 should return 3 matches");
+    assert_eq!(
+        capped["result"]["truncated"], true,
+        "truncated should be true when matches > limit"
+    );
+
+    // Case 2: limit=100 (above the count) returns all 8 with truncated=false.
+    let uncapped = round_trip(
+        &mut stream,
+        "11",
+        "Index.FindSymbol",
+        json!({ "pattern": "limit_test_fn_*", "limit": 100 }),
+    )
+    .await?;
+    let uc_matches = uncapped["result"]["matches"].as_array().cloned().unwrap();
+    assert_eq!(uc_matches.len(), 8, "limit=100 should return all 8 matches");
+    assert_eq!(
+        uncapped["result"]["truncated"], false,
+        "truncated should be false when matches <= limit"
+    );
+
+    // Case 3: limit omitted → default 256, returns all 8.
+    let default_limit = round_trip(
+        &mut stream,
+        "12",
+        "Index.FindSymbol",
+        json!({ "pattern": "limit_test_fn_*" }),
+    )
+    .await?;
+    assert_eq!(
+        default_limit["result"]["matches"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap(),
+        8,
+        "default limit should return all 8 matches"
+    );
+
+    // Case 4: limit=0 → INVALID_PARAMS.
+    let zero = round_trip(
+        &mut stream,
+        "13",
+        "Index.FindSymbol",
+        json!({ "pattern": "limit_test_fn_*", "limit": 0 }),
+    )
+    .await?;
+    assert!(zero["error"].is_object(), "limit=0 should error: {zero:?}");
+
+    // Case 5: limit=5000 (above MAX_LIMIT 4096) → INVALID_PARAMS.
+    let oversize = round_trip(
+        &mut stream,
+        "14",
+        "Index.FindSymbol",
+        json!({ "pattern": "limit_test_fn_*", "limit": 5000 }),
+    )
+    .await?;
+    assert!(
+        oversize["error"].is_object(),
+        "limit=5000 should error: {oversize:?}"
+    );
+
+    Ok(())
+}

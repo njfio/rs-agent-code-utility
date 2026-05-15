@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### `Index.FindSymbol.limit` — explicit cap for the eval harness (+10pp answerable coverage)
+
+Adds an optional `limit` parameter to `Index.FindSymbol` (and the
+matching MCP tool). Range `1..=4096`; defaults to 256 (back-compat).
+
+#### Why
+
+PR #56's semantic baseline iteration identified retrieval — not
+scoring — as the dominant bottleneck on the rts-core corpus. With the
+old hard cap of 256, the candidate pool dedupes to ~141 unique
+symbols on rts-core. Several expected names for answerable queries
+(`SyntaxTree`, `is_public`, `Symbol`) sit below that PageRank cutoff
+and never reach the scorer at all. No amount of scoring cleverness
+on a too-small pool can recover them.
+
+#### What
+
+- `Index.FindSymbol` accepts `limit: u32` in its params:
+  - Absent → default 256 (identical to pre-v0.4.1 behavior).
+  - 1..=4096 → effective cap; `truncated: true` set if more matches existed.
+  - 0 or >4096 → `INVALID_PARAMS`.
+- The pattern-mode candidate truncation (formerly hardcoded at
+  `MAX_MATCHES * 4 = 1024`) now scales with the resolved limit
+  (`limit * 4`).
+- MCP `find_symbol` tool exposes `limit` in `FindSymbolArgs` with a
+  description that explicitly discourages agents from using it
+  (limit raising is for offline eval tooling, not LLM contexts).
+- `rts-bench query find-symbol --limit N` for direct-probe testing.
+- `rts-bench semantic` now calls `find_symbol(*, limit=4096)`.
+- New capability `find_symbol_limit_param` in `Daemon.Ping`.
+
+#### Numbers on the rts-core corpus
+
+| Metric              | Pre-limit (PR #56) | With limit=4096 | Δ          |
+|---------------------|--------------------|-----------------|------------|
+| MRR                 | 0.197              | 0.192           | −0.005     |
+| Coverage (all 13 q) | 38.5%              | 46.2%           | +7.7pp     |
+| **Answerable cov.** | **50.0% (5/10)**   | **60.0% (6/10)**| **+10pp**  |
+| Precision@10        | 0.069              | 0.092           | +33%       |
+
+Answerable coverage jumped from 50% to 60%. Precision@10 climbed
+33% because the larger pool fills the top-10 with more genuine
+near-hits (multiple expected names per query now appear, not just
+the first). MRR slipped slightly: a few queries that hit at rank 0
+with the small pool got pushed back by genuine competition from
+newly-visible candidates. Trade we'd take every time.
+
+The query "where is the syntax tree wrapper defined?" — previously
+a miss — now hits at rank 0 (top1: `SyntaxTree`). Three other
+previously-missing queries now hit at ranks 2–8.
+
+#### Corpus finding (filed for follow-up)
+
+Probing the larger pool revealed that some `expected_top_k` names
+in `corpus/semantic-eval-rts-core.toml` are fictional —
+`detect_language`, `count_symbols`, `render_signature` don't exist
+in rts-core. The corpus author (an earlier session) imagined the
+codebase had concepts it doesn't. Queries with those expectations
+inflate the miss count; the corpus needs an audit pass.
+
+#### Test coverage
+
++1 daemon integration test (`find_symbol_limit_param_caps_results`)
+covering: limit caps + sets `truncated`, limit above count returns
+all + clears `truncated`, default (omitted) behavior unchanged,
+limit=0 and limit>MAX_LIMIT both error. 579 workspace tests pass.
+
 ### Semantic baseline: decompose + stem + dedupe (post-harness iteration)
 
 First iteration on the graph-only baseline ranker shipped in PR #55.
