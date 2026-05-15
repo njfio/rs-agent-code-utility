@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Read-symbol perf — batched `find_symbol` in the closure resolve loop (-31% p95)
+
+Profiling on the post-sync-closure baseline showed
+`find_symbol_resolve_loop` still spending **168 µs avg per closure
+walk** — N sequential `Store::find_symbol(name)` calls, each
+paying its own `db.begin_read()` + table-open cost. Across N≈5
+candidates per call on `crates/rts-core`, that's ~30 µs of pure
+txn-setup overhead per dep.
+
+**Change:** new `Store::find_symbols_batch(&[String]) →
+HashMap<String, Vec<FoundSymbol>>`. Opens one read transaction,
+one shared `fid → path` cache, and walks each name's defs.
+`closure::compute` calls this once instead of `find_symbol` N
+times.
+
+**Measured impact**
+(`rts-bench latency --workspace crates/rts-core --queries 5000 --cold-count 500 --deps`):
+
+| Metric | Pre-batch (post-sync-closure) | Post-batch | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 2023 µs | **1720 µs** | **−15 %** |
+| `read_symbol` p95 | 4618 µs | **3205 µs** | **−31 %** |
+| `read_symbol` p99 | 8307 µs | **6663 µs** | **−20 %** |
+| `find_symbol` p95 | 2446 µs | **1482 µs** | **−39 %** |
+
+(`find_symbol`'s own p95 also dropped — likely a side effect of
+reduced redb transaction contention on the read path; the bench
+runs find_symbol and read_symbol interleaved.)
+
+**Cumulative session progress** (v0.3.0 release → now):
+
+| Metric | v0.3.0 release | After all fixes | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 3207 µs | **1720 µs** | **−46 %** |
+| `read_symbol` p95 | 7023 µs | **3205 µs** | **−54 %** |
+| `read_symbol` p99 | 11877 µs | **6663 µs** | **−44 %** |
+
+**Remaining gap to alpha.30:** alpha.30 read_symbol p95 = 974 µs.
+Post-fix v0.3 = 3205 µs. **Still 3.3× slower** (down from 7.2×
+pre-session, 4.7× post-sync-closure).
+
+Tests: 131 unit + 24 integration pass; +2 new
+(`find_symbols_batch_matches_per_name_find_symbol`,
+`find_symbols_batch_empty_input_returns_empty_map`).
+
 ### Read-symbol perf — remove `spawn_blocking` from closure walk (additional 21% p95 win)
 
 Follow-up to the content_version + signature caches. With those in,
