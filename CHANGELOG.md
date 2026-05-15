@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Find-symbol perf — single-txn batch + `into_iter` (-10% read_symbol p95)
+
+Follow-up to the closure-resolve batching in PR #47. Two related fixes:
+
+1. **Single transaction for find_symbol's rank lookup.** The
+   `Index.FindSymbol` handler called `store.find_symbol(name)` AND
+   `store.sid_for_name(name)` per name — two read transactions, both
+   doing the same `NAME_TO_SID` lookup. New `find_symbols_batch_
+   with_sids(&[String]) → HashMap<String, (Option<u32>, Vec<FoundSymbol>)>`
+   returns both in one shared txn. For pattern mode (up to 1024
+   candidate names per request), that's 2048 → 1 txn-opens.
+
+2. **Avoid the per-hit clone.** Pre-fix iterated `hits.iter()` and
+   cloned each `FoundSymbol` (allocates the `name` and `file`
+   `String`s) before pushing into the typed buffer. Switching to
+   `batched.remove(name)` + `hits.into_iter()` moves ownership
+   without cloning.
+
+The second fix is what actually moves the bench needle — the
+single-txn savings only show up in pattern mode, which the bench
+doesn't exercise (`--name` only).
+
+**Measured impact**
+(`rts-bench latency --workspace crates/rts-core --queries 5000 --cold-count 500 --deps`):
+
+| Metric | Pre-fix (post-PR-#47) | Post-fix | Δ |
+|---|---:|---:|---|
+| `find_symbol` p95 | 1482 µs | **1389 µs** | **−6 %** |
+| `read_symbol` p50 | 1720 µs | **1641 µs** | **−5 %** |
+| `read_symbol` p95 | 3205 µs | **2898 µs** | **−10 %** |
+| `read_symbol` p99 | 6663 µs | **5521 µs** | **−17 %** |
+
+**Cumulative session progress** (v0.3.0 release → now):
+
+| Metric | v0.3.0 release | After all fixes | Δ |
+|---|---:|---:|---|
+| `read_symbol` p50 | 3207 µs | **1641 µs** | **−49 %** |
+| `read_symbol` p95 | 7023 µs | **2898 µs** | **−59 %** |
+| `read_symbol` p99 | 11877 µs | **5521 µs** | **−54 %** |
+
+**Remaining gap to alpha.30:** alpha.30 read_symbol p95 = 974 µs.
+Post-fix v0.3 = 2898 µs. **Still 3.0× slower** (down from 7.2×
+pre-session). The remaining gap is mostly in tree-sitter signature
+renders on uncached deps (cold-miss path) and the larger v0.3
+response shape.
+
+Tests: 132 unit + 24 integration pass; +1 new test
+(`find_symbols_batch_with_sids_returns_sids_for_known_names`).
+
 ### Read-symbol perf — batched `find_symbol` in the closure resolve loop (-31% p95)
 
 Profiling on the post-sync-closure baseline showed

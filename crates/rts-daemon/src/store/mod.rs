@@ -827,22 +827,46 @@ impl Store {
         &self,
         names: &[String],
     ) -> anyhow::Result<HashMap<String, Vec<FoundSymbol>>> {
+        // Delegate to the with-sids variant; throw away the sids.
+        // Avoids duplicating the txn + cache-walking logic.
+        Ok(self
+            .find_symbols_batch_with_sids(names)?
+            .into_iter()
+            .map(|(name, (_sid, hits))| (name, hits))
+            .collect())
+    }
+
+    /// Same as [`find_symbols_batch`], but also returns the `sid` for
+    /// each name (when known). The daemon's `Index.FindSymbol` handler
+    /// needs the sid to look up `rank_score`; pre-fix it called
+    /// `find_symbol(name)` + `sid_for_name(name)` — TWO read
+    /// transactions per name, both doing the same `NAME_TO_SID`
+    /// lookup. This combined call halves that.
+    ///
+    /// On pattern mode (up to 1024 candidate names per request), the
+    /// savings compound: pre-fix 2048 txn-opens, post-fix 1.
+    pub fn find_symbols_batch_with_sids(
+        &self,
+        names: &[String],
+    ) -> anyhow::Result<HashMap<String, (Option<u32>, Vec<FoundSymbol>)>> {
         let txn = self.db.begin_read().context("begin_read")?;
         let name_to_sid = txn.open_table(NAME_TO_SID)?;
         let defs = txn.open_multimap_table(DEFS)?;
         let fid_to_path = txn.open_table(FID_TO_PATH)?;
 
         let mut fid_path_cache: HashMap<u32, String> = HashMap::new();
-        let mut out: HashMap<String, Vec<FoundSymbol>> = HashMap::with_capacity(names.len());
+        let mut out: HashMap<String, (Option<u32>, Vec<FoundSymbol>)> =
+            HashMap::with_capacity(names.len());
         for name in names {
             let sid = match name_to_sid.get(name.as_str())? {
                 Some(v) => v.value(),
                 None => {
-                    out.entry(name.clone()).or_default();
+                    out.entry(name.clone()).or_insert((None, Vec::new()));
                     continue;
                 }
             };
-            let entry = out.entry(name.clone()).or_default();
+            let entry = out.entry(name.clone()).or_insert((Some(sid), Vec::new()));
+            entry.0 = Some(sid);
             for row in defs.get(&sid)? {
                 let row = row?;
                 let def: DefSite = from_bytes(row.value()).context("decode DefSite")?;
@@ -857,7 +881,7 @@ impl Store {
                         s
                     }
                 };
-                entry.push(FoundSymbol {
+                entry.1.push(FoundSymbol {
                     name: name.clone(),
                     kind: def.kind,
                     file: path,
@@ -1306,6 +1330,47 @@ mod tests {
         let (_tmp, store) = temp_store();
         let result = store.find_symbols_batch(&[]).unwrap();
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn find_symbols_batch_with_sids_returns_sids_for_known_names() {
+        let (_tmp, store) = temp_store();
+        let h = blake3::hash(b"file v1").into();
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("src/lib.rs"),
+            meta: rust_meta(h),
+            defs: vec![(
+                "alpha".to_string(),
+                DefSite {
+                    fid: 0,
+                    start: 0,
+                    end: 50,
+                    start_line: 1,
+                    end_line: 3,
+                    visibility: Visibility::Public,
+                    kind: SymbolKind::Function,
+                },
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![entry], vec![], Durability::Immediate)
+            .unwrap();
+
+        let names = vec!["alpha".to_string(), "missing".to_string()];
+        let batched = store.find_symbols_batch_with_sids(&names).unwrap();
+        let (alpha_sid, alpha_hits) = batched.get("alpha").expect("alpha present");
+        assert!(alpha_sid.is_some(), "known name must have a sid");
+        assert_eq!(alpha_hits.len(), 1);
+        // Verify the sid matches what `sid_for_name` returns (the API
+        // we're avoiding the second call to in the daemon handler).
+        let expected_sid = store.sid_for_name("alpha").unwrap();
+        assert_eq!(*alpha_sid, expected_sid);
+
+        let (missing_sid, missing_hits) = batched.get("missing").expect("missing present");
+        assert!(missing_sid.is_none(), "absent name must have no sid");
+        assert!(missing_hits.is_empty());
     }
 
     #[test]

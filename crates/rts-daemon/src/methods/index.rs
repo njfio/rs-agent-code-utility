@@ -509,20 +509,30 @@ pub async fn find_symbol(
     // before building the wire JSON. The 256-entry cap applies after
     // sorting (per Deepening §G: rank-then-truncate gives the
     // top-K-by-rank, not the top-K-by-encounter).
+    //
+    // Pre-fix: the loop called `store.find_symbol(name)` + `store.
+    // sid_for_name(name)` per name — TWO read transactions per name,
+    // both doing the same `NAME_TO_SID` lookup. For pattern mode
+    // (up to 1024 candidate names), that's 2048 txn-opens. The
+    // batched `find_symbols_batch_with_sids` shares one txn.
     let mut typed: Vec<(crate::store::FoundSymbol, f64)> =
         Vec::with_capacity(names.len().min(MAX_MATCHES));
-    for n in &names {
-        let hits = store_arc.find_symbol(n).map_err(|e| {
+    let mut batched = store_arc
+        .find_symbols_batch_with_sids(&names)
+        .map_err(|e| {
             ProtocolError::new(
                 ErrorCode::InternalError,
-                format!("find_symbol storage error: {e:#}"),
+                format!("find_symbols_batch_with_sids storage error: {e:#}"),
             )
         })?;
-        // Resolve this name's sid once per name (all hits share it).
-        let rank_for_name = match store_arc.sid_for_name(n) {
-            Ok(Some(sid)) => ranks.as_ref().map(|r| r.rank_for(sid)).unwrap_or(0.0),
-            _ => 0.0,
+    for n in &names {
+        let (sid, hits) = match batched.remove(n) {
+            Some(t) => t,
+            None => continue,
         };
+        let rank_for_name = sid
+            .and_then(|s| ranks.as_ref().map(|r| r.rank_for(s)))
+            .unwrap_or(0.0);
         for h in hits.into_iter() {
             if let Some(filter) = kind_filter {
                 if h.kind != filter {
