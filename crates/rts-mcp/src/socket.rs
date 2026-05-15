@@ -82,7 +82,10 @@ pub async fn try_connect(path: &std::path::Path) -> Option<UnixStream> {
 /// resolves this from `RTS_DAEMON_BIN` (set by tests + bench harnesses) or
 /// looks up the sibling `rts-daemon` in the same directory as the current
 /// executable.
-pub async fn connect_with_auto_spawn(daemon_bin: &std::path::Path) -> Result<UnixStream> {
+pub async fn connect_with_auto_spawn(
+    daemon_bin: &std::path::Path,
+    prewarm_workspace: Option<&std::path::Path>,
+) -> Result<UnixStream> {
     let socket_path = default_socket_path()?;
     if let Some(s) = try_connect(&socket_path).await {
         return Ok(s);
@@ -90,14 +93,23 @@ pub async fn connect_with_auto_spawn(daemon_bin: &std::path::Path) -> Result<Uni
 
     info!(
         target: "rts_mcp::socket",
-        "no daemon at {}, spawning {}",
+        "no daemon at {}, spawning {}{}",
         socket_path.display(),
-        daemon_bin.display()
+        daemon_bin.display(),
+        prewarm_workspace
+            .map(|p| format!(" --workspace {}", p.display()))
+            .unwrap_or_default(),
     );
 
     // Spawn the daemon. It's a detached child — we don't want it to die when
     // the MCP server exits, and we don't want its stdio to leak into ours
     // (stdin/stdout are JSON-RPC frames to the agent).
+    //
+    // v0.4 prewarm: pass `--workspace <path>` so the daemon kicks off
+    // its initial walk eagerly. By the time `Workspace.Mount` is sent
+    // over the socket, the walk is in progress (or done on small
+    // workspaces) and Mount's idempotent path returns immediately
+    // instead of paying the walk's 6 s cold tax on 100k LOC.
     let mut cmd = tokio::process::Command::new(daemon_bin);
     cmd.stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
@@ -114,6 +126,9 @@ pub async fn connect_with_auto_spawn(daemon_bin: &std::path::Path) -> Result<Uni
                 std::process::Stdio::null()
             },
         );
+    if let Some(p) = prewarm_workspace {
+        cmd.arg("--workspace").arg(p);
+    }
     // Inherit XDG_RUNTIME_DIR / HOME / XDG_STATE_HOME so the daemon writes to
     // the same socket directory we just probed.
     let child = cmd

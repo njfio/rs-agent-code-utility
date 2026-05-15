@@ -120,6 +120,20 @@ pub struct DaemonState {
     /// reads on the same file resolve in tens of ns. Invalidates
     /// implicitly when mtime or generation changes.
     pub content_version_cache: ContentVersionCache,
+    /// v0.4 prewarm coordination. `prewarm_in_flight` is set to true
+    /// while the daemon's `--workspace`-triggered background mount is
+    /// running; `prewarm_done` is notified when it completes (success
+    /// or failure). `Workspace.Mount` checks these so a Mount RPC that
+    /// races with prewarm waits for the prewarm to finish (joining
+    /// its work) instead of trying to mount in parallel — concurrent
+    /// mounts of the same path would fight over the redb file, the
+    /// notify watcher, and the writer task.
+    ///
+    /// Without prewarm (the daemon was spawned without `--workspace`),
+    /// `prewarm_in_flight` stays false and Mount takes the normal
+    /// path; nothing waits on `prewarm_done`.
+    pub prewarm_in_flight: std::sync::atomic::AtomicBool,
+    pub prewarm_done: tokio::sync::Notify,
 }
 
 /// Per-(path, start_byte, end_byte, mtime) cache for rendered
@@ -301,6 +315,8 @@ impl DaemonState {
             symbol_pagerank_cache: SymbolPagerankCache::new(),
             signature_cache: SignatureCache::new(),
             content_version_cache: ContentVersionCache::new(),
+            prewarm_in_flight: std::sync::atomic::AtomicBool::new(false),
+            prewarm_done: tokio::sync::Notify::new(),
         }
     }
 

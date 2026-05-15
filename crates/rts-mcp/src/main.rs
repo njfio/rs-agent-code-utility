@@ -95,7 +95,13 @@ async fn main() -> Result<()> {
     );
 
     let daemon_bin = socket::resolve_daemon_bin()?;
-    let stream = socket::connect_with_auto_spawn(&daemon_bin)
+    // v0.4: pass the workspace path to auto-spawn so the daemon
+    // prewarms (kicks off the initial walk) before the `Workspace.Mount`
+    // RPC arrives over the socket. By the time the agent's first
+    // `find_symbol` lands, the index is warm — the cold-mount tax
+    // (~6 s on 100k LOC) overlaps with the MCP handshake instead of
+    // blocking the first tool call.
+    let stream = socket::connect_with_auto_spawn(&daemon_bin, Some(&workspace))
         .await
         .context("connect to rts-daemon")?;
     let mut daemon = DaemonClient::new(stream);
