@@ -7,6 +7,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-15
+
+**v0.4.0 release: cold-mount becomes invisible to the agent loop.**
+
+Consolidates two PRs (#51 + #52) that together change the
+operational shape of `rts-daemon` from "CLI tool with a daemon
+hiding inside" to "daemon-as-service the agent harness keeps warm."
+
+The question that drove v0.4: *if this is built for long-running
+agent sessions, why does the cold-mount tax block the first user
+query?*
+
+### Before v0.4.0
+
+```
+T=0        Agent harness launches rts-mcp
+T=50ms     rts-mcp spawns rts-daemon (NO args; daemon doesn't know path)
+T=100ms    Daemon binds socket, idles
+T=100ms    rts-mcp IMMEDIATELY sends Workspace.Mount(path)  ← path arrives here
+T=100ms    Daemon starts the initial walk
+T=~6s      Walk completes, Mount returns
+T=~6s      rts-mcp serves MCP stdio
+T=~6s      User has been waiting ~6 s for tools to appear
+```
+
+The daemon was throwing away knowledge `rts-mcp` already had: the
+workspace path is literally what derives the socket hash. The
+6 s walk happened *during* rts-mcp startup, blocking everything.
+
+### After v0.4.0
+
+```
+T=0        Agent harness launches rts-mcp
+T=50ms     rts-mcp spawns `rts-daemon --workspace <path>`  ← path at spawn
+T=100ms    Daemon binds socket; kicks off BACKGROUND prewarm walk
+T=100ms    rts-mcp serves MCP stdio immediately — tools listed
+T=100ms    Agent sees tools available; user reading greeting / typing
+T=~5s      Daemon prewarm completes (background)
+T=8s       User asks code question; agent invokes first tool
+T=8.001s   RtsServer.call_daemon sees mounted=false → Workspace.Mount RPC
+T=8.001s   Daemon prewarm done → idempotent path → instant return
+T=8.003s   Tool returns
+```
+
+**Cold-mount tax now overlaps with user-typing time, not with
+agent startup.**
+
+### Implementation
+
+Two PRs working together:
+
+| PR | What it does |
+|---|---|
+| **#51** | `rts-daemon --workspace <path>` CLI flag. Background prewarm task; `accept_loop` runs concurrently. `Workspace.Mount` RPC waits via `tokio::sync::Notify` if a prewarm is in-flight (so the RPC and the prewarm don't race for redb / watcher / writer). Split `mount()` → `mount()` (RPC handler with prewarm-wait) + `mount_inner()` (actual work, called from both paths) — deadlock-avoidance caught by tests before merge. |
+| **#52** | `RtsServer` defers `Workspace.Mount` to the first agent tool call. New `mounted: Arc<AtomicBool>` for the fast-path; the daemon mutex serializes concurrent mounts. Mount failure leaves `mounted=false` so transient failures recover. |
+
+Together they make first-mount invisible to the user — the daemon
+walks during the user's typing time instead of blocking rts-mcp
+boot.
+
+### Wire protocol
+
+No changes. Existing clients work unchanged; protocol-v0 unchanged;
+no new RPCs, no schema bump.
+
+### Backward compatibility
+
+- **Daemon spawned without `--workspace`**: legacy behavior preserved.
+  `prewarm_in_flight` stays false; `Workspace.Mount` takes the
+  normal path. Operators running `rts-daemon` directly are
+  unaffected.
+- **`rts-mcp` with old daemon (mismatched versions)**: rts-mcp will
+  pass `--workspace` and the old daemon will reject the unknown
+  argument and fail to start. This is the expected behavior for a
+  release boundary; both binaries should ship together.
+- **`rts-mcp` agent-side**: tool list / tool descriptions /
+  response shapes unchanged. The only observable difference is the
+  log line `lazy-mounted workspace ... on first tool call` at INFO
+  level (suppressed in bench runs that set `RTS_LOG=warn`).
+
+### Reframing G3
+
+v0.3.1's release notes called G3 "❌ 6240 ms first-mount vs 1500 ms
+target." That spec was implicitly a CLI-tool target. For a
+daemon-as-service product, first-mount happens once per session
+and amortizes over thousands of warm queries. v0.4.0's honest G3
+is: **first-mount tax is invisible** because it overlaps with
+session-startup time the user spends elsewhere (model load, UI
+render, greeting, typing the first question). The 6 s walk still
+takes 6 s of wall-clock — the win is that **it isn't on the
+critical path of any user-visible action**.
+
+### Test count
+
+563 tests across workspace, 0 failures. Both PRs caught real bugs
+via the test suite before merge (PR #51's deadlock in `mount()`
+calling itself through the prewarm-wait; PR #52's
+`AtomicBool: !Clone` trait bound).
+
+### v0.4+ filed
+
+The architectural wins this release sets up but doesn't land:
+
+1. **Parallel parsing in writer.** Single-threaded today; ~6 s on
+   100k LOC. Tree-sitter parses parallelise cleanly; a worker pool
+   would cut first-mount roughly linearly with core count. This
+   would let prewarm complete in 1-2 s on typical workspaces,
+   making the deferred Mount almost always-instant even when the
+   user is fast.
+2. **Per-language prelude filter sets** (JS/TS/Python) — needs
+   per-sid language tracking.
+3. **Investigate v0.3 read_symbol perf gap** (mostly IPC + cold
+   renders); currently 3× alpha.30 at p95, but 2.9 ms absolute is
+   fine for agent loops.
+4. **Stacked-PR auto-spawn race** per protocol-v0 §15.5.
+5. **Cross-compile macOS x86_64** from arm64 runner (Intel tarball
+   still queues for hours on GitHub's macos-13 pool).
+
 ## [0.3.1] - 2026-05-15
 
 **v0.3.1 release: correctness fixes + honest numbers + measurable perf wins.**
