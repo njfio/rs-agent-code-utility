@@ -40,6 +40,47 @@ pub async fn mount(
     let _ = p.enable_telemetry; // accepted but inert in this build
     let user_path = PathBuf::from(p.root);
 
+    // v0.4 prewarm: if `--workspace` was passed at daemon startup,
+    // a background task is currently running the initial walk. Wait
+    // for it to finish before falling into the normal mount path —
+    // otherwise this RPC and the prewarm would race for the redb
+    // file, the notify watcher, and the writer task. After the wait,
+    // either the prewarm succeeded (idempotent path below returns)
+    // or it failed (we proceed with a fresh mount).
+    //
+    // 30 s deadline matches the per-request soft deadline (§14).
+    if state
+        .prewarm_in_flight
+        .load(std::sync::atomic::Ordering::Acquire)
+    {
+        let notified = state.prewarm_done.notified();
+        // Re-check after armed (Notify is edge-triggered; check
+        // again in case prewarm completed between the check and the
+        // notified() call to avoid lost-wakeup).
+        if state
+            .prewarm_in_flight
+            .load(std::sync::atomic::Ordering::Acquire)
+        {
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(30), notified).await;
+        }
+    }
+
+    mount_inner(user_path, state).await
+}
+
+/// Internal entry point that skips the prewarm-wait. Called from:
+///   - `mount` (the public RPC handler) — after the prewarm wait.
+///   - `prewarm_mount` (the daemon's background-on-startup path) —
+///     where waiting on `prewarm_done` would deadlock the task that
+///     fires it.
+///
+/// Both callers do the same mount work; the only thing they
+/// differ on is whether they need to coordinate with an
+/// already-running prewarm.
+pub(super) async fn mount_inner(
+    user_path: PathBuf,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
     // Idempotent within a connection: a second Mount for the same canonical
     // path returns current status. Held in its own scope so the lock is
     // released before we await the initial walk further down (the

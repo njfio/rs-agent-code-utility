@@ -11,6 +11,31 @@ mod index;
 mod session;
 mod workspace;
 
+/// v0.4 prewarm: mount eagerly during daemon startup so the initial
+/// walk overlaps with the MCP handshake. Called from `main.rs` when
+/// the daemon is spawned with `--workspace <path>`.
+///
+/// Internally calls the same `Workspace.Mount` handler the RPC uses,
+/// so the resulting state is identical to a normal Mount. The first
+/// real `Workspace.Mount` RPC for the same path enters Mount's
+/// idempotent branch (path equality → return current status) without
+/// re-doing the walk.
+///
+/// Errors are returned for the caller to log; they're non-fatal for
+/// the daemon (the socket should still bind so the explicit Mount
+/// RPC can surface the error to the client).
+pub async fn prewarm_mount(
+    workspace_path: &std::path::Path,
+    state: &Arc<DaemonState>,
+) -> Result<(), ProtocolError> {
+    // Call mount_inner (bypass the prewarm-wait at the top of
+    // mount()) — otherwise the background prewarm task would wait
+    // for its own completion, deadlocking.
+    workspace::mount_inner(workspace_path.to_path_buf(), state)
+        .await
+        .map(|_| ())
+}
+
 /// Route a wire-level `method` string to the appropriate handler.
 pub async fn dispatch(
     method: &str,
