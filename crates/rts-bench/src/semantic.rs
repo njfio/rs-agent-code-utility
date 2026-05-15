@@ -292,18 +292,57 @@ pub fn decompose_name(name: &str) -> Vec<String> {
     out.into_iter().filter(|s| s.len() > 1).collect()
 }
 
+/// Greek-origin noun/verb pairs the naive suffix stemmer can't
+/// unify on its own. `analysis` and `analyze` look completely
+/// different to a rule-based stripper (one ends in `-is`, the
+/// other in `-ize`), but they share the same semantic root.
+///
+/// Each entry maps a token to the stem its sibling form would
+/// produce under the regular suffix/e logic. e.g. `stem("analyze")`
+/// naturally lands on `analyz` (no suffix match, trailing-e strip);
+/// we map `analysis` → `analyz` so they meet.
+///
+/// Keep this list small and well-justified — it's a workaround for
+/// stemmer limitations, not a synonym dictionary.
+const LEMMA_OVERRIDES: &[(&str, &str)] = &[
+    // analysis ↔ analyze ↔ analyser ↔ analytical
+    ("analysis", "analyz"),
+    ("analyses", "analyz"),
+    ("analytic", "analyz"),
+    ("analytical", "analyz"),
+    // synthesis ↔ synthesize
+    ("synthesis", "synthesiz"),
+    ("syntheses", "synthesiz"),
+    // hypothesis ↔ hypothesize
+    ("hypothesis", "hypothesiz"),
+    ("hypotheses", "hypothesiz"),
+    // diagnosis ↔ diagnose
+    ("diagnosis", "diagnos"),
+    ("diagnoses", "diagnos"),
+];
+
 /// Drop common English suffixes so different inflections collapse
 /// to the same root. Intentionally simple — not a Porter stemmer,
 /// just enough to map `parsing`/`parse`/`parsed`/`parses` →`pars` and
 /// `nodes`/`node` → `nod`.
 ///
-/// Two passes:
-/// 1. Strip the first matching suffix from a fixed list (if the
+/// Three passes:
+/// 1. Lemma override: a small table of noun/verb pairs the rule-
+///    based stripper can't unify (`analysis` ↔ `analyze`). Checked
+///    first; if the lowercased input matches an entry, return its
+///    override.
+/// 2. Strip the first matching suffix from a fixed list (if the
 ///    resulting stem is still ≥ 3 chars).
-/// 2. Drop a final trailing `e` (so `parse` after the no-suffix path
+/// 3. Drop a final trailing `e` (so `parse` after the no-suffix path
 ///    still lands on `pars`).
 pub fn stem(token: &str) -> String {
-    let mut t = token.to_string();
+    let lower = token.to_lowercase();
+    for (from, to) in LEMMA_OVERRIDES {
+        if lower == *from {
+            return (*to).to_string();
+        }
+    }
+    let mut t = lower;
     // Longest first so e.g. `connection` matches `tion` before `s`.
     let suffixes: &[&str] = &[
         "ations", "ization", "tions", "sions", "ation", "tion", "sion", "ings", "ers", "ies",
@@ -765,6 +804,26 @@ mod tests {
         );
         // 1-char fragments dropped.
         assert_eq!(decompose_name("a_useful_name"), vec!["useful", "name"]);
+    }
+
+    #[test]
+    fn stem_lemma_overrides_unify_greek_origin_pairs() {
+        // The classic case: `analysis` and `analyze` look totally
+        // different to a suffix-strip stemmer (one ends in -is, the
+        // other in -ize) but share a semantic root. The lemma table
+        // forces them to meet on `analyz`.
+        let analyze_stem = stem("analyze");
+        assert_eq!(stem("analysis"), analyze_stem);
+        assert_eq!(stem("analyses"), analyze_stem);
+        assert_eq!(stem("analyzes"), analyze_stem); // suffix-strip path
+        assert_eq!(stem("analyzed"), analyze_stem); // suffix-strip path
+        // Synthesis family.
+        assert_eq!(stem("synthesis"), stem("synthesize"));
+        // Diagnosis family — pre-stem comparison; `diagnose` runs
+        // through the trailing-e path to "diagnos" and `diagnosis`
+        // uses the override to land on the same root.
+        assert_eq!(stem("diagnosis"), "diagnos");
+        assert_eq!(stem("diagnose"), "diagnos");
     }
 
     #[test]
