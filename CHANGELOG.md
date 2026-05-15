@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Blind-v2 corpus — confirmation-bias correction on the v0.4.1 claim
+
+The v0.4.1 release claimed 100% answerable coverage on a 10-query
+rts-core corpus. The release notes flagged the honest caveat: the
+corpus was hand-graded by the same author who built the ranker,
+which biases the measurement.
+
+This PR addresses that caveat directly. A second corpus,
+`corpus/semantic-eval-rts-core-blind-v2.toml`, was written
+*outside-in* — queries drafted from agent-coding-loop patterns
+(error/debugging, lifecycle, extension, performance, result-
+collection) without first inspecting the symbol table. Only after
+drafting did each query's `expected_top_k` get graded against the
+actual 4096-symbol pool. Queries with no plausible answer became
+negative controls.
+
+#### What the blind corpus says
+
+| Corpus           | Queries | Answerable | Coverage     | MRR   |
+|------------------|---------|------------|--------------|-------|
+| v1 (original)    | 13      | 10         | **100%**     | 0.441 |
+| **blind v2**     | 15      | 10         | **80%** (8/10) | 0.273 |
+| Combined         | 28      | 20         | **90%** (18/20) | 0.351 |
+
+**The honest generalization number is 90%, not 100%.** The 20pp gap
+between v1 and blind v2 is the real confirmation-bias correction
+on the original measurement.
+
+#### The two blind-corpus misses (filed)
+
+1. **"what cleans up after analysis?"** → top1 = `cleaned` (a noise
+   match). Expected `clear`/`clear_cache`/`reset` are in the pool
+   but not in top-10. Root cause: `clean*` and `clear*` are
+   synonyms only to humans — the stemmer treats them as unrelated
+   roots. A synonym table (similar to the Greek-origin lemma overrides)
+   could close this.
+
+2. **"where are language-specific queries defined?"** → top1 =
+   `get_language_specific_complexity`. Expected `LanguageParser`/
+   `QueryBuilder`/`Query` are in the pool. The miss is a real
+   trade-off: compound names with two matching sub-tokens
+   (`language` + `specific`) legitimately outscore single-match
+   names. This isn't strictly wrong — it's a corpus-grading
+   judgment call.
+
+Neither miss is a bug. Both are now-visible limits of the graph-
+only baseline against agent-natural queries.
+
+#### Implication for the embedding question
+
+The 100%→90% correction doesn't change the conclusion meaningfully:
+the graph-only baseline still covers nearly all natural-language
+queries that have an identifier-shaped answer. Any embedding work
+still needs to beat 90% on a *harder, externally-graded* corpus —
+ideally one mined from real agent transcripts — to justify the
+model dependency.
+
+The two specific miss patterns above are concrete targets that
+future ranker work (synonym tables, multi-token prioritization) or
+future capability work (doc-comment indexing) could close *without*
+needing embeddings.
+
 ## [0.4.1] - 2026-05-15
 
 **Theme: from "we should add embeddings" to "the graph-only baseline scores 100%."**
