@@ -1,0 +1,140 @@
+# Semantic-search evaluation corpus for `crates/rts-core` — blind v2.
+#
+# Companion to `semantic-eval-rts-core.toml`. Where v1 was authored
+# after building the ranker (hence the v0.4.1 honest caveat about
+# confirmation bias), v2 was written outside-in: queries phrased the
+# way a new agent landing in *any* code-analysis crate might ask,
+# without first peeking at the symbol table.
+#
+# Workflow used:
+# 1. Drafted 18 queries from agent-coding-loop patterns: error/debug,
+#    lifecycle, extension, performance, plus 5 fictional topics.
+# 2. THEN probed `find_symbol(pattern="*", limit=4096)` to see what
+#    realistic answers exist in the pool. Queries with no plausible
+#    answer became negative controls; others got hand-graded
+#    `expected_top_k` lists of real symbols.
+# 3. Dropped 3 queries where every type would match ("how does X
+#    initialize?" against a crate full of `*Analyzer`s with `new`).
+#
+# Categories covered (v1 corpus covered none of these):
+#   - Error/debugging queries (3)
+#   - Lifecycle/workflow queries (3)
+#   - Extension/integration queries (2)
+#   - Performance/optimization queries (1)
+#   - Result-collection query (1)
+#   - Negative controls (5)
+#
+# Purpose: stress-test the v0.4.1 100%-on-v1 baseline on queries that
+# weren't shaped by knowledge of the codebase. If coverage drops
+# meaningfully on v2, the v1 number was corpus-overfit. If it stays
+# high, the baseline generalizes.
+
+version = 1
+
+# ─── Error / debugging queries ───
+
+[[query]]
+text = "what raises errors when parsing fails?"
+expected_top_k = ["ParseErrorDetails", "Parser", "Error", "LanguageErrorDetails", "QueryErrorType"]
+
+[[query]]
+text = "how are tree-sitter parser errors reported?"
+expected_top_k = ["TreeErrorDetails", "ParseErrorDetails", "Parser", "LanguageErrorDetails"]
+
+[[query]]
+text = "what error types exist for the parser?"
+expected_top_k = [
+    "ParseErrorDetails",
+    "LanguageErrorDetails",
+    "QueryErrorDetails",
+    "TreeErrorDetails",
+    "QueryErrorType",
+    "Error",
+]
+
+# ─── Lifecycle / workflow queries ───
+
+[[query]]
+text = "what runs first when analysis starts?"
+expected_top_k = ["FileAnalyzer", "CodebaseAnalyzer", "analyze", "analyze_file"]
+
+[[query]]
+text = "how does the cache get populated?"
+expected_top_k = [
+    "FileCache",
+    "cache_tree",
+    "calculate_cache_key",
+    "cache_key",
+    "cache_capacity",
+]
+
+[[query]]
+text = "what cleans up after analysis?"
+expected_top_k = ["clear", "clear_cache", "reset", "reset_statistics"]
+
+# ─── Extension / integration queries ───
+
+[[query]]
+text = "where are language-specific queries defined?"
+expected_top_k = [
+    "LanguageParser",
+    "QueryBuilder",
+    "Query",
+    "JavaScriptSyntax",
+    "PythonSyntax",
+]
+
+[[query]]
+text = "where is the JavaScript-specific extractor?"
+expected_top_k = [
+    "JavaScriptSyntax",
+    "detect_js_allocations",
+    "calculate_js_npath",
+    "detect_js_memory_leaks",
+]
+
+# ─── Performance / optimization ───
+
+[[query]]
+text = "where are allocation patterns optimized?"
+expected_top_k = [
+    "AllocationHotspot",
+    "AllocationPattern",
+    "AsyncOptimization",
+    "MemoryHotspot",
+    "MemoryLeakCandidate",
+]
+
+# ─── Result-collection query ───
+
+[[query]]
+text = "where does the analyzer collect results?"
+expected_top_k = [
+    "AnalysisResult",
+    "ResultAggregator",
+    "collect_definitions",
+    "SymbolAnalysisResult",
+    "DependencyAnalysisResult",
+]
+
+# ─── Negative controls — confirmed absent from the 4096-pool ───
+
+[[query]]
+text = "where do file I/O failures get handled?"
+expected_top_k = []
+
+[[query]]
+text = "where is panic recovery wired up?"
+expected_top_k = []
+
+[[query]]
+text = "where is the WebSocket handler?"
+expected_top_k = []
+
+[[query]]
+text = "what's the OAuth flow implementation?"
+expected_top_k = []
+
+[[query]]
+text = "where is the Redis cache adapter?"
+expected_top_k = []
