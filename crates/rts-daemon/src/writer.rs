@@ -431,6 +431,7 @@ fn parse_and_extract(
             },
             defs: Vec::new(),
             refs: Vec::new(),
+            docs: Vec::new(),
         });
     }
 
@@ -469,14 +470,29 @@ fn parse_and_extract(
                 },
                 defs: Vec::new(),
                 refs: Vec::new(),
+                docs: Vec::new(),
             });
         }
     };
 
-    let defs = symbols
-        .into_iter()
-        .filter_map(|sym| symbol_to_def(&sym, &content))
-        .collect();
+    // Collect docs alongside defs in one pass — `symbol_to_def` strips
+    // the rts-core Symbol after extraction, so we read the doc field
+    // out before that. Empty doc strings are filtered to avoid noise
+    // in the multimap (defense in depth; the storage layer also skips
+    // empty inserts).
+    let mut docs: Vec<(String, String)> = Vec::new();
+    let mut defs: Vec<(String, DefSite, SymbolKind)> = Vec::with_capacity(symbols.len());
+    for sym in symbols {
+        if let Some(doc) = sym.documentation.as_ref() {
+            let trimmed = doc.trim();
+            if !trimmed.is_empty() && !sym.name.is_empty() {
+                docs.push((sym.name.clone(), trimmed.to_string()));
+            }
+        }
+        if let Some(d) = symbol_to_def(&sym, &content) {
+            defs.push(d);
+        }
+    }
 
     // v0.3 (U1): extract reference sites alongside defs so the
     // store's REFS/FID_REFS/SID_REFS_OUT tables get populated on
@@ -500,6 +516,7 @@ fn parse_and_extract(
         },
         defs,
         refs,
+        docs,
     })
 }
 
