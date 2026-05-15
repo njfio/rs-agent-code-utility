@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-15
+
+**Theme: from a single saturated baseline to a verified, doc-aware ranker.**
+
+v0.4.1 declared "graph-only baseline hits 100% answerable coverage"
+on a 10-query corpus, with the honest caveat that the corpus was
+hand-graded by the same author who built the ranker. v0.5.0 closes
+that loop in three moves:
+
+1. **Built a blind-corpus to falsify the claim** (#62). 15 new
+   queries written outside-in, no peek at the symbol table. Honest
+   number is **90%**, not 100%. The 10pp gap is the real
+   confirmation-bias correction.
+2. **Wired a CI regression guard** (#63). `rts-bench semantic`
+   gained `--check-coverage`; the workflow fails any PR that
+   regresses below 0.95 on v1. The 100%-on-v1 number is now an
+   invariant, not a snapshot.
+3. **Shipped doc-comment indexing for Rust** (#64 plan, #65
+   implementation). The wire-shape `"doc"` field — a placeholder
+   since v0.2 — now carries real `///` / `//!` text. Bench scorer
+   matches query tokens against doc-word stems at conservative
+   `+1 × IDF`. Capability `find_symbol_doc_field` advertised.
+
+#### New protocol surface
+
+- `Index.FindSymbol` response `"doc"` field populated for documented
+  Rust symbols (previously always `null`).
+- Capability `find_symbol_doc_field` advertised in `Daemon.Ping`.
+- No breaking changes: pre-v0.5 clients reading `doc: null` keep
+  working. New clients see real doc text.
+
+#### Storage
+
+- New `SID_DOCS` multimap table in redb keyed by symbol ID, value
+  type `DocBlob { fid, text }`.
+- **Sidecar design** keeps v0.4.1 on-disk format unchanged. Existing
+  redb stores open cleanly under v0.5; new doc rows populate as
+  files re-index.
+
+#### Benchmark headline
+
+| Corpus           | v0.4.1 | v0.5.0 (this release) | Δ          |
+|------------------|--------|-----------------------|------------|
+| v1 audited (13q) | 100%   | 100%                  | parity     |
+| blind-v2 (15q)   | n/a    | 80%                   | new metric |
+| combined (28q)   | n/a    | 90% (18/20)           | new metric |
+| v1 precision@10  | 0.200  | 0.215                 | +7.5%      |
+
+The MRR slip is the visible cost of widening the candidate scoring
+beyond identifier names. The infrastructure is what compounds.
+
+#### What this means for the embedding question
+
+The honest baseline is now **90% on a verified combined corpus**,
+with doc-text infrastructure in place. Any embedding work must
+beat 90% on a *harder, externally-graded* corpus — ideally one
+mined from real agent transcripts — to justify the model
+dependency.
+
+Two concrete near-term ranker improvements remain on the table
+that don't need embeddings:
+
+1. **Synonym tables** to close the `clean` ↔ `clear` gap exposed
+   by blind-v2 (the lemma-override pattern from PR #60, extended
+   to noun↔verb synonyms).
+2. **Doc-IDF computed separately from name-IDF**, which would let
+   the doc-text bonus rise from `+1` to a real signal without
+   amplifying noise.
+
+#### Out of scope (filed for follow-up)
+
+- C, JavaScript, Python, Go, Swift doc-comment extraction (rts-core
+  has partial C; others need their own extractors).
+- `outline_workspace` exposing docs (token budget there is tight).
+- Doc-IDF separate from name-IDF.
+- Synonym tables (the next concrete ranker win).
+- Mining queries from real Claude Code transcripts (the most
+  rigorous corpus addition).
+
 ### Doc-comment indexing (Rust) — executes plan #64 end-to-end
 
 Implements all 4 units from the doc-comment indexing plan (PR #64).
