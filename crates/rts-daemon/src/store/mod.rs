@@ -811,6 +811,67 @@ impl Store {
         }
         Ok(out)
     }
+
+    /// Batched `find_symbol` for N names. Opens one read transaction,
+    /// one shared `fid → path` cache, and walks each name's defs.
+    /// Per-name cost drops from `(txn open + table opens + lookups)`
+    /// to `(lookups + shared cache)` — measurable on the closure walker
+    /// which previously called `find_symbol` once per resolved
+    /// candidate (168 µs avg total across N≈5 names per call on
+    /// `crates/rts-core`).
+    ///
+    /// Names absent from `NAME_TO_SID` produce an empty Vec at that key.
+    /// Returned map is keyed by the input `name`; callers that need a
+    /// specific name's defs just `.get(name)`.
+    pub fn find_symbols_batch(
+        &self,
+        names: &[String],
+    ) -> anyhow::Result<HashMap<String, Vec<FoundSymbol>>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let name_to_sid = txn.open_table(NAME_TO_SID)?;
+        let defs = txn.open_multimap_table(DEFS)?;
+        let fid_to_path = txn.open_table(FID_TO_PATH)?;
+
+        let mut fid_path_cache: HashMap<u32, String> = HashMap::new();
+        let mut out: HashMap<String, Vec<FoundSymbol>> = HashMap::with_capacity(names.len());
+        for name in names {
+            let sid = match name_to_sid.get(name.as_str())? {
+                Some(v) => v.value(),
+                None => {
+                    out.entry(name.clone()).or_default();
+                    continue;
+                }
+            };
+            let entry = out.entry(name.clone()).or_default();
+            for row in defs.get(&sid)? {
+                let row = row?;
+                let def: DefSite = from_bytes(row.value()).context("decode DefSite")?;
+                let path = match fid_path_cache.get(&def.fid) {
+                    Some(p) => p.clone(),
+                    None => {
+                        let s = fid_to_path
+                            .get(&def.fid)?
+                            .map(|v| v.value().to_string())
+                            .unwrap_or_default();
+                        fid_path_cache.insert(def.fid, s.clone());
+                        s
+                    }
+                };
+                entry.push(FoundSymbol {
+                    name: name.clone(),
+                    kind: def.kind,
+                    file: path,
+                    fid: def.fid,
+                    start_byte: def.start,
+                    end_byte: def.end,
+                    start_line: def.start_line,
+                    end_line: def.end_line,
+                    visibility: def.visibility,
+                });
+            }
+        }
+        Ok(out)
+    }
 }
 
 /// Surface struct for `Index.FindSymbol` consumers. Plain data; no redb
@@ -1156,6 +1217,95 @@ mod tests {
 
         let no_hits = store.find_symbol("does_not_exist").unwrap();
         assert!(no_hits.is_empty());
+    }
+
+    #[test]
+    fn find_symbols_batch_matches_per_name_find_symbol() {
+        // Same fixture as `commit_then_find_symbol_round_trips`, but
+        // ask via batch + compare against single-call. The two paths
+        // must produce identical FoundSymbol sets per name.
+        let (_tmp, store) = temp_store();
+        let h = blake3::hash(b"file v1").into();
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("src/lib.rs"),
+            meta: rust_meta(h),
+            defs: vec![
+                (
+                    "build_index".to_string(),
+                    DefSite {
+                        fid: 0,
+                        start: 100,
+                        end: 200,
+                        start_line: 5,
+                        end_line: 15,
+                        visibility: Visibility::Public,
+                        kind: SymbolKind::Function,
+                    },
+                    SymbolKind::Function,
+                ),
+                (
+                    "Index".to_string(),
+                    DefSite {
+                        fid: 0,
+                        start: 0,
+                        end: 50,
+                        start_line: 1,
+                        end_line: 3,
+                        visibility: Visibility::Public,
+                        kind: SymbolKind::Struct,
+                    },
+                    SymbolKind::Struct,
+                ),
+            ],
+            refs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![entry], vec![], Durability::Immediate)
+            .unwrap();
+
+        let names = vec![
+            "build_index".to_string(),
+            "Index".to_string(),
+            "does_not_exist".to_string(),
+        ];
+        let batched = store.find_symbols_batch(&names).unwrap();
+        assert_eq!(batched.len(), 3);
+        // Present names return the same Vec contents as find_symbol.
+        for name in &["build_index", "Index"] {
+            let batch_hits = batched.get(*name).expect("name in batch result");
+            let single_hits = store.find_symbol(name).unwrap();
+            assert_eq!(
+                batch_hits.len(),
+                single_hits.len(),
+                "{name}: batch vs single-call hit count must match"
+            );
+            // The two paths produce identical FoundSymbol entries.
+            // (Order within a name is multimap-walk order; we don't
+            // pin it here — the closure walker sorts before picking
+            // the first match anyway.)
+            for (b, s) in batch_hits.iter().zip(single_hits.iter()) {
+                assert_eq!(b.name, s.name);
+                assert_eq!(b.file, s.file);
+                assert_eq!(b.kind, s.kind);
+                assert_eq!(b.start_byte, s.start_byte);
+                assert_eq!(b.end_byte, s.end_byte);
+            }
+        }
+        // Missing name returns an empty Vec at the key.
+        assert!(
+            batched
+                .get("does_not_exist")
+                .expect("key present")
+                .is_empty(),
+            "missing name should map to empty Vec, not be absent"
+        );
+    }
+
+    #[test]
+    fn find_symbols_batch_empty_input_returns_empty_map() {
+        let (_tmp, store) = temp_store();
+        let result = store.find_symbols_batch(&[]).unwrap();
+        assert!(result.is_empty());
     }
 
     #[test]
