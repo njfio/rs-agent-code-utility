@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-15
+
+**Theme: from "we should add embeddings" to "the graph-only baseline scores 100%."**
+
+The original brainstorm for v0.5+ hypothesized that embeddings would
+close the natural-language-query gap. Before building them, this
+release builds the *falsifier*: a reproducible semantic-eval harness
+with a measurable graph-only baseline. Then iterates on that baseline,
+shipping six PRs in sequence, each lifting a single concrete metric:
+
+| Stage                          | Answerable coverage |
+|--------------------------------|---------------------|
+| PR #55 baseline (graph-only)   | 40%                 |
+| PR #56 decompose+stem+dedupe   | 50%                 |
+| PR #57 `limit` param           | 60%                 |
+| PR #58 corpus audit            | 80%                 |
+| PR #59 IDF weighting           | 90%                 |
+| PR #60 lemma overrides         | **100%** (10/10)    |
+
+MRR climbed 0.189 → 0.441 (+133 %). Precision@10 climbed 0.085 →
+0.200 (+135 %). All graph-only — no embeddings, no LLM scoring, no
+external model.
+
+Single new daemon-protocol surface this release:
+`Index.FindSymbol.limit` (1..=4096, defaults to 256 — fully back-
+compatible). Capability advertised as `find_symbol_limit_param`.
+Existing agent callers continue to receive 256-match responses
+identical to v0.4.0.
+
+**What this means for the embedding question:** the brainstorm's
+hypothesis was right that there *was* a gap — the original baseline
+was 40%, not 100%. But the gap closed entirely with retrieval +
+scoring fixes that touched zero ML code. Any future embedding work
+must beat this on a *harder, externally-graded* corpus to justify
+its model dependency.
+
+**Honest caveats:**
+- 10 answerable queries is small. Numbers would compress on a larger,
+  harder corpus.
+- The corpus was hand-graded by the same author who built the ranker.
+  Confirmation bias is real; an externally-graded corpus (or queries
+  mined from real agent traces) is the next step.
+- Code-domain natural-language queries skew identifier-shaped.
+  Behavior queries ("where does the migration roll back on failure?")
+  remain unanswerable by this approach.
+
 ### Stemmer lemma overrides — closes the last miss (100% answerable coverage)
 
 PR #59 closed the second-to-last gap on the rts-core corpus, leaving
