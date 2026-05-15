@@ -56,6 +56,13 @@ pub struct FindSymbolArgs {
     /// when the same name lives in multiple files.
     #[serde(default)]
     pub file: Option<String>,
+    /// Maximum number of results. Defaults to 256 — leave at default
+    /// for normal agent use (LLM contexts can't usefully digest more).
+    /// Range: 1..=4096. The 4096 ceiling exists for offline evaluation
+    /// tooling (`rts-bench semantic`); setting `limit` above the
+    /// default in an agent call is almost always a mistake.
+    #[serde(default)]
+    pub limit: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -283,6 +290,9 @@ impl RtsServer {
         }
         if let Some(f) = args.file {
             params.insert("file".into(), Value::String(f));
+        }
+        if let Some(n) = args.limit {
+            params.insert("limit".into(), Value::Number(n.into()));
         }
         match self
             .call_daemon("Index.FindSymbol", Value::Object(params))

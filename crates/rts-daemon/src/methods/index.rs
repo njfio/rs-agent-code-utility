@@ -56,6 +56,18 @@ struct FindSymbolParams {
     /// Unknown values are accepted and treated as `"rank"`.
     #[serde(default)]
     sort: Option<String>,
+    /// Maximum number of `matches` to return. Defaults to 256 (the
+    /// agent-facing default — most LLM contexts can't usefully digest
+    /// more). Range: 1..=4096. The 4096 ceiling is set for the
+    /// `rts-bench semantic` eval harness, which needs the full ranked
+    /// candidate set to score query relevance — values above that
+    /// indicate a tooling problem (the daemon shouldn't be paginating
+    /// thousands of symbols for an agent).
+    ///
+    /// When omitted (the common case for agent calls), behavior is
+    /// identical to pre-v0.4.1 daemons.
+    #[serde(default)]
+    limit: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -422,21 +434,32 @@ fn symbol_ranks_lazy(
 /// v0 contract:
 /// - always returns a list (length ≥ 0), never errors with `SYMBOL_NOT_FOUND`
 ///   for empty results; the agent disambiguates via the list shape.
-/// - `truncated: true` when the list was clipped to `MAX_MATCHES` (256).
+/// - `truncated: true` when the list was clipped to the effective `limit`.
 /// - either `name` (exact) or `pattern` (glob `*`/`?`) is required, but
 ///   not both — the pattern path is the alpha.24 dogfooding-gap fix
 ///   that replaces "agent falls back to ripgrep when they don't know the
-///   exact name". O(N) over all indexed names; with a 256-match cap.
+///   exact name". O(N) over all indexed names.
 /// - **v0.3 U4** (alpha.34+, capability `pagerank_symbolwise`):
 ///   `rank_score` is filled with the symbol-level PageRank value
 ///   and results sort by descending rank. The `sort: "lexical"`
 ///   param opts out for tooling that pinned to v0.2's
 ///   insertion-order ordering.
+/// - **v0.4.1+** (capability `find_symbol_limit_param`): `limit`
+///   parameter sets the maximum number of returned matches.
+///   Defaults to 256 (back-compat); range 1..=4096. The 4096 ceiling
+///   exists for the `rts-bench semantic` eval; agents shouldn't go
+///   above the default.
 pub async fn find_symbol(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
-    const MAX_MATCHES: usize = 256;
+    /// Default cap when no `limit` is supplied. Tuned for agent
+    /// callers — most LLM contexts can't usefully digest more.
+    const DEFAULT_LIMIT: usize = 256;
+    /// Hard ceiling on `limit`. Set for the `rts-bench semantic`
+    /// eval harness, which needs the full ranked candidate pool to
+    /// score query relevance.
+    const MAX_LIMIT: usize = 4096;
 
     let p: FindSymbolParams = parse_params(params)?;
     if p.name.is_some() && p.pattern.is_some() {
@@ -467,6 +490,24 @@ pub async fn find_symbol(
             ));
         }
     }
+    // Resolve effective limit. 0 → INVALID; >MAX_LIMIT → INVALID.
+    // Absent → DEFAULT_LIMIT.
+    let limit = match p.limit {
+        None => DEFAULT_LIMIT,
+        Some(0) => {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                "`limit` must be >= 1",
+            ));
+        }
+        Some(n) if (n as usize) > MAX_LIMIT => {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                format!("`limit` must be <= {MAX_LIMIT}"),
+            ));
+        }
+        Some(n) => n as usize,
+    };
     let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
     let file_filter = p.file.as_deref();
     let sort_mode = SortMode::from_param(p.sort.as_deref());
@@ -485,7 +526,7 @@ pub async fn find_symbol(
         vec![n.clone()]
     } else {
         // Pattern path. Pull the full name set and glob-match. Capped at
-        // 4× MAX_MATCHES candidates to bound work — patterns like `*`
+        // 4× the effective limit to bound work — patterns like `*`
         // would otherwise iterate every def in the index.
         let pattern = p.pattern.as_deref().unwrap();
         let all = store_arc.all_defined_names().map_err(|e| {
@@ -501,12 +542,12 @@ pub async fn find_symbol(
         // Stable lexicographic order so successive calls with the same
         // pattern return the same prefix when truncated.
         filtered.sort();
-        filtered.truncate(MAX_MATCHES * 4);
+        filtered.truncate(limit * 4);
         filtered
     };
 
     // Collect typed `(FoundSymbol, rank_score)` tuples so we can sort
-    // before building the wire JSON. The 256-entry cap applies after
+    // before building the wire JSON. The `limit` cap applies after
     // sorting (per Deepening §G: rank-then-truncate gives the
     // top-K-by-rank, not the top-K-by-encounter).
     //
@@ -516,7 +557,7 @@ pub async fn find_symbol(
     // (up to 1024 candidate names), that's 2048 txn-opens. The
     // batched `find_symbols_batch_with_sids` shares one txn.
     let mut typed: Vec<(crate::store::FoundSymbol, f64)> =
-        Vec::with_capacity(names.len().min(MAX_MATCHES));
+        Vec::with_capacity(names.len().min(limit));
     let mut batched = store_arc
         .find_symbols_batch_with_sids(&names)
         .map_err(|e| {
@@ -566,7 +607,7 @@ pub async fn find_symbol(
     }
 
     let pre_truncate_len = typed.len();
-    typed.truncate(MAX_MATCHES);
+    typed.truncate(limit);
 
     let matches: Vec<serde_json::Value> = typed
         .into_iter()
@@ -593,7 +634,7 @@ pub async fn find_symbol(
         })
         .collect();
 
-    let truncated = pre_truncate_len > MAX_MATCHES;
+    let truncated = pre_truncate_len > limit;
     Ok(serde_json::json!({
         "matches":   matches,
         "truncated": truncated,
@@ -626,7 +667,7 @@ pub async fn find_symbol(
 /// Errors: `SYMBOL_NOT_FOUND` when no `NAME_TO_SID` entry; mirrors
 /// `Index.FindSymbol`'s shape. Result is sorted by `(file, start_byte)`
 /// for stable output across calls. The 256-entry cap (`MAX_CALLERS`)
-/// matches `MAX_MATCHES` from `find_symbol`.
+/// matches `find_symbol`'s default `limit`.
 ///
 /// Capability: `find_callers` (advertised in `Daemon.Ping` from
 /// alpha.32 onward).
@@ -950,7 +991,7 @@ fn build_caller_entry(
 /// Algorithm is two-pointer with backtracking on `*` — same shape as
 /// libc's `fnmatch(3)` minus the bracket-expr machinery. O(N×M) worst
 /// case for catastrophic patterns like `a*a*a*a*b` against `aaaaaa…`,
-/// but the 4× MAX_MATCHES candidate cap upstream keeps that bounded.
+/// but the 4× `limit` candidate cap upstream keeps that bounded.
 pub(crate) fn symbol_glob_match(pattern: &str, name: &str) -> bool {
     let pb = pattern.as_bytes();
     let nb = name.as_bytes();

@@ -174,6 +174,12 @@ enum QueryCmd {
         kind: Option<String>,
         #[arg(long)]
         file: Option<String>,
+        /// Max number of results. Defaults to 256 (the agent default);
+        /// up to 4096 supported by daemons advertising
+        /// `find_symbol_limit_param`. Useful for dumping the full
+        /// ranked symbol set when validating the semantic eval.
+        #[arg(long)]
+        limit: Option<u32>,
     },
     /// `read_symbol` — read by name, optional shape + closure walk + callers.
     ReadSymbol {
@@ -587,6 +593,7 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             pattern,
             kind,
             file,
+            limit,
         } => {
             if name.is_none() && pattern.is_none() {
                 return Err(anyhow!(
@@ -598,6 +605,9 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             opt_str(pattern, &mut a, "pattern");
             opt_str(kind, &mut a, "kind");
             opt_str(file, &mut a, "file");
+            if let Some(n) = limit {
+                a.insert("limit".into(), serde_json::Value::Number((*n).into()));
+            }
             Ok((
                 default_workspace(workspace)?,
                 "find_symbol",
