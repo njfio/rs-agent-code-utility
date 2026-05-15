@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### IDF-weighted sub-token scoring (+10pp answerable coverage → 90% on rts-core)
+
+Adds inverse-document-frequency weighting to the semantic baseline
+ranker. Sub-token matches against common workspace terms (`symbol`,
+`file`, `analysis` in a code-analysis crate) get less score; matches
+against rare terms (`public`, `cache`, `signature`) get more.
+
+#### Why
+
+The audited corpus (PR #58) exposed two scoring failure modes:
+
+1. **"track which symbols are public"** → top1 = `Symbol` (a single-
+   word type), expected `is_public`/`visibility`. `Symbol` matched
+   the stemmed query token "symbol" at +10 (exact full-name) and
+   beat `is_public`'s +6 sub-token match. But `symbol` is a *very*
+   common term in rts-core — almost every candidate's name contains
+   it. The exact match was inflating against a generic match.
+
+2. **"how does the analyzer count symbols by kind?"** → top1 =
+   `SymbolTableAnalyzer`. Same pattern: common terms (`symbol`,
+   `analyzer`) outweighing rarer ones (`kind`, `count`).
+
+IDF directly addresses both. The classic Salton-Wong information-
+retrieval formula: a term's weight is `log((N + 1) / (df + 1)) + 1`
+where `df` is the count of candidates containing it. Common terms
+get weights near 1.0; rare terms get weights of 4-7×.
+
+#### What
+
+- New `IdfWeights::from_candidates(&[Candidate])` pre-computes
+  weights over the full pool once per eval.
+- `score_candidate(..., &IdfWeights)` multiplies every match-tier
+  bonus by the matched token's IDF weight. Exact-name match against
+  a common term now scores around 10 × 1.0; against a rare term, up
+  to 10 × 6.0.
+- File-path substring also IDF-weighted.
+
+#### Numbers on the audited corpus
+
+| Metric              | Pre-IDF (PR #58) | With IDF      | Δ          |
+|---------------------|------------------|---------------|------------|
+| MRR                 | 0.336            | 0.402         | +20%       |
+| Coverage (all 13 q) | 61.5%            | 69.2%         | +7.7pp     |
+| **Answerable cov.** | **80% (8/10)**   | **90% (9/10)**| **+10pp**  |
+| Precision@10        | 0.169            | 0.185         | +10%       |
+
+9 of 10 answerable queries hit. "track which symbols are public"
+went from a miss to rank 9 (`MemoryTracker` and `Symbol` no longer
+crowd out `is_public`). "how does the analyzer count symbols by
+kind?" went from rank 3 to rank 0 (top1 = `kind`).
+
+Cumulative on the answerable-corpus journey: 40% (PR #55 baseline) →
+50% (PR #56 decompose+stem) → 60% (PR #57 limit param) → 80% (PR #58
+corpus audit) → **90% (this PR)**.
+
+#### The one remaining miss
+
+"what does file analysis do?" → top1 = `FileAnalysisTask`; expected
+`analyze_file`/`FileAnalyzer` aren't in top-10. Root cause: the
+naive stemmer can't unify `analysis` (stems to `analysi`) with
+`analyze` (stems to `analyz`). Real Porter handles this via specific
+-is/-ize rules; ours doesn't. Could be addressed via:
+- A small synonym/lemma table for code-domain word pairs
+- Real Porter stemmer (~150 lines)
+- Word vectors (out of scope for "graph-only baseline")
+
+Filed for the next iteration.
+
+#### Test coverage
+
++2 unit tests:
+- `idf_weights_down_weight_common_tokens` (raw IDF behavior)
+- `idf_breaks_single_word_vs_compound_match` (the `Symbol` vs
+  `is_public` failure mode directly reproduced)
+
+Existing tests updated to pass a flat-IDF (weight=1.0 everywhere)
+to isolate score-tier ordering from IDF noise. 581 workspace tests
+pass.
+
 ### Semantic eval corpus audit (+20pp answerable coverage)
 
 Audits `corpus/semantic-eval-rts-core.toml` against the actual symbols
