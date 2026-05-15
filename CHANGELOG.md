@@ -7,54 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Find-symbol perf — single-txn batch + `into_iter` (-10% read_symbol p95)
+### Honest G3 — first-mount time on the post-walker-fix daemon
 
-Follow-up to the closure-resolve batching in PR #47. Two related fixes:
+**Correction to the v0.3.0 release notes.** The published G3
+number ("first-mount on 100k LOC = 902 ms ✅, 40 % headroom under
+1500 ms target") measured a *broken* daemon. The walker truncated
+at 256 files (PR #43's "256-file plateau" — every workspace > 256
+files was permanently partially indexed), so the published 902 ms
+was **time-to-plateau, not time-to-fully-indexed**.
 
-1. **Single transaction for find_symbol's rank lookup.** The
-   `Index.FindSymbol` handler called `store.find_symbol(name)` AND
-   `store.sid_for_name(name)` per name — two read transactions, both
-   doing the same `NAME_TO_SID` lookup. New `find_symbols_batch_
-   with_sids(&[String]) → HashMap<String, (Option<u32>, Vec<FoundSymbol>)>`
-   returns both in one shared txn. For pattern mode (up to 1024
-   candidate names per request), that's 2048 → 1 txn-opens.
+Re-measured on the fixed daemon (post-PR-#43):
 
-2. **Avoid the per-hit clone.** Pre-fix iterated `hits.iter()` and
-   cloned each `FoundSymbol` (allocates the `name` and `file`
-   `String`s) before pushing into the typed buffer. Switching to
-   `batched.remove(name)` + `hits.into_iter()` moves ownership
-   without cloning.
+| Synthetic LOC | Files | `build_time_ms` | `full_index_time_ms` | peak RSS | index size | bytes/symbol |
+|---:|---:|---:|---:|---:|---:|---:|
+| 10,000 | 154 | 886 | 1,120 | 26.06 MiB | 1.52 MiB | 938 |
+| 30,000 | 462 | 1,566 | 1,928 | 29.05 MiB | 2.52 MiB | 519 |
+| 50,000 | 770 | 2,405 | 2,861 | 30.61 MiB | 4.53 MiB | 560 |
+| 100,000 | 1,539 | **5,679** | **6,240** | 36.83 MiB | 8.54 MiB | 529 |
 
-The second fix is what actually moves the bench needle — the
-single-txn savings only show up in pattern mode, which the bench
-doesn't exercise (`--name` only).
+**G3 spec target (≤ 1,500 ms first-mount on 100k LOC) is NOT met
+on the fixed daemon.** Real first-mount on 100k LOC is **~6 s** —
+about 3.8× the spec.
 
-**Measured impact**
-(`rts-bench latency --workspace crates/rts-core --queries 5000 --cold-count 500 --deps`):
+The spec was set against a measurement that quietly only covered
+the first ~256 files. Now that we walk and index everything
+(verified `files_considered: 1539 / 1539` in the bench), 6 s is
+the actual cost of building a full call graph + PageRank node-set
++ signature index for 100k LOC.
 
-| Metric | Pre-fix (post-PR-#47) | Post-fix | Δ |
-|---|---:|---:|---|
-| `find_symbol` p95 | 1482 µs | **1389 µs** | **−6 %** |
-| `read_symbol` p50 | 1720 µs | **1641 µs** | **−5 %** |
-| `read_symbol` p95 | 3205 µs | **2898 µs** | **−10 %** |
-| `read_symbol` p99 | 6663 µs | **5521 µs** | **−17 %** |
+#### Is that acceptable?
 
-**Cumulative session progress** (v0.3.0 release → now):
+**Yes, for the agent-loop use case** — first-mount is paid once
+per daemon session (default `RTS_IDLE_SHUTDOWN_SECS=600`), then
+warm queries are sub-ms-to-low-ms (read_symbol p95 = 2.9 ms
+post-perf-fixes). For a long-running agent on a 100k-LOC
+workspace, paying 6 s up-front to make every subsequent
+`find_symbol` / `read_symbol` / `impact_of` call take 1–3 ms is
+a great trade.
 
-| Metric | v0.3.0 release | After all fixes | Δ |
-|---|---:|---:|---|
-| `read_symbol` p50 | 3207 µs | **1641 µs** | **−49 %** |
-| `read_symbol` p95 | 7023 µs | **2898 µs** | **−59 %** |
-| `read_symbol` p99 | 11877 µs | **5521 µs** | **−54 %** |
+**Not acceptable for one-off shell-pipeline use** at 100k LOC —
+the 6 s cold-mount tax dominates a single query. For one-off
+lookups on big repos, `rg` is faster end-to-end.
 
-**Remaining gap to alpha.30:** alpha.30 read_symbol p95 = 974 µs.
-Post-fix v0.3 = 2898 µs. **Still 3.0× slower** (down from 7.2×
-pre-session). The remaining gap is mostly in tree-sitter signature
-renders on uncached deps (cold-miss path) and the larger v0.3
-response shape.
+#### Filed: re-set G3 spec with honest target
 
-Tests: 132 unit + 24 integration pass; +1 new test
-(`find_symbols_batch_with_sids_returns_sids_for_known_names`).
+The 1500 ms target needs to either:
+
+1. Move to a smaller LOC fixture (say `≤ 1500 ms on 30k LOC`,
+   which the data shows IS met at 1566 ms; or `≤ 3000 ms on
+   50k LOC` — met at 2405 ms)
+2. Stay at 100k LOC and accept ~6 s, marking the gate `🟡 honest
+   but spec exceeded` rather than `✅`
+3. Investigate whether the walker + writer can parallelise the
+   parse step (currently single-threaded — each file is parsed
+   in sequence by the writer task)
+
+Option 3 is the right long-term answer (parallel parsing is a
+known win for tree-sitter workloads); options 1 and 2 are stopgap
+spec revisions.
+
+The original `bytes/symbol = 93` claim was also wrong — that
+number was `1.52 MiB / 16,929 synthetic-symbols`, but only ~256
+files (≈ 2,816 symbols) were actually indexed. The real
+`bytes/symbol` on 100k LOC is **529** (8.54 MiB / 16,929) —
+heavier than expected because the ref graph (`SID_REFS_OUT`,
+`REFS`, `FID_REFS`) adds ~400 bytes/symbol on top of v0.2's
+def-only index. Still cheap relative to the workspace source
+(~3.5 MB for 100k LOC of Rust).
 
 ### Read-symbol perf — batched `find_symbol` in the closure resolve loop (-31% p95)
 
