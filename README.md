@@ -164,6 +164,33 @@ in [docs/protocol-v0.md](docs/protocol-v0.md) §4.1 + Appendix F.
 
 ## Known limitations
 
+### First-mount on big workspaces takes seconds
+
+Cold-mount cost on synthetic Rust workspaces (post-walker-fix daemon):
+
+| Synthetic LOC | Files | First-mount |
+|---:|---:|---:|
+| 10k | 154 | ~1.0 s |
+| 30k | 462 | ~1.9 s |
+| 50k | 770 | ~2.9 s |
+| 100k | 1539 | ~6.2 s |
+
+The walker + writer are single-threaded today; each file is parsed
+in sequence. Daemon defaults to a 10-minute idle timeout
+(`RTS_IDLE_SHUTDOWN_SECS=600`), so first-mount is paid **once per
+session** and subsequent warm queries are sub-ms-to-low-ms
+(`read_symbol` p95 = 2.9 ms post-perf-fixes).
+
+The earlier v0.3.0 release notes claimed 902 ms first-mount on
+100k LOC — that number measured a broken daemon that truncated at
+~256 files (see CHANGELOG entry "Honest G3"). Real first-mount is
+~6 s. Acceptable for a long-running agent loop; **not** acceptable
+for one-off shell-pipeline use at 100k LOC — for those, `rg` is
+faster end-to-end.
+
+Parallel parsing in the writer is the v0.4+ candidate that would
+move this number.
+
 ### The PageRank graph is over *call* edges, not *type* edges
 
 v0.3's symbol-level PageRank ranks symbols by how often they're called
