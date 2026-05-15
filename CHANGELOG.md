@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-15
+
+**v0.3.1 release: correctness fixes + honest numbers + measurable perf wins.**
+
+Consolidates twelve PRs (#40 - #49) into one release. Three categories:
+
+### Correctness (the foundational fixes)
+
+| PR | What it fixes |
+|---|---|
+| **#43** | Walker no longer truncates at 256 files on initial mount. Every workspace > 256 files was permanently mis-indexed in v0.3.0. |
+| **#40** | Rust prelude artifacts (`Ok`/`Err`/`Some`/`None`) filtered from PageRank top-K. G4 was 🟡 at v0.3.0; ✅ on Rust workspaces in v0.3.1. |
+
+These two PRs change the answer the daemon gives. Everything else in v0.3.1 makes correct answers faster or makes the measurements honest.
+
+### Honest measurement (the bench-validity fixes)
+
+| PR | What it fixes |
+|---|---|
+| **#41** | `rts-bench latency --deps` flag — exercises the v0.3 closure walker path that the historical mix never touched. |
+| **#42** | Percentiles in `rts-bench latency` reports now compute over `.ok` samples only (not contaminated by fast-returning `SYMBOL_NOT_FOUND` errors). |
+| **#42** | Cold gate polls `outline_workspace.files_considered` until stable instead of waiting for a single probe symbol. |
+| **#44** | `rts-bench latency --workspace <path>` for real-workspace benchmarks (synth fixture had 3-line bodies that hid real costs). |
+| **#49** | **Honest G3 numbers.** v0.3.0 published `first-mount = 902 ms` on 100k LOC. That was on the broken daemon (256-file plateau). Real number is **~6 s**. Corrected in CHANGELOG + README "Known limitations". |
+
+### Performance (measured wins on real workspace)
+
+| PR | What changed | read_symbol p95 |
+|---|---|---:|
+| (v0.3.0 baseline) | — | 7,023 µs |
+| **#45** | `ContentVersionCache` (blake3 hash) + `SignatureCache` (tree-sitter renders) | 5,829 µs (−17 %) |
+| **#46** | Remove `spawn_blocking` from closure walk (was ~50-100 µs handoff per call) | 4,618 µs (−21 %) |
+| **#47** | `find_symbols_batch` — N redb lookups → 1 redb txn for closure dep resolve | 3,205 µs (−31 %) |
+| **#48** | `find_symbols_batch_with_sids` + remove per-hit clone | **2,898 µs (−10 %)** |
+| **Cumulative** | | **−59 %** |
+
+### Honest G-gate scorecard (corrects v0.3.0)
+
+| Gate | v0.3.0 published | v0.3.1 actual |
+|---|---|---|
+| **G1** find_symbol warm p95 < 5 ms | ✅ 2.7 ms | ✅ measured 1.5 ms (smaller than v0.3.0's number because bench-validity fix removed `SYMBOL_NOT_FOUND` noise from the percentile) |
+| **G2** refactor token reduction ≥ 70 % | ✅ 97.5 % | ✅ unchanged (measured on real workspace via different code path) |
+| **G3** first-mount on 100k LOC ≤ 1500 ms | ✅ 902 ms | ❌ **6240 ms on the fixed daemon.** Spec target was set against a broken-walker measurement that only covered ~256 files. Filed: re-set the target or land parallel parsing in writer (v0.4+). |
+| **G4** PageRank top-K coherence | 🟡 Ok/Some artifacts | ✅ Rust prelude filtered (#40). JS/TS/Python preludes are v0.4+. |
+| **G5** closure-walker cold p95 ≥ 50 % faster than alpha.30 | 🟡 "structural ✅" | ❌ **Measured: v0.3 is slower, not faster on real workspaces.** read_symbol p95 = 2.9 ms (post-fixes) vs alpha.30's 974 µs. The closure-walker structural fix was real but its benefit is offset by v0.3's other per-call work (`rank_score`, `content_version`, larger response shape). The honest reframe: **2.9 ms warm is fine in absolute terms** for an agent loop. |
+
+**Honest scorecard: 3 ✅ (G1, G2, G4) + 2 ❌ (G3, G5).**
+
+Both ❌s have honest framings:
+
+- **G3 ❌**: 6 s first-mount on 100k LOC is paid once per daemon session (default 10-minute idle). Warm queries are 1–3 ms. **Usable for long-running agent loops; not for one-off shell pipelines on big repos.**
+- **G5 ❌**: v0.3 is 3× slower than alpha.30 at read_symbol p95 — but **2.9 ms is invisible in an LLM-driven agent loop** where generation takes seconds. The v0.3 wins that matter (call graph, PageRank, `impact_of`, persistent ref edges) compound across a long session.
+
+### Should you use rts-daemon?
+
+**Yes**, for these workloads:
+- Long-running agent on 30k+ LOC Rust workspace
+- Refactor-impact analysis (`impact_of` has no shell equivalent)
+- `find_callers` (AST-precise; no `rg` substring false positives)
+
+**No**, for these:
+- Quick one-off shell pipeline lookups (use `rg`)
+- Workspaces < 10k LOC (daemon overhead dominates)
+
+### Test count
+
+145 unit + 24 integration pass (was 550 across the project at v0.3.0; net +13 from v0.3.1's new tests: cache invariants, batched find_symbol, ContentVersionCache, SignatureCache, prelude filter, real-workspace prepare_workspace, percentile invariants).
+
+### v0.4+ filed
+
+1. Parallel parsing in writer (G3 is single-threaded today — biggest first-mount win)
+2. Per-language prelude filter sets (JS/TS/Python) — needs per-sid language tracking
+3. Investigate v0.3 read_symbol perf gap to alpha.30 (3× slower; mostly in IPC + signature renders on cold-miss deps)
+4. Stacked-PR auto-spawn race per protocol-v0 §15.5
+5. Cross-compile macOS x86_64 from arm64 runner (Intel tarball still queues for hours on GitHub's macos-13 pool)
+
 ### Honest G3 — first-mount time on the post-walker-fix daemon
 
 **Correction to the v0.3.0 release notes.** The published G3
