@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Semantic eval corpus audit (+20pp answerable coverage)
+
+Audits `corpus/semantic-eval-rts-core.toml` against the actual symbols
+indexed for `crates/rts-core`. The previous corpus included fictional
+names the author imagined but never verified — exposed once the v0.4.1
+`limit` parameter let the bench see the full 2096-symbol pool.
+
+#### What was wrong
+
+Six of the ten "answerable" queries had `expected_top_k` entries that
+don't exist anywhere in rts-core:
+
+- `detect_language`, `from_extension`, `info_for_path` (language detection)
+- `Visibility`, `Public` (visibility tracking)
+- `SymbolKind`, `count_symbols` (symbol counting)
+- `render_signature`, `signature_renderer`, `SignatureRenderer` (all three — that whole query was fully fictional)
+- `TreeCache`, `cached_tree` (cache)
+- `Tree`, `walk_tree` (syntax tree / walk)
+
+The three "negative controls" (`auth`, `database pool`, `http handler`)
+were ALSO wrong — rts-core is a code-analysis crate that detects
+authentication / thread-pool / handler patterns in *other* people's
+code, so it has `AuthenticationCheck`, `AdvancedThreadPool`, and
+`Handler` types. Hitting those was a real hit being counted as a
+"correctly handled negative control".
+
+#### What was fixed
+
+- Every fictional expected name replaced with a real symbol from the
+  4096-pool probe. `detect_language` → `detect_language_from_path` /
+  `detect_language_from_extension` / `detect_language_from_content`,
+  etc.
+- One query (`render_signature`) reworded to point at real code:
+  "what strips a symbol's body for display?" → `render_strip_body`,
+  `render_rust`, `render_python`, etc.
+- Negative controls swapped to topics genuinely absent: `JWT`,
+  `GraphQL`, `SMTP` — all probed and confirmed missing from rts-core.
+- Validation: every `expected_top_k` name is verified against the
+  daemon's pool before the corpus ships.
+
+#### Numbers on the audited corpus
+
+| Metric              | Pre-audit (PR #57) | Audited corpus | Δ          |
+|---------------------|--------------------|----------------|------------|
+| MRR                 | 0.192              | 0.336          | +75%       |
+| Coverage (all 13 q) | 46.2%              | 61.5%          | +15.3pp    |
+| **Answerable cov.** | **60.0% (6/10)**   | **80.0% (8/10)** | **+20pp**  |
+| Precision@10        | 0.092              | 0.169          | +84%       |
+
+Important: these gains are NOT from a smarter ranker. They're from
+giving the existing ranker a corpus it can actually answer. This is
+the honest baseline — what graph-only retrieval achieves against
+verified ground truth.
+
+#### The two remaining misses
+
+- "what does file analysis do?" — top1 = `FileAnalysisTask`; expected
+  `analyze_file`/`FileAnalyzer` are in the pool but ranked below
+  competing token-overlap candidates.
+- "where does the code track which symbols are public?" — top1 =
+  `Symbol`; expected `is_public`/`visibility` lose because query token
+  "symbols" stems to "symbol" and exact-name-matches the `Symbol` type
+  at +10, beating sub-token matches at +6.
+
+Both are scoring-tier quirks, not retrieval problems. Filed for the
+next ranker iteration.
+
 ### `Index.FindSymbol.limit` — explicit cap for the eval harness (+10pp answerable coverage)
 
 Adds an optional `limit` parameter to `Index.FindSymbol` (and the

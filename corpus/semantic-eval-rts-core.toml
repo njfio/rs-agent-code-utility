@@ -13,16 +13,19 @@
 # Run: `rts-bench semantic --corpus corpus/semantic-eval-rts-core.toml \
 #                          --workspace crates/rts-core`
 #
-# Grading notes:
-# - "Hand-graded" means I looked at the actual code and listed
-#   symbols I'd expect a useful answer to surface. Not an
-#   exhaustive list — just the obvious ones for a quick scan.
+# Grading methodology:
+# - All `expected_top_k` names must exist in the indexed workspace.
+#   The corpus is validated by probing the daemon with
+#   `find_symbol(pattern="*", limit=4096)` and confirming every name
+#   appears in the pool. Names known to be missing are flagged.
 # - Order doesn't matter; the scorer checks membership in top-K.
-# - Some queries deliberately have no expected matches in this
-#   workspace (e.g. "where's auth logic?" — there isn't any in
-#   rts-core). Those queries score 0 across the board, which is
-#   useful: a ranker should NOT invent symbols for queries with
-#   no actual answer.
+# - Negative-control queries (empty `expected_top_k`) target topics
+#   genuinely absent from rts-core. Confirmed absent via `rg` over
+#   the workspace: no JWT, GraphQL, or SMTP code anywhere.
+# - Audited 2026-05-15 after the v0.4.1 limit-param landing exposed
+#   the full ranked pool. Previous version included fictional names
+#   like `detect_language`, `count_symbols`, `render_signature` that
+#   the corpus author imagined but never verified.
 
 version = 1
 
@@ -34,11 +37,14 @@ expected_top_k = ["parse", "parse_file_content", "create_syntax_tree", "Parser"]
 
 [[query]]
 text = "where is the syntax tree wrapper defined?"
-expected_top_k = ["SyntaxTree", "tree", "Tree"]
+# `Tree` doesn't exist in rts-core; the wrapper is named `SyntaxTree`.
+# `TreeCursor` is the tree-sitter cursor type and a reasonable hit.
+expected_top_k = ["SyntaxTree", "tree", "syntax_tree", "TreeCursor"]
 
 [[query]]
 text = "how does the analyzer walk nodes?"
-expected_top_k = ["find_nodes_by_kind", "collect_nodes_by_kind", "walk_tree", "root_node"]
+# `walk_tree` doesn't exist; the actual walk types are `walk`/`walker`.
+expected_top_k = ["find_nodes_by_kind", "collect_nodes_by_kind", "walk", "walker", "root_node"]
 
 [[query]]
 text = "what does file analysis do?"
@@ -46,40 +52,80 @@ expected_top_k = ["analyze_file", "FileAnalyzer", "analyze", "analyze_directory"
 
 [[query]]
 text = "where is the cache implemented?"
-expected_top_k = ["calculate_cache_key", "cache_tree", "TreeCache", "cached_tree"]
+# `TreeCache` and `cached_tree` don't exist. The real cache types are
+# `FileCache`, `CacheStats`, plus the symbol-level cache helpers.
+expected_top_k = ["calculate_cache_key", "cache_tree", "FileCache", "CacheStats", "is_cached"]
 
 [[query]]
 text = "what's the entry point for language detection?"
-expected_top_k = ["detect_language", "Language", "from_extension", "info_for_path"]
+# `detect_language` doesn't exist; the real entry points are the
+# `detect_language_from_*` family. `from_extension` and `info_for_path`
+# don't exist either; `LanguageInfo` is the closest type.
+expected_top_k = [
+    "detect_language_from_path",
+    "detect_language_from_extension",
+    "detect_language_from_content",
+    "Language",
+    "LanguageInfo",
+]
 
 # ─── Conceptual questions that may need fuzzier matching ───
 
 [[query]]
 text = "where does the code track which symbols are public?"
-expected_top_k = ["Visibility", "visibility", "is_public", "Public"]
+# `Visibility` and `Public` types don't exist in rts-core. The real
+# visibility logic lives in `is_public*` predicates and the bare
+# `visibility` field/method.
+expected_top_k = [
+    "is_public",
+    "visibility",
+    "is_public_function",
+    "is_public_class",
+    "is_public_method",
+    "is_rust_item_public",
+]
 
 [[query]]
 text = "how does the analyzer count symbols by kind?"
-expected_top_k = ["SymbolKind", "kind", "count_symbols", "find_nodes_by_kind"]
+# `SymbolKind` and `count_symbols` don't exist. The actual symbol
+# inventory lives in `SymbolTable`/`SymbolStatistics`/`Symbol`,
+# enumerated via `find_nodes_by_kind`.
+expected_top_k = ["Symbol", "SymbolTable", "SymbolStatistics", "kind", "find_nodes_by_kind"]
 
 [[query]]
-text = "what generates a signature from source?"
-expected_top_k = ["render_signature", "signature_renderer", "SignatureRenderer"]
+text = "what strips a symbol's body for display?"
+# Replaces the previous fully-fictional "render_signature" query.
+# rts-core's signature-rendering layer is the `render_*` family per
+# language, plus the body-stripping helpers.
+expected_top_k = [
+    "render_strip_body",
+    "render_strip_body_with_recursive_body",
+    "render_rust",
+    "render_python",
+    "render_javascript",
+]
 
 [[query]]
 text = "what's central to the codebase?"
 expected_top_k = ["find_nodes_by_kind", "child_by_field_name", "contains", "children"]
 
-# ─── Negative controls — no real answer in rts-core ───
+# ─── Negative controls — topics genuinely absent from rts-core ───
+#
+# The previous corpus had `auth`, `database connection pool`, and
+# `http handler` as negative controls — but rts-core ACTUALLY has
+# `AuthenticationCheck`, `AdvancedThreadPool`, and `Handler` types
+# (it's a code-analysis crate that detects these patterns in *other*
+# people's code). Replaced with JWT / GraphQL / SMTP, which were
+# probed and confirmed to be absent from the full 4096-symbol pool.
 
 [[query]]
-text = "where's the authentication logic?"
+text = "where is JWT token validation?"
 expected_top_k = []
 
 [[query]]
-text = "how does the database connection pool work?"
+text = "what's the GraphQL schema definition?"
 expected_top_k = []
 
 [[query]]
-text = "where is the http handler?"
+text = "where is the SMTP email client implementation?"
 expected_top_k = []
