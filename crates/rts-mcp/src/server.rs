@@ -177,21 +177,67 @@ pub struct RtsServer {
     #[allow(dead_code)]
     tool_router: ToolRouter<Self>,
     daemon: Arc<Mutex<DaemonClient>>,
+    /// v0.4: workspace path needed for lazy `Workspace.Mount`.
+    /// rts-mcp used to call Mount immediately at startup; with the
+    /// daemon's prewarm-on-spawn (PR #51), deferring Mount until
+    /// the first agent tool call lets the daemon's background walk
+    /// overlap with the seconds-to-minutes between session start and
+    /// the user's first code question. By the time Mount fires, the
+    /// daemon's prewarm has already populated the index — Mount hits
+    /// the idempotent path and returns immediately.
+    workspace: std::path::PathBuf,
+    /// Whether `Workspace.Mount` has been called for this session.
+    /// `AtomicBool` so the (cheap) fast-path in `call_daemon` is a
+    /// single relaxed load. Synchronization for the slow-path
+    /// (do-the-mount) happens through the daemon `Mutex` we already
+    /// hold there — no double-mount race possible.
+    ///
+    /// Wrapped in `Arc` because `RtsServer: Clone` (rmcp requirement)
+    /// and `AtomicBool` itself is not `Clone`.
+    mounted: Arc<std::sync::atomic::AtomicBool>,
     instructions: String,
 }
 
 #[tool_router]
 impl RtsServer {
-    pub fn new(daemon: DaemonClient, instructions: String) -> Self {
+    pub fn new(daemon: DaemonClient, workspace: std::path::PathBuf, instructions: String) -> Self {
         Self {
             tool_router: Self::tool_router(),
             daemon: Arc::new(Mutex::new(daemon)),
+            workspace,
+            mounted: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             instructions,
         }
     }
 
+    /// Forward a method to the daemon. On the FIRST call (or after
+    /// a prior `Workspace.Mount` failure), this also issues
+    /// `Workspace.Mount` so subsequent tool calls have a workspace
+    /// to read from.
+    ///
+    /// The `daemon` mutex serializes — concurrent tool calls don't
+    /// race on the mount; the first one in does the mount, the
+    /// others wait on the mutex and see `mounted == true` by the
+    /// time they get the lock.
     async fn call_daemon(&self, method: &str, params: Value) -> Result<Value, DaemonError> {
         let mut guard = self.daemon.lock().await;
+        if !self.mounted.load(std::sync::atomic::Ordering::Acquire) {
+            let mount_resp = guard
+                .call(
+                    "Workspace.Mount",
+                    serde_json::json!({ "root": self.workspace }),
+                )
+                .await?;
+            let workspace_id = mount_resp["workspace_id"].as_str().unwrap_or("<unknown>");
+            tracing::info!(
+                target: "rts_mcp",
+                "lazy-mounted workspace {} as id={} on first tool call",
+                self.workspace.display(),
+                workspace_id,
+            );
+            self.mounted
+                .store(true, std::sync::atomic::Ordering::Release);
+        }
         guard.call(method, params).await
     }
 

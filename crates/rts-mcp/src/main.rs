@@ -12,7 +12,6 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use rmcp::service::ServiceExt;
-use serde_json::json;
 
 mod daemon_client;
 mod server;
@@ -96,29 +95,29 @@ async fn main() -> Result<()> {
 
     let daemon_bin = socket::resolve_daemon_bin()?;
     // v0.4: pass the workspace path to auto-spawn so the daemon
-    // prewarms (kicks off the initial walk) before the `Workspace.Mount`
-    // RPC arrives over the socket. By the time the agent's first
-    // `find_symbol` lands, the index is warm — the cold-mount tax
-    // (~6 s on 100k LOC) overlaps with the MCP handshake instead of
-    // blocking the first tool call.
+    // prewarms (kicks off the initial walk) before any RPC arrives.
+    // Combined with the deferred `Workspace.Mount` below, this hides
+    // the cold-mount tax entirely on long-lived agent sessions: the
+    // daemon walks in the background while the user types their
+    // first question, and the lazy Mount on first tool call hits the
+    // idempotent path instantly.
     let stream = socket::connect_with_auto_spawn(&daemon_bin, Some(&workspace))
         .await
         .context("connect to rts-daemon")?;
-    let mut daemon = DaemonClient::new(stream);
+    let daemon = DaemonClient::new(stream);
 
-    // Mount the workspace before we start accepting MCP traffic. If this
-    // fails the agent will see no tools listed because the server exits.
-    let mount_resp = daemon
-        .call("Workspace.Mount", json!({ "root": workspace }))
-        .await
-        .with_context(|| format!("Workspace.Mount on {}", workspace.display()))?;
-    let workspace_id = mount_resp["workspace_id"].as_str().unwrap_or("<unknown>");
-    tracing::info!(
-        target: "rts_mcp",
-        "mounted workspace {} as id={}",
-        workspace.display(),
-        workspace_id
-    );
+    // v0.4: Workspace.Mount is now deferred — see `RtsServer::call_daemon`.
+    // The first agent tool call (find_symbol / outline_workspace / etc.)
+    // triggers the Mount. Daemon prewarm overlaps with the seconds the
+    // user spends typing their first question, so Mount is effectively
+    // free.
+    //
+    // Pre-v0.4 behavior was to Mount synchronously here at startup,
+    // which paid the 6 s cold-walk tax during rts-mcp boot — before
+    // the agent's first tool call could even be served. The deferred
+    // approach lets Claude Code / Cursor / etc. show tools as
+    // available immediately and amortizes the walk into the user's
+    // typing time.
 
     let instructions = format!(
         "rts-mcp serves four read-only retrieval tools for the workspace at {}. \
@@ -126,7 +125,7 @@ async fn main() -> Result<()> {
          first for orientation, then `find_symbol`/`read_symbol` for targeted reads.",
         workspace.display()
     );
-    let server = RtsServer::new(daemon, instructions);
+    let server = RtsServer::new(daemon, workspace.clone(), instructions);
     let service = server
         .serve(rmcp::transport::stdio())
         .await
