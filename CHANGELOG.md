@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI guard upgrade — now checks blind-v2 too
+
+PR #63 wired CI to run `rts-bench semantic --check-coverage 0.95`
+against the v1 (author-graded) corpus. This adds a second check
+against the blind-v2 corpus at threshold 0.75 (current observed
+0.80, with a 5pp regression buffer).
+
+Why two checks instead of one combined corpus
+---------------------------------------------
+A combined-file approach was considered; running both corpora as
+separate steps wins on three counts:
+
+1. **Distinct failure modes** — a regression on v1 vs blind-v2
+   tells you different things. v1 catches scoring-tier disruptions
+   on the friendly corpus; blind-v2 catches generalization loss
+   on a non-overfit query set.
+2. **No new artifact** — no need to maintain a combined corpus
+   file that duplicates the source TOMLs.
+3. **CI log clarity** — each step's pass/fail is its own line in
+   the workflow; the operator sees exactly which corpus regressed.
+
+Cost
+----
+The first bench step does the cold-mount + indexing; the second
+hits a warm daemon cache. Total extra CI time: ~60-90s instead of
+~30-60s. Worth it for catching confirmation-bias-style regressions
+that v1 alone would miss.
+
+Follow-up: when more corpora land (e.g. mined from real agent
+transcripts), add additional steps with their own thresholds.
+
 ## [0.5.0] - 2026-05-15
 
 **Theme: from a single saturated baseline to a verified, doc-aware ranker.**
@@ -85,189 +116,6 @@ that don't need embeddings:
 - Synonym tables (the next concrete ranker win).
 - Mining queries from real Claude Code transcripts (the most
   rigorous corpus addition).
-
-### Doc-comment indexing (Rust) — executes plan #64 end-to-end
-
-Implements all 4 units from the doc-comment indexing plan (PR #64).
-Extracts Rust `///` and `//!` comments during the parse pass, stores
-them in a new sidecar table, exposes them through the existing
-`"doc": null` placeholder in `Index.FindSymbol` / `Index.ReadSymbol`,
-and adds doc-text matching to the bench scorer.
-
-**U1 — Storage (`store/schema.rs` + `store/mod.rs`):**
-- New `SID_DOCS: MultimapTable<u32, &[u8]>` keyed by symbol ID
-- New `DocBlob { fid: u32, text: String }` value type
-- `Store::doc_for_sid(sid)` and `Store::docs_for_names_with_fid()`
-  for single and batched reads
-- Sidecar design (vs extending `DefSite`) keeps v0.4.1 on-disk
-  format unchanged — existing redb stores open cleanly under v0.5
-  daemons; new doc data populates as files re-index
-- `drop_file_entries` extended to invalidate per-file doc rows
-- 3 new round-trip tests covering write, empty-case, and re-upsert
-  deletion
-
-**U2 — Writer plumbing (`writer.rs`):**
-- `FileBatchEntry` gains a `docs: Vec<(String, String)>` field
-- Extractor pass-through: rts-core's `Symbol::documentation` field
-  was *already* populated by `extract_rust_doc_comments` but the
-  writer was dropping it in `symbol_to_def()`. Pulled the doc out
-  ahead of the def conversion and threaded it through to commit
-
-**U3 — Wire shape (`methods/index.rs`):**
-- `Index.FindSymbol` response `"doc"` field now carries real text
-  when the symbol has a Rust doc comment, `null` when it doesn't.
-  The placeholder was already in place since v0.2.
-- Capability `find_symbol_doc_field` advertised in `Daemon.Ping`
-- Single batched read per `find_symbol` call (one txn for all
-  matches, not one per match) — no measurable latency change
-
-**U4 — Bench scorer (`crates/rts-bench/src/semantic.rs`):**
-- `Candidate` gains `Option<String> doc` field
-- `score_candidate` matches query-token stems against word-stems
-  extracted from the doc text. Doc is tokenized with `tokens_of()`
-  and stemmed — same pipeline as query tokens, so the shared
-  stopword list filters common words
-- Weight: `+1.0 * IDF` per matching token stem (equal to file-path
-  tier; conservative because doc text uses full natural-language
-  vocabulary which is noisy by nature)
-
-#### Numbers (with doc indexing enabled)
-
-| Corpus           | Pre-doc (v0.4.1)   | With doc (this PR) | Δ          |
-|------------------|--------------------|---------------------|------------|
-| v1 audited (13q) | 100% / 0.441       | 100% / 0.381        | parity     |
-| v1 P@10          | 0.200              | 0.215               | +7.5%      |
-| blind-v2 (15q)   | 80% / 0.273        | 80% / 0.169         | parity-MRR↓|
-
-**Coverage parity on both corpora.** Precision@10 on v1 went up
-(more expected names land in top-10 because doc text surfaces
-additional relevant candidates). MRR slipped because doc-text
-matches sometimes elevate candidates whose docs incidentally use
-query words; the corrective signal (sub-token name match, +6) still
-wins on the corpora's clearest answers.
-
-#### Honest tradeoff
-
-The doc-comment matching has a known weakness on this corpus:
-
-- "what cleans up after analysis?" still misses `clear_cache` (doc:
-  "Clear the file cache") because the corpus uses "clean" but the
-  docs use "clear" — synonym handling, not doc indexing, is what
-  bridges this.
-
-Ship with conservative +1 weight; future ranker work (doc-IDF
-computed separately from name-IDF, synonym tables, query
-expansion) can tune. The *infrastructure* is the real win — future
-bench/ranker iterations have doc text to work with.
-
-#### What stays back-compatible
-
-- v0.4.1 redb stores open cleanly under v0.5 (sidecar table is
-  empty on first open; populates as files re-index).
-- Pre-v0.5 daemons returning `"doc": null` continue to work — the
-  bench treats `null` as "no doc" and falls back to identifier-only
-  scoring.
-- Default `find_symbol` agent calls add a single batched read; no
-  measurable latency change.
-
-#### Out of scope (filed for follow-up)
-
-- C, JavaScript, Python, Go, Swift doc-comment extraction
-- `outline_workspace` exposing docs (token budget there is tight)
-- Doc-IDF computed separately from name-IDF
-- Synonym tables for noun↔verb pairs the stemmer can't unify
-
-### CI semantic-baseline regression guard
-
-`rts-bench semantic` now accepts `--check-coverage <FLOAT>`. When
-set, the bench exits with code 2 if the observed
-`answerable_coverage` falls below the threshold; pass-case prints
-`check: answerable_coverage X.XXX ≥ required Y.YYY ✓` and exits 0.
-
-CI wired to run the bench on every PR / push against
-`corpus/semantic-eval-rts-core.toml` (the v1 verified corpus) with
-threshold `0.95`. Future ranker / retrieval changes that regress
-below this number will fail CI.
-
-Why
----
-Without this, the 100% answerable-coverage claim in v0.4.1 is a
-snapshot, not an invariant. A future refactor of the daemon's
-`find_symbol`, the bench's scorer, the prelude filter, the
-PageRank weights, or even an upgrade to a tree-sitter grammar
-that changes which symbols get extracted, could silently regress
-the baseline. Now it can't slip past code review.
-
-Cost: ~30-60 seconds extra per CI run (cold-mount + small
-workspace + 10 queries). Worth it.
-
-Follow-up: now that the blind-v2 corpus has landed (#62), the CI
-guard should upgrade to the combined corpus with threshold 0.85
-(the honest combined-corpus baseline of 0.90 minus a 5pp regression
-buffer).
-
-### Blind-v2 corpus — confirmation-bias correction on the v0.4.1 claim
-
-The v0.4.1 release claimed 100% answerable coverage on a 10-query
-rts-core corpus. The release notes flagged the honest caveat: the
-corpus was hand-graded by the same author who built the ranker,
-which biases the measurement.
-
-This PR addresses that caveat directly. A second corpus,
-`corpus/semantic-eval-rts-core-blind-v2.toml`, was written
-*outside-in* — queries drafted from agent-coding-loop patterns
-(error/debugging, lifecycle, extension, performance, result-
-collection) without first inspecting the symbol table. Only after
-drafting did each query's `expected_top_k` get graded against the
-actual 4096-symbol pool. Queries with no plausible answer became
-negative controls.
-
-#### What the blind corpus says
-
-| Corpus           | Queries | Answerable | Coverage     | MRR   |
-|------------------|---------|------------|--------------|-------|
-| v1 (original)    | 13      | 10         | **100%**     | 0.441 |
-| **blind v2**     | 15      | 10         | **80%** (8/10) | 0.273 |
-| Combined         | 28      | 20         | **90%** (18/20) | 0.351 |
-
-**The honest generalization number is 90%, not 100%.** The 20pp gap
-between v1 and blind v2 is the real confirmation-bias correction
-on the original measurement.
-
-#### The two blind-corpus misses (filed)
-
-1. **"what cleans up after analysis?"** → top1 = `cleaned` (a noise
-   match). Expected `clear`/`clear_cache`/`reset` are in the pool
-   but not in top-10. Root cause: `clean*` and `clear*` are
-   synonyms only to humans — the stemmer treats them as unrelated
-   roots. A synonym table (similar to the Greek-origin lemma overrides)
-   could close this.
-
-2. **"where are language-specific queries defined?"** → top1 =
-   `get_language_specific_complexity`. Expected `LanguageParser`/
-   `QueryBuilder`/`Query` are in the pool. The miss is a real
-   trade-off: compound names with two matching sub-tokens
-   (`language` + `specific`) legitimately outscore single-match
-   names. This isn't strictly wrong — it's a corpus-grading
-   judgment call.
-
-Neither miss is a bug. Both are now-visible limits of the graph-
-only baseline against agent-natural queries.
-
-#### Implication for the embedding question
-
-The 100%→90% correction doesn't change the conclusion meaningfully:
-the graph-only baseline still covers nearly all natural-language
-queries that have an identifier-shaped answer. Any embedding work
-still needs to beat 90% on a *harder, externally-graded* corpus —
-ideally one mined from real agent transcripts — to justify the
-model dependency.
-
-The two specific miss patterns above are concrete targets that
-future ranker work (synonym tables, multi-token prioritization) or
-future capability work (doc-comment indexing) could close *without*
-needing embeddings.
-
 ## [0.4.1] - 2026-05-15
 
 **Theme: from "we should add embeddings" to "the graph-only baseline scores 100%."**
