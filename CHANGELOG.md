@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI semantic-baseline regression guard
+
+`rts-bench semantic` now accepts `--check-coverage <FLOAT>`. When
+set, the bench exits with code 2 if the observed
+`answerable_coverage` falls below the threshold; pass-case prints
+`check: answerable_coverage X.XXX ≥ required Y.YYY ✓` and exits 0.
+
+CI wired to run the bench on every PR / push against
+`corpus/semantic-eval-rts-core.toml` (the v1 verified corpus) with
+threshold `0.95`. Future ranker / retrieval changes that regress
+below this number will fail CI.
+
+Why
+---
+Without this, the 100% answerable-coverage claim in v0.4.1 is a
+snapshot, not an invariant. A future refactor of the daemon's
+`find_symbol`, the bench's scorer, the prelude filter, the
+PageRank weights, or even an upgrade to a tree-sitter grammar
+that changes which symbols get extracted, could silently regress
+the baseline. Now it can't slip past code review.
+
+Cost: ~30-60 seconds extra per CI run (cold-mount + small
+workspace + 10 queries). Worth it.
+
+Follow-up: now that the blind-v2 corpus has landed (#62), the CI
+guard should upgrade to the combined corpus with threshold 0.85
+(the honest combined-corpus baseline of 0.90 minus a 5pp regression
+buffer).
+
 ### Blind-v2 corpus — confirmation-bias correction on the v0.4.1 claim
 
 The v0.4.1 release claimed 100% answerable coverage on a 10-query

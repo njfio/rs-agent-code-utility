@@ -155,6 +155,12 @@ enum Cmd {
         /// Skip writing the report.
         #[arg(long)]
         dry_run: bool,
+        /// Regression guard: fail the process with exit code 2 if
+        /// `answerable_coverage` falls below this threshold (e.g.
+        /// `0.90` for 90%). Use in CI to catch ranker regressions.
+        /// Default: no check, exits 0 regardless of metrics.
+        #[arg(long)]
+        check_coverage: Option<f64>,
     },
 }
 
@@ -436,7 +442,8 @@ async fn main() -> Result<()> {
             top_k,
             out,
             dry_run,
-        } => run_semantic(corpus, workspace, top_k, out, dry_run).await,
+            check_coverage,
+        } => run_semantic(corpus, workspace, top_k, out, dry_run, check_coverage).await,
     }
 }
 
@@ -446,6 +453,7 @@ async fn run_semantic(
     top_k: usize,
     out: Option<PathBuf>,
     dry_run: bool,
+    check_coverage: Option<f64>,
 ) -> Result<()> {
     let workspace = workspace
         .canonicalize()
@@ -498,16 +506,33 @@ async fn run_semantic(
         );
     }
 
-    if dry_run {
-        return Ok(());
+    if !dry_run {
+        let out_path = out.unwrap_or_else(|| {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(format!("bench-semantic-{}.json", git_short_sha()))
+        });
+        semantic::write_report(&out_path, &report)?;
+        println!("wrote {}", out_path.display());
     }
-    let out_path = out.unwrap_or_else(|| {
-        std::env::current_dir()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join(format!("bench-semantic-{}.json", git_short_sha()))
-    });
-    semantic::write_report(&out_path, &report)?;
-    println!("wrote {}", out_path.display());
+
+    // Regression guard: after writing the report, gate on coverage.
+    // Print on its own line so CI failure logs make the threshold
+    // and observed value easy to spot.
+    if let Some(min) = check_coverage {
+        if report.answerable_coverage + f64::EPSILON < min {
+            eprintln!(
+                "regression: answerable_coverage {:.3} < required {:.3}",
+                report.answerable_coverage, min
+            );
+            std::process::exit(2);
+        } else {
+            println!(
+                "check: answerable_coverage {:.3} ≥ required {:.3} ✓",
+                report.answerable_coverage, min
+            );
+        }
+    }
     Ok(())
 }
 
