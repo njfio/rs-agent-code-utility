@@ -49,3 +49,6 @@ indexmap = { version = "2", features = ["serde"] }
 # Synthetic workspace generation for the latency bench (S1) lives in
 # the main binary path; move tempfile to runtime deps.
 tempfile = "3"
+
+# TOML parsing for the semantic-eval corpus format. Pure-Rust, small.
+toml = "0.8"

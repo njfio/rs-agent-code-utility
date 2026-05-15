@@ -23,6 +23,7 @@ mod footprint;
 mod latency;
 mod mcp_runner;
 mod report;
+mod semantic;
 mod tasks;
 mod token;
 
@@ -124,6 +125,36 @@ enum Cmd {
     Query {
         #[command(subcommand)]
         sub: QueryCmd,
+    },
+    /// Semantic-search evaluation harness. Runs a TOML corpus of
+    /// labelled queries against a workspace, reports precision@10 +
+    /// MRR + coverage of a graph-only baseline ranker. The deliverable
+    /// is a measurable comparison point for ANY future ranker
+    /// (embedding-based, LLM-routed, hybrid) — without this, every
+    /// claim about "semantic search would help" is speculation.
+    ///
+    /// Corpus format: see `corpus/semantic-eval-rts-core.toml` for an
+    /// example. Each query has `text` (the natural-language query)
+    /// and `expected_top_k` (hand-graded list of symbol names that
+    /// should appear in the top-K results).
+    Semantic {
+        /// Path to a TOML corpus file.
+        #[arg(long)]
+        corpus: PathBuf,
+        /// Workspace to evaluate against. Must be canonicalized;
+        /// the bench mounts it and runs the baseline ranker against
+        /// the live daemon index.
+        #[arg(long)]
+        workspace: PathBuf,
+        /// Top-K cutoff for precision scoring. Default 10.
+        #[arg(long, default_value_t = 10)]
+        top_k: usize,
+        /// Where to write the JSON report.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Skip writing the report.
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -393,7 +424,84 @@ async fn main() -> Result<()> {
             dry_run,
         } => run_footprint(synth_loc, out, dry_run).await,
         Cmd::Query { sub } => run_query(sub).await,
+        Cmd::Semantic {
+            corpus,
+            workspace,
+            top_k,
+            out,
+            dry_run,
+        } => run_semantic(corpus, workspace, top_k, out, dry_run).await,
     }
+}
+
+async fn run_semantic(
+    corpus_path: PathBuf,
+    workspace: PathBuf,
+    top_k: usize,
+    out: Option<PathBuf>,
+    dry_run: bool,
+) -> Result<()> {
+    let workspace = workspace
+        .canonicalize()
+        .with_context(|| format!("canonicalize {}", workspace.display()))?;
+    let corpus = semantic::load_corpus(&corpus_path)
+        .with_context(|| format!("load corpus {}", corpus_path.display()))?;
+    println!(
+        "semantic: workspace={} corpus={} queries={} top_k={}",
+        workspace.display(),
+        corpus_path.display(),
+        corpus.queries.len(),
+        top_k,
+    );
+
+    let rts_mcp_bin = resolve_bin("rts-mcp")?;
+    let rts_daemon_bin = resolve_bin("rts-daemon")?;
+    let mut session =
+        mcp_runner::McpSession::spawn(&rts_mcp_bin, &rts_daemon_bin, &workspace, &[]).await?;
+
+    // Probe to make sure the index is hot before we start scoring;
+    // share the bench's INDEX_NOT_READY-retry budget so cold mounts
+    // don't muddy the eval results.
+    let _ = session
+        .tools_call("find_symbol", json!({ "pattern": "*" }), 30)
+        .await?;
+
+    let results = semantic::run(&mut session, &corpus, top_k).await?;
+    session.close().await?;
+
+    let report = semantic::build_report(&workspace, &corpus_path, top_k, results);
+    println!(
+        "semantic: mrr={:.3} coverage={:.1}% precision@{}={:.3}",
+        report.mrr,
+        report.coverage * 100.0,
+        report.top_k,
+        report.mean_precision_at_k,
+    );
+    // Per-query lines for quick scan; full report goes to JSON.
+    for q in &report.queries {
+        let mark = match q.first_hit_rank {
+            Some(0) => "✅".to_string(),
+            Some(r) => format!("rank {}", r + 1),
+            None => "❌ miss".to_string(),
+        };
+        println!(
+            "  [{mark:>8}] {} → top1={:?}",
+            q.query,
+            q.returned_top_k.first().cloned().unwrap_or_default()
+        );
+    }
+
+    if dry_run {
+        return Ok(());
+    }
+    let out_path = out.unwrap_or_else(|| {
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(format!("bench-semantic-{}.json", git_short_sha()))
+    });
+    semantic::write_report(&out_path, &report)?;
+    println!("wrote {}", out_path.display());
+    Ok(())
 }
 
 /// One-shot query against the daemon. Spawns rts-mcp + the daemon,
