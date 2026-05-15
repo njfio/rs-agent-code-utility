@@ -7,6 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### `rts-bench semantic` — eval harness for graph-only ranking
+
+New subcommand:
+
+```
+rts-bench semantic --corpus <toml> --workspace <path> [--top-k N]
+```
+
+Runs a TOML corpus of labelled queries against a workspace, reports
+**precision@K + MRR + coverage** of a graph-only baseline ranker
+(no embeddings, no LLM). The deliverable is a reproducible
+comparison point for ANY future ranker.
+
+#### Why this exists
+
+The brainstorm proposal to add embeddings/semantic search to
+rts-daemon has been around for a while. The blocker every time has
+been: **no way to measure whether embeddings would actually help**.
+G2 has 97.5% as concrete; semantic search has had no equivalent.
+
+This subcommand is the falsifier. Before any embedding work lands,
+we now have a measurable answer to "how much of the natural-language-
+query gap does the existing graph already cover?" If the baseline
+scores 70%+ precision@10, embeddings have less work to do than the
+proposal assumed. If it scores 30%, embeddings have measurable
+headroom and the proposal becomes worth executing.
+
+#### Baseline ranker design
+
+For each query, the baseline:
+
+1. Tokenises the query text (lowercase, strip stopwords + question
+   words + code-discussion fillers like "handle"/"thing")
+2. Pulls the top-256 candidates by PageRank via
+   `find_symbol(pattern="*")`
+3. Scores each candidate: exact-name match +10, substring in name
+   +3, substring in file path +1, plus the candidate's own
+   `rank_score` (0..1)
+4. Returns top-K by combined score
+
+Intentionally simple — its job is to be a reproducible baseline,
+not state-of-the-art. Any future ranker should beat this by an
+amount that justifies its added complexity.
+
+#### Starter corpus + numbers
+
+Ships with `corpus/semantic-eval-rts-core.toml` (13 queries — 10
+content + 3 negative controls — hand-graded against
+`crates/rts-core`):
+
+```
+rts-bench semantic --corpus corpus/semantic-eval-rts-core.toml \
+                   --workspace crates/rts-core --top-k 10
+
+semantic: mrr=0.189 coverage=30.8% precision@10=0.085
+```
+
+Interpretation:
+- 4 of 13 queries had at least one expected name in the top-10
+- Negative controls (no expected matches) correctly score 0 — the
+  ranker doesn't invent answers for queries with no real match
+- Conceptual queries miss (e.g. "tree-sitter parsing" → `parse`
+  doesn't match because the tokens don't appear in the symbol
+  name). This is the headroom future rankers could capture.
+
+#### Wire shape
+
+Corpus TOML:
+
+```toml
+version = 1
+
+[[query]]
+text = "where is the cache implemented?"
+expected_top_k = ["calculate_cache_key", "cache_tree", "TreeCache"]
+```
+
+Report JSON: per-query rank-of-first-hit, hits-in-top-K, reciprocal
+rank; aggregate MRR, coverage, mean precision@K. See
+`crates/rts-bench/src/semantic.rs` for the full schema.
+
+#### Test coverage
+
++6 new tests (`tokens_drop_stopwords_and_short_tokens`,
+`tokens_normalize_case_and_punctuation`,
+`score_candidate_exact_name_dominates_substring`,
+`score_candidate_pagerank_breaks_ties_on_no_keyword_match`,
+`build_report_computes_mrr_and_coverage`,
+`load_corpus_round_trips_via_toml`). 574 tests pass.
+
+#### Next: actually use this
+
+The eval harness is the prerequisite for the broader semantic-overlay
+proposal (embed symbol signatures + bodies; hybrid graph + vector
+ranking; etc.). Now there's a falsifier to measure against. Build
+graph-slice improvements first (smarter tokenization, doc-comment
+indexing) and re-run; if those don't close the gap, build the
+embedding overlay.
+
 ### Multi-language prelude filter (closes the "Rust only" caveat on PageRank)
 
 Extends PR #40's `Ok`/`Err`/`Some`/`None` filter to cover the
