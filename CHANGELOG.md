@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Multi-language prelude filter (closes the "Rust only" caveat on PageRank)
+
+Extends PR #40's `Ok`/`Err`/`Some`/`None` filter to cover the
+stdlib/builtin call-shape names of all 11 supported languages.
+Two-tier policy in `crates/rts-daemon/src/symbol_pagerank.rs`:
+
+1. **`ALWAYS_FILTER`** (4 names): Rust variant constructors. Filtered
+   unconditionally — tree-sitter's tags.scm promotes `type Err = ()`
+   associated-type aliases into def sites, so `def_count > 0` is
+   common for these names even in clean Rust workspaces. The PR #40
+   filter was right to ignore def-count for these.
+
+2. **`FILTER_IF_NO_DEF`** (~120 names): broader stdlib/builtin set
+   across JavaScript, TypeScript, Python, Go, C, C++, Java, PHP,
+   Ruby, Swift. Filtered only when `def_count == 0`, protecting
+   user-defined symbols whose names collide with a prelude entry
+   (a Rust function called `print`, a Go type called `Error`, etc.).
+
+#### Why two tiers
+
+When I first extended the filter, I used a single union list with
+the `def_count == 0` guard for everything. Re-running on
+`crates/rts-core` showed `Ok` back at the top of the rank — the
+guard was being bypassed because `crates/rts-core` has two
+`type Err = Error;` declarations in `FromStr` impls that
+tree-sitter captures as defs. Splitting into the two tiers above
+fixes this — `Ok`/`Err`/`Some`/`None` always filter, the rest go
+through the def-count guard.
+
+#### Selection criteria
+
+Only names that parse as `call_expression` (or equivalent) get
+listed. Method receivers like `Array.from` aren't listed because
+`Array` is captured as a receiver, not a callee. Container types
+(`Vec`, `HashMap`, `Array`) live in type positions, not call
+positions, so the call-graph doesn't include them at all.
+
+#### Verified on `crates/rts-core`
+
+Top-10 by `rank_score` before/after — Rust-only baseline shown
+because that's the workspace I can fully validate; JS/Python
+coverage is verified by unit tests (`prelude_noise_filter_covers_*`)
+and the empty list of false positives in the test corpus.
+
+```
+Before (PR #40 single-tier):                After (two-tier):
+ 1. Ok                  0.0209               1. find_nodes_by_kind     0.0143
+ 2. find_nodes_by_kind  0.0136               2. child_by_field_name    0.0122
+ 3. child_by_field_name 0.0118               3. contains               0.0100
+ 4-6. Some              0.0106               4. child_count            0.0098
+ 7. contains            0.0094               5-7. children             0.0091
+ 8. child_count         0.0091               8-9. clone                0.0075
+ 9-10. children         0.0084              10. calculate_cache_key    0.0071
+```
+
+Top-K is now uniformly real call-central code in any supported
+language. No more language caveat in the "Should you use this?"
+answer for non-Rust workspaces.
+
+Tests: +5 new (`always_filter_matches_rust_variant_constructors`,
+`prelude_noise_filter_covers_javascript_typescript`,
+`prelude_noise_filter_covers_python`,
+`prelude_noise_filter_covers_go_c_cpp`,
+`prelude_noise_filter_lets_user_names_through`,
+`prelude_filter_contract_is_name_only`). 568 tests pass, 0 fail.
+
 ## [0.4.0] - 2026-05-15
 
 **v0.4.0 release: cold-mount becomes invisible to the agent loop.**

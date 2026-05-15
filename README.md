@@ -214,30 +214,44 @@ tools), the top-K closely matches "what's central in this codebase."
 For type-heavy libraries, the top-K is "what's the busiest helper
 machinery" — useful but not the same answer.
 
-### Language-prelude artifacts (Rust filtered; others pending)
+### Language-prelude artifacts (filtered across 11 languages)
 
-Tree-sitter's `call_expression` pattern captures variant constructors
-the same way it captures real function calls. `Ok(x)`, `Err(e)`,
-`Some(x)`, `None` (used as a unit-variant constructor) all parse as
-calls, so they used to dominate the top-K of `find_symbol(pattern="*")`
-on Rust workspaces — every function returning a `Result` or `Option`
-"calls" them.
+Tree-sitter's `call_expression` pattern captures stdlib/builtin names
+the same way it captures real function calls. `Ok(x)`, `print(x)`,
+`len(x)`, `malloc(n)`, `panic("...")` all parse as calls, so they
+used to dominate the top-K of `find_symbol(pattern="*")` — every
+function in the codebase "calls" them.
 
-**Fixed for Rust** (post-v0.3.0 [Unreleased]): the four Rust prelude
-names are filtered out of the PageRank node-set in
-`compute_symbol_ranks`. They still exist in the symbol table, so
-`find_symbol(name="Ok")` still finds them; they just get
-`rank_score = 0.0` and sink to the bottom of rank-sorted responses.
-The top-K on `crates/rts-core` now starts with `find_nodes_by_kind`,
-`child_by_field_name`, `contains`, `child_count`, `children`, etc. —
-uniformly real call-central methods.
+**Filtered as of v0.4.x.** Two-tier policy in
+[`crates/rts-daemon/src/symbol_pagerank.rs`](crates/rts-daemon/src/symbol_pagerank.rs):
 
-**Other languages: not yet filtered.** JavaScript / TypeScript /
-Python / etc. have analogous artifacts (`console.log`, `len`,
-`Promise.resolve`, etc.), but the daemon doesn't track per-sid
-language yet, so filtering them naively would also strip user-defined
-collisions. Per-language filter sets driven by the language registry
-is v0.4+ work.
+- **Always filter** (4 names): Rust variant constructors `Ok`, `Err`,
+  `Some`, `None`. Filtered unconditionally because tree-sitter's
+  tags.scm spuriously promotes `type Err = ()` associated-type
+  aliases into def sites, so a def-count guard alone wouldn't catch
+  them.
+- **Filter if no workspace def** (~120 names): stdlib/builtin call-
+  shape names across JavaScript, TypeScript, Python, Go, C, C++,
+  Java, PHP, Ruby, Swift. Examples: `print`, `len`, `range`,
+  `console`, `Promise`, `parseInt`, `make`, `append`, `panic`,
+  `malloc`, `free`, `printf`, `Integer`, `puts`. The def-count guard
+  preserves user-defined symbols whose names collide with a
+  prelude entry (e.g. a Rust function called `print`).
+
+Filtered names still exist in the symbol table — `find_symbol(name="print")`
+still finds them; they just get `rank_score = 0.0` and sink to the
+bottom of rank-sorted responses.
+
+**Scope decisions:**
+- Only names that parse as `call_expression` (or equivalent) get
+  listed. Method receivers like `Array.from` aren't listed because
+  `Array` is captured as a receiver, not a callee.
+- Container types like `Vec`, `HashMap` live in *type* positions,
+  not call positions; they're not in the graph at all.
+
+Adding a name: edit `PRELUDE_NOISE` / `ALWAYS_FILTER` in
+`symbol_pagerank.rs`. Adding a language: add its call-shape stdlib
+names to `FILTER_IF_NO_DEF`.
 
 ### Single workspace per daemon process
 
