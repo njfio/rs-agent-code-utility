@@ -144,39 +144,264 @@ impl std::fmt::Debug for SymbolPagerankCache {
     }
 }
 
-/// Names that should be excluded from the PageRank node-set. The
-/// algorithm is over *call edges*, and tree-sitter's `call_expression`
-/// pattern captures variant constructors like `Ok(x)` and `Some(x)`
-/// the same way it captures real function calls. That makes them
-/// reliably dominate the top-K rank on Rust workspaces — they're
-/// "called" by every function that returns a Result or Option, which
-/// is most of them.
+/// Names that should be excluded from the PageRank node-set when they
+/// have no workspace def. The algorithm is over *call edges*, and
+/// tree-sitter's `call_expression` pattern captures stdlib/builtin
+/// names like `Ok(x)`, `console.log(x)`, `print(x)`, `len(x)` the
+/// same way it captures real user-defined function calls. That makes
+/// them reliably dominate the top-K rank on each language's
+/// workspaces — they're "called" by ~every function in the codebase.
 ///
-/// Filtering at the node-set means the sid still exists in
+/// Filtering at the PageRank node-set means the sid still exists in
 /// `NAME_TO_SID` + `DEFS` (so `find_symbol(Ok)` still works) but the
-/// PageRank graph doesn't include them as nodes; they get `0.0`
-/// from the `rank_for` default and sink to the bottom of any
-/// rank-sorted response.
+/// graph doesn't include them as nodes; they get `0.0` from the
+/// `rank_for` default and sink to the bottom of any rank-sorted
+/// response.
 ///
-/// Scope (v0.3.1):
-/// - **Rust only** for now. JavaScript/TypeScript/Python preludes are
-///   real but we'd need per-language filtering (currently the daemon
-///   doesn't track per-sid language). A user-defined `Ok` or `Some`
-///   in non-Rust code would still get filtered — acceptable trade-off
-///   for v0.3.1; the four names are vanishingly unlikely to be
-///   project-defined "real" symbols anyone wants in the top-K.
-/// - The four variant constructors are the only AST-visible call-shape
-///   prelude items. Container types (`Vec`, `String`, etc.) appear in
-///   *type* positions, not call positions, so the call-graph doesn't
-///   include them anyway.
+/// ### Why this is a union across languages, not per-sid
 ///
-/// Documented as a known limitation in the README; future v0.4+ work
-/// extends this to per-language filter sets driven by the language
-/// registry.
-const RUST_PRELUDE_NOISE: &[&str] = &["Ok", "Err", "Some", "None"];
+/// The daemon doesn't track per-sid language today (a sid is a u32
+/// keyed off the name string; the language of its defining file
+/// would have to be looked up separately). Instead, we use a
+/// **union** of prelude names across the 11 supported languages
+/// and check `def_count == 0` — if a workspace doesn't define a
+/// name AND that name is in any language's prelude, it's safe to
+/// filter regardless of the workspace's language.
+///
+/// False-positive risk: a user-defined symbol in language A whose
+/// name happens to be a prelude name in language B (e.g. a Rust
+/// function called `print`) would be filtered iff the user didn't
+/// define it. Since we check `def_count == 0`, this is bounded to
+/// "name appears only in refs, never in defs" — meaning the name
+/// would already be unreachable in PageRank (no def → no incoming
+/// edges). So the filter is functionally a no-op for that case.
+///
+/// Two tiers of prelude filtering:
+///
+/// 1. **`ALWAYS_FILTER`** — Rust variant constructors. tree-sitter's
+///    tags.scm captures `type Err = ()` (associated-type aliases in
+///    trait impls) as def sites, so these names accumulate
+///    `def_count > 0` in real Rust workspaces. The `def_count == 0`
+///    guard wouldn't catch them. They're known to be call-expression-
+///    captured prelude noise regardless of whether some trait impl
+///    aliases the name — always drop from PageRank.
+///
+/// 2. **`FILTER_IF_NO_DEF`** — broader stdlib/builtin names across
+///    the other 10 supported languages. These get filtered only when
+///    `def_count == 0`, protecting user-defined symbols that happen
+///    to share a stdlib name (a Rust function called `print`, a Go
+///    type called `Error`, etc.).
+///
+/// Scope decisions:
+/// - Only names that parse as `call_expression` (or equivalent) get
+///   listed — not method receivers like `Array.from` (Array here is
+///   captured as a receiver, not a callee).
+/// - Container types (`Vec`, `HashMap`, `Array`) live in *type*
+///   positions, not call positions; the call-graph doesn't include
+///   them.
+/// - Constants only appear when their AST shape matches a call
+///   (e.g. Rust's `None` is a unit variant constructor parsed as
+///   identifier-in-call-position).
+const ALWAYS_FILTER: &[&str] = &["Ok", "Err", "Some", "None"];
 
+const FILTER_IF_NO_DEF: &[&str] = &[
+    // JavaScript / TypeScript (free-function calls + global constructors
+    // called bare; method-form `JSON.stringify` etc. are method
+    // captures and don't appear here)
+    "Promise",
+    "Error",
+    "TypeError",
+    "RangeError",
+    "SyntaxError",
+    "Number",
+    "String",
+    "Boolean",
+    "Symbol",
+    "Date",
+    "parseInt",
+    "parseFloat",
+    "isNaN",
+    "isFinite",
+    "setTimeout",
+    "setInterval",
+    "clearTimeout",
+    "clearInterval",
+    "encodeURIComponent",
+    "decodeURIComponent",
+    "encodeURI",
+    "decodeURI",
+    "require",
+    // Python (builtins that parse as free-function calls)
+    "print",
+    "len",
+    "str",
+    "int",
+    "float",
+    "bool",
+    "bytes",
+    "list",
+    "dict",
+    "tuple",
+    "set",
+    "frozenset",
+    "range",
+    "enumerate",
+    "zip",
+    "map",
+    "filter",
+    "sorted",
+    "reversed",
+    "sum",
+    "min",
+    "max",
+    "abs",
+    "round",
+    "type",
+    "isinstance",
+    "issubclass",
+    "hasattr",
+    "getattr",
+    "setattr",
+    "delattr",
+    "callable",
+    "super",
+    "repr",
+    "hash",
+    "id",
+    "dir",
+    "vars",
+    "locals",
+    "globals",
+    "open",
+    "input",
+    "iter",
+    "next",
+    "all",
+    "any",
+    "format",
+    "chr",
+    "ord",
+    "hex",
+    "oct",
+    "bin",
+    // Go (builtins parsed as call_expression)
+    "make",
+    "new",
+    "cap",
+    "append",
+    "copy",
+    "delete",
+    "panic",
+    "recover",
+    "println",
+    "complex",
+    "real",
+    "imag",
+    // C / C++ (stdlib functions extremely common in call position)
+    "malloc",
+    "calloc",
+    "realloc",
+    "free",
+    "memcpy",
+    "memmove",
+    "memset",
+    "memcmp",
+    "strcpy",
+    "strncpy",
+    "strcat",
+    "strncat",
+    "strcmp",
+    "strncmp",
+    "strlen",
+    "strchr",
+    "strstr",
+    "strtok",
+    "strdup",
+    "printf",
+    "fprintf",
+    "sprintf",
+    "snprintf",
+    "vprintf",
+    "scanf",
+    "fscanf",
+    "sscanf",
+    "fopen",
+    "fclose",
+    "fread",
+    "fwrite",
+    "fseek",
+    "ftell",
+    "fflush",
+    "fgets",
+    "fputs",
+    "fgetc",
+    "fputc",
+    "feof",
+    "ferror",
+    "exit",
+    "abort",
+    "atexit",
+    "getenv",
+    "system",
+    "assert",
+    "atoi",
+    "atol",
+    "atof",
+    // Java (constructors that parse as call_expression; common stdlib)
+    "Integer",
+    "Long",
+    "Double",
+    "Float",
+    "Character",
+    "ArrayList",
+    "HashMap",
+    "HashSet",
+    "LinkedList",
+    // PHP
+    "echo",
+    "isset",
+    "empty",
+    "unset",
+    "count",
+    "array",
+    "var_dump",
+    "print_r",
+    "is_array",
+    "is_string",
+    "is_int",
+    "is_null",
+    "is_object",
+    "is_bool",
+    "is_numeric",
+    // Ruby (builtins parsed as call)
+    "puts",
+    "p",
+    "pp",
+    "raise",
+    "require_relative",
+    "attr_accessor",
+    "attr_reader",
+    "attr_writer",
+    // Swift (constructors / global functions)
+    "precondition",
+    "fatalError",
+];
+
+/// Returns true iff `name` should ALWAYS be filtered regardless of
+/// whether it appears as a def in the workspace. Reserved for names
+/// where tree-sitter's tags.scm spuriously creates def entries
+/// (associated-type aliases, etc.).
+fn is_always_filtered(name: &str) -> bool {
+    ALWAYS_FILTER.contains(&name)
+}
+
+/// Returns true iff `name` is in the def-count-conditional prelude
+/// set. Callers should additionally check that `def_count == 0`
+/// before filtering — otherwise a user-defined symbol whose name
+/// collides with a prelude name (e.g. a Rust function called `print`)
+/// would be incorrectly dropped.
 fn is_prelude_noise_name(name: &str) -> bool {
-    RUST_PRELUDE_NOISE.contains(&name)
+    FILTER_IF_NO_DEF.contains(&name)
 }
 
 /// Compute symbol-level PageRank by enumerating workspace-defined
@@ -198,17 +423,26 @@ pub fn compute_symbol_ranks(store: &Store, generation: u64) -> anyhow::Result<Sy
     // The def count drives the "ubiquitous" edge-weight multiplier
     // (>5 defs across the workspace → ×0.1 dampening).
     //
-    // v0.3.1: filter Rust prelude noise (Ok/Err/Some/None) from the
-    // node-set. These reliably dominate the top-K on Rust workspaces
-    // because variant constructors parse as call_expression and
-    // every function that returns a Result/Option "calls" them.
+    // Filter prelude noise across all supported languages. A name is
+    // dropped from the PageRank node-set iff:
+    //   (a) `is_always_filtered(name)` — Rust variant constructors
+    //       (Ok/Err/Some/None) which tree-sitter's tags.scm sometimes
+    //       captures as defs via `type Err = ()` associated-type
+    //       aliases, so a def_count check alone wouldn't catch them.
+    //   (b) `def_count == 0 && is_prelude_noise_name(name)` — the
+    //       broader stdlib/builtin set across 10 other languages.
+    //       Filtered only when no workspace def exists so user-
+    //       defined collisions (a Rust `print()` function) survive.
+    //
     // Excluded sids still exist in NAME_TO_SID + DEFS — `find_symbol`
     // still finds them; they just get rank_score = 0.0 from the
     // default and sink to the bottom of rank-sorted responses.
     let all_sids = collect_workspace_sids(store).context("collect_workspace_sids")?;
     let sid_info: Vec<(u32, String, u32)> = all_sids
         .into_iter()
-        .filter(|(_sid, name, _def_count)| !is_prelude_noise_name(name))
+        .filter(|(_sid, name, def_count)| {
+            !is_always_filtered(name) && !(*def_count == 0 && is_prelude_noise_name(name))
+        })
         .collect();
     if sid_info.is_empty() {
         return Ok(SymbolRanks {
@@ -349,22 +583,147 @@ mod tests {
     use super::*;
 
     #[test]
-    fn prelude_noise_filter_matches_variant_constructors() {
+    fn always_filter_matches_rust_variant_constructors() {
         // The four AST-visible variant constructors that
-        // call_expression captures from Rust source.
+        // call_expression captures from Rust source. These go through
+        // `is_always_filtered` (not `is_prelude_noise_name`) because
+        // tree-sitter's tags.scm spuriously promotes `type Err = ()`
+        // associated-type aliases into def sites, giving `Err` a
+        // `def_count > 0`. The always-filter list bypasses the
+        // def_count guard.
         for n in &["Ok", "Err", "Some", "None"] {
             assert!(
-                is_prelude_noise_name(n),
-                "{n} should be filtered as prelude noise"
+                is_always_filtered(n),
+                "{n} should be in the always-filter set"
             );
-        }
-        // Non-prelude names pass through.
-        for n in &["foo", "bar", "Result", "Option", "compute_symbol_ranks"] {
+            // And these should NOT be in the def-count-conditional set
+            // (they're handled by the always-filter list instead).
             assert!(
                 !is_prelude_noise_name(n),
-                "{n} should NOT be filtered (we only filter the 4 variant constructors)"
+                "{n} should NOT appear in the def-count-conditional set \
+                 (it's handled by is_always_filtered)"
             );
         }
+    }
+
+    #[test]
+    fn prelude_noise_filter_covers_javascript_typescript() {
+        // Free-function calls + global constructors that JS/TS code
+        // routinely captures as call_expression.
+        for n in &[
+            "Promise",
+            "Error",
+            "Number",
+            "String",
+            "Boolean",
+            "parseInt",
+            "parseFloat",
+            "setTimeout",
+            "clearTimeout",
+            "encodeURIComponent",
+            "require",
+        ] {
+            assert!(
+                is_prelude_noise_name(n),
+                "{n} should be filtered as JS/TS prelude noise"
+            );
+        }
+    }
+
+    #[test]
+    fn prelude_noise_filter_covers_python() {
+        // The Python builtins that show up as free-function call_expression.
+        for n in &[
+            "print",
+            "len",
+            "range",
+            "enumerate",
+            "zip",
+            "map",
+            "filter",
+            "sorted",
+            "type",
+            "isinstance",
+            "hasattr",
+            "getattr",
+            "super",
+            "repr",
+            "open",
+            "input",
+            "iter",
+            "next",
+        ] {
+            assert!(
+                is_prelude_noise_name(n),
+                "{n} should be filtered as Python prelude noise"
+            );
+        }
+    }
+
+    #[test]
+    fn prelude_noise_filter_covers_go_c_cpp() {
+        // Go builtins + C/C++ stdlib functions.
+        for n in &[
+            // Go
+            "make", "append", "panic", "recover", // C / C++
+            "malloc", "free", "memcpy", "strlen", "printf", "fopen", "exit",
+        ] {
+            assert!(
+                is_prelude_noise_name(n),
+                "{n} should be filtered as Go/C/C++ prelude noise"
+            );
+        }
+    }
+
+    #[test]
+    fn prelude_noise_filter_lets_user_names_through() {
+        // Names a workspace might legitimately define — must NOT be
+        // filtered just because they're not in the prelude set. The
+        // filter is allow-by-default; the prelude is a known-bad list.
+        //
+        // NOTE: stdlib type names (`HashMap`, `ArrayList`) ARE in the
+        // prelude set because they parse as call_expression on
+        // construction (`HashMap::new()` in Rust, `new HashMap()` in
+        // Java). The `def_count == 0` guard at the filter call site
+        // prevents this from dropping user-defined symbols.
+        for n in &[
+            "compute_symbol_ranks",
+            "find_symbol",
+            "MyStruct",
+            "Widget",
+            // Type aliases / wrapper types — outside any prelude set:
+            "Result",
+            "Option",
+            "Vec",
+            // Common project names that don't collide with prelude:
+            "main",
+            "lib",
+            "init",
+            "build",
+            "configure",
+            // Note: `new` IS in the Go builtin prelude (Go's `new(T)`),
+            // so it's in the prelude set. In Rust workspaces it has
+            // many `def_count > 0` sids (one per type's `Foo::new`),
+            // so the runtime guard at the filter site keeps it. Don't
+            // assert it here.
+        ] {
+            assert!(
+                !is_prelude_noise_name(n),
+                "{n} should NOT be filtered (not in any prelude set)"
+            );
+        }
+    }
+
+    #[test]
+    fn prelude_filter_contract_is_name_only() {
+        // Each helper is a pure name lookup; the policy (always /
+        // only-if-no-def) lives at the filter call site. Verifies the
+        // two sets are disjoint by design — a name is either always-
+        // filtered OR conditionally-filtered, never both.
+        assert!(is_prelude_noise_name("print"));
+        assert!(!is_always_filtered("print"));
+        assert!(is_always_filtered("Ok"));
+        assert!(!is_prelude_noise_name("Ok"));
     }
 
     #[test]
