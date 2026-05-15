@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Stemmer lemma overrides — closes the last miss (100% answerable coverage)
+
+PR #59 closed the second-to-last gap on the rts-core corpus, leaving
+one query missing: "what does file analysis do?" — caused by the
+naive stemmer being unable to unify `analysis` (stems to `analysi`)
+with `analyze` (stems to `analyz`). Same word, totally different
+suffixes.
+
+This PR adds a tiny lemma-override table for the Greek-origin
+noun/verb pairs that suffix-strip stemmers can't reconcile. The
+table is intentionally short and well-justified — not a general
+synonym dictionary.
+
+```rust
+const LEMMA_OVERRIDES: &[(&str, &str)] = &[
+    ("analysis", "analyz"),    ("analyses", "analyz"),
+    ("analytic", "analyz"),    ("analytical", "analyz"),
+    ("synthesis", "synthesiz"),("syntheses", "synthesiz"),
+    ("hypothesis", "hypothesiz"), ("hypotheses", "hypothesiz"),
+    ("diagnosis", "diagnos"),  ("diagnoses", "diagnos"),
+];
+```
+
+The overrides are checked before the regular suffix/e logic; if a
+token matches, the override wins. `stem("analyze")` continues to go
+through the regular path (no suffix match, trailing-e strip → `analyz`),
+so the entries are tuned so the two forms meet there.
+
+#### Numbers on the audited corpus
+
+| Metric              | Pre-lemma (PR #59) | With lemma          | Δ          |
+|---------------------|--------------------|---------------------|------------|
+| MRR                 | 0.402              | 0.441               | +10%       |
+| Coverage (all 13 q) | 69.2%              | 76.9%               | +7.7pp     |
+| **Answerable cov.** | **90% (9/10)**     | **100% (10/10)**    | **+10pp**  |
+| Precision@10        | 0.185              | 0.200               | +8%        |
+
+"what does file analysis do?" — previously a miss — now hits at
+**rank 2** (`FileAnalyzer` at position 1, `analyze_file` at position
+7). Three of four expected names land in top-10.
+
+#### Cumulative answerable-coverage journey
+
+| Stage                          | Coverage        |
+|--------------------------------|-----------------|
+| PR #55 baseline (graph-only)   | 40%             |
+| PR #56 decompose+stem+dedupe   | 50%             |
+| PR #57 limit param             | 60%             |
+| PR #58 corpus audit            | 80%             |
+| PR #59 IDF weighting           | 90%             |
+| **This PR (lemma overrides)**  | **100%**        |
+
+From 4-of-10 to 10-of-10 on a verified corpus, all on the graph-only
+baseline — no embeddings, no LLM scoring, no external model.
+
+#### What this means for the embedding question
+
+The original brainstorm proposal hypothesized that embeddings would
+help close the "natural-language ↔ identifier" gap. We now have a
+concrete answer for rts-core: **the graph-only baseline reaches
+100% on the corpus we built**. Any future embedding work has to
+beat this on a *different*, harder corpus to justify its model
+dependency.
+
+Honest caveats:
+- 10 answerable queries is small. The numbers would compress on a
+  larger corpus with harder queries.
+- The corpus was hand-graded by the same author who built the
+  ranker. Confirmation bias is real; an externally-graded corpus
+  (or queries from real agent traces) is the next step.
+- Code-domain natural-language queries skew identifier-shaped.
+  Queries like "where does the migration roll back on failure?" —
+  which require reasoning about *behavior* rather than naming —
+  remain unanswerable by this approach.
+
+#### Test coverage
+
++1 unit test (`stem_lemma_overrides_unify_greek_origin_pairs`)
+covering analysis/analyses/analyze + synthesis/synthesize +
+diagnosis/diagnose. 13/13 semantic tests pass.
+
 ### IDF-weighted sub-token scoring (+10pp answerable coverage → 90% on rts-core)
 
 Adds inverse-document-frequency weighting to the semantic baseline
