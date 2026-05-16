@@ -11,6 +11,14 @@ reference half of the call graph is indexed at write time, so questions
 like _"who calls X?"_, _"if I change X what breaks?"_, and _"what's central
 to this codebase?"_ are single redb lookups instead of full workspace scans.
 
+As of **v0.5** the index also carries **doc-comment text** for 10 languages
+(`///`, `/** */`, `"""..."""`, `#`), and `find_symbol` accepts a
+`doc_contains` substring filter. Behavior-shaped queries — _"find the
+cache-eviction code"_ — return any documented symbol whose comment
+mentions `evict`, regardless of identifier name. The graph-only ranker
+sits at **100% answerable coverage** on a verified rts-core corpus (see
+[CHANGELOG](CHANGELOG.md) for the per-PR journey from 40% → 100%).
+
 | measurement | baseline | MCP | reduction |
 |---|---:|---:|---:|
 | Locate a function's definition (`parse` in `rts-core`) | 259,607 tokens | 148 tokens | **99.9%** |
@@ -25,10 +33,11 @@ Anthropic SDK oracle (`--with-network`) lands later.
 
 ## Status
 
-**Active pre-release.** Latest alpha: `v0.2.0-alpha.35`. The v0.3
-code-graph KB plan is complete; see
-[CHANGELOG.md](CHANGELOG.md) for the per-alpha trail. Pre-pivot library
-+ CLI live in [`archive/`](archive/) for git history; no longer maintained.
+**Active pre-release.** Latest tag: `v0.5.1`. The v0.3 code-graph KB plan
+is complete and v0.5 lights up doc-comment retrieval across 10
+languages; see [CHANGELOG.md](CHANGELOG.md) for the per-PR trail.
+Pre-pivot library + CLI live in [`archive/`](archive/) for git history;
+no longer maintained.
 
 | Phase | Status |
 |---|---|
@@ -42,6 +51,8 @@ code-graph KB plan is complete; see
 | P8 — `SignatureRenderer` + PageRank | ✅ (file-level alpha.18; symbol-level alpha.34) |
 | P9 — Benchmarks + install docs + prebuilt binaries | ✅ (`scenario_compiler_fix` + `scenario_refactor_impact` scenario tasks) |
 | **v0.3 — Persistent code-graph KB** | ✅ (`Index.FindCallers`, `Index.ImpactOf`, symbol PageRank, indexed closure walker; U0-U5 shipped alpha.31-alpha.35) |
+| **v0.4 — Semantic eval harness** | ✅ (graph-only ranker driven from a verified rts-core corpus; CI invariant locks `combined_answerable_rate`) |
+| **v0.5 — Doc-comment retrieval** | ✅ (extractor for 10 languages, `find_symbol.doc` + `doc_contains` + `pre_filter_count`, doc-IDF in the ranker; 100% answerable coverage on the rts-core corpus) |
 
 ## Architecture
 
@@ -101,7 +112,7 @@ port lands in v1.x).
 
 ```sh
 # Pick the right target for your platform
-VERSION=0.2.0-alpha.35
+VERSION=0.5.1
 TARGET=aarch64-apple-darwin
 URL="https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz"
 
@@ -146,7 +157,7 @@ prose) are pinned per protocol-v0 §7 in
 | tool | input | returns |
 |---|---|---|
 | `outline_workspace` | `{ glob?, token_budget?, mentioned_files?, mentioned_idents? }` | Token-budgeted structural map with file-level PageRank (Aider repo-map algorithm). |
-| `find_symbol` | `{ name? \| pattern?, kind?, file?, sort? }` | List of matches with `qualified_name`, `kind`, `file`, byte range, **real `rank_score`** (symbol-level PageRank). `pattern` is glob (`*`/`?`); default sort is descending rank; pass `sort: "lexical"` to opt out. |
+| `find_symbol` | `{ name? \| pattern?, kind?, file?, sort?, limit?, doc_contains? }` | List of matches with `qualified_name`, `kind`, `file`, byte range, **real `rank_score`** (symbol-level PageRank), and `doc` (extracted comment, 10 languages). `pattern` is glob (`*`/`?`); default sort is descending rank; pass `sort: "lexical"` to opt out. `doc_contains` substring-filters by doc text (case-insensitive) for behavior-shaped queries; when the filter is active the response also carries `pre_filter_count` so an empty result set is distinguishable from "nothing matched the name". |
 | `find_callers` | `{ name, kind?, file? }` | Direct callers — one redb lookup. Each entry carries the enclosing fn's `qualified_name`, `kind`, def range, call-site range, and `rank_score`. AST-precise; replaces `rg <name>`. |
 | `impact_of` | `{ name, depth?, token_budget?, max_nodes?, exclude_test_paths? }` | Transitive caller closure (BFS depth N, default 2, max 4). Refactor blast-radius query. Four independent truncation flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell agents *why* a result is partial. |
 | `read_symbol` | `{ name, file?, kind?, shape?, token_budget?, include_dependencies?, include_callers?, force_resend? }` | Body bytes + `content_version` + optional tree-shaken dependency closure (alpha.22+) + optional direct callers (alpha.32+). |
@@ -157,10 +168,13 @@ Every body-returning response carries a `content_version`
 (`blake3(content)[:16]@mtime_ns+index_generation`) so v2 safe-edit flows
 can detect stale views.
 
-The 18 capability strings the daemon advertises via `Daemon.Ping` —
-including the four v0.3 ones (`find_callers`, `impact_of`,
-`read_symbol.include_callers`, `pagerank_symbolwise`) — are documented
-in [docs/protocol-v0.md](docs/protocol-v0.md) §4.1 + Appendix F.
+The 22 capability strings the daemon advertises via `Daemon.Ping` —
+including the v0.3 graph quartet (`find_callers`, `impact_of`,
+`read_symbol.include_callers`, `pagerank_symbolwise`) and the v0.5 doc
+quartet (`find_symbol_limit_param`, `find_symbol_doc_field`,
+`find_symbol_doc_filter`, `find_symbol_pre_filter_count`) — are
+documented in [docs/protocol-v0.md](docs/protocol-v0.md) §4.1 +
+Appendix F.
 
 ## Known limitations
 
@@ -352,13 +366,20 @@ Rust, JavaScript, TypeScript, Python, C, C++, Go, Java, PHP, Ruby,
 Swift. Kotlin is paused pending an upstream `tree-sitter 0.26+` release
 (see [CHANGELOG.md](CHANGELOG.md) entry for v0.2.0-alpha.2).
 
+Doc-comment extraction (v0.5+) covers 10 of those 11 languages: Rust
+`///` + `//!`, JS/TS/Java/PHP/C/C++ `/** */`, Python `"""..."""`, Go
+`//`, Ruby `#`, Swift `///`. Doc text is queryable through
+`find_symbol.doc_contains` and influences ranker scoring via a doc-IDF
+weight separate from name-IDF. C# is the gap — scoped at ~150 LOC
+following the Java/Swift extractor pattern.
+
 ## Documentation
 
 - [docs/install.md](docs/install.md) — install + Claude Code / Cursor /
   Cline / Aider / Continue snippets.
 - [docs/protocol-v0.md](docs/protocol-v0.md) — daemon ↔ MCP wire-protocol
   specification (the contract both halves implement). Includes the
-  18-capability advertisement list (§4.1), per-method schemas (§7),
+  22-capability advertisement list (§4.1), per-method schemas (§7),
   and per-alpha wire-shape evolution (Appendix F).
 - [docs/plans/](docs/plans/) — active and historical implementation
   plans. The v0.2 pivot plan:
