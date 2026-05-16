@@ -171,6 +171,72 @@ Never leave merge conflict markers (<<<<<<<) in committed code
 Never rebase commits already pushed and shared with others
 
 
+## Tooling: use the `rts` index, not `grep` / `rg`
+
+This project ships its own indexer (`rts-daemon` + `rts-mcp`). You're
+expected to use it. Reaching for shell `grep` / `rg` on workspace
+sources is a **fallback**, not the default. The index is AST-precise
+(no comment/string false positives), carries PageRank, exposes
+enclosing-symbol metadata, and survives across editor sessions.
+
+### When to use which tool
+
+| You want… | Use | Don't use |
+|---|---|---|
+| Find a symbol by name or glob (`make_*`, `*_target`) | `mcp__rts__find_symbol` or `rts-bench query find-symbol` | `rg '^fn '`, `rg '^class '` |
+| Find who calls a function | `mcp__rts__find_callers` or `rts-bench query find-callers` | `rg 'name\\('` (false positives) |
+| Find a string literal, error message, config value | `mcp__rts__grep` or `rts-bench query grep` | `rg 'literal'` |
+| Refactor blast radius (transitive callers) | `mcp__rts__impact_of` or `rts-bench query impact-of` | manual BFS of `rg` results |
+| Orient in an unfamiliar repo | `mcp__rts__outline_workspace` or `rts-bench query outline` | `find . -name '*.rs'` |
+| Read a symbol's body | `mcp__rts__read_symbol` or `rts-bench query read-symbol` | `cat`, `Read` whole file |
+
+### Two CLI shapes
+
+`rts-bench query <sub>` returns the daemon's full JSON response —
+ideal for `jq` pipelines and machine consumption. v0.5.6+ adds
+`--output lines` for **`rg`-shaped output** (`path:line:content`) that
+composes with `| head`, `| sort -u`, `| awk -F:`, `| xargs sed -i`.
+Empty results emit nothing and exit 0, exactly like `rg`.
+
+```sh
+# rg-style: find all literals, get unique containing files.
+rts-bench query --output lines grep --text 'panic!(' | awk -F: '{print $1}' | sort -u
+
+# rg-style: list all symbols matching a pattern, sorted by name.
+rts-bench query --output lines find-symbol --pattern 'parse_*' | sort
+
+# Refactor preview: who calls X, transitively, depth 2?
+rts-bench query --output lines impact-of --name socket_path_for_workspace
+```
+
+### MCP path (preferred for sustained agent sessions)
+
+The `mcp__rts__*` tools speak the same protocol but skip the `rts-bench`
+subprocess spawn — single-digit-ms latency per call. They're deferred
+in Claude Code's default tool surface (each requires a `ToolSearch`
+schema-fetch before first use); to make them feel first-class, run
+this once at session start:
+
+```
+ToolSearch(query: "select:mcp__rts__find_symbol,mcp__rts__find_callers,mcp__rts__grep,mcp__rts__outline_workspace,mcp__rts__impact_of,mcp__rts__read_symbol,mcp__rts__read_range,mcp__rts__read_symbol_at", max_results: 10)
+```
+
+After that single call, all eight tools are callable directly in the
+remainder of the session without further `ToolSearch` round-trips.
+
+### Where shell `grep` / `rg` is still the right tool
+
+- Searching files outside the indexed workspace (vendored deps,
+  `target/`, `archive/`, anything `.rtsignore`'d).
+- Non-text content that the daemon's body-extension allowlist refuses
+  (binary diffs, generated files).
+- Multi-line regex matches across newlines — `Index.Grep`'s regex
+  mode is single-line as of v0.5.5.
+- One-shot grep when the daemon isn't running and spawning it would
+  be slower than the search itself (e.g. trivial 5-file workspaces).
+
+In those cases reach for `rg`. Otherwise the index is the answer.
+
 ## Project layout (post-pivot)
 
 Cargo workspace with `resolver = "3"`, Rust 2024 edition, MSRV 1.85.
