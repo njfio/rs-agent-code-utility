@@ -582,6 +582,7 @@ fn lang_tag(language: Language) -> u8 {
         Language::Php => 9,
         Language::Ruby => 10,
         Language::Swift => 11,
+        Language::CSharp => 12,
     }
 }
 

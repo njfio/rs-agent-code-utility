@@ -591,6 +591,52 @@ pub fn render_java(bytes: &[u8]) -> Option<String> {
     )
 }
 
+// ---------- C# ----------
+
+/// Render the signature of a C# top-level item.
+///
+/// - **Type declarations** (`class_declaration`, `interface_declaration`,
+///   `struct_declaration`, `record_declaration`, `enum_declaration`):
+///   strip the `declaration_list` / `enum_member_declaration_list` body.
+/// - **`method_declaration`** / **`constructor_declaration`** /
+///   **`destructor_declaration`** / **`operator_declaration`**: strip
+///   the `block` body.
+/// - **`namespace_declaration`** / **`using_directive`**: kept whole.
+pub fn render_csharp(bytes: &[u8]) -> Option<String> {
+    render_strip_body(
+        bytes,
+        tree_sitter_c_sharp::LANGUAGE.into(),
+        &[
+            Handler {
+                kinds: &[
+                    "class_declaration",
+                    "interface_declaration",
+                    "struct_declaration",
+                    "record_declaration",
+                    "enum_declaration",
+                ],
+                body_action: BodyAction::Strip(&[
+                    "declaration_list",
+                    "enum_member_declaration_list",
+                ]),
+            },
+            Handler {
+                kinds: &[
+                    "method_declaration",
+                    "constructor_declaration",
+                    "destructor_declaration",
+                    "operator_declaration",
+                ],
+                body_action: BodyAction::Strip(&["block"]),
+            },
+            Handler {
+                kinds: &["using_directive", "namespace_declaration"],
+                body_action: BodyAction::Keep,
+            },
+        ],
+    )
+}
+
 // ---------- C ----------
 
 /// Render the signature of a C top-level item.

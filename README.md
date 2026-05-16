@@ -365,15 +365,14 @@ pointer to the new commands.
 ## Languages supported (rts-core)
 
 Rust, JavaScript, TypeScript, Python, C, C++, Go, Java, PHP, Ruby,
-Swift. Kotlin is paused pending an upstream `tree-sitter 0.26+` release
-(see [CHANGELOG.md](CHANGELOG.md) entry for v0.2.0-alpha.2).
+Swift, C#. Kotlin is paused pending an upstream `tree-sitter 0.26+`
+release (see [CHANGELOG.md](CHANGELOG.md) entry for v0.2.0-alpha.2).
 
-Doc-comment extraction (v0.5+) covers 10 of those 11 languages: Rust
+Doc-comment extraction (v0.5+) covers all 12 in-tree languages: Rust
 `///` + `//!`, JS/TS/Java/PHP/C/C++ `/** */`, Python `"""..."""`, Go
-`//`, Ruby `#`, Swift `///`. Doc text is queryable through
-`find_symbol.doc_contains` and influences ranker scoring via a doc-IDF
-weight separate from name-IDF. C# is the gap — scoped at ~150 LOC
-following the Java/Swift extractor pattern.
+`//`, Ruby `#`, Swift `///`, C# `///` (XML doc-comments). Doc text is
+queryable through `find_symbol.doc_contains` and influences ranker
+scoring via a doc-IDF weight separate from name-IDF.
 
 ## Documentation
 

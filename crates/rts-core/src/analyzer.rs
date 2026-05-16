@@ -946,6 +946,9 @@ impl CodebaseAnalyzer {
             Language::Swift => {
                 self.extract_swift_symbols(tree, content, &mut symbols)?;
             }
+            Language::CSharp => {
+                self.extract_csharp_symbols(tree, content, &mut symbols)?;
+            }
         }
 
         Ok(symbols)
@@ -2034,6 +2037,105 @@ impl CodebaseAnalyzer {
         self.extract_rust_doc_comments(content, start_row)
     }
 
+    /// Extract C# XML doc comments preceding an item start line.
+    ///
+    /// C# convention: contiguous `///`-prefixed lines carrying XML
+    /// elements (`<summary>`, `<param>`, `<returns>`, etc.). Same
+    /// line-scan shape as Rust/Swift `///`. We retain the raw XML
+    /// payload — agents searching `doc_contains` get matches against
+    /// `<summary>...evicts the cache...</summary>` as written.
+    /// Block-form `/** */` is also legal C# doc syntax but is
+    /// vanishingly rare in practice; not handled in v0.5.3.
+    fn extract_csharp_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
+        // Same logic as Rust; C# `///` is identical syntax (only the
+        // contents differ — XML instead of Markdown).
+        self.extract_rust_doc_comments(content, start_row)
+    }
+
+    /// Extract C# symbols (classes, interfaces, structs, records, enums, methods).
+    ///
+    /// Closes the v0.5.0 "out of scope" follow-up for C# doc-comment
+    /// indexing. Brings in-tree language coverage from 11 → 12 and
+    /// doc-comment extraction from 10 → 11 languages.
+    fn extract_csharp_symbols(
+        &self,
+        tree: &SyntaxTree,
+        content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        // Type declarations: class, interface, struct, record, enum.
+        // All share the same shape — `child_by_field_name("name")`
+        // returns the type identifier.
+        for kind_name in [
+            "class_declaration",
+            "interface_declaration",
+            "struct_declaration",
+            "record_declaration",
+            "enum_declaration",
+        ] {
+            let nodes = tree.find_nodes_by_kind(kind_name);
+            for node in nodes {
+                if let Some(name_node) = node.child_by_field_name("name") {
+                    if let Ok(name) = name_node.text() {
+                        let docs =
+                            self.extract_csharp_doc_comments(content, node.start_position().row);
+                        symbols.push(Symbol {
+                            name: name.to_string(),
+                            // Wire-side kind strings: keep `class` for
+                            // class_declaration / record_declaration
+                            // (records are nominal-typed classes that
+                            // generate `Equals`/`GetHashCode`), `interface`
+                            // for interfaces, `struct` for value types,
+                            // `enum` for enumerations.
+                            kind: match kind_name {
+                                "class_declaration" | "record_declaration" => "class".to_string(),
+                                "interface_declaration" => "interface".to_string(),
+                                "struct_declaration" => "struct".to_string(),
+                                "enum_declaration" => "enum".to_string(),
+                                _ => "class".to_string(),
+                            },
+                            start_line: node.start_position().row + 1,
+                            start_column: node.start_position().column,
+                            end_line: node.end_position().row + 1,
+                            end_column: node.end_position().column,
+                            // C# default access for top-level types is
+                            // `internal`; for nested types it's `private`.
+                            // Determining this precisely requires walking
+                            // the modifier list — defer for v0.5.3 and
+                            // default to `public` to match the precedent
+                            // set by Java/PHP/Swift extractors.
+                            visibility: "public".to_string(),
+                            documentation: docs,
+                        });
+                    }
+                }
+            }
+        }
+
+        // Method declarations.
+        let methods = tree.find_nodes_by_kind("method_declaration");
+        for method in methods {
+            if let Some(name_node) = method.child_by_field_name("name") {
+                if let Ok(name) = name_node.text() {
+                    let docs =
+                        self.extract_csharp_doc_comments(content, method.start_position().row);
+                    symbols.push(Symbol {
+                        name: name.to_string(),
+                        kind: "method".to_string(),
+                        start_line: method.start_position().row + 1,
+                        start_column: method.start_position().column,
+                        end_line: method.end_position().row + 1,
+                        end_column: method.end_position().column,
+                        visibility: "public".to_string(),
+                        documentation: docs,
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Extract doc comments preceding a Rust item start line
     fn extract_rust_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
         let lines: Vec<&str> = content.lines().collect();
@@ -2630,5 +2732,89 @@ mod tests {
                 Some("The default greeting.")
             );
         }
+    }
+
+    #[test]
+    fn test_csharp_extraction() {
+        // C# uses `///` XML doc comments, identical line-scan shape to
+        // Rust/Swift. Verifies the extractor surfaces class + method +
+        // interface + record symbols and that the XML payload flows
+        // through to `documentation`.
+        let temp_dir = TempDir::new().unwrap();
+        let cs_file = temp_dir.path().join("Greeter.cs");
+        fs::write(
+            &cs_file,
+            "namespace Demo;\n\n\
+             /// <summary>\n\
+             /// Greeter returns hello strings.\n\
+             /// </summary>\n\
+             public class Greeter\n\
+             {\n\
+             /// <summary>The default greeting.</summary>\n\
+             public string Hello() { return \"hi\"; }\n\
+             }\n\n\
+             /// <summary>A record for caching.</summary>\n\
+             public record CacheKey(string Name);\n\n\
+             /// <summary>Eviction policy contract.</summary>\n\
+             public interface IEvictionPolicy { void Evict(); }\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|e| e.to_str()) == Some("cs"))
+            .expect("Greeter.cs should be picked up");
+
+        // Class with multi-line XML doc.
+        let greeter = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "Greeter")
+            .expect("Greeter class should be extracted");
+        let docs = greeter.documentation.as_ref().expect("Greeter has docs");
+        assert!(
+            docs.contains("Greeter returns hello"),
+            "Greeter doc should preserve XML payload, got: {docs:?}"
+        );
+
+        // Method inside the class.
+        let hello = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "Hello")
+            .expect("Hello method should be extracted");
+        assert_eq!(hello.kind, "method");
+        let hello_docs = hello.documentation.as_ref().expect("Hello has docs");
+        assert!(
+            hello_docs.contains("default greeting"),
+            "got: {hello_docs:?}"
+        );
+
+        // Record (newer C# nominal class).
+        let cache_key = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "CacheKey")
+            .expect("CacheKey record should be extracted");
+        assert_eq!(
+            cache_key.kind, "class",
+            "records surface as class kind for wire stability"
+        );
+
+        // Interface.
+        let policy = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "IEvictionPolicy")
+            .expect("IEvictionPolicy interface should be extracted");
+        assert_eq!(policy.kind, "interface");
+        let policy_docs = policy
+            .documentation
+            .as_ref()
+            .expect("IEvictionPolicy has docs");
+        assert!(policy_docs.contains("Eviction"), "got: {policy_docs:?}");
     }
 }

@@ -194,6 +194,7 @@ pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
         "php" | "phtml" => Some(Language::Php),
         "rb" | "rake" => Some(Language::Ruby),
         "swift" => Some(Language::Swift),
+        "cs" | "csx" => Some(Language::CSharp),
         _ => None,
     }
 }
