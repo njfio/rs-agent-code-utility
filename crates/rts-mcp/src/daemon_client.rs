@@ -6,6 +6,7 @@
 //! tool call maps to a single request/response on the socket, and stdio MCP
 //! is sequential per connection, so we don't need fan-out concurrency here.
 
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
@@ -27,16 +28,59 @@ pub struct DaemonClient {
     /// Monotonic request id. Stringified on the wire — protocol-v0 §3.4
     /// requires string ids.
     next_id: AtomicU64,
+    /// v0.5.5+ reconnect state. When the daemon dies (crash, SIGTERM,
+    /// upgrade), the next `call()` returns a transport error. The upper
+    /// layer (`RtsServer::call_daemon`) inspects via
+    /// [`DaemonError::is_disconnect`] and calls
+    /// [`DaemonClient::reconnect`] to re-establish via auto-spawn —
+    /// without this state the client couldn't re-resolve the daemon
+    /// binary or pass the right `--workspace` to the new process.
+    daemon_bin: PathBuf,
+    /// Canonical workspace path. Threaded into `connect_with_auto_spawn`
+    /// so the respawned daemon's per-workspace socket path matches the
+    /// original (per `socket_path_for_workspace` from v0.5.4).
+    workspace: PathBuf,
 }
 
 impl DaemonClient {
-    pub fn new(stream: UnixStream) -> Self {
+    pub fn new(stream: UnixStream, daemon_bin: PathBuf, workspace: PathBuf) -> Self {
         let (rd, wr) = stream.into_split();
         Self {
             writer: wr,
             reader: BufReader::new(rd),
             next_id: AtomicU64::new(1),
+            daemon_bin,
+            workspace,
         }
+    }
+
+    /// Re-establish the socket connection by re-running the auto-spawn
+    /// flow. Used by the upper layer when a previous `call()` returned
+    /// a disconnect-shaped transport error.
+    ///
+    /// Idempotent: if the daemon is still alive on the per-workspace
+    /// socket, this just reconnects to it. If the daemon is gone,
+    /// auto-spawn brings up a fresh one.
+    ///
+    /// **Caller responsibilities** (`RtsServer::call_daemon`):
+    /// 1. Clear the `Workspace.Mount` sentinel — a fresh daemon needs
+    ///    Mount before serving Index queries.
+    /// 2. Retry the original call **once**. Repeated retries on
+    ///    repeated disconnects indicate a deeper problem (daemon won't
+    ///    stay up, binary path wrong, etc.) and should surface the
+    ///    error rather than loop.
+    pub async fn reconnect(&mut self) -> Result<(), DaemonError> {
+        let stream =
+            crate::socket::connect_with_auto_spawn(&self.daemon_bin, Some(&self.workspace))
+                .await
+                .map_err(|e| DaemonError::transport(format!("reconnect via auto-spawn: {e:#}")))?;
+        let (rd, wr) = stream.into_split();
+        self.writer = wr;
+        self.reader = BufReader::new(rd);
+        // Don't reset `next_id`: monotonic across reconnects is fine
+        // (protocol-v0 §3.4 only requires uniqueness within a session,
+        // and the daemon has fresh state anyway after a respawn).
+        Ok(())
     }
 
     fn alloc_id(&self) -> String {
@@ -125,6 +169,35 @@ impl DaemonError {
             message: message.into(),
             data: None,
         }
+    }
+
+    /// True iff the error indicates the socket connection is dead and
+    /// a fresh daemon needs to be auto-spawned. The upper layer
+    /// (`RtsServer::call_daemon`) checks this to decide whether to
+    /// reconnect-and-retry.
+    ///
+    /// Recognised transport-layer signatures (must be `code ==
+    /// "INTERNAL_ERROR"` AND the message contains one of):
+    /// - `"Broken pipe"` — write failed because peer closed
+    /// - `"Connection reset"` — peer aborted
+    /// - `"daemon closed connection"` — read returned `n == 0`
+    /// - `"connection refused"` — socket file gone before we wrote
+    /// - `"unexpected end of file"` / `"EOF"` — partial read
+    ///
+    /// Anything else (including legitimate daemon-emitted errors like
+    /// `INDEX_NOT_READY` or `OUT_OF_ROOT`) returns `false` — we don't
+    /// want to reconnect on a working daemon's expected error path.
+    pub fn is_disconnect(&self) -> bool {
+        if self.code != "INTERNAL_ERROR" {
+            return false;
+        }
+        let msg_lower = self.message.to_lowercase();
+        msg_lower.contains("broken pipe")
+            || msg_lower.contains("connection reset")
+            || msg_lower.contains("daemon closed connection")
+            || msg_lower.contains("connection refused")
+            || msg_lower.contains("unexpected end of file")
+            || msg_lower.contains("eof")
     }
 }
 

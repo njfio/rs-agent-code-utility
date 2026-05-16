@@ -266,25 +266,90 @@ impl RtsServer {
     /// others wait on the mutex and see `mounted == true` by the
     /// time they get the lock.
     async fn call_daemon(&self, method: &str, params: Value) -> Result<Value, DaemonError> {
-        let mut guard = self.daemon.lock().await;
-        if !self.mounted.load(std::sync::atomic::Ordering::Acquire) {
-            let mount_resp = guard
-                .call(
-                    "Workspace.Mount",
-                    serde_json::json!({ "root": self.workspace }),
-                )
-                .await?;
-            let workspace_id = mount_resp["workspace_id"].as_str().unwrap_or("<unknown>");
-            tracing::info!(
-                target: "rts_mcp",
-                "lazy-mounted workspace {} as id={} on first tool call",
-                self.workspace.display(),
-                workspace_id,
-            );
-            self.mounted
-                .store(true, std::sync::atomic::Ordering::Release);
+        // Retry-on-disconnect loop. Pre-v0.5.5 this method made a
+        // single attempt; if the daemon had died mid-session, the
+        // first transport error left the connection wedged and every
+        // subsequent tool call failed with `Broken pipe`. v0.5.5+ does
+        // one explicit reconnect (auto-spawning a fresh daemon on the
+        // per-workspace socket) and retries the call once.
+        //
+        // Why ONE retry, not infinite:
+        // - A working daemon should never need reconnects mid-session.
+        // - Repeated disconnects after one reconnect indicates the
+        //   daemon won't stay up (binary missing, crash loop, etc.);
+        //   surfacing the error to the agent beats hot-spinning the
+        //   spawn flow.
+        // - Wall-clock cost is bounded: at most two `CALL_TIMEOUT`s
+        //   (35s × 2 = 70s).
+        for attempt in 0..2 {
+            let mut guard = self.daemon.lock().await;
+            if !self.mounted.load(std::sync::atomic::Ordering::Acquire) {
+                let mount_resp = match guard
+                    .call(
+                        "Workspace.Mount",
+                        serde_json::json!({ "root": self.workspace }),
+                    )
+                    .await
+                {
+                    Ok(v) => v,
+                    Err(e) if attempt == 0 && e.is_disconnect() => {
+                        // Reconnect path on the FIRST call after spawn.
+                        // Rare in practice (the auto-spawn flow has
+                        // already verified the socket accepts a
+                        // connection), but harmless to handle.
+                        tracing::warn!(
+                            target: "rts_mcp",
+                            "daemon disconnected during Workspace.Mount; reconnecting + retrying ({})",
+                            e.message,
+                        );
+                        guard.reconnect().await?;
+                        // Mount sentinel stays false (which it already is);
+                        // the next iteration will re-Mount.
+                        drop(guard);
+                        continue;
+                    }
+                    Err(e) => return Err(e),
+                };
+                let workspace_id = mount_resp["workspace_id"].as_str().unwrap_or("<unknown>");
+                tracing::info!(
+                    target: "rts_mcp",
+                    "lazy-mounted workspace {} as id={} on first tool call (attempt={})",
+                    self.workspace.display(),
+                    workspace_id,
+                    attempt,
+                );
+                self.mounted
+                    .store(true, std::sync::atomic::Ordering::Release);
+            }
+            match guard.call(method, params.clone()).await {
+                Ok(v) => return Ok(v),
+                Err(e) if attempt == 0 && e.is_disconnect() => {
+                    tracing::warn!(
+                        target: "rts_mcp",
+                        "daemon disconnected during {} ({}); reconnecting + retrying",
+                        method,
+                        e.message,
+                    );
+                    guard.reconnect().await?;
+                    // The respawned daemon has no Workspace.Mount — clear
+                    // the sentinel so the retry iteration re-mounts before
+                    // re-issuing the original call.
+                    self.mounted
+                        .store(false, std::sync::atomic::Ordering::Release);
+                    drop(guard);
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
         }
-        guard.call(method, params).await
+        // Unreachable: the loop either returns or continues; the
+        // `continue` arm runs exactly once because `attempt == 0`
+        // gates it. Defensive return so the compiler is satisfied.
+        Err(DaemonError {
+            code: "INTERNAL_ERROR".to_string(),
+            message: "exhausted reconnect retries".to_string(),
+            data: None,
+        })
     }
 
     #[tool(
