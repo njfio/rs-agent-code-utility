@@ -2079,8 +2079,15 @@ impl CodebaseAnalyzer {
             let line = lines[line_idx as usize].trim();
 
             if line.ends_with("*/") && line.contains("/*") {
-                // Single line block comment
-                let doc_content = line.trim_start_matches("/*").trim_end_matches("*/").trim();
+                // Single line block comment. Strip both the `/*`
+                // opening and an immediately-following `*` (the
+                // JSDoc / `/**` convention) so the doc text doesn't
+                // carry a stray leading asterisk.
+                let doc_content = line
+                    .trim_start_matches("/*")
+                    .trim_start_matches('*')
+                    .trim_end_matches("*/")
+                    .trim();
                 if !doc_content.is_empty() {
                     docs.push(doc_content);
                 }
@@ -2095,7 +2102,8 @@ impl CodebaseAnalyzer {
                 }
             } else if in_block_comment {
                 if line.starts_with("/*") {
-                    let doc_content = line.trim_start_matches("/*").trim();
+                    // Same JSDoc-aware strip as the single-line case.
+                    let doc_content = line.trim_start_matches("/*").trim_start_matches('*').trim();
                     if !doc_content.is_empty() {
                         docs.push(doc_content);
                     }
@@ -2334,6 +2342,59 @@ mod tests {
             orphan.documentation.is_none(),
             "Orphan should have no docs (blank line severs the comment): got {:?}",
             orphan.documentation
+        );
+    }
+
+    #[test]
+    fn test_jsdoc_extraction_for_javascript() {
+        // JSDoc /** ... */ blocks should flow through to
+        // Symbol::documentation. The C extractor already handles
+        // /* ... */ but the JSDoc convention adds a `*` to each
+        // continuation line plus a leading `*` after `/**`; this
+        // test pins the cosmetic strip.
+        let temp_dir = TempDir::new().unwrap();
+        let js_file = temp_dir.path().join("app.js");
+        fs::write(
+            &js_file,
+            "/**\n * Greet returns a friendly hello message.\n * Used when no name is provided.\n */\nfunction greet() { return \"hi\"; }\n\n/** Single-line JSDoc. */\nclass Counter { }\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "js")
+            .unwrap();
+
+        let greet = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "greet")
+            .expect("greet symbol should be extracted");
+        let docs = greet
+            .documentation
+            .as_ref()
+            .expect("greet should have docs");
+        assert!(
+            !docs.starts_with('*'),
+            "JSDoc opening `*` should be stripped, got: {docs:?}"
+        );
+        assert!(docs.contains("friendly hello"), "got docs={docs:?}");
+
+        let counter = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "Counter")
+            .expect("Counter class should be extracted");
+        let counter_docs = counter
+            .documentation
+            .as_ref()
+            .expect("Counter should have docs");
+        assert_eq!(
+            counter_docs, "Single-line JSDoc.",
+            "single-line JSDoc should strip leading `*`"
         );
     }
 

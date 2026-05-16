@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### JSDoc cosmetic strip — clean JS/TS doc-comment output
+
+JavaScript / TypeScript already routed doc comments through
+`extract_c_doc_comments` (since C/C++ also use `/* ... */`). That
+worked functionally — JSDoc text flowed into `Symbol::documentation`
+— but the JSDoc `/**` convention introduces a leading `*` on the
+opening line that the C extractor wasn't stripping. Doc text came
+out as `* Greet returns a friendly hello message.` instead of
+`Greet returns a friendly hello message.`.
+
+Fix: in `extract_c_doc_comments`, after stripping the `/*` opening,
+also strip an immediately-following `*` (the JSDoc / Doxygen-style
+opening sequence `/**`). Applied at both the single-line and
+multi-line block-start branches.
+
+#### Verification
+
+```text
+$ rts-bench query find-symbol --workspace /tmp/js-doc-test --name greet
+{ "doc": "Greet returns a friendly hello message.\nUsed as the default response when no name is provided." }
+```
+
+Previously the same call returned `"doc": "*\nGreet returns ..."`.
+
+Bonus: the same fix applies to C/C++ symbols with `/** ... */`
+Doxygen-style comments, which are common.
+
++1 unit test (`test_jsdoc_extraction_for_javascript`) covering
+multi-line `/** ... */` and single-line `/** ... */` blocks. 590
+workspace tests pass.
+
 ### Multi-token scoring fix — 100% combined answerable coverage 🎯
 
 Closes the last remaining failure mode on the verified rts-core
@@ -63,79 +94,6 @@ dependency.
 
 +1 unit test (`score_candidate_diminishing_subtoken_returns`).
 589 workspace tests pass.
-
-### Multi-language doc-comment extraction — Go + Swift (extends v0.5.0 Rust-only)
-
-v0.5.0 shipped Rust doc-comment indexing (#65). This extends the
-pipeline to **Go** and **Swift**:
-
-- **Go**: line-comment scanner that walks backwards from the symbol
-  start collecting contiguous `//` lines. Honors the Go convention
-  that a blank line between the comment block and the declaration
-  severs the documentation relationship.
-- **Swift**: `///` line-comment scanner. Same shape as Rust's
-  extractor — Swift's `///` syntax is identical, so the new
-  `extract_swift_doc_comments` is a thin wrapper around
-  `extract_rust_doc_comments`. Block `/** */` doc syntax is valid
-  Swift but isn't handled here for v0; the `///` form dominates.
-
-#### Where this plugs in
-
-`crates/rts-core/src/analyzer.rs`:
-- New `extract_go_doc_comments(content, start_row) -> Option<String>`
-- New `extract_swift_doc_comments(content, start_row) -> Option<String>`
-- `extract_go_symbols` now takes `content` (was `_content`), calls
-  the new extractor at all three sites (function, method, type)
-- `extract_swift_symbols` same — class, struct, function
-
-No changes to the daemon, the wire shape, or the bench scorer.
-The existing v0.5.0 plumbing (`SID_DOCS` table, `find_symbol` `doc`
-field, capability `find_symbol_doc_field`) just sees real data
-flowing for Go and Swift workspaces now, where it saw `None` before.
-
-#### End-to-end verification
-
-```text
-$ rts-bench query find-symbol --workspace /tmp/go-doc-test --name Greet
-{
-  "qualified_name": "Greet",
-  "doc": "Greet returns a friendly hello message.\nUsed as the default response when no name is provided.",
-  ...
-}
-```
-
-#### Regression check on rts-core (Rust)
-
-| Corpus           | v0.5.1 | with Go+Swift | Δ      |
-|------------------|--------|---------------|--------|
-| v1 audited (13q) | 100%   | 100%          | parity |
-| blind-v2 (15q)   | 90%    | 90%           | parity |
-
-No regression on the existing Rust workspace eval. Both new
-extractors operate on languages disjoint from the test corpora.
-
-#### Test coverage
-
-+3 unit tests in `analyzer::tests`:
-- `test_go_doc_extraction`: multi-line comment block flows through
-  to `Symbol::documentation`
-- `test_go_doc_extraction_blank_line_severs`: Go convention enforced
-  (blank line between comment and decl breaks the doc relationship)
-- `test_swift_doc_extraction`: `///` block on `class` flows through
-
-589 workspace tests pass.
-
-#### Out of scope (filed for follow-up)
-
-- **JavaScript / TypeScript**: JSDoc `/** */` block scanning. Medium
-  effort — needs a block-comment parser that handles multi-line
-  bodies and `*` line prefixes.
-- **Ruby**: `#` line comments above declarations (similar shape to
-  Go, but `#` instead of `//`).
-- **PHP / Java**: PHPDoc / Javadoc (both `/** */`-style block).
-- **Python**: docstrings are already wired (`extract_python_docstring`
-  is called from `extract_python_symbols` since pre-v0.5).
-
 ## [0.5.1] - 2026-05-15
 
 Patch release. Two iterations on top of v0.5.0:
