@@ -195,6 +195,38 @@ The existing per-daemon `SignatureCache` (keyed on `(path, byte_range, mtime)`) 
 #### Protocol surface
 
 `docs/protocol-v0.md` §7.6 documents the heuristic and the explicit-off escape hatch. No new capability string — the field is still advertised under `find_symbol_signature_field` (v0.5.3+), the change is to its default-value resolution.
+### `Index.FindSymbol.pre_filter_count` — extended to `kind` and `file` filters
+
+PR #78 (v0.5.2) added `pre_filter_count` to close the silent-empty failure mode for the `doc_contains` filter. Dogfooding revealed the same shape applies to the older `kind` and `file` filters: a query like `pattern: "*" + file: "X"` could return `matches: []` ambiguously between *"pattern matched nothing"* and *"file filter rejected every candidate"*. Same agent-hostile silent failure, just with a different filter.
+
+This PR extends the same machinery to fire for all three filter types:
+
+| Filter | pre_filter_count present? | Reports |
+|---|---|---|
+| `doc_contains` set | ✅ (since v0.5.2) | unfiltered candidate count |
+| `kind` set | ✅ (v0.5.4+) | unfiltered candidate count |
+| `file` set | ✅ (v0.5.4+) | unfiltered candidate count |
+| No filter active | ❌ — field absent | (back-compat with pre-v0.5.2) |
+
+The reported value is the **unfiltered population** — every `(name, file, kind)` hit that matched the base `name`/`pattern` before any filter ran. Previously the v0.5.2 emission counted post-kind/file-filter candidates (the doc_contains case), which understated the pool when multiple filters were stacked. v0.5.4 reports the full unfiltered count regardless of which filter(s) are active, so the agent can reason about the upstream population independently of which knob they twisted.
+
+#### Capability
+
+No new capability string — `find_symbol_pre_filter_count` (advertised since v0.5.2) covers the extended surface. Clients that already branch on this capability get the broader emission for free.
+
+#### Test coverage
+
++1 integration test (`find_symbol_pre_filter_count_for_kind_and_file`) covering:
+- File filter that rejects all → field present, `>= 4`
+- Kind filter that rejects all → field present, `>= 4`
+- No filter → field absent (back-compat)
+- File filter that matches → field present even when `matches` is non-empty
+
+The pre-existing `find_symbol_doc_contains_filter` test continues to pass — the doc_contains path is unchanged.
+
+#### Protocol surface
+
+`docs/protocol-v0.md` §7.6 updated to document the extended coverage and the new "unfiltered population" semantics.
 
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 

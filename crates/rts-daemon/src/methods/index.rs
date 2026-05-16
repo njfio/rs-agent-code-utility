@@ -618,7 +618,21 @@ pub async fn find_symbol(
     // both doing the same `NAME_TO_SID` lookup. For pattern mode
     // (up to 1024 candidate names), that's 2048 txn-opens. The
     // batched `find_symbols_batch_with_sids` shares one txn.
-    let mut typed: Vec<(crate::store::FoundSymbol, f64)> =
+    // v0.5.4: pre-filter count covers ALL active filters
+    // (`kind`, `file`, `doc_contains`), not just `doc_contains`. The
+    // PR #78 surface was extended after dogfood found the same
+    // silent-empty failure mode for the `file` filter — a query
+    // like `pattern: "*" + file: "foo.rs"` could return `matches:
+    // []` ambiguously between "no symbols matched the pattern"
+    // and "the file filter rejected every candidate".
+    //
+    // Strategy: collect ALL hits (pre-filter), then apply kind+file
+    // filter. Track the pre-filter count for emission only when at
+    // least one filter is active (back-compat: unfiltered responses
+    // keep the pre-v0.5.2 wire shape with no `pre_filter_count` field).
+    let any_local_filter =
+        kind_filter.is_some() || file_filter.is_some() || p.doc_contains.is_some();
+    let mut typed_all: Vec<(crate::store::FoundSymbol, f64)> =
         Vec::with_capacity(names.len().min(limit));
     let mut batched = store_arc
         .find_symbols_batch_with_sids(&names)
@@ -637,19 +651,21 @@ pub async fn find_symbol(
             .and_then(|s| ranks.as_ref().map(|r| r.rank_for(s)))
             .unwrap_or(0.0);
         for h in hits.into_iter() {
-            if let Some(filter) = kind_filter {
-                if h.kind != filter {
-                    continue;
-                }
-            }
-            if let Some(filter) = file_filter {
-                if h.file != filter {
-                    continue;
-                }
-            }
-            typed.push((h, rank_for_name));
+            typed_all.push((h, rank_for_name));
         }
     }
+    // Capture the unfiltered population before any kind/file/doc
+    // filter runs. Emitted later iff any filter was active.
+    let pre_filter_count_value: Option<usize> = if any_local_filter {
+        Some(typed_all.len())
+    } else {
+        None
+    };
+    let mut typed: Vec<(crate::store::FoundSymbol, f64)> = typed_all
+        .into_iter()
+        .filter(|(h, _)| kind_filter.map(|k| h.kind == k).unwrap_or(true))
+        .filter(|(h, _)| file_filter.map(|f| h.file == f).unwrap_or(true))
+        .collect();
 
     // Apply sort. Default = descending rank when ranks are available;
     // explicit "lexical" opts out. Stable secondary sort by
@@ -686,15 +702,15 @@ pub async fn find_symbol(
     // as an agent-hostile silent failure mode. The field is omitted
     // (serialized as JSON null when serde drops `Option::None`)
     // when no filter ran, preserving the pre-v0.5.2 wire shape.
-    let mut pre_filter_count: Option<usize> = None;
     let mut docs: Vec<Option<String>>;
     if let Some(needle) = p.doc_contains.as_deref() {
         // Pre-truncate lookup so the filter sees every candidate.
         let names_for_docs: Vec<String> = typed.iter().map(|(h, _)| h.name.clone()).collect();
         let fids_for_docs: Vec<u32> = typed.iter().map(|(h, _)| h.fid).collect();
-        // Capture pre-filter cardinality BEFORE the filter loop so we
-        // report the true candidate population.
-        pre_filter_count = Some(typed.len());
+        // Note: `pre_filter_count_value` was already captured above
+        // — it covers the full unfiltered population (before
+        // kind/file/doc filters), so we don't need to capture it
+        // again here.
         let all_docs = store_arc
             .docs_for_names_with_fid(&names_for_docs, &fids_for_docs)
             .map_err(|e| {
@@ -874,13 +890,19 @@ pub async fn find_symbol(
         "matches":   matches,
         "truncated": truncated,
     });
-    // v0.5.2: emit `pre_filter_count` only when a filter was active.
-    // Omitted otherwise so pre-v0.5.2 callers see the original wire
-    // shape unchanged. When present, an empty `matches[]` array
-    // accompanied by `pre_filter_count: N > 0` tells the agent the
-    // filter rejected N candidates — not that nothing matched the
-    // base pattern.
-    if let Some(count) = pre_filter_count {
+    // v0.5.2+: emit `pre_filter_count` only when at least one filter
+    // (`kind`, `file`, `doc_contains`) was active. Omitted otherwise
+    // so pre-v0.5.2 callers see the original wire shape unchanged.
+    // When present, an empty `matches[]` array accompanied by
+    // `pre_filter_count: N > 0` tells the agent N candidates matched
+    // the base name/pattern but the active filters rejected all of
+    // them — distinguishing "nothing matched" from "filters dropped
+    // every candidate".
+    //
+    // v0.5.4 extension: the field now fires for `kind` and `file`
+    // filter rejections too, not just `doc_contains`. Same
+    // silent-empty failure mode, same remedy.
+    if let Some(count) = pre_filter_count_value {
         response["pre_filter_count"] = serde_json::Value::Number(count.into());
     }
     Ok(response)
