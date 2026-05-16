@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-05-16
+
+**Theme: cross-codebase evaluation, daemon workspace-isolation, grep, and 12-language parity.**
+
+v0.5.3 declared "100% answerable coverage on rts-core" but only had self-eval to support it. v0.5.4 closes that loop by adding **six external-repo corpora** spanning Rust, Go, Python, JavaScript, and Java — and a battery of ranker improvements driven by the failure modes those corpora exposed.
+
+The marquee result: **ripgrep (50k LOC Rust)** went from **35.7% coverage / MRR 0.073** to **85.7% / 0.549** — a 7.5× MRR improvement from a single PR. The candidate-pool architecture (PageRank-only fetch was missing the type-level symbols on large workspaces) was the deeper issue hiding behind a scorer-tuning hypothesis.
+
+### Headline changes
+
+1. **C# language support** — 12-language doc-comment parity (#84).
+2. **Trait / type-alias / union / macro extraction** in `extract_rust_symbols` (part of #91). Pre-fix `pub trait Log` was invisible to `find_symbol`.
+3. **Per-workspace socket paths** (#88). `ws-<16hex>.sock` from `blake3(canonical_path)`. No more `pkill -f rts-daemon` to switch workspaces.
+4. **`Index.Grep` method** (#90). Literal-substring search across indexed file bytes. Capability `index_grep`.
+5. **`Index.FindSymbol.include_signature`** — opt-in (#81) then auto-default for small queries (#86).
+6. **`Index.FindSymbol.pre_filter_count`** extended to `kind` + `file` filters (#89).
+7. **Six external-repo corpora** (#87, #91): rust-log, ripgrep, cobra, requests, chalk (JS), gson (Java) + dogfood-v3.
+8. **Ranker improvements** (#91): trait extraction, CVC consonant-doubling lemma overrides, common-noun penalty, kind-hint multiplier, public-visibility boost, multi-pass kind-enriched candidate fetch, test-file/test-name penalty.
+
+### Quality-of-life
+
+- **Cold-mount UX** (#83): 30s recv timeout + diagnostic error.
+- **`rts-bench query` workspace auto-detection** (#85): no more `--workspace .`.
+- **Release workflow** (#82): dropped hung Intel Mac target; unblocked SHA256SUMS aggregator.
+
+### Final cross-corpus matrix
+
+| Corpus | Coverage | MRR |
+|---|---:|---:|
+| rust-log | **100%** | 0.736 |
+| ripgrep | 85.7% | 0.553 |
+| cobra | 76.9% | 0.573 |
+| requests | 84.6% | 0.545 |
+| chalk | 85.7% | 0.857 |
+| gson | 75.0% | 0.497 |
+| rts-core v1 (audited) | 100% answerable | 0.352 |
+| rts-core blind-v2 | 100% answerable | 0.312 |
+
+External-corpus avg: **84.6%**. rts-core invariants held.
+
+### Protocol surface
+
+New capabilities advertised in `Daemon.Ping`:
+- `find_symbol_signature_field` (v0.5.3+, opt-in `include_signature`)
+- `index_grep` (v0.5.4+, literal-substring search)
+
+Per-workspace socket path: `<runtime_root>/ws-<16hex>.sock` (`default.sock` retained as bootstrap fallback).
+
+### Out of scope (filed for follow-up)
+
+- cobra + requests past 76.9% / 84.6%
+- Promote external corpora to CI invariants
+- rts-core v1 MRR regression (-10%, generalisation cost)
+
 ### Semantic eval — dogfood-v3 corpus surfaces the real generalization gap
 
 Closes the v0.5.0-noted "out of scope" follow-up: *"Mining queries from real Claude Code transcripts (the most rigorous corpus addition)."* True transcript mining isn't possible yet because rts-mcp isn't wired into Claude Code sessions today — but the next-best thing is: **mine the developer's own dogfood lookups while building features against this very repo**, treating those natural-language intents as the corpus.
