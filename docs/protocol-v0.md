@@ -252,10 +252,16 @@ On every `Workspace.Mount`, the daemon re-stats the path and verifies `(dev, ino
 ### 5.3 Socket path
 
 ```text
-Linux:   ${XDG_RUNTIME_DIR}/rts/${workspace_id_hex}.sock
-macOS:   ${HOME}/Library/Caches/rts/${workspace_id_hex}.sock
-Windows: \\.\pipe\rts.${user_sid}.${workspace_id_hex}        (v1.1)
+Linux:   ${XDG_RUNTIME_DIR}/rts/ws-${workspace_id_hex16}.sock   (v0.5.4+)
+         ${XDG_RUNTIME_DIR}/rts/default.sock                    (bootstrap)
+macOS:   ${HOME}/Library/Caches/rts/ws-${workspace_id_hex16}.sock   (v0.5.4+)
+         ${HOME}/Library/Caches/rts/default.sock                    (bootstrap)
+Windows: \\.\pipe\rts.${user_sid}.${workspace_id_hex16}        (v1.1)
 ```
+
+`${workspace_id_hex16}` is the first 8 bytes of `blake3(canonical_workspace_path_bytes)`, hex-encoded — 16 chars. Two distinct workspace roots produce distinct sockets, so concurrent daemons (one per workspace) coexist on the same UID without `WORKSPACE_MISMATCH`.
+
+The `default.sock` bootstrap path is kept for the no-workspace case (daemons started without `--workspace`, e.g. some test harnesses, and pre-v0.5.4 clients). Post-v0.5.4 production callers always know their workspace at spawn time and route to the per-workspace path.
 
 Linux MUST refuse to start if `XDG_RUNTIME_DIR` is unset. There is **no `/tmp/rts-$UID/` fallback** — the symlink-attack surface on `/tmp` is too large (security-review F2).
 
