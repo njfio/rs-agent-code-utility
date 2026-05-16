@@ -120,6 +120,18 @@ const GO_REFS: &str = r#"
     (selector_expression field: (field_identifier) @name)
     (parenthesized_expression (selector_expression field: (field_identifier) @name))
   ]) @reference.call
+
+;; Go 1.18+ generics: `MakeFoo[int]()` and `pkg.MakeFoo[int]()`.
+;; index_expression wraps the function name with the type-argument
+;; list. Without this capture every generic call is invisible to
+;; find_callers and skews the reference graph.
+(call_expression
+  function: (index_expression
+    operand: (identifier) @name)) @reference.call
+
+(call_expression
+  function: (index_expression
+    operand: (selector_expression field: (field_identifier) @name))) @reference.call
 "#;
 
 const RUBY_REFS: &str = r#"
@@ -148,6 +160,13 @@ const JAVASCRIPT_REFS: &str = r#"
 
 (new_expression
     constructor: (identifier) @name) @reference.class
+
+;; `new Module.Foo()` — namespaced constructor. Missed pre-fix; the
+;; scoped-call gap surfaced on Rust (#94) prompted the audit that
+;; caught this JS equivalent.
+(new_expression
+    constructor: (member_expression
+        property: (property_identifier) @name)) @reference.class
 "#;
 
 /// TypeScript reference patterns. The upstream tree-sitter-typescript
@@ -168,6 +187,11 @@ const TYPESCRIPT_REFS: &str = r#"
 
 (new_expression
     constructor: (identifier) @name) @reference.class
+
+;; Same `new Module.Foo()` gap as JavaScript; see the comment there.
+(new_expression
+    constructor: (member_expression
+        property: (property_identifier) @name)) @reference.class
 "#;
 
 /// Path → [`LanguageInfo`]. The canonical extension table.
