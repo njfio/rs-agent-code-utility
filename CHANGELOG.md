@@ -7,93 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### JSDoc cosmetic strip — clean JS/TS doc-comment output
+### Doc-IDF separate from name-IDF
 
-JavaScript / TypeScript already routed doc comments through
-`extract_c_doc_comments` (since C/C++ also use `/* ... */`). That
-worked functionally — JSDoc text flowed into `Symbol::documentation`
-— but the JSDoc `/**` convention introduces a leading `*` on the
-opening line that the C extractor wasn't stripping. Doc text came
-out as `* Greet returns a friendly hello message.` instead of
-`Greet returns a friendly hello message.`.
+Computes a second IDF table from candidate doc-comment text rather
+than reusing the name-IDF for doc matches. Lets rare doc-specific
+terms (`rollback`, `retry`, `validate`) earn higher weight than
+common ones (`returns`, `the`, `function`) when scoring against
+doc text — independent of how those terms appear in identifier
+names.
 
-Fix: in `extract_c_doc_comments`, after stripping the `/*` opening,
-also strip an immediately-following `*` (the JSDoc / Doxygen-style
-opening sequence `/**`). Applied at both the single-line and
-multi-line block-start branches.
+#### Why
 
-#### Verification
+PR #65 shipped doc-comment matching at conservative `+1.0 × name_IDF`
+because name-IDF is calibrated to identifier sub-tokens, not doc
+words. Common doc words ("function", "returns") that aren't
+sub-tokens fall to the high default name-IDF, inflating noise
+matches.
 
-```text
-$ rts-bench query find-symbol --workspace /tmp/js-doc-test --name greet
-{ "doc": "Greet returns a friendly hello message.\nUsed as the default response when no name is provided." }
-```
+With separate doc-IDF computed from the actual doc corpus:
+- `function` (extremely common in docs) → low doc-IDF (~1.5)
+- `rollback` (rare in docs) → high doc-IDF (~5-7)
 
-Previously the same call returned `"doc": "*\nGreet returns ..."`.
-
-Bonus: the same fix applies to C/C++ symbols with `/** ... */`
-Doxygen-style comments, which are common.
-
-+1 unit test (`test_jsdoc_extraction_for_javascript`) covering
-multi-line `/** ... */` and single-line `/** ... */` blocks. 590
-workspace tests pass.
-
-### Multi-token scoring fix — 100% combined answerable coverage 🎯
-
-Closes the last remaining failure mode on the verified rts-core
-corpora. blind-v2 jumps from **90% → 100%**; combined corpus (v1 +
-blind-v2) jumps from **95% → 100% (20/20 answerable)**.
-
-Two changes that work together:
-
-**1. Conditional diminishing returns on sub-token matches.**
-Long compound names (≥ 4 sub-tokens) like
-`get_language_specific_complexity` (matches `language` + `specific`)
-were summing two `+6` sub-token bonuses to beat short names with a
-single `+10` exact-name match. Now: short/compound names with 1-3
-sub-tokens keep the full `+6` per match (preserving e.g.
-`AllocationPattern`'s hit on "allocation patterns optimized"), but
-4+ sub-token names diminish — 1st match `+6`, 2nd `+3`, 3rd `+1.5`.
-The geometric-series cap keeps cumulative bonus below `+12`,
-preserving exact-name (+10) as the natural top of the tier ordering.
-
-**2. `-y` / `-ies` lemma overrides.** The suffix stemmer can't
-unify `query` ↔ `queries` on its own (the regular `y → ies` plural
-rule would over-strip nouns like `city` → `cit`). Hand-curated
-overrides for common code-domain pairs:
-
-- `query` ↔ `queries` → `queri`
-- `dependency` ↔ `dependencies` → `dependenci`
-- `entity` ↔ `entities` → `entiti`
-- `entry` ↔ `entries` → `entri`
+Weight coefficient adjusted to `0.8 × doc_IDF` (was `1.0 × name_IDF`)
+so the maximum doc bonus stays below the `+6` sub-token tier.
 
 #### Numbers on the rts-core corpora
 
 | Metric              | v0.5.1            | This PR             | Δ          |
 |---------------------|-------------------|---------------------|------------|
-| v1 audited (13q)    | 100% / 0.381      | 100% / 0.387        | parity     |
-| **blind-v2 (15q)**  | 90% / 0.235       | **100% / 0.273**    | **+10pp**  |
-| **Combined (28q)**  | 95% (19/20)       | **100% (20/20)**    | **+5pp**   |
+| v1 audited (13q)    | 100% / 0.381      | 100% / 0.381        | parity     |
+| blind-v2 (15q)      | 90% / 0.235       | 90% / 0.234         | parity     |
 
-#### Cumulative answerable-coverage journey
+**Coverage parity on both corpora** — this is architectural
+infrastructure, not a coverage move. The change pays off as workspaces
+with richer doc text (Python, Java) get indexed. Filed under
+"compounding investment" rather than "today's metric win."
 
-| Stage                                   | v1      | blind-v2 | Combined |
-|-----------------------------------------|---------|----------|----------|
-| PR #55 baseline                         | 40%     | n/a      | n/a      |
-| PR #59 IDF                              | 90%     | n/a      | n/a      |
-| PR #60 lemma overrides (Greek-origin)   | 100%    | n/a      | n/a      |
-| PR #62 blind-v2 corpus added            | 100%    | 80%      | 90%      |
-| PR #65 doc-comment indexing             | 100%    | 80%      | 90%      |
-| PR #68 code-domain synonym overrides    | 100%    | 90%      | 95%      |
-| **This PR (multi-token + -y lemmas)**   | **100%**| **100%** | **100%** |
+590 workspace tests pass.
 
-The graph-only baseline now covers 100% of the answerable queries
-on both verified corpora. Any future embedding work must beat 100%
-on a *harder, externally-graded* corpus to justify the model
-dependency.
+### Multi-language doc-comment extraction — Go + Swift (extends v0.5.0 Rust-only)
 
-+1 unit test (`score_candidate_diminishing_subtoken_returns`).
-589 workspace tests pass.
+### JSDoc cosmetic strip — clean JS/TS doc-comment output
 ## [0.5.1] - 2026-05-15
 
 Patch release. Two iterations on top of v0.5.0:
