@@ -1165,6 +1165,16 @@ pub async fn grep(
 
     let (root, store_arc) = snapshot(state)?;
 
+    // v0.5.5: PageRank-based ranking. Same lazy-fetch shape
+    // `find_callers` uses — `symbol_ranks_lazy` hits the cache
+    // when warm and runs `compute_symbol_ranks` only on a generation
+    // miss. Reading `index_generation` here (before the file walk)
+    // upholds the Deepening §C TOCTOU invariant: cache lookups
+    // observe a generation that's no newer than what the file walk
+    // sees in subsequent `defs_in_file` reads.
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks: Option<Arc<SymbolRanks>> = symbol_ranks_lazy(state, &store_arc, generation)?;
+
     // Pull the workspace-relative paths the writer has committed.
     let files = store_arc.list_indexed_files().map_err(|e| {
         ProtocolError::new(
@@ -1258,22 +1268,34 @@ pub async fn grep(
                 // covers them — module-level statements, top-of-file
                 // comments) return `None` here, surfacing as nulls in
                 // the wire response.
-                let (enc_name, enc_kind, enc_def_range) =
+                let (enc_name, enc_kind, enc_def_range, rank_score) =
                     match pick_innermost_def(&defs, one_based_line) {
-                        Some(d) => (
-                            serde_json::Value::String(d.name.clone()),
-                            serde_json::Value::String(d.kind.as_wire_str().to_string()),
-                            serde_json::json!({
-                                "start_byte": d.start_byte,
-                                "end_byte":   d.end_byte,
-                                "start_line": d.start_line,
-                                "end_line":   d.end_line,
-                            }),
-                        ),
+                        Some(d) => {
+                            // v0.5.5: PageRank of the enclosing def.
+                            // File-scope matches and cold-start (no
+                            // ranks yet) collapse to 0.0 — same
+                            // convention as `find_callers.rank_score`.
+                            let r = match ranks.as_ref() {
+                                Some(r) => r.rank_for(d.sid),
+                                None => 0.0,
+                            };
+                            (
+                                serde_json::Value::String(d.name.clone()),
+                                serde_json::Value::String(d.kind.as_wire_str().to_string()),
+                                serde_json::json!({
+                                    "start_byte": d.start_byte,
+                                    "end_byte":   d.end_byte,
+                                    "start_line": d.start_line,
+                                    "end_line":   d.end_line,
+                                }),
+                                r,
+                            )
+                        }
                         None => (
                             serde_json::Value::Null,
                             serde_json::Value::Null,
                             serde_json::Value::Null,
+                            0.0,
                         ),
                     };
 
@@ -1294,6 +1316,10 @@ pub async fn grep(
                     "enclosing_qualified_name": enc_name,
                     "enclosing_kind":           enc_kind,
                     "enclosing_def_range":      enc_def_range,
+                    // v0.5.5: PageRank of the enclosing def. File-scope
+                    // matches surface 0.0; same convention as
+                    // `Index.FindCallers.callers[].rank_score`.
+                    "rank_score":               rank_score,
                 }));
                 file_recorded = true;
             } else {
@@ -1312,6 +1338,25 @@ pub async fn grep(
     }
 
     let truncated = truncated_hit_cap || total_pre_truncate > matches.len();
+
+    // v0.5.5: sort by enclosing-def PageRank, descending. Ties broken
+    // by `(file, start_byte)` for stable cross-call ordering — same
+    // shape `find_callers` uses. Matches without enclosing (file-scope
+    // or cold-start) carry `rank_score == 0.0` and fall to the bottom.
+    matches.sort_by(|a, b| {
+        let ra = a["rank_score"].as_f64().unwrap_or(0.0);
+        let rb = b["rank_score"].as_f64().unwrap_or(0.0);
+        // total_cmp handles NaN safely; partial_cmp would panic on
+        // NaN inputs (which shouldn't happen here, but defending in
+        // depth is cheap).
+        rb.total_cmp(&ra).then_with(|| {
+            let af = a["file"].as_str().unwrap_or("");
+            let bf = b["file"].as_str().unwrap_or("");
+            let ab = a["range"]["start_byte"].as_u64().unwrap_or(0);
+            let bb = b["range"]["start_byte"].as_u64().unwrap_or(0);
+            af.cmp(bf).then(ab.cmp(&bb))
+        })
+    });
 
     Ok(serde_json::json!({
         "matches":            matches,
@@ -2500,6 +2545,7 @@ mod tests {
             kind: SymbolKind::Function,
             file: "src/lib.rs".into(),
             fid: 1,
+            sid: 0,
             start_byte: sb,
             end_byte: sb + 50,
             start_line: sl,

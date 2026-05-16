@@ -506,5 +506,39 @@ async fn grep_finds_string_literals_across_workspace() -> anyhow::Result<()> {
         "file-scope match must report null enclosing_def_range: {c0:?}"
     );
 
+    // Case P (v0.5.5): rank_score field is present on every match
+    // and is a finite f64. Even on cold-start (PageRank not yet
+    // computed for tiny fixture workspaces), the convention is 0.0,
+    // not absent. The wire shape must stay consistent so agents
+    // can rely on the field always being readable.
+    let rank_shape =
+        round_trip(&mut stream, "30", "Index.Grep", json!({ "text": "pub fn" })).await?;
+    let p_matches = rank_shape["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        !p_matches.is_empty(),
+        "`pub fn` search must hit at least one indexed file: {rank_shape:?}"
+    );
+    for m in &p_matches {
+        let rs = m["rank_score"].as_f64();
+        assert!(
+            rs.is_some_and(|v| v.is_finite()),
+            "every match must carry a finite rank_score: {m:?}"
+        );
+    }
+    // And matches must be in non-increasing rank_score order — the
+    // post-scan sort is what guarantees agents see most-central hits
+    // first without re-ranking client-side.
+    for window in p_matches.windows(2) {
+        let prev = window[0]["rank_score"].as_f64().unwrap_or(0.0);
+        let next = window[1]["rank_score"].as_f64().unwrap_or(0.0);
+        assert!(
+            prev >= next,
+            "matches must be sorted by rank_score desc: prev={prev} next={next}, m={window:?}"
+        );
+    }
+
     Ok(())
 }
