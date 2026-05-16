@@ -1,0 +1,145 @@
+# Semantic-search evaluation corpus for `crates/rts-core` — dogfood v3.
+#
+# Companion to v1 (author-authored, hand-graded) and blind-v2
+# (outside-in, agent-coding-loop categories). v3 captures **actual
+# natural-language intents observed while dogfooding the daemon to
+# build features for this very repo** — the kind of vocabulary that
+# emerges from real use rather than retrospective synthesis.
+#
+# Workflow used to author this corpus:
+# 1. While building PRs #81, #82, #83, #84, #85, #86, the developer
+#    (using `rts-bench query find-symbol/read-symbol/outline` as
+#    primary navigation) made ~30 distinct lookups against rts-core
+#    over a single multi-hour session.
+# 2. The actual *intents* behind those lookups — phrased the way the
+#    developer would have asked them to a teammate — became the
+#    `text` field. The symbol names that resolved the lookup became
+#    `expected_top_k`.
+# 3. Three queries that crossed crate boundaries (e.g. resolving to
+#    `crates/rts-daemon/src/*`) were dropped, since this corpus is
+#    rts-core-scoped for consistency with v1/v2.
+#
+# Categories distinct from v1/v2:
+#   - Enumerate-by-family (4): "where are all the X for Y?"
+#   - Extension-point discovery (3): "how do I add a new <thing>?"
+#   - Cross-cutting horizontal slices (3): "where are doc comments
+#     handled across all languages?"
+#   - Source-of-truth lookups (2): "what's THE canonical table for X?"
+#   - Implementation-detail anchors (2): "find the recv timeout"
+#
+# Purpose: stress-test the ranker on query *shapes* the prior
+# corpora didn't cover. If the v1/v2 100% holds here, the baseline
+# generalises across multiple author-distribution patterns.
+
+version = 1
+
+# ─── Enumerate-by-family ───
+# Tests that the ranker handles "all the X for Y" patterns where the
+# user knows there's a family of related symbols and wants the full
+# set, not just one.
+
+[[query]]
+text = "where are all the per-language signature renderers?"
+expected_top_k = [
+    "render_rust",
+    "render_python",
+    "render_typescript",
+    "render_javascript",
+    "render_go",
+    "render_java",
+    "render_c",
+    "render_cpp",
+    "render_php",
+    "render_ruby",
+    "render_swift",
+]
+
+[[query]]
+text = "show me the per-language symbol extractors"
+expected_top_k = [
+    "extract_rust_symbols",
+    "extract_python_symbols",
+    "extract_javascript_symbols",
+    "extract_go_symbols",
+    "extract_java_symbols",
+    "extract_swift_symbols",
+    "extract_ruby_symbols",
+    "extract_php_symbols",
+    "extract_c_symbols",
+]
+
+[[query]]
+text = "what are all the doc-comment extractors?"
+expected_top_k = [
+    "extract_rust_doc_comments",
+    "extract_swift_doc_comments",
+    "extract_c_doc_comments",
+    "extract_ruby_doc_comments",
+    "extract_go_doc_comments",
+]
+
+[[query]]
+text = "find all the tree-sitter language loaders"
+expected_top_k = ["tree_sitter_language", "Language", "detect_language_from_extension", "detect_language_from_path"]
+
+# ─── Extension-point discovery ───
+# Tests that "how do I add a new <thing>?" questions land on the
+# right extension surfaces (enums, dispatch matches, registries).
+
+[[query]]
+text = "how do I add a new language?"
+expected_top_k = ["Language", "tree_sitter_language", "detect_language_from_extension", "file_extensions"]
+
+[[query]]
+text = "where do I register a new file extension?"
+expected_top_k = ["detect_language_from_extension", "file_extensions", "detect_language_from_path", "Language"]
+
+[[query]]
+text = "what's the extension table for languages?"
+expected_top_k = ["file_extensions", "detect_language_from_extension", "Language"]
+
+# ─── Cross-cutting horizontal slices ───
+# Tests that "where is X handled across the codebase?" questions
+# find the cross-cutting concern, not just one site.
+
+[[query]]
+text = "where are doc comments handled across all languages?"
+expected_top_k = [
+    "extract_rust_doc_comments",
+    "extract_swift_doc_comments",
+    "extract_c_doc_comments",
+    "extract_ruby_doc_comments",
+    "extract_go_doc_comments",
+]
+
+[[query]]
+text = "how does symbol visibility get determined?"
+expected_top_k = ["visibility", "Symbol", "extract_rust_symbols"]
+
+[[query]]
+text = "what handles tree-sitter parser construction?"
+expected_top_k = ["Parser", "SyntaxTree", "tree_sitter_language"]
+
+# ─── Source-of-truth lookups ───
+# Tests that THE canonical table or registry ranks #1, not a usage
+# site that happens to mention the concept.
+
+[[query]]
+text = "what's the canonical Language enum definition?"
+expected_top_k = ["Language", "name", "file_extensions"]
+
+[[query]]
+text = "where is the highlights query table?"
+expected_top_k = ["highlights_query", "supports_highlights", "Language"]
+
+# ─── Implementation-detail anchors ───
+# Tests recall on specific known-by-behavior code that the user can
+# describe in plain English but not name precisely.
+
+[[query]]
+text = "what struct represents an extracted symbol?"
+expected_top_k = ["Symbol", "SymbolDefinition", "FileInfo"]
+
+[[query]]
+text = "where does C# get its grammar?"
+expected_top_k = ["Language", "tree_sitter_language"]

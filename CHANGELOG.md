@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Semantic eval — dogfood-v3 corpus surfaces the real generalization gap
+
+Closes the v0.5.0-noted "out of scope" follow-up: *"Mining queries from real Claude Code transcripts (the most rigorous corpus addition)."* True transcript mining isn't possible yet because rts-mcp isn't wired into Claude Code sessions today — but the next-best thing is: **mine the developer's own dogfood lookups while building features against this very repo**, treating those natural-language intents as the corpus.
+
+#### What's in the corpus
+
+`corpus/semantic-eval-rts-core-dogfood-v3.toml` — 14 queries authored from the developer's actual lookups while building PRs #81 / #82 / #83 / #84 / #85 / #86. Categories deliberately distinct from v1/v2:
+
+- **Enumerate-by-family** (4): _"where are all the per-language signature renderers?"_ → expects `render_rust`, `render_python`, ... family
+- **Extension-point discovery** (3): _"how do I add a new language?"_ → expects `Language` enum + `tree_sitter_language` + `detect_language_from_extension`
+- **Cross-cutting horizontal slices** (3): _"where are doc comments handled across all languages?"_ → expects the family of `extract_*_doc_comments`
+- **Source-of-truth lookups** (2): _"what's the canonical Language enum definition?"_ → expects `Language` ranked #1
+- **Implementation-detail anchors** (2): _"what struct represents an extracted symbol?"_ → expects `Symbol`
+
+#### The honest result: **71.4% answerable coverage** (10/14)
+
+| Corpus | Answerable coverage | MRR | Precision@10 |
+|---|---:|---:|---:|
+| v1 audited (13q) | 100% | 0.387 | 0.215 |
+| blind-v2 (15q) | 100% | 0.273 | n/a |
+| Combined v1+v2 (28q) | 100% (20/20) | - | - |
+| **dogfood-v3 (14q)** | **71.4% (10/14)** | **0.512** | **0.164** |
+
+The v1+v2 100% was meaningfully corpus-overfit. v3 exposes three concrete ranker gaps:
+
+1. **Token-frequency noise**: common English nouns (`all`, `structs`, `enums`, `new`) appearing in doc comments rank above real symbol names.
+2. **Plural ↔ singular stems for family-words**: queries asking about "renderers" / "extractors" / "loaders" don't reliably hit `render_*` / `extract_*` families.
+3. **Enumerate-by-family weak spot**: the ranker is tuned to surface a single best match; family queries systematically underperform.
+
+#### What this corpus is and isn't
+
+- ✅ **Is**: a falsifier for the "ranker generalises across query-shape distributions" hypothesis. The 100%-on-v1+v2 number does not generalise; v3 shows the honest ceiling on agent-natural query shapes.
+- ✅ **Is**: an artifact of *real use* — every query has a concrete provenance in a developer lookup that happened during this session's work.
+- ❌ **Is not**: a CI guard yet. Ranker improvements are filed for follow-up.
+
 ### `rts-bench query` — cold-mount UX: 30s recv timeout + diagnostic error message
 
 The `rts-bench query` (one-shot CLI dogfooding path) used a hardcoded 10s timeout when reading MCP responses and surfaced timeouts as the bare message `Error: timeout reading MCP response`. Three pain points met in one error:
