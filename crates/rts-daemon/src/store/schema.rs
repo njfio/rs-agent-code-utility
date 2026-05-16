@@ -88,6 +88,47 @@ pub const META: TableDefinition<&str, &[u8]> = TableDefinition::new("meta");
 /// daemons. Doc text only populates as files are re-indexed.
 pub const SID_DOCS: MultimapTableDefinition<u32, &[u8]> = MultimapTableDefinition::new("sid_docs");
 
+// ---------- v0.5.6 deferred-ref tables (SCHEMA_VERSION=3) ----------
+//
+// Closes the §F1 silent-drop bug: pre-v0.5.6, `commit_batch`'s Pass 2
+// dropped any ref whose callee name wasn't in NAME_TO_SID yet. That's
+// correct for true external symbols (stdlib `Vec`, `println!`, …) but
+// wrong for workspace symbols whose def happens to live in a *future*
+// commit batch — those refs went missing forever, silently corrupting
+// `find_callers` / `impact_of`. v0.5.5 #100 patched the cold-walk
+// path by holding off flushes until the walk completed; these tables
+// close the live-edit path (and the long-tail of multi-batch
+// boundaries — large workspaces past BATCH_SIZE_BUDGET, save bursts
+// >150ms apart, etc.).
+
+/// Multimap `callee_name (&str)` → postcard(`RefSite`). When a ref's
+/// callee name isn't yet interned in NAME_TO_SID at commit time,
+/// `commit_batch` Pass 2 defers it here instead of dropping. A
+/// subsequent commit that interns this name will re-resolve the
+/// pending entries (Pass 3) into REFS / FID_REFS / SID_REFS_OUT and
+/// delete them from this table.
+///
+/// Keyed by name rather than by callee_sid because we don't know the
+/// sid yet — that's the whole reason the ref is unresolved. Values
+/// share the on-disk shape of resolved refs (`RefSite` blob) so the
+/// Pass-3 materialization is a straight insert without re-encoding.
+///
+/// External (truly never-defined-in-workspace) symbols accumulate
+/// here permanently — stdlib `Vec`, `String`, `println!`, etc. A
+/// per-name cap is filed as v0.5.7 follow-up; for v0.5.6 we accept
+/// the bloat (~30 bytes per entry × ~50 stdlib names × N files = a
+/// few MB on disk for a typical workspace).
+pub const UNRESOLVED_REFS: MultimapTableDefinition<&str, &[u8]> =
+    MultimapTableDefinition::new("unresolved_refs");
+
+/// Multimap `fid (u32)` → set of `callee_name (&str)`s this file has
+/// unresolved refs to. Inverse index for UNRESOLVED_REFS used by
+/// `drop_file_entries` to cleanly remove a file's pending unresolved
+/// refs without scanning the full UNRESOLVED_REFS table. Symmetric
+/// to FID_REFS's role for the resolved REFS table.
+pub const FID_UNRESOLVED: MultimapTableDefinition<u32, &str> =
+    MultimapTableDefinition::new("fid_unresolved");
+
 // ---------- Value types ----------
 
 /// Whether the parser succeeded, partially succeeded, or errored on the file.
