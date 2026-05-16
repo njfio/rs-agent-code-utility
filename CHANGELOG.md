@@ -68,6 +68,36 @@ daemon-side progress.
 #### Out of scope (filed for follow-up)
 
 The `tools_call` retry loop's INDEX_NOT_READY budget (`30 retries × 120ms = ~3.6s`) still gives up faster than the recv timeout under some pathological patterns. A unified total-budget cap that handles both timeout-during-recv and INDEX_NOT_READY-response cases is the next iteration; the present fix removes the agent-hostile silent failure mode.
+### `rts-bench query` — workspace auto-detection (no more `--workspace .` every time)
+
+Pre-v0.5.3: every `rts-bench query` invocation required `--workspace PATH`, even when the user was already inside a project tree. The flag was boilerplate that interrupted muscle memory — `rts-bench query find-symbol --name foo` was actually `rts-bench query find-symbol --workspace . --name foo`.
+
+This PR makes `--workspace` optional. When omitted, `default_workspace` walks upward from `$PWD` looking for the first project-root marker:
+
+```
+Cargo.toml         (Rust)
+package.json       (JS / TS)
+go.mod             (Go)
+pyproject.toml     (Python — modern)
+setup.py           (Python — legacy)
+pom.xml            (Java / Maven)
+build.gradle       (Java / Kotlin — Gradle Groovy DSL)
+build.gradle.kts   (Kotlin — Gradle KTS)
+Gemfile            (Ruby)
+composer.json      (PHP)
+Package.swift      (Swift)
+.git               (universal VCS fallback)
+```
+
+First-match-wins per directory level, so a nested `Cargo.toml` in a member crate beats the workspace `Cargo.toml` at the repo root — matching `cargo build`'s own resolution shape. When no marker is found anywhere up to `/`, falls back to `$PWD` (strictly additive — pre-v0.5.3 behavior preserved).
+
+#### Test coverage
+
++4 unit tests in `crates/rts-bench/src/main.rs` (`detect_walks_upward_to_cargo_toml`, `detect_prefers_nearest_marker`, `detect_falls_back_to_start_when_no_marker`, `detect_git_fallback`).
+
+#### Out of scope (filed for follow-up)
+
+The `resolve_bin` helper (which locates `rts-mcp` / `rts-daemon` binaries) still requires `$PWD` to be the cargo build root. Running `rts-bench query` from a deep subdirectory works for the `--workspace` flag but fails on binary resolution unless `RTS_MCP_BIN` and `RTS_DAEMON_BIN` are exported. A symmetric "walk upward to find `target/{release,debug}/`" fix is the obvious next iteration.
 
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 

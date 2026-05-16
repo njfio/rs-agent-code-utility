@@ -604,12 +604,61 @@ async fn run_query(cmd: QueryCmd) -> Result<()> {
 /// Lower the typed `QueryCmd` into `(workspace, tool_name, args_json)`.
 /// Keeps the network shape colocated with the CLI surface for easy
 /// review when adding new tools.
+/// Resolve the workspace path for a `query` invocation.
+///
+/// - When `--workspace PATH` is passed: use it verbatim.
+/// - Otherwise: walk upward from `start` looking for any of the
+///   marker files below; first hit wins. This lets agents run
+///   `rts-bench query find-symbol --name foo` from anywhere
+///   inside a project tree without re-typing the workspace path.
+///
+/// Markers cover all 12 in-tree languages plus `.git` as a
+/// universal fallback. `Cargo.toml` is checked first since
+/// `rts-bench` is itself a Rust binary and Rust workspaces are
+/// the most common dogfood target.
+///
+/// If no marker is found, falls back to `start` itself (matches the
+/// pre-v0.5.3 behavior, so this change is strictly additive).
+///
+/// `start` is `$PWD` in production; tests pass a tempdir.
+fn detect_workspace_from(start: &std::path::Path) -> PathBuf {
+    // Ordered by frequency / specificity; first-match wins per
+    // directory level. `.git` is last so a Cargo.toml inside a
+    // git repo wins for its sub-crate over the repo root.
+    const MARKERS: &[&str] = &[
+        "Cargo.toml",       // Rust
+        "package.json",     // JS / TS
+        "go.mod",           // Go
+        "pyproject.toml",   // Python (modern)
+        "setup.py",         // Python (legacy)
+        "pom.xml",          // Java / Maven
+        "build.gradle",     // Java / Kotlin (Gradle Groovy DSL)
+        "build.gradle.kts", // Kotlin (Gradle KTS)
+        "Gemfile",          // Ruby
+        "composer.json",    // PHP
+        "Package.swift",    // Swift
+        ".git",             // generic VCS fallback
+    ];
+    let mut dir: Option<&std::path::Path> = Some(start);
+    while let Some(d) = dir {
+        for marker in MARKERS {
+            if d.join(marker).exists() {
+                return d.to_path_buf();
+            }
+        }
+        dir = d.parent();
+    }
+    // No marker anywhere up to /: just use the start path.
+    start.to_path_buf()
+}
+
 fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Value)> {
     fn default_workspace(ws: &Option<PathBuf>) -> Result<PathBuf> {
-        match ws {
-            Some(p) => Ok(p.clone()),
-            None => std::env::current_dir().context("$PWD lookup"),
+        if let Some(p) = ws {
+            return Ok(p.clone());
         }
+        let cwd = std::env::current_dir().context("$PWD lookup")?;
+        Ok(detect_workspace_from(&cwd))
     }
     fn opt_str(
         o: &Option<String>,
@@ -1299,5 +1348,83 @@ fn git_short_sha() -> String {
     match output {
         Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         _ => "nogit".into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Auto-detect should find the workspace root even from a deep
+    /// subdirectory, matching the marker (Cargo.toml here).
+    #[test]
+    fn detect_walks_upward_to_cargo_toml() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        std::fs::write(root.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
+        let deep = root.join("crates").join("a").join("src");
+        std::fs::create_dir_all(&deep).unwrap();
+
+        let resolved = detect_workspace_from(&deep);
+        // Canonicalise both sides — tempdir on macOS may give
+        // /var/... while canonicalize returns /private/var/...
+        assert_eq!(
+            resolved.canonicalize().unwrap(),
+            root.canonicalize().unwrap(),
+            "should walk up to the Cargo.toml dir",
+        );
+    }
+
+    /// First-marker-wins: a nested Cargo.toml beats the outer one.
+    /// Matches Cargo's own behavior — `cargo build` inside a member
+    /// crate operates on that member, not the workspace root.
+    #[test]
+    fn detect_prefers_nearest_marker() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let outer = tmp.path();
+        std::fs::write(outer.join("Cargo.toml"), "[workspace]\n").unwrap();
+        let inner = outer.join("crates").join("inner");
+        std::fs::create_dir_all(&inner).unwrap();
+        std::fs::write(inner.join("Cargo.toml"), "[package]\nname = \"inner\"\n").unwrap();
+        let deep = inner.join("src");
+        std::fs::create_dir_all(&deep).unwrap();
+
+        let resolved = detect_workspace_from(&deep);
+        assert_eq!(
+            resolved.canonicalize().unwrap(),
+            inner.canonicalize().unwrap(),
+            "nearest Cargo.toml wins over outer workspace root",
+        );
+    }
+
+    /// When no marker exists anywhere, fall back to the start path
+    /// (matches pre-v0.5.3 behavior — strictly additive change).
+    #[test]
+    fn detect_falls_back_to_start_when_no_marker() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        // No marker files; just a bare directory.
+        let resolved = detect_workspace_from(tmp.path());
+        assert_eq!(
+            resolved.canonicalize().unwrap(),
+            tmp.path().canonicalize().unwrap(),
+        );
+    }
+
+    /// `.git` is the universal fallback when no language-specific
+    /// marker is present (e.g. checkout of a polyglot repo whose
+    /// roots aren't recognised by their per-language marker).
+    #[test]
+    fn detect_git_fallback() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        std::fs::create_dir(root.join(".git")).unwrap();
+        let deep = root.join("nested").join("dir");
+        std::fs::create_dir_all(&deep).unwrap();
+
+        let resolved = detect_workspace_from(&deep);
+        assert_eq!(
+            resolved.canonicalize().unwrap(),
+            root.canonicalize().unwrap(),
+        );
     }
 }
