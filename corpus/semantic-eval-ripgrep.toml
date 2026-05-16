@@ -1,0 +1,83 @@
+# Semantic-search evaluation corpus for `BurntSushi/ripgrep` (pinned to 14.1.1).
+#
+# External-repo corpus v0.5.4. ripgrep is the canonical Rust
+# "grep-but-better" CLI — well-architected, ~30k LOC, and
+# meta-relevant because we just shipped `Index.Grep` (PR #90).
+#
+# Repo: https://github.com/BurntSushi/ripgrep
+# Pin:  14.1.1
+# LOC:  ~50k Rust across 9 sub-crates (matcher, searcher, regex, pcre2,
+#       printer, ignore, globset, cli, core)
+# Why:  Multi-crate workspace tests the daemon under realistic scale.
+#       Idiomatic Rust with traits (Matcher, Captures, etc) +
+#       extensive use of builder patterns — exercises trait_item
+#       extraction (added in this PR) and the SearcherBuilder /
+#       PrinterBuilder family-discovery query shape.
+
+version = 1
+
+# ─── Core entry points ───
+
+[[query]]
+text = "what's the main searcher type?"
+expected_top_k = ["Searcher", "SearcherBuilder"]
+
+[[query]]
+text = "how do I configure a search?"
+expected_top_k = ["SearcherBuilder", "Searcher"]
+
+[[query]]
+text = "what trait describes a pattern matcher?"
+expected_top_k = ["Matcher", "Captures", "Match"]
+
+# ─── Family-discovery (multi-symbol) ───
+
+[[query]]
+text = "where are all the matcher implementations?"
+expected_top_k = ["RegexMatcher", "RegexMatcherBuilder", "Matcher"]
+
+[[query]]
+text = "what are all the printers?"
+expected_top_k = ["Printer", "Standard", "JSON", "Summary", "PathPrinter"]
+
+[[query]]
+text = "show me the builder types"
+expected_top_k = ["SearcherBuilder", "RegexMatcherBuilder", "StandardBuilder", "JSONBuilder", "PathPrinterBuilder"]
+
+# ─── Type-level lookups ───
+
+[[query]]
+text = "how does binary file detection work?"
+expected_top_k = ["BinaryDetection"]
+
+[[query]]
+text = "where is the line-terminator type?"
+expected_top_k = ["LineTerminator"]
+
+[[query]]
+text = "what controls hyperlink output?"
+expected_top_k = ["HyperlinkConfig", "HyperlinkFormat", "HyperlinkPath"]
+
+# ─── Behavior-by-description ───
+
+[[query]]
+text = "how does ripgrep handle gitignore files?"
+expected_top_k = ["Ignore", "IgnoreMatch", "Gitignore", "IgnoreBuilder"]
+
+[[query]]
+text = "what handles glob patterns?"
+expected_top_k = ["Glob", "GlobMatcher", "GlobBuilder", "GlobSet"]
+
+[[query]]
+text = "where is path traversal logic?"
+expected_top_k = ["WalkBuilder", "Walk", "WalkParallel"]
+
+# ─── Cross-cutting / lower-level ───
+
+[[query]]
+text = "what are the sink traits for receiving matches?"
+expected_top_k = ["Sink", "SinkMatch", "SinkContext", "SinkFinish"]
+
+[[query]]
+text = "how is search context (before/after lines) handled?"
+expected_top_k = ["SinkContext", "ContextKind", "BeforeContext", "AfterContext"]

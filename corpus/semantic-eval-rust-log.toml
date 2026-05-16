@@ -1,0 +1,91 @@
+# Semantic-search evaluation corpus for `rust-lang/log` (pinned to 0.4.22).
+#
+# External-repo corpus v0.5.4. Companion to the rts-core corpora
+# (v1 / blind-v2 / dogfood-v3); first cross-codebase falsifier
+# the ranker has ever seen.
+#
+# Repo: https://github.com/rust-lang/log
+# Pin:  0.4.22
+# LOC:  ~5.7k Rust
+# Why:  Universal Rust logging facade. 12-year-old, well-documented,
+#       a trait-centric design that exercises the v0.5.4
+#       trait_item extraction added during this corpus's authoring.
+#
+# Authoring protocol:
+# 1. Read the repo's README + lib.rs module-doc to understand the
+#    library's mental model.
+# 2. Run `outline_workspace` against the checkout to confirm what
+#    symbols actually exist.
+# 3. Author natural-language queries the way a new agent landing
+#    on this repo would phrase them. NO peeking at internal
+#    naming choices for the queries themselves — phrase them as
+#    "what does an agent who just heard of this library type?"
+# 4. For each query, verify `expected_top_k` symbols actually
+#    exist via `find_symbol`.
+#
+# Distribution of query shapes:
+#   - Core API discovery (what's the public surface?)
+#   - Extension-point discovery (how do I add a logger?)
+#   - Type-level lookups (what's the Level enum?)
+#   - Cross-cutting concerns (macros, error types)
+#   - Behavior-by-description ("filter messages by severity")
+
+version = 1
+
+# ─── Core API discovery ───
+
+[[query]]
+text = "what's the main trait a logger implements?"
+expected_top_k = ["Log", "Metadata"]
+
+[[query]]
+text = "how do I log a message?"
+expected_top_k = ["log", "info", "warn", "error", "debug", "trace"]
+
+[[query]]
+text = "where does the global logger get registered?"
+expected_top_k = ["set_logger", "set_boxed_logger", "set_max_level", "logger"]
+
+# ─── Extension-point discovery ───
+
+[[query]]
+text = "how do I implement a custom logger?"
+expected_top_k = ["Log", "Metadata", "Record"]
+
+[[query]]
+text = "what struct represents a log record?"
+expected_top_k = ["Record", "RecordBuilder"]
+
+[[query]]
+text = "what represents log metadata?"
+expected_top_k = ["Metadata", "MetadataBuilder"]
+
+# ─── Type-level lookups ───
+
+[[query]]
+text = "what's the log level enum?"
+expected_top_k = ["Level", "LevelFilter"]
+
+[[query]]
+text = "how do I filter by severity?"
+expected_top_k = ["LevelFilter", "max_level", "set_max_level"]
+
+# ─── Cross-cutting concerns ───
+
+[[query]]
+text = "what error types exist?"
+expected_top_k = ["SetLoggerError", "ParseLevelError"]
+
+[[query]]
+text = "where are the structured key-value APIs?"
+expected_top_k = ["Key", "Value", "KeyValues", "Source"]
+
+# ─── Behavior-by-description ───
+
+[[query]]
+text = "how do I check if a level is enabled?"
+expected_top_k = ["enabled", "Log", "Metadata"]
+
+[[query]]
+text = "what flushes pending log output?"
+expected_top_k = ["flush", "Log"]

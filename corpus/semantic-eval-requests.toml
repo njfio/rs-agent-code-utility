@@ -1,0 +1,79 @@
+# Semantic-search evaluation corpus for `psf/requests` (pinned to v2.32.3).
+#
+# External-repo corpus v0.5.4. Tests the daemon's Python extractor on
+# the most-installed Python library ever — every Python developer
+# has used `requests`, so the queries reflect actual Python-developer
+# mental models.
+#
+# Repo: https://github.com/psf/requests
+# Pin:  v2.32.3
+# LOC:  ~11k Python
+# Why:  Tests Python extractor (class_definition, function_definition,
+#       method_definition). Different naming conventions (snake_case,
+#       PascalCase classes) round out the cross-language eval.
+
+version = 1
+
+# ─── Core entry points ───
+
+[[query]]
+text = "what's the main session class?"
+expected_top_k = ["Session"]
+
+[[query]]
+text = "what does a response look like?"
+expected_top_k = ["Response"]
+
+[[query]]
+text = "how do I make an HTTP request?"
+expected_top_k = ["request", "get", "post", "Session"]
+
+# ─── Family-discovery ───
+
+[[query]]
+text = "show me all the HTTP method helpers"
+expected_top_k = ["get", "post", "put", "delete", "head", "patch", "options"]
+
+[[query]]
+text = "what are all the exception types?"
+expected_top_k = ["RequestException", "ConnectionError", "Timeout", "TooManyRedirects", "HTTPError"]
+
+# ─── Authentication ───
+
+[[query]]
+text = "how does authentication work?"
+expected_top_k = ["AuthBase", "HTTPBasicAuth", "HTTPDigestAuth", "HTTPProxyAuth"]
+
+[[query]]
+text = "what's the base class for auth handlers?"
+expected_top_k = ["AuthBase"]
+
+# ─── Cookies + adapters ───
+
+[[query]]
+text = "where is cookie handling?"
+expected_top_k = ["RequestsCookieJar", "cookiejar_from_dict", "extract_cookies_to_jar"]
+
+[[query]]
+text = "what's the transport adapter system?"
+expected_top_k = ["HTTPAdapter", "BaseAdapter"]
+
+# ─── Behavior-by-description ───
+
+[[query]]
+text = "how does requests follow redirects?"
+expected_top_k = ["resolve_redirects", "rebuild_auth", "rebuild_method", "Session"]
+
+[[query]]
+text = "where does SSL verification happen?"
+expected_top_k = ["HTTPAdapter", "ssl_context", "verify"]
+
+[[query]]
+text = "what handles streaming response bodies?"
+expected_top_k = ["iter_content", "iter_lines", "Response"]
+
+# ─── Cross-cutting ───
+
+[[query]]
+text = "how does requests handle encoding detection?"
+expected_top_k = ["get_encoding_from_headers", "get_encodings_from_content", "apparent_encoding"]
