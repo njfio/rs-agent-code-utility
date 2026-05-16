@@ -252,3 +252,232 @@ async fn mcp_round_trip_against_real_daemon() -> Result<()> {
     let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
     Ok(())
 }
+
+/// Compute the per-workspace socket-PID-file path the way
+/// `rts_daemon::socket::socket_path_for_workspace` + the lifecycle
+/// module do. Mirrors the production hash so the test kills the
+/// right daemon by reading the lockfile.
+fn ws_pid_path(
+    daemon_runtime_dir: &std::path::Path,
+    canonical_workspace: &std::path::Path,
+) -> PathBuf {
+    let bytes = canonical_workspace.as_os_str().as_encoded_bytes();
+    let hash = blake3::hash(bytes);
+    let short = hash.to_hex();
+    let short16 = &short.as_str()[..16];
+    daemon_runtime_dir.join(format!("ws-{short16}.sock.pid"))
+}
+
+/// v0.5.5+: when the auto-spawned daemon dies mid-session, the next
+/// tool call should transparently reconnect via auto-spawn and
+/// succeed. Pre-fix the connection was wedged and every subsequent
+/// call returned `Broken pipe`. Surfaced by real Claude Code dogfood
+/// — see PR #94 follow-up.
+///
+/// Test shape:
+/// 1. Spawn rts-mcp (which auto-spawns rts-daemon).
+/// 2. Do one tool call to verify both are alive.
+/// 3. Find the daemon's PID via the per-workspace lockfile, kill it.
+/// 4. Do another tool call — must succeed (reconnect kicks in,
+///    auto-spawn brings up a fresh daemon, Mount sentinel resets,
+///    retry succeeds).
+#[tokio::test(flavor = "current_thread")]
+async fn mcp_reconnects_after_daemon_death() -> Result<()> {
+    let daemon_bin = rts_daemon_bin();
+    assert!(daemon_bin.is_file(), "rts-daemon must be built first");
+
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    std::fs::write(
+        workspace.path().join("lib.rs"),
+        "pub fn reconnect_smoke() {}\n",
+    )?;
+    let canonical_workspace = workspace.path().canonicalize()?;
+
+    // Daemon runtime dir on macOS = $HOME/Library/Caches/rts; on
+    // Linux = $XDG_RUNTIME_DIR/rts.
+    let daemon_runtime_dir = if cfg!(target_os = "macos") {
+        home_dir.path().join("Library").join("Caches").join("rts")
+    } else {
+        runtime_dir.path().join("rts")
+    };
+
+    let mut cmd = tokio::process::Command::new(rts_mcp_bin());
+    cmd.arg("--workspace")
+        .arg(workspace.path())
+        .env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RTS_LOG", "warn")
+        .env("RTS_DAEMON_BIN", &daemon_bin)
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true);
+    let mut child = cmd.spawn().context("spawn rts-mcp")?;
+    let mut stdin = child.stdin.take().expect("piped stdin");
+    let mut reader = BufReader::new(child.stdout.take().expect("piped stdout"));
+
+    // MCP handshake.
+    send_request(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": { "name": "reconnect-itest", "version": "0.0.0" }
+            }
+        }),
+    )
+    .await?;
+    let _ = read_one_response(&mut reader).await?;
+    send_request(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized",
+            "params": {}
+        }),
+    )
+    .await?;
+
+    // First call: triggers Mount + lazy-spawn the daemon. Poll until
+    // the writer commits, so we know the daemon is fully up.
+    let pid_path = ws_pid_path(&daemon_runtime_dir, &canonical_workspace);
+    let mut next_id: u64 = 10;
+    let mut first_call_ok = false;
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while std::time::Instant::now() < deadline {
+        next_id += 1;
+        send_request(
+            &mut stdin,
+            &json!({
+                "jsonrpc": "2.0",
+                "id": next_id,
+                "method": "tools/call",
+                "params": {
+                    "name": "find_symbol",
+                    "arguments": { "name": "reconnect_smoke" }
+                }
+            }),
+        )
+        .await?;
+        let resp = read_one_response(&mut reader).await?;
+        let body_str = resp["result"]["content"][0]["text"].as_str().unwrap_or("");
+        let parsed: Value = serde_json::from_str(body_str).unwrap_or(Value::Null);
+        if parsed["matches"]
+            .as_array()
+            .map(|a| !a.is_empty())
+            .unwrap_or(false)
+        {
+            first_call_ok = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(
+        first_call_ok,
+        "first tool call never succeeded; daemon may not have started"
+    );
+
+    // Read the daemon PID from the per-workspace lockfile + kill it.
+    assert!(
+        pid_path.exists(),
+        "daemon lockfile missing at {}",
+        pid_path.display()
+    );
+    let pid_bytes = std::fs::read(&pid_path)?;
+    // The lockfile shape (rts-daemon::lifecycle::write_pid_to_file)
+    // is `<pid>\n<start_seconds>\n`. Parse only the first line.
+    let pid_text = std::str::from_utf8(&pid_bytes)?;
+    let pid_line = pid_text
+        .lines()
+        .next()
+        .ok_or_else(|| anyhow!("empty PID lockfile"))?
+        .trim();
+    let pid: u32 = pid_line.parse().context("parse daemon PID from lockfile")?;
+    // SIGKILL via the `kill` binary so the test crate doesn't need
+    // `unsafe` (this crate has `#![deny(unsafe_code)]`). Real-world
+    // daemon crashes / OOM kills produce the same broken-pipe shape;
+    // the choice between SIGKILL and SIGTERM doesn't matter for what
+    // we're testing (rts-mcp sees a closed socket either way).
+    let kill_status = std::process::Command::new("kill")
+        .arg("-9")
+        .arg(pid.to_string())
+        .status()
+        .context("invoke kill")?;
+    assert!(
+        kill_status.success(),
+        "kill -9 {pid} failed: {kill_status:?}"
+    );
+
+    // Wait briefly for the daemon process to actually exit + the
+    // socket file to disappear / become stale.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // Second call: this is the test. The DaemonClient inside rts-mcp
+    // is still holding a (now dead) socket. The first write or read
+    // will fail with `Broken pipe` / `daemon closed connection`. The
+    // retry-on-disconnect loop in `RtsServer::call_daemon` must
+    // detect that, call `DaemonClient::reconnect()` (which auto-
+    // spawns a fresh daemon on the per-workspace socket), reset the
+    // Mount sentinel, and retry the call.
+    //
+    // We poll because the fresh daemon needs to walk + commit before
+    // find_symbol returns matches — same shape as the first call's
+    // poll loop above.
+    next_id += 100;
+    let mut second_call_ok = false;
+    let deadline2 = std::time::Instant::now() + Duration::from_secs(20);
+    while std::time::Instant::now() < deadline2 {
+        next_id += 1;
+        send_request(
+            &mut stdin,
+            &json!({
+                "jsonrpc": "2.0",
+                "id": next_id,
+                "method": "tools/call",
+                "params": {
+                    "name": "find_symbol",
+                    "arguments": { "name": "reconnect_smoke" }
+                }
+            }),
+        )
+        .await?;
+        let resp = read_one_response(&mut reader).await?;
+        // After a successful reconnect, this should NOT be isError.
+        // (A broken-pipe-without-reconnect would surface as
+        // isError=true with INTERNAL_ERROR.)
+        if resp["result"]["isError"] == serde_json::Value::Bool(false) {
+            let body_str = resp["result"]["content"][0]["text"].as_str().unwrap_or("");
+            let parsed: Value = serde_json::from_str(body_str).unwrap_or(Value::Null);
+            if parsed["matches"]
+                .as_array()
+                .map(|a| !a.is_empty())
+                .unwrap_or(false)
+            {
+                second_call_ok = true;
+                break;
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+    assert!(
+        second_call_ok,
+        "post-kill tool call never recovered — reconnect path didn't fire"
+    );
+
+    drop(stdin);
+    let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
+    Ok(())
+}

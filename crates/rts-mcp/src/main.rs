@@ -104,7 +104,11 @@ async fn main() -> Result<()> {
     let stream = socket::connect_with_auto_spawn(&daemon_bin, Some(&workspace))
         .await
         .context("connect to rts-daemon")?;
-    let daemon = DaemonClient::new(stream);
+    // v0.5.5+: pass daemon_bin + workspace to DaemonClient so it can
+    // re-auto-spawn if the socket dies mid-session (daemon crash,
+    // SIGTERM, upgrade). Without this state the client couldn't
+    // re-resolve the binary path or route to the per-workspace socket.
+    let daemon = DaemonClient::new(stream, daemon_bin.clone(), workspace.clone());
 
     // v0.4: Workspace.Mount is now deferred — see `RtsServer::call_daemon`.
     // The first agent tool call (find_symbol / outline_workspace / etc.)
