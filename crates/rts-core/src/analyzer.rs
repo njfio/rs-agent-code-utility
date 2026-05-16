@@ -1534,15 +1534,15 @@ impl CodebaseAnalyzer {
     fn extract_java_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full Java symbol extraction
-        // For now, extract basic class and method symbols
+        // Javadoc is `/** ... */` — reuse extract_c_doc_comments.
         let classes = tree.find_nodes_by_kind("class_declaration");
         for class in classes {
             if let Some(name_node) = class.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_c_doc_comments(content, class.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "class".to_string(),
@@ -1550,8 +1550,8 @@ impl CodebaseAnalyzer {
                         start_column: class.start_position().column,
                         end_line: class.end_position().row + 1,
                         end_column: class.end_position().column,
-                        visibility: "public".to_string(), // Default for Java
-                        documentation: None,
+                        visibility: "public".to_string(),
+                        documentation: docs,
                     });
                 }
             }
@@ -1561,6 +1561,7 @@ impl CodebaseAnalyzer {
         for method in methods {
             if let Some(name_node) = method.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_c_doc_comments(content, method.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "method".to_string(),
@@ -1568,8 +1569,8 @@ impl CodebaseAnalyzer {
                         start_column: method.start_position().column,
                         end_line: method.end_position().row + 1,
                         end_column: method.end_position().column,
-                        visibility: "public".to_string(), // Default for Java
-                        documentation: None,
+                        visibility: "public".to_string(),
+                        documentation: docs,
                     });
                 }
             }
@@ -1582,15 +1583,14 @@ impl CodebaseAnalyzer {
     fn extract_ruby_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full Ruby symbol extraction
-        // For now, extract basic class and method symbols
         let classes = tree.find_nodes_by_kind("class");
         for class in classes {
             if let Some(name_node) = class.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_ruby_doc_comments(content, class.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "class".to_string(),
@@ -1598,8 +1598,8 @@ impl CodebaseAnalyzer {
                         start_column: class.start_position().column,
                         end_line: class.end_position().row + 1,
                         end_column: class.end_position().column,
-                        visibility: "public".to_string(), // Ruby classes are public
-                        documentation: None,
+                        visibility: "public".to_string(),
+                        documentation: docs,
                     });
                 }
             }
@@ -1609,6 +1609,7 @@ impl CodebaseAnalyzer {
         for method in methods {
             if let Some(name_node) = method.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_ruby_doc_comments(content, method.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "method".to_string(),
@@ -1616,8 +1617,8 @@ impl CodebaseAnalyzer {
                         start_column: method.start_position().column,
                         end_line: method.end_position().row + 1,
                         end_column: method.end_position().column,
-                        visibility: "public".to_string(), // Ruby methods are public by default
-                        documentation: None,
+                        visibility: "public".to_string(),
+                        documentation: docs,
                     });
                 }
             }
@@ -1906,6 +1907,39 @@ impl CodebaseAnalyzer {
     //     Ok(())
     // }
 
+    /// Extract Ruby-style doc comments preceding an item start line.
+    ///
+    /// Ruby convention: contiguous `#` line comments immediately
+    /// above the declaration, similar to Go's `//` shape but with
+    /// the `#` lead character. Honors shebang lines (`#!`) by
+    /// stopping early — those are not documentation.
+    fn extract_ruby_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
+        let lines: Vec<&str> = content.lines().collect();
+        if start_row == 0 {
+            return None;
+        }
+        let mut docs = Vec::new();
+        let mut line_idx = start_row as isize - 1;
+        while line_idx >= 0 {
+            let line = lines[line_idx as usize].trim();
+            if let Some(rest) = line.strip_prefix('#') {
+                if rest.starts_with('!') {
+                    break;
+                }
+                docs.push(rest.trim());
+                line_idx -= 1;
+            } else {
+                break;
+            }
+        }
+        if docs.is_empty() {
+            None
+        } else {
+            docs.reverse();
+            Some(docs.join("\n"))
+        }
+    }
+
     /// Extract Go-style doc comments preceding an item start line.
     ///
     /// Go convention: documentation is a contiguous block of `//`
@@ -1987,15 +2021,15 @@ impl CodebaseAnalyzer {
     fn extract_php_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
-        // TODO: Implement full PHP symbol extraction
-        // For now, extract basic class and function symbols
+        // PHPDoc is `/** ... */` — reuse extract_c_doc_comments.
         let classes = tree.find_nodes_by_kind("class_declaration");
         for class in classes {
             if let Some(name_node) = class.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_c_doc_comments(content, class.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "class".to_string(),
@@ -2003,8 +2037,8 @@ impl CodebaseAnalyzer {
                         start_column: class.start_position().column,
                         end_line: class.end_position().row + 1,
                         end_column: class.end_position().column,
-                        visibility: "public".to_string(), // PHP classes are public
-                        documentation: None,
+                        visibility: "public".to_string(),
+                        documentation: docs,
                     });
                 }
             }
@@ -2014,6 +2048,7 @@ impl CodebaseAnalyzer {
         for func in functions {
             if let Some(name_node) = func.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_c_doc_comments(content, func.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "function".to_string(),
@@ -2021,8 +2056,8 @@ impl CodebaseAnalyzer {
                         start_column: func.start_position().column,
                         end_line: func.end_position().row + 1,
                         end_column: func.end_position().column,
-                        visibility: "public".to_string(), // PHP functions are public
-                        documentation: None,
+                        visibility: "public".to_string(),
+                        documentation: docs,
                     });
                 }
             }
@@ -2396,6 +2431,70 @@ mod tests {
             counter_docs, "Single-line JSDoc.",
             "single-line JSDoc should strip leading `*`"
         );
+    }
+
+    #[test]
+    fn test_ruby_doc_extraction() {
+        let temp_dir = TempDir::new().unwrap();
+        let rb_file = temp_dir.path().join("greeter.rb");
+        fs::write(
+            &rb_file,
+            "# Greeter returns hello strings.\n# Use the static `hello` method for the default.\nclass Greeter\n  # The default greeting.\n  def hello\n    return \"hi\"\n  end\nend\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "rb")
+            .unwrap();
+
+        if let Some(greeter) = info.symbols.iter().find(|s| s.name == "Greeter") {
+            let docs = greeter
+                .documentation
+                .as_ref()
+                .expect("Greeter should have docs");
+            assert!(docs.contains("returns hello"), "got docs={docs:?}");
+        }
+        if let Some(hello) = info.symbols.iter().find(|s| s.name == "hello") {
+            assert_eq!(
+                hello.documentation.as_deref(),
+                Some("The default greeting.")
+            );
+        }
+    }
+
+    #[test]
+    fn test_java_doc_extraction() {
+        // Now that PR #72 has landed (JSDoc cosmetic `*` strip),
+        // Javadoc output is fully clean. The assertions verify both
+        // functional doc extraction AND the clean cosmetic shape.
+        let temp_dir = TempDir::new().unwrap();
+        let java_file = temp_dir.path().join("Greeter.java");
+        fs::write(
+            &java_file,
+            "/**\n * Greeter returns hello strings.\n * Use the static `hello()` for the default.\n */\npublic class Greeter {\n    /** The default greeting. */\n    public String hello() { return \"hi\"; }\n}\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "java")
+            .unwrap();
+
+        if let Some(greeter) = info.symbols.iter().find(|s| s.name == "Greeter") {
+            let docs = greeter
+                .documentation
+                .as_ref()
+                .expect("Greeter should have Javadoc");
+            assert!(docs.contains("returns hello"), "got docs={docs:?}");
+            assert!(!docs.starts_with('*'), "Javadoc `*` should be stripped");
+        }
     }
 
     #[test]
