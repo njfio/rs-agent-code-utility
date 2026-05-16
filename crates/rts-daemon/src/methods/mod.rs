@@ -37,31 +37,88 @@ pub async fn prewarm_mount(
 }
 
 /// Route a wire-level `method` string to the appropriate handler.
+///
+/// Bumps `state.call_counters` per method **before** the handler
+/// fires, so even errored calls count — they still represent agent
+/// intent and the `Daemon.Stats` surface should show them. The bump
+/// is one relaxed atomic increment per RPC; negligible overhead next
+/// to the rest of dispatch.
 pub async fn dispatch(
     method: &str,
     params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
+    use std::sync::atomic::Ordering::Relaxed;
+    let counters = &state.call_counters;
     match method {
-        "Daemon.Ping" => daemon::ping(params, state).await,
-        "Workspace.Mount" => workspace::mount(params, state).await,
-        "Workspace.Status" => workspace::status(params, state).await,
-        "Workspace.Unmount" => workspace::unmount(params, state).await,
-        "Session.Open" => session::open(params, state).await,
-        "Session.Close" => session::close(params, state).await,
+        "Daemon.Ping" => {
+            counters.daemon_ping.fetch_add(1, Relaxed);
+            daemon::ping(params, state).await
+        }
+        "Daemon.Stats" => {
+            counters.daemon_stats.fetch_add(1, Relaxed);
+            daemon::stats(params, state).await
+        }
+        "Workspace.Mount" => {
+            counters.workspace_mount.fetch_add(1, Relaxed);
+            workspace::mount(params, state).await
+        }
+        "Workspace.Status" => {
+            counters.workspace_status.fetch_add(1, Relaxed);
+            workspace::status(params, state).await
+        }
+        "Workspace.Unmount" => {
+            counters.workspace_unmount.fetch_add(1, Relaxed);
+            workspace::unmount(params, state).await
+        }
+        "Session.Open" => {
+            counters.session_open.fetch_add(1, Relaxed);
+            session::open(params, state).await
+        }
+        "Session.Close" => {
+            counters.session_close.fetch_add(1, Relaxed);
+            session::close(params, state).await
+        }
 
-        "Index.FindSymbol" => index::find_symbol(params, state).await,
-        "Index.FindCallers" => index::find_callers(params, state).await,
-        "Index.ImpactOf" => index::impact_of(params, state).await,
-        "Index.ReadRange" => index::read_range(params, state).await,
-        "Index.ReadSymbol" => index::read_symbol(params, state).await,
-        "Index.ReadSymbolAt" => index::read_symbol_at(params, state).await,
-        "Index.Outline" => index::outline(params, state).await,
-        "Index.Grep" => index::grep(params, state).await,
+        "Index.FindSymbol" => {
+            counters.index_find_symbol.fetch_add(1, Relaxed);
+            index::find_symbol(params, state).await
+        }
+        "Index.FindCallers" => {
+            counters.index_find_callers.fetch_add(1, Relaxed);
+            index::find_callers(params, state).await
+        }
+        "Index.ImpactOf" => {
+            counters.index_impact_of.fetch_add(1, Relaxed);
+            index::impact_of(params, state).await
+        }
+        "Index.ReadRange" => {
+            counters.index_read_range.fetch_add(1, Relaxed);
+            index::read_range(params, state).await
+        }
+        "Index.ReadSymbol" => {
+            counters.index_read_symbol.fetch_add(1, Relaxed);
+            index::read_symbol(params, state).await
+        }
+        "Index.ReadSymbolAt" => {
+            counters.index_read_symbol_at.fetch_add(1, Relaxed);
+            index::read_symbol_at(params, state).await
+        }
+        "Index.Outline" => {
+            counters.index_outline.fetch_add(1, Relaxed);
+            index::outline(params, state).await
+        }
+        "Index.Grep" => {
+            counters.index_grep.fetch_add(1, Relaxed);
+            index::grep(params, state).await
+        }
 
-        other => Err(ProtocolError::new(
-            ErrorCode::InvalidParams,
-            format!("unknown method: {other}"),
-        )),
+        other => {
+            counters.unknown_method.fetch_add(1, Relaxed);
+            Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                format!("unknown method: {other}"),
+            ))
+        }
     }
 }

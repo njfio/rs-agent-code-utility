@@ -134,6 +134,101 @@ pub struct DaemonState {
     /// path; nothing waits on `prewarm_done`.
     pub prewarm_in_flight: std::sync::atomic::AtomicBool,
     pub prewarm_done: tokio::sync::Notify,
+    /// v0.5.7+ per-session call counters. Bumped in `methods::dispatch`
+    /// before each handler fires (so even errored calls count — they
+    /// still represent agent intent). Surfaced via `Daemon.Stats`.
+    ///
+    /// Why: every reflection-on-dogfooding round of this project so
+    /// far has been *anecdotal* — "I think I used grep more than
+    /// find_symbol." With these counters and `Daemon.Stats`, future
+    /// reflection rounds can quote actual numbers. Bumping is one
+    /// atomic increment per RPC; negligible overhead next to the
+    /// rest of the dispatch path.
+    pub call_counters: CallCounters,
+}
+
+/// Per-method call counts for the daemon's RPC surface. All fields
+/// are `AtomicU64` so dispatch can bump them lock-free; the
+/// `Daemon.Stats` reader does relaxed loads which is fine — we don't
+/// need cross-counter ordering, only eventually-consistent totals.
+///
+/// The counter set deliberately mirrors the protocol-v0 method names
+/// so a future schema change (new method, renamed method) is caught
+/// at compile time by the dispatcher rather than silently miscounted.
+#[derive(Debug, Default)]
+pub struct CallCounters {
+    pub daemon_ping: AtomicU64,
+    pub daemon_stats: AtomicU64,
+    pub daemon_shutdown: AtomicU64,
+    pub workspace_mount: AtomicU64,
+    pub workspace_status: AtomicU64,
+    pub workspace_unmount: AtomicU64,
+    pub session_open: AtomicU64,
+    pub session_close: AtomicU64,
+    pub index_find_symbol: AtomicU64,
+    pub index_find_callers: AtomicU64,
+    pub index_impact_of: AtomicU64,
+    pub index_read_range: AtomicU64,
+    pub index_read_symbol: AtomicU64,
+    pub index_read_symbol_at: AtomicU64,
+    pub index_outline: AtomicU64,
+    pub index_grep: AtomicU64,
+    /// Method name didn't match any known handler. A growing
+    /// `unknown_method` count over time usually means a wire-protocol
+    /// version skew (rts-mcp newer than daemon, or vice versa).
+    pub unknown_method: AtomicU64,
+}
+
+impl CallCounters {
+    /// Snapshot as a `serde_json::Value` map for the `Daemon.Stats`
+    /// response body. Relaxed loads — no fence needed; we're
+    /// reporting an approximate point-in-time view, not a coherent
+    /// transaction.
+    pub fn snapshot(&self) -> serde_json::Value {
+        use std::sync::atomic::Ordering::Relaxed;
+        serde_json::json!({
+            "Daemon.Ping":         self.daemon_ping.load(Relaxed),
+            "Daemon.Stats":        self.daemon_stats.load(Relaxed),
+            "Daemon.Shutdown":     self.daemon_shutdown.load(Relaxed),
+            "Workspace.Mount":     self.workspace_mount.load(Relaxed),
+            "Workspace.Status":    self.workspace_status.load(Relaxed),
+            "Workspace.Unmount":   self.workspace_unmount.load(Relaxed),
+            "Session.Open":        self.session_open.load(Relaxed),
+            "Session.Close":       self.session_close.load(Relaxed),
+            "Index.FindSymbol":    self.index_find_symbol.load(Relaxed),
+            "Index.FindCallers":   self.index_find_callers.load(Relaxed),
+            "Index.ImpactOf":      self.index_impact_of.load(Relaxed),
+            "Index.ReadRange":     self.index_read_range.load(Relaxed),
+            "Index.ReadSymbol":    self.index_read_symbol.load(Relaxed),
+            "Index.ReadSymbolAt":  self.index_read_symbol_at.load(Relaxed),
+            "Index.Outline":       self.index_outline.load(Relaxed),
+            "Index.Grep":          self.index_grep.load(Relaxed),
+            "unknown_method":      self.unknown_method.load(Relaxed),
+        })
+    }
+
+    /// Total of all method counters. Used by `Daemon.Stats` to surface
+    /// a session-level traffic indicator.
+    pub fn total(&self) -> u64 {
+        use std::sync::atomic::Ordering::Relaxed;
+        self.daemon_ping.load(Relaxed)
+            + self.daemon_stats.load(Relaxed)
+            + self.daemon_shutdown.load(Relaxed)
+            + self.workspace_mount.load(Relaxed)
+            + self.workspace_status.load(Relaxed)
+            + self.workspace_unmount.load(Relaxed)
+            + self.session_open.load(Relaxed)
+            + self.session_close.load(Relaxed)
+            + self.index_find_symbol.load(Relaxed)
+            + self.index_find_callers.load(Relaxed)
+            + self.index_impact_of.load(Relaxed)
+            + self.index_read_range.load(Relaxed)
+            + self.index_read_symbol.load(Relaxed)
+            + self.index_read_symbol_at.load(Relaxed)
+            + self.index_outline.load(Relaxed)
+            + self.index_grep.load(Relaxed)
+            + self.unknown_method.load(Relaxed)
+    }
 }
 
 /// Per-(path, start_byte, end_byte, mtime) cache for rendered
@@ -317,6 +412,7 @@ impl DaemonState {
             content_version_cache: ContentVersionCache::new(),
             prewarm_in_flight: std::sync::atomic::AtomicBool::new(false),
             prewarm_done: tokio::sync::Notify::new(),
+            call_counters: CallCounters::default(),
         }
     }
 

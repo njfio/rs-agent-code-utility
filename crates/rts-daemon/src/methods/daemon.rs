@@ -80,6 +80,10 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // case-insensitive-by-default; regex / file_glob / context
     // lines / enclosing-symbol resolution are filed for follow-up.
     "index_grep",
+    // v0.5.7 — Daemon.Stats method: per-session call counts +
+    // uptime. Mainly for honest dogfood reflection ("am I actually
+    // using this?") — agents can self-report rather than guess.
+    "daemon_stats",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
@@ -97,5 +101,51 @@ pub async fn ping(
         },
         "capabilities": DAEMON_CAPABILITIES,
         "uptime_ms":    uptime_ms,
+    }))
+}
+
+/// `Daemon.Stats` — per-session call counters (v0.5.7+).
+///
+/// Returns the per-method call-count snapshot from
+/// `state.call_counters` plus session-level context (uptime, daemon
+/// version, total RPC count). The Stats RPC itself is counted, so
+/// querying stats twice in a row shows `Daemon.Stats: 2`.
+///
+/// Wire shape:
+/// ```jsonc
+/// {
+///   "uptime_ms":  12345,
+///   "version":    "0.5.7",
+///   "total_calls": 89,
+///   "calls": {
+///     "Index.FindSymbol":  3,
+///     "Index.Grep":        47,
+///     "Index.FindCallers": 0,
+///     ...
+///   }
+/// }
+/// ```
+///
+/// **Counters are not persisted across daemon restarts.** A
+/// daemon-internal restart (crash + auto-respawn, SIGTERM + new
+/// process, version upgrade) resets every counter to zero. This is
+/// intentional: the counters describe *this daemon process's*
+/// served traffic; persisting would conflate independent runs.
+/// Cross-session aggregation should happen client-side from
+/// per-session snapshots.
+///
+/// Performance: one relaxed-load per counter field plus a JSON
+/// serialize. Sub-microsecond on modern hardware; safe to call from
+/// a hot agent loop.
+pub async fn stats(
+    _params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    let uptime_ms = state.uptime().as_millis() as u64;
+    Ok(serde_json::json!({
+        "uptime_ms":   uptime_ms,
+        "version":     env!("CARGO_PKG_VERSION"),
+        "total_calls": state.call_counters.total(),
+        "calls":       state.call_counters.snapshot(),
     }))
 }

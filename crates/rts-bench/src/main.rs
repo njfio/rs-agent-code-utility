@@ -353,6 +353,15 @@ enum QueryCmd {
         #[arg(long)]
         case_sensitive: bool,
     },
+    /// `Daemon.Stats` — per-session RPC call counters (v0.5.7+).
+    /// Answers "am I actually using the rts surface, or reaching for
+    /// `grep`/`Read`?" with real numbers instead of vibes. Counters
+    /// reset on every daemon restart — they describe THIS process's
+    /// served traffic.
+    DaemonStats {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -775,6 +784,36 @@ fn render_lines(tool: &str, body: &serde_json::Value) -> Option<String> {
             }
             Some(out)
         }
+        // daemon_stats: one line per method, `<method>: <count>`,
+        // sorted by count descending so the most-called methods
+        // surface first. Zero-count methods are still emitted (the
+        // dogfood signal "what AREN'T you using?" is just as
+        // important as "what are you using?"). Header lines for
+        // uptime + total are printed first, prefixed with `#` so
+        // `grep -v ^#` strips the meta and gives you pure
+        // method-count pairs for `sort` / `awk`.
+        "daemon_stats" => {
+            let uptime_ms = body["uptime_ms"].as_u64().unwrap_or(0);
+            let total = body["total_calls"].as_u64().unwrap_or(0);
+            let version = body["version"].as_str().unwrap_or("?");
+            let _ = writeln!(out, "# daemon-version: {version}");
+            let _ = writeln!(out, "# uptime-ms: {uptime_ms}");
+            let _ = writeln!(out, "# total-calls: {total}");
+            let calls = body["calls"].as_object()?;
+            // Stable sort: count descending, then method-name asc
+            // for deterministic output when counts tie. The agent's
+            // typical first read of stats has every counter at 0;
+            // the lex tiebreaker keeps that output reproducible.
+            let mut pairs: Vec<(&String, u64)> = calls
+                .iter()
+                .map(|(k, v)| (k, v.as_u64().unwrap_or(0)))
+                .collect();
+            pairs.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+            for (method, count) in pairs {
+                let _ = writeln!(out, "{method}: {count}");
+            }
+            Some(out)
+        }
         // read_symbol / read_symbol_at / read_range return file bodies,
         // not match lists. Lines mode doesn't help here — caller falls
         // back to JSON.
@@ -1051,6 +1090,11 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
                 serde_json::Value::Object(a),
             ))
         }
+        QueryCmd::DaemonStats { workspace } => Ok((
+            default_workspace(workspace)?,
+            "daemon_stats",
+            serde_json::Value::Object(serde_json::Map::new()),
+        )),
     }
 }
 
