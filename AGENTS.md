@@ -267,12 +267,31 @@ don't install lefthook are unaffected; CI is still the source of truth.
 - **Conventional Commits** scoped by crate or doc:
   `feat(rts-daemon): …`, `fix(rts-mcp): …`, `docs(protocol): …`,
   `chore(workspace): …`.
-- Each commit references its CHANGELOG entry. Per-alpha bumps land in
-  one commit (e.g. `feat(rts-mcp): 0.2.0-alpha.9 — MCP server bridge to
-  rts-daemon`).
 - PRs include a summary, testing notes (full `cargo test --workspace`
   count), and rollback considerations for changes that touch the
   protocol wire shape.
+
+### Changelog fragments (v0.5.5+)
+
+Each PR adds a **single Markdown fragment** to `changelog.d/`,
+not a direct edit to `CHANGELOG.md`. This eliminates the per-PR
+merge conflict that historically ate ~30 minutes per release
+queue (every concurrent PR collided on the `## [Unreleased]`
+section).
+
+File name: `changelog.d/<PR-number>-<kind>-<short-slug>.md` —
+e.g. `changelog.d/93-feat-grep-regex-mode.md`. Use `xxx` as a
+placeholder until the PR number is assigned, then rename.
+
+Fragment content: regular Markdown with a top-level `###`
+header. No front-matter. See `changelog.d/README.md` for the full
+spec.
+
+At release time, run `scripts/build-changelog.sh <version>` to
+concatenate all fragments under a new `## [<version>]` heading
+and clear the fragments dir. The release commit then bundles the
+CHANGELOG update, the fragment deletions, and the `Cargo.toml`
+version bump together.
 
 ## Security & configuration
 
