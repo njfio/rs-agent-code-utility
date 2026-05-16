@@ -458,6 +458,24 @@ impl SymbolTableAnalyzer {
                     | "do_statement"
                     | "switch_statement"
             ),
+            Language::CSharp => matches!(
+                node_kind,
+                "class_declaration"
+                    | "interface_declaration"
+                    | "struct_declaration"
+                    | "record_declaration"
+                    | "enum_declaration"
+                    | "namespace_declaration"
+                    | "method_declaration"
+                    | "constructor_declaration"
+                    | "block"
+                    | "if_statement"
+                    | "while_statement"
+                    | "for_statement"
+                    | "foreach_statement"
+                    | "try_statement"
+                    | "switch_statement"
+            ),
         }
     }
 
@@ -563,6 +581,17 @@ impl SymbolTableAnalyzer {
                 "function_declaration" => ScopeType::Function,
                 _ => ScopeType::Block,
             },
+            Language::CSharp => match node_kind {
+                "class_declaration" => ScopeType::Class,
+                "interface_declaration" => ScopeType::Class,
+                "struct_declaration" => ScopeType::Class,
+                "record_declaration" => ScopeType::Class,
+                "enum_declaration" => ScopeType::Class,
+                "namespace_declaration" => ScopeType::Namespace,
+                "method_declaration" => ScopeType::Method,
+                "constructor_declaration" => ScopeType::Method,
+                _ => ScopeType::Block,
+            },
         }
     }
 
@@ -589,12 +618,21 @@ impl SymbolTableAnalyzer {
             Language::Php => self.extract_php_symbol_definition(node),
             Language::Ruby => self.extract_ruby_symbol_definition(node),
             Language::Swift => self.extract_swift_symbol_definition(node),
+            Language::CSharp => self.extract_csharp_symbol_definition(node),
         }
     }
 
     /// Extract Java symbol definitions
     fn extract_java_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
         // TODO: Implement Java symbol definition extraction
+        Ok(None)
+    }
+
+    /// Extract C# symbol definitions
+    fn extract_csharp_symbol_definition(&self, _node: Node) -> Result<Option<SymbolDefinition>> {
+        // Symbol-table-level extraction is not used by the daemon path;
+        // analyzer.rs::extract_csharp_symbols is the live extractor.
+        // Stub to satisfy the trait surface — same shape as Java's TODO.
         Ok(None)
     }
 
@@ -762,6 +800,7 @@ impl SymbolTableAnalyzer {
             Language::Php => matches!(node_kind, "identifier" | "variable_name"),
             Language::Ruby => matches!(node_kind, "identifier" | "constant"),
             Language::Swift => matches!(node_kind, "simple_identifier" | "type_identifier"),
+            Language::CSharp => matches!(node_kind, "identifier"),
         }
     }
 

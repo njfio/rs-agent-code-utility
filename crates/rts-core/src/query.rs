@@ -162,6 +162,7 @@ impl Query {
             Language::Php => "(function_definition name: (identifier) @name) @function",
             Language::Ruby => "(method name: (identifier) @name) @function",
             Language::Swift => "(function_declaration name: (simple_identifier) @name) @function",
+            Language::CSharp => "(method_declaration name: (identifier) @name) @function",
         };
 
         Self::new(language, pattern)
@@ -183,6 +184,7 @@ impl Query {
             Language::Php => "(class_declaration name: (identifier) @name) @class",
             Language::Ruby => "(class name: (constant) @name) @class",
             Language::Swift => "(class_declaration name: (simple_identifier) @name) @class",
+            Language::CSharp => "(class_declaration name: (identifier) @name) @class",
         };
 
         Self::new(language, pattern)

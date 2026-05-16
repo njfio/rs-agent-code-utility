@@ -39,6 +39,8 @@ pub enum Language {
     Ruby,
     /// Swift programming language
     Swift,
+    /// C# programming language
+    CSharp,
 }
 
 impl Language {
@@ -60,6 +62,7 @@ impl Language {
             Language::Php => Ok(tree_sitter_php::LANGUAGE_PHP.into()),
             Language::Ruby => Ok(tree_sitter_ruby::LANGUAGE.into()),
             Language::Swift => Ok(tree_sitter_swift::LANGUAGE.into()),
+            Language::CSharp => Ok(tree_sitter_c_sharp::LANGUAGE.into()),
         }
     }
 
@@ -77,6 +80,7 @@ impl Language {
             Language::Php => "PHP",
             Language::Ruby => "Ruby",
             Language::Swift => "Swift",
+            Language::CSharp => "C#",
         }
     }
 
@@ -94,6 +98,7 @@ impl Language {
             Language::Php => &["php"],
             Language::Ruby => &["rb"],
             Language::Swift => &["swift"],
+            Language::CSharp => &["cs", "csx"],
         }
     }
 
@@ -111,6 +116,7 @@ impl Language {
             Language::Php => "0.21.0",
             Language::Ruby => "0.21.0",
             Language::Swift => "0.21.0",
+            Language::CSharp => "0.23.0",
         }
     }
 
@@ -128,6 +134,7 @@ impl Language {
             Language::Php => true,
             Language::Ruby => true,
             Language::Swift => true,
+            Language::CSharp => true,
         }
     }
 
@@ -148,6 +155,7 @@ impl Language {
             Language::Php => Some(tree_sitter_php::HIGHLIGHTS_QUERY),
             Language::Ruby => Some(tree_sitter_ruby::HIGHLIGHTS_QUERY),
             Language::Swift => Some(tree_sitter_swift::HIGHLIGHTS_QUERY),
+            Language::CSharp => Some(tree_sitter_c_sharp::HIGHLIGHTS_QUERY),
         }
     }
 
@@ -165,6 +173,7 @@ impl Language {
             Language::Php => None,        // PHP doesn't have injections query
             Language::Ruby => None,       // Ruby doesn't have injections query
             Language::Swift => None,      // Swift doesn't have injections query
+            Language::CSharp => None,     // C# doesn't have injections query
         }
     }
 
@@ -182,6 +191,7 @@ impl Language {
             Language::Php => None,        // PHP doesn't have locals query
             Language::Ruby => None,       // Ruby doesn't have locals query
             Language::Swift => None,      // Swift doesn't have locals query
+            Language::CSharp => None,     // C# doesn't have locals query
         }
     }
 
@@ -199,6 +209,7 @@ impl Language {
             Language::Php,
             Language::Ruby,
             Language::Swift,
+            Language::CSharp,
         ]
     }
 }
@@ -235,6 +246,7 @@ impl std::str::FromStr for Language {
             "php" => Ok(Language::Php),
             "ruby" | "rb" => Ok(Language::Ruby),
             "swift" => Ok(Language::Swift),
+            "csharp" | "c#" | "cs" => Ok(Language::CSharp),
             _ => Err(Error::invalid_input_error(
                 "language",
                 s,
@@ -312,6 +324,7 @@ mod tests {
             (Language::Php, "<?php $x = 1;"),
             (Language::Ruby, "x = 1"),
             (Language::Swift, "let x = 1"),
+            (Language::CSharp, "class C {}"),
         ];
 
         // Sanity: every variant of `Language::all()` is exercised here.

@@ -132,6 +132,39 @@ Two daemons on distinct workspaces can now coexist on the same UID. The `WORKSPA
 - Post-v0.5.4 MCP + post-v0.5.4 daemon: per-workspace path on both sides → ✅
 - Post-v0.5.4 MCP + pre-v0.5.4 daemon: MCP looks for `ws-XXX.sock`, doesn't find it, auto-spawns a fresh daemon (which is post-v0.5.4 since both binaries ship together) → ✅
 - Pre-v0.5.4 MCP + post-v0.5.4 daemon: pre-v0.5.4 MCP looks for `default.sock`, post-v0.5.4 daemon-with-workspace doesn't bind there → mismatch. Practical impact: zero, since both binaries ship and update together. Documented for completeness.
+### C# language support — closes the doc-comment extraction gap (12-language parity)
+
+Closes the v0.5.0-noted "out of scope" follow-up. v0.5.2 reached 10 of 11 languages with doc-comment extraction; the C# extractor brings in-tree coverage to **12 of 12**.
+
+**Surface:**
+
+- New `Language::CSharp` variant; `.cs` / `.csx` extensions detected.
+- `extract_csharp_symbols` extracts classes, interfaces, structs, records, enums, and methods. Records surface as `kind: "class"` for wire stability with the existing class kind.
+- `extract_csharp_doc_comments` walks contiguous `///`-prefixed lines (XML doc convention) — same line-scan logic as Rust/Swift `///`. XML payload (`<summary>...</summary>`, `<param>...`) is retained verbatim so `doc_contains` filters work against the documented text agents see.
+- `render_csharp` in `rts-core::signature` strips the `declaration_list` / `block` body — class/interface/struct/record/enum signatures render correctly via `find_symbol.include_signature`. Method-level signature rendering is a known limitation (the inner-class slice doesn't parse standalone — same as Java today); filed for follow-up.
+
+#### Dependency
+
+- `tree-sitter-c-sharp = "0.23"` added to `rts-core`'s Cargo.toml. Matches the workspace's existing `0.23.x` tree-sitter grammar line; no other dep changes.
+
+#### Dogfood validation
+
+Indexed a hand-written `Cache.cs` containing an `LruCache<K, V>` class, a `Put` method, an `Evict` method, and an `IHasher` interface. `find_symbol --pattern "*" --include-signature` returned all four with their XML doc payloads attached:
+
+```
+LruCache  (class)      signature: "public class LruCache<K, V>"
+                       doc: "<summary>LRU cache with size-based eviction policy..."
+IHasher   (interface)  signature: "public interface IHasher"
+                       doc: "<summary>Hash function for cache keys.</summary>"
+Put       (method)     doc: "<summary>Add or update a cache entry.</summary>"
+Evict     (method)     doc: "<summary>Evict the LRU entry to make room.</summary>"
+```
+
+A `find_symbol --doc-contains "evict"` query against the indexed workspace returns both `LruCache` and `Evict` — behavior-shaped retrieval works end-to-end for C# from this PR forward.
+
+#### Test coverage
+
++1 unit test (`test_csharp_extraction`) covering class, method, record, and interface extraction with XML doc payload assertions.
 
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 

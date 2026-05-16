@@ -223,6 +223,11 @@ pub fn info_for_path(rel_path: &str) -> Option<LanguageInfo> {
             signature_renderer: Some(rust_tree_sitter::signature::render_swift),
             refs_query: None,
         }),
+        "cs" | "csx" => Some(LanguageInfo {
+            language: Language::CSharp,
+            signature_renderer: Some(rust_tree_sitter::signature::render_csharp),
+            refs_query: None,
+        }),
         _ => None,
     }
 }
