@@ -57,6 +57,7 @@ pub async fn dispatch(
         "Index.ReadSymbol" => index::read_symbol(params, state).await,
         "Index.ReadSymbolAt" => index::read_symbol_at(params, state).await,
         "Index.Outline" => index::outline(params, state).await,
+        "Index.Grep" => index::grep(params, state).await,
 
         other => Err(ProtocolError::new(
             ErrorCode::InvalidParams,

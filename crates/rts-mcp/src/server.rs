@@ -195,6 +195,27 @@ pub struct ReadRangeArgs {
     pub token_budget: Option<u64>,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct GrepArgs {
+    /// Literal substring to search for across all indexed file
+    /// bytes. 1..=1024 characters. Case-insensitive by default
+    /// (set `case_insensitive: false` for exact case). Use this
+    /// when you know roughly what a string LITERAL says — error
+    /// messages, version pins, log strings, config values — that
+    /// `find_symbol` can't reach because they're not symbol names
+    /// or doc-comment text. Capability: `index_grep` (v0.5.4+).
+    pub text: String,
+    /// Maximum number of matches to return. Defaults to 256;
+    /// range 1..=4096. Above the default is almost always a tooling
+    /// problem — agents should narrow the search instead.
+    #[serde(default)]
+    pub limit: Option<u32>,
+    /// Case-insensitive matching. Defaults to `true` (agent-friendly).
+    /// Set `false` for exact-case matches (rare).
+    #[serde(default)]
+    pub case_insensitive: Option<bool>,
+}
+
 #[derive(Clone)]
 pub struct RtsServer {
     // The `#[tool_router]` macro generates dispatch through `tool_router`;
@@ -472,6 +493,27 @@ impl RtsServer {
             .call_daemon("Index.ReadRange", Value::Object(params))
             .await
         {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(daemon_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Find literal-substring matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. Default case-insensitive. Returns the file + line range + the matched line's text for each hit. Capability: `index_grep` (v0.5.4+)."
+    )]
+    async fn grep(
+        &self,
+        Parameters(args): Parameters<GrepArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("text".into(), Value::String(args.text));
+        if let Some(n) = args.limit {
+            params.insert("limit".into(), Value::Number(n.into()));
+        }
+        if let Some(b) = args.case_insensitive {
+            params.insert("case_insensitive".into(), Value::Bool(b));
+        }
+        match self.call_daemon("Index.Grep", Value::Object(params)).await {
             Ok(v) => Ok(success_json(&v)),
             Err(e) => Ok(daemon_error_to_call_result(&e)),
         }

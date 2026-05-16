@@ -312,6 +312,25 @@ enum QueryCmd {
         #[arg(long)]
         token_budget: Option<u64>,
     },
+    /// `grep` — literal-substring search across indexed file bytes.
+    /// Closes the gap `find_symbol` can't reach: error messages,
+    /// version strings, log literals, config values, anything that
+    /// isn't a symbol name or a doc-comment. Capability:
+    /// `index_grep` (v0.5.4+).
+    Grep {
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+        /// Literal substring to search for. 1..=1024 characters.
+        #[arg(long)]
+        text: String,
+        /// Max results. Default 256, range 1..=4096.
+        #[arg(long)]
+        limit: Option<u32>,
+        /// Case-sensitive matching (default is case-insensitive).
+        /// Pass `--case-sensitive` to opt into exact case.
+        #[arg(long)]
+        case_sensitive: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -844,6 +863,29 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             Ok((
                 default_workspace(workspace)?,
                 "read_range",
+                serde_json::Value::Object(a),
+            ))
+        }
+        QueryCmd::Grep {
+            workspace,
+            text,
+            limit,
+            case_sensitive,
+        } => {
+            let mut a = serde_json::Map::new();
+            a.insert("text".into(), serde_json::Value::String(text.clone()));
+            if let Some(n) = limit {
+                a.insert("limit".into(), serde_json::Value::Number((*n).into()));
+            }
+            // CLI exposes `--case-sensitive` (opt-in) so the
+            // default invocation matches the daemon default
+            // (`case_insensitive=true`).
+            if *case_sensitive {
+                a.insert("case_insensitive".into(), serde_json::Value::Bool(false));
+            }
+            Ok((
+                default_workspace(workspace)?,
+                "grep",
                 serde_json::Value::Object(a),
             ))
         }

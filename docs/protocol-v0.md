@@ -182,7 +182,8 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "find_symbol_doc_field",        // v0.5.0+
                      "find_symbol_doc_filter",       // v0.5.2+
                      "find_symbol_pre_filter_count", // v0.5.2+
-                     "find_symbol_signature_field"], // v0.5.3+
+                     "find_symbol_signature_field", // v0.5.3+
+                     "index_grep"],                  // v0.5.4+
     "uptime_ms":    123456
   }
 }
@@ -214,6 +215,7 @@ Reserved for the **v0.4 / v0.5 semantic-retrieval extensions**. Advertised indep
 - ~~`find_symbol_doc_filter`~~ — **advertised** as of `v0.5.2`. `Index.FindSymbol.params.doc_contains: Option<String>` filters matches by case-insensitive substring against doc-comment text. Enables behavior-shaped queries (e.g. `doc_contains: "evict"` returns documented symbols whose comments mention eviction).
 - ~~`find_symbol_pre_filter_count`~~ — **advertised** as of `v0.5.2`. `Index.FindSymbol.result.pre_filter_count: Option<usize>` reports the candidate count before any filter ran. Present iff a filter was active; lets agents distinguish empty-because-filter-rejected-all from empty-because-pattern-matched-nothing.
 - ~~`find_symbol_signature_field`~~ — **advertised** as of `v0.5.3`. `Index.FindSymbol.params.include_signature: bool` (default `false`) populates each match's `signature` field via the per-language `SignatureRenderer`. Renders are cached per `(path, byte_range, mtime)` on the daemon, so repeated pattern queries on the same workspace amortize the parse. Default off preserves the pre-v0.5.3 wire shape (`signature: null`).
+- ~~`index_grep`~~ — **advertised** as of `v0.5.4`. `Index.Grep` method: literal-substring search across indexed file bytes. Closes the agent-loop hole where `find_symbol` couldn't help find non-symbol content (error messages, version strings, log output). MVP is literal case-insensitive-by-default; regex / `file_glob` / `context_lines` / enclosing-symbol resolution are filed for follow-up. See §7.8b.
 
 ### 4.3 Version mismatch
 
@@ -697,6 +699,49 @@ Read explicit line/byte range. For stack traces, diff hunks, exact spans.
 **`result`**: same shape as `Index.ReadSymbol` body but with `qualified_name: null` and no `dependencies` / closure info.
 
 Errors: `INDEX_NOT_READY`, `FILE_NOT_INDEXED`, `OUT_OF_ROOT`, `RANGE_OUT_OF_BOUNDS`, `BUDGET_TOO_SMALL`.
+
+### 7.8b `Index.Grep` (v0.5.4+, capability `index_grep`)
+
+Literal-substring search across all indexed file bytes. Closes the agent-loop hole where `Index.FindSymbol` and `Index.FindCallers` can't help find content that isn't a symbol name or doc-comment text — error message literals, version strings, log output, configuration values, embedded URLs, magic constants.
+
+**`params`**:
+```jsonc
+{
+  "text":             "timeout reading MCP response",  // 1..=1024 chars
+  "limit":            256,                              // optional; 1..=4096, default 256
+  "case_insensitive": true                              // optional; default true
+}
+```
+
+**`result`**:
+```jsonc
+{
+  "matches": [
+    {
+      "file":      "crates/rts-bench/src/mcp_runner.rs",
+      "range":     { "start_line": 165, "end_line": 165, "start_byte": 5507, "end_byte": 5535 },
+      "line_text": "        .map_err(|_| anyhow!(\"timeout reading MCP response\"))??;"
+    }
+  ],
+  "truncated":          false,    // true if `limit` was reached before scanning finished
+  "files_scanned":      245,      // total indexed files iterated
+  "files_with_matches": 1
+}
+```
+
+**Semantics**:
+- Iterates the indexed file set (the same files `Index.Outline` covers). Files larger than 4 MiB are skipped (counted toward `files_scanned`).
+- `line_text` is the full line containing the match, lossy-UTF-8-encoded and truncated to 512 bytes with `…` suffix when over budget. Long lines (minified JS, generated tables) don't blow up the response.
+- `range` covers the literal match itself (not the whole line). Byte offsets are stable across calls until the file's content_version changes.
+- `truncated: true` indicates more matches exist in the workspace than `limit` allowed; agents should narrow the query (longer literal, narrower term, etc.) rather than paginate.
+
+**Out of scope for the v0.5.4 MVP** (filed for follow-up):
+- Regex syntax (`text` is always a literal in v0.5.4).
+- `file_glob` to restrict scope.
+- `context_lines` for surrounding lines around each match.
+- `enclosing_qualified_name` / `enclosing_kind` on each match (similar to `Index.FindCallers`'s shape).
+
+Errors: `INVALID_PARAMS` (empty `text`, `text` > 1024 chars, `limit` outside `1..=4096`).
 
 ### 7.9 `Session.Open`
 

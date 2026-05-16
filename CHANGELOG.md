@@ -227,6 +227,74 @@ The pre-existing `find_symbol_doc_contains_filter` test continues to pass — th
 #### Protocol surface
 
 `docs/protocol-v0.md` §7.6 updated to document the extended coverage and the new "unfiltered population" semantics.
+### `Index.Grep` — literal-substring search across indexed file bytes
+
+Closes the agent-loop hole that's been visible in real dogfood throughout this session: the daemon couldn't help find **non-symbol** content. Error message text, version-string literals, log output, configuration values, embedded URLs — anything that lives inside source bytes but isn't a symbol name or doc-comment text — required falling back to `grep` outside the daemon. A daemon for "AI agent retrieval" missing this primitive is a load-bearing gap.
+
+`Index.Grep` closes it. MCP tool `grep` and `rts-bench query grep` ship as the agent-facing surfaces.
+
+#### Wire shape
+
+```jsonc
+{
+  "text":             "timeout reading MCP response",  // 1..=1024 chars, literal
+  "limit":            256,                              // optional; 1..=4096, default 256
+  "case_insensitive": true                              // optional; default true
+}
+→
+{
+  "matches": [
+    {
+      "file":      "crates/rts-bench/src/mcp_runner.rs",
+      "range":     { "start_line": 165, "end_line": 165, "start_byte": 5507, "end_byte": 5535 },
+      "line_text": "        .map_err(|_| anyhow!(\"timeout reading MCP response\"))??;"
+    }
+  ],
+  "truncated":          false,
+  "files_scanned":      245,
+  "files_with_matches": 1
+}
+```
+
+#### MVP scope
+
+- **Literal substring only** (no regex). Regex support filed for follow-up.
+- **Case-insensitive by default**. Set `case_insensitive: false` for exact case.
+- **No `file_glob`**. Iterates the full indexed file set (`Index.Outline`'s scope).
+- **No `context_lines`**. The matched line's text is returned in full (lossy UTF-8, truncated at 512 bytes with `…` suffix for very long lines).
+- **No enclosing-symbol resolution**. The response carries `(file, range, line_text)` only — the `find_callers`-style `enclosing_qualified_name` is a separate iteration.
+
+Each gap is documented in `docs/protocol-v0.md` §7.8b and called out as "Filed for follow-up". The MVP closes the agent-hostile silent gap without over-investing in features the eval data hasn't shown demand for yet.
+
+#### Capability
+
+New capability `index_grep` advertised in `Daemon.Ping`.
+
+#### Surfaces
+
+- **Daemon**: `Index.Grep` method handler in `crates/rts-daemon/src/methods/index.rs`. New `Store::list_indexed_files()` helper enumerates the indexed file set without the def-walking cost of `list_files_with_defs`.
+- **MCP**: `grep` tool registered on `RtsServer`. Tool description points to the agent use cases (error strings / version pins / log literals) so the LLM knows when to reach for it.
+- **`rts-bench`**: `rts-bench query grep --text "X"` for the CLI dogfood path.
+
+#### Test coverage
+
++1 integration test (`grep_finds_string_literals_across_workspace`) covering six cases:
+- Exact-phrase match in one file
+- Case-insensitive default matches both cases
+- `case_insensitive: false` matches only the exact-case file
+- No matches → empty list, no error
+- Response carries `files_scanned` + `files_with_matches`
+- Empty `text` → `INVALID_PARAMS`
+
+Dogfood-verified end-to-end on the actual workspace: `rts-bench query grep --text "timeout reading MCP response"` finds 3 hits across `mcp_runner.rs`, `mcp_round_trip.rs`, and (recursively) the new method's own doc-comment.
+
+#### Out of scope (filed for follow-up)
+
+- **Regex syntax**. Add `regex: bool` param routing to a vetted regex backend (likely the `regex` crate, already in the dep tree via `ignore`).
+- **`file_glob`** to restrict scope. Reuse the `outline_workspace.glob` matcher.
+- **`context_lines: N`** for surrounding lines.
+- **`enclosing_qualified_name` / `enclosing_kind`** on each match, resolved via the same code path `Index.ReadSymbolAt` uses.
+- **Parallel file scan**. Current implementation is single-threaded; on a 1000-file workspace each scan is ~10ms which is acceptable, but `rayon::into_par_iter` would cut multi-MB scans further.
 
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 
