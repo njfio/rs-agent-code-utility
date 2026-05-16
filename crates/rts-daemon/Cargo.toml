@@ -48,8 +48,13 @@ notify-debouncer-full = "0.7"
 # Workspace walker (re-exports the gitignore parser used for the pre-filter).
 ignore = "0.4"
 
-# Editor-swap-file pattern matching.
+# Editor-swap-file pattern matching + v0.5.5 `Index.Grep.regex` mode.
 regex = "1"
+
+# v0.5.5 `Index.Grep.file_glob` filter. Already a transitive dep
+# through `ignore`; promoting to explicit so the daemon compiles
+# against a stable interface rather than `ignore`'s re-export.
+globset = "0.4"
 
 # Unix syscalls: umask, prctl, peer-creds, flock, etc.
 # nix 0.29 supports rust-version >= 1.69; we're on 1.85, well above.

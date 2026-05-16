@@ -197,13 +197,15 @@ pub struct ReadRangeArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct GrepArgs {
-    /// Literal substring to search for across all indexed file
-    /// bytes. 1..=1024 characters. Case-insensitive by default
-    /// (set `case_insensitive: false` for exact case). Use this
-    /// when you know roughly what a string LITERAL says — error
-    /// messages, version pins, log strings, config values — that
-    /// `find_symbol` can't reach because they're not symbol names
-    /// or doc-comment text. Capability: `index_grep` (v0.5.4+).
+    /// Pattern to search for across all indexed file bytes.
+    /// 1..=1024 characters. By default interpreted as a LITERAL
+    /// substring; set `regex: true` to interpret as a regex
+    /// (`regex` crate syntax). Case-insensitive by default in
+    /// both modes (set `case_insensitive: false` for exact case).
+    /// Use this when you know roughly what a string LITERAL says —
+    /// error messages, version pins, log strings, config values —
+    /// that `find_symbol` can't reach because they're not symbol
+    /// names or doc-comment text. Capability: `index_grep` (v0.5.4+).
     pub text: String,
     /// Maximum number of matches to return. Defaults to 256;
     /// range 1..=4096. Above the default is almost always a tooling
@@ -211,9 +213,26 @@ pub struct GrepArgs {
     #[serde(default)]
     pub limit: Option<u32>,
     /// Case-insensitive matching. Defaults to `true` (agent-friendly).
-    /// Set `false` for exact-case matches (rare).
+    /// Set `false` for exact-case matches (rare). Applies to both
+    /// literal and regex modes.
     #[serde(default)]
     pub case_insensitive: Option<bool>,
+    /// v0.5.5+ opt-in regex mode. When `true`, `text` is interpreted
+    /// as a `regex` crate pattern (byte-level matching). Defaults
+    /// to `false` (literal mode). Use for: `TODO\(.*?\)`,
+    /// `\bunsafe\b`, `\d+ms`. Compilation errors surface as
+    /// `INVALID_PARAMS` with the compiler's diagnostic so you can
+    /// self-correct.
+    #[serde(default)]
+    pub regex: Option<bool>,
+    /// v0.5.5+ file-path glob filter. When set, only files whose
+    /// workspace-relative path matches this glob are scanned. Uses
+    /// `globset` syntax: `*.rs`, `src/**/*.toml`,
+    /// `crates/{rts-core,rts-daemon}/**/*.rs`. Pairs with `text`
+    /// or `text + regex` to scope a search — equivalent to
+    /// `rg --type rust foo` without leaving the indexed file set.
+    #[serde(default)]
+    pub file_glob: Option<String>,
 }
 
 #[derive(Clone)]
@@ -564,7 +583,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Find literal-substring matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. Default case-insensitive. Returns the file + line range + the matched line's text for each hit. Capability: `index_grep` (v0.5.4+)."
+        description = "Find literal-substring (or regex) matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. Default case-insensitive literal mode; set `regex: true` for `regex` crate syntax (e.g. `TODO\\(.*?\\)`, `\\bunsafe\\b`). Set `file_glob: \"*.rs\"` / `\"crates/**/*.toml\"` to scope to a path pattern. Returns the file + line range + the matched line's text for each hit. Capability: `index_grep` (regex + glob v0.5.5+, literal v0.5.4+)."
     )]
     async fn grep(
         &self,
@@ -577,6 +596,12 @@ impl RtsServer {
         }
         if let Some(b) = args.case_insensitive {
             params.insert("case_insensitive".into(), Value::Bool(b));
+        }
+        if let Some(b) = args.regex {
+            params.insert("regex".into(), Value::Bool(b));
+        }
+        if let Some(g) = args.file_glob {
+            params.insert("file_glob".into(), Value::String(g));
         }
         match self.call_daemon("Index.Grep", Value::Object(params)).await {
             Ok(v) => Ok(success_json(&v)),
