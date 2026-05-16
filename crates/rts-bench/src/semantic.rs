@@ -373,6 +373,24 @@ const LEMMA_OVERRIDES: &[(&str, &str)] = &[
     ("entities", "entiti"),
     ("entry", "entri"),
     ("entries", "entri"),
+    ("strategy", "strategi"),
+    ("strategies", "strategi"),
+    ("category", "categori"),
+    ("categories", "categori"),
+    ("policy", "polici"),
+    ("policies", "polici"),
+    ("summary", "summari"),
+    ("summaries", "summari"),
+    ("history", "histori"),
+    ("histories", "histori"),
+    ("library", "librari"),
+    ("libraries", "librari"),
+    ("registry", "registri"),
+    ("registries", "registri"),
+    ("factory", "factori"),
+    ("factories", "factori"),
+    ("property", "properti"),
+    ("properties", "properti"),
     // v0.5.4: CVC consonant-doubling -er agent nouns. English rule:
     // 1-syllable verbs ending in consonant-vowel-consonant double
     // the final consonant when adding -er ("run" → "runner",
@@ -615,7 +633,12 @@ const KIND_HINTS: &[(&str, &[&str])] = &[
     ("struct", &["struct"]),
     ("trait", &["trait", "interface"]),
     ("interface", &["interface", "trait"]),
-    ("class", &["class", "struct"]),
+    // "class" deliberately includes interface + trait — agent
+    // queries phrased as "the X class" rarely distinguish language
+    // idioms (Java has both; Rust has trait; Go has interface;
+    // Python has only class). Treating them as one family for the
+    // boost matches agent intent better than strict equality.
+    ("class", &["class", "struct", "interface", "trait"]),
     ("enum", &["enum"]),
     ("function", &["fn", "function", "method"]),
     ("method", &["method", "fn"]),
