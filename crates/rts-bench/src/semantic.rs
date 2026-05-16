@@ -360,6 +360,19 @@ const LEMMA_OVERRIDES: &[(&str, &str)] = &[
     ("completes", "end"),
     ("completed", "end"),
     ("completion", "end"),
+    // -y/-ies inflections the suffix stemmer doesn't unify on its
+    // own. The English rule "y → ies in plural" is regular, but
+    // catching it generically would over-strip nouns whose lemma
+    // ends in -y (city, story). Hand-curated for common code-domain
+    // words instead.
+    ("query", "queri"),
+    ("queries", "queri"),
+    ("dependency", "dependenci"),
+    ("dependencies", "dependenci"),
+    ("entity", "entiti"),
+    ("entities", "entiti"),
+    ("entry", "entri"),
+    ("entries", "entri"),
 ];
 
 /// Drop common English suffixes so different inflections collapse
@@ -508,6 +521,16 @@ pub fn score_candidate(
         })
         .unwrap_or_default();
     let mut score = candidate_rank; // baseline: PageRank already 0..1
+    // Diminishing-returns counter — applies ONLY when the candidate
+    // has many sub-tokens (≥4). For short/compound names with 1-3
+    // sub-tokens, every sub-token match earns the full +6 bonus.
+    // Long compound names (4+ sub-tokens) like
+    // `get_language_specific_complexity` start to look like noise
+    // when multiple query tokens hit, so additional matches earn
+    // diminishing weight to prevent them outranking shorter,
+    // semantically-tighter candidates.
+    let apply_diminishing = sub_stems.len() >= 4;
+    let mut sub_token_match_idx: u32 = 0;
     for tok in tokens {
         let tok_stem = stem(tok);
         let w = idf.weight(&tok_stem);
@@ -519,7 +542,13 @@ pub fn score_candidate(
         } else if sub_stems.contains(&tok_stem) {
             // Exact stemmed sub-token match — bridges the natural-
             // language ↔ identifier gap (`parsing` ↔ `parse_file`).
-            score += 6.0 * w;
+            let bonus = if apply_diminishing {
+                6.0 / 2.0_f64.powi(sub_token_match_idx as i32)
+            } else {
+                6.0
+            };
+            score += bonus * w;
+            sub_token_match_idx += 1;
         } else if name_lower.contains(tok) {
             score += 3.0 * w;
         }
@@ -996,6 +1025,40 @@ mod tests {
             hit > miss + 5.0,
             "stemmed sub-token match should fire (`parsing` → `pars` matches `parse`): \
              hit={hit}, miss={miss}"
+        );
+    }
+
+    #[test]
+    fn score_candidate_diminishing_subtoken_returns() {
+        // The blind-v2 failure mode: a compound name matching MANY
+        // sub-tokens used to beat a short name with one exact-name
+        // hit. With diminishing returns on sub-token matches, the
+        // short name wins.
+        //
+        // Query: "language specific queries"
+        // - `Query` exact-name matches "queries" → +10
+        // - `get_language_specific_complexity` matches `language` (+6)
+        //   + `specific` (+3, halved) = +9 total — beats `Query`
+        //   only if IDF tips it, which doesn't fire under flat IDF.
+        let toks = vec![
+            "language".to_string(),
+            "specific".to_string(),
+            "queries".to_string(),
+        ];
+        let idf = flat_idf();
+        let query_score = score_candidate("Query", "src/queries.rs", 0.001, None, &toks, &idf);
+        let compound_score = score_candidate(
+            "get_language_specific_complexity",
+            "src/complexity.rs",
+            0.001,
+            None,
+            &toks,
+            &idf,
+        );
+        assert!(
+            query_score > compound_score,
+            "Query (exact-name +10) should beat get_language_specific_complexity \
+             (two diminishing sub-token matches): query={query_score}, compound={compound_score}"
         );
     }
 
