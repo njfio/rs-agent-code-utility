@@ -155,14 +155,34 @@ impl McpSession {
         Ok(())
     }
 
+    /// Per-call timeout for `recv()`. Defaults to 30s — large enough
+    /// to cover cold-mount of a ~100k-LOC workspace (the daemon's
+    /// first walk before the writer settles). Overridable via
+    /// `RTS_MCP_RECV_TIMEOUT_SECS` for pathologically-large workspaces.
+    fn recv_timeout(&self) -> Duration {
+        const DEFAULT_SECS: u64 = 30;
+        let secs = std::env::var("RTS_MCP_RECV_TIMEOUT_SECS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .filter(|n| *n >= 1 && *n <= 600)
+            .unwrap_or(DEFAULT_SECS);
+        Duration::from_secs(secs)
+    }
+
     async fn recv(&mut self) -> Result<Value> {
         let mut buf = Vec::new();
-        let n = tokio::time::timeout(
-            Duration::from_secs(10),
-            self.reader.read_until(b'\n', &mut buf),
-        )
-        .await
-        .map_err(|_| anyhow!("timeout reading MCP response"))??;
+        let timeout = self.recv_timeout();
+        let n = tokio::time::timeout(timeout, self.reader.read_until(b'\n', &mut buf))
+            .await
+            .map_err(|_| {
+                anyhow!(
+                    "no MCP response after {}s — daemon may still be indexing the workspace \
+                     (first mount of ~100k LOC takes 5-30s). \
+                     Set RTS_MCP_RECV_TIMEOUT_SECS=60 for very large workspaces; \
+                     run with RTS_BENCH_INHERIT_STDERR=1 to see daemon-side progress.",
+                    timeout.as_secs()
+                )
+            })??;
         if n == 0 {
             return Err(anyhow!("rts-mcp closed stdout"));
         }

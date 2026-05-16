@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### `rts-bench query` — cold-mount UX: 30s recv timeout + diagnostic error message
+
+The `rts-bench query` (one-shot CLI dogfooding path) used a hardcoded 10s timeout when reading MCP responses and surfaced timeouts as the bare message `Error: timeout reading MCP response`. Three pain points met in one error:
+
+1. **First-mount of a real workspace** (e.g. `crates/` + `archive/` ≈ 50k LOC) routinely takes 5-15s — well over the 10s budget. Cold-call timed out on every fresh build.
+2. **No diagnostic context** in the error. Was the daemon dead? Indexing? Wrong workspace path? The user couldn't tell.
+3. **No knob** to extend the timeout for pathologically large workspaces.
+
+Self-inflicted: hit this 3 times in 5 minutes while dogfooding for this very PR — the most visceral motivator possible.
+
+This PR changes `crates/rts-bench/src/mcp_runner.rs::McpSession::recv()`:
+
+- **Default timeout 10s → 30s.** Covers 95th-percentile cold-mount for real workspaces (the 100k-LOC bench is ~6s; doubling that for safety).
+- **`RTS_MCP_RECV_TIMEOUT_SECS` env var** (clamped 1..=600) overrides the default for very large workspaces or aggressive CI gates.
+- **New diagnostic error message** points at the most likely cause and the available knobs:
+
+```
+no MCP response after 30s — daemon may still be indexing the workspace
+(first mount of ~100k LOC takes 5-30s). Set RTS_MCP_RECV_TIMEOUT_SECS=60
+for very large workspaces; run with RTS_BENCH_INHERIT_STDERR=1 to see
+daemon-side progress.
+```
+
+#### Out of scope (filed for follow-up)
+
+The `tools_call` retry loop's INDEX_NOT_READY budget (`30 retries × 120ms = ~3.6s`) still gives up faster than the recv timeout under some pathological patterns. A unified total-budget cap that handles both timeout-during-recv and INDEX_NOT_READY-response cases is the next iteration; the present fix removes the agent-hostile silent failure mode.
+
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 
 Diagnosed while babysitting the v0.5.2 release: the `x86_64-apple-darwin` matrix entry on the `macos-13` runner pool has hung **on every release in this series** (v0.5.0, v0.5.1, v0.5.2 all show the job perpetually queued, never completing). The cascading consequence: `aggregate-checksums` has `needs: build` and waits on all 4 entries, so the consolidated `SHA256SUMS` file was never published — the README's verify snippet (`sha256sum -c SHA256SUMS --ignore-missing`) pointed at a file that didn't exist on any release.
