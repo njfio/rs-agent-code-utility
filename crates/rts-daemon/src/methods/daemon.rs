@@ -60,6 +60,12 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // cache-eviction code" can hit any documented symbol whose
     // comment mentions "evict" regardless of identifier name.
     "find_symbol_doc_filter",
+    // v0.5.2 — Index.FindSymbol response includes optional
+    // `pre_filter_count: usize` showing the candidate population
+    // before any filter (doc_contains) was applied. Lets agents
+    // distinguish "filter rejected all matches" from "nothing
+    // matched name/pattern". Omitted when no filter was active.
+    "find_symbol_pre_filter_count",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

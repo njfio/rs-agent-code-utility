@@ -637,11 +637,24 @@ pub async fn find_symbol(
     // applied to the full sorted pre-truncate set, and only matches
     // whose doc text contains the substring survive. Without the
     // filter the lookup remains post-truncate (only `limit` items).
+    //
+    // v0.5.2 (cap: `find_symbol_pre_filter_count`): when a filter is
+    // active, record the pre-filter candidate count so agents can
+    // distinguish "no matches against name/pattern" from "filter
+    // rejected every candidate". Without this, a `matches: []`
+    // response is ambiguous — PR #76's dogfood report flagged this
+    // as an agent-hostile silent failure mode. The field is omitted
+    // (serialized as JSON null when serde drops `Option::None`)
+    // when no filter ran, preserving the pre-v0.5.2 wire shape.
+    let mut pre_filter_count: Option<usize> = None;
     let mut docs: Vec<Option<String>>;
     if let Some(needle) = p.doc_contains.as_deref() {
         // Pre-truncate lookup so the filter sees every candidate.
         let names_for_docs: Vec<String> = typed.iter().map(|(h, _)| h.name.clone()).collect();
         let fids_for_docs: Vec<u32> = typed.iter().map(|(h, _)| h.fid).collect();
+        // Capture pre-filter cardinality BEFORE the filter loop so we
+        // report the true candidate population.
+        pre_filter_count = Some(typed.len());
         let all_docs = store_arc
             .docs_for_names_with_fid(&names_for_docs, &fids_for_docs)
             .map_err(|e| {
@@ -726,10 +739,20 @@ pub async fn find_symbol(
         .collect();
 
     let truncated = pre_truncate_len > limit;
-    Ok(serde_json::json!({
+    let mut response = serde_json::json!({
         "matches":   matches,
         "truncated": truncated,
-    }))
+    });
+    // v0.5.2: emit `pre_filter_count` only when a filter was active.
+    // Omitted otherwise so pre-v0.5.2 callers see the original wire
+    // shape unchanged. When present, an empty `matches[]` array
+    // accompanied by `pre_filter_count: N > 0` tells the agent the
+    // filter rejected N candidates — not that nothing matched the
+    // base pattern.
+    if let Some(count) = pre_filter_count {
+        response["pre_filter_count"] = serde_json::Value::Number(count.into());
+    }
+    Ok(response)
 }
 
 /// `Index.FindCallers(name)` — direct callers of a symbol. v0.3 U2'.
