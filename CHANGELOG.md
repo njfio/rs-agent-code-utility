@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### `Index.FindSymbol.doc_contains` — behavior-shaped queries via doc text
+
+Built while **dogfooding the daemon** as my primary navigation surface. Filter `Index.FindSymbol` matches by case-insensitive substring against doc text. Lets agents ask "find the cache eviction code" → matches any documented symbol whose comment mentions `evict`, regardless of identifier name.
+
+#### Wire shape
+
+```jsonc
+{ "pattern": "*",
+  "doc_contains": "retry",   // v0.5.2+, cap: find_symbol_doc_filter
+  "limit": 10 }
+```
+
+Symbols with no doc never match (filter is opt-in). Matches that pass the filter retain PageRank-derived ordering.
+
+#### Candidate-pool sizing
+
+The pre-rank candidate cap (normally `limit * 4` for pattern queries) expands to `MAX_LIMIT * 4 = 16384` when `doc_contains` is set. Without that expansion, `--limit 5` would only see 20 candidate names — almost none carrying the queried doc-text in a large pool. Subtle, easy to miss; the dogfood exercise surfaced it.
+
+#### Dogfood findings (honest report)
+
+Built this PR using `rts-bench query find-symbol/read-symbol/find-callers/outline` as primary navigation, falling back to grep once. Findings:
+
+- ✅ **`find-symbol --pattern` is dramatically better than grep** for "find all symbols matching X". One round-trip with file:line + kind + doc.
+- ✅ **`read-symbol` reads bodies directly** — no grep+head+sed pipeline. Reading `Language` enum or `FindSymbolParams` struct took one daemon call each.
+- ✅ **`find-callers` immediately revealed the JS↔TS / C↔C++ sharing** in the dispatch match — no need to read the whole dispatch by hand.
+- ❌ **Rust `const` declarations don't surface via `find_symbol`** — they're not extracted as symbols. Searching for `DEFAULT_CAPABILITIES` fell back to grep. **Filed for follow-up.**
+- ❌ **First version of this PR returned silent empty results** because the candidate-pool cap was applied before the doc filter — indistinguishable from "no actual matches". Diagnosing took ~10 min with `RTS_INHERIT_DAEMON_STDERR=1` + eprintln. Some kind of `pre_filter_count` field in the response would have flagged it immediately. **Filed for follow-up.**
+
+Net: tools are good enough that using them for navigation is faster than grep+Read for ~80% of cases, and the gaps are concrete enough to fix.
+
+#### Capability + protocol
+
+- New capability `find_symbol_doc_filter` advertised in `Daemon.Ping`.
+- MCP `find_symbol` tool's `FindSymbolArgs` gains `doc_contains: Option<String>`.
+- `rts-bench query find-symbol --doc-contains <STR>` for shell use.
+
++1 integration test covering case-insensitive match, undocumented filtering, empty-result needles, and back-compat absence of the param. 594 workspace tests pass.
+
 ### Doc-IDF separate from name-IDF
 
 Computes a second IDF table from candidate doc-comment text rather

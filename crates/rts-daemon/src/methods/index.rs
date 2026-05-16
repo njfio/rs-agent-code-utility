@@ -68,6 +68,17 @@ struct FindSymbolParams {
     /// identical to pre-v0.4.1 daemons.
     #[serde(default)]
     limit: Option<u32>,
+    /// Filter the returned matches to those whose doc-comment text
+    /// contains the given substring (case-insensitive). Applied
+    /// AFTER rank-sorting but BEFORE the `limit` cap, so the
+    /// filtered candidate population is what gets truncated.
+    /// Symbols with no doc comment never match. Requires capability
+    /// `find_symbol_doc_filter` (v0.5.2+). Useful for agents
+    /// searching by behavior described in docs rather than by
+    /// identifier name — "find the cache eviction logic" can hit
+    /// any documented function whose comment mentions "evict".
+    #[serde(default)]
+    doc_contains: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -542,7 +553,18 @@ pub async fn find_symbol(
         // Stable lexicographic order so successive calls with the same
         // pattern return the same prefix when truncated.
         filtered.sort();
-        filtered.truncate(limit * 4);
+        // When `doc_contains` is set the filter reduces the post-rank
+        // candidate set significantly; expand the pre-filter pool to
+        // MAX_LIMIT*4 so the filter has the full ranked universe to
+        // pull matching docs from. Without this, a `--limit 5`
+        // request would only ever see 20 candidate names — almost
+        // none of which carry the queried doc-text in a large pool.
+        let candidate_cap = if p.doc_contains.is_some() {
+            MAX_LIMIT * 4
+        } else {
+            limit * 4
+        };
+        filtered.truncate(candidate_cap);
         filtered
     };
 
@@ -606,22 +628,68 @@ pub async fn find_symbol(
         }),
     }
 
-    let pre_truncate_len = typed.len();
-    typed.truncate(limit);
-
     // v0.5: batched doc-comment lookup. One read txn for all matches.
     // The result is parallel to `typed[i]`; positions with no doc
     // become JSON `null` (back-compat with pre-v0.5 wire shape).
-    let names_for_docs: Vec<String> = typed.iter().map(|(h, _)| h.name.clone()).collect();
-    let fids_for_docs: Vec<u32> = typed.iter().map(|(h, _)| h.fid).collect();
-    let docs = store_arc
-        .docs_for_names_with_fid(&names_for_docs, &fids_for_docs)
-        .map_err(|e| {
-            ProtocolError::new(
-                ErrorCode::InternalError,
-                format!("docs_for_names_with_fid storage error: {e:#}"),
-            )
-        })?;
+    //
+    // v0.5.2 (cap: `find_symbol_doc_filter`): when `doc_contains` is
+    // set, we do the doc lookup BEFORE truncating so the filter is
+    // applied to the full sorted pre-truncate set, and only matches
+    // whose doc text contains the substring survive. Without the
+    // filter the lookup remains post-truncate (only `limit` items).
+    let mut docs: Vec<Option<String>>;
+    if let Some(needle) = p.doc_contains.as_deref() {
+        // Pre-truncate lookup so the filter sees every candidate.
+        let names_for_docs: Vec<String> = typed.iter().map(|(h, _)| h.name.clone()).collect();
+        let fids_for_docs: Vec<u32> = typed.iter().map(|(h, _)| h.fid).collect();
+        let all_docs = store_arc
+            .docs_for_names_with_fid(&names_for_docs, &fids_for_docs)
+            .map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InternalError,
+                    format!("docs_for_names_with_fid storage error: {e:#}"),
+                )
+            })?;
+        let needle_lower = needle.to_lowercase();
+        // Zip + filter: keep (typed, doc) pairs whose doc text
+        // contains the needle (case-insensitive). Symbols with no
+        // doc are dropped entirely (the filter is opt-in; agents
+        // calling without it get the full behavior).
+        let mut kept_typed: Vec<(crate::store::FoundSymbol, f64)> = Vec::with_capacity(typed.len());
+        let mut kept_docs: Vec<Option<String>> = Vec::with_capacity(typed.len());
+        for (entry, doc) in typed.into_iter().zip(all_docs) {
+            if let Some(d) = doc {
+                if d.to_lowercase().contains(&needle_lower) {
+                    kept_typed.push(entry);
+                    kept_docs.push(Some(d));
+                }
+            }
+        }
+        typed = kept_typed;
+        docs = kept_docs;
+    } else {
+        docs = Vec::new();
+    }
+
+    let pre_truncate_len = typed.len();
+    typed.truncate(limit);
+
+    if p.doc_contains.is_none() {
+        // No filter: do the doc lookup post-truncate (cheaper).
+        let names_for_docs: Vec<String> = typed.iter().map(|(h, _)| h.name.clone()).collect();
+        let fids_for_docs: Vec<u32> = typed.iter().map(|(h, _)| h.fid).collect();
+        docs = store_arc
+            .docs_for_names_with_fid(&names_for_docs, &fids_for_docs)
+            .map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InternalError,
+                    format!("docs_for_names_with_fid storage error: {e:#}"),
+                )
+            })?;
+    } else {
+        // Filter active: docs already gathered above, truncate to match.
+        docs.truncate(limit);
+    }
 
     let matches: Vec<serde_json::Value> = typed
         .into_iter()

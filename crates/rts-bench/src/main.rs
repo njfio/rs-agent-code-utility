@@ -186,6 +186,13 @@ enum QueryCmd {
         /// ranked symbol set when validating the semantic eval.
         #[arg(long)]
         limit: Option<u32>,
+        /// Filter matches by case-insensitive substring against the
+        /// doc-comment text. Requires daemon capability
+        /// `find_symbol_doc_filter` (v0.5.2+). Useful for behavior-
+        /// shaped queries: `--doc-contains retry` returns documented
+        /// symbols whose comments mention retry, regardless of name.
+        #[arg(long)]
+        doc_contains: Option<String>,
     },
     /// `read_symbol` — read by name, optional shape + closure walk + callers.
     ReadSymbol {
@@ -619,6 +626,7 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             kind,
             file,
             limit,
+            doc_contains,
         } => {
             if name.is_none() && pattern.is_none() {
                 return Err(anyhow!(
@@ -633,6 +641,7 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             if let Some(n) = limit {
                 a.insert("limit".into(), serde_json::Value::Number((*n).into()));
             }
+            opt_str(doc_contains, &mut a, "doc_contains");
             Ok((
                 default_workspace(workspace)?,
                 "find_symbol",

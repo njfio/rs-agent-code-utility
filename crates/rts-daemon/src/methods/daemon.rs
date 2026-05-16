@@ -54,6 +54,12 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // daemons always returned `null` for this field. C/JS/Python doc
     // extraction filed as follow-up.
     "find_symbol_doc_field",
+    // v0.5.2 — Index.FindSymbol.params.doc_contains: Option<String>
+    // filters matches by substring (case-insensitive) against the
+    // doc text. Useful for behavior-shaped queries — "find the
+    // cache-eviction code" can hit any documented symbol whose
+    // comment mentions "evict" regardless of identifier name.
+    "find_symbol_doc_filter",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

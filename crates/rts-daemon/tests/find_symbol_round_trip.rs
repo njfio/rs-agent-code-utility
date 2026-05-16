@@ -353,3 +353,144 @@ async fn find_symbol_limit_param_caps_results() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// v0.5.2: `Index.FindSymbol.doc_contains` filter.
+///
+/// Verifies:
+/// - `doc_contains: "frob"` keeps matches whose doc mentions "frob"
+/// - case-insensitive match
+/// - symbols with no doc are filtered out
+/// - missing `doc_contains` field preserves pre-v0.5.2 behavior
+#[tokio::test(flavor = "current_thread")]
+async fn find_symbol_doc_contains_filter() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // Three functions:
+    //   - frob_one: doc mentions "FROBNICATION"  (uppercase needle test)
+    //   - frob_two: doc mentions "frobnication"  (lowercase match)
+    //   - bare:    no doc at all
+    std::fs::write(
+        workspace.path().join("lib.rs"),
+        "/// FROBNICATION primary entry point.\npub fn frob_one() {}\n\n/// secondary frobnication path.\npub fn frob_two() {}\n\npub fn bare() {}\n",
+    )?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+
+    let _ = poll_for_match(&mut stream, "frob_one", Duration::from_secs(5)).await?;
+
+    // Case 1: doc_contains case-insensitive — matches both frob_*.
+    let filtered = round_trip(
+        &mut stream,
+        "10",
+        "Index.FindSymbol",
+        json!({ "pattern": "frob_*", "doc_contains": "frobnication" }),
+    )
+    .await?;
+    let matches = filtered["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(
+        matches.len(),
+        2,
+        "expected 2 matches (both frob_* have frobnication in docs): {matches:?}"
+    );
+    for m in &matches {
+        assert!(
+            m["doc"]
+                .as_str()
+                .map(|d| d.to_lowercase().contains("frobnication"))
+                .unwrap_or(false),
+            "every kept match should contain `frobnication` in doc: {m:?}"
+        );
+    }
+
+    // Case 2: doc_contains with no matches — empty array.
+    let nomatch = round_trip(
+        &mut stream,
+        "11",
+        "Index.FindSymbol",
+        json!({ "pattern": "frob_*", "doc_contains": "no_such_word_anywhere" }),
+    )
+    .await?;
+    assert!(
+        nomatch["result"]["matches"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(false),
+        "no_such_word should yield no matches: {nomatch:?}"
+    );
+
+    // Case 3: undocumented symbol filtered out.
+    let bare_filter = round_trip(
+        &mut stream,
+        "12",
+        "Index.FindSymbol",
+        json!({ "name": "bare", "doc_contains": "anything" }),
+    )
+    .await?;
+    assert!(
+        bare_filter["result"]["matches"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(false),
+        "undocumented symbol must be filtered out: {bare_filter:?}"
+    );
+
+    // Case 4: no doc_contains preserves old behavior — bare appears.
+    let unfiltered = round_trip(
+        &mut stream,
+        "13",
+        "Index.FindSymbol",
+        json!({ "name": "bare" }),
+    )
+    .await?;
+    assert!(
+        !unfiltered["result"]["matches"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(true),
+        "without filter, undocumented symbol should still appear: {unfiltered:?}"
+    );
+
+    Ok(())
+}

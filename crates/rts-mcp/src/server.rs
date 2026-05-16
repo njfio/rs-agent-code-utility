@@ -63,6 +63,14 @@ pub struct FindSymbolArgs {
     /// default in an agent call is almost always a mistake.
     #[serde(default)]
     pub limit: Option<u32>,
+    /// Filter matches to those whose doc-comment text contains the
+    /// given substring (case-insensitive). Useful for behavior-shaped
+    /// queries: `doc_contains: "retry"` returns documented symbols
+    /// whose comments mention retry behavior, regardless of identifier
+    /// name. Symbols with no doc comment never match. Capability:
+    /// `find_symbol_doc_filter` (v0.5.2+).
+    #[serde(default)]
+    pub doc_contains: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -293,6 +301,9 @@ impl RtsServer {
         }
         if let Some(n) = args.limit {
             params.insert("limit".into(), Value::Number(n.into()));
+        }
+        if let Some(s) = args.doc_contains {
+            params.insert("doc_contains".into(), Value::String(s));
         }
         match self
             .call_daemon("Index.FindSymbol", Value::Object(params))
