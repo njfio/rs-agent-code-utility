@@ -463,6 +463,50 @@ impl IdfWeights {
         IdfWeights { weights, default }
     }
 
+    /// Compute IDF weights from the *doc-comment* text in the
+    /// candidate pool. Same smoothed formula as `from_candidates`
+    /// but the "documents" are the doc-comment bodies, tokenized
+    /// + stemmed via the same query-token pipeline.
+    ///
+    /// Computing this separately from name-IDF matters because the
+    /// two text universes have different term distributions. In a
+    /// code-analysis crate, `symbol` is everywhere in names (low
+    /// name-IDF) but moderately common in docs (moderate doc-IDF).
+    /// `cleanup` may appear in only 2 docs but never as a sub-token
+    /// — name-IDF returns the default (treat as rare) while doc-IDF
+    /// correctly gives it high but bounded weight.
+    ///
+    /// Candidates with no doc (`doc.is_none()`) contribute nothing
+    /// to df counts; their candidate-count IS included in N (the
+    /// total candidate corpus size) so doc-IDF stays calibrated to
+    /// the full pool.
+    pub fn from_candidate_docs(candidates: &[Candidate]) -> Self {
+        use std::collections::HashMap;
+        let n = candidates.len() as f64;
+        let mut df: HashMap<String, usize> = HashMap::new();
+        for c in candidates {
+            let Some(doc) = c.doc.as_deref() else {
+                continue;
+            };
+            let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+            for t in tokens_of(doc) {
+                let s = stem(&t);
+                if seen.insert(s.clone()) {
+                    *df.entry(s).or_insert(0) += 1;
+                }
+            }
+        }
+        let weights = df
+            .into_iter()
+            .map(|(tok, dfc)| {
+                let idf = ((n + 1.0) / (dfc as f64 + 1.0)).ln() + 1.0;
+                (tok, idf)
+            })
+            .collect();
+        let default = ((n + 1.0) / 1.0_f64).ln() + 1.0;
+        IdfWeights { weights, default }
+    }
+
     /// Look up the weight for a stemmed token; missing tokens get
     /// `default` (treated as "never seen, maximally rare").
     pub fn weight(&self, stemmed_token: &str) -> f64 {
@@ -499,6 +543,7 @@ pub fn score_candidate(
     candidate_doc: Option<&str>,
     tokens: &[String],
     idf: &IdfWeights,
+    doc_idf: &IdfWeights,
 ) -> f64 {
     let name_lower = candidate_name.to_lowercase();
     let file_lower = candidate_file.to_lowercase();
@@ -564,7 +609,13 @@ pub fn score_candidate(
         // (synonym tables, doc-IDF computed separately from name-
         // IDF) could earn a higher weight by being more selective.
         if doc_word_stems.contains(&tok_stem) {
-            score += 1.0 * w;
+            // Use the doc-IDF table here so rare doc-specific terms
+            // ("rollback", "retry", "validate") earn higher weight
+            // than common ones ("the", "returns") even though the
+            // candidate's NAME doesn't contain them. Capped via a
+            // 0.8 coefficient so doc matches don't overwhelm
+            // identifier matches even at maximum doc-IDF.
+            score += 0.8 * doc_idf.weight(&tok_stem);
         }
     }
     score
@@ -590,14 +641,22 @@ pub async fn run(
     // Pre-compute IDF over the full candidate pool — the same
     // weights apply to every query.
     let idf = IdfWeights::from_candidates(&candidates);
+    let doc_idf = IdfWeights::from_candidate_docs(&candidates);
     let mut out: Vec<QueryResult> = Vec::with_capacity(corpus.queries.len());
     for q in &corpus.queries {
         let tokens = tokens_of(&q.text);
         let mut scored: Vec<(String, String, f64)> = candidates
             .iter()
             .map(|c| {
-                let score =
-                    score_candidate(&c.name, &c.file, c.rank, c.doc.as_deref(), &tokens, &idf);
+                let score = score_candidate(
+                    &c.name,
+                    &c.file,
+                    c.rank,
+                    c.doc.as_deref(),
+                    &tokens,
+                    &idf,
+                    &doc_idf,
+                );
                 (c.name.clone(), c.file.clone(), score)
             })
             .collect();
@@ -824,16 +883,31 @@ mod tests {
     fn score_candidate_exact_name_dominates_substring() {
         let toks = vec!["mount".to_string()];
         let idf = flat_idf();
-        let exact = score_candidate("mount", "src/lib.rs", 0.001, None, &toks, &idf);
-        let sub_token = score_candidate("workspace_mount", "src/lib.rs", 0.001, None, &toks, &idf);
+        let exact = score_candidate("mount", "src/lib.rs", 0.001, None, &toks, &idf, &idf);
+        let sub_token = score_candidate(
+            "workspace_mount",
+            "src/lib.rs",
+            0.001,
+            None,
+            &toks,
+            &idf,
+            &idf,
+        );
         assert!(
             exact > sub_token,
             "exact full-name match should outrank sub-token match (+10 vs +6)"
         );
         // And sub-token match should outrank mere substring (which
         // is what `workspacemount` would have been before decompose).
-        let raw_substring =
-            score_candidate("workspacemount", "src/lib.rs", 0.001, None, &toks, &idf);
+        let raw_substring = score_candidate(
+            "workspacemount",
+            "src/lib.rs",
+            0.001,
+            None,
+            &toks,
+            &idf,
+            &idf,
+        );
         assert!(
             sub_token > raw_substring,
             "stemmed sub-token match should outrank raw substring match (+6 vs +3)"
@@ -896,10 +970,24 @@ mod tests {
         });
         let idf = IdfWeights::from_candidates(&cands);
         let toks = vec!["symbols".to_string(), "public".to_string()];
-        let symbol_score =
-            score_candidate("Symbol", "src/symbol_table.rs", 0.001, None, &toks, &idf);
-        let is_public_score =
-            score_candidate("is_public", "src/symbol_table.rs", 0.001, None, &toks, &idf);
+        let symbol_score = score_candidate(
+            "Symbol",
+            "src/symbol_table.rs",
+            0.001,
+            None,
+            &toks,
+            &idf,
+            &idf,
+        );
+        let is_public_score = score_candidate(
+            "is_public",
+            "src/symbol_table.rs",
+            0.001,
+            None,
+            &toks,
+            &idf,
+            &idf,
+        );
         assert!(
             is_public_score > symbol_score,
             "with IDF, sub-token match against rare term should outrank exact-name match against common term: \
@@ -1008,6 +1096,7 @@ mod tests {
             None,
             &toks,
             &idf,
+            &idf,
         );
         let miss = score_candidate(
             "unrelated_function",
@@ -1015,6 +1104,7 @@ mod tests {
             0.001,
             None,
             &toks,
+            &idf,
             &idf,
         );
         // Hit gets at least the +6 sub-token bonus plus a file-path
@@ -1046,13 +1136,15 @@ mod tests {
             "queries".to_string(),
         ];
         let idf = flat_idf();
-        let query_score = score_candidate("Query", "src/queries.rs", 0.001, None, &toks, &idf);
+        let query_score =
+            score_candidate("Query", "src/queries.rs", 0.001, None, &toks, &idf, &idf);
         let compound_score = score_candidate(
             "get_language_specific_complexity",
             "src/complexity.rs",
             0.001,
             None,
             &toks,
+            &idf,
             &idf,
         );
         assert!(
@@ -1066,8 +1158,8 @@ mod tests {
     fn score_candidate_pagerank_breaks_ties_on_no_keyword_match() {
         let toks = vec!["unrelated_keyword_xyz".to_string()];
         let idf = flat_idf();
-        let high = score_candidate("foo", "src/lib.rs", 0.5, None, &toks, &idf);
-        let low = score_candidate("bar", "src/lib.rs", 0.001, None, &toks, &idf);
+        let high = score_candidate("foo", "src/lib.rs", 0.5, None, &toks, &idf, &idf);
+        let low = score_candidate("bar", "src/lib.rs", 0.001, None, &toks, &idf, &idf);
         assert!(
             high > low,
             "with no keyword hits, PageRank determines the order"
