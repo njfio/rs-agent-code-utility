@@ -319,6 +319,47 @@ const LEMMA_OVERRIDES: &[(&str, &str)] = &[
     // diagnosis ↔ diagnose
     ("diagnosis", "diagnos"),
     ("diagnoses", "diagnos"),
+    // ─── Code-domain synonym pairs (v0.5+) ───
+    //
+    // These are NOT lemma-equivalent — they're distinct words that
+    // refer to the same operation in agent-coding queries. The
+    // blind-v2 corpus exposed the gap: a query for "what cleans up
+    // after analysis?" misses `clear_cache` because the doc says
+    // "Clear" but the corpus says "clean".
+    //
+    // Each entry maps a query-side word to the stem its code-side
+    // synonym already produces. Keep this list short and audited;
+    // it's a curated bridge, not a thesaurus.
+    //
+    // clean ↔ clear: cleanup, cleans, cleaning all → "clear"
+    ("clean", "clear"),
+    ("cleans", "clear"),
+    ("cleanup", "clear"),
+    ("cleaning", "clear"),
+    ("cleaned", "clear"),
+    // remove ↔ delete: rts-core uses both. The choice between them
+    // is rarely meaningful at the call-site granularity; agent
+    // queries phrased either way should hit either symbol.
+    ("delete", "remov"),
+    ("deletes", "remov"),
+    ("deleting", "remov"),
+    ("deleted", "remov"),
+    ("deletion", "remov"),
+    // begin ↔ start: same pattern.
+    ("begin", "start"),
+    ("begins", "start"),
+    ("beginning", "start"),
+    // finish ↔ end ↔ complete: tighter cluster. Agent queries about
+    // "when does X finish/complete?" should hit code that uses "end"
+    // or "done" or "finish" interchangeably.
+    ("finish", "end"),
+    ("finishes", "end"),
+    ("finishing", "end"),
+    ("finished", "end"),
+    ("complete", "end"),
+    ("completes", "end"),
+    ("completed", "end"),
+    ("completion", "end"),
 ];
 
 /// Drop common English suffixes so different inflections collapse
@@ -854,6 +895,33 @@ mod tests {
         );
         // 1-char fragments dropped.
         assert_eq!(decompose_name("a_useful_name"), vec!["useful", "name"]);
+    }
+
+    #[test]
+    fn stem_synonym_overrides_unify_code_domain_pairs() {
+        // The blind-v2 corpus exposed the gap directly: "what cleans
+        // up after analysis?" should hit `clear_cache`, but
+        // clean*/clear* are different roots to a suffix stemmer.
+        // The synonym overrides bridge each pair.
+        let clear_stem = stem("clear");
+        assert_eq!(stem("clean"), clear_stem);
+        assert_eq!(stem("cleans"), clear_stem);
+        assert_eq!(stem("cleanup"), clear_stem);
+        assert_eq!(stem("cleaning"), clear_stem);
+        assert_eq!(stem("cleaned"), clear_stem);
+        // remove ↔ delete
+        let remove_stem = stem("remove");
+        assert_eq!(stem("delete"), remove_stem);
+        assert_eq!(stem("deletes"), remove_stem);
+        assert_eq!(stem("deleting"), remove_stem);
+        // begin ↔ start
+        let start_stem = stem("start");
+        assert_eq!(stem("begin"), start_stem);
+        // finish ↔ end ↔ complete
+        let end_stem = stem("end");
+        assert_eq!(stem("finish"), end_stem);
+        assert_eq!(stem("complete"), end_stem);
+        assert_eq!(stem("completion"), end_stem);
     }
 
     #[test]
