@@ -793,3 +793,163 @@ async fn find_symbol_auto_signature_for_small_queries() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// v0.5.4: `pre_filter_count` extension to `kind` and `file` filters.
+///
+/// Pre-v0.5.4 the field only fired for `doc_contains`. Real dogfood
+/// hit the same silent-empty failure on file filters:
+/// `pattern: "*" + file: "X"` could return `matches: []`
+/// indistinguishably between "pattern matched nothing" and "file
+/// filter rejected every candidate".
+///
+/// Verifies:
+/// - `file` filter that rejects everything → `pre_filter_count > 0`
+/// - `kind` filter that rejects everything → `pre_filter_count > 0`
+/// - Neither filter active → field absent (back-compat)
+/// - File filter that DOES match → field present, `matches` non-empty
+#[tokio::test(flavor = "current_thread")]
+async fn find_symbol_pre_filter_count_for_kind_and_file() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // Three fns in `a.rs`, one struct in `b.rs`. Lets us test:
+    // - file filter pointing at `c.rs` (no such file) → 4 candidates rejected
+    // - kind filter `struct` against pattern `*` in `a.rs` → 3 fns rejected
+    std::fs::write(
+        workspace.path().join("a.rs"),
+        "pub fn aa() {}\npub fn bb() {}\npub fn cc() {}\n",
+    )?;
+    std::fs::write(workspace.path().join("b.rs"), "pub struct Widget;\n")?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+    let _ = poll_for_match(&mut stream, "aa", Duration::from_secs(5)).await?;
+
+    // Case A: file filter that rejects ALL candidates (no such file).
+    let file_reject = round_trip(
+        &mut stream,
+        "40",
+        "Index.FindSymbol",
+        json!({ "pattern": "*", "file": "c.rs" }),
+    )
+    .await?;
+    assert_eq!(
+        file_reject["result"]["matches"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(0),
+        0,
+        "no-such-file filter should yield empty matches: {file_reject:?}"
+    );
+    let pre_count_a = file_reject["result"]["pre_filter_count"]
+        .as_u64()
+        .expect("pre_filter_count must be present when file filter is active");
+    assert!(
+        pre_count_a >= 4,
+        "pre_filter_count must report the unfiltered pool (4 symbols across a.rs + b.rs); got {pre_count_a}: {file_reject:?}"
+    );
+
+    // Case B: kind filter that rejects ALL candidates (no enums in workspace).
+    let kind_reject = round_trip(
+        &mut stream,
+        "41",
+        "Index.FindSymbol",
+        json!({ "pattern": "*", "kind": "enum" }),
+    )
+    .await?;
+    assert_eq!(
+        kind_reject["result"]["matches"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(0),
+        0,
+        "kind=enum filter must reject all candidates"
+    );
+    let pre_count_b = kind_reject["result"]["pre_filter_count"]
+        .as_u64()
+        .expect("pre_filter_count must be present when kind filter is active");
+    assert!(
+        pre_count_b >= 4,
+        "kind filter pre_filter_count must report the unfiltered pool; got {pre_count_b}: {kind_reject:?}"
+    );
+
+    // Case C: no filter active → field absent (back-compat).
+    let no_filter = round_trip(
+        &mut stream,
+        "42",
+        "Index.FindSymbol",
+        json!({ "pattern": "*" }),
+    )
+    .await?;
+    assert!(
+        no_filter["result"]["pre_filter_count"].is_null(),
+        "pre_filter_count must be absent when no filter active: {no_filter:?}"
+    );
+
+    // Case D: file filter that DOES match → field present + non-empty matches.
+    let file_match = round_trip(
+        &mut stream,
+        "43",
+        "Index.FindSymbol",
+        json!({ "pattern": "*", "file": "a.rs" }),
+    )
+    .await?;
+    let matches_d = file_match["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        matches_d.iter().all(|m| m["file"] == "a.rs"),
+        "every match must come from a.rs: {file_match:?}"
+    );
+    assert!(
+        matches_d.len() >= 3,
+        "a.rs should have >=3 matches (aa, bb, cc)"
+    );
+    let pre_count_d = file_match["result"]["pre_filter_count"]
+        .as_u64()
+        .expect("pre_filter_count present even when filter matched some");
+    assert!(
+        pre_count_d >= 4,
+        "pre_filter_count covers the unfiltered population (>=4): {file_match:?}"
+    );
+
+    Ok(())
+}
