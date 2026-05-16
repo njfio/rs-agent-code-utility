@@ -1112,6 +1112,53 @@ impl CodebaseAnalyzer {
             });
         }
 
+        // Extract `const` and `static` declarations.
+        //
+        // Surfaces module-level constants (e.g. `pub const DEFAULT_LIMIT:
+        // usize = 256;`) and statics (e.g. `static FOO: AtomicU32 = …`)
+        // via `find_symbol`. Without this, agents searching by constant
+        // name fall back to grep — a real dogfooding gap surfaced in
+        // PR #76's report.
+        //
+        // tree-sitter rust grammar: `const_item` and `static_item`. Both
+        // expose a `name` child field. Doc comments use the same
+        // `///`-line scan as fns / structs / enums.
+        for kind_name in ["const_item", "static_item"] {
+            let items = tree.find_nodes_by_kind(kind_name);
+            for item in items {
+                if let Some(name_node) = item.child_by_field_name("name") {
+                    if let Ok(name) = name_node.text() {
+                        let visibility = if item
+                            .children()
+                            .iter()
+                            .any(|child| child.kind() == "visibility_modifier")
+                        {
+                            "public"
+                        } else {
+                            "private"
+                        };
+                        let docs =
+                            self.extract_rust_doc_comments(content, item.start_position().row);
+                        let kind_label = if kind_name == "const_item" {
+                            "const"
+                        } else {
+                            "static"
+                        };
+                        symbols.push(Symbol {
+                            name: name.to_string(),
+                            kind: kind_label.to_string(),
+                            start_line: item.start_position().row + 1,
+                            end_line: item.end_position().row + 1,
+                            start_column: item.start_position().column,
+                            end_column: item.end_position().column,
+                            visibility: visibility.to_string(),
+                            documentation: docs,
+                        });
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -2431,6 +2478,57 @@ mod tests {
             counter_docs, "Single-line JSDoc.",
             "single-line JSDoc should strip leading `*`"
         );
+    }
+
+    #[test]
+    fn test_rust_const_and_static_extraction() {
+        // Module-level `const` and `static` declarations weren't
+        // surfaced as symbols pre-this-PR, forcing agents to fall
+        // back to grep for constant lookups (see PR #76 dogfood
+        // report).
+        let temp_dir = TempDir::new().unwrap();
+        let rs_file = temp_dir.path().join("constants.rs");
+        fs::write(
+            &rs_file,
+            "/// The default request limit.\npub const DEFAULT_LIMIT: usize = 256;\n\n/// Maximum supported.\npub const MAX_LIMIT: usize = 4096;\n\nstatic INTERNAL_FLAG: bool = false;\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "rs")
+            .unwrap();
+
+        let default_limit = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "DEFAULT_LIMIT")
+            .expect("DEFAULT_LIMIT should be extracted as a symbol");
+        assert_eq!(default_limit.kind, "const");
+        assert_eq!(default_limit.visibility, "public");
+        assert_eq!(
+            default_limit.documentation.as_deref(),
+            Some("The default request limit."),
+            "const doc should flow through"
+        );
+
+        let max_limit = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "MAX_LIMIT")
+            .expect("MAX_LIMIT should be extracted");
+        assert_eq!(max_limit.kind, "const");
+
+        let internal_flag = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "INTERNAL_FLAG")
+            .expect("static INTERNAL_FLAG should be extracted as a symbol");
+        assert_eq!(internal_flag.kind, "static");
+        assert_eq!(internal_flag.visibility, "private");
     }
 
     #[test]
