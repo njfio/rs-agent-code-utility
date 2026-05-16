@@ -84,6 +84,18 @@ pub enum WatchEvent {
     /// Linux/Windows; FSEvents coalesce flag on macOS). The watcher has
     /// already started a re-walk; this event is purely informational.
     Rescan,
+    /// v0.5.5+: emitted by `walk_and_emit_blocking` when the cold
+    /// initial walk has finished pushing every existing file event.
+    /// The writer uses this as a hard barrier: until it fires, the
+    /// writer holds back the 150ms timer-driven flush and accumulates
+    /// every cold-walk file into a single batch. Without this barrier,
+    /// the cold-walk's stream could split across multiple batches —
+    /// and `commit_batch`'s Pass-2 ref resolution permanently drops
+    /// refs whose callee def lives in a *future* batch (§F1). The
+    /// resulting half-finished reference graph caused the
+    /// `impact_of_three_tier_with_test_filter` flake to surface 4/10
+    /// times under heavy CI/parallel load.
+    ColdWalkComplete,
 }
 
 /// Backing debouncer kind. Either the platform's `RecommendedWatcher`
@@ -330,6 +342,22 @@ fn walk_and_emit_blocking(
             }
             FilterDecision::Skip(_) => {}
         }
+    }
+    // v0.5.5: signal the end of the cold walk so the writer can
+    // release its hold-off and flush the accumulated batch as a
+    // single atomic commit. Without this, the writer's 150ms
+    // timer-driven flush could split the cold-walk's files across
+    // batches — and `commit_batch`'s Pass-2 ref resolution would
+    // permanently drop refs whose callee def lived in a future
+    // batch (the `impact_of` flake). `blocking_send` is fine here:
+    // there's always room in the 256-cap channel by this point
+    // (we've already drained the walker into it, and the writer
+    // is consuming as we go).
+    if tx.blocking_send(WatchEvent::ColdWalkComplete).is_err() {
+        // Channel closed before we could send the barrier — the
+        // writer is gone, so there's no one to hand off to. Surface
+        // the same status as a mid-walk channel-close.
+        state.set_watcher_status(WatcherStatus::OverflowedRewalking);
     }
     debug!(emitted, "initial walk done");
     Ok(emitted)

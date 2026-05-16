@@ -79,6 +79,24 @@ async fn run(
     let mut flush_timer = tokio::time::interval(BATCH_FLUSH_INTERVAL);
     flush_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
+    // v0.5.5: cold-walk hold-off. While this flag is true, the
+    // timer-driven flush is suppressed — we accumulate every event
+    // from the cold walk into a single `upserts`/`removals` set, then
+    // flush atomically when the `ColdWalkComplete` barrier arrives.
+    // This guarantees `commit_batch`'s intra-batch ref resolution
+    // sees every callee def before resolving refs against them, so
+    // refs to symbols defined elsewhere in the workspace are NOT
+    // permanently filtered as "external" (§F1).
+    //
+    // The size budget (BATCH_SIZE_BUDGET) still applies as a
+    // safety valve — for very large cold walks where holding off
+    // would burn memory, we flush incrementally. Cross-batch refs
+    // for those workspaces aren't fully resolved, but that's a
+    // pre-existing trade-off (and the affected workloads are
+    // dwarfed by the typical 1k-file repo where everything fits
+    // in one batch anyway).
+    let mut cold_walk_in_progress = true;
+
     loop {
         tokio::select! {
             _ = cancel.cancelled() => {
@@ -129,6 +147,28 @@ async fn run(
                                 dur,
                             );
                         }
+                    }
+                    Some(WatchEvent::ColdWalkComplete) => {
+                        // v0.5.5: cold walk is done. Flush whatever we
+                        // accumulated as a single batch (so intra-batch
+                        // ref resolution covers every workspace symbol),
+                        // and release the timer hold-off.
+                        debug!(
+                            target: "rts_daemon::writer",
+                            pending = upserts.len() + removals.len(),
+                            "cold-walk complete; flushing accumulated batch"
+                        );
+                        let _ = flush(
+                            &store,
+                            &state,
+                            &parsers,
+                            &workspace_root,
+                            &mut upserts,
+                            &mut removals,
+                            Durability::Immediate,
+                        );
+                        cold_walk_in_progress = false;
+                        last_durability_flush = Instant::now();
                     }
                     Some(WatchEvent::Rescan) => {
                         // Kernel watch buffer overflowed; index state may be
@@ -190,6 +230,17 @@ async fn run(
                 }
             }
             _ = flush_timer.tick() => {
+                // v0.5.5: suppress the timer flush during the cold
+                // initial walk. The cold-walk path needs to commit as
+                // a single atomic batch so intra-batch ref resolution
+                // sees every workspace symbol; the `ColdWalkComplete`
+                // sentinel is what releases this hold-off. Without it
+                // the timer could split the walk's stream across
+                // batches, dropping cross-batch refs permanently (the
+                // §F1 filter at commit_batch line 402).
+                if cold_walk_in_progress {
+                    continue;
+                }
                 if !upserts.is_empty() || !removals.is_empty() {
                     let dur = pick_durability(&mut last_durability_flush);
                     let _ = flush(
