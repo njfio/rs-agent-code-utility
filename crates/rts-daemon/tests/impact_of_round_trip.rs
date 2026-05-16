@@ -105,6 +105,64 @@ async fn wait_for_symbol(
     }
 }
 
+/// Poll `Index.FindCallers(target)` until **every** name in
+/// `expected_callers` is present in the callers list. This is the
+/// flake fix: `wait_for_symbol` only guarantees a symbol's DEF +
+/// `NAME_TO_SID` row are committed, but the REFS edges that
+/// `Index.ImpactOf`'s BFS depends on are committed in a separate
+/// writer batch. Under parallel-test load the daemon's writer can
+/// land `caller_a.rs`'s DEF row before its REF row (caller_a calls
+/// target), and a snapshot read between those commits sees a
+/// half-finished graph — `impact_of(target)` returns a partial
+/// caller list and the assertion fires.
+///
+/// Polling for the REF edges directly via `find_callers` closes the
+/// race: when this returns `Ok(())`, every (target ← expected) edge
+/// is committed, so the subsequent `impact_of` BFS has the full
+/// reverse-reference graph.
+async fn wait_for_refs(
+    stream: &mut UnixStream,
+    target: &str,
+    expected_callers: &[&str],
+    timeout: Duration,
+) -> anyhow::Result<()> {
+    let deadline = Instant::now() + timeout;
+    let mut id: u64 = 200;
+    loop {
+        id += 1;
+        let resp = round_trip(
+            stream,
+            &id.to_string(),
+            "Index.FindCallers",
+            json!({ "name": target }),
+        )
+        .await?;
+        let callers = resp["result"]["callers"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let caller_names: Vec<&str> = callers
+            .iter()
+            .filter_map(|c| c["enclosing_qualified_name"].as_str())
+            .collect();
+        let all_present = expected_callers
+            .iter()
+            .all(|expected| caller_names.contains(expected));
+        if all_present {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            anyhow::bail!(
+                "REFS to `{target}` never fully settled within {:?} — expected {:?}, got {:?}",
+                timeout,
+                expected_callers,
+                caller_names
+            );
+        }
+        tokio::time::sleep(Duration::from_millis(75)).await;
+    }
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn impact_of_three_tier_with_test_filter() -> anyhow::Result<()> {
     let runtime_dir = tempfile::tempdir()?;
@@ -201,6 +259,43 @@ async fn impact_of_three_tier_with_test_filter() -> anyhow::Result<()> {
     ] {
         wait_for_symbol(&mut stream, n, Duration::from_secs(5)).await?;
     }
+    // Flake fix: DEFs landing is necessary but not sufficient — the
+    // writer commits REF edges in a separate batch. Poll the REFS
+    // graph directly via `find_callers` until every expected edge
+    // is committed before we ask `impact_of` to walk it. Without
+    // this gate the parallel-test load on CI/dogfood occasionally
+    // catches the writer mid-flight, returning a partial caller
+    // list to `impact_of` and tripping the per-name assertion.
+    wait_for_refs(
+        &mut stream,
+        "target",
+        &["caller_a", "caller_b", "caller_c", "test_target_runs"],
+        Duration::from_secs(10),
+    )
+    .await?;
+    // Same for the grandcallers — they call caller_a/b/c, so REFS
+    // to those must be committed before BFS depth=2 can resolve.
+    wait_for_refs(
+        &mut stream,
+        "caller_a",
+        &["grandcaller_1"],
+        Duration::from_secs(10),
+    )
+    .await?;
+    wait_for_refs(
+        &mut stream,
+        "caller_b",
+        &["grandcaller_1", "grandcaller_2"],
+        Duration::from_secs(10),
+    )
+    .await?;
+    wait_for_refs(
+        &mut stream,
+        "caller_c",
+        &["grandcaller_2"],
+        Duration::from_secs(10),
+    )
+    .await?;
 
     // 1. Daemon.Ping advertises impact_of.
     let ping = round_trip(&mut stream, "2", "Daemon.Ping", json!({})).await?;
