@@ -535,7 +535,33 @@ pub async fn find_symbol(
     let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
     let file_filter = p.file.as_deref();
     let sort_mode = SortMode::from_param(p.sort.as_deref());
-    let want_signatures = p.include_signature.unwrap_or(false);
+    // Auto-default for `include_signature` when not explicitly set.
+    //
+    // Heuristic: small-result queries are "browsing" queries where
+    // signatures are nearly always wanted next (the agent's natural
+    // follow-up is `read_symbol` for the top hit). Pre-v0.5.3 the
+    // default was always `false` — cheaper, but every browsing flow
+    // paid an extra round-trip.
+    //
+    // We auto-enable when:
+    //   - the user asked by exact `name` (lookups land 0-3 results)
+    //   - OR the user explicitly capped `limit` at 10 or less
+    //
+    // Pattern queries with the default 256 limit still default to
+    // `false` — pattern-of-the-day workflows like
+    // `find_symbol --pattern "*"` shouldn't auto-parse 256 symbols.
+    //
+    // Explicit `include_signature: false` always wins (escape hatch
+    // for clients that want the pre-v0.5.3 wire shape on small
+    // queries — useful for byte-count-tight clients).
+    let want_signatures = match p.include_signature {
+        Some(b) => b,
+        None => match (p.name.as_ref(), p.limit) {
+            (Some(_), _) => true,
+            (None, Some(n)) if n <= 10 => true,
+            _ => false,
+        },
+    };
 
     let (root, store_arc) = snapshot(state)?;
 

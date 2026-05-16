@@ -627,7 +627,12 @@ async fn find_symbol_include_signature() -> anyhow::Result<()> {
         "rendered signature should strip the body: {sig:?}"
     );
 
-    // Case B: include_signature omitted → null (back-compat).
+    // Case B: include_signature omitted on a name lookup → auto-on
+    // (v0.5.3+). The pre-v0.5.3 default was null; the new heuristic
+    // recognises name-only queries as "browsing" and renders the
+    // signature without an extra round trip. Dedicated coverage of
+    // the full auto-default matrix lives in
+    // `find_symbol_auto_signature_for_small_queries` below.
     let no_sig = round_trip(
         &mut stream,
         "11",
@@ -635,12 +640,15 @@ async fn find_symbol_include_signature() -> anyhow::Result<()> {
         json!({ "name": "add" }),
     )
     .await?;
+    let auto_sig = no_sig["result"]["matches"][0]["signature"].as_str();
     assert!(
-        no_sig["result"]["matches"][0]["signature"].is_null(),
-        "signature should be null without include_signature: {no_sig:?}"
+        auto_sig.map(|s| s.contains("fn add")).unwrap_or(false),
+        "name-only query should auto-render signature (v0.5.3+ behavior): {no_sig:?}"
     );
 
-    // Case C: include_signature false explicitly → also null.
+    // Case C: include_signature false explicitly → null even on a
+    // name lookup. Explicit-off escape hatch for clients that need
+    // the pre-v0.5.3 wire shape (e.g. byte-count-tight callers).
     let false_sig = round_trip(
         &mut stream,
         "12",
@@ -651,6 +659,136 @@ async fn find_symbol_include_signature() -> anyhow::Result<()> {
     assert!(
         false_sig["result"]["matches"][0]["signature"].is_null(),
         "signature should be null when include_signature=false: {false_sig:?}"
+    );
+
+    Ok(())
+}
+
+/// v0.5.3: auto-enable `include_signature` for small-result queries.
+///
+/// Heuristic: when `include_signature` is omitted,
+/// - `name` lookups (likely 0-3 results) → auto-on
+/// - `pattern` with `limit <= 10` → auto-on
+/// - `pattern` with default/large limit → stay off (pre-v0.5.3 shape)
+/// - explicit `include_signature: false` always wins
+#[tokio::test(flavor = "current_thread")]
+async fn find_symbol_auto_signature_for_small_queries() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // Three functions so pattern queries have a result-set bigger than 1.
+    std::fs::write(
+        workspace.path().join("lib.rs"),
+        "pub fn alpha() {}\npub fn beta(x: u32) -> u32 { x }\npub fn gamma() {}\n",
+    )?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+    let _ = poll_for_match(&mut stream, "beta", Duration::from_secs(5)).await?;
+
+    // Case A: name-only query → auto-on. `beta` should have a rendered signature.
+    let by_name = round_trip(
+        &mut stream,
+        "30",
+        "Index.FindSymbol",
+        json!({ "name": "beta" }),
+    )
+    .await?;
+    let sig_a = by_name["result"]["matches"][0]["signature"].as_str();
+    assert!(
+        sig_a.map(|s| s.contains("fn beta")).unwrap_or(false),
+        "name-only query should auto-render signature; got: {by_name:?}"
+    );
+
+    // Case B: pattern with small explicit limit → auto-on. All three
+    // alphabet fns should have rendered signatures.
+    let pattern_small = round_trip(
+        &mut stream,
+        "31",
+        "Index.FindSymbol",
+        json!({ "pattern": "*", "limit": 5 }),
+    )
+    .await?;
+    let matches_b = pattern_small["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        !matches_b.is_empty(),
+        "pattern with limit=5 should return matches: {pattern_small:?}"
+    );
+    for m in &matches_b {
+        let sig = m["signature"].as_str();
+        assert!(
+            sig.is_some(),
+            "limit\u{2264}10 pattern query should auto-render every match's signature; \
+             got null for {:?}",
+            m["qualified_name"]
+        );
+    }
+
+    // Case C: pattern with default (no limit) → stay off. Signatures null.
+    let pattern_default = round_trip(
+        &mut stream,
+        "32",
+        "Index.FindSymbol",
+        json!({ "pattern": "*" }),
+    )
+    .await?;
+    let first = &pattern_default["result"]["matches"][0];
+    assert!(
+        first["signature"].is_null(),
+        "pattern with default limit should NOT auto-render (default 256 is too many): {pattern_default:?}"
+    );
+
+    // Case D: explicit false always wins, even for name lookups.
+    let explicit_off = round_trip(
+        &mut stream,
+        "33",
+        "Index.FindSymbol",
+        json!({ "name": "beta", "include_signature": false }),
+    )
+    .await?;
+    assert!(
+        explicit_off["result"]["matches"][0]["signature"].is_null(),
+        "explicit include_signature=false must win over auto-default: {explicit_off:?}"
     );
 
     Ok(())

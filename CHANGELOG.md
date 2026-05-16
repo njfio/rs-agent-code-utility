@@ -165,6 +165,36 @@ A `find_symbol --doc-contains "evict"` query against the indexed workspace retur
 #### Test coverage
 
 +1 unit test (`test_csharp_extraction`) covering class, method, record, and interface extraction with XML doc payload assertions.
+### `Index.FindSymbol.include_signature` — auto-default for small-result queries
+
+PR #81 shipped `include_signature` as opt-in (default `false`) to preserve the pre-v0.5.3 wire shape. v0.5.3+ flips the default *for browsing-shaped queries* — the cases where an agent's most likely next step is `read_symbol` on the top hit, and the round-trip is pure waste.
+
+The auto-default rule:
+
+| Query shape | New default |
+|---|---|
+| `name` exact lookup (any limit) | `true` (auto-render) |
+| `pattern` with `limit <= 10` | `true` (auto-render) |
+| `pattern` with default 256 (or any larger explicit limit) | `false` |
+| `include_signature` explicitly set | honored verbatim |
+
+Pre-v0.5.3 callers reading `signature: null` see strictly more populated data after this change — `null` becomes a real string for name lookups and small-pattern queries. Clients relying on the pre-v0.5.3 null can opt out per-call with `include_signature: false` (the existing escape hatch).
+
+#### Why these specific shapes
+
+- **Name lookups**: by-name queries are typically `name: "foo"` where the user already knows exactly what they want — 0-3 matches, signatures always wanted next. The cost is bounded.
+- **Pattern with limit ≤ 10**: user explicitly asked for a short list → browsing intent → signatures useful.
+- **Pattern with default 256**: bulk enumeration → 256 signatures is too much speculative parsing. Stay off unless asked.
+
+The existing per-daemon `SignatureCache` (keyed on `(path, byte_range, mtime)`) means repeat queries on the same workspace amortize to hashmap lookups — auto-on doesn't add per-query latency after the first warm pass.
+
+#### Test coverage
+
++1 integration test (`find_symbol_auto_signature_for_small_queries`) covering all four branches (name-default, limit-default, pattern-default-off, explicit-off). Updated `find_symbol_include_signature` to expect the new auto-on behavior on name lookups; explicit-false case unchanged.
+
+#### Protocol surface
+
+`docs/protocol-v0.md` §7.6 documents the heuristic and the explicit-off escape hatch. No new capability string — the field is still advertised under `find_symbol_signature_field` (v0.5.3+), the change is to its default-value resolution.
 
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 

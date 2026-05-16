@@ -467,7 +467,18 @@ The glob matcher has **no character classes** and **no escapes** — `*` and `?`
 
 **Pre-filter count (v0.5.2+, capability `find_symbol_pre_filter_count`):** `result.pre_filter_count: Option<usize>` — present only when a filter (currently `doc_contains`) was active. Reports the candidate count before the filter ran. Lets agents distinguish `matches: []` because the pattern matched nothing from `matches: []` because the filter rejected every candidate. Omitted when no filter ran (back-compat).
 
-**Signature field (v0.5.3+, capability `find_symbol_signature_field`):** `params.include_signature: bool` (default `false`) — when true, each match's `signature` field is populated via the per-language `SignatureRenderer` (the same code path `Index.ReadSymbol shape=signature` uses). Renders are cached on the daemon per `(path, byte_range, mtime)`, so repeated pattern queries on the same workspace amortize the parse cost. Default `false` preserves the pre-v0.5.3 wire shape (`signature: null`); agents that want rendered signatures must opt in. Best for outline-style follow-ups where the agent wants per-match signatures without paying for `read_symbol` per result.
+**Signature field (v0.5.3+, capability `find_symbol_signature_field`):** `params.include_signature: bool` — when true, each match's `signature` field is populated via the per-language `SignatureRenderer` (the same code path `Index.ReadSymbol shape=signature` uses). Renders are cached on the daemon per `(path, byte_range, mtime)`, so repeated pattern queries on the same workspace amortize the parse cost.
+
+**Default-on heuristic (v0.5.3+):** when `include_signature` is omitted, the daemon auto-enables it for *small-result* queries — the cases where the agent's most likely next step is `read_symbol` on the top hit, and an extra round trip is pure waste. Specifically:
+
+| Query shape | Auto-default |
+|---|---|
+| `name` exact lookup (any limit) | `true` |
+| `pattern` with `limit <= 10` | `true` |
+| `pattern` with default 256 (or any larger explicit limit) | `false` |
+| `include_signature` explicitly set | honored verbatim |
+
+Pre-v0.5.3 clients reading `signature: null` see strictly more populated fields after this change — `null` becomes a real string for the affected query shapes. Clients relying on the pre-v0.5.3 null can opt out per-call with `include_signature: false`.
 
 **`result`**:
 ```jsonc
