@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Rust `const` and `static` extraction — closes the PR #76 dogfood gap
+
+PR #76's honest dogfood report flagged: **Rust `const` declarations
+don't surface via `find_symbol`** — they weren't extracted as symbols
+by `extract_rust_symbols`. Agents searching for constants by name
+had to fall back to grep.
+
+This PR closes the gap by adding `const_item` and `static_item`
+extraction to `extract_rust_symbols`. Both module-level constants
+and function-local consts now surface as symbols with their doc
+comments attached.
+
+#### Verification
+
+The exact lookup that failed during PR #76's dogfood now works:
+
+```text
+$ rts-bench query find-symbol --workspace . --name DAEMON_CAPABILITIES
+  DAEMON_CAPABILITIES (const)  @  crates/rts-daemon/src/methods/daemon.rs:18
+
+$ rts-bench query find-symbol --workspace . --name DEFAULT_LIMIT
+  { qualified_name: "DEFAULT_LIMIT", kind: "const",
+    doc: "Default cap when no `limit` is supplied. ...",
+    file: "crates/rts-daemon/src/methods/index.rs", line: 469 }
+```
+
+Pattern queries work too: `--pattern "DEFAULT_*"` returns 8+
+constants across rts-core / rts-bench / rts-daemon, all with their
+doc-strings populated (v0.5.0+).
+
+#### What changed
+
+`crates/rts-core/src/analyzer.rs`:
+- New extraction pass in `extract_rust_symbols` that walks
+  `const_item` and `static_item` nodes
+- Sets `kind: "const"` or `kind: "static"` accordingly
+- Visibility derived from presence of `visibility_modifier` child
+- Doc comments extracted via the existing `extract_rust_doc_comments`
+  path (so `///`-line blocks attach correctly)
+
+Function-local consts get extracted too — tree-sitter's recursive
+descent picks them up alongside module-level ones.
+
+#### Test coverage
+
++1 unit test (`test_rust_const_and_static_extraction`) covering:
+- `pub const` extracted with `kind: "const"`, `visibility: "public"`
+- Multiple consts in the same file
+- `static` extracted with `kind: "static"`
+- Doc-string flows through
+
+595 workspace tests pass.
+
 ### `Index.FindSymbol.doc_contains` — behavior-shaped queries via doc text
 
 Built while **dogfooding the daemon** as my primary navigation surface. Filter `Index.FindSymbol` matches by case-insensitive substring against doc text. Lets agents ask "find the cache eviction code" → matches any documented symbol whose comment mentions `evict`, regardless of identifier name.
