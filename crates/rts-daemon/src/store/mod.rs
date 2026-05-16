@@ -10,7 +10,7 @@ pub mod schema;
 
 pub use schema::{DefSite, DocBlob, FileId, FileMeta, ParseStatus, RefSite, SymbolKind};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -19,8 +19,8 @@ use postcard::{from_bytes, to_allocvec};
 use redb::{Database, Durability, ReadableMultimapTable, ReadableTable};
 
 use schema::{
-    DEFS, FID_DEFS, FID_REFS, FID_TO_PATH, FILES, META, NAME_TO_SID, PATH_TO_FID, REFS, SID_DOCS,
-    SID_REFS_OUT, SID_TO_NAME,
+    DEFS, FID_DEFS, FID_REFS, FID_TO_PATH, FID_UNRESOLVED, FILES, META, NAME_TO_SID, PATH_TO_FID,
+    REFS, SID_DOCS, SID_REFS_OUT, SID_TO_NAME, UNRESOLVED_REFS,
 };
 
 /// Current on-disk schema version. Bump when any table layout or value-bytes
@@ -33,7 +33,13 @@ use schema::{
 ///   for the call graph half of the index. Old `db.redb` files are
 ///   wiped on first mount; the index is a derived cache per
 ///   protocol-v0 §15.4. No migration code needed.
-pub const SCHEMA_VERSION: u32 = 2;
+/// * `3` — v0.5.6: adds UNRESOLVED_REFS + FID_UNRESOLVED for
+///   deferred ref resolution across commit batches. Closes the §F1
+///   silent-drop bug where a file's ref to a callee defined in a
+///   FUTURE batch was permanently filtered as "external". Wiping
+///   any v2 store on bump forces a re-walk that materialises every
+///   previously-dropped edge through the new deferred path.
+pub const SCHEMA_VERSION: u32 = 3;
 
 const META_SCHEMA_VERSION: &str = "schema_version";
 const META_NEXT_FID: &str = "next_fid";
@@ -203,6 +209,9 @@ impl Store {
                 let _ = w.open_multimap_table(SID_REFS_OUT)?;
                 // v0.5 (back-compat additive table): doc comments.
                 let _ = w.open_multimap_table(SID_DOCS)?;
+                // v0.5.6 (SCHEMA_VERSION=3): deferred ref tables.
+                let _ = w.open_multimap_table(UNRESOLVED_REFS)?;
+                let _ = w.open_multimap_table(FID_UNRESOLVED)?;
                 let _ = w.open_table(META)?;
             }
             w.commit().context("commit table init")?;
@@ -256,6 +265,11 @@ impl Store {
             let mut fid_refs = txn.open_multimap_table(FID_REFS)?;
             let mut sid_refs_out = txn.open_multimap_table(SID_REFS_OUT)?;
             let mut sid_docs = txn.open_multimap_table(SID_DOCS)?;
+            // v0.5.6 deferred-ref tables. Pass 2 writes here when a
+            // callee name isn't yet in NAME_TO_SID; Pass 3 drains
+            // them when a future commit interns the name.
+            let mut unresolved_refs = txn.open_multimap_table(UNRESOLVED_REFS)?;
+            let mut fid_unresolved = txn.open_multimap_table(FID_UNRESOLVED)?;
             let mut meta = txn.open_table(META)?;
 
             // Removals first (rare relative to upserts; cheap to scan).
@@ -273,6 +287,8 @@ impl Store {
                     &mut refs_t,
                     &mut sid_refs_out,
                     &mut sid_docs,
+                    &mut unresolved_refs,
+                    &mut fid_unresolved,
                     fid,
                 )?;
                 path_to_fid.remove(path_str.as_ref())?;
@@ -295,6 +311,13 @@ impl Store {
             // ranges.
             let mut staged: Vec<(u32, Vec<(u32, u32, u32, SymbolKind)>, Vec<RefHit>)> =
                 Vec::with_capacity(upserts.len());
+            // v0.5.6 Pass 3 driver. Tracks names whose first
+            // NAME_TO_SID entry was just minted in Pass 1 — these are
+            // the only names whose UNRESOLVED_REFS rows can possibly
+            // resolve now. Already-interned names had a chance to
+            // resolve on their original commit; iterating them again
+            // would be wasted work.
+            let mut newly_interned_names: HashSet<String> = HashSet::new();
 
             // Pass 1.
             for entry in upserts {
@@ -335,6 +358,8 @@ impl Store {
                     &mut refs_t,
                     &mut sid_refs_out,
                     &mut sid_docs,
+                    &mut unresolved_refs,
+                    &mut fid_unresolved,
                     fid,
                 )?;
 
@@ -359,6 +384,12 @@ impl Store {
                             let new_sid = self.next_sid.fetch_add(1, Ordering::Relaxed);
                             name_to_sid.insert(name.as_str(), new_sid)?;
                             sid_to_name.insert(new_sid, name.as_str())?;
+                            // v0.5.6: record so Pass 3 knows which
+                            // UNRESOLVED_REFS rows to drain. Insert
+                            // into the set is O(1); even on a
+                            // 100k-symbol workspace this stays
+                            // small per batch.
+                            newly_interned_names.insert(name.clone());
                             new_sid
                         }
                     };
@@ -393,14 +424,14 @@ impl Store {
             }
 
             // Pass 2: refs. Every same-batch callee is now interned.
-            // External names (no NAME_TO_SID entry after Pass 1) are
-            // filtered per v0.3 plan §F1.
+            // Names with no NAME_TO_SID entry after Pass 1 are
+            // **deferred** to UNRESOLVED_REFS (v0.5.6+), not dropped.
+            // Pre-v0.5.6 these were filtered per v0.3 plan §F1 and
+            // lost forever — that's the silent-corruption bug.
+            // Pass 3 (below) re-resolves them when a future commit
+            // interns the callee's name.
             for (fid, file_defs, refs) in staged {
                 for r in refs {
-                    let callee_sid = match name_to_sid.get(r.name.as_str())? {
-                        Some(v) => v.value(),
-                        None => continue, // external symbol; skip per F1
-                    };
                     let caller_sid = enclosing_caller_sid(&file_defs, r.start);
 
                     let site = RefSite {
@@ -412,10 +443,87 @@ impl Store {
                         caller_sid,
                     };
                     let site_bytes = to_allocvec(&site).context("encode RefSite")?;
-                    refs_t.insert(&callee_sid, site_bytes.as_slice())?;
-                    fid_refs.insert(&fid, &callee_sid)?;
-                    if let Some(c) = caller_sid {
+
+                    match name_to_sid.get(r.name.as_str())? {
+                        Some(v) => {
+                            // Resolved path — standard insert into
+                            // the live REFS / FID_REFS / SID_REFS_OUT
+                            // triple.
+                            let callee_sid = v.value();
+                            refs_t.insert(&callee_sid, site_bytes.as_slice())?;
+                            fid_refs.insert(&fid, &callee_sid)?;
+                            if let Some(c) = caller_sid {
+                                sid_refs_out.insert(&c, &callee_sid)?;
+                            }
+                        }
+                        None => {
+                            // Deferred path — write to UNRESOLVED_REFS
+                            // and record the (fid, name) reverse edge
+                            // so a later removal of this file can
+                            // clean up its pending entries.
+                            unresolved_refs.insert(r.name.as_str(), site_bytes.as_slice())?;
+                            fid_unresolved.insert(&fid, r.name.as_str())?;
+                        }
+                    }
+                }
+            }
+
+            // Pass 3 (v0.5.6+): re-resolve UNRESOLVED_REFS for any
+            // names this batch newly defined. For each name in
+            // `newly_interned_names`, drain UNRESOLVED_REFS[name]
+            // into REFS / FID_REFS / SID_REFS_OUT, and clean up the
+            // FID_UNRESOLVED reverse edges. This is what closes the
+            // §F1 silent-drop bug: a ref written before its callee's
+            // def was committed gets materialized as soon as the def
+            // lands, no matter how many commit batches later.
+            for name in &newly_interned_names {
+                // Re-fetch the sid; we know it exists because Pass 1
+                // just inserted it.
+                let callee_sid = match name_to_sid.get(name.as_str())? {
+                    Some(v) => v.value(),
+                    None => continue,
+                };
+
+                // Collect the pending entries before we mutate the
+                // table. Keep both the encoded bytes (for refs_t
+                // insert) and the decoded form (for fid_refs /
+                // sid_refs_out which need typed access to fid +
+                // caller_sid).
+                let pending: Vec<(Vec<u8>, RefSite)> = {
+                    let mut v = Vec::new();
+                    let it = unresolved_refs.get(name.as_str())?;
+                    for row in it {
+                        let bytes = row?.value().to_vec();
+                        if let Ok(site) = from_bytes::<RefSite>(&bytes) {
+                            v.push((bytes, site));
+                        }
+                    }
+                    v
+                };
+
+                if pending.is_empty() {
+                    continue;
+                }
+
+                // Materialize into the live tables.
+                for (bytes, site) in &pending {
+                    refs_t.insert(&callee_sid, bytes.as_slice())?;
+                    fid_refs.insert(&site.fid, &callee_sid)?;
+                    if let Some(c) = site.caller_sid {
                         sid_refs_out.insert(&c, &callee_sid)?;
+                    }
+                }
+
+                // Now drop UNRESOLVED_REFS[name] in one shot and
+                // remove the FID_UNRESOLVED reverse edges. We track
+                // the unique fids we materialized to keep the
+                // FID_UNRESOLVED cleanup O(distinct_fids) rather
+                // than O(pending).
+                unresolved_refs.remove_all(name.as_str())?;
+                let mut seen_fids: HashSet<u32> = HashSet::new();
+                for (_, site) in &pending {
+                    if seen_fids.insert(site.fid) {
+                        fid_unresolved.remove(&site.fid, name.as_str())?;
                     }
                 }
             }
@@ -1085,6 +1193,12 @@ fn drop_file_entries(
     refs_t: &mut redb::MultimapTable<'_, u32, &[u8]>,
     sid_refs_out: &mut redb::MultimapTable<'_, u32, u32>,
     sid_docs: &mut redb::MultimapTable<'_, u32, &[u8]>,
+    // v0.5.6 deferred-ref tables. Passed in so removals also clean
+    // up pending unresolved refs originating in this file —
+    // otherwise a delete-then-redefine would resurrect stale
+    // unresolved-ref entries when the callee finally lands.
+    unresolved_refs: &mut redb::MultimapTable<'_, &str, &[u8]>,
+    fid_unresolved: &mut redb::MultimapTable<'_, u32, &str>,
     fid: u32,
 ) -> anyhow::Result<()> {
     // Drop the file row itself.
@@ -1240,6 +1354,44 @@ fn drop_file_entries(
             sid_docs.insert(sid, v.as_slice())?;
         }
     }
+
+    // v0.5.6: drop unresolved refs originating in this file. Mirrors
+    // the REFS / FID_REFS cleanup above. Without this step a delete-
+    // then-redefine would leave stale (fid, name) edges in
+    // UNRESOLVED_REFS that resurrect as zombie call sites the next
+    // time `name` lands in NAME_TO_SID.
+    let prior_unresolved_names: Vec<String> = {
+        let mut v = Vec::new();
+        let it = fid_unresolved.get(&fid)?;
+        for row in it {
+            v.push(row?.value().to_string());
+        }
+        v
+    };
+    fid_unresolved.remove_all(&fid)?;
+    for name in &prior_unresolved_names {
+        // Filter-rewrite: keep entries from OTHER fids, drop this
+        // file's. UNRESOLVED_REFS values carry `RefSite { fid, … }`
+        // so the fid is recoverable from the postcard blob.
+        let kept: Vec<Vec<u8>> = {
+            let mut v = Vec::new();
+            let it = unresolved_refs.get(name.as_str())?;
+            for row in it {
+                let bytes = row?.value().to_vec();
+                if let Ok(rs) = from_bytes::<RefSite>(&bytes) {
+                    if rs.fid != fid {
+                        v.push(bytes);
+                    }
+                }
+            }
+            v
+        };
+        unresolved_refs.remove_all(name.as_str())?;
+        for v in kept {
+            unresolved_refs.insert(name.as_str(), v.as_slice())?;
+        }
+    }
+
     Ok(())
 }
 
@@ -1773,9 +1925,21 @@ mod tests {
 
     #[test]
     fn refs_external_symbol_filtered_at_commit() {
-        // A file references `Vec` (not workspace-defined). After commit,
-        // no REFS row should exist for `Vec` — we filter externals per
-        // the v0.3 plan §F1 "drop external-symbol storage."
+        // A file references `Vec` (not workspace-defined). The
+        // **semantics shifted at v0.5.6**:
+        //
+        // - Pre-v0.5.6: the §F1 filter dropped the ref entirely, so
+        //   NAME_TO_SID had no entry AND no other table did either.
+        // - Post-v0.5.6: we still don't intern `Vec` in NAME_TO_SID
+        //   (no def for it yet), but the ref **is deferred** to
+        //   UNRESOLVED_REFS — because we can't tell at commit time
+        //   whether `Vec` will eventually get a workspace def or
+        //   stay external. If it stays external, the entry sits
+        //   pending forever (bloat tradeoff; cap is a v0.5.7
+        //   follow-up). If it gets defined later, Pass 3 drains
+        //   the entry into the live REFS table.
+        //
+        // Test asserts both halves of the v0.5.6 invariant.
         let (_tmp, store) = temp_store();
 
         let entry = FileBatchEntry {
@@ -1799,13 +1963,23 @@ mod tests {
             .commit_batch(vec![entry], vec![], Durability::Immediate)
             .unwrap();
 
-        // NAME_TO_SID should not have an entry for "Vec" (we skip it at
-        // commit time before allocating a sid).
         let txn = store.db.begin_read().unwrap();
+        // NAME_TO_SID should still not have an entry for "Vec" — we
+        // only intern on def, not on ref.
         let name_to_sid = txn.open_table(NAME_TO_SID).unwrap();
         assert!(
             name_to_sid.get("Vec").unwrap().is_none(),
             "external symbols should NOT be interned"
+        );
+        // …but the ref must be parked in UNRESOLVED_REFS, ready to
+        // resurrect if `Vec` ever gets defined. This is the v0.5.6
+        // shift from "drop" to "defer".
+        let unresolved = txn.open_multimap_table(UNRESOLVED_REFS).unwrap();
+        let pending: Vec<_> = unresolved.get("Vec").unwrap().collect();
+        assert_eq!(
+            pending.len(),
+            1,
+            "v0.5.6: external ref should be deferred to UNRESOLVED_REFS, not dropped"
         );
     }
 
@@ -2033,18 +2207,203 @@ mod tests {
     }
 
     #[test]
-    fn v1_to_v2_schema_mismatch_triggers_rebuild() {
-        // Simulate a v0.2 redb file by seeding SCHEMA_VERSION=1, then
-        // open it with the v0.3 binary (SCHEMA_VERSION=2). The existing
-        // `Store::open` rebuild path at mod.rs:124-148 wipes and
-        // recreates; the new tables (REFS, FID_REFS, SID_REFS_OUT)
-        // must be open-able after the rebuild, and the workspace
-        // starts fresh (no leaked rows).
+    fn cross_batch_refs_resolve_via_unresolved_refs_table() {
+        // v0.5.6 regression test for the §F1 silent-drop bug.
         //
-        // This is v0.3's first real exercise of the schema-mismatch
-        // rebuild path (the policy was introduced in v0.2 alpha.1 but
-        // never tripped because SCHEMA_VERSION stayed at 1 for the
-        // entire alpha line).
+        // Scenario: commit batch 1 contains caller.rs with a ref to
+        // `target`. Commit batch 2 contains target.rs defining `target`.
+        // Pre-v0.5.6, the ref written in batch 1 was filtered as
+        // "external" because `target` wasn't yet in NAME_TO_SID, and
+        // it stayed dropped forever even after target.rs landed.
+        // Post-v0.5.6, batch 1 defers the ref to UNRESOLVED_REFS; batch
+        // 2's commit-time Pass-3 drains it into REFS so find_callers
+        // returns the cross-batch edge.
+        let (_tmp, store) = temp_store();
+
+        // Batch 1: caller.rs references undefined `target`.
+        let caller = FileBatchEntry {
+            path: std::path::PathBuf::from("caller.rs"),
+            meta: rust_meta(blake3::hash(b"caller").into()),
+            defs: vec![(
+                "make_call".to_string(),
+                fn_def(0, 100, 1, 10),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "target".to_string(),
+                start: 50,
+                end: 56,
+                start_line: 5,
+                end_line: 5,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![caller], vec![], Durability::Immediate)
+            .unwrap();
+
+        // Pre-v0.5.6 invariant: find_callers("target") returns empty
+        // because the sid doesn't exist yet. Post-v0.5.6: same shape,
+        // but the ref is staged in UNRESOLVED_REFS waiting for a
+        // future commit to mint the sid.
+        let txn = store.db.begin_read().unwrap();
+        let name_to_sid = txn.open_table(NAME_TO_SID).unwrap();
+        assert!(
+            name_to_sid.get("target").unwrap().is_none(),
+            "target sid shouldn't exist yet"
+        );
+        let unresolved = txn.open_multimap_table(UNRESOLVED_REFS).unwrap();
+        let pending: Vec<_> = unresolved.get("target").unwrap().collect();
+        assert_eq!(
+            pending.len(),
+            1,
+            "v0.5.6 should defer the ref to UNRESOLVED_REFS, not drop it"
+        );
+        drop(unresolved);
+        drop(name_to_sid);
+        drop(txn);
+
+        // Batch 2: target.rs defines `target`.
+        let target = FileBatchEntry {
+            path: std::path::PathBuf::from("target.rs"),
+            meta: rust_meta(blake3::hash(b"target").into()),
+            defs: vec![(
+                "target".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![target], vec![], Durability::Immediate)
+            .unwrap();
+
+        // The §F1 fix: the ref from caller.rs to target should now
+        // be materialized. find_callers must return it.
+        let target_sid = {
+            let txn = store.db.begin_read().unwrap();
+            let name_to_sid = txn.open_table(NAME_TO_SID).unwrap();
+            name_to_sid.get("target").unwrap().unwrap().value()
+        };
+        let callers = store.refs_to_symbol(target_sid).unwrap();
+        assert_eq!(
+            callers.len(),
+            1,
+            "cross-batch ref must be materialized after callee def lands"
+        );
+        let site = &callers[0];
+        assert_eq!(site.start, 50);
+        assert_eq!(site.end, 56);
+        assert_eq!(site.start_line, 5);
+
+        // UNRESOLVED_REFS[target] should be empty now; the entry
+        // moved to the live REFS table.
+        let txn = store.db.begin_read().unwrap();
+        let unresolved = txn.open_multimap_table(UNRESOLVED_REFS).unwrap();
+        let still_pending: Vec<_> = unresolved.get("target").unwrap().collect();
+        assert!(
+            still_pending.is_empty(),
+            "Pass 3 should drain UNRESOLVED_REFS[target] when target's sid lands"
+        );
+    }
+
+    #[test]
+    fn unresolved_refs_cleared_on_file_removal() {
+        // v0.5.6: dropping a file must also drop its pending
+        // UNRESOLVED_REFS entries via the FID_UNRESOLVED reverse
+        // index. Otherwise a delete-then-redefine cycle resurrects
+        // zombie call sites.
+        let (_tmp, store) = temp_store();
+
+        // Commit caller.rs with an unresolved ref to `target`.
+        let caller = FileBatchEntry {
+            path: std::path::PathBuf::from("caller.rs"),
+            meta: rust_meta(blake3::hash(b"caller").into()),
+            defs: vec![(
+                "make_call".to_string(),
+                fn_def(0, 100, 1, 10),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "target".to_string(),
+                start: 50,
+                end: 56,
+                start_line: 5,
+                end_line: 5,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![caller], vec![], Durability::Immediate)
+            .unwrap();
+
+        // Now remove caller.rs via a FileBatchRemoval. The pending
+        // entry in UNRESOLVED_REFS[target] should disappear.
+        store
+            .commit_batch(
+                vec![],
+                vec![FileBatchRemoval {
+                    path: std::path::PathBuf::from("caller.rs"),
+                }],
+                Durability::Immediate,
+            )
+            .unwrap();
+
+        let txn = store.db.begin_read().unwrap();
+        let unresolved = txn.open_multimap_table(UNRESOLVED_REFS).unwrap();
+        let after_remove: Vec<_> = unresolved.get("target").unwrap().collect();
+        assert!(
+            after_remove.is_empty(),
+            "removing caller.rs should clear its pending UNRESOLVED_REFS rows"
+        );
+
+        // Now define `target` in target.rs. There should be NO
+        // zombie call site materialized — caller.rs's pending entry
+        // was correctly cleaned up.
+        drop(unresolved);
+        drop(txn);
+        let target = FileBatchEntry {
+            path: std::path::PathBuf::from("target.rs"),
+            meta: rust_meta(blake3::hash(b"target").into()),
+            defs: vec![(
+                "target".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![target], vec![], Durability::Immediate)
+            .unwrap();
+        let target_sid = {
+            let txn = store.db.begin_read().unwrap();
+            let name_to_sid = txn.open_table(NAME_TO_SID).unwrap();
+            name_to_sid.get("target").unwrap().unwrap().value()
+        };
+        let callers = store.refs_to_symbol(target_sid).unwrap();
+        assert!(
+            callers.is_empty(),
+            "after caller.rs removal, no zombie ref should resurface; got {callers:?}"
+        );
+    }
+
+    #[test]
+    fn schema_mismatch_triggers_rebuild() {
+        // Simulate an older-schema redb file by seeding
+        // SCHEMA_VERSION=1, then open with the current binary. The
+        // `Store::open` rebuild path at mod.rs:124-148 wipes and
+        // recreates; every table (DEFS, REFS, FID_REFS,
+        // SID_REFS_OUT, plus v0.5.6's UNRESOLVED_REFS and
+        // FID_UNRESOLVED) must be open-able after the rebuild, and
+        // the workspace starts fresh (no leaked rows).
+        //
+        // First exercised at v0.3 (SCHEMA_VERSION 1 → 2). Re-asserted
+        // at v0.5.6 (SCHEMA_VERSION 2 → 3) to cover the deferred-ref
+        // tables. Seeding 1 covers the multi-version-jump path
+        // implicitly; the older version is the strict test because
+        // it forces a full rebuild from the earliest known state.
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("db.redb");
 
@@ -2084,7 +2443,11 @@ mod tests {
             .unwrap();
         assert_eq!(store.find_symbol("X").unwrap().len(), 1);
 
-        // SCHEMA_VERSION metadata is now v2.
+        // SCHEMA_VERSION metadata is now whatever the current
+        // binary advertises. We assert equality with the constant
+        // rather than a literal so future bumps don't break this
+        // test — the substantive invariant is "rebuild wrote the
+        // current version", not the specific number.
         let txn = store.db.begin_read().unwrap();
         let meta = txn.open_table(META).unwrap();
         let stored = meta
@@ -2093,7 +2456,6 @@ mod tests {
             .and_then(|v| u32_from_le_slice(v.value()))
             .unwrap();
         assert_eq!(stored, SCHEMA_VERSION);
-        assert_eq!(stored, 2);
     }
 
     #[test]
