@@ -177,7 +177,9 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "polling_fallback",
                      "find_callers", "read_symbol.include_callers",
                      "pagerank_symbolwise",
-                     "impact_of"],
+                     "impact_of",
+                     "find_symbol_limit_param",      // v0.4.1+
+                     "find_symbol_doc_field"],       // v0.5.0+
     "uptime_ms":    123456
   }
 }
@@ -201,6 +203,11 @@ Reserved for the **v0.3 code-graph KB** extension (see [v0.3 plan](plans/2026-05
 - ~~`read_symbol.include_callers`~~ — **advertised** as of `v0.2.0-alpha.32` (U2'). `Index.ReadSymbol.params.include_callers: bool` composes with `include_dependencies`; see §7.7.
 - ~~`pagerank_symbolwise`~~ — **advertised** as of `v0.2.0-alpha.34` (U4). Symbol-level PageRank fills `rank_score` in `Index.FindSymbol` + `Index.FindCallers` responses; `find_symbol` results sort by descending rank by default. Clients pinned to v0.2 insertion-order ordering can pass `sort: "lexical"` on `Index.FindSymbol.params` to opt out.
 - `call_graph` (umbrella; reserved but **not advertised by itself** — agents should branch on the four fine-grained strings above; **all four now advertised**).
+
+Reserved for the **v0.4 / v0.5 semantic-retrieval extensions**. Advertised independently when implemented:
+
+- ~~`find_symbol_limit_param`~~ — **advertised** as of `v0.4.1`. `Index.FindSymbol.params.limit: u32` (range `1..=4096`, default `256`) caps the returned `matches[]` size. Pre-v0.4.1 daemons silently ignored the field. The 4096 ceiling exists for offline eval tooling; agents should leave at default.
+- ~~`find_symbol_doc_field`~~ — **advertised** as of `v0.5.0`. `Index.FindSymbol.matches[].doc` carries extracted doc-comment text. v0.5.0 ships Rust (`///`/`//!`); v0.5.x patches extend to Go, Swift, Python, JavaScript / TypeScript / C / C++ (`/** */`), Ruby (`#`), PHP (PHPDoc), Java (Javadoc). Pre-v0.5 daemons return `null` for all symbols.
 
 ### 4.3 Version mismatch
 
@@ -429,13 +436,18 @@ AST-precise definition + references + signature for a named or pattern-matched s
   "pattern": "build_*",              // optional; glob: `*` (any run, including empty) and `?` (single char). Mutually exclusive with name. Capability: `fuzzy_match` (alpha.24+).
   "kind":    "fn",                   // optional; one of: fn, struct, enum, type, trait, const, static, impl, method, class, interface, module
   "file":    "src/index/mod.rs",     // optional; filter
-  "sort":    "rank"                  // optional; "rank" (default; descending rank_score) | "lexical" (alphabetical-by-file). Capability: `pagerank_symbolwise` (alpha.34+).
+  "sort":    "rank",                 // optional; "rank" (default; descending rank_score) | "lexical" (alphabetical-by-file). Capability: `pagerank_symbolwise` (alpha.34+).
+  "limit":   256                     // optional; max matches in `result.matches[]`. Range 1..=4096; default 256. Capability: `find_symbol_limit_param` (v0.4.1+).
 }
 ```
 
 The glob matcher has **no character classes** and **no escapes** — `*` and `?` only. Agents that need regex-like expressivity (e.g. character classes) should compose multiple `pattern` queries client-side; a flagged regex mode is on the v1.1 candidate list pending a concrete user request.
 
-**Sort order (alpha.34+, capability `pagerank_symbolwise`):** `matches[]` is sorted by descending `rank_score` (symbol-level PageRank over the workspace call graph) by default. Pass `sort: "lexical"` for back-compat with v0.2's alphabetical-by-`(file, start_byte)` ordering. The 256-entry cap applies *after* sorting, so `pattern="*"` with rank sort returns the top-K most-central symbols. Clients that don't advertise the capability still receive the new default sort — daemons advertising `pagerank_symbolwise` use ranked order unless `sort: "lexical"` is explicit.
+**Sort order (alpha.34+, capability `pagerank_symbolwise`):** `matches[]` is sorted by descending `rank_score` (symbol-level PageRank over the workspace call graph) by default. Pass `sort: "lexical"` for back-compat with v0.2's alphabetical-by-`(file, start_byte)` ordering. The `limit` cap applies *after* sorting, so `pattern="*"` with rank sort returns the top-K most-central symbols. Clients that don't advertise the capability still receive the new default sort — daemons advertising `pagerank_symbolwise` use ranked order unless `sort: "lexical"` is explicit.
+
+**Limit (v0.4.1+, capability `find_symbol_limit_param`):** the optional `limit` parameter caps the number of returned matches. Range `1..=4096`. The default of 256 matches pre-v0.4.1 behavior — pre-v0.4.1 daemons silently ignored the field. The 4096 ceiling exists for offline eval tooling (`rts-bench semantic`); **setting `limit` above the default in an agent call is almost always a mistake** because LLM contexts can't usefully digest more than a few hundred matches.
+
+**Doc field (v0.5.0+, capability `find_symbol_doc_field`):** `matches[].doc` carries extracted doc-comment text for documented symbols, `null` for undocumented or pre-v0.5 daemons. v0.5.0 ships Rust (`///`/`//!`) support. v0.5.x patches extend coverage to Go, Swift, Python (`"""..."""`), JavaScript / TypeScript / C / C++ (JSDoc / Doxygen `/** ... */`), Ruby (`#`), PHP (PHPDoc), Java (Javadoc).
 
 **`result`**:
 ```jsonc
@@ -448,14 +460,15 @@ The glob matcher has **no character classes** and **no escapes** — `*` and `?`
       "range":          { "start_line": 42, "end_line": 58, "start_byte": 1024, "end_byte": 1456 },
       "signature":      "pub fn build_index(workspace: &Path) -> Result<Index>",
       "doc":            "Walk the workspace and build a fresh index.",
+      "visibility":     "public",
       "rank_score":     0.0421                // PageRank-derived; higher = more central
     }
   ],
-  "truncated": false                          // true if list was clipped at MAX_MATCHES (256)
+  "truncated": false                          // true if list was clipped at the effective `limit`
 }
 ```
 
-Errors: `INDEX_NOT_READY`, `INVALID_PARAMS` (e.g. unknown `kind`).
+Errors: `INDEX_NOT_READY`, `INVALID_PARAMS` (e.g. unknown `kind`; `limit` outside 1..=4096).
 
 ### 7.7 `Index.ReadSymbol`
 
