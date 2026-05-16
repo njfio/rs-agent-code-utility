@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
+
+Diagnosed while babysitting the v0.5.2 release: the `x86_64-apple-darwin` matrix entry on the `macos-13` runner pool has hung **on every release in this series** (v0.5.0, v0.5.1, v0.5.2 all show the job perpetually queued, never completing). The cascading consequence: `aggregate-checksums` has `needs: build` and waits on all 4 entries, so the consolidated `SHA256SUMS` file was never published — the README's verify snippet (`sha256sum -c SHA256SUMS --ignore-missing`) pointed at a file that didn't exist on any release.
+
+This PR does two things:
+
+1. **Drops `x86_64-apple-darwin` from the build matrix.** GitHub's `macos-13` runners have been flaky-to-broken since the macOS 14/15 transition. Intel Mac users build from source via `cargo install` (the Option B path in the README) — the user population is small and shrinking; the alternative is a universal-binary cross-compile from `macos-latest`, which we can add later if there's demand.
+2. **Loosens the `aggregate-checksums` gate** to `success() || failure()`. The aggregator now publishes whatever the surviving matrix entries managed to upload, even when a target fails. (`always()` would also fire on cancellation — we don't want that.)
+
+Net effect: v0.5.3+ releases will ship 3 tarballs + per-asset `.sha256` sidecars + the aggregated `SHA256SUMS` file, all checksum-verifiable end-to-end.
+
+README updated to drop the Intel Mac row and note the build-from-source path for that platform.
+
 ### `Index.FindSymbol.include_signature` — opt-in per-match signature rendering
 
 The `signature` field on `find_symbol` matches has shipped as `null` since v0 because the writer doesn't store rendered signatures — they're computed on demand by `Index.ReadSymbol shape=signature`. That's the right default for the common case (an agent calling `find_symbol` doesn't always need signatures), but the cost is that **outline-style follow-ups need a separate `read_symbol` call per match** to see signatures.
