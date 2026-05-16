@@ -103,26 +103,131 @@ struct ReadRangeParams {
     token_budget: Option<u64>,
 }
 
-/// v0.5.4: `Index.Grep` — literal-substring search over indexed
-/// file contents. Closes the agent-loop hole where the daemon
-/// couldn't help find error messages, version strings, log
+/// v0.5.4: `Index.Grep` — literal-substring (or v0.5.5+ regex) search
+/// over indexed file contents. Closes the agent-loop hole where the
+/// daemon couldn't help find error messages, version strings, log
 /// outputs, or any other non-symbol text.
 ///
-/// The MVP is literal-only (no regex), case-insensitive by default.
-/// Regex support, `file_glob`, `context_lines`, and enclosing-symbol
-/// resolution are filed for follow-up.
+/// v0.5.5 adds `regex: true` (opt-in regex syntax) and `file_glob`
+/// (`*.rs`, `src/**/*.toml`, etc.) so agents can scope searches the
+/// same way they would with `rg --type rust foo` without leaving the
+/// daemon's already-indexed file set. `context_lines` and enclosing-
+/// symbol resolution remain filed for follow-up.
 #[derive(Debug, Deserialize)]
 struct GrepParams {
-    /// The literal substring to search for. Required; 1..=1024 chars.
+    /// The pattern to search for. Required; 1..=1024 chars. By
+    /// default interpreted as a literal substring; set
+    /// `regex: true` to interpret as a regex (Rust `regex` crate
+    /// syntax, byte-level matching).
     text: String,
     /// Maximum number of matches to return. Defaults to 256.
     /// Range: 1..=4096 (same shape as `find_symbol.limit`).
     #[serde(default)]
     limit: Option<u32>,
     /// Case-insensitive matching. Defaults to `true` — agent-friendly.
-    /// Set explicitly to `false` for case-sensitive search.
+    /// Set explicitly to `false` for case-sensitive search. Applies
+    /// to both literal and regex modes (regex mode uses
+    /// `RegexBuilder::case_insensitive(true)`).
     #[serde(default)]
     case_insensitive: Option<bool>,
+    /// v0.5.5+ opt-in regex mode. When `true`, `text` is compiled as
+    /// a `regex::bytes::Regex` pattern. Compilation failures surface
+    /// as `INVALID_PARAMS` with the compiler's error message so the
+    /// agent can self-correct. Defaults to `false` (literal mode).
+    #[serde(default)]
+    regex: Option<bool>,
+    /// v0.5.5+ file-path glob filter. When set, only files whose
+    /// workspace-relative path matches this glob are scanned. Uses
+    /// `globset::Glob` syntax: `*.rs`, `src/**/*.toml`,
+    /// `crates/{rts-core,rts-daemon}/**/*.rs`. Invalid globs surface
+    /// as `INVALID_PARAMS`. Defaults to scanning every indexed file.
+    #[serde(default)]
+    file_glob: Option<String>,
+}
+
+/// Per-mode search strategy. Compiled once in `grep()` and reused
+/// across every scanned file. Literal mode stays on the byte-windows
+/// path that's been measured at GB/s on modern CPUs; regex mode
+/// delegates to `regex::bytes::Regex::find_iter`.
+enum GrepScanner {
+    Literal {
+        needle: String,
+        case_insensitive: bool,
+    },
+    Regex(regex::bytes::Regex),
+}
+
+impl GrepScanner {
+    /// Return every non-overlapping match in `bytes` as
+    /// `(start_byte, end_byte)` pairs against the *original* buffer
+    /// (not the lowercased copy in the case-insensitive literal
+    /// path — the caller renders `line_text` from the original).
+    fn scan_file(&self, bytes: &[u8]) -> Vec<(usize, usize)> {
+        match self {
+            GrepScanner::Literal {
+                needle,
+                case_insensitive,
+            } => {
+                let needle_bytes = needle.as_bytes();
+                if needle_bytes.is_empty() {
+                    return Vec::new();
+                }
+                let n = needle_bytes.len();
+                if *case_insensitive {
+                    // Allocate the lowercase haystack + needle once
+                    // per file. ASCII fast-path matches v0.5.4
+                    // behaviour byte-for-byte; non-ASCII content is
+                    // still scanned correctly because the original
+                    // byte windows are what we return.
+                    let needle_lower: Vec<u8> = needle_bytes
+                        .iter()
+                        .map(|b| b.to_ascii_lowercase())
+                        .collect();
+                    let haystack_lower: Vec<u8> =
+                        bytes.iter().map(|b| b.to_ascii_lowercase()).collect();
+                    let mut out = Vec::new();
+                    let mut from = 0usize;
+                    while from + n <= haystack_lower.len() {
+                        if &haystack_lower[from..from + n] == needle_lower.as_slice() {
+                            out.push((from, from + n));
+                            from += n;
+                        } else {
+                            from += 1;
+                        }
+                    }
+                    out
+                } else {
+                    let mut out = Vec::new();
+                    let mut from = 0usize;
+                    while from + n <= bytes.len() {
+                        if &bytes[from..from + n] == needle_bytes {
+                            out.push((from, from + n));
+                            from += n;
+                        } else {
+                            from += 1;
+                        }
+                    }
+                    out
+                }
+            }
+            GrepScanner::Regex(re) => {
+                let mut out = Vec::new();
+                // `find_iter` skips overlapping matches by advancing
+                // past `m.end()`, matching the literal path's
+                // semantics. Zero-width matches (e.g. `(?i)^`) are
+                // dropped — we'd otherwise loop forever, and a
+                // line-anchor regex without a body isn't a useful
+                // grep query for the agent.
+                for m in re.find_iter(bytes) {
+                    if m.start() == m.end() {
+                        continue;
+                    }
+                    out.push((m.start(), m.end()));
+                }
+                out
+            }
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -1011,6 +1116,52 @@ pub async fn grep(
         Some(n) => n as usize,
     };
     let case_insensitive = p.case_insensitive.unwrap_or(true);
+    let use_regex = p.regex.unwrap_or(false);
+
+    // Compile the search strategy *before* we touch the index.
+    // Compile-time errors should surface as `INVALID_PARAMS` (agent
+    // can self-correct), not as `INTERNAL_ERROR` (post-mount infra
+    // failure).
+    let scanner = if use_regex {
+        let mut builder = regex::bytes::RegexBuilder::new(&p.text);
+        builder.case_insensitive(case_insensitive);
+        // The `regex` crate's default DFA size limit (10MB) is more
+        // than enough for any agent-authored pattern. Catastrophic
+        // patterns surface as compile errors here.
+        let re = builder.build().map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InvalidParams,
+                format!("`text` failed to compile as regex: {e}"),
+            )
+        })?;
+        GrepScanner::Regex(re)
+    } else {
+        GrepScanner::Literal {
+            needle: p.text.clone(),
+            case_insensitive,
+        }
+    };
+
+    // Compile `file_glob` (workspace-relative path matcher) before
+    // mounting the index, same reason as the regex precompile above.
+    let glob = match p.file_glob.as_deref() {
+        Some(g) if g.is_empty() => {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                "`file_glob` must be non-empty when provided",
+            ));
+        }
+        Some(g) => {
+            let glob = globset::Glob::new(g).map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InvalidParams,
+                    format!("`file_glob` failed to compile: {e}"),
+                )
+            })?;
+            Some(glob.compile_matcher())
+        }
+        None => None,
+    };
 
     let (root, store_arc) = snapshot(state)?;
 
@@ -1022,15 +1173,6 @@ pub async fn grep(
         )
     })?;
 
-    // Pre-compute the lowercased needle once when case-insensitive.
-    let needle_lower = if case_insensitive {
-        Some(p.text.to_lowercase())
-    } else {
-        None
-    };
-    let needle_bytes_ci = needle_lower.as_deref().map(|s| s.as_bytes());
-    let needle_bytes = p.text.as_bytes();
-
     let mut matches: Vec<serde_json::Value> = Vec::new();
     let mut files_scanned: usize = 0;
     let mut files_with_matches: usize = 0;
@@ -1038,6 +1180,16 @@ pub async fn grep(
     let mut truncated_hit_cap = false;
 
     'files: for rel in &files {
+        // file_glob filter is path-only — applied before file read so
+        // a tight glob (`crates/rts-core/**/*.rs`) keeps `files_scanned`
+        // honest: we don't claim to have scanned files the user asked
+        // us to skip.
+        if let Some(g) = &glob {
+            if !g.is_match(rel) {
+                continue;
+            }
+        }
+
         // Resolve workspace-relative → absolute. Skip the file
         // silently if resolution fails (e.g. file deleted after
         // index but before this scan); the writer will catch up.
@@ -1054,77 +1206,45 @@ pub async fn grep(
             continue;
         }
 
-        // Choose the haystack: case-insensitive scans lowercase a
-        // copy of the bytes once per file. Cost is acceptable
-        // (linear in file size, single pass) and lets us reuse the
-        // same `bytes.windows()` shape as the case-sensitive path.
-        let haystack: Vec<u8>;
-        let scan_bytes: &[u8] = if let Some(n_ci) = needle_bytes_ci {
-            haystack = bytes
-                .iter()
-                .map(|b| b.to_ascii_lowercase())
-                .collect::<Vec<u8>>();
-            let _ = n_ci; // needle_bytes_ci alias holds the lowercase needle bytes
-            &haystack
-        } else {
-            &bytes
-        };
-        let needle_for_scan: &[u8] = needle_bytes_ci.unwrap_or(needle_bytes);
-
-        // Stream the file looking for needle occurrences. We use
-        // `memchr`-style scanning would be faster but adds a dep;
-        // for v0.5.4 a simple windows-based scan is plenty (single
-        // file scans at GB/s on modern CPUs).
-        let mut from = 0usize;
-        let n = needle_for_scan.len();
-        if n == 0 {
+        // Per-file match collection. `scan_file` is `_ -> Vec<(byte_start, byte_end)>`
+        // — both modes return concrete byte ranges into the original
+        // `bytes` buffer so line-bounds resolution + line_text
+        // extraction is identical.
+        let hits = scanner.scan_file(&bytes);
+        if hits.is_empty() {
             continue;
         }
-        while from + n <= scan_bytes.len() {
-            if &scan_bytes[from..from + n] == needle_for_scan {
-                total_pre_truncate += 1;
 
-                // Resolve byte offset → (line, line_text).
-                let (line_no, line_start, line_end) = find_line_bounds(&bytes, from);
+        let mut file_recorded = false;
+        for (m_start, m_end) in hits {
+            total_pre_truncate += 1;
+
+            if matches.len() < limit {
+                let (line_no, line_start, line_end) = find_line_bounds(&bytes, m_start);
                 let raw_line = &bytes[line_start..line_end];
                 let line_text = bytes_to_truncated_utf8(raw_line, MAX_LINE_BYTES);
-
-                if matches.len() < limit {
-                    matches.push(serde_json::json!({
-                        "file": rel,
-                        "range": {
-                            "start_line": (line_no + 1) as u32,
-                            "end_line":   (line_no + 1) as u32,
-                            "start_byte": from as u32,
-                            "end_byte":   (from + n) as u32,
-                        },
-                        "line_text": line_text,
-                    }));
-                } else {
-                    truncated_hit_cap = true;
-                }
-
-                if matches.len() >= limit && truncated_hit_cap {
-                    // We've already filled `matches` AND there are
-                    // more matches in this file. Mark and stop
-                    // scanning entirely — agents should narrow the
-                    // search instead of asking for more pages.
-                    if files_scanned > 0 && !matches.iter().any(|m| m["file"] == *rel) {
-                        // file contributed only to overflow; don't
-                        // bump files_with_matches.
-                    }
-                    break 'files;
-                }
-                // Advance past this match (don't double-count the
-                // same starting byte).
-                from += n;
+                matches.push(serde_json::json!({
+                    "file": rel,
+                    "range": {
+                        "start_line": (line_no + 1) as u32,
+                        "end_line":   (line_no + 1) as u32,
+                        "start_byte": m_start as u32,
+                        "end_byte":   m_end as u32,
+                    },
+                    "line_text": line_text,
+                }));
+                file_recorded = true;
             } else {
-                from += 1;
+                truncated_hit_cap = true;
+                // We've filled `matches`; further hits in this file
+                // count toward `total_pre_truncate` (so `truncated`
+                // reflects reality) but contribute no payload.
+                // Stop scanning entirely — agents should narrow the
+                // search instead of asking for more pages.
+                break 'files;
             }
         }
-
-        // Did we record at least one match from this file?
-        if matches.iter().any(|m| m["file"] == *rel) {
+        if file_recorded {
             files_with_matches += 1;
         }
     }

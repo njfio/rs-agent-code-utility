@@ -278,5 +278,154 @@ async fn grep_finds_string_literals_across_workspace() -> anyhow::Result<()> {
         "empty text must error with INVALID_PARAMS: {empty:?}"
     );
 
+    // Case G (v0.5.5): regex mode. `\btimeout\b` should match the
+    // literal `timeout` (a.rs) and `TIMEOUT` (b.rs) under default
+    // case-insensitivity, but not the inside of `times_out` if it
+    // existed. Here we just verify the regex compiles and matches.
+    let regex_default = round_trip(
+        &mut stream,
+        "20",
+        "Index.Grep",
+        json!({ "text": "\\btimeout\\b", "regex": true }),
+    )
+    .await?;
+    let r_matches = regex_default["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        r_matches.len() >= 2,
+        "regex \\btimeout\\b should hit both a.rs + b.rs under default case-insensitivity: {regex_default:?}"
+    );
+
+    // Case H (v0.5.5): regex mode with explicit case-sensitive.
+    // Only the lowercase `timeout` in a.rs should hit.
+    let regex_cs = round_trip(
+        &mut stream,
+        "21",
+        "Index.Grep",
+        json!({ "text": "\\btimeout\\b", "regex": true, "case_insensitive": false }),
+    )
+    .await?;
+    let h_matches = regex_cs["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        h_matches.iter().all(|m| {
+            m["file"]
+                .as_str()
+                .map(|f| f.ends_with("a.rs"))
+                .unwrap_or(false)
+        }),
+        "case-sensitive regex must match only a.rs: {regex_cs:?}"
+    );
+
+    // Case I (v0.5.5): regex compile failure → INVALID_PARAMS with
+    // the compiler's diagnostic surfaced for the agent.
+    let bad_regex = round_trip(
+        &mut stream,
+        "22",
+        "Index.Grep",
+        json!({ "text": "[unclosed", "regex": true }),
+    )
+    .await?;
+    assert_eq!(
+        bad_regex["error"]["code"], "INVALID_PARAMS",
+        "invalid regex must error with INVALID_PARAMS: {bad_regex:?}"
+    );
+    let msg = bad_regex["error"]["message"].as_str().unwrap_or("");
+    assert!(
+        msg.contains("regex"),
+        "error message should mention regex compilation: {msg:?}"
+    );
+
+    // Case J (v0.5.5): file_glob scopes the scan. Restrict to a.rs
+    // only — the "timeout" search must now miss b.rs.
+    let scoped = round_trip(
+        &mut stream,
+        "23",
+        "Index.Grep",
+        json!({ "text": "timeout", "file_glob": "a.rs" }),
+    )
+    .await?;
+    let j_matches = scoped["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        j_matches.iter().all(|m| {
+            m["file"]
+                .as_str()
+                .map(|f| f.ends_with("a.rs"))
+                .unwrap_or(false)
+        }),
+        "file_glob=a.rs should restrict matches to a.rs: {scoped:?}"
+    );
+    // files_scanned must reflect the glob — only one file made it
+    // past the filter, so the count should be 1 (b.rs and c.rs were
+    // skipped by the path matcher before any I/O).
+    let scoped_scanned = scoped["result"]["files_scanned"].as_u64();
+    assert_eq!(
+        scoped_scanned,
+        Some(1),
+        "file_glob filter must skip non-matching files BEFORE counting them as scanned: {scoped:?}"
+    );
+
+    // Case K (v0.5.5): file_glob with wildcard. `*.rs` should match
+    // all three test files; `*.toml` should match none.
+    let glob_rs = round_trip(
+        &mut stream,
+        "24",
+        "Index.Grep",
+        json!({ "text": "pub fn", "file_glob": "*.rs" }),
+    )
+    .await?;
+    let k_scanned = glob_rs["result"]["files_scanned"].as_u64().unwrap_or(0);
+    assert!(
+        k_scanned >= 3,
+        "file_glob=*.rs should scan all three .rs files: {glob_rs:?}"
+    );
+    let glob_toml = round_trip(
+        &mut stream,
+        "25",
+        "Index.Grep",
+        json!({ "text": "pub fn", "file_glob": "*.toml" }),
+    )
+    .await?;
+    let toml_scanned = glob_toml["result"]["files_scanned"].as_u64();
+    assert_eq!(
+        toml_scanned,
+        Some(0),
+        "file_glob=*.toml should skip all .rs files: {glob_toml:?}"
+    );
+
+    // Case L (v0.5.5): invalid file_glob → INVALID_PARAMS.
+    let bad_glob = round_trip(
+        &mut stream,
+        "26",
+        "Index.Grep",
+        json!({ "text": "pub fn", "file_glob": "[unclosed" }),
+    )
+    .await?;
+    assert_eq!(
+        bad_glob["error"]["code"], "INVALID_PARAMS",
+        "invalid file_glob must error with INVALID_PARAMS: {bad_glob:?}"
+    );
+
+    // Case M (v0.5.5): empty file_glob → INVALID_PARAMS (separate
+    // diagnostic from a compile failure so agents get a useful hint).
+    let empty_glob = round_trip(
+        &mut stream,
+        "27",
+        "Index.Grep",
+        json!({ "text": "pub fn", "file_glob": "" }),
+    )
+    .await?;
+    assert_eq!(
+        empty_glob["error"]["code"], "INVALID_PARAMS",
+        "empty file_glob must error with INVALID_PARAMS: {empty_glob:?}"
+    );
+
     Ok(())
 }
