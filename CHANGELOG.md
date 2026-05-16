@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-05-15
+
+Patch release. Two iterations on top of v0.5.0:
+
+- **Synonym overrides** (#68): closes the `clean ↔ clear` gap on
+  blind-v2. Answerable coverage jumps from 80% → **90%** on
+  blind-v2; combined corpus (v1 + blind-v2) goes 90% → **95%**
+  (19/20).
+- **CI guard upgrade** (#67): regression workflow now checks both
+  v1 (threshold 0.95) and blind-v2 (threshold 0.75). Either
+  regression blocks the PR.
+
+No protocol changes. No schema changes. All v0.5.0 stores remain
+back-compatible.
+
 ### Stemmer synonym overrides — closes the `clean ↔ clear` gap (+10pp on blind-v2)
 
 The blind-v2 corpus (#62) exposed a specific scoring gap: a query
