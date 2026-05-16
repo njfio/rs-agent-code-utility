@@ -235,6 +235,13 @@ pub struct GrepArgs {
     pub file_glob: Option<String>,
 }
 
+/// Empty arg struct for `daemon_stats`. The rmcp `tool_router` macro
+/// expects every `#[tool]` function to take `Parameters<T>`; this
+/// `Empty` placeholder satisfies that contract for parameterless
+/// tools without polluting the wire schema.
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+pub struct EmptyArgs {}
+
 #[derive(Clone)]
 pub struct RtsServer {
     // The `#[tool_router]` macro generates dispatch through `tool_router`;
@@ -604,6 +611,22 @@ impl RtsServer {
             params.insert("file_glob".into(), Value::String(g));
         }
         match self.call_daemon("Index.Grep", Value::Object(params)).await {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(daemon_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Daemon session telemetry — per-method call counts for this daemon process. Useful for honest dogfood reflection (\"am I actually using the rts surface, or reaching for grep/Read?\"). Returns total_calls, uptime_ms, daemon version, and a per-method breakdown (find_symbol, grep, find_callers, impact_of, read_symbol, …). Counters reset on daemon restart — they describe this process's served traffic. Capability: `daemon_stats` (v0.5.7+)."
+    )]
+    async fn daemon_stats(
+        &self,
+        Parameters(_): Parameters<EmptyArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match self
+            .call_daemon("Daemon.Stats", Value::Object(serde_json::Map::new()))
+            .await
+        {
             Ok(v) => Ok(success_json(&v)),
             Err(e) => Ok(daemon_error_to_call_result(&e)),
         }
