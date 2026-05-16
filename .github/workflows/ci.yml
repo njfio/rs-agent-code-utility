@@ -47,15 +47,22 @@ jobs:
       - name: Build all workspace binaries
         run: cargo build --workspace --bins
 
-      # Semantic-baseline regression guard. Runs the bench against the
-      # rts-core corpus and fails CI if `answerable_coverage` falls
-      # below 0.90 (the honest combined-corpus baseline from v0.4.1+
-      # blind-v2). Catches ranker / retrieval regressions on every PR.
+      # Semantic-baseline regression guard. Runs the bench against
+      # both rts-core corpora and fails CI if `answerable_coverage`
+      # regresses on either.
       #
-      # Cost: ~30-60s extra per CI run (cold-mount + indexing on a
-      # small workspace + 10 queries). Worth it — without this, the
-      # 100%/90% numbers in CHANGELOG are snapshots, not invariants.
-      - name: Semantic baseline (regression guard)
+      #   v1 audited (10 answerable):  threshold 0.95   (currently 1.00)
+      #   blind-v2  (10 answerable):   threshold 0.75   (currently 0.80)
+      #
+      # Two corpora because the v1 one is author-graded (prone to
+      # confirmation bias) while blind-v2 is outside-in. Failing
+      # either is a regression worth blocking the PR for.
+      #
+      # Cost: ~60-90s extra per CI run total (cold-mount + indexing
+      # is dominated by the first call; the second call hits a warm
+      # daemon cache). Worth it — without this, the v0.5.0 numbers
+      # in CHANGELOG are snapshots, not invariants.
+      - name: Semantic baseline — v1 audited (regression guard)
         run: |
           RTS_MCP_BIN=$PWD/target/debug/rts-mcp \
           RTS_DAEMON_BIN=$PWD/target/debug/rts-daemon \
@@ -65,3 +72,14 @@ jobs:
             --top-k 10 \
             --dry-run \
             --check-coverage 0.95
+
+      - name: Semantic baseline — blind-v2 (regression guard)
+        run: |
+          RTS_MCP_BIN=$PWD/target/debug/rts-mcp \
+          RTS_DAEMON_BIN=$PWD/target/debug/rts-daemon \
+          ./target/debug/rts-bench semantic \
+            --corpus corpus/semantic-eval-rts-core-blind-v2.toml \
+            --workspace crates/rts-core \
+            --top-k 10 \
+            --dry-run \
+            --check-coverage 0.75
