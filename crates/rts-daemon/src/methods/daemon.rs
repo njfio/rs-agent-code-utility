@@ -66,6 +66,13 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // distinguish "filter rejected all matches" from "nothing
     // matched name/pattern". Omitted when no filter was active.
     "find_symbol_pre_filter_count",
+    // v0.5.3 — Index.FindSymbol.params.include_signature: bool
+    // populates each match's `signature` field via rts-core's
+    // per-language SignatureRenderer. Default false — back-compat
+    // wire shape preserved. Renders are cached per
+    // `(path, byte_range, mtime)` in DaemonState::signature_cache,
+    // so repeat queries on the same workspace amortize the parse.
+    "find_symbol_signature_field",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

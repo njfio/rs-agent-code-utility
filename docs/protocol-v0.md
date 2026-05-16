@@ -181,7 +181,8 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "find_symbol_limit_param",      // v0.4.1+
                      "find_symbol_doc_field",        // v0.5.0+
                      "find_symbol_doc_filter",       // v0.5.2+
-                     "find_symbol_pre_filter_count"],// v0.5.2+
+                     "find_symbol_pre_filter_count", // v0.5.2+
+                     "find_symbol_signature_field"], // v0.5.3+
     "uptime_ms":    123456
   }
 }
@@ -212,6 +213,7 @@ Reserved for the **v0.4 / v0.5 semantic-retrieval extensions**. Advertised indep
 - ~~`find_symbol_doc_field`~~ — **advertised** as of `v0.5.0`. `Index.FindSymbol.matches[].doc` carries extracted doc-comment text. v0.5.0 ships Rust (`///`/`//!`); v0.5.x patches extend to Go, Swift, Python, JavaScript / TypeScript / C / C++ (`/** */`), Ruby (`#`), PHP (PHPDoc), Java (Javadoc). Pre-v0.5 daemons return `null` for all symbols.
 - ~~`find_symbol_doc_filter`~~ — **advertised** as of `v0.5.2`. `Index.FindSymbol.params.doc_contains: Option<String>` filters matches by case-insensitive substring against doc-comment text. Enables behavior-shaped queries (e.g. `doc_contains: "evict"` returns documented symbols whose comments mention eviction).
 - ~~`find_symbol_pre_filter_count`~~ — **advertised** as of `v0.5.2`. `Index.FindSymbol.result.pre_filter_count: Option<usize>` reports the candidate count before any filter ran. Present iff a filter was active; lets agents distinguish empty-because-filter-rejected-all from empty-because-pattern-matched-nothing.
+- ~~`find_symbol_signature_field`~~ — **advertised** as of `v0.5.3`. `Index.FindSymbol.params.include_signature: bool` (default `false`) populates each match's `signature` field via the per-language `SignatureRenderer`. Renders are cached per `(path, byte_range, mtime)` on the daemon, so repeated pattern queries on the same workspace amortize the parse. Default off preserves the pre-v0.5.3 wire shape (`signature: null`).
 
 ### 4.3 Version mismatch
 
@@ -441,7 +443,9 @@ AST-precise definition + references + signature for a named or pattern-matched s
   "kind":    "fn",                   // optional; one of: fn, struct, enum, type, trait, const, static, impl, method, class, interface, module
   "file":    "src/index/mod.rs",     // optional; filter
   "sort":    "rank",                 // optional; "rank" (default; descending rank_score) | "lexical" (alphabetical-by-file). Capability: `pagerank_symbolwise` (alpha.34+).
-  "limit":   256                     // optional; max matches in `result.matches[]`. Range 1..=4096; default 256. Capability: `find_symbol_limit_param` (v0.4.1+).
+  "limit":   256,                    // optional; max matches in `result.matches[]`. Range 1..=4096; default 256. Capability: `find_symbol_limit_param` (v0.4.1+).
+  "doc_contains":       "evict",     // optional; case-insensitive substring filter against doc text. Capability: `find_symbol_doc_filter` (v0.5.2+).
+  "include_signature":  false        // optional; default false. When true, populates `matches[].signature` via per-language SignatureRenderer. Capability: `find_symbol_signature_field` (v0.5.3+).
 }
 ```
 
@@ -456,6 +460,8 @@ The glob matcher has **no character classes** and **no escapes** — `*` and `?`
 **Doc-text filter (v0.5.2+, capability `find_symbol_doc_filter`):** `params.doc_contains: Option<String>` — case-insensitive substring filter against the doc-comment text. Symbols with no doc never match. Useful for behavior-shaped queries ("find the cache eviction code"). When set, the pre-rank candidate cap expands automatically so the filter sees the full ranked pool.
 
 **Pre-filter count (v0.5.2+, capability `find_symbol_pre_filter_count`):** `result.pre_filter_count: Option<usize>` — present only when a filter (currently `doc_contains`) was active. Reports the candidate count before the filter ran. Lets agents distinguish `matches: []` because the pattern matched nothing from `matches: []` because the filter rejected every candidate. Omitted when no filter ran (back-compat).
+
+**Signature field (v0.5.3+, capability `find_symbol_signature_field`):** `params.include_signature: bool` (default `false`) — when true, each match's `signature` field is populated via the per-language `SignatureRenderer` (the same code path `Index.ReadSymbol shape=signature` uses). Renders are cached on the daemon per `(path, byte_range, mtime)`, so repeated pattern queries on the same workspace amortize the parse cost. Default `false` preserves the pre-v0.5.3 wire shape (`signature: null`); agents that want rendered signatures must opt in. Best for outline-style follow-ups where the agent wants per-match signatures without paying for `read_symbol` per result.
 
 **`result`**:
 ```jsonc

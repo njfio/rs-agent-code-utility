@@ -71,6 +71,16 @@ pub struct FindSymbolArgs {
     /// `find_symbol_doc_filter` (v0.5.2+).
     #[serde(default)]
     pub doc_contains: Option<String>,
+    /// When `true`, populate each match's `signature` field via
+    /// rts-core's per-language SignatureRenderer (Rust, Python,
+    /// TypeScript, JavaScript, Go, Java, C, C++, PHP, Ruby, Swift).
+    /// Default `false` — the field stays `null` to preserve the
+    /// pre-v0.5.3 wire shape. Use this for outline-style lookups
+    /// where you want signatures without paying for `read_symbol`
+    /// per match. Renders are cached per file across calls.
+    /// Capability: `find_symbol_signature_field` (v0.5.3+).
+    #[serde(default)]
+    pub include_signature: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -304,6 +314,9 @@ impl RtsServer {
         }
         if let Some(s) = args.doc_contains {
             params.insert("doc_contains".into(), Value::String(s));
+        }
+        if let Some(b) = args.include_signature {
+            params.insert("include_signature".into(), Value::Bool(b));
         }
         match self
             .call_daemon("Index.FindSymbol", Value::Object(params))

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### `Index.FindSymbol.include_signature` — opt-in per-match signature rendering
+
+The `signature` field on `find_symbol` matches has shipped as `null` since v0 because the writer doesn't store rendered signatures — they're computed on demand by `Index.ReadSymbol shape=signature`. That's the right default for the common case (an agent calling `find_symbol` doesn't always need signatures), but the cost is that **outline-style follow-ups need a separate `read_symbol` call per match** to see signatures.
+
+This PR adds `include_signature: Option<bool>` (default `false`) to `Index.FindSymbol`. When set, each surviving match's `signature` field is populated via the same per-language `SignatureRenderer` that `read_symbol` uses, returning the declaration prefix without the body. Off by default — the pre-v0.5.3 wire shape is preserved for callers that don't ask.
+
+```jsonc
+// Before (default — still null):
+{ "matches": [{ "qualified_name": "build_index", "signature": null, ... }] }
+
+// New (include_signature=true):
+{ "matches": [{ "qualified_name": "build_index",
+                "signature": "pub fn build_index(workspace: &Path) -> Result<Index>",
+                ... }] }
+```
+
+#### Caching
+
+Each render is `O(parse(symbol_bytes))`, but `DaemonState::signature_cache` already deduplicates per `(path, byte_range, mtime)` from the closure-walker path. A single `find_symbol --pattern "build_*" --include-signature` reads each file once (per-call file_cache) and parses each symbol once (per-daemon `signature_cache`); repeat queries on the same workspace amortize down to a hashmap lookup.
+
+#### Capability + protocol
+
+- New capability `find_symbol_signature_field` advertised in `Daemon.Ping`.
+- `docs/protocol-v0.md` §7.6 updated with the new param + Appendix F entry.
+
+#### Test coverage
+
++1 integration test (`find_symbol_include_signature`) covering:
+- `include_signature: true` → declaration prefix returned, body stripped
+- `include_signature: false` (or omitted) → `signature: null` preserved
+
+596 workspace tests pass.
+
 ## [0.5.2] - 2026-05-15
 
 **Theme: doc-comment retrieval reaches 10-language parity; ranker hits 100% on the verified combined corpus.**

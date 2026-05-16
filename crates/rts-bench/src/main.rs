@@ -193,6 +193,13 @@ enum QueryCmd {
         /// symbols whose comments mention retry, regardless of name.
         #[arg(long)]
         doc_contains: Option<String>,
+        /// Populate each match's `signature` field via rts-core's
+        /// per-language SignatureRenderer. Default off (preserves
+        /// pre-v0.5.3 wire shape). Useful for outline-style lookups
+        /// where you want signatures without paying for `read_symbol`
+        /// per match. Capability: `find_symbol_signature_field`.
+        #[arg(long, default_value_t = false)]
+        include_signature: bool,
     },
     /// `read_symbol` — read by name, optional shape + closure walk + callers.
     ReadSymbol {
@@ -627,6 +634,7 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
             file,
             limit,
             doc_contains,
+            include_signature,
         } => {
             if name.is_none() && pattern.is_none() {
                 return Err(anyhow!(
@@ -642,6 +650,9 @@ fn build_query(cmd: &QueryCmd) -> Result<(PathBuf, &'static str, serde_json::Val
                 a.insert("limit".into(), serde_json::Value::Number((*n).into()));
             }
             opt_str(doc_contains, &mut a, "doc_contains");
+            if *include_signature {
+                a.insert("include_signature".into(), serde_json::Value::Bool(true));
+            }
             Ok((
                 default_workspace(workspace)?,
                 "find_symbol",

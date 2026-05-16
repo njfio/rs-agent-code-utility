@@ -79,6 +79,19 @@ struct FindSymbolParams {
     /// any documented function whose comment mentions "evict".
     #[serde(default)]
     doc_contains: Option<String>,
+    /// When `true`, populate the `signature` field on each match by
+    /// invoking the `rts-core` per-language `SignatureRenderer` over
+    /// the symbol's byte range. Default `false` (pre-v0.5.3 wire
+    /// shape preserved — agents pay the rendering cost only when
+    /// they ask for it).
+    ///
+    /// Each render is `O(parse(symbol_bytes))` but cached per
+    /// `(path, byte_range, mtime)` in `DaemonState::signature_cache`,
+    /// so repeated calls on the same workspace pay it once. Best for
+    /// outline-style follow-ups where the agent wants signatures
+    /// without paying for `read_symbol` per result.
+    #[serde(default)]
+    include_signature: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -522,8 +535,9 @@ pub async fn find_symbol(
     let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
     let file_filter = p.file.as_deref();
     let sort_mode = SortMode::from_param(p.sort.as_deref());
+    let want_signatures = p.include_signature.unwrap_or(false);
 
-    let (_root, store_arc) = snapshot(state)?;
+    let (root, store_arc) = snapshot(state)?;
 
     // Read the index generation BEFORE opening any read transaction
     // for rank lookup. Deepening §C invariant: the cache key must be
@@ -704,10 +718,100 @@ pub async fn find_symbol(
         docs.truncate(limit);
     }
 
+    // v0.5.3 (cap: `find_symbol_signature_field`): when
+    // `include_signature: true`, render each surviving match's
+    // signature via `rts-core`'s per-language renderer. Default off
+    // — agents pay the parse cost only when they ask for it.
+    //
+    // We share one file_cache across all matches in this call so a
+    // pattern query that hits 50 symbols in the same file reads it
+    // once. The `signature_cache` on `DaemonState` deduplicates
+    // across calls as well (keyed on `(path, byte_range, mtime)`).
+    //
+    // Vec is parallel to `typed[i]`; `None` entries serialize to
+    // JSON `null` (back-compat: a match with no renderer support
+    // looks identical to the pre-v0.5.3 wire shape).
+    let signatures: Vec<Option<String>> = if want_signatures {
+        let mut file_cache: std::collections::HashMap<std::path::PathBuf, Option<(Vec<u8>, i128)>> =
+            std::collections::HashMap::with_capacity(typed.len().min(8));
+        let mut out: Vec<Option<String>> = Vec::with_capacity(typed.len());
+        for (h, _) in typed.iter() {
+            let abs = match crate::path::resolve_workspace_path(&root, &h.file) {
+                Ok((abs, _)) => abs,
+                Err(_) => {
+                    out.push(None);
+                    continue;
+                }
+            };
+            let bytes_and_mtime: Option<(&[u8], i128)> = if let Some(c) = file_cache.get(&abs) {
+                c.as_ref().map(|(b, m)| (b.as_slice(), *m))
+            } else {
+                let read_result = std::fs::read(&abs).and_then(|b| {
+                    let meta = std::fs::metadata(&abs)?;
+                    let mtime_ns = meta
+                        .modified()
+                        .ok()
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|d| d.as_nanos() as i128)
+                        .unwrap_or(0);
+                    Ok((b, mtime_ns))
+                });
+                match read_result {
+                    Ok((b, m)) => {
+                        file_cache.insert(abs.clone(), Some((b, m)));
+                        file_cache
+                            .get(&abs)
+                            .and_then(|c| c.as_ref())
+                            .map(|(b, m)| (b.as_slice(), *m))
+                    }
+                    Err(_) => {
+                        file_cache.insert(abs.clone(), None);
+                        None
+                    }
+                }
+            };
+            let Some((body_bytes, mtime_ns)) = bytes_and_mtime else {
+                out.push(None);
+                continue;
+            };
+            let (start, end) = (h.start_byte as usize, h.end_byte as usize);
+            let slice = if end > start && end <= body_bytes.len() {
+                &body_bytes[start..end]
+            } else {
+                out.push(None);
+                continue;
+            };
+            let rendered = state.signature_cache.get_or_compute(
+                &abs,
+                h.start_byte,
+                h.end_byte,
+                mtime_ns,
+                || {
+                    crate::language::info_for_path(&h.file)
+                        .and_then(|info| info.signature_renderer)
+                        .and_then(|render| render(slice))
+                },
+            );
+            out.push(rendered);
+        }
+        out
+    } else {
+        Vec::new()
+    };
+
     let matches: Vec<serde_json::Value> = typed
         .into_iter()
         .zip(docs)
-        .map(|((h, rank), doc)| {
+        .enumerate()
+        .map(|(i, ((h, rank), doc))| {
+            let signature_value = if want_signatures {
+                match signatures.get(i).and_then(|s| s.clone()) {
+                    Some(s) => serde_json::Value::String(s),
+                    None => serde_json::Value::Null,
+                }
+            } else {
+                serde_json::Value::Null
+            };
             serde_json::json!({
                 "qualified_name": h.name,
                 "kind":           h.kind.as_wire_str(),
@@ -718,9 +822,10 @@ pub async fn find_symbol(
                     "start_byte": h.start_byte,
                     "end_byte":   h.end_byte,
                 },
-                // v0: signature rendering is part of P8 SignatureRenderer;
-                // the writer doesn't store extracted signatures.
-                "signature": serde_json::Value::Null,
+                // v0.5.3 (cap: `find_symbol_signature_field`):
+                // populated when params.include_signature=true; null
+                // otherwise (preserves pre-v0.5.3 wire shape).
+                "signature": signature_value,
                 // v0.5: real doc text when the writer extracted any;
                 // null when the symbol has no doc comment. Capability
                 // `find_symbol_doc_field` advertises that the daemon
