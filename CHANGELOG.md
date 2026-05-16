@@ -7,6 +7,405 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-05-16
+
+### `rts-daemon` writer — cold-walk hold-off fixes silent ref-graph holes
+
+`impact_of_three_tier_with_test_filter` had been an intermittent flake in CI under heavy parallel load. Investigation surfaced a real correctness bug in the writer, not just a timing issue with the test:
+
+#### Root cause
+
+`Store::commit_batch`'s Pass-2 ref resolution (`crates/rts-daemon/src/store/mod.rs:402`) **permanently drops** any ref whose callee name isn't yet in `NAME_TO_SID`:
+
+```rust
+let callee_sid = match name_to_sid.get(r.name.as_str())? {
+    Some(v) => v.value(),
+    None => continue, // external symbol; skip per F1
+};
+```
+
+The intent of this §F1 filter is to drop refs to stdlib / builtin names that will *never* be defined in the workspace. But the same code path also fires when the callee's def **happens to be in a future batch**. Once Pass 2 commits the batch missing the ref, the ref is gone — no retry happens when the callee def lands in a later batch.
+
+Under the writer's 150ms `BATCH_FLUSH_INTERVAL`, the cold initial walk's stream of file events normally fits in one batch (BATCH_SIZE_BUDGET = 128 files). But under CI/parallel-test load:
+
+- The cold walk emits 7 files at ~T=0–50ms via `blocking_send`.
+- The writer's `tokio::select!` was pseudo-randomly biased; under load the `flush_timer.tick()` arm wins enough times to split the stream.
+- File N+k commits before file N. Cross-batch refs in N→N+k are filtered as "external" and dropped permanently.
+- `Index.ImpactOf` then returns an incomplete caller list, and the test's `assert!(names.contains("caller_a"))` fires.
+
+The bug was reproducible: 4/10 failures running the full test suite 10 times in a row with the test hardened to expose the underlying issue (`wait_for_refs` polling for committed REF edges with a 10s timeout — without the fix, the REFs *never* settled because they'd been dropped).
+
+#### Fix
+
+A new `WatchEvent::ColdWalkComplete` sentinel:
+
+- **Walker** emits it from `walk_and_emit_blocking` after the file-iteration loop finishes (via `blocking_send` like any other event).
+- **Writer** starts with `cold_walk_in_progress = true` and treats this flag as a hard barrier: while it's set, the `flush_timer.tick()` arm is a no-op — events accumulate in `upserts` / `removals` HashMaps but never flush.
+- When `ColdWalkComplete` arrives, the writer fires one atomic `flush()` (via `Durability::Immediate` so the commit hits disk before Mount returns its status payload), then clears the flag and resumes normal 150ms batching.
+
+Because the walker uses `blocking_send`, the receiver-side state is always consistent: by the time `ColdWalkComplete` is consumed, every `Touched` it preceded is already in the writer's local `upserts`. The whole cold walk lands as one batch — and Pass-2 ref resolution sees every workspace symbol when resolving refs.
+
+The size budget (`BATCH_SIZE_BUDGET = 128`) still applies as a safety valve for very-large cold walks. Cross-batch refs in workspaces with >128 files aren't fully resolved — same pre-existing trade-off as before this PR. The typical 1k-file repo where everything fits in one batch is now correct end-to-end.
+
+#### Test hardening
+
+`tests/impact_of_round_trip.rs` adds a new helper `wait_for_refs(target, expected_callers[], timeout)` that polls `Index.FindCallers` until every expected (target ← caller) edge is committed. This is **not** a workaround — it's a regression guard: if the writer fix regresses and refs go missing again, the test will time out at 10s with a descriptive error message rather than silently passing on a half-finished reference graph.
+
+#### Verification
+
+10 consecutive full-suite runs after the fix:
+
+```
+Run 1: PASS    Run 6: PASS
+Run 2: PASS    Run 7: PASS
+Run 3: PASS    Run 8: PASS
+Run 4: PASS    Run 9: PASS
+Run 5: PASS    Run 10: PASS
+---SUMMARY: 10/10 passed---
+```
+
+Previously: 4/10 failures (same hardware, same load pattern). The fix is necessary AND sufficient.
+
+#### Out of scope (filed for follow-up)
+
+- **Live-edit cross-batch refs.** This PR fixes the cold-walk path. Sequential file saves >150ms apart still hit the §F1 permanent-drop bug — if you save `caller_a.rs` first and `target.rs` second, with >150ms between saves, the `caller_a → target` ref drops forever. In practice users type linearly so this is rare, but the proper fix is an `UNRESOLVED_REFS` table that defers unresolvable refs and re-materializes them when their callee def first lands. Tracked separately.
+- **Very-large cold walks (>128 files).** When the batch size budget triggers, the cold-walk hold-off doesn't help: we still split. A future revision could promote the hold-off to span the entire walk regardless of size, with the cost being peak memory during initial index. Worth doing once we see real workspaces large enough to matter.
+
+### `changelog.d/` fragments — kill the per-PR CHANGELOG conflict
+
+The v0.5.4 release queue (9 PRs) every concurrent PR collided on `CHANGELOG.md`'s `[Unreleased]` section. Each rebase produced the same shape of conflict; ~30 minutes of mechanical resolution per release.
+
+v0.5.5+ adopts the "changelog fragments" pattern (familiar from Towncrier, mkdocs, etc.): each PR adds a unique file to `changelog.d/`. At release time, `scripts/build-changelog.sh <version>` concatenates them under a new version header in `CHANGELOG.md` and clears the fragments dir.
+
+#### Surface
+
+- `changelog.d/README.md` — workflow spec + file naming convention
+- `scripts/build-changelog.sh` — the release script (dry-run supported)
+- `AGENTS.md` — updated with the new workflow
+
+#### Migration
+
+Existing entries in `CHANGELOG.md`'s `[Unreleased]` section (if any) stay where they are — the script inserts AFTER the `[Unreleased]` header but BEFORE the new version section. Manual entries and fragment entries coexist during the transition.
+
+This PR itself is the first one to use the new pattern: the fragment you're reading came from `changelog.d/93-chore-changelog-fragments.md`.
+
+#### Out of scope (filed for follow-up)
+
+- A pre-commit hook that warns when a PR touches `crates/` but not `changelog.d/`. Catches the "I forgot to add a fragment" case at commit time rather than at release time.
+- Per-kind subdirectories (`changelog.d/feat/`, `changelog.d/fix/`) so the release header groups by change type. Probably unnecessary at our volume but worth considering if we hit 20+ PRs/cycle.
+
+### `find_callers` — capture `mod::fn()` calls (scoped_identifier gap)
+
+**Surfaced by real MCP-path dogfood.** First session running rts-mcp wired into Claude Code natively (not through the `rts-bench query` CLI shim) caught this within five queries:
+
+```
+find_callers("socket_path_for_workspace") → callers: []
+```
+
+…despite a call site existing at `crates/rts-daemon/src/main.rs:151`:
+
+```rust
+socket::socket_path_for_workspace(&canonical)?
+```
+
+#### Root cause
+
+The `RUST_REFS` tree-sitter query in `crates/rts-daemon/src/language.rs` captured `@reference.call` for:
+
+- `(call_expression function: (identifier))` — bare-identifier calls like `extract_rust_symbols()`
+- `(call_expression function: (field_expression field: (field_identifier)))` — method calls like `self.foo()`
+- `(macro_invocation macro: (identifier))` — `macro!()`
+
+It did **not** capture `(call_expression function: (scoped_identifier))` — `mod::fn()` and `Type::method()` style calls. In real Rust code, the majority of calls use path prefixes. Every one of them was invisible to `find_callers`.
+
+This silently inflated "is this function dead?" queries (returning `[]` is the same wire shape as "no callers exist") and quietly skewed PageRank since the reference graph was missing huge swaths of edges.
+
+#### Fix
+
+Three new captures added to `RUST_REFS`:
+
+1. `(call_expression function: (scoped_identifier name: (identifier)))` — `mod::fn()`, `Type::method()`, and arbitrarily-deep `mod::sub::fn()` paths.
+2. `(call_expression function: (generic_function function: (identifier)))` — turbofish on a bare identifier (`make::<T>()`).
+3. `(call_expression function: (generic_function function: (scoped_identifier name: (identifier))))` — turbofish on a scoped path (`Vec::<u32>::new()`).
+4. `(macro_invocation macro: (scoped_identifier name: (identifier)))` — `mod::macro!()`.
+
+The leaf `name: (identifier)` capture intentionally drops the path prefix and stores only the function name. That's what `find_callers --name X` matches against, and it's the right shape — agents asking "who calls `new`" want hits from `Foo::new()` and `Vec::new()` and bare `new()` collapsed.
+
+#### Verification
+
+End-to-end through the live MCP daemon after the fix:
+
+```
+find_callers("socket_path_for_workspace") →
+  callers: [{
+    file: "crates/rts-daemon/src/main.rs",
+    range: { start_line: 151, ... },
+    enclosing_qualified_name: "main",
+    kind: "fn",
+    rank_score: 7.4e-05
+  }]
+```
+
+#### Out of scope (filed for follow-up)
+
+- **Audit other languages' refs queries** for similar gaps. Python's `attribute` access is captured; Go's `selector_expression` is captured; JS/TS's `member_expression` is captured. Ruby `Module::method` and Java `Class.method` need verification.
+- **PageRank recalculation impact**: this fix increases the reference-graph edge count significantly on Rust workspaces. Some rank scores will shift. The CI `semantic-eval-rts-core.toml` ≥0.95 invariant should still hold (the answers are the same; only ordering may tighten); flag if it doesn't.
+- **`rts-mcp` daemon-reconnect logic**: separately surfaced this session. When the underlying rts-daemon dies, rts-mcp keeps writing to the dead socket and returns `Broken pipe`. Should reconnect / re-spawn instead. Filed as a separate issue.
+
+### Refs-query audit follow-up — Go generics, JS/TS scoped-new
+
+#94 fixed the Rust `scoped_identifier` gap that hid `mod::fn()` calls from `find_callers`. That fix prompted an audit of the other languages' refs queries; this PR ships the analogous fixes.
+
+#### Audit results
+
+| Language | Status | Notes |
+|---|---|---|
+| Rust | ✅ fixed in #94 | scoped_identifier + generic_function added |
+| Python | ✅ comprehensive | `attribute` covers both `obj.f()` and `module.f()` (Python has no `::`) |
+| Go | ⚠️ generics missing | `MakeFoo[int]()` — generic_function calls invisible |
+| Ruby | ⚠️ minimal coverage | bare-method-no-parens case is grammar-ambiguous; deferred |
+| JavaScript | ⚠️ scoped-new missing | `new Module.Foo()` |
+| TypeScript | ⚠️ scoped-new missing | same as JS |
+| Java / C / C++ / PHP / Swift | ❌ no refs query | regex fallback; pre-existing v0+ limitation |
+
+#### Go generics (Go 1.18+)
+
+Generic functions are now common in the Go ecosystem (released March 2022). Calls like `MakeFoo[int]()` or `pkg.MakeFoo[int]()` have `function: (index_expression operand: …)` instead of plain `identifier` or `selector_expression`, so the old query missed every one.
+
+Two new captures:
+
+```scheme
+(call_expression
+  function: (index_expression
+    operand: (identifier) @name)) @reference.call
+
+(call_expression
+  function: (index_expression
+    operand: (selector_expression field: (field_identifier) @name))) @reference.call
+```
+
+#### JavaScript + TypeScript scoped-new
+
+`new Module.Foo()` parses as `(new_expression constructor: (member_expression property: (property_identifier)))`. The old queries only captured bare `new Foo()` (identifier constructor) and missed every namespaced one. Added the member-expression form to both JS and TS query strings.
+
+#### Out of scope (filed for further follow-up)
+
+- **Ruby bare-method-no-parens**: `do_thing` (no receiver, no parens) is ambiguous between local-variable-read and method-call in Ruby's grammar without context. Needs scope-tracking to disambiguate; non-trivial.
+- **JS/TS optional chaining**: `obj?.foo()` may parse to a different node shape than `obj.foo()`. Need empirical verification before adding a pattern.
+- **JS/TS dynamic property access**: `obj["foo"]()` uses `subscript_expression`. Skip — agents shouldn't be searching by string-key method names.
+- **Java / C / C++ / PHP / Swift refs queries**: still rely on regex fallback. Authoring real `@reference.call` queries for each is a multi-day audit deferred to v0.6.
+- **Test-side coverage**: the refs queries' actual coverage isn't directly tested today — the `find_callers` round-trip test exercises a tiny synthetic workspace. A real test would index a known-shape repo and assert specific edge counts. Filed.
+
+#### Validation
+
+Build + test suite pass post-fix. Existing `find_callers` round-trip tests unchanged (they exercise Rust bare-identifier calls which were never broken). Empirical validation of the Go + JS/TS coverage requires real workspaces with generic / scoped-new patterns — `cobra` (Go) and `chalk` (JS) corpora are good first targets when promoting external corpora to CI invariants.
+
+### `rts-mcp` — reconnect + remount + retry on daemon disconnect
+
+**Surfaced by real MCP-path dogfood** (same session that caught the `find_callers` `scoped_identifier` gap fixed in #94). When the auto-spawned `rts-daemon` died mid-session — crash, `SIGTERM`, upgrade, or operator `kill` — `rts-mcp` kept writing JSON-RPC frames to the dead socket and returned `Broken pipe (os error 32)` to the agent forever. The only recovery was to restart the host app (Claude Code, Cursor, etc.), which is the wrong UX for a "persistent code graph" pitch.
+
+#### Root cause
+
+`DaemonClient` held a single `OwnedReadHalf` + `OwnedWriteHalf` for the lifetime of the MCP stdio session. There was no detection of socket death and no path to re-establish the connection. The auto-spawn logic in `socket::connect_with_auto_spawn` was only invoked once, at `main.rs` boot.
+
+#### Fix
+
+Three layered changes in `crates/rts-mcp`:
+
+1. **`DaemonClient` learns to reconnect.** New fields `daemon_bin: PathBuf` and `workspace: PathBuf` are threaded through the constructor so the client can re-resolve the binary and per-workspace socket path. `pub async fn reconnect(&mut self)` re-runs `connect_with_auto_spawn` and swaps in fresh reader/writer halves. `next_id` is **not** reset — protocol-v0 §3.4 only requires uniqueness within a session and the daemon has fresh state anyway.
+
+2. **`DaemonError::is_disconnect()` classifies transport failures.** Returns `true` only when `code == "INTERNAL_ERROR"` AND the message matches one of: `broken pipe`, `connection reset`, `daemon closed connection`, `connection refused`, `unexpected end of file`, `eof`. Legitimate daemon-emitted errors like `INDEX_NOT_READY` or `OUT_OF_ROOT` return `false` — we never reconnect on a working daemon's expected error path.
+
+3. **`RtsServer::call_daemon` retries once on disconnect.** On the first `is_disconnect()` error: call `guard.reconnect()`, reset the `self.mounted` `AtomicBool` to `false` (so the lazy `Workspace.Mount` re-fires against the fresh daemon), and retry the original call. A second disconnect propagates the error rather than looping — repeated reconnects indicate a deeper problem (binary path wrong, daemon refusing to stay up) that should surface to the agent.
+
+#### Verification
+
+New `tests/mcp_round_trip.rs::mcp_reconnects_after_daemon_death`:
+
+1. Spawn `rts-mcp` against a fixture workspace, complete one successful `find_symbol` call (auto-spawning the daemon).
+2. Read the daemon's PID from the per-workspace lockfile at `<runtime_root>/ws-<16hex>.sock.pid` (first line of the two-line `<pid>\n<start_seconds>\n` format that `socket_path_for_workspace` writes).
+3. `kill -9 <pid>` the daemon via a subprocess (`std::process::Command`; `rts-mcp` has `#![deny(unsafe_code)]` so `libc::kill` isn't available).
+4. Issue another `find_symbol`. The retry path re-auto-spawns the daemon, re-mounts, and serves the call. Result: `passed in 1.67s`.
+
+#### Out of scope (filed for follow-up)
+
+- **Backoff on repeated reconnects.** Current logic is "retry once per call." A daemon that crashes every Mount would burn through respawns. Adding a per-session reconnect counter / exponential backoff is worth doing once we see it in practice — not before.
+- **Surface reconnect events to the agent.** Today the retry is silent. An `eprintln!` to stderr (which the host app's stderr parser ignores per the P0.1 spike) would help operators correlate "huh, that one was slow" with "the daemon got OOM-killed and respawned."
+
+### `Index.Grep.params.regex` + `Index.Grep.params.file_glob` — scoped pattern search
+
+v0.5.4 shipped `Index.Grep` as literal-substring only. Real agent dogfooding immediately wanted two more things:
+
+- **Regex.** "Find every `TODO(name)`" needs a pattern, not a literal. So does "find unused `unwrap()` outside `tests/`" — `\bunwrap\(\)` is the minimum-viable shape.
+- **Path scoping.** "Where do we log this string?" is a different query in `crates/rts-daemon/**/*.rs` vs the whole workspace — and walking 50k indexed files when you know it's in 50 of them is wasted I/O.
+
+Both are now opt-in `GrepParams` fields.
+
+#### Wire shape
+
+```jsonc
+// Literal mode (unchanged from v0.5.4)
+{ "text": "timeout reading MCP response" }
+
+// Regex mode (v0.5.5+)
+{ "text": "\\bunsafe\\b", "regex": true }
+{ "text": "TODO\\(.*?\\)", "regex": true, "case_insensitive": false }
+
+// File-path scoping (v0.5.5+)
+{ "text": "tokio::spawn", "file_glob": "crates/**/*.rs" }
+{ "text": "version = ", "file_glob": "*.toml" }
+
+// Combined
+{ "text": "panic!\\(", "regex": true, "file_glob": "crates/rts-daemon/**/*.rs" }
+```
+
+The response shape is unchanged: `matches[].{file, range, line_text}` + `files_scanned` + `files_with_matches` + `truncated`.
+
+#### Regex mode
+
+- Backed by `regex::bytes::Regex` (already a daemon dep). Byte-level matching means no UTF-8 cost on the haystack.
+- `case_insensitive` still defaults to `true` and applies in both modes via `RegexBuilder::case_insensitive(true)`.
+- Compilation failures surface as `INVALID_PARAMS` with the `regex` crate's diagnostic surfaced verbatim — agents can self-correct (`"bad pattern: regex parse error: ..."`) without a round-trip to the user.
+- Zero-width matches (`(?i)^`, `\b`) are dropped during iteration — they'd otherwise loop forever and aren't useful grep results.
+
+#### File-glob mode
+
+- Backed by `globset::Glob` (a transitive dep through `ignore`, now promoted to an explicit dep so we compile against a stable interface).
+- Match is **path-only**, applied **before** the file read. A tight glob (`crates/rts-core/**/*.rs`) keeps `files_scanned` honest: we don't count files the user asked us to skip.
+- Workspace-relative paths — same as every other path field in protocol-v0.
+- Empty string + invalid glob both surface as `INVALID_PARAMS` (separate diagnostics: "must be non-empty" vs the `globset` parser's error).
+
+#### Verification
+
+Extended `crates/rts-daemon/tests/grep_round_trip.rs` from 6 cases (F) to 13 (M):
+
+- G: regex matches with default case-insensitivity (`\btimeout\b` hits both `a.rs` and `b.rs`).
+- H: regex with `case_insensitive: false` (only the lowercase hit).
+- I: invalid regex returns `INVALID_PARAMS` with `regex` in the error message.
+- J: `file_glob: "a.rs"` restricts matches *and* `files_scanned`.
+- K: `*.rs` matches all three test files; `*.toml` matches none.
+- L: invalid glob (`[unclosed`) → `INVALID_PARAMS`.
+- M: empty `file_glob` → `INVALID_PARAMS`.
+
+Full suite: `cargo test -p rts-daemon -p rts-mcp --release` — 160+ tests pass.
+
+#### Out of scope (filed for follow-up)
+
+- **Enclosing-symbol resolution.** Today's response carries `(file, range, line_text)`. Adding `enclosing_qualified_name` (the same field find_callers returns) would let "find every panic!() in the daemon" surface the containing function name — much higher signal-per-match. Filed as a separate PR because the shape change deserves its own review.
+- **PageRank ranking.** Grep currently returns matches in file-walk order. Sorting by the enclosing file's mean symbol PageRank would put hits in the busiest, most central code at the top — matches `find_symbol`'s default ordering and avoids agents having to re-rank client-side. Filed alongside enclosing-symbol resolution since the implementations share the same enclosing-def lookup.
+- **Multiline regex (`(?m)`, `(?s)`).** Today's `line_text` resolution treats each match as single-line — the start byte's line bounds dictate the response field. Multi-line matches would need a richer range-and-text shape; not worth doing until a real query needs it.
+
+### `Index.Grep` — enclosing-symbol resolution per match
+
+v0.5.4 + #97 shipped `Index.Grep` returning `(file, range, line_text)` per match. Real agent use immediately wanted "which function is this match inside?" — every follow-up step (read the surrounding code, write a fix, find callers of the enclosing fn) starts there. Until now agents resolved that with a second `read_symbol_at` per match. Round-trip overhead aside, that's a dance the daemon should run itself.
+
+Each match now carries three new fields, populated by the same `pick_innermost_def` lookup `read_symbol_at` uses:
+
+```jsonc
+{
+  "matches": [
+    {
+      "file": "crates/rts-daemon/src/methods/index.rs",
+      "range": { "start_line": 1156, "end_line": 1156,
+                 "start_byte": 38420, "end_byte": 38449 },
+      "line_text": "    if let Some(g) = &glob {",
+      // NEW in v0.5.5:
+      "enclosing_qualified_name": "grep",
+      "enclosing_kind": "fn",
+      "enclosing_def_range": {
+        "start_byte": 36800, "end_byte": 42100,
+        "start_line": 1098, "end_line": 1287
+      }
+    }
+  ],
+  "truncated": false,
+  "files_scanned": 245,
+  "files_with_matches": 1
+}
+```
+
+#### Resolution rules
+
+- **Innermost def wins.** When multiple defs cover the match line (nested closure, impl block + method), `pick_innermost_def` returns the smallest line-range one — ties broken by `(span, start_byte)` for stable output across calls.
+- **Single redb txn per file.** The naive shape would be one `defs_in_file` lookup per match. We hoist it to one per file-with-matches, keeping the hot path `O(files_with_matches)` rather than `O(matches)`. On `crates/rts-daemon` with ~200 matches concentrated in ~30 files, that's 30 lookups vs 200.
+- **File-scope matches surface explicit `null`s.** When no def covers the match (top-level comment, module-level statement, `use` line), all three enclosing fields are JSON `null` — distinct from "missing" so agents can tell "outside any def" from "field absent."
+- **Storage errors degrade gracefully.** If `defs_in_file` fails for a specific file (torn read, writer race), the match data is still valid; we log a warning and surface the matches with `enclosing_*: null` rather than failing the whole query.
+
+#### Backward compatibility
+
+Three new fields on a result object. Existing callers that only read `file`, `range`, `line_text` see no behavior change. Tests for the existing fields still pass byte-for-byte.
+
+#### Verification
+
+`grep_round_trip.rs` goes from 13 cases (M) to 15 (O):
+
+- **N**: `timeout reading MCP response` is on line 2 of `a.rs`, inside `pub fn a()`. Response must surface `enclosing_qualified_name == "a"`, `enclosing_kind == "fn"`, `enclosing_def_range.start_line == 1` covering the match.
+- **O**: `Comment about TIMEOUT` is on line 1 of `b.rs`, outside any function — all three enclosing fields must be JSON `null`.
+
+Full suite: `cargo test -p rts-daemon -p rts-mcp --release` — 160+ tests pass.
+
+#### Out of scope (filed for follow-up)
+
+- **PageRank ranking of matches.** Now that each match has an enclosing def, sorting by that def's PageRank is the next obvious step — puts hits in the workspace's busiest, most central code at the top, matching `find_symbol`'s default ordering. Filed as the next PR in this Index.Grep arc.
+- **`enclosing_qualified_name` is bare-name, not path-qualified.** Same shape as `Index.FindCallers.callers[].enclosing_qualified_name`; both inherit the underlying store schema where names aren't path-qualified. A separate `path` schema upgrade would surface `module::Type::method` consistently across both endpoints. Not a v0.5.5 deliverable.
+
+### `Index.Grep` — sort matches by enclosing-def PageRank
+
+#98 added `enclosing_qualified_name` + `enclosing_kind` + `enclosing_def_range` to every grep match. This PR closes the loop: each match now carries a `rank_score` (the PageRank of its enclosing def), and the response is sorted by `rank_score` descending. Hits in the workspace's busiest, most central code float to the top — matching `find_symbol`'s default ordering and saving agents from re-ranking client-side.
+
+#### Wire shape
+
+```jsonc
+{
+  "matches": [
+    {
+      "file": "crates/rts-daemon/src/methods/index.rs",
+      "range": { "start_line": 1156, "end_line": 1156, "start_byte": 38420, "end_byte": 38449 },
+      "line_text": "    if let Some(g) = &glob {",
+      "enclosing_qualified_name": "grep",
+      "enclosing_kind": "fn",
+      "enclosing_def_range": { "start_byte": 36800, "end_byte": 42100, "start_line": 1098, "end_line": 1287 },
+      // NEW in this PR:
+      "rank_score": 0.000142
+    }
+    // …additional matches in non-increasing rank_score order
+  ]
+}
+```
+
+#### Ranking rules
+
+- **Primary key**: `rank_score` descending. File-scope matches and cold-start (PageRank not yet computed) collapse to `0.0` and sink to the bottom — same convention as `Index.FindCallers.callers[].rank_score`.
+- **Tie-breaker**: `(file, start_byte)` ascending. Stable cross-call ordering when two matches share an enclosing def (and thus the same rank).
+- **NaN-safe**: `f64::total_cmp` handles any oddity in case future PageRank tweaks introduce non-finite values. `partial_cmp` would have panicked.
+
+#### Implementation
+
+- New field `FoundSymbol.sid` plumbed through the three `Store` constructors. Every constructor already had `sid` in scope; this just exposes it on the public struct. Lets grep (and any future `defs_in_file` → `pick_innermost_def` consumer) look up `SymbolRanks::rank_for(sid)` directly without a second `sid_for_name` lookup that would be ambiguous for overloaded names.
+- Lazy-fetch PageRank via the existing `symbol_ranks_lazy(state, store, generation)` helper. Cache-warm: one mutex-lock + one Arc clone (sub-microsecond). Cache-miss: triggers a compute on the daemon's blocking pool — same path `find_symbol` and `find_callers` use, so cold-start cost is shared, not duplicated.
+- TOCTOU invariant preserved: `index_generation` is read *before* the file walk starts, matching the Deepening §C contract.
+
+#### Verification
+
+`grep_round_trip.rs` adds Case **P**: every match must carry a finite `rank_score`, and the response must be in non-increasing `rank_score` order across the entire `matches` array. Existing 15 cases (A-O) continue to pass byte-for-byte.
+
+Semantic-eval invariants checked post-change:
+- `corpus/semantic-eval-rts-core.toml` against `crates/rts-core` — `answerable_coverage = 1.000 ≥ 0.95 ✓` (no regression vs the pre-change baseline).
+
+Full suite: `cargo test -p rts-daemon -p rts-mcp --release` — 160+ tests pass.
+
+#### Backward compatibility
+
+One new field on each match object. Existing callers that don't read `rank_score` see no behavior change *except* the result ordering shifts from "file-walk order" to "rank desc, file/byte asc". That ordering shift is the whole point of the PR, but it's worth flagging: any test that asserted "first match is in file X" without a more specific filter is now order-dependent on PageRank, not file-walk order.
+
+The `grep_round_trip.rs` existing Case A asserts `matches[0]["file"].ends_with("a.rs")` — that still holds because there's only one match for the query.
+
+#### Out of scope (filed for follow-up)
+
+- **`rank_score` as a query parameter (`min_rank`, `top_rank_only`)**. Once agents start filtering by rank, they'll want to express "only hits in the top decile of central code." Today's response includes the rank so client-side filtering is trivial; promoting to a server-side parameter is worth doing when usage patterns demand it.
+- **File-level rank vs symbol-level rank**. The current sort uses the *enclosing def's* PageRank. For matches at file scope (no enclosing def), an alternative would be the mean rank of all defs in that file — surfaces hits in "central files" even when they're in module-level code. Worth exploring once we have a concrete query that motivates it.
+
+
 ## [0.5.4] - 2026-05-16
 
 **Theme: cross-codebase evaluation, daemon workspace-isolation, grep, and 12-language parity.**
