@@ -98,6 +98,40 @@ First-match-wins per directory level, so a nested `Cargo.toml` in a member crate
 #### Out of scope (filed for follow-up)
 
 The `resolve_bin` helper (which locates `rts-mcp` / `rts-daemon` binaries) still requires `$PWD` to be the cargo build root. Running `rts-bench query` from a deep subdirectory works for the `--workspace` flag but fails on binary resolution unless `RTS_MCP_BIN` and `RTS_DAEMON_BIN` are exported. A symmetric "walk upward to find `target/{release,debug}/`" fix is the obvious next iteration.
+### Per-workspace socket paths — closes the `WORKSPACE_MISMATCH` recovery dance
+
+Pre-v0.5.4 every daemon on a given UID bound `default.sock`. Switching workspaces in the same shell gave:
+
+```
+Error: WORKSPACE_MISMATCH — daemon is already pinned to a different workspace on this socket.
+```
+
+…and required `pkill -f rts-daemon && sleep 1` to recover. Hit this in real dogfooding multiple times.
+
+The error message itself claimed "the socket path is per-workspace-hash per protocol-v0 §5.3" — but that was aspirational; only the bootstrap `default.sock` path was ever implemented.
+
+This PR makes the claim true:
+
+#### What changed
+
+- New `rts_daemon::socket::socket_path_for_workspace(canonical_path)` and matching `rts_mcp::socket::workspace_socket_path` — both compute `<runtime_root>/ws-<16hex>.sock` where the hex is the first 8 bytes of `blake3(canonical_path_bytes)`.
+- When the daemon is started with `--workspace W`, it canonicalises `W` and binds the per-workspace socket. Without `--workspace`, it falls back to `default.sock` (bootstrap path preserved for tests and any client that started without a workspace).
+- When `rts-mcp`'s auto-spawn knows the workspace at startup (the production path: `rts-mcp --workspace W` from Claude Code / Cursor / etc.), it computes the same hash and routes to the per-workspace socket — connecting to a live daemon there, or auto-spawning one if absent.
+- `docs/protocol-v0.md` §5.3 updated with the new layout and the `default.sock` bootstrap rationale.
+
+#### Impact
+
+Two daemons on distinct workspaces can now coexist on the same UID. The `WORKSPACE_MISMATCH` error remains for the (now rare) case where a daemon's hard-locked workspace is queried with a different `Workspace.Mount` payload over its own socket — that's a real protocol violation, not the path-collision artifact.
+
+#### Test coverage
+
++1 integration test (`two_daemons_one_runtime_dir_distinct_workspaces`) explicitly exercising the pre-PR failure: spawn daemon A with `--workspace=tempA`, spawn daemon B with `--workspace=tempB` against the **same shared `XDG_RUNTIME_DIR` / HOME**, verify both bind successfully, mount succeeds on each socket, each daemon indexes its own workspace's symbols, and neither sees the other's. Pre-v0.5.4 this test would have failed at daemon B's `bind()` (lockfile collision on `default.sock`).
+
+#### Wire-compat
+
+- Post-v0.5.4 MCP + post-v0.5.4 daemon: per-workspace path on both sides → ✅
+- Post-v0.5.4 MCP + pre-v0.5.4 daemon: MCP looks for `ws-XXX.sock`, doesn't find it, auto-spawns a fresh daemon (which is post-v0.5.4 since both binaries ship together) → ✅
+- Pre-v0.5.4 MCP + post-v0.5.4 daemon: pre-v0.5.4 MCP looks for `default.sock`, post-v0.5.4 daemon-with-workspace doesn't bind there → mismatch. Practical impact: zero, since both binaries ship and update together. Documented for completeness.
 
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 

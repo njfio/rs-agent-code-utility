@@ -136,7 +136,22 @@ async fn main() -> anyhow::Result<()> {
     lifecycle::preflight().context("daemon preflight failed")?;
 
     // Phase 2: socket path and lockfile.
-    let socket_path = socket::socket_path_for_default()?;
+    //
+    // v0.5.4+: when `--workspace <path>` is passed, bind a
+    // per-workspace socket (`ws-<16hex>.sock`) so multiple daemons
+    // can coexist — one per workspace. Without `--workspace` we
+    // bind `default.sock` for the bootstrap case (which still
+    // preserves the v0.5.3-and-earlier shape for callers that
+    // expect it).
+    let socket_path = match prewarm_workspace.as_deref() {
+        Some(p) => {
+            let canonical = p
+                .canonicalize()
+                .with_context(|| format!("canonicalize --workspace argument {}", p.display()))?;
+            socket::socket_path_for_workspace(&canonical)?
+        }
+        None => socket::socket_path_for_default()?,
+    };
     let _lock = lifecycle::acquire_lock(&socket_path).with_context(|| {
         format!(
             "could not acquire daemon lock for {}",

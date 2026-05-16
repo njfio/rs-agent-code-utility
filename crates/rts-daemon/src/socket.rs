@@ -21,11 +21,49 @@ use crate::state::DaemonState;
 /// Per-connection in-flight cap (protocol-v0 §9.4).
 const PER_CONNECTION_INFLIGHT_CAP: usize = 16;
 
-/// Fallback socket path used when no per-workspace hash is known yet —
-/// for v0's bootstrap "I haven't mounted yet" state. Once a workspace is
-/// mounted, future invocations would write to the per-workspace path; this
-/// fallback lets us boot a daemon without one.
+/// Fallback socket path used when no workspace is known yet — the
+/// bootstrap "started without `--workspace`" state. Once a daemon
+/// knows its workspace, future spawns hit the per-workspace path
+/// via [`socket_path_for_workspace`].
+///
+/// Pre-v0.5.4 this was the *only* socket path: every daemon on a
+/// given UID bound `default.sock` and switching workspaces required
+/// killing the daemon. v0.5.4+ adds per-workspace sockets so two
+/// daemons can coexist (one per workspace) without the
+/// `WORKSPACE_MISMATCH` error.
 pub fn socket_path_for_default() -> anyhow::Result<PathBuf> {
+    let dir = ensure_runtime_dir()?;
+    Ok(dir.join("default.sock"))
+}
+
+/// Per-workspace socket path. Two distinct workspaces produce
+/// distinct socket files, so an agent (or `rts-bench`) can switch
+/// between workspaces in the same shell without the second
+/// invocation seeing `WORKSPACE_MISMATCH` from a daemon pinned to
+/// the first one.
+///
+/// Hash input is `blake3(canonical_path.as_os_str_bytes())` —
+/// device/inode information would be slightly more robust against
+/// bind-mounts, but the canonical-path collision surface is
+/// effectively zero for real workspace roots, and a path-only hash
+/// keeps the algorithm deterministic across `Workspace.Mount`
+/// retries (`fstat` may race during cold-mount).
+///
+/// Socket file shape: `ws-<16hex>.sock` (first 8 bytes of blake3,
+/// 16 hex chars). 2^64 paths before a collision — plenty.
+pub fn socket_path_for_workspace(canonical_workspace: &Path) -> anyhow::Result<PathBuf> {
+    let dir = ensure_runtime_dir()?;
+    let bytes = canonical_workspace.as_os_str().as_encoded_bytes();
+    let hash = blake3::hash(bytes);
+    let short = hash.to_hex();
+    let short16 = &short.as_str()[..16];
+    Ok(dir.join(format!("ws-{short16}.sock")))
+}
+
+/// Shared helper: ensure `runtime_root()` exists with `0700` perms.
+/// Both `socket_path_for_default` and `socket_path_for_workspace`
+/// route through this so the parent dir invariant is one place.
+fn ensure_runtime_dir() -> anyhow::Result<PathBuf> {
     let dir = runtime_root()?;
     std::fs::create_dir_all(&dir).with_context(|| format!("create {}", dir.display()))?;
     nix::sys::stat::fchmodat(
@@ -35,7 +73,7 @@ pub fn socket_path_for_default() -> anyhow::Result<PathBuf> {
         nix::sys::stat::FchmodatFlags::FollowSymlink,
     )
     .with_context(|| format!("chmod 0700 on {}", dir.display()))?;
-    Ok(dir.join("default.sock"))
+    Ok(dir)
 }
 
 fn runtime_root() -> anyhow::Result<PathBuf> {

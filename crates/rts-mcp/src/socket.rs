@@ -1,15 +1,21 @@
 //! Socket-path discovery + daemon auto-spawn.
 //!
-//! Mirrors `rts-daemon`'s `socket::socket_path_for_default` so the MCP server
-//! and the daemon agree on where the Unix socket lives:
+//! Mirrors `rts-daemon`'s `socket` module so the MCP server and the
+//! daemon agree on where the Unix socket lives:
 //!
-//!   Linux: `${XDG_RUNTIME_DIR}/rts/default.sock`
-//!   macOS: `$HOME/Library/Caches/rts/default.sock`
+//!   Linux: `${XDG_RUNTIME_DIR}/rts/`
+//!   macOS: `$HOME/Library/Caches/rts/`
 //!
-//! Per-workspace socket paths (the `blake3(dev_id || inode || canonical_path)`
-//! flavour from protocol-v0 §5.3) are a v1.1 refinement — v0 is workspace-pinned
-//! to one daemon per host, and the "default" socket is the agreed bootstrap
-//! location.
+//! Per-workspace socket paths (v0.5.4+): when the MCP server knows
+//! the workspace at startup (`--workspace`), we compute
+//! `ws-<16hex>.sock` (first 8 bytes of blake3 over the canonical
+//! path) and use that. Switching workspaces in the same UID no
+//! longer hits `WORKSPACE_MISMATCH` — each workspace gets its own
+//! daemon on its own socket.
+//!
+//! The `default.sock` path is kept as a bootstrap fallback for the
+//! "started without a workspace" case (mostly: pre-v0.5.4 daemons
+//! and tests that boot a bare daemon).
 //!
 //! The auto-spawn flow:
 //!   1. If the socket exists and accepts a connection, use it.
@@ -38,6 +44,17 @@ const MAX_POLL: Duration = Duration::from_millis(250);
 /// unset on Linux (matches the daemon's refusal to fall back to `/tmp`).
 pub fn default_socket_path() -> Result<PathBuf> {
     Ok(runtime_root()?.join("default.sock"))
+}
+
+/// Per-workspace socket path — mirrors
+/// `rts_daemon::socket::socket_path_for_workspace`. Two distinct
+/// workspaces produce distinct socket files. v0.5.4+.
+pub fn workspace_socket_path(canonical_workspace: &std::path::Path) -> Result<PathBuf> {
+    let bytes = canonical_workspace.as_os_str().as_encoded_bytes();
+    let hash = blake3::hash(bytes);
+    let short = hash.to_hex();
+    let short16 = &short.as_str()[..16];
+    Ok(runtime_root()?.join(format!("ws-{short16}.sock")))
 }
 
 fn runtime_root() -> Result<PathBuf> {
@@ -86,7 +103,25 @@ pub async fn connect_with_auto_spawn(
     daemon_bin: &std::path::Path,
     prewarm_workspace: Option<&std::path::Path>,
 ) -> Result<UnixStream> {
-    let socket_path = default_socket_path()?;
+    // v0.5.4+: pick a per-workspace socket when we know the workspace
+    // at spawn time. Falls back to `default.sock` only for the
+    // bootstrap path (no `--workspace` known yet).
+    let socket_path = match prewarm_workspace {
+        Some(p) => {
+            // Canonicalise so the same workspace always hashes to
+            // the same socket, regardless of how the caller spelled
+            // the path. Falls through to default on canonicalize
+            // failure (e.g. workspace doesn't exist yet) — the
+            // daemon's own canonicalization step would error
+            // identically, so deferring it preserves the error
+            // surface.
+            match p.canonicalize() {
+                Ok(canon) => workspace_socket_path(&canon)?,
+                Err(_) => default_socket_path()?,
+            }
+        }
+        None => default_socket_path()?,
+    };
     if let Some(s) = try_connect(&socket_path).await {
         return Ok(s);
     }
