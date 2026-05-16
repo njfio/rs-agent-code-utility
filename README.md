@@ -104,11 +104,13 @@ license files, and this README. Available targets:
 |---|---|
 | `x86_64-unknown-linux-gnu` | most Linux distros (Ubuntu 20.04+, Debian 11+, RHEL 9+) |
 | `aarch64-unknown-linux-gnu` | ARM Linux (Raspberry Pi 64-bit, AWS Graviton) |
-| `x86_64-apple-darwin` | Intel Mac |
-| `aarch64-apple-darwin` | Apple Silicon Mac |
+| `aarch64-apple-darwin` | Apple Silicon Mac (M1/M2/M3/M4) |
 
 Windows is not yet supported — the daemon uses Unix sockets (a Windows
-port lands in v1.x).
+port lands in v1.x). Intel Mac (x86_64-apple-darwin) prebuilt tarballs
+were dropped after the `macos-13` GitHub runner pool started hanging
+indefinitely; Intel Mac users should build from source via Option B
+below.
 
 ```sh
 # Pick the right target for your platform

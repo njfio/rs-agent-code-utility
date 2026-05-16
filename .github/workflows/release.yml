@@ -12,8 +12,13 @@
 # Coverage:
 #   - x86_64-unknown-linux-gnu     (ubuntu-latest, native)
 #   - aarch64-unknown-linux-gnu    (ubuntu-24.04-arm, native)
-#   - x86_64-apple-darwin          (macos-13, native Intel)
-#   - aarch64-apple-darwin         (macos-latest, native M-series)
+#   - aarch64-apple-darwin         (macos-latest, native Apple Silicon)
+#
+# Intel Mac (x86_64-apple-darwin) is intentionally dropped. The
+# `macos-13` runner pool hung indefinitely on every release in this
+# series (v0.5.0, v0.5.1, v0.5.2) — see commit history. Intel Mac
+# users build from source via `cargo install` for now; a Rosetta-aware
+# universal binary lands when there's user demand.
 #
 # Windows is intentionally out — the daemon uses `std::os::unix` (Unix
 # sockets + permissions) and the watcher's fs path is inotify/fsevents.
@@ -66,9 +71,6 @@ jobs:
             archive_ext: tar.gz
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-24.04-arm
-            archive_ext: tar.gz
-          - target: x86_64-apple-darwin
-            runner: macos-13
             archive_ext: tar.gz
           - target: aarch64-apple-darwin
             runner: macos-latest
@@ -190,7 +192,14 @@ jobs:
     # Run on tag push so the aggregated SHA256SUMS file lands in the
     # draft release alongside the individual sidecars. workflow_dispatch
     # skips this — it's only relevant for actual releases.
-    if: github.ref_type == 'tag'
+    #
+    # `success() || failure()` (not `always()`) — runs once the build
+    # matrix has finished, even if one entry failed, but skips when the
+    # job was cancelled. Pre-fix this job required ALL matrix entries
+    # to succeed; the broken Intel Mac entry meant SHA256SUMS never
+    # published on v0.5.0, v0.5.1, or v0.5.2. With Intel Mac dropped
+    # and this guard, the aggregator publishes from whatever survived.
+    if: github.ref_type == 'tag' && (success() || failure())
     runs-on: ubuntu-latest
     steps:
       - name: Download all checksums
