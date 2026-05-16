@@ -75,8 +75,25 @@ const RUST_REFS: &str = r#"
     function: (field_expression
         field: (field_identifier) @name)) @reference.call
 
+(call_expression
+    function: (scoped_identifier
+        name: (identifier) @name)) @reference.call
+
+(call_expression
+    function: (generic_function
+        function: (identifier) @name)) @reference.call
+
+(call_expression
+    function: (generic_function
+        function: (scoped_identifier
+            name: (identifier) @name))) @reference.call
+
 (macro_invocation
     macro: (identifier) @name) @reference.call
+
+(macro_invocation
+    macro: (scoped_identifier
+        name: (identifier) @name)) @reference.call
 
 (impl_item
     trait: (type_identifier) @name) @reference.implementation
