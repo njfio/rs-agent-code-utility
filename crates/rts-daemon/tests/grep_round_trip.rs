@@ -427,5 +427,84 @@ async fn grep_finds_string_literals_across_workspace() -> anyhow::Result<()> {
         "empty file_glob must error with INVALID_PARAMS: {empty_glob:?}"
     );
 
+    // Case N (v0.5.5): enclosing-symbol resolution. The "timeout
+    // reading MCP response" literal is on line 2 of a.rs, inside
+    // `pub fn a()` which spans lines 1..=3. The grep response must
+    // surface `enclosing_qualified_name` = "a", `enclosing_kind`
+    // = "fn", with `enclosing_def_range` covering that span.
+    let enclosing = round_trip(
+        &mut stream,
+        "28",
+        "Index.Grep",
+        json!({ "text": "timeout reading MCP response" }),
+    )
+    .await?;
+    let enc_matches = enclosing["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(
+        enc_matches.len(),
+        1,
+        "enclosing case expects exactly one match: {enclosing:?}"
+    );
+    let m0 = &enc_matches[0];
+    assert_eq!(
+        m0["enclosing_qualified_name"].as_str(),
+        Some("a"),
+        "enclosing_qualified_name should be the function name 'a': {m0:?}"
+    );
+    assert_eq!(
+        m0["enclosing_kind"].as_str(),
+        Some("fn"),
+        "enclosing_kind should be 'fn': {m0:?}"
+    );
+    let def_range = &m0["enclosing_def_range"];
+    assert!(
+        def_range.is_object(),
+        "enclosing_def_range should be an object when enclosing is resolved: {m0:?}"
+    );
+    let def_start = def_range["start_line"].as_u64().unwrap_or(0);
+    let def_end = def_range["end_line"].as_u64().unwrap_or(0);
+    assert!(
+        def_start == 1 && def_end >= 2,
+        "enclosing_def_range should cover the match line: {def_range:?}"
+    );
+
+    // Case O (v0.5.5): file-scope match (no enclosing def). The
+    // comment in b.rs sits on line 1, outside any function — the
+    // response should surface explicit JSON null for each of the
+    // three enclosing_* fields so the agent can distinguish
+    // "outside any def" from "missing data".
+    let comment_match = round_trip(
+        &mut stream,
+        "29",
+        "Index.Grep",
+        json!({ "text": "Comment about TIMEOUT" }),
+    )
+    .await?;
+    let c_matches = comment_match["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(
+        c_matches.len(),
+        1,
+        "file-scope match expects one hit: {comment_match:?}"
+    );
+    let c0 = &c_matches[0];
+    assert!(
+        c0["enclosing_qualified_name"].is_null(),
+        "file-scope match must report null enclosing_qualified_name: {c0:?}"
+    );
+    assert!(
+        c0["enclosing_kind"].is_null(),
+        "file-scope match must report null enclosing_kind: {c0:?}"
+    );
+    assert!(
+        c0["enclosing_def_range"].is_null(),
+        "file-scope match must report null enclosing_def_range: {c0:?}"
+    );
+
     Ok(())
 }
