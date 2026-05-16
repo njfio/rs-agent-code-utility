@@ -550,6 +550,7 @@ impl Store {
                             kind: d.kind,
                             file: path.to_string(),
                             fid: d.fid,
+                            sid,
                             start_byte: d.start,
                             end_byte: d.end,
                             start_line: d.start_line,
@@ -914,6 +915,7 @@ impl Store {
                 kind: def.kind,
                 file: path,
                 fid: def.fid,
+                sid,
                 start_byte: def.start,
                 end_byte: def.end,
                 start_line: def.start_line,
@@ -998,6 +1000,7 @@ impl Store {
                     kind: def.kind,
                     file: path,
                     fid: def.fid,
+                    sid,
                     start_byte: def.start,
                     end_byte: def.end,
                     start_line: def.start_line,
@@ -1039,6 +1042,13 @@ pub struct FoundSymbol {
     /// invocations; the writer is the source of truth for the format).
     pub file: String,
     pub fid: u32,
+    /// v0.5.5+: the def's symbol id. Carrying `sid` here lets
+    /// `Index.Grep` (and any future caller that runs `defs_in_file` →
+    /// `pick_innermost_def` → wants a PageRank score) look up
+    /// `SymbolRanks::rank_for(sid)` directly without a second
+    /// `sid_for_name` lookup that would be ambiguous for overloaded
+    /// names. Every existing constructor already has `sid` in scope.
+    pub sid: u32,
     pub start_byte: u32,
     pub end_byte: u32,
     pub start_line: u32,
