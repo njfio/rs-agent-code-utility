@@ -130,11 +130,78 @@ async fn main() -> Result<()> {
         workspace.display()
     );
     let server = RtsServer::new(daemon, workspace.clone(), instructions);
+    // v0.5.8: hold a clone of the daemon Arc so we can issue one
+    // last `Daemon.Stats` after `service.waiting()` returns —
+    // `serve()` consumes the server, so this is the only window we
+    // have to grab a handle. The Mutex is uncontested at shutdown
+    // (stdio is closed → no tool calls can race), so the lock + RPC
+    // round-trip is sub-millisecond.
+    let daemon_for_shutdown = server.daemon_handle();
     let service = server
         .serve(rmcp::transport::stdio())
         .await
         .context("serve stdio")?;
     service.waiting().await.context("service.waiting")?;
+
+    // v0.5.8 session-end stats dump. The whole point of `Daemon.Stats`
+    // was to replace anecdotal "I think I used grep more than
+    // find_symbol" with a real number; issuing one final query at
+    // session end means every session naturally produces a data
+    // point on its way out. Failures here are non-fatal: stderr
+    // logging is observational, not load-bearing for the daemon
+    // lifecycle.
+    dump_session_stats(&daemon_for_shutdown).await;
     tracing::info!(target: "rts_mcp", "rts-mcp shut down cleanly");
     Ok(())
+}
+
+/// Issue a final `Daemon.Stats` RPC and pretty-print the result to
+/// stderr (via `eprintln!` so it's visible even when RTS_LOG filters
+/// out our tracing target). One eprintln line per non-zero counter
+/// — zero-count methods are silent to keep the dump tight on quiet
+/// sessions.
+///
+/// Non-fatal: any failure to query the daemon (it might have
+/// crashed before we got here, or the socket may already be gone)
+/// is reported via a single `tracing::warn!` and the function
+/// returns. Shutdown should never block on observability.
+async fn dump_session_stats(daemon: &std::sync::Arc<tokio::sync::Mutex<DaemonClient>>) {
+    let mut guard = daemon.lock().await;
+    let result = guard.call("Daemon.Stats", serde_json::json!({})).await;
+    drop(guard);
+
+    let body = match result {
+        Ok(v) => v,
+        Err(e) => {
+            // Pre-v0.5.7 daemons don't have Daemon.Stats — surfaces
+            // here as a daemon-side INVALID_PARAMS. Treat as "no
+            // stats available" and log at debug so old-daemon
+            // sessions don't get a scary warn on every shutdown.
+            tracing::debug!(
+                target: "rts_mcp",
+                error = %e,
+                "Daemon.Stats unavailable (likely pre-v0.5.7 daemon); skipping shutdown dump"
+            );
+            return;
+        }
+    };
+
+    let uptime_ms = body["uptime_ms"].as_u64().unwrap_or(0);
+    let total = body["total_calls"].as_u64().unwrap_or(0);
+    let version = body["version"].as_str().unwrap_or("?");
+    eprintln!("rts-mcp session stats:");
+    eprintln!("  daemon-version: {version}");
+    eprintln!("  uptime-ms:      {uptime_ms}");
+    eprintln!("  total-calls:    {total}");
+    if let Some(calls) = body["calls"].as_object() {
+        let mut pairs: Vec<(&String, u64)> = calls
+            .iter()
+            .map(|(k, v)| (k, v.as_u64().unwrap_or(0)))
+            .filter(|(_, n)| *n > 0)
+            .collect();
+        pairs.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        for (method, n) in pairs {
+            eprintln!("  {method}: {n}");
+        }
+    }
 }

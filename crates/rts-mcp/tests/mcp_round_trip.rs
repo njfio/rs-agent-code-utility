@@ -481,3 +481,164 @@ async fn mcp_reconnects_after_daemon_death() -> Result<()> {
     let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
     Ok(())
 }
+
+/// v0.5.8: when the MCP stdio session ends, rts-mcp issues a final
+/// `Daemon.Stats` RPC and dumps the snapshot to stderr. This test
+/// verifies the dump happens, has the documented shape, and
+/// reflects the calls actually made during the session.
+///
+/// Test shape:
+/// 1. Spawn rts-mcp with stderr piped (not /dev/null).
+/// 2. Complete handshake + one `find_symbol` call.
+/// 3. Close stdin → rts-mcp exits → shutdown dump fires.
+/// 4. Read stderr to EOF; assert it contains the documented
+///    header lines + the per-method counts that match what we
+///    issued during the session.
+#[tokio::test(flavor = "current_thread")]
+async fn rts_mcp_dumps_session_stats_to_stderr_on_shutdown() -> Result<()> {
+    use tokio::io::AsyncReadExt;
+
+    let daemon_bin = rts_daemon_bin();
+    assert!(daemon_bin.is_file(), "rts-daemon must be built first");
+
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // Seed one tiny file so find_symbol has something to match.
+    std::fs::write(workspace.path().join("hub.rs"), "pub fn hello() {}\n")?;
+
+    let mut cmd = tokio::process::Command::new(rts_mcp_bin());
+    cmd.arg("--workspace")
+        .arg(workspace.path())
+        .env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RTS_LOG", "warn")
+        .env("RTS_DAEMON_BIN", &daemon_bin)
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    let mut child = cmd.spawn().context("spawn rts-mcp")?;
+    let mut stdin = child.stdin.take().expect("piped stdin");
+    let mut stdout = BufReader::new(child.stdout.take().expect("piped stdout"));
+    let mut stderr = child.stderr.take().expect("piped stderr");
+
+    // Handshake + one find_symbol call.
+    send_request(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": { "protocolVersion": "2024-11-05", "capabilities": {},
+                        "clientInfo": { "name": "stats-test", "version": "0" } }
+        }),
+    )
+    .await?;
+    let _ = read_one_response(&mut stdout).await?;
+    send_request(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0", "method": "notifications/initialized", "params": {}
+        }),
+    )
+    .await?;
+    // Poll find_symbol until the writer commits, then make one
+    // confirmed call so the find_symbol counter is at >= 1 on
+    // shutdown. Using a deadline is safer than a single shot since
+    // the cold-walk timing varies on CI noise.
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let mut next_id: u64 = 10;
+    let mut find_symbol_succeeded = false;
+    while std::time::Instant::now() < deadline {
+        next_id += 1;
+        send_request(
+            &mut stdin,
+            &json!({
+                "jsonrpc": "2.0",
+                "id": next_id,
+                "method": "tools/call",
+                "params": {
+                    "name": "find_symbol",
+                    "arguments": { "name": "hello" }
+                }
+            }),
+        )
+        .await?;
+        let resp = read_one_response(&mut stdout).await?;
+        let body = resp["result"]["content"][0]["text"].as_str().unwrap_or("");
+        let parsed: Value = serde_json::from_str(body).unwrap_or(Value::Null);
+        if !parsed["matches"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(true)
+        {
+            find_symbol_succeeded = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(
+        find_symbol_succeeded,
+        "writer never produced a `hello` match through the MCP tool"
+    );
+
+    // Close stdin → service.waiting() returns → shutdown dump fires.
+    drop(stdin);
+
+    // Reap and collect stderr to EOF. Bound the wait so a stuck
+    // child fails fast instead of hanging the test.
+    let mut stderr_buf = String::new();
+    let _ = tokio::time::timeout(
+        Duration::from_secs(5),
+        stderr.read_to_string(&mut stderr_buf),
+    )
+    .await
+    .context("reading stderr to EOF")??;
+    let _ = tokio::time::timeout(Duration::from_secs(5), child.wait())
+        .await
+        .context("waiting for rts-mcp exit")??;
+
+    // Documented shape: header + per-counter lines for non-zero
+    // counters. The dump prints zero-count counters as silent, so
+    // we only assert on what we actually used (mount + find_symbol +
+    // the final Daemon.Stats RPC itself).
+    assert!(
+        stderr_buf.contains("rts-mcp session stats:"),
+        "stderr should contain the session-stats header; got: {stderr_buf}"
+    );
+    assert!(
+        stderr_buf.contains("daemon-version:"),
+        "stderr should contain daemon-version field; got: {stderr_buf}"
+    );
+    assert!(
+        stderr_buf.contains("total-calls:"),
+        "stderr should contain total-calls field; got: {stderr_buf}"
+    );
+    // Each of these counters has been hit at least once during the
+    // session and should appear in the per-method breakdown.
+    for expected_method in ["Workspace.Mount", "Index.FindSymbol", "Daemon.Stats"] {
+        assert!(
+            stderr_buf.contains(&format!("{expected_method}: ")),
+            "stderr should contain `{expected_method}: N` line; got: {stderr_buf}"
+        );
+    }
+
+    // Zero-count counters must NOT appear (the dump filters them
+    // out to keep tight on quiet sessions). impact_of and grep
+    // were never called.
+    assert!(
+        !stderr_buf.contains("Index.ImpactOf:"),
+        "zero-count counters should be filtered out of the dump; got: {stderr_buf}"
+    );
+    assert!(
+        !stderr_buf.contains("Index.Grep:"),
+        "zero-count counters should be filtered out of the dump; got: {stderr_buf}"
+    );
+
+    Ok(())
+}
