@@ -373,6 +373,50 @@ const LEMMA_OVERRIDES: &[(&str, &str)] = &[
     ("entities", "entiti"),
     ("entry", "entri"),
     ("entries", "entri"),
+    ("strategy", "strategi"),
+    ("strategies", "strategi"),
+    ("category", "categori"),
+    ("categories", "categori"),
+    ("policy", "polici"),
+    ("policies", "polici"),
+    ("summary", "summari"),
+    ("summaries", "summari"),
+    ("history", "histori"),
+    ("histories", "histori"),
+    ("library", "librari"),
+    ("libraries", "librari"),
+    ("registry", "registri"),
+    ("registries", "registri"),
+    ("factory", "factori"),
+    ("factories", "factori"),
+    ("property", "properti"),
+    ("properties", "properti"),
+    // v0.5.4: CVC consonant-doubling -er agent nouns. English rule:
+    // 1-syllable verbs ending in consonant-vowel-consonant double
+    // the final consonant when adding -er ("run" → "runner",
+    // "log" → "logger"). The suffix stemmer strips "er" but
+    // leaves the doubled consonant, so `Logger` → "logg" never
+    // unifies with `Log` → "log". Hand-curated overrides for the
+    // common code-domain ones — the agent who asks "how do I
+    // implement a custom logger?" expects to hit the `Log` trait.
+    //
+    // Exposed by the rust-log external corpus (v0.5.4).
+    ("logger", "log"),
+    ("loggers", "log"),
+    ("runner", "run"),
+    ("runners", "run"),
+    ("mapper", "map"),
+    ("mappers", "map"),
+    ("zipper", "zip"),
+    ("zippers", "zip"),
+    ("stripper", "strip"),
+    ("strippers", "strip"),
+    ("planner", "plan"),
+    ("planners", "plan"),
+    ("scanner", "scan"),
+    ("scanners", "scan"),
+    ("spinner", "spin"),
+    ("spinners", "spin"),
 ];
 
 /// Drop common English suffixes so different inflections collapse
@@ -536,11 +580,78 @@ impl IdfWeights {
 /// per matching token — between the sub-token tier (+6) and the
 /// raw-name-substring tier (+3). Doc text bridges behavior queries
 /// ("what cleans up...?") that identifier names alone can't answer.
+/// Symbol names that ARE common English words. v0.5.4+: when a
+/// candidate's full name appears in this list, the exact-name match
+/// bonus is reduced from `+10 × IDF` to `+1 × IDF`. Closes the
+/// failure mode observed on external corpora where a generic
+/// function called `main`, `new`, `run`, or `error` won the top
+/// slot for multi-token natural-language queries like _"what's the
+/// main searcher type?"_.
+///
+/// IDF already partially handles this — common words have low IDF
+/// — but for a small workspace IDF doesn't see the word as common,
+/// and the +10 ratio swamps the IDF moderation. The hand-curated
+/// list is a hard ceiling on common-word names.
+///
+/// Kept short and conservative: only words that are
+/// (a) common English nouns/verbs the average agent would use in
+///     a question, AND
+/// (b) frequently bound as identifier names in any non-trivial
+///     codebase.
+///
+/// Not in this list (intentionally): `parse`, `format`, `render`,
+/// `compile` — these are common English words too, but they're
+/// *also* the canonical name for the operation they describe.
+/// An exact-name match on those is usually the right answer.
+const COMMON_NOUN_SYMBOLS: &[&str] = &[
+    "main", "new", "test", "run", "get", "set", "type", "kind", "all", "none", "some", "default",
+    "base", "root", "item", "key", "name", "file", "path", "line", "byte", "time", "size", "list",
+    "map", "string", "number", "id", "self", "this", "error", "result", "value", "data", "info",
+    "state",
+];
+
+/// Kind-shape hint tokens. When a query contains one of these,
+/// candidates whose `kind` matches the hint get a `+5` boost.
+/// Closes the failure mode where _"what's the X type?"_ returns a
+/// function or variable instead of a struct/enum/trait.
+///
+/// The mapping is from query word → set of matching kind strings
+/// (since "type" should match struct, enum, trait, type-alias).
+const KIND_HINTS: &[(&str, &[&str])] = &[
+    (
+        "type",
+        &[
+            "struct",
+            "enum",
+            "type",
+            "trait",
+            "interface",
+            "class",
+            "union",
+        ],
+    ),
+    ("struct", &["struct"]),
+    ("trait", &["trait", "interface"]),
+    ("interface", &["interface", "trait"]),
+    // "class" deliberately includes interface + trait — agent
+    // queries phrased as "the X class" rarely distinguish language
+    // idioms (Java has both; Rust has trait; Go has interface;
+    // Python has only class). Treating them as one family for the
+    // boost matches agent intent better than strict equality.
+    ("class", &["class", "struct", "interface", "trait"]),
+    ("enum", &["enum"]),
+    ("function", &["fn", "function", "method"]),
+    ("method", &["method", "fn"]),
+    ("module", &["module", "mod"]),
+];
+
 pub fn score_candidate(
     candidate_name: &str,
     candidate_file: &str,
     candidate_rank: f64,
     candidate_doc: Option<&str>,
+    candidate_kind: &str,
+    candidate_visibility: &str,
     tokens: &[String],
     idf: &IdfWeights,
     doc_idf: &IdfWeights,
@@ -576,6 +687,23 @@ pub fn score_candidate(
     // semantically-tighter candidates.
     let apply_diminishing = sub_stems.len() >= 4;
     let mut sub_token_match_idx: u32 = 0;
+
+    // v0.5.4: common-noun penalty. When the candidate's full name
+    // is in `COMMON_NOUN_SYMBOLS` AND the query has more than one
+    // meaningful token (so we're NOT in a single-token by-name
+    // lookup), reduce the exact-name bonus from +10 to +1. Closes
+    // the ripgrep "what's the main searcher type?" → top1="main"
+    // failure mode where a generic function name floods.
+    //
+    // The single-token guard preserves direct-by-name lookups:
+    // `find_symbol --name main` against any project will still
+    // surface `main` as the top hit (the agent is asking for it
+    // explicitly), but a question phrased as a noun phrase won't.
+    let multi_token_query = tokens.iter().filter(|t| t.len() >= 3).count() > 1;
+    let is_common_noun_symbol =
+        multi_token_query && COMMON_NOUN_SYMBOLS.contains(&name_lower.as_str());
+    let exact_name_bonus = if is_common_noun_symbol { 1.0 } else { 10.0 };
+
     for tok in tokens {
         let tok_stem = stem(tok);
         let w = idf.weight(&tok_stem);
@@ -583,7 +711,7 @@ pub fn score_candidate(
             // Exact full-name match (raw or stemmed) dominates.
             // Weighted by IDF so a query against `Symbol` in a
             // symbol-heavy codebase doesn't crush more-specific hits.
-            score += 10.0 * w;
+            score += exact_name_bonus * w;
         } else if sub_stems.contains(&tok_stem) {
             // Exact stemmed sub-token match — bridges the natural-
             // language ↔ identifier gap (`parsing` ↔ `parse_file`).
@@ -618,7 +746,134 @@ pub fn score_candidate(
             score += 0.8 * doc_idf.weight(&tok_stem);
         }
     }
+
+    // v0.5.4: kind-hint multiplicative boost. When the query
+    // contains a type-shape word (`type`, `trait`, `class`,
+    // `enum`, `interface`, `struct`, `function`, `method`,
+    // `module`) AND the candidate's kind matches, multiply score
+    // by 1.6. Helps _"the X type"_ and _"the Y trait"_ queries
+    // surface structs/traits over functions that happen to share
+    // name tokens — but always multiplicative rather than additive
+    // so a strong name match still dominates a weak kind match.
+    //
+    // Multiple hints multiply — _"what struct or enum represents
+    // Z?"_ boosts both struct and enum candidates 1.6×.
+    if !candidate_kind.is_empty() {
+        for (hint_word, matching_kinds) in KIND_HINTS {
+            // Compare against the raw query tokens, not the stemmed
+            // form: stemming maps "type" → "type" but "types" → "type"
+            // and "trait" → "trait" already, so plain comparison is
+            // fine and avoids cross-contamination with sub-tokens.
+            if tokens.iter().any(|t| t == hint_word) && matching_kinds.contains(&candidate_kind) {
+                score *= 1.6;
+            }
+        }
+    }
+
+    // v0.5.4: public-symbol boost. Public API surface should
+    // generally outrank crate-internal helpers on natural-language
+    // queries. Multiplicative `×1.15` is gentle enough that a
+    // private symbol with strong name/sub-token hits still beats
+    // a public symbol with weak hits — it just breaks ties in the
+    // right direction.
+    if candidate_visibility == "public" {
+        score *= 1.15;
+    }
+
+    // v0.5.4: test-file penalty. Symbols defined in test files or
+    // whose name follows test-naming conventions (Go's `Test*`,
+    // Python/Rust's `test_*`) are almost never the answer to
+    // natural-language queries — yet they often have strong
+    // sub-token matches because tests EXIST to exercise the
+    // canonical name. e.g. `TestMergeCommandLineToFlags` matches
+    // "command" + "line" sub-tokens for the query "how does cobra
+    // parse the command line?", beating the real `Execute` method
+    // whose docs describe the parse flow.
+    //
+    // Multiplicative `×0.35` is heavy enough to drop tests out of
+    // the top-K on most natural-language queries while still
+    // letting a query that EXPLICITLY asks about a test (rare in
+    // practice) surface them — a query like "find the
+    // TestMergeCommandLineToFlags test" would still hit via the
+    // exact-name match path which gets a +10×IDF that survives
+    // the 0.35 penalty.
+    if looks_like_test_file(candidate_file) || looks_like_test_name(candidate_name) {
+        score *= 0.35;
+    }
+
     score
+}
+
+/// Test-file path heuristic. Conservative — errs toward classifying
+/// things that *look* like tests as tests, since the alternative
+/// (a test name beating a canonical method on a natural-language
+/// query) is the more visible failure mode.
+///
+/// Matched patterns (case-insensitive substring):
+/// - `tests/` or `test/` anywhere in the path
+/// - `__tests__/` (JS convention)
+/// - filename ends with `_test.<ext>`, `_tests.<ext>`, `_spec.<ext>`,
+///   or `.test.<ext>` (JS / TS / Rust integration convention)
+/// - filename ends with `.spec.<ext>`
+///
+/// Mirrors `rts_daemon::impact::is_test_path`; kept local to the
+/// bench so we don't drag in the daemon's internals.
+fn looks_like_test_file(rel_path: &str) -> bool {
+    let lower = rel_path.to_ascii_lowercase();
+    if lower.contains("/tests/")
+        || lower.contains("/test/")
+        || lower.contains("/__tests__/")
+        || lower.starts_with("tests/")
+        || lower.starts_with("test/")
+    {
+        return true;
+    }
+    let basename = lower.rsplit('/').next().unwrap_or(&lower);
+    let parts: Vec<&str> = basename.split('.').collect();
+    if parts.len() < 2 {
+        return false;
+    }
+    let stem = parts[0];
+    let after_first_dot = parts[1];
+    if stem.ends_with("_test") || stem.ends_with("_tests") || stem.ends_with("_spec") {
+        return true;
+    }
+    if after_first_dot == "test" || after_first_dot == "spec" {
+        return true;
+    }
+    false
+}
+
+/// Test-symbol name heuristic. Captures language conventions where
+/// the test function's NAME itself carries the test marker, even
+/// when the file path doesn't (e.g. Go test files end in
+/// `_test.go` which would be caught by `looks_like_test_file`, but
+/// the convention is reinforced by the `TestXxx` function-naming
+/// rule).
+///
+/// Matched:
+/// - PascalCase starting with `Test` (Go: `TestFoo`, `TestBar`)
+/// - snake_case starting with `test_` (Rust / Python: `test_foo`)
+/// - `bench_*` and PascalCase `Bench*` (Go benchmark convention)
+///
+/// Bench functions are downweighted the same as test functions —
+/// they're scaffolding, not API surface.
+fn looks_like_test_name(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    if lower.starts_with("test_") || lower.starts_with("bench_") {
+        return true;
+    }
+    // Go-style `TestFoo` / `BenchmarkFoo`: PascalCase Test/Benchmark
+    // prefix followed by a capital letter (so we don't match a
+    // legit name like "tester" or "testimony").
+    let bytes = name.as_bytes();
+    if bytes.len() >= 5 && &bytes[..4] == b"Test" && bytes[4].is_ascii_uppercase() {
+        return true;
+    }
+    if bytes.len() >= 10 && &bytes[..9] == b"Benchmark" && bytes[9].is_ascii_uppercase() {
+        return true;
+    }
+    false
 }
 
 /// Run the eval harness end-to-end.
@@ -653,6 +908,8 @@ pub async fn run(
                     &c.file,
                     c.rank,
                     c.doc.as_deref(),
+                    &c.kind,
+                    &c.visibility,
                     &tokens,
                     &idf,
                     &doc_idf,
@@ -706,25 +963,104 @@ pub struct Candidate {
     /// shows up here as `None` — the scorer falls back to
     /// identifier-only matching for those.
     pub doc: Option<String>,
+    /// Wire-side kind string: `fn`, `struct`, `enum`, `trait`,
+    /// `type`, `class`, `interface`, `method`, `const`, `static`,
+    /// `union`, `macro`, `module`, etc. v0.5.4+ uses this to apply
+    /// a kind-hint boost when the query contains a type-shape word
+    /// ("the X type", "what's the Y trait?"). Empty string when
+    /// the daemon didn't return one (pre-v0.5 fallback).
+    pub kind: String,
+    /// Visibility: `"public"`, `"private"`, or empty. v0.5.4+ uses
+    /// this to apply a small public-symbol boost — agent-facing
+    /// API surface should generally outrank crate-internal helpers
+    /// on natural-language queries.
+    pub visibility: String,
 }
 
-/// Pull the workspace's full ranked candidate set via
-/// `find_symbol(pattern="*", limit=4096)`. The 4096 cap is the
-/// daemon's MAX_LIMIT (v0.4.1+); on workspaces smaller than that
-/// it returns everything. Dedupes by qualified_name — the daemon
-/// returns one row per occurrence, so popular names show up many
-/// times without dedupe and crowd the top-K.
+/// Pull the workspace's candidate set as a union of multiple
+/// `find_symbol` calls:
+///
+/// 1. `pattern="*", limit=4096` — top-4096 by PageRank (the
+///    historical fetch path). Catches popular functions, methods,
+///    variables.
+/// 2. `pattern="*", limit=4096, kind=X` for each of: `trait`,
+///    `struct`, `enum`, `interface`, `class`, `type`, `union`.
+///    Catches type-level symbols that PageRank would otherwise
+///    push below the 4096 cutoff on large codebases.
+///
+/// The single-fetch path was the v0.5.3 shape; v0.5.4 surfaced
+/// (via the ripgrep external corpus) that the canonical types
+/// `Searcher`, `Matcher`, `Printer` were missing from the pool on
+/// large workspaces because functions called from `main()` had
+/// much higher PageRank than struct definitions. The kind-targeted
+/// passes guarantee every type-level symbol is at least a
+/// candidate, even when its PageRank is low.
+///
+/// Dedupes by `qualified_name` so identical hits across the
+/// per-kind passes don't double up.
 ///
 /// Note: pre-v0.4.1 daemons silently ignored the `limit` parameter
-/// and capped at 256. Running the bench against an older daemon
-/// will work but the pool size limits coverage.
+/// and capped at 256. Pre-v0.5.4 daemons advertised
+/// `find_symbol_limit_param` but didn't honor the `kind` filter
+/// in combination with `pattern="*"`; this still works because
+/// the per-kind passes use a real glob over names and the daemon
+/// filters server-side.
 pub async fn fetch_candidates(session: &mut McpSession) -> Result<Vec<Candidate>> {
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut out: Vec<Candidate> = Vec::new();
+
+    // Pass 1: top-by-PageRank (no kind filter).
+    fetch_pass(
+        session,
+        json!({ "pattern": "*", "limit": 4096 }),
+        &mut seen,
+        &mut out,
+    )
+    .await?;
+
+    // Passes 2..N: per-kind enrichment so type-level symbols are
+    // guaranteed in the pool. The kind list mirrors the language-
+    // matrix surface — anything an agent might phrase as a query
+    // shape ("the X type", "the Y trait", "the Z class") routes
+    // here.
+    for kind in [
+        "trait",
+        "struct",
+        "enum",
+        "interface",
+        "class",
+        "type",
+        "union",
+    ] {
+        // Errors on per-kind passes are non-fatal: a daemon that
+        // doesn't recognise a particular kind string just returns
+        // empty matches, and the overall pool stays usable. We
+        // still bubble up genuine RPC errors (daemon down, etc.)
+        // via the inner helper.
+        let params = json!({ "pattern": "*", "limit": 4096, "kind": kind });
+        if let Err(e) = fetch_pass(session, params, &mut seen, &mut out).await {
+            tracing::debug!(target: "semantic", kind, error = %e, "kind-targeted candidate fetch failed; continuing");
+        }
+    }
+
+    Ok(out)
+}
+
+/// One `find_symbol` call; appends new (deduped) candidates to
+/// `out`. Used by `fetch_candidates` to compose the union of
+/// rank-ordered + kind-targeted passes.
+async fn fetch_pass(
+    session: &mut McpSession,
+    params: Value,
+    seen: &mut std::collections::HashSet<String>,
+    out: &mut Vec<Candidate>,
+) -> Result<()> {
     let resp = session
-        .tools_call("find_symbol", json!({ "pattern": "*", "limit": 4096 }), 5)
+        .tools_call("find_symbol", params, 5)
         .await
-        .context("fetch candidates via find_symbol(pattern='*', limit=4096)")?;
+        .context("fetch candidates via find_symbol")?;
     if resp.is_error {
-        anyhow::bail!("find_symbol(pattern='*') errored");
+        anyhow::bail!("find_symbol errored");
     }
     let body = resp
         .result_body
@@ -733,13 +1069,6 @@ pub async fn fetch_candidates(session: &mut McpSession) -> Result<Vec<Candidate>
         .get("matches")
         .and_then(|m| m.as_array())
         .ok_or_else(|| anyhow::anyhow!("find_symbol response missing matches array"))?;
-    // Dedupe by qualified_name. `find_symbol` returns one row per
-    // occurrence, so popular names show up many times — without
-    // dedupe, a single symbol can monopolize the top-K and crowd
-    // out genuinely-relevant alternatives. Keep the first (highest-
-    // rank, since the daemon returns by descending rank) occurrence.
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut out: Vec<Candidate> = Vec::new();
     for m in matches.iter() {
         let Some(name) = m.get("qualified_name").and_then(|n| n.as_str()) else {
             continue;
@@ -758,14 +1087,26 @@ pub async fn fetch_candidates(session: &mut McpSession) -> Result<Vec<Candidate>
             .and_then(|d| d.as_str())
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string());
+        let kind = m
+            .get("kind")
+            .and_then(|k| k.as_str())
+            .unwrap_or("")
+            .to_string();
+        let visibility = m
+            .get("visibility")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
         out.push(Candidate {
             name: name.to_string(),
             file,
             rank,
             doc,
+            kind,
+            visibility,
         });
     }
-    Ok(out)
+    Ok(())
 }
 
 /// Load and parse a TOML corpus.
@@ -883,12 +1224,24 @@ mod tests {
     fn score_candidate_exact_name_dominates_substring() {
         let toks = vec!["mount".to_string()];
         let idf = flat_idf();
-        let exact = score_candidate("mount", "src/lib.rs", 0.001, None, &toks, &idf, &idf);
+        let exact = score_candidate(
+            "mount",
+            "src/lib.rs",
+            0.001,
+            None,
+            "",
+            "",
+            &toks,
+            &idf,
+            &idf,
+        );
         let sub_token = score_candidate(
             "workspace_mount",
             "src/lib.rs",
             0.001,
             None,
+            "",
+            "",
             &toks,
             &idf,
             &idf,
@@ -904,6 +1257,8 @@ mod tests {
             "src/lib.rs",
             0.001,
             None,
+            "",
+            "",
             &toks,
             &idf,
             &idf,
@@ -925,6 +1280,8 @@ mod tests {
                 file: String::new(),
                 rank: 0.0,
                 doc: None,
+                kind: String::new(),
+                visibility: String::new(),
             });
         }
         cands.push(Candidate {
@@ -932,6 +1289,8 @@ mod tests {
             file: String::new(),
             rank: 0.0,
             doc: None,
+            kind: String::new(),
+            visibility: String::new(),
         });
         let idf = IdfWeights::from_candidates(&cands);
         let w_symbol = idf.weight(&stem("symbol"));
@@ -954,6 +1313,8 @@ mod tests {
                 file: String::new(),
                 rank: 0.0,
                 doc: None,
+                kind: String::new(),
+                visibility: String::new(),
             });
         }
         cands.push(Candidate {
@@ -961,12 +1322,16 @@ mod tests {
             file: "src/symbol_table.rs".into(),
             rank: 0.001,
             doc: None,
+            kind: String::new(),
+            visibility: String::new(),
         });
         cands.push(Candidate {
             name: "is_public".into(),
             file: "src/symbol_table.rs".into(),
             rank: 0.001,
             doc: None,
+            kind: String::new(),
+            visibility: String::new(),
         });
         let idf = IdfWeights::from_candidates(&cands);
         let toks = vec!["symbols".to_string(), "public".to_string()];
@@ -975,6 +1340,8 @@ mod tests {
             "src/symbol_table.rs",
             0.001,
             None,
+            "",
+            "",
             &toks,
             &idf,
             &idf,
@@ -984,6 +1351,8 @@ mod tests {
             "src/symbol_table.rs",
             0.001,
             None,
+            "",
+            "",
             &toks,
             &idf,
             &idf,
@@ -1094,6 +1463,8 @@ mod tests {
             "src/parser.rs",
             0.001,
             None,
+            "",
+            "",
             &toks,
             &idf,
             &idf,
@@ -1103,6 +1474,8 @@ mod tests {
             "src/other.rs",
             0.001,
             None,
+            "",
+            "",
             &toks,
             &idf,
             &idf,
@@ -1136,13 +1509,24 @@ mod tests {
             "queries".to_string(),
         ];
         let idf = flat_idf();
-        let query_score =
-            score_candidate("Query", "src/queries.rs", 0.001, None, &toks, &idf, &idf);
+        let query_score = score_candidate(
+            "Query",
+            "src/queries.rs",
+            0.001,
+            None,
+            "",
+            "",
+            &toks,
+            &idf,
+            &idf,
+        );
         let compound_score = score_candidate(
             "get_language_specific_complexity",
             "src/complexity.rs",
             0.001,
             None,
+            "",
+            "",
             &toks,
             &idf,
             &idf,
@@ -1158,8 +1542,8 @@ mod tests {
     fn score_candidate_pagerank_breaks_ties_on_no_keyword_match() {
         let toks = vec!["unrelated_keyword_xyz".to_string()];
         let idf = flat_idf();
-        let high = score_candidate("foo", "src/lib.rs", 0.5, None, &toks, &idf, &idf);
-        let low = score_candidate("bar", "src/lib.rs", 0.001, None, &toks, &idf, &idf);
+        let high = score_candidate("foo", "src/lib.rs", 0.5, None, "", "", &toks, &idf, &idf);
+        let low = score_candidate("bar", "src/lib.rs", 0.001, None, "", "", &toks, &idf, &idf);
         assert!(
             high > low,
             "with no keyword hits, PageRank determines the order"

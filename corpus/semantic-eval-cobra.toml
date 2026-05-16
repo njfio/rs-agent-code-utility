@@ -1,0 +1,77 @@
+# Semantic-search evaluation corpus for `spf13/cobra` (pinned to v1.8.1).
+#
+# External-repo corpus v0.5.4. cobra is the canonical Go CLI
+# framework — the basis for kubectl, hugo, gh, and most major Go
+# CLIs. Tests the daemon's Go extractor on a real workload.
+#
+# Repo: https://github.com/spf13/cobra
+# Pin:  v1.8.1
+# LOC:  ~15k Go
+# Why:  Exercises the Go extractor path. Different naming
+#       conventions from Rust (PascalCase methods, no traits,
+#       interface-as-trait, Cmd-suffix vs Command-prefix family),
+#       so generalisation across language idioms gets tested.
+
+version = 1
+
+# ─── Core entry points ───
+
+[[query]]
+text = "what's the main command type?"
+expected_top_k = ["Command"]
+
+[[query]]
+text = "how do I add subcommands?"
+expected_top_k = ["AddCommand", "Command"]
+
+[[query]]
+text = "where do I attach flags to a command?"
+expected_top_k = ["Flags", "PersistentFlags", "LocalFlags", "Command"]
+
+# ─── Family-discovery ───
+
+[[query]]
+text = "show me the shell-completion generators"
+expected_top_k = ["GenBashCompletion", "GenZshCompletion", "GenFishCompletion", "GenPowerShellCompletion"]
+
+[[query]]
+text = "where are all the completion-file helpers?"
+expected_top_k = ["GenBashCompletionFile", "GenZshCompletionFile", "GenFishCompletionFile", "GenPowerShellCompletionFile"]
+
+# ─── Type-level lookups ───
+
+[[query]]
+text = "what represents shell completion configuration?"
+expected_top_k = ["CompletionOptions", "ShellCompDirective"]
+
+[[query]]
+text = "how do I validate command arguments?"
+expected_top_k = ["PositionalArgs", "MinimumNArgs", "MaximumNArgs", "ExactArgs", "NoArgs"]
+
+# ─── Behavior-by-description ───
+
+[[query]]
+text = "how does cobra parse the command line?"
+expected_top_k = ["Execute", "ExecuteC", "ExecuteContext", "Find"]
+
+[[query]]
+text = "where is the help system?"
+expected_top_k = ["Help", "HelpFunc", "UsageFunc", "InitDefaultHelpCmd"]
+
+[[query]]
+text = "how do I customize usage output?"
+expected_top_k = ["UsageFunc", "SetUsageFunc", "SetUsageTemplate", "UsageTemplate"]
+
+# ─── Cross-cutting ───
+
+[[query]]
+text = "what handles error display?"
+expected_top_k = ["SetErr", "ErrPrefix", "PrintErr"]
+
+[[query]]
+text = "what controls command suggestions on typos?"
+expected_top_k = ["SuggestionsMinimumDistance", "SuggestFor", "SuggestionsFor", "DisableSuggestions"]
+
+[[query]]
+text = "how do I register dynamic flag completion?"
+expected_top_k = ["RegisterFlagCompletionFunc", "MarkFlagCustom", "ShellCompDirective"]

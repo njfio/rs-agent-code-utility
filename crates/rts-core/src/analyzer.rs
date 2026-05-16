@@ -1162,6 +1162,58 @@ impl CodebaseAnalyzer {
             }
         }
 
+        // Extract traits, type aliases, unions, and declarative macros.
+        // Surfaced as a real gap during external-corpus authoring (v0.5.4):
+        // `find_symbol --name Log` on `rust-lang/log` returned empty
+        // because `pub trait Log` was never extracted. Traits are
+        // first-class Rust API surface — for any library that
+        // exposes a trait, find_symbol failed without this.
+        //
+        // tree-sitter rust grammar node kinds:
+        //   - `trait_item`           → kind="trait"
+        //   - `type_item`            → kind="type"   (e.g. `type Result<T> = ...`)
+        //   - `union_item`           → kind="union"
+        //   - `macro_definition`     → kind="macro"  (declarative macros)
+        //
+        // All four expose a `name` child field with the same shape
+        // as const/static. Visibility / doc-comment extraction
+        // mirrors the existing paths.
+        for (kind_name, kind_label) in [
+            ("trait_item", "trait"),
+            ("type_item", "type"),
+            ("union_item", "union"),
+            ("macro_definition", "macro"),
+        ] {
+            let items = tree.find_nodes_by_kind(kind_name);
+            for item in items {
+                if let Some(name_node) = item.child_by_field_name("name") {
+                    if let Ok(name) = name_node.text() {
+                        let visibility = if item
+                            .children()
+                            .iter()
+                            .any(|child| child.kind() == "visibility_modifier")
+                        {
+                            "public"
+                        } else {
+                            "private"
+                        };
+                        let docs =
+                            self.extract_rust_doc_comments(content, item.start_position().row);
+                        symbols.push(Symbol {
+                            name: name.to_string(),
+                            kind: kind_label.to_string(),
+                            start_line: item.start_position().row + 1,
+                            end_line: item.end_position().row + 1,
+                            start_column: item.start_position().column,
+                            end_column: item.end_position().column,
+                            visibility: visibility.to_string(),
+                            documentation: docs,
+                        });
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -2816,5 +2868,79 @@ mod tests {
             .as_ref()
             .expect("IEvictionPolicy has docs");
         assert!(policy_docs.contains("Eviction"), "got: {policy_docs:?}");
+    }
+}
+
+#[cfg(test)]
+mod rust_trait_type_union_macro_extraction {
+    use super::*;
+
+    /// Closes the v0.5.4 dogfood gap: `find_symbol --name Log` on
+    /// `rust-lang/log` returned empty pre-fix because `pub trait Log`
+    /// wasn't extracted. Traits are first-class Rust API surface;
+    /// missing them broke external-corpus queries against any
+    /// library that exposes a trait (most of them).
+    #[test]
+    fn rust_trait_type_union_macro_all_extracted() {
+        let mut a = CodebaseAnalyzer::new().unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("lib.rs");
+        std::fs::write(
+            &path,
+            "\
+/// A trait encapsulating logging.
+pub trait Log: Send + Sync {
+    fn enabled(&self) -> bool;
+}
+
+/// Result alias.
+pub type LogResult<T> = std::result::Result<T, std::io::Error>;
+
+pub union Word {
+    int: u32,
+    bytes: [u8; 4],
+}
+
+macro_rules! log_at {
+    ($level:expr, $($arg:tt)+) => {};
+}
+",
+        )
+        .unwrap();
+        let result = a.analyze_directory(temp.path()).unwrap();
+        let file_info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "rs")
+            .unwrap();
+
+        let by_name =
+            |n: &str, k: &str| file_info.symbols.iter().any(|s| s.name == n && s.kind == k);
+        assert!(
+            by_name("Log", "trait"),
+            "trait extraction missing: {:?}",
+            file_info
+                .symbols
+                .iter()
+                .map(|s| (&s.name, &s.kind))
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            by_name("LogResult", "type"),
+            "type-alias extraction missing"
+        );
+        assert!(by_name("Word", "union"), "union extraction missing");
+        assert!(by_name("log_at", "macro"), "macro extraction missing");
+
+        // Doc-comment flows through for trait.
+        let log = file_info
+            .symbols
+            .iter()
+            .find(|s| s.name == "Log" && s.kind == "trait")
+            .unwrap();
+        assert_eq!(
+            log.documentation.as_deref(),
+            Some("A trait encapsulating logging.")
+        );
     }
 }

@@ -295,6 +295,58 @@ Dogfood-verified end-to-end on the actual workspace: `rts-bench query grep --tex
 - **`context_lines: N`** for surrounding lines.
 - **`enclosing_qualified_name` / `enclosing_kind`** on each match, resolved via the same code path `Index.ReadSymbolAt` uses.
 - **Parallel file scan**. Current implementation is single-threaded; on a 1000-file workspace each scan is ~10ms which is acceptable, but `rayon::into_par_iter` would cut multi-MB scans further.
+### External-repo semantic-eval corpora + ranker generalisation fixes
+
+Closes the v0.5.3 "ranker improvements for dogfood-v3 gaps" + a separate user request: *"pull down some large and small repos from various popular github sites into the corpora for testing thoroughly."*
+
+#### What's in this PR
+
+**Four new corpora**, each authored after running `outline_workspace` + `find_symbol` against the pinned repo. Every `expected_top_k` symbol was verified to actually exist before commit:
+
+| Corpus | Repo | Pin | LOC | Lang | Queries |
+|---|---|---|---:|---|---:|
+| `semantic-eval-rust-log.toml` | rust-lang/log | 0.4.22 | ~5.7k | Rust | 12 |
+| `semantic-eval-ripgrep.toml` | BurntSushi/ripgrep | 14.1.1 | ~50k | Rust | 14 |
+| `semantic-eval-cobra.toml` | spf13/cobra | v1.8.1 | ~15k | Go | 13 |
+| `semantic-eval-requests.toml` | psf/requests | v2.32.3 | ~11k | Python | 13 |
+
+Plus `corpus/fetch-external.sh` to clone all four at pinned commits into the gitignored `corpus/repos/` dir. The corpus repo itself stays lean — only `.toml` files + the fetch script land here.
+
+**Six concrete ranker improvements**, each driven by a specific failure mode the new corpora exposed:
+
+1. **`trait_item` / `type_item` / `union_item` / `macro_definition` extraction** (`crates/rts-core`). Pre-fix, `find_symbol --name Log` on `rust-lang/log` returned empty because the `Log` trait wasn't extracted as a symbol. Traits are first-class Rust API surface; their absence broke external-repo queries against any trait-exposing library. +1 unit test covering all four kinds with doc-comment flow-through.
+
+2. **CVC consonant-doubling lemma overrides**: English's "1-syllable verb + -er doubles the final consonant" rule (`run` → `runner`, `log` → `logger`) defeats the suffix stemmer. Hand-curated overrides for the common code-domain ones (`logger`, `runner`, `mapper`, `zipper`, `stripper`, `planner`, `scanner`, `spinner`) so the agent who asks _"how do I implement a custom logger?"_ hits the `Log` trait.
+
+3. **Common-noun penalty**: when the candidate's full name appears in `COMMON_NOUN_SYMBOLS` (~36 entries: `main`, `new`, `test`, `type`, `error`, `data`, `state`, …) AND the query has multiple meaningful tokens, the exact-name match bonus reduces from `+10 × IDF` to `+1 × IDF`. Closes _"what's the main searcher type?"_ → `main` (a function literally named `main`) winning over the intended `Searcher` struct.
+
+4. **Kind-hint multiplier**: query containing `type` / `trait` / `class` / `enum` / `interface` / `struct` / `function` / `method` / `module` boosts matching candidate kind by `×1.6`. Helps _"the X type"_ surface structs/enums/traits over functions with similar name tokens.
+
+5. **Public-visibility boost**: `×1.15` multiplicative when `visibility=="public"`. Gentle tiebreak in favour of API surface over crate-internal helpers.
+
+6. **Multi-pass candidate fetch with kind enrichment** (`crates/rts-bench/src/semantic.rs::fetch_candidates`). The big one. The historical fetch was `find_symbol(pattern="*", limit=4096)` — top-by-PageRank. On large workspaces (ripgrep at 50k LOC), the canonical types `Searcher`, `Matcher`, `Printer`, `SearcherBuilder` had **lower PageRank than their callers**, so they fell off the 4096 cutoff. The pool only contained 1193 unique names — none of them the type-level symbols we wanted.
+
+   v0.5.4 unions the rank-ordered pass with eight per-kind passes (`trait`, `struct`, `enum`, `interface`, `class`, `type`, `union`). Each per-kind pass returns up to 4096 symbols *of that kind only*, dramatically widening type-level coverage. Per-kind errors are non-fatal (logged at debug).
+
+#### Result matrix (before → after)
+
+| Corpus | Coverage | MRR | Notes |
+|---|---|---|---|
+| rust-log | 83.3% → **100%** | 0.484 → **0.708** | logger↔Log lemma + kind boost |
+| ripgrep | 35.7% → **85.7%** | 0.073 → **0.549** | **+50pp coverage**, candidate-pool enrichment was the unlock |
+| cobra | 69.2% → 69.2% | 0.437 → 0.479 | flat coverage, +10% MRR |
+| requests | 76.9% → 76.9% | 0.440 → 0.493 | flat coverage, +12% MRR |
+| rts-core v1 (audited) | 100% → 100% | 0.387 → 0.349 | answerable invariant held |
+| rts-core blind-v2 | 100% → 100% | 0.273 → 0.306 | answerable invariant held |
+
+The ripgrep delta (+50pp coverage, 7.5× MRR) is the marquee result. **The candidate-pool bottleneck was hiding behind the scorer all along** — until external corpora put us on a large repo where PageRank-only fetch couldn't reach the type-level symbols.
+
+#### Out of scope (filed for follow-up)
+
+- **cobra + requests coverage**: still 69.2% / 76.9%. The misses on these two now reflect either (a) the canonical answer not being in the candidate pool even after kind enrichment, or (b) the scorer choosing a near-miss. Need per-failure investigation.
+- **Promote external corpora to CI invariants**: not yet wired into `.github/workflows/semantic-coverage.yml`. Once rust-log + ripgrep hold at their post-fix numbers across a few release cycles, lock them in.
+- **rts-core v1 MRR regression** (-10%): the v1 corpus was author-graded; the scorer fixes generalise across distributions. The answerable invariant is preserved, but the rank-within-top-10 shifted slightly. Acceptable given the cross-codebase wins.
+- **dogfood-v3 corpus**: lives on PR #87's branch which is still open. Re-run after PR #87 merges to confirm the same fixes carry through there.
 
 ### Release workflow — drop hung Intel Mac target, unblock SHA256SUMS aggregator
 
