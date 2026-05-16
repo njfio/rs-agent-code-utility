@@ -535,3 +535,123 @@ async fn find_symbol_doc_contains_filter() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// v0.5.3: `Index.FindSymbol.include_signature` populates each match's
+/// `signature` field via rts-core's per-language SignatureRenderer.
+///
+/// Verifies:
+/// - `include_signature: true` returns a non-null signature for a
+///   documented Rust function (renderer supports Rust).
+/// - The rendered signature is the declaration prefix (no body braces).
+/// - Default (omitted param) keeps `signature: null` for back-compat.
+#[tokio::test(flavor = "current_thread")]
+async fn find_symbol_include_signature() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // A Rust function with a multi-arg signature and a body we want
+    // stripped from the rendered form.
+    std::fs::write(
+        workspace.path().join("lib.rs"),
+        "/// Sums two numbers.\npub fn add(a: u32, b: u32) -> u32 {\n    a + b\n}\n",
+    )?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+
+    let _ = poll_for_match(&mut stream, "add", Duration::from_secs(5)).await?;
+
+    // Case A: include_signature true → rendered signature.
+    let with_sig = round_trip(
+        &mut stream,
+        "10",
+        "Index.FindSymbol",
+        json!({ "name": "add", "include_signature": true }),
+    )
+    .await?;
+    let matches = with_sig["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(
+        matches.len(),
+        1,
+        "expected one match for `add`: {matches:?}"
+    );
+    let sig = matches[0]["signature"]
+        .as_str()
+        .expect("signature should be a string when include_signature=true");
+    assert!(
+        sig.contains("fn add(a: u32, b: u32) -> u32"),
+        "rendered signature should carry the declaration prefix: {sig:?}"
+    );
+    assert!(
+        !sig.contains("a + b"),
+        "rendered signature should strip the body: {sig:?}"
+    );
+
+    // Case B: include_signature omitted → null (back-compat).
+    let no_sig = round_trip(
+        &mut stream,
+        "11",
+        "Index.FindSymbol",
+        json!({ "name": "add" }),
+    )
+    .await?;
+    assert!(
+        no_sig["result"]["matches"][0]["signature"].is_null(),
+        "signature should be null without include_signature: {no_sig:?}"
+    );
+
+    // Case C: include_signature false explicitly → also null.
+    let false_sig = round_trip(
+        &mut stream,
+        "12",
+        "Index.FindSymbol",
+        json!({ "name": "add", "include_signature": false }),
+    )
+    .await?;
+    assert!(
+        false_sig["result"]["matches"][0]["signature"].is_null(),
+        "signature should be null when include_signature=false: {false_sig:?}"
+    );
+
+    Ok(())
+}
