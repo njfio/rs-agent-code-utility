@@ -1215,6 +1215,32 @@ pub async fn grep(
             continue;
         }
 
+        // v0.5.5: enclosing-symbol resolution. For each match, surface
+        // the innermost def whose line range contains the match line
+        // — same `pick_innermost_def` lookup `read_symbol_at` uses.
+        // One redb txn per file with matches (not per match) keeps the
+        // hot path O(files_with_matches), not O(matches). Files with
+        // no indexed defs (yet — torn read, or a file the writer
+        // hasn't extracted symbols from) return an empty Vec; matches
+        // in those files surface with `enclosing_*: null`, same shape
+        // as a match at file scope (top-level comment, module-level
+        // statement).
+        let defs = match store_arc.defs_in_file(rel) {
+            Ok(v) => v,
+            // Storage errors at this layer shouldn't fail the whole
+            // query — the match data is still valid and the agent
+            // can re-issue if needed. Log + continue with empty defs.
+            Err(e) => {
+                tracing::warn!(
+                    target: "rts_daemon::grep",
+                    error = %e,
+                    file = %rel,
+                    "defs_in_file failed; surfacing matches without enclosing"
+                );
+                Vec::new()
+            }
+        };
+
         let mut file_recorded = false;
         for (m_start, m_end) in hits {
             total_pre_truncate += 1;
@@ -1223,15 +1249,51 @@ pub async fn grep(
                 let (line_no, line_start, line_end) = find_line_bounds(&bytes, m_start);
                 let raw_line = &bytes[line_start..line_end];
                 let line_text = bytes_to_truncated_utf8(raw_line, MAX_LINE_BYTES);
+                let one_based_line = (line_no + 1) as u32;
+
+                // Resolve enclosing def. `pick_innermost_def` returns
+                // the smallest line-range def covering `one_based_line`,
+                // breaking ties by `(span, start_byte)` for stable
+                // output across calls. Matches at file scope (no def
+                // covers them — module-level statements, top-of-file
+                // comments) return `None` here, surfacing as nulls in
+                // the wire response.
+                let (enc_name, enc_kind, enc_def_range) =
+                    match pick_innermost_def(&defs, one_based_line) {
+                        Some(d) => (
+                            serde_json::Value::String(d.name.clone()),
+                            serde_json::Value::String(d.kind.as_wire_str().to_string()),
+                            serde_json::json!({
+                                "start_byte": d.start_byte,
+                                "end_byte":   d.end_byte,
+                                "start_line": d.start_line,
+                                "end_line":   d.end_line,
+                            }),
+                        ),
+                        None => (
+                            serde_json::Value::Null,
+                            serde_json::Value::Null,
+                            serde_json::Value::Null,
+                        ),
+                    };
+
                 matches.push(serde_json::json!({
                     "file": rel,
                     "range": {
-                        "start_line": (line_no + 1) as u32,
-                        "end_line":   (line_no + 1) as u32,
+                        "start_line": one_based_line,
+                        "end_line":   one_based_line,
                         "start_byte": m_start as u32,
                         "end_byte":   m_end as u32,
                     },
                     "line_text": line_text,
+                    // v0.5.5: enclosing-symbol fields. Same shape as
+                    // `Index.FindCallers.callers[]` (modulo the rename
+                    // from `kind` → `enclosing_kind` for clarity in a
+                    // grep-result context, where bare `kind` would
+                    // confuse the reader: "kind of what, the match?").
+                    "enclosing_qualified_name": enc_name,
+                    "enclosing_kind":           enc_kind,
+                    "enclosing_def_range":      enc_def_range,
                 }));
                 file_recorded = true;
             } else {
