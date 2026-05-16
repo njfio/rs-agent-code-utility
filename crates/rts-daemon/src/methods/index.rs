@@ -103,6 +103,28 @@ struct ReadRangeParams {
     token_budget: Option<u64>,
 }
 
+/// v0.5.4: `Index.Grep` — literal-substring search over indexed
+/// file contents. Closes the agent-loop hole where the daemon
+/// couldn't help find error messages, version strings, log
+/// outputs, or any other non-symbol text.
+///
+/// The MVP is literal-only (no regex), case-insensitive by default.
+/// Regex support, `file_glob`, `context_lines`, and enclosing-symbol
+/// resolution are filed for follow-up.
+#[derive(Debug, Deserialize)]
+struct GrepParams {
+    /// The literal substring to search for. Required; 1..=1024 chars.
+    text: String,
+    /// Maximum number of matches to return. Defaults to 256.
+    /// Range: 1..=4096 (same shape as `find_symbol.limit`).
+    #[serde(default)]
+    limit: Option<u32>,
+    /// Case-insensitive matching. Defaults to `true` — agent-friendly.
+    /// Set explicitly to `false` for case-sensitive search.
+    #[serde(default)]
+    case_insensitive: Option<bool>,
+}
+
 #[derive(Debug, Deserialize)]
 struct ReadSymbolParams {
     name: String,
@@ -906,6 +928,253 @@ pub async fn find_symbol(
         response["pre_filter_count"] = serde_json::Value::Number(count.into());
     }
     Ok(response)
+}
+
+/// `Index.Grep(text)` — literal-substring search across all
+/// indexed file bytes. v0.5.4+, capability `index_grep`.
+///
+/// Closes the agent-loop hole where `find_symbol` / `find_callers`
+/// couldn't help find non-symbol content: error message text, log
+/// strings, version literals, configuration values, doc-comment
+/// passages too long to surface through `doc_contains`.
+///
+/// **Wire shape:**
+/// ```jsonc
+/// {
+///   "matches": [
+///     {
+///       "file": "crates/rts-bench/src/mcp_runner.rs",
+///       "range": { "start_line": 165, "end_line": 165,
+///                  "start_byte": 4892, "end_byte": 4925 },
+///       "line_text": "        .map_err(|_| anyhow!(\"timeout reading MCP response\"))??;"
+///     }
+///   ],
+///   "truncated": false,
+///   "files_scanned": 245,
+///   "files_with_matches": 1
+/// }
+/// ```
+///
+/// MVP: literal substring, case-insensitive default, no regex, no
+/// `file_glob`, no `context_lines`, no enclosing-symbol resolution.
+/// Each of those is a separate iteration filed in the CHANGELOG.
+///
+/// Errors: `INVALID_PARAMS` for empty `text`, `text` over 1024
+/// chars, `limit` outside `1..=4096`.
+pub async fn grep(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    /// Default cap on returned matches when `limit` is unset.
+    /// Matches `find_symbol`'s default — same agent-context budget.
+    const DEFAULT_LIMIT: usize = 256;
+    /// Hard ceiling on `limit`. Same shape as `find_symbol`.
+    const MAX_LIMIT: usize = 4096;
+    /// Max body bytes we'll scan per file. Above this, the file is
+    /// skipped and counted toward `files_scanned` but contributes
+    /// no matches. Caps an individual oversized file's CPU cost
+    /// without rejecting the whole query.
+    const MAX_FILE_BYTES: usize = 4 * 1024 * 1024;
+    /// Max line-text length we surface in the response. Long lines
+    /// (minified JS, generated tables) get truncated with an
+    /// ellipsis suffix so the response stays parseable.
+    const MAX_LINE_BYTES: usize = 512;
+
+    let p: GrepParams = parse_params(params)?;
+
+    if p.text.is_empty() {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`text` must be 1..=1024 characters",
+        ));
+    }
+    if p.text.len() > 1024 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`text` must be 1..=1024 characters",
+        ));
+    }
+    let limit = match p.limit {
+        None => DEFAULT_LIMIT,
+        Some(0) => {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                "`limit` must be >= 1",
+            ));
+        }
+        Some(n) if (n as usize) > MAX_LIMIT => {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                format!("`limit` must be <= {MAX_LIMIT}"),
+            ));
+        }
+        Some(n) => n as usize,
+    };
+    let case_insensitive = p.case_insensitive.unwrap_or(true);
+
+    let (root, store_arc) = snapshot(state)?;
+
+    // Pull the workspace-relative paths the writer has committed.
+    let files = store_arc.list_indexed_files().map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("list_indexed_files storage error: {e:#}"),
+        )
+    })?;
+
+    // Pre-compute the lowercased needle once when case-insensitive.
+    let needle_lower = if case_insensitive {
+        Some(p.text.to_lowercase())
+    } else {
+        None
+    };
+    let needle_bytes_ci = needle_lower.as_deref().map(|s| s.as_bytes());
+    let needle_bytes = p.text.as_bytes();
+
+    let mut matches: Vec<serde_json::Value> = Vec::new();
+    let mut files_scanned: usize = 0;
+    let mut files_with_matches: usize = 0;
+    let mut total_pre_truncate: usize = 0;
+    let mut truncated_hit_cap = false;
+
+    'files: for rel in &files {
+        // Resolve workspace-relative → absolute. Skip the file
+        // silently if resolution fails (e.g. file deleted after
+        // index but before this scan); the writer will catch up.
+        let abs = match crate::path::resolve_workspace_path(&root, rel) {
+            Ok((abs, _)) => abs,
+            Err(_) => continue,
+        };
+        let bytes = match std::fs::read(&abs) {
+            Ok(b) => b,
+            Err(_) => continue,
+        };
+        files_scanned += 1;
+        if bytes.len() > MAX_FILE_BYTES {
+            continue;
+        }
+
+        // Choose the haystack: case-insensitive scans lowercase a
+        // copy of the bytes once per file. Cost is acceptable
+        // (linear in file size, single pass) and lets us reuse the
+        // same `bytes.windows()` shape as the case-sensitive path.
+        let haystack: Vec<u8>;
+        let scan_bytes: &[u8] = if let Some(n_ci) = needle_bytes_ci {
+            haystack = bytes
+                .iter()
+                .map(|b| b.to_ascii_lowercase())
+                .collect::<Vec<u8>>();
+            let _ = n_ci; // needle_bytes_ci alias holds the lowercase needle bytes
+            &haystack
+        } else {
+            &bytes
+        };
+        let needle_for_scan: &[u8] = needle_bytes_ci.unwrap_or(needle_bytes);
+
+        // Stream the file looking for needle occurrences. We use
+        // `memchr`-style scanning would be faster but adds a dep;
+        // for v0.5.4 a simple windows-based scan is plenty (single
+        // file scans at GB/s on modern CPUs).
+        let mut from = 0usize;
+        let n = needle_for_scan.len();
+        if n == 0 {
+            continue;
+        }
+        while from + n <= scan_bytes.len() {
+            if &scan_bytes[from..from + n] == needle_for_scan {
+                total_pre_truncate += 1;
+
+                // Resolve byte offset → (line, line_text).
+                let (line_no, line_start, line_end) = find_line_bounds(&bytes, from);
+                let raw_line = &bytes[line_start..line_end];
+                let line_text = bytes_to_truncated_utf8(raw_line, MAX_LINE_BYTES);
+
+                if matches.len() < limit {
+                    matches.push(serde_json::json!({
+                        "file": rel,
+                        "range": {
+                            "start_line": (line_no + 1) as u32,
+                            "end_line":   (line_no + 1) as u32,
+                            "start_byte": from as u32,
+                            "end_byte":   (from + n) as u32,
+                        },
+                        "line_text": line_text,
+                    }));
+                } else {
+                    truncated_hit_cap = true;
+                }
+
+                if matches.len() >= limit && truncated_hit_cap {
+                    // We've already filled `matches` AND there are
+                    // more matches in this file. Mark and stop
+                    // scanning entirely — agents should narrow the
+                    // search instead of asking for more pages.
+                    if files_scanned > 0 && !matches.iter().any(|m| m["file"] == *rel) {
+                        // file contributed only to overflow; don't
+                        // bump files_with_matches.
+                    }
+                    break 'files;
+                }
+                // Advance past this match (don't double-count the
+                // same starting byte).
+                from += n;
+            } else {
+                from += 1;
+            }
+        }
+
+        // Did we record at least one match from this file?
+        if matches.iter().any(|m| m["file"] == *rel) {
+            files_with_matches += 1;
+        }
+    }
+
+    let truncated = truncated_hit_cap || total_pre_truncate > matches.len();
+
+    Ok(serde_json::json!({
+        "matches":            matches,
+        "truncated":          truncated,
+        "files_scanned":      files_scanned,
+        "files_with_matches": files_with_matches,
+    }))
+}
+
+/// Helper: given byte offset `pos` into `bytes`, return
+/// `(line_index_0_based, line_start_byte, line_end_byte_exclusive)`.
+/// Stops the end at the newline or EOF, whichever comes first.
+fn find_line_bounds(bytes: &[u8], pos: usize) -> (usize, usize, usize) {
+    let pos = pos.min(bytes.len());
+    // Count newlines in [0, pos) for the line number.
+    let mut line_no = 0usize;
+    let mut line_start = 0usize;
+    for (i, b) in bytes[..pos].iter().enumerate() {
+        if *b == b'\n' {
+            line_no += 1;
+            line_start = i + 1;
+        }
+    }
+    // Find the end of the current line.
+    let mut line_end = pos;
+    while line_end < bytes.len() && bytes[line_end] != b'\n' {
+        line_end += 1;
+    }
+    (line_no, line_start, line_end)
+}
+
+/// Helper: lossy-UTF8 a slice with truncation to `max_bytes`. The
+/// truncation respects char boundaries via `String::from_utf8_lossy`
+/// (replaces invalid sequences with U+FFFD).
+fn bytes_to_truncated_utf8(bytes: &[u8], max_bytes: usize) -> String {
+    let slice = if bytes.len() > max_bytes {
+        &bytes[..max_bytes]
+    } else {
+        bytes
+    };
+    let mut s = String::from_utf8_lossy(slice).into_owned();
+    if bytes.len() > max_bytes {
+        s.push_str("…");
+    }
+    s
 }
 
 /// `Index.FindCallers(name)` — direct callers of a symbol. v0.3 U2'.

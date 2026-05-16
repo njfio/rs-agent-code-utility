@@ -73,6 +73,13 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // `(path, byte_range, mtime)` in DaemonState::signature_cache,
     // so repeat queries on the same workspace amortize the parse.
     "find_symbol_signature_field",
+    // v0.5.4 — Index.Grep method: literal-substring search across
+    // indexed file bytes. Closes the agent-loop hole where the
+    // daemon couldn't help find error messages, version strings,
+    // log output, or any non-symbol text content. MVP is literal
+    // case-insensitive-by-default; regex / file_glob / context
+    // lines / enclosing-symbol resolution are filed for follow-up.
+    "index_grep",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

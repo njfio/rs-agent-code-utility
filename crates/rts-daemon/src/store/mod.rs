@@ -446,6 +446,21 @@ impl Store {
     /// Returns `Ok(None)` if the path isn't indexed (gitignore/secrets/ext or
     /// just not seen by the watcher yet). Used by `Index.ReadRange` for the
     /// pre-read existence check + by `Index.ReadSymbol` for `content_version`.
+    /// Enumerate every indexed file path (workspace-relative). Used by
+    /// `Index.Grep` to drive the iteration without the def-walking cost of
+    /// `list_files_with_defs`. Returns paths in arbitrary order.
+    pub fn list_indexed_files(&self) -> anyhow::Result<Vec<String>> {
+        let txn = self.db.begin_read().context("begin_read")?;
+        let fid_to_path = txn.open_table(FID_TO_PATH)?;
+        let mut out: Vec<String> = Vec::new();
+        let iter = fid_to_path.iter()?;
+        for row in iter {
+            let row = row?;
+            out.push(row.1.value().to_string());
+        }
+        Ok(out)
+    }
+
     /// Enumerate every indexed file path + its symbol defs. Used by
     /// `Index.Outline` to build the file-level reference graph for
     /// PageRank ranking. Returns paths in arbitrary order.
