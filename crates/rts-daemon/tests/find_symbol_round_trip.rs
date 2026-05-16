@@ -492,5 +492,46 @@ async fn find_symbol_doc_contains_filter() -> anyhow::Result<()> {
         "without filter, undocumented symbol should still appear: {unfiltered:?}"
     );
 
+    // Case 5 (v0.5.2): when the filter rejects ALL candidates, the
+    // response should still include `pre_filter_count` so the agent
+    // can distinguish "filter dropped N candidates" from "nothing
+    // matched the pattern".
+    let all_rejected = round_trip(
+        &mut stream,
+        "14",
+        "Index.FindSymbol",
+        json!({ "pattern": "frob_*", "doc_contains": "no_such_word_at_all" }),
+    )
+    .await?;
+    assert_eq!(
+        all_rejected["result"]["matches"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(0),
+        0,
+        "no-match filter should yield empty matches"
+    );
+    let pre_count = all_rejected["result"]["pre_filter_count"]
+        .as_u64()
+        .expect("pre_filter_count should be present when filter is active");
+    assert!(
+        pre_count >= 2,
+        "pre_filter_count should report the candidate pool (>=2 frob_* names): got {pre_count}, response: {all_rejected:?}"
+    );
+
+    // Case 6: when no filter is active, pre_filter_count should be
+    // ABSENT (back-compat wire shape).
+    let no_filter = round_trip(
+        &mut stream,
+        "15",
+        "Index.FindSymbol",
+        json!({ "pattern": "frob_*" }),
+    )
+    .await?;
+    assert!(
+        no_filter["result"]["pre_filter_count"].is_null(),
+        "pre_filter_count should be absent when no filter active: {no_filter:?}"
+    );
+
     Ok(())
 }

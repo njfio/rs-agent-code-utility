@@ -179,7 +179,9 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "pagerank_symbolwise",
                      "impact_of",
                      "find_symbol_limit_param",      // v0.4.1+
-                     "find_symbol_doc_field"],       // v0.5.0+
+                     "find_symbol_doc_field",        // v0.5.0+
+                     "find_symbol_doc_filter",       // v0.5.2+
+                     "find_symbol_pre_filter_count"],// v0.5.2+
     "uptime_ms":    123456
   }
 }
@@ -208,6 +210,8 @@ Reserved for the **v0.4 / v0.5 semantic-retrieval extensions**. Advertised indep
 
 - ~~`find_symbol_limit_param`~~ — **advertised** as of `v0.4.1`. `Index.FindSymbol.params.limit: u32` (range `1..=4096`, default `256`) caps the returned `matches[]` size. Pre-v0.4.1 daemons silently ignored the field. The 4096 ceiling exists for offline eval tooling; agents should leave at default.
 - ~~`find_symbol_doc_field`~~ — **advertised** as of `v0.5.0`. `Index.FindSymbol.matches[].doc` carries extracted doc-comment text. v0.5.0 ships Rust (`///`/`//!`); v0.5.x patches extend to Go, Swift, Python, JavaScript / TypeScript / C / C++ (`/** */`), Ruby (`#`), PHP (PHPDoc), Java (Javadoc). Pre-v0.5 daemons return `null` for all symbols.
+- ~~`find_symbol_doc_filter`~~ — **advertised** as of `v0.5.2`. `Index.FindSymbol.params.doc_contains: Option<String>` filters matches by case-insensitive substring against doc-comment text. Enables behavior-shaped queries (e.g. `doc_contains: "evict"` returns documented symbols whose comments mention eviction).
+- ~~`find_symbol_pre_filter_count`~~ — **advertised** as of `v0.5.2`. `Index.FindSymbol.result.pre_filter_count: Option<usize>` reports the candidate count before any filter ran. Present iff a filter was active; lets agents distinguish empty-because-filter-rejected-all from empty-because-pattern-matched-nothing.
 
 ### 4.3 Version mismatch
 
@@ -449,6 +453,10 @@ The glob matcher has **no character classes** and **no escapes** — `*` and `?`
 
 **Doc field (v0.5.0+, capability `find_symbol_doc_field`):** `matches[].doc` carries extracted doc-comment text for documented symbols, `null` for undocumented or pre-v0.5 daemons. v0.5.0 ships Rust (`///`/`//!`) support. v0.5.x patches extend coverage to Go, Swift, Python (`"""..."""`), JavaScript / TypeScript / C / C++ (JSDoc / Doxygen `/** ... */`), Ruby (`#`), PHP (PHPDoc), Java (Javadoc).
 
+**Doc-text filter (v0.5.2+, capability `find_symbol_doc_filter`):** `params.doc_contains: Option<String>` — case-insensitive substring filter against the doc-comment text. Symbols with no doc never match. Useful for behavior-shaped queries ("find the cache eviction code"). When set, the pre-rank candidate cap expands automatically so the filter sees the full ranked pool.
+
+**Pre-filter count (v0.5.2+, capability `find_symbol_pre_filter_count`):** `result.pre_filter_count: Option<usize>` — present only when a filter (currently `doc_contains`) was active. Reports the candidate count before the filter ran. Lets agents distinguish `matches: []` because the pattern matched nothing from `matches: []` because the filter rejected every candidate. Omitted when no filter ran (back-compat).
+
 **`result`**:
 ```jsonc
 {
@@ -464,7 +472,8 @@ The glob matcher has **no character classes** and **no escapes** — `*` and `?`
       "rank_score":     0.0421                // PageRank-derived; higher = more central
     }
   ],
-  "truncated": false                          // true if list was clipped at the effective `limit`
+  "truncated":         false,                  // true if list was clipped at the effective `limit`
+  "pre_filter_count":  158                     // optional (v0.5.2+); present iff a filter was active
 }
 ```
 

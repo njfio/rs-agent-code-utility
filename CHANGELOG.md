@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### `Index.FindSymbol.pre_filter_count` — closes the silent-empty-result gap
+
+PR #76's dogfood report flagged: **when `doc_contains` rejected every candidate, `matches: []` was indistinguishable from "nothing matched the pattern"**. An agent couldn't tell whether the base query had any hits to begin with. Diagnosing the silent failure required `RTS_INHERIT_DAEMON_STDERR=1` + ad-hoc eprintln.
+
+This PR adds `pre_filter_count: Option<usize>` to the `Index.FindSymbol` response:
+
+```jsonc
+// Filter active, all rejected:
+{ "matches": [], "truncated": false, "pre_filter_count": 15975 }
+
+// No filter, pattern matched nothing:
+{ "matches": [], "truncated": false /* pre_filter_count omitted */ }
+```
+
+When present, `pre_filter_count` reports the candidate population before any filter (currently `doc_contains`) ran. Omitted when no filter was active — pre-v0.5.2 wire shape preserved.
+
+#### Capability + protocol
+
+- New capability `find_symbol_pre_filter_count` advertised in `Daemon.Ping`.
+- `docs/protocol-v0.md` §7.6 updated with the new field semantics.
+
+#### Test coverage
+
++2 integration test cases in `find_symbol_doc_contains_filter`:
+- Filter rejects all → `pre_filter_count >= 2` and `matches` empty
+- No filter → `pre_filter_count` is JSON null (absent)
+
+594 workspace tests pass.
+
 ### Rust `const` and `static` extraction — closes the PR #76 dogfood gap
 
 PR #76's honest dogfood report flagged: **Rust `const` declarations
@@ -59,86 +88,6 @@ descent picks them up alongside module-level ones.
 - Doc-string flows through
 
 595 workspace tests pass.
-
-### `Index.FindSymbol.doc_contains` — behavior-shaped queries via doc text
-
-Built while **dogfooding the daemon** as my primary navigation surface. Filter `Index.FindSymbol` matches by case-insensitive substring against doc text. Lets agents ask "find the cache eviction code" → matches any documented symbol whose comment mentions `evict`, regardless of identifier name.
-
-#### Wire shape
-
-```jsonc
-{ "pattern": "*",
-  "doc_contains": "retry",   // v0.5.2+, cap: find_symbol_doc_filter
-  "limit": 10 }
-```
-
-Symbols with no doc never match (filter is opt-in). Matches that pass the filter retain PageRank-derived ordering.
-
-#### Candidate-pool sizing
-
-The pre-rank candidate cap (normally `limit * 4` for pattern queries) expands to `MAX_LIMIT * 4 = 16384` when `doc_contains` is set. Without that expansion, `--limit 5` would only see 20 candidate names — almost none carrying the queried doc-text in a large pool. Subtle, easy to miss; the dogfood exercise surfaced it.
-
-#### Dogfood findings (honest report)
-
-Built this PR using `rts-bench query find-symbol/read-symbol/find-callers/outline` as primary navigation, falling back to grep once. Findings:
-
-- ✅ **`find-symbol --pattern` is dramatically better than grep** for "find all symbols matching X". One round-trip with file:line + kind + doc.
-- ✅ **`read-symbol` reads bodies directly** — no grep+head+sed pipeline. Reading `Language` enum or `FindSymbolParams` struct took one daemon call each.
-- ✅ **`find-callers` immediately revealed the JS↔TS / C↔C++ sharing** in the dispatch match — no need to read the whole dispatch by hand.
-- ❌ **Rust `const` declarations don't surface via `find_symbol`** — they're not extracted as symbols. Searching for `DEFAULT_CAPABILITIES` fell back to grep. **Filed for follow-up.**
-- ❌ **First version of this PR returned silent empty results** because the candidate-pool cap was applied before the doc filter — indistinguishable from "no actual matches". Diagnosing took ~10 min with `RTS_INHERIT_DAEMON_STDERR=1` + eprintln. Some kind of `pre_filter_count` field in the response would have flagged it immediately. **Filed for follow-up.**
-
-Net: tools are good enough that using them for navigation is faster than grep+Read for ~80% of cases, and the gaps are concrete enough to fix.
-
-#### Capability + protocol
-
-- New capability `find_symbol_doc_filter` advertised in `Daemon.Ping`.
-- MCP `find_symbol` tool's `FindSymbolArgs` gains `doc_contains: Option<String>`.
-- `rts-bench query find-symbol --doc-contains <STR>` for shell use.
-
-+1 integration test covering case-insensitive match, undocumented filtering, empty-result needles, and back-compat absence of the param. 594 workspace tests pass.
-
-### Doc-IDF separate from name-IDF
-
-Computes a second IDF table from candidate doc-comment text rather
-than reusing the name-IDF for doc matches. Lets rare doc-specific
-terms (`rollback`, `retry`, `validate`) earn higher weight than
-common ones (`returns`, `the`, `function`) when scoring against
-doc text — independent of how those terms appear in identifier
-names.
-
-#### Why
-
-PR #65 shipped doc-comment matching at conservative `+1.0 × name_IDF`
-because name-IDF is calibrated to identifier sub-tokens, not doc
-words. Common doc words ("function", "returns") that aren't
-sub-tokens fall to the high default name-IDF, inflating noise
-matches.
-
-With separate doc-IDF computed from the actual doc corpus:
-- `function` (extremely common in docs) → low doc-IDF (~1.5)
-- `rollback` (rare in docs) → high doc-IDF (~5-7)
-
-Weight coefficient adjusted to `0.8 × doc_IDF` (was `1.0 × name_IDF`)
-so the maximum doc bonus stays below the `+6` sub-token tier.
-
-#### Numbers on the rts-core corpora
-
-| Metric              | v0.5.1            | This PR             | Δ          |
-|---------------------|-------------------|---------------------|------------|
-| v1 audited (13q)    | 100% / 0.381      | 100% / 0.381        | parity     |
-| blind-v2 (15q)      | 90% / 0.235       | 90% / 0.234         | parity     |
-
-**Coverage parity on both corpora** — this is architectural
-infrastructure, not a coverage move. The change pays off as workspaces
-with richer doc text (Python, Java) get indexed. Filed under
-"compounding investment" rather than "today's metric win."
-
-590 workspace tests pass.
-
-### Multi-language doc-comment extraction — Go + Swift (extends v0.5.0 Rust-only)
-
-### JSDoc cosmetic strip — clean JS/TS doc-comment output
 ## [0.5.1] - 2026-05-15
 
 Patch release. Two iterations on top of v0.5.0:
