@@ -14,7 +14,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, anyhow};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::json;
 
 mod baseline;
@@ -123,6 +123,17 @@ enum Cmd {
     /// (including this very Claude Code session, which can't easily
     /// re-configure its MCP server list mid-conversation).
     Query {
+        /// Output format. `json` (default) prints the daemon's full
+        /// response. `lines` prints rg-shaped `path:line:content` so
+        /// queries compose into bash pipelines (`| head`, `| sort`,
+        /// `| xargs sed -i`). Lines mode is the v0.5.6+ answer to
+        /// "why does the agent always reach for grep instead of
+        /// `query grep`" — it strips the JSON-skim friction without
+        /// losing the AST-precise data the daemon returns. Available
+        /// for `find-symbol`, `find-callers`, `grep`, `impact-of`,
+        /// `outline`. Other subcommands ignore this flag.
+        #[arg(long, value_enum, default_value_t = QueryOutput::Json, global = true)]
+        output: QueryOutput,
         #[command(subcommand)]
         sub: QueryCmd,
     },
@@ -162,6 +173,17 @@ enum Cmd {
         #[arg(long)]
         check_coverage: Option<f64>,
     },
+}
+
+/// Output format for `rts-bench query …`. See the `--output` doc on
+/// `Cmd::Query` for the rationale.
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum QueryOutput {
+    /// Pretty JSON to stdout. Matches the daemon's wire shape exactly.
+    Json,
+    /// rg-shaped `path:line:content` lines. Composable with `| head`,
+    /// `| sort`, `| xargs`, etc.
+    Lines,
 }
 
 #[derive(Subcommand, Debug)]
@@ -468,7 +490,7 @@ async fn main() -> Result<()> {
             out,
             dry_run,
         } => run_footprint(synth_loc, out, dry_run).await,
-        Cmd::Query { sub } => run_query(sub).await,
+        Cmd::Query { output, sub } => run_query(sub, output).await,
         Cmd::Semantic {
             corpus,
             workspace,
@@ -581,7 +603,7 @@ async fn run_semantic(
 /// Output: pretty JSON to stdout. The `result_body` from McpCall is
 /// what gets printed — the daemon's structured response, not the MCP
 /// envelope. For raw envelope debugging, set `RTS_BENCH_LOG=debug`.
-async fn run_query(cmd: QueryCmd) -> Result<()> {
+async fn run_query(cmd: QueryCmd, output: QueryOutput) -> Result<()> {
     let rts_mcp_bin = resolve_bin("rts-mcp")?;
     let rts_daemon_bin = resolve_bin("rts-daemon")?;
 
@@ -602,14 +624,34 @@ async fn run_query(cmd: QueryCmd) -> Result<()> {
     let call = session.tools_call(tool, args, 30).await?;
     session.close().await?;
 
-    // Pretty-print the daemon's result body. Falls back to a minimal
-    // shape when the body wasn't JSON (shouldn't happen for v0
-    // tools, but defensive).
     let body = call
         .result_body
         .clone()
         .unwrap_or_else(|| serde_json::json!({"is_error": call.is_error, "raw": null}));
-    println!("{}", serde_json::to_string_pretty(&body)?);
+
+    // Lines mode: render rg-shaped output for bash pipelines. Falls
+    // back to JSON for tools where line-shape doesn't make sense
+    // (read_symbol body, read_range) or for error envelopes — the
+    // agent needs the full diagnostic in those cases.
+    match output {
+        QueryOutput::Json => {
+            println!("{}", serde_json::to_string_pretty(&body)?);
+        }
+        QueryOutput::Lines => match render_lines(tool, &body) {
+            Some(s) if !s.is_empty() => print!("{s}"),
+            Some(_) => {
+                // Tool returned an empty result set. Emit nothing —
+                // `rts-bench query grep --output lines | wc -l` then
+                // returns 0, matching `rg`'s no-match semantics.
+            }
+            None => {
+                // Tool doesn't have a line shape (read_symbol body,
+                // read_range). Fall back to JSON so the user still
+                // gets a useful result rather than silence.
+                println!("{}", serde_json::to_string_pretty(&body)?);
+            }
+        },
+    }
 
     if call.is_error {
         // Body already carries the error code; agents pipe to `jq`
@@ -618,6 +660,126 @@ async fn run_query(cmd: QueryCmd) -> Result<()> {
         std::process::exit(1);
     }
     Ok(())
+}
+
+/// Render an MCP tool response as `rg`-shaped `path:line:content` lines.
+///
+/// Returns `Some("")` when the tool has a defined line shape but the
+/// response is empty (no matches / no callers); the caller emits
+/// nothing in that case so `wc -l` / `| head` match `rg`'s semantics.
+///
+/// Returns `None` for tools that don't have a useful line shape
+/// (`read_symbol`, `read_symbol_at`, `read_range` return file bodies,
+/// not match lists). The caller falls back to JSON in that case so
+/// the user still sees the result.
+///
+/// Wire-shape coupling: this function reads optional fields like
+/// `enclosing_qualified_name` (v0.5.5+) and `rank_score`. Older
+/// daemons that don't populate them produce slightly thinner output
+/// — by design, so the same CLI binary works against a mixed
+/// daemon-version fleet.
+fn render_lines(tool: &str, body: &serde_json::Value) -> Option<String> {
+    use std::fmt::Write;
+    let mut out = String::new();
+    match tool {
+        // find_symbol: one line per match, `path:line:qualified_name (kind)`.
+        // Rank when present (≥1e-6) appended as `[rank=…]`. Wire field
+        // names match protocol-v0 §7.6: `qualified_name`, `range.start_line`.
+        "find_symbol" => {
+            let matches = body["matches"].as_array()?;
+            for m in matches {
+                let file = m["file"].as_str().unwrap_or("?");
+                let line = m["range"]["start_line"].as_u64().unwrap_or(0);
+                let name = m["qualified_name"].as_str().unwrap_or("?");
+                let kind = m["kind"].as_str().unwrap_or("?");
+                let _ = write!(out, "{file}:{line}:{name} ({kind})");
+                if let Some(r) = m["rank_score"].as_f64() {
+                    if r > 1e-6 {
+                        let _ = write!(out, " [rank={r:.3e}]");
+                    }
+                }
+                out.push('\n');
+            }
+            Some(out)
+        }
+        // find_callers: one line per caller, `path:line:enclosing_qualified_name (kind)`.
+        // Mirrors the find_symbol shape so a refactor can chain
+        // `find_callers ... | awk -F: '{print $1}' | sort -u`.
+        "find_callers" => {
+            let callers = body["callers"].as_array()?;
+            for c in callers {
+                let file = c["file"].as_str().unwrap_or("?");
+                let line = c["range"]["start_line"].as_u64().unwrap_or(0);
+                let enc = c["enclosing_qualified_name"]
+                    .as_str()
+                    .unwrap_or("<file-scope>");
+                let kind = c["kind"].as_str().unwrap_or("?");
+                let _ = writeln!(out, "{file}:{line}:{enc} ({kind})");
+            }
+            Some(out)
+        }
+        // grep: `path:line:[enclosing] line_text`. The bracketed
+        // enclosing is v0.5.5+ — older daemons omit it and we just
+        // print `path:line:line_text`, matching pre-v0.5.5 rg shape.
+        "grep" => {
+            let matches = body["matches"].as_array()?;
+            for m in matches {
+                let file = m["file"].as_str().unwrap_or("?");
+                let line = m["range"]["start_line"].as_u64().unwrap_or(0);
+                let text = m["line_text"].as_str().unwrap_or("").trim_end();
+                let enc = m["enclosing_qualified_name"].as_str();
+                match enc {
+                    Some(e) if !e.is_empty() => {
+                        let _ = writeln!(out, "{file}:{line}:[{e}] {text}");
+                    }
+                    _ => {
+                        let _ = writeln!(out, "{file}:{line}:{text}");
+                    }
+                }
+            }
+            Some(out)
+        }
+        // impact_of: `[depth=N] path:line:qualified_name (kind) [rank=…]`.
+        // Depth-prefix lets a refactor scan see direct callers first
+        // by `sort` order without re-implementing the daemon's depth-asc
+        // tie-break.
+        "impact_of" => {
+            let impact = body["impact"].as_array()?;
+            for e in impact {
+                let depth = e["depth"].as_u64().unwrap_or(0);
+                let file = e["file"].as_str().unwrap_or("?");
+                let line = e["range"]["start_line"].as_u64().unwrap_or(0);
+                let name = e["qualified_name"].as_str().unwrap_or("?");
+                let kind = e["kind"].as_str().unwrap_or("?");
+                let _ = write!(out, "[depth={depth}] {file}:{line}:{name} ({kind})");
+                if let Some(r) = e["rank_score"].as_f64() {
+                    if r > 1e-6 {
+                        let _ = write!(out, " [rank={r:.3e}]");
+                    }
+                }
+                out.push('\n');
+            }
+            Some(out)
+        }
+        // outline_workspace: the daemon already returns a dotted plain-text
+        // outline in `outline_text` (protocol-v0 §7.5). Pass through
+        // verbatim so `--output lines` is consistent with the rest of
+        // the suite (one item per line).
+        "outline_workspace" => {
+            let text = body["outline_text"].as_str()?;
+            if !text.is_empty() {
+                out.push_str(text);
+                if !text.ends_with('\n') {
+                    out.push('\n');
+                }
+            }
+            Some(out)
+        }
+        // read_symbol / read_symbol_at / read_range return file bodies,
+        // not match lists. Lines mode doesn't help here — caller falls
+        // back to JSON.
+        _ => None,
+    }
 }
 
 /// Lower the typed `QueryCmd` into `(workspace, tool_name, args_json)`.
