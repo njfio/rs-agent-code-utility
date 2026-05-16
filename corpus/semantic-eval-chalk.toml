@@ -1,0 +1,50 @@
+# Semantic-search evaluation corpus for `chalk/chalk` (pinned to v5.3.0).
+#
+# External-repo corpus v0.5.4. chalk is the canonical JS terminal-
+# styling library — used by nearly every Node CLI tool. Small
+# (~2k LOC), well-understood, and tests the daemon's JavaScript
+# extractor on a real workload with TypeScript declaration files.
+#
+# Repo: https://github.com/chalk/chalk
+# Pin:  v5.3.0
+# LOC:  ~2k JS + a TS .d.ts
+# Why:  JS/TS path coverage. Different conventions from Rust/Go
+#       (camelCase methods, function expressions, default exports).
+
+version = 1
+
+# ─── Core API ───
+
+[[query]]
+text = "what's the main chalk export?"
+expected_top_k = ["chalk", "Chalk", "createChalk"]
+
+[[query]]
+text = "how do I create a styled chalk instance?"
+expected_top_k = ["createChalk", "Chalk", "chalk"]
+
+# ─── Color level / detection ───
+
+[[query]]
+text = "how does chalk detect color support?"
+expected_top_k = ["_supportsColor", "supportsColor", "translateLevel"]
+
+[[query]]
+text = "how do I force color output?"
+expected_top_k = ["envForceColor", "hasFlag"]
+
+# ─── Style application ───
+
+[[query]]
+text = "what styles are available?"
+expected_top_k = ["assembleStyles", "styles"]
+
+[[query]]
+text = "how does chalk handle nested styles?"
+expected_top_k = ["stringReplaceAll", "stringEncaseCRLFWithFirstIndex"]
+
+# ─── Utilities ───
+
+[[query]]
+text = "where are the string-utility helpers?"
+expected_top_k = ["stringReplaceAll", "stringEncaseCRLFWithFirstIndex"]

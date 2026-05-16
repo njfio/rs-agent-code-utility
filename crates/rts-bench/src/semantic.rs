@@ -757,7 +757,100 @@ pub fn score_candidate(
         score *= 1.15;
     }
 
+    // v0.5.4: test-file penalty. Symbols defined in test files or
+    // whose name follows test-naming conventions (Go's `Test*`,
+    // Python/Rust's `test_*`) are almost never the answer to
+    // natural-language queries — yet they often have strong
+    // sub-token matches because tests EXIST to exercise the
+    // canonical name. e.g. `TestMergeCommandLineToFlags` matches
+    // "command" + "line" sub-tokens for the query "how does cobra
+    // parse the command line?", beating the real `Execute` method
+    // whose docs describe the parse flow.
+    //
+    // Multiplicative `×0.35` is heavy enough to drop tests out of
+    // the top-K on most natural-language queries while still
+    // letting a query that EXPLICITLY asks about a test (rare in
+    // practice) surface them — a query like "find the
+    // TestMergeCommandLineToFlags test" would still hit via the
+    // exact-name match path which gets a +10×IDF that survives
+    // the 0.35 penalty.
+    if looks_like_test_file(candidate_file) || looks_like_test_name(candidate_name) {
+        score *= 0.35;
+    }
+
     score
+}
+
+/// Test-file path heuristic. Conservative — errs toward classifying
+/// things that *look* like tests as tests, since the alternative
+/// (a test name beating a canonical method on a natural-language
+/// query) is the more visible failure mode.
+///
+/// Matched patterns (case-insensitive substring):
+/// - `tests/` or `test/` anywhere in the path
+/// - `__tests__/` (JS convention)
+/// - filename ends with `_test.<ext>`, `_tests.<ext>`, `_spec.<ext>`,
+///   or `.test.<ext>` (JS / TS / Rust integration convention)
+/// - filename ends with `.spec.<ext>`
+///
+/// Mirrors `rts_daemon::impact::is_test_path`; kept local to the
+/// bench so we don't drag in the daemon's internals.
+fn looks_like_test_file(rel_path: &str) -> bool {
+    let lower = rel_path.to_ascii_lowercase();
+    if lower.contains("/tests/")
+        || lower.contains("/test/")
+        || lower.contains("/__tests__/")
+        || lower.starts_with("tests/")
+        || lower.starts_with("test/")
+    {
+        return true;
+    }
+    let basename = lower.rsplit('/').next().unwrap_or(&lower);
+    let parts: Vec<&str> = basename.split('.').collect();
+    if parts.len() < 2 {
+        return false;
+    }
+    let stem = parts[0];
+    let after_first_dot = parts[1];
+    if stem.ends_with("_test") || stem.ends_with("_tests") || stem.ends_with("_spec") {
+        return true;
+    }
+    if after_first_dot == "test" || after_first_dot == "spec" {
+        return true;
+    }
+    false
+}
+
+/// Test-symbol name heuristic. Captures language conventions where
+/// the test function's NAME itself carries the test marker, even
+/// when the file path doesn't (e.g. Go test files end in
+/// `_test.go` which would be caught by `looks_like_test_file`, but
+/// the convention is reinforced by the `TestXxx` function-naming
+/// rule).
+///
+/// Matched:
+/// - PascalCase starting with `Test` (Go: `TestFoo`, `TestBar`)
+/// - snake_case starting with `test_` (Rust / Python: `test_foo`)
+/// - `bench_*` and PascalCase `Bench*` (Go benchmark convention)
+///
+/// Bench functions are downweighted the same as test functions —
+/// they're scaffolding, not API surface.
+fn looks_like_test_name(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    if lower.starts_with("test_") || lower.starts_with("bench_") {
+        return true;
+    }
+    // Go-style `TestFoo` / `BenchmarkFoo`: PascalCase Test/Benchmark
+    // prefix followed by a capital letter (so we don't match a
+    // legit name like "tester" or "testimony").
+    let bytes = name.as_bytes();
+    if bytes.len() >= 5 && &bytes[..4] == b"Test" && bytes[4].is_ascii_uppercase() {
+        return true;
+    }
+    if bytes.len() >= 10 && &bytes[..9] == b"Benchmark" && bytes[9].is_ascii_uppercase() {
+        return true;
+    }
+    false
 }
 
 /// Run the eval harness end-to-end.

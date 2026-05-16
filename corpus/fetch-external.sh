@@ -36,6 +36,8 @@ REPOS=(
     "ripgrep|https://github.com/BurntSushi/ripgrep.git|14.1.1|Recursive line-search CLI (~30k LOC, medium Rust, meta-relevant)"
     "cobra|https://github.com/spf13/cobra.git|v1.8.1|Go CLI framework (~15k LOC, popular Go)"
     "requests|https://github.com/psf/requests.git|v2.32.3|Python HTTP for humans (~10k LOC, classic Python)"
+    "chalk|https://github.com/chalk/chalk.git|v5.3.0|JS/TS terminal styling (~2k LOC, classic JS, TS conversion)"
+    "gson|https://github.com/google/gson.git|gson-parent-2.11.0|Java JSON serialization (~40k LOC, popular Java)"
 )
 
 fetch_one() {

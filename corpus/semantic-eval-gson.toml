@@ -1,0 +1,76 @@
+# Semantic-search evaluation corpus for `google/gson` (pinned to gson-parent-2.11.0).
+#
+# External-repo corpus v0.5.4. Gson is the canonical Java JSON
+# serialization library — taught in every Java tutorial.
+#
+# Repo: https://github.com/google/gson
+# Pin:  gson-parent-2.11.0
+# LOC:  ~40k Java
+# Why:  Tests Java extractor on a real workload. Java idioms differ
+#       from Rust/Go (interface-based design, Builder pattern,
+#       Adapter pattern, generics with type tokens) — broadens the
+#       cross-language eval matrix.
+
+version = 1
+
+# ─── Core entry points ───
+
+[[query]]
+text = "what's the main Gson class?"
+expected_top_k = ["Gson", "GsonBuilder"]
+
+[[query]]
+text = "how do I configure Gson?"
+expected_top_k = ["GsonBuilder"]
+
+# ─── JSON tree model ───
+
+[[query]]
+text = "what represents a JSON element?"
+expected_top_k = ["JsonElement", "JsonObject", "JsonArray", "JsonPrimitive", "JsonNull"]
+
+[[query]]
+text = "show me all the JSON value types"
+expected_top_k = ["JsonElement", "JsonObject", "JsonArray", "JsonPrimitive", "JsonNull"]
+
+# ─── Adapter / serialization ───
+
+[[query]]
+text = "how do type adapters work?"
+expected_top_k = ["TypeAdapter", "TypeAdapterFactory", "TypeAdapters"]
+
+[[query]]
+text = "what's the base class for custom serializers?"
+expected_top_k = ["TypeAdapter", "JsonSerializer", "JsonDeserializer"]
+
+# ─── Reading + writing ───
+
+[[query]]
+text = "where is the JSON reader?"
+expected_top_k = ["JsonReader", "JsonToken"]
+
+[[query]]
+text = "where is the JSON writer?"
+expected_top_k = ["JsonWriter"]
+
+# ─── Type system ───
+
+[[query]]
+text = "how do I represent a generic type at runtime?"
+expected_top_k = ["TypeToken"]
+
+# ─── Annotations / customization ───
+
+[[query]]
+text = "how do I rename a field in JSON?"
+expected_top_k = ["SerializedName"]
+
+[[query]]
+text = "what handles exclusion strategies?"
+expected_top_k = ["ExclusionStrategy", "Excluder"]
+
+# ─── Errors ───
+
+[[query]]
+text = "what error gets thrown when parsing fails?"
+expected_top_k = ["JsonSyntaxException", "JsonParseException", "JsonIOException", "MalformedJsonException"]

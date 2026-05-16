@@ -45,8 +45,8 @@ text = "what represents shell completion configuration?"
 expected_top_k = ["CompletionOptions", "ShellCompDirective"]
 
 [[query]]
-text = "what's the type used for command arguments validation?"
-expected_top_k = ["PositionalArgs", "MinimumNArgs", "MaximumNArgs", "ExactArgs"]
+text = "how do I validate command arguments?"
+expected_top_k = ["PositionalArgs", "MinimumNArgs", "MaximumNArgs", "ExactArgs", "NoArgs"]
 
 # ─── Behavior-by-description ───
 
@@ -70,7 +70,7 @@ expected_top_k = ["SetErr", "ErrPrefix", "PrintErr"]
 
 [[query]]
 text = "what controls command suggestions on typos?"
-expected_top_k = ["SuggestionsMinimumDistance", "SuggestFor", "DisableSuggestions"]
+expected_top_k = ["SuggestionsMinimumDistance", "SuggestFor", "SuggestionsFor", "DisableSuggestions"]
 
 [[query]]
 text = "how do I register dynamic flag completion?"
