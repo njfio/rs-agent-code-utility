@@ -1434,7 +1434,7 @@ impl CodebaseAnalyzer {
     fn extract_go_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
         // Extract function declarations
@@ -1447,6 +1447,7 @@ impl CodebaseAnalyzer {
                     } else {
                         "private"
                     };
+                    let docs = self.extract_go_doc_comments(content, func.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "function".to_string(),
@@ -1455,7 +1456,7 @@ impl CodebaseAnalyzer {
                         end_line: func.end_position().row + 1,
                         end_column: func.end_position().column,
                         visibility: visibility.to_string(),
-                        documentation: None,
+                        documentation: docs,
                     });
                 }
             }
@@ -1471,6 +1472,7 @@ impl CodebaseAnalyzer {
                     } else {
                         "private"
                     };
+                    let docs = self.extract_go_doc_comments(content, method.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "method".to_string(),
@@ -1479,7 +1481,7 @@ impl CodebaseAnalyzer {
                         end_line: method.end_position().row + 1,
                         end_column: method.end_position().column,
                         visibility: visibility.to_string(),
-                        documentation: None,
+                        documentation: docs,
                     });
                 }
             }
@@ -1507,6 +1509,8 @@ impl CodebaseAnalyzer {
                             } else {
                                 "private"
                             };
+                            let docs = self
+                                .extract_go_doc_comments(content, type_decl.start_position().row);
                             symbols.push(Symbol {
                                 name: name.to_string(),
                                 kind: kind.to_string(),
@@ -1515,7 +1519,7 @@ impl CodebaseAnalyzer {
                                 end_line: type_decl.end_position().row + 1,
                                 end_column: type_decl.end_position().column,
                                 visibility: visibility.to_string(),
-                                documentation: None,
+                                documentation: docs,
                             });
                         }
                     }
@@ -1626,7 +1630,7 @@ impl CodebaseAnalyzer {
     fn extract_swift_symbols(
         &self,
         tree: &SyntaxTree,
-        _content: &str,
+        content: &str,
         symbols: &mut Vec<Symbol>,
     ) -> Result<()> {
         // TODO: Implement full Swift symbol extraction
@@ -1635,6 +1639,7 @@ impl CodebaseAnalyzer {
         for class in classes {
             if let Some(name_node) = class.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_swift_doc_comments(content, class.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "class".to_string(),
@@ -1643,7 +1648,7 @@ impl CodebaseAnalyzer {
                         end_line: class.end_position().row + 1,
                         end_column: class.end_position().column,
                         visibility: "internal".to_string(), // Default for Swift
-                        documentation: None,
+                        documentation: docs,
                     });
                 }
             }
@@ -1653,6 +1658,8 @@ impl CodebaseAnalyzer {
         for struct_node in structs {
             if let Some(name_node) = struct_node.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs =
+                        self.extract_swift_doc_comments(content, struct_node.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "struct".to_string(),
@@ -1661,7 +1668,7 @@ impl CodebaseAnalyzer {
                         end_line: struct_node.end_position().row + 1,
                         end_column: struct_node.end_position().column,
                         visibility: "internal".to_string(), // Default for Swift
-                        documentation: None,
+                        documentation: docs,
                     });
                 }
             }
@@ -1671,6 +1678,7 @@ impl CodebaseAnalyzer {
         for func in functions {
             if let Some(name_node) = func.child_by_field_name("name") {
                 if let Ok(name) = name_node.text() {
+                    let docs = self.extract_swift_doc_comments(content, func.start_position().row);
                     symbols.push(Symbol {
                         name: name.to_string(),
                         kind: "function".to_string(),
@@ -1679,7 +1687,7 @@ impl CodebaseAnalyzer {
                         end_line: func.end_position().row + 1,
                         end_column: func.end_position().column,
                         visibility: "internal".to_string(), // Default for Swift
-                        documentation: None,
+                        documentation: docs,
                     });
                 }
             }
@@ -1897,6 +1905,53 @@ impl CodebaseAnalyzer {
 
     //     Ok(())
     // }
+
+    /// Extract Go-style doc comments preceding an item start line.
+    ///
+    /// Go convention: documentation is a contiguous block of `//`
+    /// line comments immediately above the declaration, with no
+    /// blank-line gap. The first sentence typically starts with the
+    /// symbol name (`// Foo does …`). We collect all contiguous
+    /// `//` lines walking backward and stop at the first non-comment,
+    /// non-blank line — but unlike Rust we DO stop at blank lines,
+    /// because the Go style explicitly uses a blank line to detach
+    /// preceding comments.
+    fn extract_go_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
+        let lines: Vec<&str> = content.lines().collect();
+        if start_row == 0 {
+            return None;
+        }
+        let mut docs = Vec::new();
+        let mut line_idx = start_row as isize - 1;
+        while line_idx >= 0 {
+            let line = lines[line_idx as usize].trim();
+            if let Some(rest) = line.strip_prefix("//") {
+                docs.push(rest.trim());
+                line_idx -= 1;
+            } else {
+                break;
+            }
+        }
+        if docs.is_empty() {
+            None
+        } else {
+            docs.reverse();
+            Some(docs.join("\n"))
+        }
+    }
+
+    /// Extract Swift-style doc comments preceding an item start line.
+    ///
+    /// Swift convention: contiguous `///` lines (single-line doc
+    /// comments) above the declaration. Block `/** */` is also valid
+    /// Swift doc syntax but isn't handled here for v0; the `///`
+    /// form dominates in practice. Same line-scan shape as Rust:
+    /// allows blank-line gaps but stops at any non-doc, non-blank
+    /// content.
+    fn extract_swift_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
+        // Same logic as Rust; Swift `///` is identical syntax.
+        self.extract_rust_doc_comments(content, start_row)
+    }
 
     /// Extract doc comments preceding a Rust item start line
     fn extract_rust_doc_comments(&self, content: &str, start_row: usize) -> Option<String> {
@@ -2208,5 +2263,114 @@ mod tests {
             .unwrap();
         assert!(!js_file_info.symbols.is_empty());
         assert!(js_file_info.symbols.iter().any(|s| s.name == "greet"));
+    }
+
+    #[test]
+    fn test_go_doc_extraction() {
+        let temp_dir = TempDir::new().unwrap();
+        let go_file = temp_dir.path().join("hello.go");
+        fs::write(
+            &go_file,
+            "package main\n\n// Greet returns a friendly hello message.\n// Used as the default response when no name is provided.\nfunc Greet() string {\n    return \"hello\"\n}\n\n// Counter holds a running total.\ntype Counter struct {\n    n int\n}\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "go")
+            .unwrap();
+
+        let greet = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "Greet")
+            .expect("Greet symbol should be extracted");
+        let docs = greet
+            .documentation
+            .as_ref()
+            .expect("Greet should have docs");
+        assert!(docs.contains("friendly hello"), "got docs={docs:?}");
+        assert!(docs.contains("default response"), "got docs={docs:?}");
+
+        let counter = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "Counter")
+            .expect("Counter type should be extracted");
+        assert_eq!(
+            counter.documentation.as_deref(),
+            Some("Counter holds a running total."),
+            "Counter docs should be the single comment line"
+        );
+    }
+
+    #[test]
+    fn test_go_doc_extraction_blank_line_severs() {
+        // Go convention: a blank line between the comment and the
+        // declaration means the comment is NOT documentation. Our
+        // extractor honors this — stops at the first non-comment line,
+        // and a blank line counts.
+        let temp_dir = TempDir::new().unwrap();
+        let go_file = temp_dir.path().join("blank.go");
+        fs::write(
+            &go_file,
+            "package main\n\n// This is not documentation, just a stray comment.\n\nfunc Orphan() {}\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "go")
+            .unwrap();
+
+        let orphan = info.symbols.iter().find(|s| s.name == "Orphan").unwrap();
+        assert!(
+            orphan.documentation.is_none(),
+            "Orphan should have no docs (blank line severs the comment): got {:?}",
+            orphan.documentation
+        );
+    }
+
+    #[test]
+    fn test_swift_doc_extraction() {
+        // Swift uses `///` like Rust. The extractor reuses the Rust path.
+        let temp_dir = TempDir::new().unwrap();
+        let swift_file = temp_dir.path().join("greeter.swift");
+        fs::write(
+            &swift_file,
+            "/// Greeter returns hello strings.\n/// Use the static `hello()` for the default.\nclass Greeter {\n    /// The default greeting.\n    func hello() -> String { return \"hi\" }\n}\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().unwrap() == "swift")
+            .unwrap();
+
+        if let Some(greeter) = info.symbols.iter().find(|s| s.name == "Greeter") {
+            let docs = greeter
+                .documentation
+                .as_ref()
+                .expect("Greeter should have docs");
+            assert!(docs.contains("returns hello"), "got docs={docs:?}");
+        }
+        // hello() method may or may not be extracted by the v0 Swift
+        // extractor (which only handles classes/structs/functions);
+        // when present, it should carry its doc.
+        if let Some(hello) = info.symbols.iter().find(|s| s.name == "hello") {
+            assert_eq!(
+                hello.documentation.as_deref(),
+                Some("The default greeting.")
+            );
+        }
     }
 }

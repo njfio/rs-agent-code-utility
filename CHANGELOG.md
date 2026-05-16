@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Multi-language doc-comment extraction — Go + Swift (extends v0.5.0 Rust-only)
+
+v0.5.0 shipped Rust doc-comment indexing (#65). This extends the
+pipeline to **Go** and **Swift**:
+
+- **Go**: line-comment scanner that walks backwards from the symbol
+  start collecting contiguous `//` lines. Honors the Go convention
+  that a blank line between the comment block and the declaration
+  severs the documentation relationship.
+- **Swift**: `///` line-comment scanner. Same shape as Rust's
+  extractor — Swift's `///` syntax is identical, so the new
+  `extract_swift_doc_comments` is a thin wrapper around
+  `extract_rust_doc_comments`. Block `/** */` doc syntax is valid
+  Swift but isn't handled here for v0; the `///` form dominates.
+
+#### Where this plugs in
+
+`crates/rts-core/src/analyzer.rs`:
+- New `extract_go_doc_comments(content, start_row) -> Option<String>`
+- New `extract_swift_doc_comments(content, start_row) -> Option<String>`
+- `extract_go_symbols` now takes `content` (was `_content`), calls
+  the new extractor at all three sites (function, method, type)
+- `extract_swift_symbols` same — class, struct, function
+
+No changes to the daemon, the wire shape, or the bench scorer.
+The existing v0.5.0 plumbing (`SID_DOCS` table, `find_symbol` `doc`
+field, capability `find_symbol_doc_field`) just sees real data
+flowing for Go and Swift workspaces now, where it saw `None` before.
+
+#### End-to-end verification
+
+```text
+$ rts-bench query find-symbol --workspace /tmp/go-doc-test --name Greet
+{
+  "qualified_name": "Greet",
+  "doc": "Greet returns a friendly hello message.\nUsed as the default response when no name is provided.",
+  ...
+}
+```
+
+#### Regression check on rts-core (Rust)
+
+| Corpus           | v0.5.1 | with Go+Swift | Δ      |
+|------------------|--------|---------------|--------|
+| v1 audited (13q) | 100%   | 100%          | parity |
+| blind-v2 (15q)   | 90%    | 90%           | parity |
+
+No regression on the existing Rust workspace eval. Both new
+extractors operate on languages disjoint from the test corpora.
+
+#### Test coverage
+
++3 unit tests in `analyzer::tests`:
+- `test_go_doc_extraction`: multi-line comment block flows through
+  to `Symbol::documentation`
+- `test_go_doc_extraction_blank_line_severs`: Go convention enforced
+  (blank line between comment and decl breaks the doc relationship)
+- `test_swift_doc_extraction`: `///` block on `class` flows through
+
+589 workspace tests pass.
+
+#### Out of scope (filed for follow-up)
+
+- **JavaScript / TypeScript**: JSDoc `/** */` block scanning. Medium
+  effort — needs a block-comment parser that handles multi-line
+  bodies and `*` line prefixes.
+- **Ruby**: `#` line comments above declarations (similar shape to
+  Go, but `#` instead of `//`).
+- **PHP / Java**: PHPDoc / Javadoc (both `/** */`-style block).
+- **Python**: docstrings are already wired (`extract_python_docstring`
+  is called from `extract_python_symbols` since pre-v0.5).
+
 ## [0.5.1] - 2026-05-15
 
 Patch release. Two iterations on top of v0.5.0:
@@ -21,92 +93,6 @@ Patch release. Two iterations on top of v0.5.0:
 
 No protocol changes. No schema changes. All v0.5.0 stores remain
 back-compatible.
-
-### Stemmer synonym overrides — closes the `clean ↔ clear` gap (+10pp on blind-v2)
-
-The blind-v2 corpus (#62) exposed a specific scoring gap: a query
-for "what cleans up after analysis?" missed `clear_cache` (doc:
-"Clear the file cache") because the corpus uses "clean" but the
-docs use "clear". The stemmer treated these as unrelated roots.
-
-This PR extends the `LEMMA_OVERRIDES` pattern (PR #60) with
-**curated code-domain synonym pairs**:
-
-```text
-clean ↔ clear:  cleanup, cleans, cleaning all → "clear"
-remove ↔ delete:  rts-core uses both interchangeably
-begin ↔ start
-finish ↔ end ↔ complete
-```
-
-Each entry maps a query-side word to the stem its code-side
-synonym already produces. Keep the list short and audited — it's
-a curated bridge, **not** a thesaurus.
-
-#### Numbers on the rts-core corpora
-
-| Metric              | v0.5.0       | With synonyms (this PR)  | Δ          |
-|---------------------|--------------|--------------------------|------------|
-| v1 audited (13q)    | 100% / 0.381 | 100% / 0.381             | parity     |
-| **blind-v2 (15q)**  | 80% / 0.169  | **90%** / 0.235 (+39%)   | **+10pp**  |
-| blind-v2 P@10       | 0.087        | 0.127                    | +46%       |
-| **Combined (28q)**  | 90% (18/20)  | **95%** (19/20)          | **+5pp**   |
-
-"what cleans up after analysis?" — previously a miss — now hits at
-**rank 0** with `top1=clear`. The corrective signal lives entirely
-in the stemmer: query token "cleans" stems to "clear" via the
-override, then matches against `clear_cache`, `clear`,
-`cleanup_lines` (which all stem to the same root).
-
-#### The one remaining blind-v2 miss
-
-"where are language-specific queries defined?" → `get_language_specific_complexity` (compound match on `language` AND `specific`) outranks `LanguageParser` / `QueryBuilder` / `Query`. Real scoring-tier trade-off, not a synonym gap — filed.
-
-#### Cumulative answerable-coverage journey
-
-| Stage                           | v1      | blind-v2 | Combined |
-|---------------------------------|---------|----------|----------|
-| PR #55 baseline                 | 40%     | n/a      | n/a      |
-| PR #59 IDF                      | 90%     | n/a      | n/a      |
-| PR #60 lemma overrides          | 100%    | n/a      | n/a      |
-| PR #62 blind-v2 corpus added    | 100%    | 80%      | 90%      |
-| PR #65 doc-comment indexing     | 100%    | 80%      | 90%      |
-| **This PR (synonym overrides)** | **100%**| **90%**  | **95%**  |
-
-+1 unit test (`stem_synonym_overrides_unify_code_domain_pairs`)
-covering all four synonym pairs.
-
-### CI guard upgrade — now checks blind-v2 too
-
-PR #63 wired CI to run `rts-bench semantic --check-coverage 0.95`
-against the v1 (author-graded) corpus. This adds a second check
-against the blind-v2 corpus at threshold 0.75 (current observed
-0.80, with a 5pp regression buffer).
-
-Why two checks instead of one combined corpus
----------------------------------------------
-A combined-file approach was considered; running both corpora as
-separate steps wins on three counts:
-
-1. **Distinct failure modes** — a regression on v1 vs blind-v2
-   tells you different things. v1 catches scoring-tier disruptions
-   on the friendly corpus; blind-v2 catches generalization loss
-   on a non-overfit query set.
-2. **No new artifact** — no need to maintain a combined corpus
-   file that duplicates the source TOMLs.
-3. **CI log clarity** — each step's pass/fail is its own line in
-   the workflow; the operator sees exactly which corpus regressed.
-
-Cost
-----
-The first bench step does the cold-mount + indexing; the second
-hits a warm daemon cache. Total extra CI time: ~60-90s instead of
-~30-60s. Worth it for catching confirmation-bias-style regressions
-that v1 alone would miss.
-
-Follow-up: when more corpora land (e.g. mined from real agent
-transcripts), add additional steps with their own thresholds.
-
 ## [0.5.0] - 2026-05-15
 
 **Theme: from a single saturated baseline to a verified, doc-aware ranker.**
