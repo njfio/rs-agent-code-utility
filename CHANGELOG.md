@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-05-15
+
+**Theme: doc-comment retrieval reaches 10-language parity; ranker hits 100% on the verified combined corpus.**
+
+v0.5.1 closed the `clean ↔ clear` gap with hand-curated synonym overrides
+(blind-v2 80% → 90%; combined 90% → 95%). v0.5.2 finishes the per-language
+doc-extractor rollout, tightens the ranker, and adds two `find_symbol`
+affordances surfaced by dogfooding:
+
+1. **Doc-comment extraction now spans 10 of 11 in-tree languages** —
+   Go + Swift (#70), then Ruby + PHP + Java (#74). Combined with PR #65
+   (Rust) and JS/TS/C/C++ via the existing C extractor (cosmetic
+   JSDoc strip in #72), only C# remains. The `SID_DOCS` table and
+   `find_symbol.doc` field were sized for this from v0.5.0.
+2. **Combined-corpus answerable coverage hits 100% (20/20)** — multi-token
+   scoring fix in #71 closed the last failure mode on blind-v2 (90% →
+   100%). Conditional diminishing-returns for compound names + `y/ies`
+   lemma overrides.
+3. **Two `find_symbol` affordances built while dogfooding** —
+   `doc_contains` substring filter (#76) for behavior-shaped queries,
+   then `pre_filter_count` (#78) so an empty result with the filter
+   active is distinguishable from "nothing matched the pattern".
+4. **Rust `const` and `static` extraction** (#77) — closes a real gap
+   the PR #76 dogfood report surfaced.
+5. **Doc-IDF computed separately from name-IDF** (#73) — architectural
+   infrastructure that pays off as workspaces with richer doc text
+   are indexed. Coverage-parity on the rts-core corpora; the change
+   compounds.
+6. **Protocol-v0 spec sync** (#75) — `find_symbol.limit` and the
+   `find_symbol.doc` field formally documented in §7.6 + Appendix F.
+
+#### New protocol surface
+
+- `Index.FindSymbol.params.doc_contains: Option<String>` (#76) — case-insensitive
+  substring filter against indexed doc text. Capability `find_symbol_doc_filter`.
+- `Index.FindSymbol` response `pre_filter_count: Option<usize>` (#78) —
+  candidate population before filtering. Capability
+  `find_symbol_pre_filter_count`. Omitted when no filter ran (back-compatible).
+- Capability `find_symbol_limit_param` (#75) — formally advertises the
+  `limit` param that landed in v0.4.1.
+- All capability additions documented in `docs/protocol-v0.md` §4.1 and
+  Appendix F.
+
+#### Storage + extractor
+
+- New `extract_go_doc_comments`, `extract_swift_doc_comments`,
+  `extract_ruby_doc_comments` in `crates/rts-core/src/analyzer.rs`.
+- Java + PHP route through `extract_c_doc_comments` (Javadoc / PHPDoc
+  share the `/** */` shape).
+- JSDoc cosmetic `*` strip applied to the existing C-style extractor —
+  benefits JS/TS, C, C++, Java, PHP uniformly.
+- Rust `const_item` and `static_item` nodes now extracted as symbols
+  with their doc comments attached.
+
+#### Ranker
+
+- Conditional diminishing-returns on sub-token bonuses: 1-3 sub-token
+  names keep `+6` per match; 4+ sub-token names diminish (`+6, +3, +1.5`)
+  with a geometric cap below `+12`.
+- `-y` / `-ies` lemma overrides: `query↔queries`, `dependency↔dependencies`,
+  `entity↔entities`, `entry↔entries`.
+- Doc-IDF computed separately from name-IDF; weight coefficient
+  `0.8 × doc_IDF` keeps max doc bonus under the `+6` sub-token tier.
+
+#### Benchmark headline
+
+| Corpus              | v0.5.1            | v0.5.2 (this release) | Δ          |
+|---------------------|-------------------|-----------------------|------------|
+| v1 audited (13q)    | 100% / 0.381      | 100% / 0.387          | parity     |
+| **blind-v2 (15q)**  | 90% / 0.235       | **100% / 0.273**      | **+10pp**  |
+| **Combined (28q)**  | 95% (19/20)       | **100% (20/20)**      | **+5pp**   |
+
+CI guard now locks the v1 invariant (≥0.95) and the blind-v2 invariant
+(≥0.75); either regression blocks the PR.
+
+#### Out of scope (filed for follow-up)
+
+- C# doc-comment extraction — scoped at ~150 LOC following the
+  Java/Swift extractor pattern.
+- `outline_workspace` exposing doc text (token budget is tight).
+- `signature` field on `find_symbol` matches still returns `null` —
+  rts-core's `SignatureRenderer` exists but isn't wired into index-time
+  capture.
+- Mining queries from real Claude Code transcripts (the most rigorous
+  corpus addition).
+
 ### `Index.FindSymbol.pre_filter_count` — closes the silent-empty-result gap
 
 PR #76's dogfood report flagged: **when `doc_contains` rejected every candidate, `matches: []` was indistinguishable from "nothing matched the pattern"**. An agent couldn't tell whether the base query had any hits to begin with. Diagnosing the silent failure required `RTS_INHERIT_DAEMON_STDERR=1` + ad-hoc eprintln.
