@@ -140,3 +140,18 @@ crates/rts-bench/bench-*.json
 .claude/scheduled_tasks.lock
 .claude/worktrees/
 .claude/projects/
+
+# agent-bench (Phase 2 of the agent-habit work). Python project; uv
+# manages a .venv per checkout. Raw per-task trajectories are also
+# excluded (volume + any embedded API outputs).
+agent-bench/.venv/
+agent-bench/uv.lock
+agent-bench/__pycache__/
+agent-bench/**/__pycache__/
+agent-bench/.ruff_cache/
+agent-bench/.pytest_cache/
+agent-bench/runs/
+# Aggregated bench-results/ ARE committed (the long-term trend
+# across releases is part of git history). Only the raw subdirs
+# inside any results dir are ignored:
+bench-results/**/raw/
