@@ -1,0 +1,20 @@
+{
+  "_comment_purpose": "Project-scoped MCP server registration for the rts code-retrieval daemon. Committed to repo so every contributor's Claude Code session sees the rts MCP tools the same way without per-user `claude mcp add` setup. Precedence is local (~/.claude.json keyed by project path) > project (this file) > user (~/.claude.json) > plugins. A contributor with an explicit local registration overrides this file; for everyone else, this is the default.",
+
+  "_comment_alwaysLoad": "alwaysLoad: true promotes mcp__rts__* tools out of Claude Code's deferred-loading surface so they appear in the top-of-prompt tool list every session — no ToolSearch round-trip required. Requires Claude Code v2.1.121+. On older versions the field is silently ignored and the AGENTS.md soft-load directive (call ToolSearch once at session start) remains the fallback path.",
+
+  "_comment_bins": "command: \"rts-mcp\" assumes the binary is on PATH. Build with `cargo build --release -p rts-mcp -p rts-daemon` and put target/release on PATH, or replace with an absolute path. RTS_DAEMON_BIN tells rts-mcp where to find the daemon binary if it isn't a sibling of rts-mcp on disk.",
+
+  "mcpServers": {
+    "rts": {
+      "type": "stdio",
+      "command": "rts-mcp",
+      "args": ["--workspace", "${workspaceFolder}"],
+      "env": {
+        "RTS_DAEMON_BIN": "rts-daemon",
+        "RTS_LOG": "rts_mcp=info,warn"
+      },
+      "alwaysLoad": true
+    }
+  }
+}

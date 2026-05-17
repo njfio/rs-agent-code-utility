@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "_comment": "Project-scoped Claude Code settings, committed to repo (vs settings.local.json which is per-user). Configures the rts-nudge PreToolUse hook that intercepts Bash grep/rg/find calls on workspace paths and suggests the AST-precise mcp__rts__* equivalent. The 'if' clause is the load-bearing optimization: Claude Code evaluates it BEFORE forking the hook process, so the script doesn't run for cargo/git/etc. Disable via env: RTS_HOOK_DISABLED=1.",
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "if": "Bash(rg *|grep *|egrep *|fgrep *|find *)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/rts-nudge.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

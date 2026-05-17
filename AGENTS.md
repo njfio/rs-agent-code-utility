@@ -212,10 +212,14 @@ rts-bench query --output lines impact-of --name socket_path_for_workspace
 ### MCP path (preferred for sustained agent sessions)
 
 The `mcp__rts__*` tools speak the same protocol but skip the `rts-bench`
-subprocess spawn — single-digit-ms latency per call. They're deferred
-in Claude Code's default tool surface (each requires a `ToolSearch`
-schema-fetch before first use); to make them feel first-class, run
-this once at session start:
+subprocess spawn — single-digit-ms latency per call. On **Claude Code
+v2.1.121+** they're loaded eagerly per the project-local `.mcp.json`
+in this repo (`"alwaysLoad": true`), so they appear in the
+top-of-prompt tool list every session with no warm-up call required.
+
+On **older Claude Code versions** (and any other MCP-aware host that
+doesn't honor `alwaysLoad`), the tools are deferred behind
+`ToolSearch`. Pre-load them once at session start:
 
 ```
 ToolSearch(query: "select:mcp__rts__find_symbol,mcp__rts__find_callers,mcp__rts__grep,mcp__rts__outline_workspace,mcp__rts__impact_of,mcp__rts__read_symbol,mcp__rts__read_range,mcp__rts__read_symbol_at", max_results: 10)
@@ -223,6 +227,26 @@ ToolSearch(query: "select:mcp__rts__find_symbol,mcp__rts__find_callers,mcp__rts_
 
 After that single call, all eight tools are callable directly in the
 remainder of the session without further `ToolSearch` round-trips.
+
+### Active behavior nudge (v0.5.8+)
+
+This repo ships a project-local Claude Code `PreToolUse` hook at
+`.claude/hooks/rts-nudge.sh` (registered via `.claude/settings.json`)
+that watches for `Bash` calls invoking `grep`/`rg`/`egrep`/`fgrep`/`find`
+on workspace paths and emits a one-line informational nudge into the
+agent's next-turn context suggesting the AST-precise `mcp__rts__*`
+equivalent. The nudge is **never blocking** — the bash call proceeds
+exactly as issued; the nudge is purely a habit-shift signal.
+
+Opt out for a session by setting `RTS_HOOK_DISABLED=1`. The env var
+propagates through subshells, make, cargo, and most subprocess
+patterns (does NOT propagate through `sudo` without `-E`).
+
+The hook is silent when the rts daemon isn't running, so it never
+nags users without rts installed.
+
+Test the hook locally with `.claude/hooks/tests/run-tests.sh` (pure
+bash, no `bats` or other deps required; needs `jq` + `python3`).
 
 ### Where shell `grep` / `rg` is still the right tool
 

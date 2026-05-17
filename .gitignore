@@ -129,3 +129,14 @@ Cargo.lock
 crates/rts-bench/corpus/
 # Bench output reports — produced by `rts-bench task <id>`.
 crates/rts-bench/bench-*.json
+
+# Claude Code per-user / runtime state (everything in .claude/ except
+# the committed hook + project-scoped settings). Project-scoped files
+# we DO want in git:
+#   .claude/settings.json        — shared project settings
+#   .claude/hooks/*               — committed hook scripts + tests
+# Everything else under .claude/ is per-user or runtime state.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+.claude/projects/
