@@ -282,6 +282,20 @@ impl RtsServer {
         }
     }
 
+    /// Clone the inner daemon handle. Used by `main.rs` so it can
+    /// keep a reference to the daemon connection after `serve()`
+    /// consumes the server — specifically to issue a final
+    /// `Daemon.Stats` query on session shutdown (v0.5.8+).
+    ///
+    /// The lock is taken via the returned `Arc<Mutex<…>>` exactly
+    /// like every tool handler does it; concurrent access during
+    /// the session is fine and the shutdown call only runs after
+    /// `service.waiting().await` returns (i.e., the agent has
+    /// hung up stdio, no more tool calls can race).
+    pub fn daemon_handle(&self) -> Arc<Mutex<DaemonClient>> {
+        self.daemon.clone()
+    }
+
     /// Forward a method to the daemon. On the FIRST call (or after
     /// a prior `Workspace.Mount` failure), this also issues
     /// `Workspace.Mount` so subsequent tool calls have a workspace
