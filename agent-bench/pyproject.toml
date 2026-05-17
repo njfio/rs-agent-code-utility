@@ -1,0 +1,76 @@
+# agent-bench — SWE-bench-lite A/B harness for the rts MCP surface.
+#
+# Phase 2 of docs/brainstorms/2026-05-16-agent-habit-and-benchmark-requirements.md.
+# Lives outside the rts-bench Rust crate per the HTTP-free invariant
+# in AGENTS.md:377-381 — daemon/MCP build trees stay HTTP-free; this
+# harness explicitly hits the Anthropic API.
+[project]
+name        = "agent-bench"
+version     = "0.1.0"
+description = "SWE-bench-lite A/B harness measuring whether the rts MCP surface shifts agent tool-use behavior"
+license     = "MIT OR Apache-2.0"
+readme      = "README.md"
+
+# 3.11 minimum: `match` statement (used in run-loop dispatch),
+# typing.Self, exception groups, time.perf_counter_ns at all desired
+# precisions. macOS Sonoma+ ships 3.9; users will install via uv.
+requires-python = ">=3.11"
+
+dependencies = [
+    # Anthropic API client. Raw SDK (not Agent SDK) — we need precise
+    # control over the agent loop for measurement.
+    "anthropic>=0.40",
+    # SWE-bench-lite dataset from HuggingFace.
+    "datasets>=3.0",
+    # Retry / backoff with Retry-After header awareness.
+    "tenacity>=9.0",
+    # Statistics for Wilson-score CIs (tool-use ratio confidence).
+    # numpy is heavy but ships precompiled wheels; mirror SWE-bench's
+    # own dependency set so corpus loading doesn't drag in a separate
+    # numerical stack.
+    "numpy>=1.26",
+    # Rich for human-readable output (tables, colored diffs in
+    # baseline reports).
+    "rich>=13.0",
+]
+
+[project.scripts]
+# `agent-bench` CLI entry point. After `uv sync`, run e.g.:
+#     uv run agent-bench --help
+agent-bench = "agent_bench.cli:main"
+
+[build-system]
+requires      = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent_bench"]
+
+[dependency-groups]
+# uv-style dev deps. Run tests with `uv run pytest`.
+dev = [
+    "pytest>=8.0",
+    # For mocking the Anthropic client without hitting the network.
+    "pytest-mock>=3.12",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length    = 100
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",  # pycodestyle + pyflakes
+    "I",            # isort (import order)
+    "UP",           # pyupgrade
+    "B",            # bugbear
+    "SIM",          # simplifications
+]
+ignore = [
+    "E501",  # line-too-long — we hand-wrap intentionally where it helps.
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-ra -q"
