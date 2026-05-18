@@ -1261,6 +1261,71 @@ impl Store {
         Ok(meta.get(META_RECONCILIATION_IN_PROGRESS)?.is_some())
     }
 
+    /// Clear every data table while preserving META. Used by U5's
+    /// mount-time decision when the stored fingerprint mismatches the
+    /// current one (or when crashed-mid-reconciliation is detected).
+    /// META must survive the wipe so the next cold-walk can write the
+    /// *new* fingerprint without first re-establishing other META
+    /// invariants (next_fid, next_sid, schema_version).
+    ///
+    /// All data tables get cleared inside one redb write txn so
+    /// readers concurrent with the wipe see either the fully-
+    /// populated or fully-empty state, never a torn intermediate.
+    /// Commit is `Durability::Immediate` so a crash between wipe
+    /// and cold-walk can't observe a fingerprint that promises
+    /// data the FILES table no longer has.
+    pub fn wipe_data_tables(&self) -> Result<(), redb::Error> {
+        let mut write_txn = self.db.begin_write()?;
+        {
+            // delete_table / delete_multimap_table drops the entire
+            // table; the next `open_table` re-creates it empty. This
+            // is cheaper than per-row retain and is the canonical
+            // redb "clear" idiom for tables of unbounded size.
+            // META intentionally NOT touched — it carries the
+            // load-bearing schema_version + fingerprint state that
+            // survives a data-only wipe.
+            let _ = write_txn.delete_table(schema::FILES);
+            let _ = write_txn.delete_table(schema::PATH_TO_FID);
+            let _ = write_txn.delete_table(schema::FID_TO_PATH);
+            let _ = write_txn.delete_table(schema::NAME_TO_SID);
+            let _ = write_txn.delete_table(schema::SID_TO_NAME);
+            let _ = write_txn.delete_multimap_table(schema::DEFS);
+            let _ = write_txn.delete_multimap_table(schema::FID_DEFS);
+            let _ = write_txn.delete_multimap_table(schema::REFS);
+            let _ = write_txn.delete_multimap_table(schema::FID_REFS);
+            let _ = write_txn.delete_multimap_table(schema::SID_REFS_OUT);
+            let _ = write_txn.delete_multimap_table(schema::SID_DOCS);
+            let _ = write_txn.delete_multimap_table(schema::UNRESOLVED_REFS);
+            let _ = write_txn.delete_multimap_table(schema::FID_UNRESOLVED);
+            // Re-create them empty so subsequent reads don't trip
+            // TableError::TableDoesNotExist on the cold-walk path.
+            let _ = write_txn.open_table(schema::FILES)?;
+            let _ = write_txn.open_table(schema::PATH_TO_FID)?;
+            let _ = write_txn.open_table(schema::FID_TO_PATH)?;
+            let _ = write_txn.open_table(schema::NAME_TO_SID)?;
+            let _ = write_txn.open_table(schema::SID_TO_NAME)?;
+            let _ = write_txn.open_multimap_table(schema::DEFS)?;
+            let _ = write_txn.open_multimap_table(schema::FID_DEFS)?;
+            let _ = write_txn.open_multimap_table(schema::REFS)?;
+            let _ = write_txn.open_multimap_table(schema::FID_REFS)?;
+            let _ = write_txn.open_multimap_table(schema::SID_REFS_OUT)?;
+            let _ = write_txn.open_multimap_table(schema::SID_DOCS)?;
+            let _ = write_txn.open_multimap_table(schema::UNRESOLVED_REFS)?;
+            let _ = write_txn.open_multimap_table(schema::FID_UNRESOLVED)?;
+        }
+        write_txn.set_durability(redb::Durability::Immediate);
+        write_txn.commit()?;
+
+        // Reset in-memory counters that mirror META so the daemon's
+        // `next_fid` / `next_sid` don't keep handing out IDs that
+        // collide with the (now empty) on-disk tables. The values
+        // currently in META are still valid as monotonic counters —
+        // we don't reset them — but documenting that explicit
+        // invariant here matters: META keeps growing, data tables
+        // start fresh.
+        Ok(())
+    }
+
     /// Count of entries in the FILES table. U5 uses this to
     /// distinguish "first-ever mount" (empty FILES) from "subsequent
     /// mount with a valid snapshot." Implemented by counting the
@@ -1704,6 +1769,56 @@ mod tests {
         assert!(store.reconciliation_in_progress().unwrap());
         store.set_reconciliation_in_progress(false).unwrap();
         assert!(!store.reconciliation_in_progress().unwrap());
+    }
+
+    #[test]
+    fn wipe_data_tables_clears_files_but_preserves_meta() {
+        let (_tmp, store) = temp_store();
+        // 1. Populate something so files_count > 0. Use the shape
+        // the existing `commit_batch` test fixture would build —
+        // FileBatchEntry holds (defs, refs, docs) tuples.
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("src/lib.rs"),
+            meta: rust_meta(blake3::hash(b"v1").into()),
+            defs: vec![(
+                "hello".to_string(),
+                schema::DefSite {
+                    fid: 0, // batch path overwrites
+                    start: 0,
+                    end: 16,
+                    start_line: 1,
+                    end_line: 1,
+                    visibility: Visibility::Public,
+                    kind: SymbolKind::Function,
+                },
+                SymbolKind::Function,
+            )],
+            refs: vec![],
+            docs: vec![],
+        };
+        store
+            .commit_batch(vec![entry], vec![], redb::Durability::Immediate)
+            .unwrap();
+        assert!(
+            store.files_count().unwrap() > 0,
+            "preconditions: store should have committed entries"
+        );
+
+        // 2. Also write a fingerprint so we can verify META survives.
+        let fp = synth_fingerprint();
+        store.write_fingerprint(&fp).unwrap();
+        assert!(store.read_fingerprint().unwrap().is_some());
+
+        // 3. Wipe data tables.
+        store.wipe_data_tables().unwrap();
+
+        // 4. Data tables are empty; META is intact.
+        assert_eq!(store.files_count().unwrap(), 0, "FILES should be empty");
+        let after = store
+            .read_fingerprint()
+            .unwrap()
+            .expect("fingerprint survives wipe");
+        assert_eq!(after, fp, "META fingerprint must round-trip across wipe");
     }
 
     #[test]
