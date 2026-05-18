@@ -143,6 +143,29 @@ struct GrepParams {
     /// as `INVALID_PARAMS`. Defaults to scanning every indexed file.
     #[serde(default)]
     file_glob: Option<String>,
+    /// v0.6 multi-line regex mode. See `GrepArgs::multiline` (MCP
+    /// side) for the user-facing doc. Only meaningful when
+    /// `regex: true`; rejected with `MULTILINE_REQUIRES_REGEX` on
+    /// the literal `text` path.
+    #[serde(default)]
+    multiline: Option<bool>,
+    /// v0.6 raw tree-sitter S-expression structural query. Requires
+    /// `language`. Validated at request time via
+    /// `rts_core::query::Query::new`. See `GrepArgs::structural_query`
+    /// for the full contract and the predicate whitelist.
+    #[serde(default)]
+    structural_query: Option<String>,
+    /// v0.6 within-symbol byte-range filter. See
+    /// `GrepArgs::within_symbol` for the full contract.
+    #[serde(default)]
+    within_symbol: Option<String>,
+    /// v0.6 opt-in to multi-def `within_symbol`.
+    #[serde(default)]
+    within_symbol_allow_overload: Option<bool>,
+    /// v0.6 language filter. Required when `structural_query` is set.
+    /// Accepted values match the indexed-language identifiers.
+    #[serde(default)]
+    language: Option<Vec<String>>,
 }
 
 /// Per-mode search strategy. Compiled once in `grep()` and reused

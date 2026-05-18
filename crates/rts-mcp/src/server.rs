@@ -233,6 +233,67 @@ pub struct GrepArgs {
     /// `rg --type rust foo` without leaving the indexed file set.
     #[serde(default)]
     pub file_glob: Option<String>,
+    /// v0.6 multi-line regex mode (capability `index_grep_multiline`).
+    /// When `true` AND `regex: true`, the regex engine treats indexed
+    /// file bytes as one logical buffer per file: `.` matches `\n`,
+    /// `^`/`$` match line boundaries, and `(?s)` / `(?m)` flags are
+    /// honored. Required for patterns that span newlines (multi-line
+    /// function signatures, SQL fragments, multi-line error
+    /// messages). REJECTED with `MULTILINE_REQUIRES_REGEX` when set
+    /// on the literal `text` path (literal substring search is
+    /// already byte-wise across newlines; multiline is a regex
+    /// concept only). Has its own DFA size budget (32 MB) to bound
+    /// adversarial patterns; over-budget regexes return
+    /// `REGEX_TOO_COMPLEX` instead of panicking or hanging.
+    #[serde(default)]
+    pub multiline: Option<bool>,
+    /// v0.6 raw tree-sitter S-expression structural query
+    /// (capability `index_grep_structural`). Runs the query against
+    /// the parsed tree of every file matching the `language` filter
+    /// and returns matches with a per-match `captures` map keyed by
+    /// the query's named captures. Example query for "find every
+    /// `impl` block containing an `unsafe fn`":
+    /// `(impl_item body: (declaration_list (function_item) @fn))`
+    /// — captures named `@fn`.
+    ///
+    /// Requires `language` (returns `STRUCTURAL_REQUIRES_LANGUAGE`
+    /// otherwise). Predicates whitelisted to `#eq?`, `#not-eq?`,
+    /// `#match?`, `#not-match?`, `#any-of?`, `#is?`, `#is-not?`;
+    /// anything else returns `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`.
+    /// Composes with `text`/`pattern` (intersection) and
+    /// `within_symbol` (filter); see `docs/protocol-v0.md` §7.8b.
+    #[serde(default)]
+    pub structural_query: Option<String>,
+    /// v0.6 byte-range scope filter (capability
+    /// `index_grep_within_symbol`). When set, returned matches are
+    /// filtered to those whose byte range lies strictly inside the
+    /// def byte range of the named symbol(s). Useful for
+    /// "find every `panic!` inside `fn parse_request`" — pairs
+    /// `find_symbol` resolution with `grep` filtering in one call.
+    ///
+    /// `within_symbol: "name"` resolves the name via the same
+    /// lookup as `find_symbol`. Returns `WITHIN_SYMBOL_NOT_FOUND` on
+    /// zero matches. When the name resolves to more than 16 defs
+    /// (overloaded names like `new`/`main`/`default`), returns
+    /// `WITHIN_SYMBOL_TOO_MANY_DEFS` unless
+    /// `within_symbol_allow_overload: true` is also set, in which
+    /// case matches across the union of all def byte ranges are
+    /// returned.
+    #[serde(default)]
+    pub within_symbol: Option<String>,
+    /// v0.6 opt-in to multi-def `within_symbol`. Defaults to `false`.
+    /// See `within_symbol` above.
+    #[serde(default)]
+    pub within_symbol_allow_overload: Option<bool>,
+    /// v0.6 language filter (capability `index_grep_v2`). When set,
+    /// only files whose language is in this list are scanned.
+    /// Intersects with `file_glob` (AND semantics). **Required** when
+    /// `structural_query` is set; optional otherwise. Accepted values
+    /// match the daemon's indexed-language identifiers: `rust`,
+    /// `javascript`, `typescript`, `python`, `c`, `cpp`, `go`, `java`,
+    /// `php`, `ruby`, `swift`, `csharp`.
+    #[serde(default)]
+    pub language: Option<Vec<String>>,
 }
 
 /// Empty arg struct for `daemon_stats`. The rmcp `tool_router` macro
