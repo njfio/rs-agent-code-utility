@@ -136,6 +136,90 @@ pub(super) async fn mount_inner(
         ProtocolError::new(code, msg)
     })?);
 
+    // v0.6 persisted-cold-mount decision (U5). After opening the
+    // store, compare the persisted fingerprint to the current
+    // (runtime + filesystem) one. The outcome determines whether
+    // we skip the InitialWalkHandle (Rehydrate), wipe + re-walk
+    // after an invalidation, or run the existing cold-walk path.
+    //
+    // The decision is recorded on `state.mount_source` for
+    // surfacing via `Daemon.Stats v2`; cumulative cache-
+    // effectiveness counters are bumped here too.
+    use crate::fingerprint::Fingerprint;
+    use crate::state::MountSource;
+    state
+        .rehydrate_attempts
+        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+    let current_fp = Fingerprint::current(&mounted.canonical.path);
+    let reconciliation_in_progress = store.reconciliation_in_progress().unwrap_or(false);
+    let stored_fp = store.read_fingerprint().unwrap_or(None);
+    let files_count = store.files_count().unwrap_or(0);
+
+    let mount_source: MountSource = if reconciliation_in_progress {
+        // Previous daemon died mid-reconciliation. Treat redb as torn.
+        let _ = store.wipe_data_tables();
+        let _ = store.set_reconciliation_in_progress(false);
+        MountSource::ColdWalkAfterCrash
+    } else {
+        match stored_fp {
+            None if files_count == 0 => MountSource::ColdWalk,
+            None => {
+                // Files present but no stored fingerprint — older
+                // daemon's redb. Wipe + cold-walk so we know the
+                // shape is current; the new fingerprint stamps at
+                // walk-end.
+                let _ = store.wipe_data_tables();
+                MountSource::ColdWalkAfterInvalidation(
+                    crate::fingerprint::InvalidationReason::EmptyOrMissingFingerprint,
+                )
+            }
+            Some(stored) => match Fingerprint::diff(&stored, &current_fp) {
+                None if files_count > 0 => MountSource::Rehydrate,
+                None => MountSource::ColdWalk, // stored fp matched but FILES empty (race)
+                Some(reason) => {
+                    let _ = store.wipe_data_tables();
+                    MountSource::ColdWalkAfterInvalidation(reason)
+                }
+            },
+        }
+    };
+
+    // Record the decision for `Daemon.Stats` (U6) and bump the
+    // appropriate counter.
+    {
+        let mut slot = state.mount_source.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("mount_source state poisoned: {e}"))
+        })?;
+        *slot = Some(mount_source.clone());
+    }
+    match &mount_source {
+        MountSource::Rehydrate => {
+            state
+                .rehydrate_successes
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+        MountSource::ColdWalkAfterInvalidation(reason) => {
+            if let Ok(mut tally) = state.rehydrate_invalidations.lock() {
+                *tally.entry(reason.as_label()).or_insert(0) += 1;
+            }
+        }
+        MountSource::ColdWalkAfterCrash => {
+            if let Ok(mut tally) = state.rehydrate_invalidations.lock() {
+                *tally.entry("crash".to_string()).or_insert(0) += 1;
+            }
+        }
+        MountSource::ColdWalk => {}
+    }
+    let skip_initial_walk = matches!(mount_source, MountSource::Rehydrate);
+    tracing::info!(
+        target: "rts_daemon::mount",
+        mount_source = %mount_source.as_label(),
+        skip_initial_walk,
+        files_count,
+        "persisted-cold-mount decision"
+    );
+
     // Start the file watcher. This subscribes to the filesystem for
     // incremental events but does NOT yet run the initial walk — that's
     // deferred to `initial.spawn()` below so the writer-drain task can
@@ -200,15 +284,33 @@ pub(super) async fn mount_inner(
     // batch is committed before `Mount` responds. Subsequent batches
     // land async per `BATCH_FLUSH_INTERVAL`, visible via
     // `Workspace.Status.progress`.
-    let emitted = match initial.spawn().await {
-        Ok(Ok(n)) => n,
-        Ok(Err(e)) => {
-            tracing::warn!(error = %e, "initial walk returned an error; mount continues");
-            0
-        }
-        Err(e) => {
-            tracing::warn!(error = %e, "initial walk task panicked; mount continues");
-            0
+    let emitted = if skip_initial_walk {
+        // v0.6 Rehydrate path: the redb already contains a valid
+        // index for this workspace (fingerprint matched, FILES
+        // non-empty, no in-progress sentinel). Skip the cold walk
+        // entirely — the watcher (started above) picks up any
+        // changes from this point forward. First-query latency
+        // collapses from `~6 s` to `<100 ms` on healthy rehydrate.
+        //
+        // The drop of `initial` here is intentional: the
+        // InitialWalkHandle owns the channel sender end the walker
+        // would have used; dropping it without spawning ensures
+        // the writer never sees a `WatchEvent::ColdWalkComplete`
+        // from a phantom walker.
+        drop(initial);
+        tracing::debug!(target: "rts_daemon::mount", "rehydrate: skipping initial walk");
+        0
+    } else {
+        match initial.spawn().await {
+            Ok(Ok(n)) => n,
+            Ok(Err(e)) => {
+                tracing::warn!(error = %e, "initial walk returned an error; mount continues");
+                0
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "initial walk task panicked; mount continues");
+                0
+            }
         }
     };
     let drain_deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -218,6 +320,20 @@ pub(super) async fn mount_inner(
             break;
         }
         tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+
+    // v0.6 fingerprint stamp: write the *current* fingerprint to META
+    // so the next mount sees a fresh signal. This commit is what makes
+    // the post-cold-walk state on disk "trustable" for the next daemon
+    // start. On the Rehydrate path the on-disk fingerprint is already
+    // current — but we still re-stamp it to refresh the timestamp
+    // (cheap; one redb txn).
+    if let Err(e) = store.write_fingerprint(&current_fp) {
+        tracing::warn!(
+            target: "rts_daemon::mount",
+            error = %e,
+            "failed to write fingerprint to META; next mount will cold-walk"
+        );
     }
 
     let payload = status_payload(&mounted, state, Some(&store));

@@ -14,6 +14,45 @@ use crate::symbol_pagerank::SymbolPagerankCache;
 use crate::watcher::Watcher;
 use crate::workspace::MountedWorkspace;
 
+/// Result of the v0.6 persisted-cold-mount decision at `Workspace.Mount`.
+/// Surfaces via `Daemon.Stats v2` as the `mount_source` field (U6).
+///
+/// The label rendering ("cold_walk", "rehydrate",
+/// "cold_walk_after_invalidation:<reason>", "cold_walk_after_crash")
+/// follows `Fingerprint::diff`'s ordering and the plan's documented
+/// telemetry strings.
+#[derive(Debug, Clone)]
+pub enum MountSource {
+    /// First-ever mount on this workspace, OR an empty redb file.
+    /// Cold walk runs as in pre-v0.6 daemons.
+    ColdWalk,
+    /// Stored fingerprint matched the current one; the on-disk redb
+    /// is trusted as-is and `InitialWalkHandle::spawn` is skipped.
+    /// The watcher catches changes from this point forward.
+    Rehydrate,
+    /// Stored fingerprint mismatched the current one. Data tables
+    /// were wiped (META preserved) before the cold walk.
+    ColdWalkAfterInvalidation(crate::fingerprint::InvalidationReason),
+    /// `META_RECONCILIATION_IN_PROGRESS` sentinel was set at mount
+    /// time, indicating the previous daemon died mid-reconciliation.
+    /// Data tables were wiped before the cold walk.
+    ColdWalkAfterCrash,
+}
+
+impl MountSource {
+    /// Stable wire label for inclusion in `Daemon.Stats.mount_source`.
+    pub fn as_label(&self) -> String {
+        match self {
+            MountSource::ColdWalk => "cold_walk".to_string(),
+            MountSource::Rehydrate => "rehydrate".to_string(),
+            MountSource::ColdWalkAfterInvalidation(reason) => {
+                format!("cold_walk_after_invalidation:{}", reason.as_label())
+            }
+            MountSource::ColdWalkAfterCrash => "cold_walk_after_crash".to_string(),
+        }
+    }
+}
+
 /// Watcher health surfaced in `Workspace.Status.watcher_status` (protocol-v0
 /// §7.4). Stored as an `AtomicU8` for lock-free reads from the status handler.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,6 +203,23 @@ pub struct DaemonState {
     /// time inside the QueryCache (see
     /// `methods/grep_v2/query_cache.rs`).
     pub query_cache: crate::methods::grep_v2::query_cache::QueryCache,
+    /// v0.6 persisted-cold-mount mount source. Set once per
+    /// `Workspace.Mount` after the fingerprint decision; surfaced via
+    /// `Daemon.Stats v2`'s `mount_source` field. None pre-mount.
+    /// `Mutex<Option<...>>` rather than atomic because the enum
+    /// carries a heap-allocated `InvalidationReason`; mount happens
+    /// once per daemon lifetime in practice, so the mutex cost is
+    /// negligible.
+    pub mount_source: Mutex<Option<MountSource>>,
+    /// v0.6 persisted-cold-mount cumulative counters. Cache-
+    /// effectiveness telemetry: without these we can't tell whether
+    /// the rehydrate path is actually doing its job.
+    pub rehydrate_attempts: AtomicU64,
+    pub rehydrate_successes: AtomicU64,
+    /// Per-reason invalidation tally. Keyed by the
+    /// `InvalidationReason::as_label()` string so the JSON shape is
+    /// stable.
+    pub rehydrate_invalidations: Mutex<std::collections::BTreeMap<String, u64>>,
 }
 
 /// Per-method call counts for the daemon's RPC surface. All fields
@@ -457,6 +513,10 @@ impl DaemonState {
             prewarm_done: tokio::sync::Notify::new(),
             call_counters: CallCounters::default(),
             query_cache: crate::methods::grep_v2::query_cache::QueryCache::new(),
+            mount_source: Mutex::new(None),
+            rehydrate_attempts: AtomicU64::new(0),
+            rehydrate_successes: AtomicU64::new(0),
+            rehydrate_invalidations: Mutex::new(std::collections::BTreeMap::new()),
         }
     }
 
