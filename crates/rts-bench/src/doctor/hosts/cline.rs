@@ -306,11 +306,19 @@ mod tests {
         }
         // For Linux the XDG_CONFIG_HOME may divert candidate_global_storage_dirs
         // away from `home`; override it locally for test determinism.
+        //
+        // Rust 2024 made `std::env::{set_var, remove_var}` `unsafe` because
+        // process-wide env mutation isn't thread-safe; tests in this module
+        // serialize themselves around XDG_CONFIG_HOME via this RAII guard
+        // and don't share an env mutation surface with concurrent tests, so
+        // the unsafe block is sound for the test's intended use.
         #[cfg(target_os = "linux")]
         let _guard = {
             // We just unset to make the function fall back to ~/.config.
             let prev = std::env::var_os("XDG_CONFIG_HOME");
-            std::env::remove_var("XDG_CONFIG_HOME");
+            unsafe {
+                std::env::remove_var("XDG_CONFIG_HOME");
+            }
             scopeguard_restore(prev)
         };
         write_synth_settings(
@@ -334,7 +342,10 @@ mod tests {
         #[cfg(target_os = "linux")]
         let _guard = {
             let prev = std::env::var_os("XDG_CONFIG_HOME");
-            std::env::remove_var("XDG_CONFIG_HOME");
+            // SAFETY: see the long-form note in `ok_when_registered`.
+            unsafe {
+                std::env::remove_var("XDG_CONFIG_HOME");
+            }
             scopeguard_restore(prev)
         };
         write_synth_settings(
@@ -358,7 +369,10 @@ mod tests {
         impl Drop for R {
             fn drop(&mut self) {
                 if let Some(v) = self.0.take() {
-                    std::env::set_var("XDG_CONFIG_HOME", v);
+                    // SAFETY: see the long-form note in `ok_when_registered`.
+                    unsafe {
+                        std::env::set_var("XDG_CONFIG_HOME", v);
+                    }
                 }
             }
         }
