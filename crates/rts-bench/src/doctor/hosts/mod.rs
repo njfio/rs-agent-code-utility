@@ -29,6 +29,7 @@ pub enum DetectionClass {
 /// "Claude Code's user-scope and project-scope point at different
 /// rts binaries").
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // detection_class is part of the public contract; U9 reads it.
 pub struct HostFinding {
     pub host_name: &'static str,
     pub detection_class: DetectionClass,
@@ -59,6 +60,7 @@ impl HostFinding {
 /// Where rts was found, and at what version/binary path. Used by
 /// the orchestrator to detect cross-scope version drift.
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // scope/binary_path/config_path consumed by U9 fix-snippet rendering.
 pub struct RegistrationDetail {
     /// e.g. `"user_scope"`, `"project_scope"`, `"vs_code_extension"`.
     pub scope: String,

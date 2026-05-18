@@ -59,3 +59,9 @@ tempfile = "3"
 
 # TOML parsing for the semantic-eval corpus format. Pure-Rust, small.
 toml = "0.8"
+
+# YAML parsing for Continue's `~/.continue/config.yaml` (and Aider's
+# `~/.aider.conf.yml`). Pulled in for the `doctor` subcommand's per-host
+# MCP-registration detectors (U7); same crate is already in use by
+# rts-core, so this does not introduce a new transitive dep.
+serde_yaml = "0.9"
