@@ -15,6 +15,7 @@ use super::DoctorArgs;
 /// through each section. The `daemon_stats` field is populated by
 /// `daemon_section::run` and read by `workspace_section::run`.
 #[derive(Debug)]
+#[allow(dead_code)] // color_enabled / socket_path read by future sections + U9 wiring.
 pub struct Ctx {
     /// `$PWD` (or `--workspace <path>`) canonicalized when possible.
     /// `None` when neither resolves to an existing directory.
@@ -46,10 +47,7 @@ impl Ctx {
     /// "workspace doesn't exist" — that's a row, not an init error.
     pub fn build(args: &DoctorArgs) -> Result<Self> {
         let workspace_arg = args.workspace.clone().or_else(|| std::env::current_dir().ok());
-        let workspace_path = workspace_arg.and_then(|p| match p.canonicalize() {
-            Ok(canon) => Some(canon),
-            Err(_) => Some(p),
-        });
+        let workspace_path = workspace_arg.map(|p| p.canonicalize().unwrap_or(p));
 
         let home = dirs::home_dir();
 
@@ -79,6 +77,7 @@ impl Ctx {
     }
 
     /// Helper: workspace path as a string ref (for messages).
+    #[allow(dead_code)] // consumed by U9 fix-snippet renderers.
     pub fn workspace_str(&self) -> &str {
         self.workspace_path
             .as_deref()

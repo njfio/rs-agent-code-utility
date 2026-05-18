@@ -44,6 +44,7 @@ pub enum RowKind {
 
 impl RowKind {
     /// Wire-stable label, used in both human and JSON output.
+    #[allow(dead_code)] // public-API helper for downstream consumers (renderers serialize via serde).
     pub fn as_str(self) -> &'static str {
         match self {
             RowKind::Ok => "ok",
@@ -139,6 +140,7 @@ impl FixSnippet {
 /// the docs in `docs/doctor-schema.md` stay current.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[allow(dead_code)] // RegisterMcp / ReindexNeeded part of the documented taxonomy; reserved for U9 / future host rows.
 pub enum FixClass {
     /// rts binary missing from PATH or version mismatched.
     InstallBinary,
@@ -167,6 +169,7 @@ pub enum FixClass {
 /// emitted in this order in both human and JSON output, so snapshot
 /// tests stay stable regardless of section impl ordering inside
 /// `mod.rs::run`.
+#[allow(dead_code)] // documentation of the normative order; consumers cross-reference docs/doctor-schema.md.
 pub const SECTION_NAMES: &[&str] = &[
     "binary",
     "daemon",

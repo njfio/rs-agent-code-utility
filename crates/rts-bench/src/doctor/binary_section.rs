@@ -214,9 +214,7 @@ fn install_fix(bin: &str) -> FixSnippet {
     // Concise one-liner: source the binaries from the matching release
     // tarball. Users on the source build can read the description for
     // the `cargo install --path …` alternative.
-    let command = format!(
-        "curl -fsSL https://github.com/njfio/rs-agent-code-utility/releases/latest/download/install.sh | sh   # or: see docs/install.md"
-    );
+    let command = "curl -fsSL https://github.com/njfio/rs-agent-code-utility/releases/latest/download/install.sh | sh   # or: see docs/install.md";
     FixSnippet::new(FixClass::InstallBinary, command).with_description(format!(
         "{} is missing from $PATH. Install from a release tarball (see docs/install.md) or run `cargo install --path crates/{}` from a source checkout.",
         bin, bin

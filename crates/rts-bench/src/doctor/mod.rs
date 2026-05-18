@@ -76,12 +76,16 @@ pub async fn run(args: DoctorArgs) -> i32 {
         // the Stats response that workspace_section.rs reads) is
         // threaded via Ctx, which sections are allowed to mutate.
         let mut ctx = ctx;
-        let mut sections = Vec::with_capacity(5);
-        sections.push(binary_section::run(&ctx));
-        sections.push(daemon_section::run(&mut ctx));
-        sections.push(mcp_section::run(&ctx));
-        sections.push(nudge_hook::run(&ctx));
-        sections.push(workspace_section::run(&ctx));
+        // Build the section list explicitly so the daemon section can
+        // mutate `ctx.daemon_stats` before workspace_section reads it.
+        // The `vec![]` macro can't sequence `&` vs `&mut` borrows of the
+        // same Ctx; we accumulate one section at a time.
+        let binary = binary_section::run(&ctx);
+        let daemon = daemon_section::run(&mut ctx);
+        let mcp = mcp_section::run(&ctx);
+        let hook = nudge_hook::run(&ctx);
+        let workspace = workspace_section::run(&ctx);
+        let sections = vec![binary, daemon, mcp, hook, workspace];
 
         DoctorReport::from_sections(sections)
     }));
