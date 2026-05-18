@@ -287,6 +287,13 @@ pub(super) async fn mount_inner(
     // batch is committed before `Mount` responds. Subsequent batches
     // land async per `BATCH_FLUSH_INTERVAL`, visible via
     // `Workspace.Status.progress`.
+    // Track whether the cold walk actually completed. The fingerprint
+    // stamp at the end of this function MUST gate on this — Codex P1
+    // review (PR #111 C4): stamping unconditionally after the 5-second
+    // drain timeout would mark a slow-indexing workspace as a "valid
+    // rehydratable snapshot," and a subsequent restart could take the
+    // Rehydrate path with a permanently partial index.
+    let mut initial_walk_ok = false;
     let emitted = if skip_initial_walk {
         // v0.6 Rehydrate path: the redb already contains a valid
         // index for this workspace (fingerprint matched, FILES
@@ -300,12 +307,21 @@ pub(super) async fn mount_inner(
         // would have used; dropping it without spawning ensures
         // the writer never sees a `WatchEvent::ColdWalkComplete`
         // from a phantom walker.
+        //
+        // Rehydrate is "always trustworthy" — the on-disk state was
+        // already stamped at the end of the previous mount's
+        // cold walk + drain. We re-stamp at the end of this mount
+        // for timestamp freshness (cheap, harmless).
         drop(initial);
         tracing::debug!(target: "rts_daemon::mount", "rehydrate: skipping initial walk");
+        initial_walk_ok = true;
         0
     } else {
         match initial.spawn().await {
-            Ok(Ok(n)) => n,
+            Ok(Ok(n)) => {
+                initial_walk_ok = true;
+                n
+            }
             Ok(Err(e)) => {
                 tracing::warn!(error = %e, "initial walk returned an error; mount continues");
                 0
@@ -316,26 +332,49 @@ pub(super) async fn mount_inner(
             }
         }
     };
+    // Drain wait. Track whether we exited via "indexed >= emitted"
+    // (drain_completed = true) or via the 5s timeout (false). The
+    // fingerprint gate below uses this flag.
     let drain_deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    let mut drain_completed = emitted == 0; // nothing to drain → trivially done
     while emitted > 0 && std::time::Instant::now() < drain_deadline {
         let indexed = store.stats().files_indexed;
         if indexed >= emitted {
+            drain_completed = true;
             break;
         }
         tokio::time::sleep(std::time::Duration::from_millis(25)).await;
     }
 
-    // v0.6 fingerprint stamp: write the *current* fingerprint to META
-    // so the next mount sees a fresh signal. This commit is what makes
-    // the post-cold-walk state on disk "trustable" for the next daemon
-    // start. On the Rehydrate path the on-disk fingerprint is already
-    // current — but we still re-stamp it to refresh the timestamp
-    // (cheap; one redb txn).
-    if let Err(e) = store.write_fingerprint(&current_fp) {
-        tracing::warn!(
+    // v0.6 fingerprint stamp (Codex review PR #111 C4): write the
+    // current fingerprint to META ONLY when the on-disk state is
+    // trustworthy. "Trustworthy" means:
+    //   - Rehydrate path: yes — state was already stamped last mount
+    //   - Cold-walk path: yes IFF initial.spawn() succeeded AND the
+    //     drain loop saw indexed >= emitted (vs timing out)
+    //
+    // Skipping the stamp when the drain timed out is what prevents
+    // the "permanently partial index" failure mode. The next mount
+    // will see a missing fingerprint (or a stale one) and cold-walk
+    // again — correct behavior for a workspace that didn't finish
+    // indexing within the 5s window.
+    let trustworthy_to_stamp = initial_walk_ok && drain_completed;
+    if trustworthy_to_stamp {
+        if let Err(e) = store.write_fingerprint(&current_fp) {
+            tracing::warn!(
+                target: "rts_daemon::mount",
+                error = %e,
+                "failed to write fingerprint to META; next mount will cold-walk"
+            );
+        }
+    } else {
+        tracing::info!(
             target: "rts_daemon::mount",
-            error = %e,
-            "failed to write fingerprint to META; next mount will cold-walk"
+            initial_walk_ok,
+            drain_completed,
+            emitted,
+            indexed = store.stats().files_indexed,
+            "skipping fingerprint stamp — initial walk did not complete cleanly; next mount will cold-walk"
         );
     }
 
