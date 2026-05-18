@@ -61,7 +61,11 @@ pub fn effective_gitignore_hash(workspace_root: &Path) -> String {
     let mut hasher = Hasher::new();
 
     // 1. workspace `.gitignore`
-    hash_optional_file(&mut hasher, "workspace-gitignore", &workspace_root.join(".gitignore"));
+    hash_optional_file(
+        &mut hasher,
+        "workspace-gitignore",
+        &workspace_root.join(".gitignore"),
+    );
 
     // 2. `.git/info/exclude`
     hash_optional_file(
@@ -71,7 +75,11 @@ pub fn effective_gitignore_hash(workspace_root: &Path) -> String {
     );
 
     // 3. workspace `.rtsignore`
-    hash_optional_file(&mut hasher, "workspace-rtsignore", &workspace_root.join(".rtsignore"));
+    hash_optional_file(
+        &mut hasher,
+        "workspace-rtsignore",
+        &workspace_root.join(".rtsignore"),
+    );
 
     // 4. ancestor `.gitignore`s — walk upward from the parent of the
     //    workspace toward `/`. Walked-order is innermost-first so the
@@ -96,7 +104,11 @@ pub fn effective_gitignore_hash(workspace_root: &Path) -> String {
     //    change here. We include them anyway so two daemons with the
     //    same binary version but somehow-different fallbacks would
     //    still be detected — defense in depth.
-    hash_segment(&mut hasher, "fallbacks", FALLBACK_IGNORES.join("\n").as_bytes());
+    hash_segment(
+        &mut hasher,
+        "fallbacks",
+        FALLBACK_IGNORES.join("\n").as_bytes(),
+    );
 
     let digest = hasher.finalize();
     let bytes = digest.as_bytes();

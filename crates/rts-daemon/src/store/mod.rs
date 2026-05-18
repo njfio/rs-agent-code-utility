@@ -1145,9 +1145,7 @@ impl Store {
     /// Read the persisted fingerprint from META. Returns `None` when
     /// any required key is missing (treat as
     /// `InvalidationReason::EmptyOrMissingFingerprint`).
-    pub fn read_fingerprint(
-        &self,
-    ) -> Result<Option<crate::fingerprint::Fingerprint>, redb::Error> {
+    pub fn read_fingerprint(&self) -> Result<Option<crate::fingerprint::Fingerprint>, redb::Error> {
         let read_txn = self.db.begin_read()?;
         let meta = match read_txn.open_table(schema::META) {
             Ok(t) => t,

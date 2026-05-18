@@ -107,9 +107,10 @@ impl Fingerprint {
             // Narrow to the first language that differs so the
             // mount_source label can name it (e.g.
             // `cold_walk_after_invalidation:grammar:rust:0.23→0.24`).
-            return Some(InvalidationReason::GrammarVersion(
-                first_grammar_diff(&stored.grammar_versions, &current.grammar_versions),
-            ));
+            return Some(InvalidationReason::GrammarVersion(first_grammar_diff(
+                &stored.grammar_versions,
+                &current.grammar_versions,
+            )));
         }
         if stored.gitignore_hash != current.gitignore_hash {
             return Some(InvalidationReason::Gitignore);
@@ -161,9 +162,7 @@ impl InvalidationReason {
                 GrammarDiff::OpaqueShapeChange => "grammar:opaque".into(),
             },
             InvalidationReason::Gitignore => "gitignore".into(),
-            InvalidationReason::EmptyOrMissingFingerprint => {
-                "empty_or_missing_fingerprint".into()
-            }
+            InvalidationReason::EmptyOrMissingFingerprint => "empty_or_missing_fingerprint".into(),
         }
     }
 }

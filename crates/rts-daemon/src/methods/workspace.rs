@@ -189,7 +189,10 @@ pub(super) async fn mount_inner(
     // appropriate counter.
     {
         let mut slot = state.mount_source.lock().map_err(|e| {
-            ProtocolError::new(ErrorCode::InternalError, format!("mount_source state poisoned: {e}"))
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("mount_source state poisoned: {e}"),
+            )
         })?;
         *slot = Some(mount_source.clone());
     }

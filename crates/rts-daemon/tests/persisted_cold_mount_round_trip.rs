@@ -37,7 +37,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -72,10 +76,7 @@ impl Drop for KillOnDrop<'_> {
     }
 }
 
-fn socket_path(
-    home_dir: &std::path::Path,
-    runtime_dir: &std::path::Path,
-) -> std::path::PathBuf {
+fn socket_path(home_dir: &std::path::Path, runtime_dir: &std::path::Path) -> std::path::PathBuf {
     if cfg!(target_os = "macos") {
         home_dir
             .join("Library")
@@ -137,7 +138,10 @@ async fn rehydrate_skips_cold_walk_and_keeps_index_warm() -> anyhow::Result<()> 
             json!({ "root": workspace.path() }),
         )
         .await?;
-        assert!(mount["error"].is_null(), "session-1 mount failed: {mount:?}");
+        assert!(
+            mount["error"].is_null(),
+            "session-1 mount failed: {mount:?}"
+        );
 
         // Poll for the cold-walk to finish indexing the symbol.
         let deadline = Instant::now() + Duration::from_secs(5);
@@ -193,7 +197,10 @@ async fn rehydrate_skips_cold_walk_and_keeps_index_warm() -> anyhow::Result<()> 
         )
         .await?;
         let mount_elapsed = mount_start.elapsed();
-        assert!(mount["error"].is_null(), "session-2 mount failed: {mount:?}");
+        assert!(
+            mount["error"].is_null(),
+            "session-2 mount failed: {mount:?}"
+        );
 
         // Hard assertion: a single FindSymbol immediately after Mount
         // returns matches. On the cold-walk path this would race; on

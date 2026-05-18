@@ -258,12 +258,7 @@ pub async fn stats(
         if let Ok(tally) = state.rehydrate_invalidations.lock() {
             let invalidations_obj: serde_json::Map<String, serde_json::Value> = tally
                 .iter()
-                .map(|(reason, count)| {
-                    (
-                        reason.clone(),
-                        serde_json::Value::Number((*count).into()),
-                    )
-                })
+                .map(|(reason, count)| (reason.clone(), serde_json::Value::Number((*count).into())))
                 .collect();
             obj.insert(
                 "rehydrate_invalidations_by_reason".into(),
