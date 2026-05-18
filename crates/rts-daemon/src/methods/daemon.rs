@@ -229,6 +229,47 @@ pub async fn stats(
             serde_json::Value::Number(generation.into()),
         );
         obj.insert("cold_walk_completed_at_ms".into(), cold_walk_value);
+
+        // v0.6 persisted-cold-mount mount_source (U6). Only emitted
+        // when a workspace is mounted, since the value is set by the
+        // Workspace.Mount handler. Reads under the mutex (rare write
+        // contention; one write per mount).
+        if let Ok(slot) = state.mount_source.lock() {
+            if let Some(ms) = slot.as_ref() {
+                obj.insert(
+                    "mount_source".into(),
+                    serde_json::Value::String(ms.as_label()),
+                );
+            }
+        }
+
+        // Cumulative cache-effectiveness counters. Present at all
+        // points after the first Workspace.Mount; pre-mount stays
+        // absent. Reset on daemon restart (counters describe this
+        // process's served traffic, same convention as call_counters).
+        obj.insert(
+            "rehydrate_attempts_total".into(),
+            serde_json::Value::Number(state.rehydrate_attempts.load(Relaxed).into()),
+        );
+        obj.insert(
+            "rehydrate_successes_total".into(),
+            serde_json::Value::Number(state.rehydrate_successes.load(Relaxed).into()),
+        );
+        if let Ok(tally) = state.rehydrate_invalidations.lock() {
+            let invalidations_obj: serde_json::Map<String, serde_json::Value> = tally
+                .iter()
+                .map(|(reason, count)| {
+                    (
+                        reason.clone(),
+                        serde_json::Value::Number((*count).into()),
+                    )
+                })
+                .collect();
+            obj.insert(
+                "rehydrate_invalidations_by_reason".into(),
+                serde_json::Value::Object(invalidations_obj),
+            );
+        }
     }
 
     Ok(body)

@@ -224,6 +224,28 @@ async fn rehydrate_skips_cold_walk_and_keeps_index_warm() -> anyhow::Result<()> 
             mount_elapsed < Duration::from_secs(1),
             "session-2 rehydrate mount took {mount_elapsed:?}; expected sub-second on a 1-file workspace"
         );
+
+        // U6 assertion: Daemon.Stats reports mount_source = "rehydrate"
+        // and the cache counter bumped exactly once.
+        let stats = round_trip(&mut stream, "3", "Daemon.Stats", json!({})).await?;
+        let r = &stats["result"];
+        assert_eq!(
+            r["mount_source"].as_str(),
+            Some("rehydrate"),
+            "session-2 should report mount_source=rehydrate; got {r:?}"
+        );
+        assert!(
+            r["rehydrate_attempts_total"].as_u64().unwrap_or(0) >= 1,
+            "rehydrate_attempts_total should be >= 1; got {r:?}"
+        );
+        assert!(
+            r["rehydrate_successes_total"].as_u64().unwrap_or(0) >= 1,
+            "rehydrate_successes_total should be >= 1; got {r:?}"
+        );
+        assert!(
+            r["rehydrate_invalidations_by_reason"].is_object(),
+            "rehydrate_invalidations_by_reason should be an object; got {r:?}"
+        );
     }
 
     Ok(())
