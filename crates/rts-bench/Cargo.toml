@@ -18,7 +18,7 @@ path = "src/main.rs"
 [dependencies]
 # Runtime. Bench tasks subprocess `rts-mcp` and `rg` and consume their stdio
 # concurrently, so we want the full multi-thread Tokio runtime.
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "process", "time", "fs"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "process", "time", "fs", "net"] }
 
 # Wire encoding for MCP JSON-RPC + corpus.lock + bench-*.json output.
 serde = { version = "1", features = ["derive"] }
