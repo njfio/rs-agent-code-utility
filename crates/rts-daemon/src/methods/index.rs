@@ -1232,15 +1232,215 @@ pub async fn grep(
             };
             (pattern, case_insensitive, multiline, GrepScanner::Regex(re))
         }
-        super::grep_v2::ValidatedGrepCall::Structural { .. } => {
-            // Validation accepted this; the scanner lives in U5. For
-            // the wire-shape-stable U2 milestone, surface a clear
-            // "not yet implemented" so callers can branch on it.
-            return Err(ProtocolError::new(
-                ErrorCode::InvalidParams,
-                "structural_query is recognized but execution lands in U5 (capability `index_grep_structural` advertised but the scanner is not yet wired)",
+        super::grep_v2::ValidatedGrepCall::Structural {
+            query, languages, ..
+        } => {
+            // Structural mode owns its own response builder — the
+            // shape is a superset of the v1 grep response with
+            // per-match `captures` plus top-level truncation /
+            // partial-failure metadata. Early-return after running
+            // structural::run; do not thread through the literal/
+            // regex scan accumulation below.
+            //
+            // The `combine` arm of ValidatedGrepCall::Structural
+            // (literal/regex intersection) is recognized by the
+            // validator but its intersection logic is deferred to
+            // a follow-up (would re-run the literal/regex scanner
+            // post-structural). v1 ships structural-only matches.
+            super::grep_v2::validate_predicates(&query)
+                .map_err(|e| e.into_protocol_error())?;
+
+            // Compile the file_glob early so a bad glob fails fast
+            // before snapshotting the store.
+            let glob = match p.file_glob.as_deref() {
+                Some(g) if g.is_empty() => {
+                    return Err(ProtocolError::new(
+                        ErrorCode::InvalidParams,
+                        "`file_glob` must be non-empty when provided",
+                    ));
+                }
+                Some(g) => {
+                    let glob = globset::Glob::new(g).map_err(|e| {
+                        ProtocolError::new(
+                            ErrorCode::InvalidParams,
+                            format!("`file_glob` failed to compile: {e}"),
+                        )
+                    })?;
+                    Some(glob.compile_matcher())
+                }
+                None => None,
+            };
+
+            let (root, store_arc) = snapshot(state)?;
+            let files = store_arc.list_indexed_files().map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InternalError,
+                    format!("list_indexed_files failed: {e}"),
+                )
+            })?;
+
+            let result = super::grep_v2::structural::run(
+                state,
+                &root,
+                &files,
+                &query,
+                &languages,
+                glob.as_ref(),
+                limit,
             )
-            .with_data(serde_json::json!({"code": "STRUCTURAL_NOT_YET_IMPLEMENTED"})));
+            .map_err(|e| match e {
+                super::grep_v2::structural::StructuralError::AllLanguagesFailed(pfs) => {
+                    let first = pfs
+                        .first()
+                        .map(|pf| format!("{}: {}", pf.language, pf.error))
+                        .unwrap_or_else(|| "no languages compiled".to_string());
+                    let pfs_json: Vec<_> = pfs
+                        .iter()
+                        .map(|pf| {
+                            serde_json::json!({
+                                "language": pf.language,
+                                "error": pf.error,
+                            })
+                        })
+                        .collect();
+                    ProtocolError::new(
+                        ErrorCode::InvalidParams,
+                        format!("structural query failed to compile for any requested language: {first}"),
+                    )
+                    .with_data(serde_json::json!({
+                        "code": super::grep_v2::GrepValidationCode::StructuralQueryInvalid.as_str(),
+                        "partial_failures": pfs_json,
+                    }))
+                }
+                super::grep_v2::structural::StructuralError::Timeout => ProtocolError::new(
+                    ErrorCode::InvalidParams,
+                    "structural query exceeded the wall-clock budget",
+                )
+                .with_data(serde_json::json!({
+                    "code": super::grep_v2::GrepValidationCode::StructuralQueryTimeout.as_str(),
+                    "budget_ms": super::grep_v2::limits::STRUCTURAL_WALL_CLOCK_MS,
+                })),
+            })?;
+
+            // Apply within_symbol filter post-scan if requested.
+            // Mirrors the literal/regex path's filter ordering.
+            let final_matches: Vec<_> = if let Some(name) = &shared_filters.within_symbol {
+                let defs = match store_arc.find_symbol(name) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(ProtocolError::new(
+                            ErrorCode::InternalError,
+                            format!("within_symbol lookup failed: {e}"),
+                        ));
+                    }
+                };
+                if defs.is_empty() {
+                    return Err(super::grep_v2::GrepValidationError::new(
+                        super::grep_v2::GrepValidationCode::WithinSymbolNotFound,
+                        format!("`within_symbol`={name} resolved to zero defs"),
+                    )
+                    .into_protocol_error());
+                }
+                if defs.len() > super::grep_v2::WITHIN_SYMBOL_MAX_DEFS
+                    && !shared_filters.within_symbol_allow_overload
+                {
+                    return Err(super::grep_v2::GrepValidationError::new(
+                        super::grep_v2::GrepValidationCode::WithinSymbolTooManyDefs,
+                        format!(
+                            "`within_symbol`={name} resolved to {} defs (cap {}); set `within_symbol_allow_overload: true` to opt in",
+                            defs.len(),
+                            super::grep_v2::WITHIN_SYMBOL_MAX_DEFS
+                        ),
+                    )
+                    .with_data("def_count", serde_json::Value::from(defs.len()))
+                    .into_protocol_error());
+                }
+                // Filter: keep matches whose byte range lies inside
+                // any resolved def's byte range AND in the same file.
+                result
+                    .matches
+                    .into_iter()
+                    .filter(|m| {
+                        defs.iter().any(|d| {
+                            d.file == m.file
+                                && m.start_byte >= d.start_byte
+                                && m.end_byte <= d.end_byte
+                        })
+                    })
+                    .collect()
+            } else {
+                result.matches
+            };
+
+            // Serialize structural matches to JSON.
+            let match_records: Vec<serde_json::Value> = final_matches
+                .iter()
+                .map(|m| {
+                    let captures_obj: serde_json::Map<String, serde_json::Value> = m
+                        .captures
+                        .iter()
+                        .map(|(name, payloads)| {
+                            let arr: Vec<serde_json::Value> = payloads
+                                .iter()
+                                .map(|p| {
+                                    let mut obj = serde_json::Map::new();
+                                    obj.insert(
+                                        "start".into(),
+                                        serde_json::json!({"line": p.start.line, "col": p.start.col}),
+                                    );
+                                    obj.insert(
+                                        "end".into(),
+                                        serde_json::json!({"line": p.end.line, "col": p.end.col}),
+                                    );
+                                    obj.insert(
+                                        "text".into(),
+                                        serde_json::Value::String(p.text.clone()),
+                                    );
+                                    if p.truncated {
+                                        obj.insert(
+                                            "truncated".into(),
+                                            serde_json::Value::Bool(true),
+                                        );
+                                    }
+                                    serde_json::Value::Object(obj)
+                                })
+                                .collect();
+                            (name.clone(), serde_json::Value::Array(arr))
+                        })
+                        .collect();
+                    serde_json::json!({
+                        "file": m.file,
+                        "range": {
+                            "start_line": m.start_line,
+                            "end_line":   m.end_line,
+                            "start_byte": m.start_byte,
+                            "end_byte":   m.end_byte,
+                        },
+                        "captures": captures_obj,
+                    })
+                })
+                .collect();
+
+            let pfs_json: Vec<_> = result
+                .partial_failures
+                .iter()
+                .map(|pf| {
+                    serde_json::json!({
+                        "language": pf.language,
+                        "error": pf.error,
+                    })
+                })
+                .collect();
+
+            return Ok(serde_json::json!({
+                "matches": match_records,
+                "truncated": result.truncated,
+                "rows_seen": result.rows_seen,
+                "rows_returned": final_matches.len(),
+                "files_scanned": result.files_scanned,
+                "files_with_matches": result.files_with_matches,
+                "partial_failures": pfs_json,
+            }));
         }
     };
     // Make the v1 unused-variables guard happy for the new fields

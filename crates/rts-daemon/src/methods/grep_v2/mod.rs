@@ -16,11 +16,17 @@
 
 pub mod compose;
 pub mod errors;
+pub mod limits;
 pub mod multiline;
+pub mod predicates;
+pub mod query_cache;
+pub mod structural;
 pub mod within_symbol;
 
 pub use compose::{ValidatedGrepCall, validate};
 pub use errors::{GrepValidationCode, GrepValidationError};
+pub use predicates::validate_predicates;
+pub use query_cache::QueryCache;
 pub use within_symbol::{
     MatchRange as WithinSymbolMatchRange, WITHIN_SYMBOL_MAX_DEFS,
     filter_matches_by_defs as filter_matches_by_within_symbol_defs,

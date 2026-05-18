@@ -77,6 +77,12 @@ unicode-normalization = "0.1"
 # cache entry, so the heavy work runs concurrently.
 rayon = "1"
 
+# v0.5.5+ Index.Grep v2 structural-query cache. 64-entry LRU keyed on
+# `(Language, query_text)`; Query::new compilation is amortized across
+# repeated structural calls with the same shape. See
+# `crates/rts-daemon/src/methods/grep_v2/query_cache.rs`.
+lru = "0.12"
+
 tempfile = "3"
 
 [dev-dependencies]

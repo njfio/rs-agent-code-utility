@@ -154,6 +154,16 @@ pub struct DaemonState {
     /// atomic increment per RPC; negligible overhead next to the
     /// rest of the dispatch path.
     pub call_counters: CallCounters,
+    /// v0.6 (`index_grep_structural` capability) — LRU cache for
+    /// compiled tree-sitter `Query` objects keyed on
+    /// `(Language, query_text)`. Agent-supplied structural queries
+    /// land here on first compile; subsequent invocations with the
+    /// same `(language, query_text)` pair pull from the cache
+    /// instead of re-paying the `Query::new` cost (hundreds of µs).
+    /// Eviction is recency-ordered; capacity is fixed at compile
+    /// time inside the QueryCache (see
+    /// `methods/grep_v2/query_cache.rs`).
+    pub query_cache: crate::methods::grep_v2::query_cache::QueryCache,
 }
 
 /// Per-method call counts for the daemon's RPC surface. All fields
@@ -446,6 +456,7 @@ impl DaemonState {
             prewarm_in_flight: std::sync::atomic::AtomicBool::new(false),
             prewarm_done: tokio::sync::Notify::new(),
             call_counters: CallCounters::default(),
+            query_cache: crate::methods::grep_v2::query_cache::QueryCache::new(),
         }
     }
 
