@@ -90,6 +90,15 @@ pub struct DaemonState {
     /// write; later phases expose this via `Workspace.Status.index_generation`.
     /// Currently always 0 (no writer yet).
     pub index_generation: AtomicU64,
+    /// Unix-epoch milliseconds when the writer's `ColdWalkComplete` flush
+    /// committed. `0` means "not yet" — either no workspace mounted, or
+    /// the cold walk hasn't drained its first batch yet.
+    ///
+    /// Surfaced via `Daemon.Stats v2` (capability `daemon_stats_v2`) so
+    /// `rts-bench doctor` and the agent-bench harness can distinguish
+    /// "index ready" from "indexing in progress" without polling
+    /// `Workspace.Status.progress.phase`.
+    pub cold_walk_completed_at_ms: AtomicU64,
     /// File-watcher health for `Workspace.Status.watcher_status` (§7.4).
     watcher_status: AtomicU8,
     /// Single-slot memoization cache for `Index.Outline`. Keyed by
@@ -405,6 +414,7 @@ impl DaemonState {
             mount_refcount: AtomicU32::new(0),
             started_at: Instant::now(),
             index_generation: AtomicU64::new(0),
+            cold_walk_completed_at_ms: AtomicU64::new(0),
             watcher_status: AtomicU8::new(WatcherStatus::NoWatcher as u8),
             outline_cache: OutlineCache::new(),
             symbol_pagerank_cache: SymbolPagerankCache::new(),

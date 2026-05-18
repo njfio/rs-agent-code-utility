@@ -84,6 +84,12 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // uptime. Mainly for honest dogfood reflection ("am I actually
     // using this?") — agents can self-report rather than guess.
     "daemon_stats",
+    // v0.6 — Daemon.Stats v2: response includes `pinned_workspace_path`,
+    // `workspace_id`, `index_generation`, and `cold_walk_completed_at_ms`
+    // when a workspace is mounted. Lets `rts-bench doctor` answer
+    // "is the daemon pinned to this $PWD?" and "is indexing done?"
+    // in a single round-trip. Old clients ignore the new fields.
+    "daemon_stats_v2",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
@@ -104,25 +110,41 @@ pub async fn ping(
     }))
 }
 
-/// `Daemon.Stats` — per-session call counters (v0.5.7+).
+/// `Daemon.Stats` — per-session call counters + workspace metadata
+/// (v0.5.7+, extended to v2 in v0.6+).
 ///
 /// Returns the per-method call-count snapshot from
 /// `state.call_counters` plus session-level context (uptime, daemon
 /// version, total RPC count). The Stats RPC itself is counted, so
 /// querying stats twice in a row shows `Daemon.Stats: 2`.
 ///
-/// Wire shape:
+/// **v2 fields (capability `daemon_stats_v2`, v0.6+):** when a
+/// workspace is mounted, the response additionally carries
+/// `pinned_workspace_path` (UTF-8 canonical path the daemon is
+/// pinned to), `workspace_id` (16-char hex blake3 fingerprint),
+/// `index_generation` (bumps on every committed write), and
+/// `cold_walk_completed_at_ms` (Unix-epoch ms when the writer's
+/// `ColdWalkComplete` flush committed, or `null` if not yet). These
+/// fields let `rts-bench doctor` answer "is the daemon pinned to
+/// this $PWD?" and "is indexing done?" in a single round-trip. Old
+/// clients ignore the additional fields; pre-v2 daemons omit them.
+///
+/// Wire shape (v2):
 /// ```jsonc
 /// {
 ///   "uptime_ms":  12345,
-///   "version":    "0.5.7",
+///   "version":    "0.6.0",
 ///   "total_calls": 89,
 ///   "calls": {
 ///     "Index.FindSymbol":  3,
 ///     "Index.Grep":        47,
-///     "Index.FindCallers": 0,
 ///     ...
-///   }
+///   },
+///   // v2 fields, present only when a workspace is mounted:
+///   "pinned_workspace_path":     "/Users/n/RustroverProjects/rust_tree_sitter",
+///   "workspace_id":              "8a8a68f7b4c3...",
+///   "index_generation":          1247,
+///   "cold_walk_completed_at_ms": 1748462100123
 /// }
 /// ```
 ///
@@ -134,18 +156,63 @@ pub async fn ping(
 /// Cross-session aggregation should happen client-side from
 /// per-session snapshots.
 ///
-/// Performance: one relaxed-load per counter field plus a JSON
-/// serialize. Sub-microsecond on modern hardware; safe to call from
-/// a hot agent loop.
+/// Performance: one relaxed-load per counter field, one workspace
+/// mutex lock for the v2 fields, plus a JSON serialize. Sub-
+/// microsecond on modern hardware; safe to call from a hot agent loop.
 pub async fn stats(
     _params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
+    use std::sync::atomic::Ordering::Relaxed;
     let uptime_ms = state.uptime().as_millis() as u64;
-    Ok(serde_json::json!({
+
+    // v2 fields. Only emitted when a workspace is mounted — old clients
+    // and pre-mount Stats calls both see the v1 shape via field absence.
+    let (pinned_path, workspace_id, index_gen, cold_walk_at_ms) = match state
+        .workspace
+        .lock()
+    {
+        Ok(guard) => match guard.as_ref() {
+            Some(mounted) => {
+                let pinned = mounted.canonical.path.to_string_lossy().into_owned();
+                let ws_id = mounted.fingerprint.id_str().to_string();
+                let generation = state.index_generation.load(Relaxed);
+                let cold_walk = state.cold_walk_completed_at_ms.load(Relaxed);
+                (Some(pinned), Some(ws_id), Some(generation), cold_walk)
+            }
+            None => (None, None, None, 0),
+        },
+        Err(_) => (None, None, None, 0),
+    };
+
+    // `cold_walk_completed_at_ms: null` when 0 (not yet completed); a
+    // real timestamp otherwise. Distinguishes "indexing in progress"
+    // from "indexing done" for the agent reading this.
+    let cold_walk_value = if cold_walk_at_ms == 0 {
+        serde_json::Value::Null
+    } else {
+        serde_json::Value::Number(cold_walk_at_ms.into())
+    };
+
+    let mut body = serde_json::json!({
         "uptime_ms":   uptime_ms,
         "version":     env!("CARGO_PKG_VERSION"),
         "total_calls": state.call_counters.total(),
         "calls":       state.call_counters.snapshot(),
-    }))
+    });
+
+    // v2 fields are added only when a workspace is mounted; pre-mount
+    // Stats responses keep the v1 shape exactly.
+    if let (Some(path), Some(id), Some(generation)) = (pinned_path, workspace_id, index_gen) {
+        let obj = body.as_object_mut().expect("body is an object");
+        obj.insert("pinned_workspace_path".into(), serde_json::Value::String(path));
+        obj.insert("workspace_id".into(), serde_json::Value::String(id));
+        obj.insert(
+            "index_generation".into(),
+            serde_json::Value::Number(generation.into()),
+        );
+        obj.insert("cold_walk_completed_at_ms".into(), cold_walk_value);
+    }
+
+    Ok(body)
 }
