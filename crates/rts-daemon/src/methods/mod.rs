@@ -7,6 +7,7 @@ use crate::error::{ErrorCode, ProtocolError};
 use crate::state::DaemonState;
 
 mod daemon;
+pub(crate) mod grep_v2;
 mod index;
 mod session;
 mod workspace;

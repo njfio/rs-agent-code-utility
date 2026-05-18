@@ -115,11 +115,18 @@ struct ReadRangeParams {
 /// symbol resolution remain filed for follow-up.
 #[derive(Debug, Deserialize)]
 struct GrepParams {
-    /// The pattern to search for. Required; 1..=1024 chars. By
-    /// default interpreted as a literal substring; set
-    /// `regex: true` to interpret as a regex (Rust `regex` crate
-    /// syntax, byte-level matching).
-    text: String,
+    /// The pattern to search for. 1..=1024 chars. By default
+    /// interpreted as a literal substring; set `regex: true` to
+    /// interpret as a regex (Rust `regex` crate syntax, byte-level
+    /// matching).
+    ///
+    /// v0.6: now `Option<String>` to allow `structural_query` alone
+    /// (no literal/regex source). At least one of `text` or
+    /// `structural_query` is required; absence of both returns
+    /// `NO_SEARCH_SOURCE_PROVIDED`. v1 callers always set this
+    /// field — backward compatibility is by construction.
+    #[serde(default)]
+    text: Option<String>,
     /// Maximum number of matches to return. Defaults to 256.
     /// Range: 1..=4096 (same shape as `find_symbol.limit`).
     #[serde(default)]
@@ -1110,60 +1117,98 @@ pub async fn grep(
 
     let p: GrepParams = parse_params(params)?;
 
-    if p.text.is_empty() {
-        return Err(ProtocolError::new(
-            ErrorCode::InvalidParams,
-            "`text` must be 1..=1024 characters",
-        ));
-    }
-    if p.text.len() > 1024 {
-        return Err(ProtocolError::new(
-            ErrorCode::InvalidParams,
-            "`text` must be 1..=1024 characters",
-        ));
-    }
-    let limit = match p.limit {
-        None => DEFAULT_LIMIT,
-        Some(0) => {
-            return Err(ProtocolError::new(
-                ErrorCode::InvalidParams,
-                "`limit` must be >= 1",
-            ));
-        }
-        Some(n) if (n as usize) > MAX_LIMIT => {
-            return Err(ProtocolError::new(
-                ErrorCode::InvalidParams,
-                format!("`limit` must be <= {MAX_LIMIT}"),
-            ));
-        }
-        Some(n) => n as usize,
+    // v0.6 composition matrix: validate the param shape first, then
+    // dispatch to the matching scanner. v1 callers (just `text`, no
+    // new fields) take the same Literal/Regex branches they did
+    // before; the validator returns a `ValidatedGrepCall::Literal`
+    // or `ValidatedGrepCall::Regex` that maps 1:1 to v1 semantics.
+    //
+    // Structural calls land in U5; for U2 we recognize the variant
+    // but report it as `NOT_YET_IMPLEMENTED` so the wire shape is
+    // observable without committing to a half-built scanner.
+    let validation_input = super::grep_v2::compose::ValidationInput {
+        text: p.text.clone(),
+        limit: p.limit,
+        case_insensitive: p.case_insensitive,
+        regex: p.regex,
+        file_glob: p.file_glob.clone(),
+        multiline: p.multiline,
+        structural_query: p.structural_query.clone(),
+        within_symbol: p.within_symbol.clone(),
+        within_symbol_allow_overload: p.within_symbol_allow_overload,
+        language: p.language.clone(),
     };
-    let case_insensitive = p.case_insensitive.unwrap_or(true);
-    let use_regex = p.regex.unwrap_or(false);
+    let (validated, shared_filters) = super::grep_v2::validate(&validation_input)
+        .map_err(|e| e.into_protocol_error())?;
 
-    // Compile the search strategy *before* we touch the index.
-    // Compile-time errors should surface as `INVALID_PARAMS` (agent
-    // can self-correct), not as `INTERNAL_ERROR` (post-mount infra
-    // failure).
-    let scanner = if use_regex {
-        let mut builder = regex::bytes::RegexBuilder::new(&p.text);
-        builder.case_insensitive(case_insensitive);
-        // The `regex` crate's default DFA size limit (10MB) is more
-        // than enough for any agent-authored pattern. Catastrophic
-        // patterns surface as compile errors here.
-        let re = builder.build().map_err(|e| {
-            ProtocolError::new(
-                ErrorCode::InvalidParams,
-                format!("`text` failed to compile as regex: {e}"),
-            )
-        })?;
-        GrepScanner::Regex(re)
-    } else {
-        GrepScanner::Literal {
-            needle: p.text.clone(),
+    if (shared_filters.limit as usize) > MAX_LIMIT {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            format!("`limit` must be <= {MAX_LIMIT}"),
+        ));
+    }
+    if shared_filters.limit == 0 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`limit` must be >= 1",
+        ));
+    }
+    let limit = shared_filters.limit as usize;
+
+    let (text_for_response, case_insensitive, _multiline, scanner) = match validated {
+        super::grep_v2::ValidatedGrepCall::Literal {
+            text,
             case_insensitive,
+        } => {
+            let scanner = GrepScanner::Literal {
+                needle: text.clone(),
+                case_insensitive,
+            };
+            (text, case_insensitive, false, scanner)
+        }
+        super::grep_v2::ValidatedGrepCall::Regex {
+            pattern,
+            case_insensitive,
+            multiline,
+        } => {
+            // U3 will honor `multiline` here. For U2 we keep the v1
+            // single-line semantics; the validator already rejected
+            // `multiline: true` on the literal path, so the only way
+            // we reach this branch with `multiline: true` is on the
+            // regex path, which U3 wires up.
+            let mut builder = regex::bytes::RegexBuilder::new(&pattern);
+            builder.case_insensitive(case_insensitive);
+            if multiline {
+                builder.dot_matches_new_line(true).multi_line(true);
+                // U3 will set explicit `size_limit`/`dfa_size_limit`.
+            }
+            let re = builder.build().map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InvalidParams,
+                    format!("`text` failed to compile as regex: {e}"),
+                )
+            })?;
+            (pattern, case_insensitive, multiline, GrepScanner::Regex(re))
+        }
+        super::grep_v2::ValidatedGrepCall::Structural { .. } => {
+            // Validation accepted this; the scanner lives in U5. For
+            // the wire-shape-stable U2 milestone, surface a clear
+            // "not yet implemented" so callers can branch on it.
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                "structural_query is recognized but execution lands in U5 (capability `index_grep_structural` advertised but the scanner is not yet wired)",
+            )
+            .with_data(serde_json::json!({"code": "STRUCTURAL_NOT_YET_IMPLEMENTED"})));
         }
     };
+    // Make the v1 unused-variables guard happy for the new fields
+    // until U4-U7 consume them. Keeps the v1 hot path untouched.
+    let _ = (
+        &text_for_response,
+        &shared_filters.within_symbol,
+        shared_filters.within_symbol_allow_overload,
+        &shared_filters.language,
+    );
 
     // Compile `file_glob` (workspace-relative path matcher) before
     // mounting the index, same reason as the regex precompile above.

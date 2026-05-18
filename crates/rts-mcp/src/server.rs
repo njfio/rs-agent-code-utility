@@ -206,7 +206,12 @@ pub struct GrepArgs {
     /// error messages, version pins, log strings, config values —
     /// that `find_symbol` can't reach because they're not symbol
     /// names or doc-comment text. Capability: `index_grep` (v0.5.4+).
-    pub text: String,
+    ///
+    /// v0.6: optional — provide `text` OR `structural_query` (or
+    /// both for intersection). When neither is set the daemon
+    /// returns `NO_SEARCH_SOURCE_PROVIDED`.
+    #[serde(default)]
+    pub text: Option<String>,
     /// Maximum number of matches to return. Defaults to 256;
     /// range 1..=4096. Above the default is almost always a tooling
     /// problem — agents should narrow the search instead.
@@ -672,7 +677,13 @@ impl RtsServer {
         Parameters(args): Parameters<GrepArgs>,
     ) -> Result<CallToolResult, McpError> {
         let mut params = serde_json::Map::new();
-        params.insert("text".into(), Value::String(args.text));
+        // `text` is optional in v0.6 (`structural_query` may be the
+        // sole search source). Pass it through only when present so
+        // the daemon's validator sees the same shape the caller
+        // emitted.
+        if let Some(t) = args.text {
+            params.insert("text".into(), Value::String(t));
+        }
         if let Some(n) = args.limit {
             params.insert("limit".into(), Value::Number(n.into()));
         }
@@ -684,6 +695,26 @@ impl RtsServer {
         }
         if let Some(g) = args.file_glob {
             params.insert("file_glob".into(), Value::String(g));
+        }
+        // v0.6 additive fields. Forward only when set so the wire
+        // shape stays minimal on v1-shape calls.
+        if let Some(b) = args.multiline {
+            params.insert("multiline".into(), Value::Bool(b));
+        }
+        if let Some(q) = args.structural_query {
+            params.insert("structural_query".into(), Value::String(q));
+        }
+        if let Some(s) = args.within_symbol {
+            params.insert("within_symbol".into(), Value::String(s));
+        }
+        if let Some(b) = args.within_symbol_allow_overload {
+            params.insert("within_symbol_allow_overload".into(), Value::Bool(b));
+        }
+        if let Some(langs) = args.language {
+            params.insert(
+                "language".into(),
+                Value::Array(langs.into_iter().map(Value::String).collect()),
+            );
         }
         match self.call_daemon("Index.Grep", Value::Object(params)).await {
             Ok(v) => Ok(success_json(&v)),
