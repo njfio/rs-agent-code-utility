@@ -58,8 +58,16 @@ pub(crate) fn detect_impl(_ctx: &Ctx, home: Option<&Path>) -> HostFinding {
         }
         any_dir_found = true;
         for candidate_name in [
+            // Current Cline (saoudrizwan.claude-dev v3.x+) stores MCP
+            // settings under `settings/cline_mcp_settings.json`.
             "settings/cline_mcp_settings.json",
+            // Older builds shipped the file at the directory root.
             "cline_mcp_settings.json",
+            // Legacy / pre-rebrand builds used the bare filename.
+            // Including it here avoids false-negative soft-detects
+            // on long-tenured installs — flagged by Codex review on
+            // PR #109.
+            "mcp_settings.json",
         ] {
             let path = base.join(candidate_name);
             if !path.exists() {

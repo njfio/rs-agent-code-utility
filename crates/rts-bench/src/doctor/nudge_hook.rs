@@ -63,7 +63,7 @@ fn check_hook(hook_path: &Path, doctor_version: &str, s: &mut SectionReport) {
                         FixClass::UpdateHook,
                         format!(
                             "mkdir -p .claude/hooks && curl -fsSL \
-https://raw.githubusercontent.com/yourusername/rust_tree_sitter/main/.claude/hooks/rts-nudge.sh \
+https://raw.githubusercontent.com/njfio/rs-agent-code-utility/main/.claude/hooks/rts-nudge.sh \
 -o {rel} && chmod +x {rel}",
                             rel = HOOK_REL_PATH
                         ),
@@ -149,7 +149,7 @@ fn update_hook_fix(hook_path: &Path) -> FixSnippet {
         FixClass::UpdateHook,
         format!(
             "curl -fsSL \
-https://raw.githubusercontent.com/yourusername/rust_tree_sitter/main/.claude/hooks/rts-nudge.sh \
+https://raw.githubusercontent.com/njfio/rs-agent-code-utility/main/.claude/hooks/rts-nudge.sh \
 -o {path} && chmod +x {path}",
             path = hook_path.display()
         ),

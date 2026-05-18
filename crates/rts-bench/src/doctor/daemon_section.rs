@@ -5,24 +5,39 @@
 //! read the pinned-path / index_generation / cold_walk_completed_at_ms
 //! fields without a second round-trip.
 //!
-//! Probing strategy for v1 (intentionally conservative — see plan §U5):
+//! Probing strategy (post Codex PR #109 review):
 //!
-//! 1. Resolve the **default** socket path (`<runtime_root>/rts/default.sock`).
-//!    For v1, doctor does NOT replicate the daemon's per-workspace
-//!    `blake3(canonical_path)` hashing; that logic lives in
-//!    `crates/rts-daemon/src/socket.rs` and duplicating it would be a
-//!    maintenance hazard. The default socket covers the common
-//!    single-workspace install — the most common first-run case.
-//! 2. If the socket file is absent → `[WARN] daemon not running`
-//!    + fix `rts-daemon --workspace $PWD &`.
-//! 3. If present, attempt a `connect(2)` with a 1-second timeout. On
-//!    connection refused → `[FAIL] stale socket` + fix `rm -f <path>`.
+//! 1. Compute *both* candidate socket paths in priority order:
+//!    a. workspace-scoped (`<runtime_root>/rts/ws-<16hex>.sock`),
+//!       where `16hex` is the first 8 bytes of
+//!       `blake3(canonical_workspace_path)` — mirrors the daemon's
+//!       `socket_path_for_workspace` in
+//!       `crates/rts-daemon/src/socket.rs:54`. Present whenever
+//!       `ctx.workspace_path` is set.
+//!    b. default (`<runtime_root>/rts/default.sock`) — the bootstrap
+//!       socket for daemons spawned without `--workspace`.
+//!    Pick the first candidate whose socket file *exists*. The
+//!    workspace-scoped path wins by priority because it's the more
+//!    specific match.
+//! 2. If neither file exists → `[WARN] daemon not running` + fix
+//!    `rts-daemon --workspace $PWD &`. Report uses the *expected*
+//!    path (workspace-scoped if known) so the fix command matches
+//!    where the daemon would actually bind.
+//! 3. If a file is present, attempt a `connect(2)` with a 1-second
+//!    timeout. On connection refused → `[FAIL] stale socket` + fix
+//!    `rm -f <path>`.
 //! 4. If the handshake succeeds, send `Daemon.Stats` and read one
 //!    JSON-RPC line back (1-second total deadline). If the response
 //!    carries v2 fields, mark OK and populate `ctx.daemon_stats`. If
 //!    the response is v1-shape only, fall back to `Workspace.Status`
 //!    so `workspace_section` still has `index_generation` data, and
 //!    emit a `[WARN] daemon predates daemon_stats_v2`.
+//!
+//! Replicating the daemon's blake3 hash here (rather than depending
+//! on the daemon crate) keeps doctor independent of the daemon's
+//! internal surface; drift risk is bounded because the hash function
+//! is deterministic and the daemon-side comment marks it stable.
+//! `workspace_socket_path_*` tests pin the file-shape contract.
 //!
 //! Synchronous `std::os::unix::net::UnixStream` is used here (no
 //! tokio); a single round-trip per section run, called from within
@@ -45,6 +60,28 @@ use super::report::{FixClass, FixSnippet, Row, SectionReport};
 /// diagnostic; a slow daemon is itself a diagnosis ("daemon hung").
 const ROUND_TRIP_TIMEOUT: Duration = Duration::from_secs(1);
 
+/// Compute the runtime-root directory the same way rts-daemon does.
+/// Returns `None` on unsupported OS or unset XDG_RUNTIME_DIR (Linux).
+fn runtime_root() -> Option<PathBuf> {
+    #[cfg(target_os = "linux")]
+    {
+        let xdg = std::env::var("XDG_RUNTIME_DIR").ok()?;
+        if xdg.is_empty() {
+            return None;
+        }
+        Some(PathBuf::from(xdg).join("rts"))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let home = dirs::home_dir()?;
+        Some(home.join("Library").join("Caches").join("rts"))
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        None
+    }
+}
+
 /// Compute the default-socket path the same way rts-daemon does for the
 /// no-`--workspace` case. Mirrors `crates/rts-daemon/src/socket.rs`.
 ///
@@ -53,41 +90,96 @@ const ROUND_TRIP_TIMEOUT: Duration = Duration::from_secs(1);
 ///
 /// macOS: `$HOME/Library/Caches/rts/default.sock`.
 pub(crate) fn default_socket_path() -> Option<PathBuf> {
-    #[cfg(target_os = "linux")]
-    {
-        let xdg = std::env::var("XDG_RUNTIME_DIR").ok()?;
-        if xdg.is_empty() {
-            return None;
-        }
-        Some(PathBuf::from(xdg).join("rts").join("default.sock"))
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let home = dirs::home_dir()?;
-        Some(
-            home.join("Library")
-                .join("Caches")
-                .join("rts")
-                .join("default.sock"),
-        )
-    }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    {
-        None
-    }
+    Some(runtime_root()?.join("default.sock"))
+}
+
+/// Compute the per-workspace socket path the same way rts-daemon does
+/// for the `--workspace <path>` case. Mirrors
+/// `socket_path_for_workspace` in `crates/rts-daemon/src/socket.rs:54`:
+/// `<runtime_root>/ws-<16hex>.sock` where `16hex` is the first 8 bytes
+/// of `blake3(canonical_path.as_os_str_bytes())`.
+///
+/// Replicating the daemon's hash logic here (instead of depending on
+/// the daemon crate) keeps doctor independent of the daemon's internal
+/// surface. Drift risk is real but bounded — the hash is deterministic
+/// and the daemon-side comment marks it as stable.
+///
+/// Returns `None` when the runtime root can't be resolved (Linux with
+/// unset `XDG_RUNTIME_DIR`, or an unsupported OS).
+pub(crate) fn workspace_socket_path(canonical_workspace: &Path) -> Option<PathBuf> {
+    let dir = runtime_root()?;
+    let bytes = canonical_workspace.as_os_str().as_encoded_bytes();
+    let hash = blake3::hash(bytes);
+    let short = hash.to_hex();
+    let short16 = &short.as_str()[..16];
+    Some(dir.join(format!("ws-{short16}.sock")))
 }
 
 pub fn run(ctx: &mut Ctx) -> SectionReport {
     let mut s = SectionReport::new("daemon");
 
-    // 1. Resolve the socket path. Without one we can only WARN.
-    let socket_path = match default_socket_path() {
-        Some(p) => p,
+    // 1. Build the candidate socket path list. When the user is
+    //    running in a workspace (the common case after #109),
+    //    `rts-daemon --workspace $PWD` binds the per-workspace
+    //    `ws-<16hex>.sock` instead of `default.sock` — so we have to
+    //    probe both. The workspace-scoped path takes precedence
+    //    because it's the more specific match; default.sock is the
+    //    fallback for daemons spawned without `--workspace`.
+    //
+    //    Codex review on PR #109 (P1) caught the original code's
+    //    blind spot: probing only `default.sock` reported `not
+    //    running` for any user running a workspace-scoped daemon,
+    //    masking the actual index state.
+    let workspace_socket = ctx
+        .workspace_path
+        .as_deref()
+        .and_then(workspace_socket_path);
+    let default_socket = default_socket_path();
+
+    let candidates: Vec<PathBuf> = [workspace_socket.clone(), default_socket.clone()]
+        .into_iter()
+        .flatten()
+        .collect();
+
+    if candidates.is_empty() {
+        s.push(Row::warn(
+            "daemon:socket_path_unresolved",
+            "could not resolve any socket path (unsupported OS or XDG_RUNTIME_DIR unset)",
+        ));
+        return s;
+    }
+
+    // 2. Pick the first candidate whose socket file *exists*. We
+    //    don't try to connect yet — that's step 3. Probing presence
+    //    first lets us report `not running` with the *expected*
+    //    workspace-scoped path in the fix snippet, instead of
+    //    nudging the user toward `default.sock`.
+    let socket_path = match candidates.iter().find(|p| std::fs::metadata(p).is_ok()) {
+        Some(p) => p.clone(),
         None => {
-            s.push(Row::warn(
-                "daemon:socket_path_unresolved",
-                "could not resolve default socket path (unsupported OS or XDG_RUNTIME_DIR unset)",
-            ));
+            // No socket exists at any candidate path. Report
+            // `not_running` using the workspace-scoped path (or
+            // default if no workspace was set) so the fix command
+            // matches the path the daemon would bind.
+            let preferred = workspace_socket
+                .clone()
+                .or(default_socket.clone())
+                .expect("candidates was non-empty");
+            s.push(
+                Row::warn(
+                    "daemon:not_running",
+                    format!(
+                        "no daemon socket at {} — daemon not running for this workspace",
+                        preferred.display()
+                    ),
+                )
+                .with_fix(
+                    FixSnippet::new(FixClass::StartDaemon, "rts-daemon --workspace $PWD &")
+                        .with_description(
+                            "start rts-daemon as a background process for this workspace",
+                        ),
+                ),
+            );
             return s;
         }
     };
@@ -96,36 +188,10 @@ pub fn run(ctx: &mut Ctx) -> SectionReport {
     // the path is informative for future debug/diagnostics).
     ctx.socket_path = Some(socket_path.clone());
 
-    // 2. Socket file present?
-    let exists = match std::fs::metadata(&socket_path) {
-        Ok(_) => true,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
-        Err(_) => {
-            // Permission denied or other I/O — treat as "absent" for
-            // doctor purposes since we can't probe it anyway.
-            false
-        }
-    };
-    if !exists {
-        s.push(
-            Row::warn(
-                "daemon:not_running",
-                format!(
-                    "no daemon socket at {} — daemon not running for this workspace",
-                    socket_path.display()
-                ),
-            )
-            .with_fix(
-                FixSnippet::new(FixClass::StartDaemon, "rts-daemon --workspace $PWD &")
-                    .with_description(
-                        "start rts-daemon as a background process for this workspace",
-                    ),
-            ),
-        );
-        return s;
-    }
-
     // 3. Connect with a short deadline. EREFUSED → stale socket.
+    // (The candidate-resolution above already established the socket
+    // file exists, so the original `if !exists` early-out has moved
+    // up there.)
     let stream = match UnixStream::connect(&socket_path) {
         Ok(s) => s,
         Err(e) => {
@@ -280,6 +346,67 @@ mod tests {
     use std::os::unix::net::UnixListener;
     use std::thread;
     use tempfile::TempDir;
+
+    #[test]
+    fn workspace_socket_path_mirrors_daemon_naming() {
+        // Pinning the expected shape: `ws-<16hex>.sock`. The 16hex is
+        // the first 8 bytes of `blake3(canonical_path.as_os_str_bytes())`
+        // — same algorithm the daemon's
+        // `crates/rts-daemon/src/socket.rs::socket_path_for_workspace`
+        // uses. Drift here would silently route doctor away from the
+        // socket the daemon actually binds.
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = workspace_socket_path(tmp.path());
+        let Some(p) = path else {
+            // Linux test env without XDG_RUNTIME_DIR is a real possibility
+            // in CI; just confirm the absent path doesn't panic.
+            return;
+        };
+        let file = p
+            .file_name()
+            .and_then(|n| n.to_str())
+            .expect("filename")
+            .to_string();
+        assert!(file.starts_with("ws-"), "expected `ws-` prefix; got {file}");
+        assert!(
+            file.ends_with(".sock"),
+            "expected `.sock` suffix; got {file}"
+        );
+        // 3 ("ws-") + 16 hex + 5 (".sock") = 24 chars total
+        assert_eq!(file.len(), 24, "expected 24-char filename; got `{file}`");
+        let hex = &file["ws-".len()..file.len() - ".sock".len()];
+        assert!(
+            hex.chars().all(|c| c.is_ascii_hexdigit()),
+            "expected lowercase-hex middle segment; got `{hex}`"
+        );
+    }
+
+    #[test]
+    fn workspace_socket_path_is_deterministic() {
+        // Same path → same hash. The fingerprint must be stable across
+        // process restarts so doctor and daemon agree.
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let a = workspace_socket_path(tmp.path());
+        let b = workspace_socket_path(tmp.path());
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn workspace_socket_path_differs_per_workspace() {
+        // Two different paths must hash to different sockets, else the
+        // daemon's bind-per-workspace invariant breaks.
+        let a_tmp = tempfile::tempdir().expect("tempdir a");
+        let b_tmp = tempfile::tempdir().expect("tempdir b");
+        let a = workspace_socket_path(a_tmp.path());
+        let b = workspace_socket_path(b_tmp.path());
+        if let (Some(a), Some(b)) = (a, b) {
+            assert_ne!(
+                a.file_name(),
+                b.file_name(),
+                "distinct workspaces must hash to distinct sockets"
+            );
+        }
+    }
 
     fn make_ctx(socket_override: Option<PathBuf>) -> (TempDir, Ctx) {
         let tmp = tempfile::tempdir().expect("tempdir");
