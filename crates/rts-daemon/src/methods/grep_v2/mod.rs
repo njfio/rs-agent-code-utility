@@ -16,6 +16,13 @@
 
 pub mod compose;
 pub mod errors;
+pub mod multiline;
+pub mod within_symbol;
 
 pub use compose::{ValidatedGrepCall, validate};
-pub use errors::{GrepValidationError, GrepValidationCode};
+pub use errors::{GrepValidationCode, GrepValidationError};
+pub use within_symbol::{
+    MatchRange as WithinSymbolMatchRange, WITHIN_SYMBOL_MAX_DEFS,
+    filter_matches_by_defs as filter_matches_by_within_symbol_defs,
+    resolve_and_filter as resolve_and_filter_within_symbol,
+};

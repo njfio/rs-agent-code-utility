@@ -1155,7 +1155,7 @@ pub async fn grep(
     }
     let limit = shared_filters.limit as usize;
 
-    let (text_for_response, case_insensitive, _multiline, scanner) = match validated {
+    let (text_for_response, case_insensitive, multiline, scanner) = match validated {
         super::grep_v2::ValidatedGrepCall::Literal {
             text,
             case_insensitive,
@@ -1171,23 +1171,28 @@ pub async fn grep(
             case_insensitive,
             multiline,
         } => {
-            // U3 will honor `multiline` here. For U2 we keep the v1
-            // single-line semantics; the validator already rejected
-            // `multiline: true` on the literal path, so the only way
-            // we reach this branch with `multiline: true` is on the
-            // regex path, which U3 wires up.
-            let mut builder = regex::bytes::RegexBuilder::new(&pattern);
-            builder.case_insensitive(case_insensitive);
-            if multiline {
-                builder.dot_matches_new_line(true).multi_line(true);
-                // U3 will set explicit `size_limit`/`dfa_size_limit`.
-            }
-            let re = builder.build().map_err(|e| {
-                ProtocolError::new(
-                    ErrorCode::InvalidParams,
-                    format!("`text` failed to compile as regex: {e}"),
+            // U3: multiline path runs through `grep_v2::multiline` so
+            // the DFA/NFA size budgets are explicit and compile
+            // failures surface as `REGEX_TOO_COMPLEX` rather than a
+            // generic INVALID_PARAMS envelope. Single-line path keeps
+            // v1 semantics (regex crate defaults; INVALID_PARAMS on
+            // syntax errors) so v1 callers see byte-identical errors.
+            let re = if multiline {
+                super::grep_v2::multiline::compile_multiline_regex(
+                    &pattern,
+                    case_insensitive,
                 )
-            })?;
+                .map_err(|e| e.into_protocol_error())?
+            } else {
+                let mut builder = regex::bytes::RegexBuilder::new(&pattern);
+                builder.case_insensitive(case_insensitive);
+                builder.build().map_err(|e| {
+                    ProtocolError::new(
+                        ErrorCode::InvalidParams,
+                        format!("`text` failed to compile as regex: {e}"),
+                    )
+                })?
+            };
             (pattern, case_insensitive, multiline, GrepScanner::Regex(re))
         }
         super::grep_v2::ValidatedGrepCall::Structural { .. } => {
@@ -1203,10 +1208,12 @@ pub async fn grep(
     };
     // Make the v1 unused-variables guard happy for the new fields
     // until U4-U7 consume them. Keeps the v1 hot path untouched.
+    // `multiline` is consumed below to compute `end_line` for matches
+    // that span newlines; `case_insensitive` is folded into the
+    // scanner already.
     let _ = (
         &text_for_response,
-        &shared_filters.within_symbol,
-        shared_filters.within_symbol_allow_overload,
+        case_insensitive,
         &shared_filters.language,
     );
 
@@ -1328,6 +1335,20 @@ pub async fn grep(
                 let raw_line = &bytes[line_start..line_end];
                 let line_text = bytes_to_truncated_utf8(raw_line, MAX_LINE_BYTES);
                 let one_based_line = (line_no + 1) as u32;
+                // U3: when the regex spans newlines (`multiline: true`
+                // with `.` matching `\n`), the match's end byte may
+                // sit on a later line than the start. Compute the
+                // end line from `m_end`; v1 single-line matches (and
+                // every literal match) collapse `end_line` back to
+                // `start_line` because `m_end` is inside the same
+                // line as `m_start`.
+                let one_based_end_line = if multiline && m_end > line_end {
+                    let (end_line_no, _, _) =
+                        find_line_bounds(&bytes, m_end.saturating_sub(1));
+                    (end_line_no + 1) as u32
+                } else {
+                    one_based_line
+                };
 
                 // Resolve enclosing def. `pick_innermost_def` returns
                 // the smallest line-range def covering `one_based_line`,
@@ -1371,7 +1392,7 @@ pub async fn grep(
                     "file": rel,
                     "range": {
                         "start_line": one_based_line,
-                        "end_line":   one_based_line,
+                        "end_line":   one_based_end_line,
                         "start_byte": m_start as u32,
                         "end_byte":   m_end as u32,
                     },
@@ -1403,6 +1424,65 @@ pub async fn grep(
         if file_recorded {
             files_with_matches += 1;
         }
+    }
+
+    // U4: within_symbol post-filter. Runs after collection (so the
+    // store lookup is paid at most once per call, not per match) and
+    // before the rank-score sort (so the response ordering remains
+    // the documented "PageRank descending" shape). Strict containment
+    // semantics — see `grep_v2::within_symbol` for the policy.
+    //
+    // Cardinality failures (`WITHIN_SYMBOL_NOT_FOUND`,
+    // `WITHIN_SYMBOL_TOO_MANY_DEFS`) are surfaced as INVALID_PARAMS
+    // envelopes per the plan; the filter never produces a partial
+    // result on a name resolution failure.
+    if let Some(name) = shared_filters.within_symbol.as_deref() {
+        let ranges: Vec<super::grep_v2::WithinSymbolMatchRange> = matches
+            .iter()
+            .map(|m| super::grep_v2::WithinSymbolMatchRange {
+                file: m["file"].as_str().unwrap_or("").to_string(),
+                start_byte: m["range"]["start_byte"].as_u64().unwrap_or(0) as u32,
+                end_byte: m["range"]["end_byte"].as_u64().unwrap_or(0) as u32,
+            })
+            .collect();
+        let kept = super::grep_v2::resolve_and_filter_within_symbol(
+            &store_arc,
+            name,
+            shared_filters.within_symbol_allow_overload,
+            ranges,
+        )
+        .map_err(|e| e.into_protocol_error())?;
+        // Re-index `matches` to only those whose (file, start_byte,
+        // end_byte) survived the filter. Build a lookup set keyed on
+        // (file, start_byte, end_byte) — matches are unique on that
+        // tuple within a single response (a match is a concrete
+        // byte slice).
+        use std::collections::HashSet;
+        let keep_keys: HashSet<(String, u32, u32)> = kept
+            .into_iter()
+            .map(|r| (r.file, r.start_byte, r.end_byte))
+            .collect();
+        let dropped_count = matches.len();
+        matches.retain(|m| {
+            let f = m["file"].as_str().unwrap_or("").to_string();
+            let s = m["range"]["start_byte"].as_u64().unwrap_or(0) as u32;
+            let e = m["range"]["end_byte"].as_u64().unwrap_or(0) as u32;
+            keep_keys.contains(&(f, s, e))
+        });
+        // `files_with_matches` was computed during collection and is
+        // now stale (a file may have contributed matches all of which
+        // got filtered out). Recompute from the surviving matches.
+        let surviving_files: HashSet<&str> = matches
+            .iter()
+            .filter_map(|m| m["file"].as_str())
+            .collect();
+        files_with_matches = surviving_files.len();
+        // Reflect the post-filter drop in the `truncated` accounting:
+        // `total_pre_truncate` was counted pre-filter, so if the
+        // filter dropped any rows we want the existing
+        // `total_pre_truncate > matches.len()` clause to keep firing.
+        // No mutation needed; just note the invariant.
+        let _ = dropped_count;
     }
 
     let truncated = truncated_hit_cap || total_pre_truncate > matches.len();
