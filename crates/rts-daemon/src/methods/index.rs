@@ -1141,6 +1141,43 @@ pub async fn grep(
     let (validated, shared_filters) = super::grep_v2::validate(&validation_input)
         .map_err(|e| e.into_protocol_error())?;
 
+    // U7: bump grep_v2 sub-counters based on which v2 params were
+    // actually active in this call. The parent `index_grep` counter
+    // is bumped by the dispatcher (`methods/mod.rs`) — DO NOT bump it
+    // again here. Sub-counters fire after validation but before the
+    // heavy work, so e.g. a structural call that later times out
+    // still counts toward `Index.Grep.structural`, giving operators
+    // visibility into rejection vs failure rates. Bump-policy spec:
+    // a call with `multiline + structural + within_symbol` bumps four
+    // counters total (parent + three sub).
+    {
+        use std::sync::atomic::Ordering::Relaxed;
+        if matches!(
+            validated,
+            super::grep_v2::ValidatedGrepCall::Regex { multiline: true, .. }
+        ) {
+            state
+                .call_counters
+                .index_grep_multiline
+                .fetch_add(1, Relaxed);
+        }
+        if matches!(
+            validated,
+            super::grep_v2::ValidatedGrepCall::Structural { .. }
+        ) {
+            state
+                .call_counters
+                .index_grep_structural
+                .fetch_add(1, Relaxed);
+        }
+        if shared_filters.within_symbol.is_some() {
+            state
+                .call_counters
+                .index_grep_within_symbol
+                .fetch_add(1, Relaxed);
+        }
+    }
+
     if (shared_filters.limit as usize) > MAX_LIMIT {
         return Err(ProtocolError::new(
             ErrorCode::InvalidParams,
