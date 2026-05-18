@@ -1233,7 +1233,9 @@ pub async fn grep(
             (pattern, case_insensitive, multiline, GrepScanner::Regex(re))
         }
         super::grep_v2::ValidatedGrepCall::Structural {
-            query, languages, ..
+            query,
+            languages,
+            combine,
         } => {
             // Structural mode owns its own response builder — the
             // shape is a superset of the v1 grep response with
@@ -1242,11 +1244,13 @@ pub async fn grep(
             // structural::run; do not thread through the literal/
             // regex scan accumulation below.
             //
-            // The `combine` arm of ValidatedGrepCall::Structural
-            // (literal/regex intersection) is recognized by the
-            // validator but its intersection logic is deferred to
-            // a follow-up (would re-run the literal/regex scanner
-            // post-structural). v1 ships structural-only matches.
+            // `combine` carries the optional literal/regex filter the
+            // caller asked to intersect with structural matches. The
+            // protocol matrix in compose.rs defines `structural + text`
+            // and `structural + regex` as INTERSECTION semantics —
+            // every returned match must satisfy *both* the structural
+            // query AND the literal/regex filter. Applied as a
+            // post-pass over `result.matches` below.
             super::grep_v2::validate_predicates(&query).map_err(|e| e.into_protocol_error())?;
 
             // Compile the file_glob early so a bad glob fails fast
@@ -1323,6 +1327,41 @@ pub async fn grep(
                 })),
             })?;
 
+            // Apply the `combine` (literal/regex) intersection filter
+            // post-scan. The protocol matrix defines `structural + text`
+            // and `structural + regex` as intersection: a returned
+            // match must satisfy BOTH filters. Without this filter
+            // calls that combine `structural_query` with `text`/`regex`
+            // would return false-positives (structural-only matches),
+            // breaking the documented composition contract — this is
+            // exactly the bug Codex flagged on PR #110 review.
+            //
+            // Implementation: group matches by file → read each file
+            // once → slice the byte range for each match → check the
+            // literal substring (case-insensitive by default) or run
+            // the regex against the slice. Reading bytes per file is
+            // unavoidable because StructuralMatch carries byte ranges,
+            // not the matched text.
+            use super::grep_v2::compose::StructuralCombine;
+            let combine_filtered: Vec<_> = match &combine {
+                StructuralCombine::None => result.matches,
+                StructuralCombine::Literal {
+                    text,
+                    case_insensitive,
+                } => filter_structural_by_literal(&root, result.matches, text, *case_insensitive),
+                StructuralCombine::Regex {
+                    pattern,
+                    case_insensitive,
+                    multiline,
+                } => filter_structural_by_regex(
+                    &root,
+                    result.matches,
+                    pattern,
+                    *case_insensitive,
+                    *multiline,
+                )?,
+            };
+
             // Apply within_symbol filter post-scan if requested.
             // Mirrors the literal/regex path's filter ordering.
             let final_matches: Vec<_> = if let Some(name) = &shared_filters.within_symbol {
@@ -1358,8 +1397,7 @@ pub async fn grep(
                 }
                 // Filter: keep matches whose byte range lies inside
                 // any resolved def's byte range AND in the same file.
-                result
-                    .matches
+                combine_filtered
                     .into_iter()
                     .filter(|m| {
                         defs.iter().any(|d| {
@@ -1370,7 +1408,7 @@ pub async fn grep(
                     })
                     .collect()
             } else {
-                result.matches
+                combine_filtered
             };
 
             // Serialize structural matches to JSON.
@@ -1747,6 +1785,180 @@ pub async fn grep(
         "files_scanned":      files_scanned,
         "files_with_matches": files_with_matches,
     }))
+}
+
+// ---- v0.6 Index.Grep v2 structural × literal/regex intersection
+// helpers (PR #110 Codex review C5). The structural scanner returns
+// matches as byte-range coordinates; intersection with the literal
+// or regex filter requires reading the file bytes at each match's
+// range and testing the substring/pattern against that slice.
+
+/// Filter structural matches by literal-substring intersection.
+/// Matches whose `[start_byte..end_byte]` slice contains `needle`
+/// (case-insensitive when `case_insensitive`) are kept.
+///
+/// Files are read once per file to amortize I/O. A match in a file
+/// that fails to read is silently dropped (already-present matches
+/// for other files survive); this mirrors the v1 grep handler's
+/// "log + continue" file-error policy.
+fn filter_structural_by_literal(
+    root: &std::path::Path,
+    matches: Vec<super::grep_v2::structural::StructuralMatch>,
+    needle: &str,
+    case_insensitive: bool,
+) -> Vec<super::grep_v2::structural::StructuralMatch> {
+    use std::collections::HashMap;
+    if matches.is_empty() || needle.is_empty() {
+        // Empty needle would tautologically match every slice; the
+        // validator already rejects empty `text`, but be defensive.
+        return matches;
+    }
+    let mut by_file: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, m) in matches.iter().enumerate() {
+        by_file.entry(m.file.as_str()).or_default().push(i);
+    }
+    let mut keep = vec![false; matches.len()];
+    let needle_bytes = needle.as_bytes();
+    for (file, indices) in by_file {
+        let path = root.join(file);
+        let bytes = match std::fs::read(&path) {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::debug!(
+                    target: "rts_daemon::grep_v2",
+                    error = %e,
+                    file = %file,
+                    "structural-intersection: file read failed; dropping its matches"
+                );
+                continue;
+            }
+        };
+        for &i in &indices {
+            let m = &matches[i];
+            let lo = m.start_byte as usize;
+            let hi = m.end_byte as usize;
+            if hi > bytes.len() || lo > hi {
+                continue;
+            }
+            let slice = &bytes[lo..hi];
+            let matched = if case_insensitive {
+                slice_contains_case_insensitive(slice, needle_bytes)
+            } else {
+                slice_contains_exact(slice, needle_bytes)
+            };
+            if matched {
+                keep[i] = true;
+            }
+        }
+    }
+    matches
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| keep[*i])
+        .map(|(_, m)| m)
+        .collect()
+}
+
+/// Exact byte-level substring check via windowed scan. The std
+/// library doesn't expose a `bytes.find(needle)` for arbitrary
+/// byte slices; this is a small O(n*m) helper that's fine for
+/// intersection scans where the match slices are bounded by the
+/// structural query's typical node sizes (kilobytes, not megabytes).
+fn slice_contains_exact(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    if needle.len() > haystack.len() {
+        return false;
+    }
+    haystack.windows(needle.len()).any(|w| w == needle)
+}
+
+/// Case-insensitive byte-level substring check. Works over ASCII
+/// case; non-ASCII bytes match only their exact value. This mirrors
+/// the v1 grep's literal-mode behavior, which uses the same
+/// case-fold-ASCII semantic.
+fn slice_contains_case_insensitive(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    if needle.len() > haystack.len() {
+        return false;
+    }
+    'outer: for start in 0..=haystack.len() - needle.len() {
+        for j in 0..needle.len() {
+            if haystack[start + j].to_ascii_lowercase() != needle[j].to_ascii_lowercase() {
+                continue 'outer;
+            }
+        }
+        return true;
+    }
+    false
+}
+
+/// Filter structural matches by regex intersection. Same file-once-
+/// read pattern as `filter_structural_by_literal`. Compile failures
+/// here are bubbled up as `INVALID_PARAMS` so the caller can
+/// self-correct the regex.
+fn filter_structural_by_regex(
+    root: &std::path::Path,
+    matches: Vec<super::grep_v2::structural::StructuralMatch>,
+    pattern: &str,
+    case_insensitive: bool,
+    multiline: bool,
+) -> Result<Vec<super::grep_v2::structural::StructuralMatch>, ProtocolError> {
+    use std::collections::HashMap;
+    if matches.is_empty() {
+        return Ok(matches);
+    }
+    let mut builder = regex::bytes::RegexBuilder::new(pattern);
+    builder.case_insensitive(case_insensitive);
+    if multiline {
+        builder.dot_matches_new_line(true).multi_line(true);
+    }
+    let re = builder.build().map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InvalidParams,
+            format!("`text` failed to compile as regex: {e}"),
+        )
+    })?;
+    let mut by_file: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, m) in matches.iter().enumerate() {
+        by_file.entry(m.file.as_str()).or_default().push(i);
+    }
+    let mut keep = vec![false; matches.len()];
+    for (file, indices) in by_file {
+        let path = root.join(file);
+        let bytes = match std::fs::read(&path) {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::debug!(
+                    target: "rts_daemon::grep_v2",
+                    error = %e,
+                    file = %file,
+                    "structural-intersection: file read failed; dropping its matches"
+                );
+                continue;
+            }
+        };
+        for &i in &indices {
+            let m = &matches[i];
+            let lo = m.start_byte as usize;
+            let hi = m.end_byte as usize;
+            if hi > bytes.len() || lo > hi {
+                continue;
+            }
+            if re.is_match(&bytes[lo..hi]) {
+                keep[i] = true;
+            }
+        }
+    }
+    Ok(matches
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| keep[*i])
+        .map(|(_, m)| m)
+        .collect())
 }
 
 /// Helper: given byte offset `pos` into `bytes`, return
