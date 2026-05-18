@@ -69,9 +69,8 @@ pub struct MatchRange {
 /// resolved defs? Closing-edge coincidence (`m.end_byte ==
 /// def.end_byte`) is allowed; protruding past it is not.
 fn match_inside_any(m: &MatchRange, defs: &[FoundSymbol]) -> bool {
-    defs.iter().any(|d| {
-        m.file == d.file && m.start_byte >= d.start_byte && m.end_byte <= d.end_byte
-    })
+    defs.iter()
+        .any(|d| m.file == d.file && m.start_byte >= d.start_byte && m.end_byte <= d.end_byte)
 }
 
 /// Pure half of the within_symbol post-filter: given a vec of
@@ -80,10 +79,7 @@ fn match_inside_any(m: &MatchRange, defs: &[FoundSymbol]) -> bool {
 ///
 /// Splits out from [`resolve_and_filter`] so the byte-range logic
 /// can be unit-tested with synthetic inputs (no `Store` required).
-pub fn filter_matches_by_defs(
-    matches: Vec<MatchRange>,
-    defs: &[FoundSymbol],
-) -> Vec<MatchRange> {
+pub fn filter_matches_by_defs(matches: Vec<MatchRange>, defs: &[FoundSymbol]) -> Vec<MatchRange> {
     matches
         .into_iter()
         .filter(|m| match_inside_any(m, defs))
@@ -198,8 +194,7 @@ mod tests {
         let straddle_start = m("src/lib.rs", 90, 110);
         // overlaps the end (protrudes after def.end)
         let straddle_end = m("src/lib.rs", 190, 210);
-        let kept =
-            filter_matches_by_defs(vec![before, after, straddle_start, straddle_end], &defs);
+        let kept = filter_matches_by_defs(vec![before, after, straddle_start, straddle_end], &defs);
         assert!(kept.is_empty(), "no match strictly inside; got {kept:?}");
     }
 

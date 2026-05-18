@@ -33,7 +33,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -165,7 +169,10 @@ async fn grep_v2_capabilities_advertised_and_schema_accepts_new_fields() -> anyh
         .as_array()
         .cloned()
         .unwrap_or_default();
-    assert!(!v1_matches.is_empty(), "v1 grep returned no matches: {v1:?}");
+    assert!(
+        !v1_matches.is_empty(),
+        "v1 grep returned no matches: {v1:?}"
+    );
 
     // 4. A request that sets v2 fields deserializes cleanly. The
     //    handler may not yet honor these (U2-U6 land the behavior)

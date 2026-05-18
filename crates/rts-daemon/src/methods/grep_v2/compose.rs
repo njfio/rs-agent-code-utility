@@ -142,10 +142,7 @@ pub fn validate(
         if text.len() > MAX_TEXT_LEN {
             return Err(GrepValidationError::new(
                 GrepValidationCode::InvalidTextLength,
-                format!(
-                    "`text` is {} chars; maximum is {MAX_TEXT_LEN}",
-                    text.len()
-                ),
+                format!("`text` is {} chars; maximum is {MAX_TEXT_LEN}", text.len()),
             ));
         }
     }
@@ -160,10 +157,7 @@ pub fn validate(
 
     // 3. Structural queries require `language`.
     if has_structural {
-        let lang_missing = input
-            .language
-            .as_ref()
-            .is_none_or(|v| v.is_empty());
+        let lang_missing = input.language.as_ref().is_none_or(|v| v.is_empty());
         if lang_missing {
             return Err(GrepValidationError::new(
                 GrepValidationCode::StructuralRequiresLanguage,
@@ -307,7 +301,9 @@ mod tests {
             ..Default::default()
         };
         let (call, _) = validate(&input).unwrap();
-        assert!(matches!(call, ValidatedGrepCall::Structural { ref combine, .. } if combine == &StructuralCombine::None));
+        assert!(
+            matches!(call, ValidatedGrepCall::Structural { ref combine, .. } if combine == &StructuralCombine::None)
+        );
     }
 
     #[test]
@@ -321,7 +317,9 @@ mod tests {
         let (call, _) = validate(&input).unwrap();
         match call {
             ValidatedGrepCall::Structural { combine, .. } => {
-                assert!(matches!(combine, StructuralCombine::Literal { ref text, .. } if text == "unsafe"));
+                assert!(
+                    matches!(combine, StructuralCombine::Literal { ref text, .. } if text == "unsafe")
+                );
             }
             _ => panic!("expected Structural call"),
         }
@@ -339,7 +337,9 @@ mod tests {
         let (call, _) = validate(&input).unwrap();
         match call {
             ValidatedGrepCall::Structural { combine, .. } => {
-                assert!(matches!(combine, StructuralCombine::Regex { ref pattern, multiline: false, .. } if pattern == "unsafe.*fn"));
+                assert!(
+                    matches!(combine, StructuralCombine::Regex { ref pattern, multiline: false, .. } if pattern == "unsafe.*fn")
+                );
             }
             _ => panic!("expected Structural call"),
         }

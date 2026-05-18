@@ -58,7 +58,13 @@ use super::limits::PREDICATE_REGEX_DFA_LIMIT;
 /// The v1 whitelist. Lexically ordered alphabetically; the order
 /// doesn't affect behavior but keeps diffs readable.
 const ALLOWED_PREDICATES: &[&str] = &[
-    "any-of?", "eq?", "is-not?", "is?", "match?", "not-eq?", "not-match?",
+    "any-of?",
+    "eq?",
+    "is-not?",
+    "is?",
+    "match?",
+    "not-eq?",
+    "not-match?",
 ];
 
 /// Inspect `query_text` for predicates and reject any that fall
@@ -177,9 +183,7 @@ fn scan_predicates(query_text: &str) -> Vec<ScannedPredicate> {
                 let name_start = j + 1;
                 let mut k = name_start;
                 while k < bytes.len()
-                    && (bytes[k].is_ascii_alphanumeric()
-                        || bytes[k] == b'-'
-                        || bytes[k] == b'_')
+                    && (bytes[k].is_ascii_alphanumeric() || bytes[k] == b'-' || bytes[k] == b'_')
                 {
                     k += 1;
                 }

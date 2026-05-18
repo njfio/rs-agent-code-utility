@@ -64,10 +64,7 @@ pub(crate) fn compile_multiline_regex_with_limits(
             GrepValidationCode::RegexTooComplex,
             format!("multiline regex failed to compile: {e}"),
         )
-        .with_data(
-            "error_message",
-            serde_json::Value::String(e.to_string()),
-        )
+        .with_data("error_message", serde_json::Value::String(e.to_string()))
     })
 }
 
@@ -90,10 +87,7 @@ mod tests {
         // error. We surface it as REGEX_TOO_COMPLEX with the upstream
         // diagnostic in `data.error_message`.
         let err = compile_multiline_regex_with_limits(
-            r"(?s).*",
-            false,
-            /* dfa_size_limit = */ 1024,
-            /* nfa_size_limit = */ 1024,
+            r"(?s).*", false, /* dfa_size_limit = */ 1024, /* nfa_size_limit = */ 1024,
         )
         .expect_err("tiny budget must reject `(?s).*`");
         assert_eq!(err.code, GrepValidationCode::RegexTooComplex);
@@ -110,8 +104,8 @@ mod tests {
         // for both syntax errors and size-limit breaches. We map both
         // to REGEX_TOO_COMPLEX (the diagnostic message preserves the
         // distinction for the caller).
-        let err = compile_multiline_regex(r"(unbalanced", false)
-            .expect_err("syntax error must reject");
+        let err =
+            compile_multiline_regex(r"(unbalanced", false).expect_err("syntax error must reject");
         assert_eq!(err.code, GrepValidationCode::RegexTooComplex);
     }
 }

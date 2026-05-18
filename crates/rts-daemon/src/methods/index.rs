@@ -1138,8 +1138,8 @@ pub async fn grep(
         within_symbol_allow_overload: p.within_symbol_allow_overload,
         language: p.language.clone(),
     };
-    let (validated, shared_filters) = super::grep_v2::validate(&validation_input)
-        .map_err(|e| e.into_protocol_error())?;
+    let (validated, shared_filters) =
+        super::grep_v2::validate(&validation_input).map_err(|e| e.into_protocol_error())?;
 
     // U7: bump grep_v2 sub-counters based on which v2 params were
     // actually active in this call. The parent `index_grep` counter
@@ -1154,7 +1154,10 @@ pub async fn grep(
         use std::sync::atomic::Ordering::Relaxed;
         if matches!(
             validated,
-            super::grep_v2::ValidatedGrepCall::Regex { multiline: true, .. }
+            super::grep_v2::ValidatedGrepCall::Regex {
+                multiline: true,
+                ..
+            }
         ) {
             state
                 .call_counters
@@ -1215,11 +1218,8 @@ pub async fn grep(
             // v1 semantics (regex crate defaults; INVALID_PARAMS on
             // syntax errors) so v1 callers see byte-identical errors.
             let re = if multiline {
-                super::grep_v2::multiline::compile_multiline_regex(
-                    &pattern,
-                    case_insensitive,
-                )
-                .map_err(|e| e.into_protocol_error())?
+                super::grep_v2::multiline::compile_multiline_regex(&pattern, case_insensitive)
+                    .map_err(|e| e.into_protocol_error())?
             } else {
                 let mut builder = regex::bytes::RegexBuilder::new(&pattern);
                 builder.case_insensitive(case_insensitive);
@@ -1247,8 +1247,7 @@ pub async fn grep(
             // validator but its intersection logic is deferred to
             // a follow-up (would re-run the literal/regex scanner
             // post-structural). v1 ships structural-only matches.
-            super::grep_v2::validate_predicates(&query)
-                .map_err(|e| e.into_protocol_error())?;
+            super::grep_v2::validate_predicates(&query).map_err(|e| e.into_protocol_error())?;
 
             // Compile the file_glob early so a bad glob fails fast
             // before snapshotting the store.
@@ -1305,7 +1304,9 @@ pub async fn grep(
                         .collect();
                     ProtocolError::new(
                         ErrorCode::InvalidParams,
-                        format!("structural query failed to compile for any requested language: {first}"),
+                        format!(
+                            "structural query failed to compile for any requested language: {first}"
+                        ),
                     )
                     .with_data(serde_json::json!({
                         "code": super::grep_v2::GrepValidationCode::StructuralQueryInvalid.as_str(),
@@ -1580,8 +1581,7 @@ pub async fn grep(
                 // `start_line` because `m_end` is inside the same
                 // line as `m_start`.
                 let one_based_end_line = if multiline && m_end > line_end {
-                    let (end_line_no, _, _) =
-                        find_line_bounds(&bytes, m_end.saturating_sub(1));
+                    let (end_line_no, _, _) = find_line_bounds(&bytes, m_end.saturating_sub(1));
                     (end_line_no + 1) as u32
                 } else {
                     one_based_line
@@ -1709,10 +1709,8 @@ pub async fn grep(
         // `files_with_matches` was computed during collection and is
         // now stale (a file may have contributed matches all of which
         // got filtered out). Recompute from the surviving matches.
-        let surviving_files: HashSet<&str> = matches
-            .iter()
-            .filter_map(|m| m["file"].as_str())
-            .collect();
+        let surviving_files: HashSet<&str> =
+            matches.iter().filter_map(|m| m["file"].as_str()).collect();
         files_with_matches = surviving_files.len();
         // Reflect the post-filter drop in the `truncated` accounting:
         // `total_pre_truncate` was counted pre-filter, so if the

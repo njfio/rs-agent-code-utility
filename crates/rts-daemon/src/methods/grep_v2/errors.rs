@@ -114,6 +114,7 @@ impl GrepValidationError {
             "code".to_string(),
             serde_json::Value::String(self.code.as_str().to_string()),
         );
-        ProtocolError::new(ErrorCode::InvalidParams, self.message).with_data(serde_json::Value::Object(data))
+        ProtocolError::new(ErrorCode::InvalidParams, self.message)
+            .with_data(serde_json::Value::Object(data))
     }
 }

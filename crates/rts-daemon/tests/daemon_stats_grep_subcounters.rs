@@ -90,7 +90,10 @@ async fn grep_v2_subcounters_track_each_param_combo() -> anyhow::Result<()> {
     // (`hello`) the within_symbol resolution can hit so the call
     // reaches the bump site rather than failing in
     // `WITHIN_SYMBOL_NOT_FOUND`.
-    std::fs::write(workspace.path().join("hub.rs"), "pub fn hello() {\n    let x = 1;\n}\n")?;
+    std::fs::write(
+        workspace.path().join("hub.rs"),
+        "pub fn hello() {\n    let x = 1;\n}\n",
+    )?;
 
     let socket_path = if cfg!(target_os = "macos") {
         home_dir
@@ -180,13 +183,7 @@ async fn grep_v2_subcounters_track_each_param_combo() -> anyhow::Result<()> {
     }
 
     // 3. v1-shape grep: parent bumps; sub-counters stay flat.
-    let _ = round_trip(
-        &mut stream,
-        "10",
-        "Index.Grep",
-        json!({ "text": "hello" }),
-    )
-    .await?;
+    let _ = round_trip(&mut stream, "10", "Index.Grep", json!({ "text": "hello" })).await?;
     let stats1 = round_trip(&mut stream, "11", "Daemon.Stats", json!({})).await?;
     let calls1 = &stats1["result"]["calls"];
     assert_eq!(

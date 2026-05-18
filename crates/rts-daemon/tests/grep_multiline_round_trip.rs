@@ -224,7 +224,10 @@ async fn multiline_regex_matches_across_newlines() -> anyhow::Result<()> {
         }),
     )
     .await?;
-    assert!(single["error"].is_null(), "single-line grep errored: {single:?}");
+    assert!(
+        single["error"].is_null(),
+        "single-line grep errored: {single:?}"
+    );
     let single_hits_on_target: Vec<&Value> = single["result"]["matches"]
         .as_array()
         .map(|v| {

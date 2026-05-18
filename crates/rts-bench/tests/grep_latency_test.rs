@@ -130,13 +130,7 @@ async fn wait_for_index_ready(
         // `Workspace.Status` returns progress.phase ∈ {walking, ready};
         // we wait for "ready". Fall back to a `FindSymbol` probe if
         // the daemon doesn't recognise the method (older builds).
-        let resp = round_trip(
-            stream,
-            &next_id.to_string(),
-            "Workspace.Status",
-            json!({}),
-        )
-        .await;
+        let resp = round_trip(stream, &next_id.to_string(), "Workspace.Status", json!({})).await;
         let ready = match resp {
             Ok(v) => v["result"]["progress"]["phase"].as_str() == Some("ready"),
             Err(_) => false,
