@@ -67,7 +67,9 @@ fn classify(stats: &JsonValue, workspace_path: &Path, s: &mut SectionReport) {
     // doctor is reporting against a workspace the daemon doesn't
     // believe it's serving. Check it first so even if we can't read
     // other fields we still flag this.
-    let pinned = stats.get("pinned_workspace_path").and_then(JsonValue::as_str);
+    let pinned = stats
+        .get("pinned_workspace_path")
+        .and_then(JsonValue::as_str);
 
     let canonical_pwd = workspace_path
         .canonicalize()
@@ -84,9 +86,7 @@ fn classify(stats: &JsonValue, workspace_path: &Path, s: &mut SectionReport) {
             s.push(
                 Row::fail(
                     "workspace_index:pinned_path_mismatch",
-                    format!(
-                        "daemon pinned to {pinned_str}, doctor running in {canonical_pwd_str}"
-                    ),
+                    format!("daemon pinned to {pinned_str}, doctor running in {canonical_pwd_str}"),
                 )
                 .with_fix(
                     FixSnippet::new(
@@ -141,9 +141,10 @@ fn classify(stats: &JsonValue, workspace_path: &Path, s: &mut SectionReport) {
         .and_then(JsonValue::as_u64);
 
     let pinned_matches = pinned.map(|p| p == canonical_pwd_str).unwrap_or(false);
-    let any_fail = s.rows.iter().any(|r| {
-        matches!(r.kind, super::report::RowKind::Fail)
-    });
+    let any_fail = s
+        .rows
+        .iter()
+        .any(|r| matches!(r.kind, super::report::RowKind::Fail));
 
     if pinned_matches && !in_progress && !any_fail {
         // Happy-path OK row.
@@ -177,7 +178,9 @@ fn classify(stats: &JsonValue, workspace_path: &Path, s: &mut SectionReport) {
 /// for the fix-snippet command so workspaces with spaces in the path
 /// don't produce a broken paste-and-run line.
 fn shell_escape(s: &str) -> String {
-    if s.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '_' | '-' | '.' | '+' | ':')) {
+    if s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '_' | '-' | '.' | '+' | ':'))
+    {
         return s.to_string();
     }
     // Wrap in single quotes; embedded single quotes become `'\''`.
@@ -252,7 +255,11 @@ mod tests {
             "got rows: {:?}",
             r.rows
         );
-        let ok = r.rows.iter().find(|row| row.kind == RowKind::Ok).expect("OK row");
+        let ok = r
+            .rows
+            .iter()
+            .find(|row| row.kind == RowKind::Ok)
+            .expect("OK row");
         assert!(ok.message.contains("generation 7"));
         assert!(ok.message.contains("42 files"));
     }

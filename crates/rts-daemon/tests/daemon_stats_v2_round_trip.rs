@@ -172,9 +172,7 @@ async fn daemon_stats_v2_emits_workspace_fields_post_mount() -> anyhow::Result<(
             break;
         }
         if Instant::now() >= deadline {
-            anyhow::bail!(
-                "cold_walk_completed_at_ms never populated within 5s; last r={r:?}"
-            );
+            anyhow::bail!("cold_walk_completed_at_ms never populated within 5s; last r={r:?}");
         }
         tokio::time::sleep(Duration::from_millis(75)).await;
     }

@@ -168,10 +168,7 @@ pub async fn stats(
 
     // v2 fields. Only emitted when a workspace is mounted — old clients
     // and pre-mount Stats calls both see the v1 shape via field absence.
-    let (pinned_path, workspace_id, index_gen, cold_walk_at_ms) = match state
-        .workspace
-        .lock()
-    {
+    let (pinned_path, workspace_id, index_gen, cold_walk_at_ms) = match state.workspace.lock() {
         Ok(guard) => match guard.as_ref() {
             Some(mounted) => {
                 let pinned = mounted.canonical.path.to_string_lossy().into_owned();
@@ -205,7 +202,10 @@ pub async fn stats(
     // Stats responses keep the v1 shape exactly.
     if let (Some(path), Some(id), Some(generation)) = (pinned_path, workspace_id, index_gen) {
         let obj = body.as_object_mut().expect("body is an object");
-        obj.insert("pinned_workspace_path".into(), serde_json::Value::String(path));
+        obj.insert(
+            "pinned_workspace_path".into(),
+            serde_json::Value::String(path),
+        );
         obj.insert("workspace_id".into(), serde_json::Value::String(id));
         obj.insert(
             "index_generation".into(),

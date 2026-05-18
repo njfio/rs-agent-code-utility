@@ -154,8 +154,8 @@ pub fn run(ctx: &mut Ctx) -> SectionReport {
     };
 
     let result = stats.get("result").cloned().unwrap_or(JsonValue::Null);
-    let has_v2 = result.get("pinned_workspace_path").is_some()
-        && result.get("index_generation").is_some();
+    let has_v2 =
+        result.get("pinned_workspace_path").is_some() && result.get("index_generation").is_some();
 
     if has_v2 {
         // Happy path. One round-trip, all the data we need.
@@ -313,9 +313,10 @@ mod tests {
                         socket_path.display()
                     ),
                 )
-                .with_fix(
-                    FixSnippet::new(FixClass::StartDaemon, "rts-daemon --workspace $PWD &"),
-                ),
+                .with_fix(FixSnippet::new(
+                    FixClass::StartDaemon,
+                    "rts-daemon --workspace $PWD &",
+                )),
             );
             return s;
         }

@@ -8,8 +8,8 @@
 
 use super::ctx::Ctx;
 use super::hosts::{
-    aider::Aider, claude_code::ClaudeCode, cline::Cline, continue_::Continue, cursor::Cursor,
-    HostDetector, HostFinding,
+    HostDetector, HostFinding, aider::Aider, claude_code::ClaudeCode, cline::Cline,
+    continue_::Continue, cursor::Cursor,
 };
 use super::report::{Row, SectionReport};
 
@@ -19,13 +19,7 @@ pub fn run(ctx: &Ctx) -> SectionReport {
     // Detector order matches docs/install.md's wiring order: Claude
     // Code first (canonical), then Cursor / Cline / Aider / Continue.
     // Doctor's row stream is stable across runs because this list is.
-    let detectors: [&dyn HostDetector; 5] = [
-        &ClaudeCode,
-        &Cursor,
-        &Continue,
-        &Aider,
-        &Cline,
-    ];
+    let detectors: [&dyn HostDetector; 5] = [&ClaudeCode, &Cursor, &Continue, &Aider, &Cline];
 
     let mut findings: Vec<HostFinding> = Vec::with_capacity(detectors.len());
     for d in detectors {
@@ -110,11 +104,7 @@ fn claude_code_drift_row(cc: &HostFinding) -> Option<Row> {
         }
     }
     if paths.len() >= 2 {
-        let joined = paths
-            .iter()
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(", ");
+        let joined = paths.iter().cloned().collect::<Vec<_>>().join(", ");
         Some(Row::warn(
             "claude_code:multi_scope_drift",
             format!(

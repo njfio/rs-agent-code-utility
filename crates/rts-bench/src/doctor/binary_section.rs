@@ -128,7 +128,9 @@ fn is_executable_file(path: &Path) -> bool {
     // On non-Unix, fall back to "is a file". rts doesn't ship
     // Windows tarballs today, so this branch exists only to keep
     // the crate building if someone tries `cargo check --target …`.
-    std::fs::metadata(path).map(|m| m.is_file()).unwrap_or(false)
+    std::fs::metadata(path)
+        .map(|m| m.is_file())
+        .unwrap_or(false)
 }
 
 /// Resolve symlinks via `std::fs::canonicalize`. Falls back to the

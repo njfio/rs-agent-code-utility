@@ -65,9 +65,7 @@ pub async fn run(args: DoctorArgs) -> i32 {
             Ok(ctx) => ctx,
             Err(e) => {
                 eprintln!("rts-bench doctor: failed to initialize context: {e}");
-                return DoctorReport::self_error(format!(
-                    "context init failed: {e}"
-                ));
+                return DoctorReport::self_error(format!("context init failed: {e}"));
             }
         };
 

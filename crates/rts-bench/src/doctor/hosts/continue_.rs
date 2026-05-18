@@ -46,10 +46,7 @@ pub(crate) fn detect_impl(
     // we surface a row per scope so users can see which file declared it.
     let mut candidates: Vec<(&'static str, PathBuf)> = Vec::new();
     if let Some(ws) = workspace {
-        candidates.push((
-            "project_scope",
-            ws.join(".continue").join("config.yaml"),
-        ));
+        candidates.push(("project_scope", ws.join(".continue").join("config.yaml")));
     }
     if let Some(h) = home {
         candidates.push(("user_scope", h.join(".continue").join("config.yaml")));
@@ -119,14 +116,17 @@ pub(crate) fn detect_impl(
             },
             Err(msg) => {
                 finding.rows.push(
-                    Row::warn(label, format!("could not parse {}: {}", path.display(), msg))
-                        .with_fix(
-                            FixSnippet::new(
-                                FixClass::FixConfigSyntax,
-                                format!("$EDITOR {}", path.display()),
-                            )
-                            .with_description("fix YAML syntax in Continue config"),
-                        ),
+                    Row::warn(
+                        label,
+                        format!("could not parse {}: {}", path.display(), msg),
+                    )
+                    .with_fix(
+                        FixSnippet::new(
+                            FixClass::FixConfigSyntax,
+                            format!("$EDITOR {}", path.display()),
+                        )
+                        .with_description("fix YAML syntax in Continue config"),
+                    ),
                 );
             }
         }

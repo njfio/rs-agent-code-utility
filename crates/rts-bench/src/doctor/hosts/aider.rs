@@ -125,10 +125,7 @@ pub(crate) fn detect_impl(
                             None => {
                                 finding.rows.push(Row::warn(
                                     label,
-                                    format!(
-                                        "rts entry in {} has no `command`",
-                                        path.display()
-                                    ),
+                                    format!("rts entry in {} has no `command`", path.display()),
                                 ));
                             }
                         }

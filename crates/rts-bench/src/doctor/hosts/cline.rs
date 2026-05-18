@@ -57,7 +57,10 @@ pub(crate) fn detect_impl(_ctx: &Ctx, home: Option<&Path>) -> HostFinding {
             continue;
         }
         any_dir_found = true;
-        for candidate_name in ["settings/cline_mcp_settings.json", "cline_mcp_settings.json"] {
+        for candidate_name in [
+            "settings/cline_mcp_settings.json",
+            "cline_mcp_settings.json",
+        ] {
             let path = base.join(candidate_name);
             if !path.exists() {
                 continue;
@@ -105,21 +108,18 @@ fn handle_settings_file(finding: &mut HostFinding, path: &Path) {
         Ok(v) => v,
         Err(e) => {
             finding.rows.push(
-                Row::warn(label, format!("could not parse {}: {}", path.display(), e))
-                    .with_fix(
-                        FixSnippet::new(
-                            FixClass::FixConfigSyntax,
-                            format!("$EDITOR {}", path.display()),
-                        )
-                        .with_description("fix JSON syntax in Cline settings"),
-                    ),
+                Row::warn(label, format!("could not parse {}: {}", path.display(), e)).with_fix(
+                    FixSnippet::new(
+                        FixClass::FixConfigSyntax,
+                        format!("$EDITOR {}", path.display()),
+                    )
+                    .with_description("fix JSON syntax in Cline settings"),
+                ),
             );
             return;
         }
     };
-    let entry = value
-        .get("mcpServers")
-        .and_then(|m| m.get("rts"));
+    let entry = value.get("mcpServers").and_then(|m| m.get("rts"));
     let Some(entry) = entry else {
         finding.rows.push(Row::info(
             label,
@@ -184,7 +184,12 @@ fn candidate_global_storage_dirs(home: &Path) -> Vec<PathBuf> {
     {
         let base = home.join("Library").join("Application Support");
         for product in ["Code", "Code - Insiders", "VSCodium"] {
-            out.push(base.join(product).join("User").join("globalStorage").join(ext));
+            out.push(
+                base.join(product)
+                    .join("User")
+                    .join("globalStorage")
+                    .join(ext),
+            );
         }
     }
     #[cfg(target_os = "linux")]
@@ -195,27 +200,50 @@ fn candidate_global_storage_dirs(home: &Path) -> Vec<PathBuf> {
             .filter(|p| p.is_absolute())
             .unwrap_or_else(|| home.join(".config"));
         for product in ["Code", "Code - Insiders", "VSCodium"] {
-            out.push(xdg.join(product).join("User").join("globalStorage").join(ext));
+            out.push(
+                xdg.join(product)
+                    .join("User")
+                    .join("globalStorage")
+                    .join(ext),
+            );
         }
     }
     #[cfg(target_os = "windows")]
     {
         if let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from) {
             for product in ["Code", "Code - Insiders", "VSCodium"] {
-                out.push(appdata.join(product).join("User").join("globalStorage").join(ext));
+                out.push(
+                    appdata
+                        .join(product)
+                        .join("User")
+                        .join("globalStorage")
+                        .join(ext),
+                );
             }
         } else {
             // Fallback: walk under the typical %USERPROFILE%/AppData/Roaming.
             let fallback = home.join("AppData").join("Roaming");
             for product in ["Code", "Code - Insiders", "VSCodium"] {
-                out.push(fallback.join(product).join("User").join("globalStorage").join(ext));
+                out.push(
+                    fallback
+                        .join(product)
+                        .join("User")
+                        .join("globalStorage")
+                        .join(ext),
+                );
             }
         }
     }
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     {
         // Unknown OS: best-effort under ~/.config — better than nothing.
-        out.push(home.join(".config").join("Code").join("User").join("globalStorage").join(ext));
+        out.push(
+            home.join(".config")
+                .join("Code")
+                .join("User")
+                .join("globalStorage")
+                .join(ext),
+        );
     }
 
     out

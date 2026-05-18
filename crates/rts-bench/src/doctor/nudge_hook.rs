@@ -58,11 +58,7 @@ fn check_hook(hook_path: &Path, doctor_version: &str, s: &mut SectionReport) {
         Err(_) => {
             // Absent (or unreadable — same remediation either way).
             s.push(
-                Row::warn(
-                    "hook:absent",
-                    "PreToolUse nudge hook not installed",
-                )
-                .with_fix(
+                Row::warn("hook:absent", "PreToolUse nudge hook not installed").with_fix(
                     FixSnippet::new(
                         FixClass::UpdateHook,
                         format!(
@@ -88,12 +84,10 @@ register it in .claude/settings.json — see docs/install.md)",
                 "hook:not_executable",
                 "hook not executable; chmod +x required",
             )
-            .with_fix(
-                FixSnippet::new(
-                    FixClass::MakeHookExecutable,
-                    format!("chmod +x {}", hook_path.display()),
-                ),
-            ),
+            .with_fix(FixSnippet::new(
+                FixClass::MakeHookExecutable,
+                format!("chmod +x {}", hook_path.display()),
+            )),
         );
         return;
     }
@@ -129,10 +123,7 @@ register it in .claude/settings.json — see docs/install.md)",
         Some(hook_version) if hook_version == doctor_version => {
             s.push(Row::ok(
                 "hook:current",
-                format!(
-                    "hook installed and current (v{ver})",
-                    ver = hook_version
-                ),
+                format!("hook installed and current (v{ver})", ver = hook_version),
             ));
         }
         Some(hook_version) => {
@@ -207,10 +198,10 @@ mod tests {
 
     use tempfile::TempDir;
 
-    use super::super::ctx::Ctx;
-    use super::super::report::RowKind;
     use super::super::DoctorArgs;
     use super::super::DoctorOutput;
+    use super::super::ctx::Ctx;
+    use super::super::report::RowKind;
 
     /// Construct a `Ctx` rooted at `workspace`. We can't go through
     /// `Ctx::build` because it canonicalizes via `current_dir()` and
@@ -409,8 +400,8 @@ mod tests {
             // fail (this test is a guardrail for the repo, not the crate).
             return;
         };
-        let marker = parse_version_marker(&body)
-            .expect("workspace hook must carry a `# version:` marker");
+        let marker =
+            parse_version_marker(&body).expect("workspace hook must carry a `# version:` marker");
         assert_eq!(
             marker,
             env!("CARGO_PKG_VERSION"),

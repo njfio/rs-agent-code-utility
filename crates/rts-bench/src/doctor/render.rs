@@ -139,13 +139,15 @@ mod tests {
 
     fn sample_report() -> DoctorReport {
         let mut binary = SectionReport::new("binary");
-        binary.push(Row::ok("binary:on_path", "rts-daemon at /usr/local/bin/rts-daemon"));
+        binary.push(Row::ok(
+            "binary:on_path",
+            "rts-daemon at /usr/local/bin/rts-daemon",
+        ));
         let mut daemon = SectionReport::new("daemon");
         daemon.push(
-            Row::warn("daemon:not_running", "no daemon socket for this workspace")
-                .with_fix(
-                    FixSnippet::new(FixClass::StartDaemon, "rts-daemon --workspace $PWD &"),
-                ),
+            Row::warn("daemon:not_running", "no daemon socket for this workspace").with_fix(
+                FixSnippet::new(FixClass::StartDaemon, "rts-daemon --workspace $PWD &"),
+            ),
         );
         DoctorReport::from_sections(vec![binary, daemon])
     }
@@ -174,7 +176,10 @@ mod tests {
         let mut buf = Vec::new();
         render_human(&r, &mut buf, true);
         let s = String::from_utf8(buf).unwrap();
-        assert!(s.contains('\x1b'), "ANSI escape codes should appear in color mode");
+        assert!(
+            s.contains('\x1b'),
+            "ANSI escape codes should appear in color mode"
+        );
     }
 
     #[test]

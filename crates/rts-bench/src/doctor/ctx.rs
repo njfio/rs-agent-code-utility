@@ -46,7 +46,10 @@ impl Ctx {
     /// home dir; computes color-enable state. Never fails on
     /// "workspace doesn't exist" — that's a row, not an init error.
     pub fn build(args: &DoctorArgs) -> Result<Self> {
-        let workspace_arg = args.workspace.clone().or_else(|| std::env::current_dir().ok());
+        let workspace_arg = args
+            .workspace
+            .clone()
+            .or_else(|| std::env::current_dir().ok());
         let workspace_path = workspace_arg.map(|p| p.canonicalize().unwrap_or(p));
 
         let home = dirs::home_dir();

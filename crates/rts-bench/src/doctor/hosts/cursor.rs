@@ -73,10 +73,7 @@ pub(crate) fn detect_impl(_ctx: &Ctx, home: Option<&Path>) -> HostFinding {
         }
     };
 
-    let entry = value
-        .get("mcpServers")
-        .and_then(|v| v.get("rts"))
-        .cloned();
+    let entry = value.get("mcpServers").and_then(|v| v.get("rts")).cloned();
     let Some(entry) = entry else {
         finding.rows.push(Row::info(
             "cursor:user_scope",
@@ -113,7 +110,10 @@ pub(crate) fn detect_impl(_ctx: &Ctx, home: Option<&Path>) -> HostFinding {
                 .with_fix(
                     FixSnippet::new(
                         FixClass::FixMcpBinaryPath,
-                        format!("$EDITOR {}  # update mcpServers.rts.command", path.display()),
+                        format!(
+                            "$EDITOR {}  # update mcpServers.rts.command",
+                            path.display()
+                        ),
                     )
                     .with_description("point Cursor's rts entry at an existing binary"),
                 ),

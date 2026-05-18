@@ -61,12 +61,7 @@ pub(crate) fn detect_impl(
                             binary_path: entry.command.clone().map(PathBuf::from),
                             config_path: path.clone(),
                         };
-                        emit_entry_row(
-                            &mut finding,
-                            "claude_code:user_scope",
-                            &entry,
-                            &path,
-                        );
+                        emit_entry_row(&mut finding, "claude_code:user_scope", &entry, &path);
                         registrations.push(detail);
                     }
                     None => {
@@ -109,12 +104,7 @@ pub(crate) fn detect_impl(
                             binary_path: entry.command.clone().map(PathBuf::from),
                             config_path: path.clone(),
                         };
-                        emit_entry_row(
-                            &mut finding,
-                            "claude_code:project_scope",
-                            &entry,
-                            &path,
-                        );
+                        emit_entry_row(&mut finding, "claude_code:project_scope", &entry, &path);
                         registrations.push(detail);
                     } else {
                         finding.rows.push(Row::info(
@@ -231,7 +221,10 @@ fn find_mcp_entry(root: &JsonValue, name: &str) -> Option<McpEntry> {
 }
 
 fn parse_mcp_entry(v: &JsonValue) -> Option<McpEntry> {
-    let cmd = v.get("command").and_then(JsonValue::as_str).map(str::to_string);
+    let cmd = v
+        .get("command")
+        .and_then(JsonValue::as_str)
+        .map(str::to_string);
     Some(McpEntry { command: cmd })
 }
 
@@ -263,12 +256,7 @@ fn read_and_parse_json(path: &Path) -> Result<JsonValue, String> {
 }
 
 /// Validate the entry's binary path; emit OK / FAIL accordingly.
-fn emit_entry_row(
-    finding: &mut HostFinding,
-    label: &str,
-    entry: &McpEntry,
-    config_path: &Path,
-) {
+fn emit_entry_row(finding: &mut HostFinding, label: &str, entry: &McpEntry, config_path: &Path) {
     match entry.command.as_deref() {
         Some(cmd) => {
             if binary_resolves(cmd) {
@@ -299,7 +287,10 @@ fn emit_entry_row(
         None => {
             finding.rows.push(Row::warn(
                 label,
-                format!("rts entry in {} has no `command` field", config_path.display()),
+                format!(
+                    "rts entry in {} has no `command` field",
+                    config_path.display()
+                ),
             ));
         }
     }
@@ -476,8 +467,7 @@ mod tests {
             .rows
             .iter()
             .filter(|r| {
-                r.label == "claude_code:user_scope"
-                    || r.label == "claude_code:project_scope"
+                r.label == "claude_code:user_scope" || r.label == "claude_code:project_scope"
             })
             .collect();
         assert_eq!(scope_rows.len(), 2);
