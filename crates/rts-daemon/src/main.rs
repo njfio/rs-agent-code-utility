@@ -21,6 +21,7 @@ mod methods;
 mod outline;
 mod path;
 mod protocol;
+mod reconciler;
 mod refs;
 mod socket;
 mod state;

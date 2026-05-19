@@ -4,8 +4,8 @@
 //! and an "active connections" gauge driving the idle-shutdown timer (per
 //! `docs/protocol-v0.md` §15.2).
 
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 
 use crate::outline::OutlineCache;
@@ -220,6 +220,12 @@ pub struct DaemonState {
     /// `InvalidationReason::as_label()` string so the JSON shape is
     /// stable.
     pub rehydrate_invalidations: Mutex<std::collections::BTreeMap<String, u64>>,
+    /// v0.6 persisted-cold-mount reconciliation stats. Shared with the
+    /// reconciler worker (spawned from `Workspace.Mount` on the
+    /// `Rehydrate` branch) and read by `Daemon.Stats`. `RwLock` rather
+    /// than `Mutex` because reads via `Daemon.Stats` outnumber writes
+    /// (one write per pass) by a large margin.
+    pub reconcile_stats: Arc<RwLock<crate::reconciler::ReconcileStats>>,
 }
 
 /// Per-method call counts for the daemon's RPC surface. All fields
@@ -517,6 +523,7 @@ impl DaemonState {
             rehydrate_attempts: AtomicU64::new(0),
             rehydrate_successes: AtomicU64::new(0),
             rehydrate_invalidations: Mutex::new(std::collections::BTreeMap::new()),
+            reconcile_stats: Arc::new(RwLock::new(crate::reconciler::ReconcileStats::default())),
         }
     }
 

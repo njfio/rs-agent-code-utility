@@ -143,7 +143,12 @@ impl Watcher {
     pub fn start(
         root: &Path,
         state: Arc<DaemonState>,
-    ) -> std::io::Result<(Watcher, mpsc::Receiver<WatchEvent>, InitialWalkHandle)> {
+    ) -> std::io::Result<(
+        Watcher,
+        mpsc::Receiver<WatchEvent>,
+        InitialWalkHandle,
+        mpsc::Sender<WatchEvent>,
+    )> {
         let gitignore = PrebuiltGitignore::build(root)?;
         let gitignore = Arc::new(gitignore);
         let (tx, rx) = mpsc::channel::<WatchEvent>(CHANNEL_CAPACITY);
@@ -249,6 +254,7 @@ impl Watcher {
             },
             rx,
             initial,
+            tx,
         ))
     }
 }
@@ -474,7 +480,7 @@ mod tests {
         std::fs::write(tmp.path().join("a.rs.swp"), "swap").unwrap();
 
         let state = fresh_state();
-        let (_watcher, mut rx, initial) = Watcher::start(tmp.path(), state).unwrap();
+        let (_watcher, mut rx, initial, _tx) = Watcher::start(tmp.path(), state).unwrap();
         let _ = initial.spawn();
 
         let mut seen = std::collections::HashSet::new();
@@ -500,7 +506,7 @@ mod tests {
     async fn live_create_surfaces_through_debouncer() {
         let tmp = tempfile::tempdir().unwrap();
         let state = fresh_state();
-        let (_watcher, mut rx, initial) = Watcher::start(tmp.path(), state.clone()).unwrap();
+        let (_watcher, mut rx, initial, _tx) = Watcher::start(tmp.path(), state.clone()).unwrap();
         // Run initial walk now that the receiver is owned by the test.
         let _ = initial.spawn();
 
@@ -529,7 +535,7 @@ mod tests {
     async fn live_create_of_secrets_file_is_filtered() {
         let tmp = tempfile::tempdir().unwrap();
         let state = fresh_state();
-        let (_watcher, mut rx, initial) = Watcher::start(tmp.path(), state).unwrap();
+        let (_watcher, mut rx, initial, _tx) = Watcher::start(tmp.path(), state).unwrap();
         let _ = initial.spawn();
 
         // Drain initial walk.
