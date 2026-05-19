@@ -107,6 +107,13 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     "index_grep_structural",
     "index_grep_within_symbol",
     "index_grep_v2",
+    // v0.6 — reconciliation worker runs once on persisted cold-mount
+    // (`mount_source: "rehydrate"`) to detect files that drifted on
+    // disk while the daemon was dead. Surfaces via `Daemon.Stats`'s
+    // `reconciliation: { last_run_ns, files_scanned, files_changed,
+    // files_removed, throttled }` object. Old clients can ignore the
+    // field; this capability lets them gate on its presence.
+    "reconciliation_worker",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
@@ -264,6 +271,17 @@ pub async fn stats(
                 "rehydrate_invalidations_by_reason".into(),
                 serde_json::Value::Object(invalidations_obj),
             );
+        }
+
+        // v0.6 reconciliation worker stats. Only emitted alongside the
+        // other workspace-scoped fields (pre-mount Stats omits the
+        // entire reconciliation object). Default zeros until the
+        // worker completes its first pass; after that the snapshot
+        // tracks the most recent run.
+        if let Ok(snapshot) = state.reconcile_stats.read() {
+            if let Ok(value) = serde_json::to_value(&*snapshot) {
+                obj.insert("reconciliation".into(), value);
+            }
         }
     }
 

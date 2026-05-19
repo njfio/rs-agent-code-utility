@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::error::{ErrorCode, ProtocolError};
 use crate::state::DaemonState;
 use crate::store::Store;
-use crate::watcher::Watcher;
+use crate::watcher::{WatchEvent, Watcher};
 use crate::workspace::{self, MountedWorkspace, state_dir_for};
 use crate::writer;
 
@@ -229,8 +229,8 @@ pub(super) async fn mount_inner(
     // start consuming from the channel first. See watcher.rs comment on
     // `InitialWalkHandle` for the 256-file plateau bug this restructure
     // fixes.
-    let (watcher, rx, initial) =
-        Watcher::start(&mounted.canonical.path, state.clone()).map_err(|e| {
+    let (watcher, rx, initial, watch_sink) = Watcher::start(&mounted.canonical.path, state.clone())
+        .map_err(|e| {
             ProtocolError::new(
                 ErrorCode::InternalError,
                 format!("could not start file watcher: {e}"),
@@ -379,6 +379,7 @@ pub(super) async fn mount_inner(
     }
 
     let payload = status_payload(&mounted, state, Some(&store));
+    let reconcile_root = mounted.canonical.path.clone();
     {
         let mut current = state.workspace.lock().map_err(|e| {
             ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
@@ -401,7 +402,7 @@ pub(super) async fn mount_inner(
                 format!("store state poisoned: {e}"),
             )
         })?;
-        *store_slot = Some(store);
+        *store_slot = Some(store.clone());
     }
     {
         let mut cancel_slot = state.writer_cancel.lock().map_err(|e| {
@@ -412,6 +413,55 @@ pub(super) async fn mount_inner(
         })?;
         *cancel_slot = Some(writer_cancel);
     }
+
+    // v0.6 reconciliation worker (U5 follow-up): on the persisted
+    // cold-mount path (`MountSource::Rehydrate`), the cold walk is
+    // skipped — but files may have changed on disk between sessions.
+    // Spawn the reconciler so it scans the mount root and emits
+    // `WatchEvent::Touched`/`Removed` for any drift. The writer drain
+    // consumes those events through the same path as live edits.
+    //
+    // Fresh / cold-walk / wipe-after-invalidation mounts do NOT need
+    // this — their cold walk already covers every file. Reconciliation
+    // is additive on top of an already-trusted snapshot.
+    if matches!(mount_source, crate::state::MountSource::Rehydrate) {
+        // The writer task spawned above starts in `cold_walk_in_progress = true`
+        // and suppresses its periodic flush until a `ColdWalkComplete`
+        // barrier fires. On the rehydrate branch no walker is spawned
+        // (so the barrier never naturally arrives), and the writer
+        // would therefore hold reconciler-emitted touches in memory
+        // forever — well past the per-event 150 ms timer budget. Push
+        // an explicit `ColdWalkComplete` so the writer releases the
+        // hold-off and begins draining as events stream in. This is
+        // load-bearing for the reconciler's `Touched`/`Removed` events
+        // to be observable via `Index.FindSymbol` etc.
+        let barrier_sink = watch_sink.clone();
+        tokio::spawn(async move {
+            if barrier_sink
+                .send(WatchEvent::ColdWalkComplete)
+                .await
+                .is_err()
+            {
+                tracing::warn!("rehydrate: writer channel closed before ColdWalkComplete barrier");
+            }
+        });
+
+        let reconciler = crate::reconciler::Reconciler::new(
+            store.clone(),
+            watch_sink.clone(),
+            state.reconcile_stats.clone(),
+        );
+        tokio::spawn(async move {
+            if let Err(e) = reconciler.run(reconcile_root).await {
+                tracing::warn!(error = ?e, "reconciliation failed");
+            }
+        });
+    }
+    // Keep `watch_sink` alive only for the reconciler spawn; the
+    // watcher and writer hold their own references, so dropping the
+    // local clone here is a no-op for steady-state operation.
+    drop(watch_sink);
+
     state.mount_refcount.fetch_add(1, Ordering::Relaxed);
     state.touch();
     Ok(payload)
