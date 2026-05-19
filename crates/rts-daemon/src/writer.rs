@@ -169,6 +169,22 @@ async fn run(
                         );
                         cold_walk_in_progress = false;
                         last_durability_flush = Instant::now();
+                        // v0.6 Daemon.Stats v2 (`daemon_stats_v2`
+                        // capability): stamp the cold-walk completion
+                        // time once the batch is durable. Read by
+                        // doctor + agent-bench preflight to tell
+                        // "indexing in progress" from "index ready"
+                        // without polling Workspace.Status. Set after
+                        // the flush so a reader observing a non-zero
+                        // value is guaranteed the index is committed.
+                        let now_ms = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_millis() as u64)
+                            .unwrap_or(0);
+                        state.cold_walk_completed_at_ms.store(
+                            now_ms,
+                            std::sync::atomic::Ordering::Relaxed,
+                        );
                     }
                     Some(WatchEvent::Rescan) => {
                         // Kernel watch buffer overflowed; index state may be

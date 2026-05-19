@@ -19,6 +19,7 @@ use serde_json::json;
 
 mod baseline;
 mod corpus;
+mod doctor;
 mod footprint;
 mod latency;
 mod mcp_runner;
@@ -148,6 +149,35 @@ enum Cmd {
     /// example. Each query has `text` (the natural-language query)
     /// and `expected_top_k` (hand-graded list of symbol names that
     /// should appear in the top-K results).
+    /// Read-only first-run health check. Inspects rts install state
+    /// (binary version, daemon reachability, MCP registration in 5
+    /// agent hosts, hook file presence) and per-workspace index state
+    /// (daemon PID, pinned-workspace path, index generation, cold-walk
+    /// completion). Prints an OK/WARN/FAIL checklist with copy-pasteable
+    /// fix snippets for every failing row.
+    ///
+    /// Exit codes are a documented public API:
+    /// - 0 — no FAIL rows (any WARN allowed)
+    /// - 1 — at least one FAIL row
+    /// - 2 — doctor itself failed (panic, unreadable own binary)
+    ///
+    /// Plan: docs/plans/2026-05-18-001-feat-rts-bench-doctor-plan.md
+    Doctor {
+        /// Output format. `human` (default) renders a checklist with
+        /// inline fix snippets and ANSI when stdout is a TTY and
+        /// `NO_COLOR` is unset. `json` produces a machine-readable
+        /// document with `schema_version: "doctor-v0"` for agent
+        /// consumption (e.g. agent-bench preflight).
+        #[arg(long, value_enum, default_value_t = doctor::DoctorOutput::Human)]
+        output: doctor::DoctorOutput,
+        /// Disable ANSI color even on a TTY. `NO_COLOR=1` env var has
+        /// the same effect.
+        #[arg(long)]
+        no_color: bool,
+        /// Workspace path to inspect. Defaults to the current directory.
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+    },
     Semantic {
         /// Path to a TOML corpus file.
         #[arg(long)]
@@ -500,6 +530,22 @@ async fn main() -> Result<()> {
             dry_run,
         } => run_footprint(synth_loc, out, dry_run).await,
         Cmd::Query { output, sub } => run_query(sub, output).await,
+        Cmd::Doctor {
+            output,
+            no_color,
+            workspace,
+        } => {
+            // doctor::run returns the process exit code (0/1/2 per the
+            // documented contract); we plumb it through std::process::exit
+            // because anyhow::Result<()> from main only gives us 0/1.
+            let code = doctor::run(doctor::DoctorArgs {
+                output,
+                no_color,
+                workspace,
+            })
+            .await;
+            std::process::exit(code);
+        }
         Cmd::Semantic {
             corpus,
             workspace,

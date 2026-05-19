@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# version: 0.5.5
 # rts-nudge.sh — Claude Code PreToolUse hook (v0.5.8+, this repo).
 #
 # Intercepts `Bash` tool calls containing grep/rg/egrep/fgrep/find on
