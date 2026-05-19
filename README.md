@@ -125,6 +125,13 @@ sudo install rts-${VERSION}-${TARGET}/{rts-daemon,rts-mcp,rts-bench} /usr/local/
 rts-daemon --version
 rts-mcp    --version
 rts-bench  --version
+rts        --version
+
+# Try it from the terminal — no agent setup required.
+# The CLI auto-spawns the daemon on first call.
+cd path/to/your/project
+rts find MyType
+rts grep 'TODO' | head
 
 # Wire into Claude Code
 claude mcp add rts -- rts-mcp --workspace .
@@ -142,12 +149,16 @@ sha256sum -c SHA256SUMS --ignore-missing
 ```sh
 cargo build --workspace --release
 
+# Sanity-check from the terminal — `rts` auto-spawns the daemon on first call.
+target/release/rts find MyType
+
 # Wire into Claude Code (the canonical client)
 claude mcp add rts -- target/release/rts-mcp --workspace .
 ```
 
 Other agents and the full troubleshooting matrix live in
-[docs/install.md](docs/install.md).
+[docs/install.md](docs/install.md). The human-facing CLI surface is
+documented in [docs/cli.md](docs/cli.md).
 
 ## The seven tools
 

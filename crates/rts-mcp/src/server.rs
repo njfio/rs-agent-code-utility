@@ -18,7 +18,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
-use crate::daemon_client::{DaemonClient, DaemonError};
+use rts_mcp::daemon_client::{DaemonClient, DaemonError};
 
 // Built-in tool descriptions are pinned inline (the `#[tool(description = ...)]`
 // macro expects a literal string and does not accept const-path expressions).

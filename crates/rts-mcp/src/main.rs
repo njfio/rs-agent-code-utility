@@ -13,11 +13,10 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use rmcp::service::ServiceExt;
 
-mod daemon_client;
 mod server;
-mod socket;
 
-use daemon_client::DaemonClient;
+use rts_mcp::daemon_client::DaemonClient;
+use rts_mcp::socket;
 use server::RtsServer;
 
 /// CLI flags, parsed manually so we don't pull in `clap` for two flags.
