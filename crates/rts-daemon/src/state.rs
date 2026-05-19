@@ -154,6 +154,16 @@ pub struct DaemonState {
     /// atomic increment per RPC; negligible overhead next to the
     /// rest of the dispatch path.
     pub call_counters: CallCounters,
+    /// v0.6 (`index_grep_structural` capability) — LRU cache for
+    /// compiled tree-sitter `Query` objects keyed on
+    /// `(Language, query_text)`. Agent-supplied structural queries
+    /// land here on first compile; subsequent invocations with the
+    /// same `(language, query_text)` pair pull from the cache
+    /// instead of re-paying the `Query::new` cost (hundreds of µs).
+    /// Eviction is recency-ordered; capacity is fixed at compile
+    /// time inside the QueryCache (see
+    /// `methods/grep_v2/query_cache.rs`).
+    pub query_cache: crate::methods::grep_v2::query_cache::QueryCache,
 }
 
 /// Per-method call counts for the daemon's RPC surface. All fields
@@ -182,6 +192,20 @@ pub struct CallCounters {
     pub index_read_symbol_at: AtomicU64,
     pub index_outline: AtomicU64,
     pub index_grep: AtomicU64,
+    /// v0.6 sub-counter: `Index.Grep` calls that exercised the
+    /// multiline-regex path (`regex: true, multiline: true`). Bumped
+    /// in addition to (not instead of) `index_grep`; appears as a
+    /// sibling field in the `Daemon.Stats` snapshot so the existing
+    /// closed-enum shape stays stable for v1 consumers.
+    pub index_grep_multiline: AtomicU64,
+    /// v0.6 sub-counter: `Index.Grep` calls that exercised the
+    /// structural-query path (`structural_query` set). Sibling of
+    /// `index_grep`; bumped in addition to the parent counter.
+    pub index_grep_structural: AtomicU64,
+    /// v0.6 sub-counter: `Index.Grep` calls that exercised the
+    /// `within_symbol` post-filter (`within_symbol` set). Sibling of
+    /// `index_grep`; bumped in addition to the parent counter.
+    pub index_grep_within_symbol: AtomicU64,
     /// Method name didn't match any known handler. A growing
     /// `unknown_method` count over time usually means a wire-protocol
     /// version skew (rts-mcp newer than daemon, or vice versa).
@@ -212,6 +236,12 @@ impl CallCounters {
             "Index.ReadSymbolAt":  self.index_read_symbol_at.load(Relaxed),
             "Index.Outline":       self.index_outline.load(Relaxed),
             "Index.Grep":          self.index_grep.load(Relaxed),
+            // v0.6 grep_v2 sub-counters. Sibling fields (not nested)
+            // so existing `--output json` consumers stay parseable.
+            // See `docs/plans/2026-05-18-002-feat-index-grep-v2-plan.md` §U7.
+            "Index.Grep.multiline":      self.index_grep_multiline.load(Relaxed),
+            "Index.Grep.structural":     self.index_grep_structural.load(Relaxed),
+            "Index.Grep.within_symbol":  self.index_grep_within_symbol.load(Relaxed),
             "unknown_method":      self.unknown_method.load(Relaxed),
         })
     }
@@ -236,6 +266,9 @@ impl CallCounters {
             + self.index_read_symbol_at.load(Relaxed)
             + self.index_outline.load(Relaxed)
             + self.index_grep.load(Relaxed)
+            + self.index_grep_multiline.load(Relaxed)
+            + self.index_grep_structural.load(Relaxed)
+            + self.index_grep_within_symbol.load(Relaxed)
             + self.unknown_method.load(Relaxed)
     }
 }
@@ -423,6 +456,7 @@ impl DaemonState {
             prewarm_in_flight: std::sync::atomic::AtomicBool::new(false),
             prewarm_done: tokio::sync::Notify::new(),
             call_counters: CallCounters::default(),
+            query_cache: crate::methods::grep_v2::query_cache::QueryCache::new(),
         }
     }
 

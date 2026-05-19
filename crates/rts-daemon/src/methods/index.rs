@@ -115,11 +115,18 @@ struct ReadRangeParams {
 /// symbol resolution remain filed for follow-up.
 #[derive(Debug, Deserialize)]
 struct GrepParams {
-    /// The pattern to search for. Required; 1..=1024 chars. By
-    /// default interpreted as a literal substring; set
-    /// `regex: true` to interpret as a regex (Rust `regex` crate
-    /// syntax, byte-level matching).
-    text: String,
+    /// The pattern to search for. 1..=1024 chars. By default
+    /// interpreted as a literal substring; set `regex: true` to
+    /// interpret as a regex (Rust `regex` crate syntax, byte-level
+    /// matching).
+    ///
+    /// v0.6: now `Option<String>` to allow `structural_query` alone
+    /// (no literal/regex source). At least one of `text` or
+    /// `structural_query` is required; absence of both returns
+    /// `NO_SEARCH_SOURCE_PROVIDED`. v1 callers always set this
+    /// field — backward compatibility is by construction.
+    #[serde(default)]
+    text: Option<String>,
     /// Maximum number of matches to return. Defaults to 256.
     /// Range: 1..=4096 (same shape as `find_symbol.limit`).
     #[serde(default)]
@@ -143,6 +150,29 @@ struct GrepParams {
     /// as `INVALID_PARAMS`. Defaults to scanning every indexed file.
     #[serde(default)]
     file_glob: Option<String>,
+    /// v0.6 multi-line regex mode. See `GrepArgs::multiline` (MCP
+    /// side) for the user-facing doc. Only meaningful when
+    /// `regex: true`; rejected with `MULTILINE_REQUIRES_REGEX` on
+    /// the literal `text` path.
+    #[serde(default)]
+    multiline: Option<bool>,
+    /// v0.6 raw tree-sitter S-expression structural query. Requires
+    /// `language`. Validated at request time via
+    /// `rts_core::query::Query::new`. See `GrepArgs::structural_query`
+    /// for the full contract and the predicate whitelist.
+    #[serde(default)]
+    structural_query: Option<String>,
+    /// v0.6 within-symbol byte-range filter. See
+    /// `GrepArgs::within_symbol` for the full contract.
+    #[serde(default)]
+    within_symbol: Option<String>,
+    /// v0.6 opt-in to multi-def `within_symbol`.
+    #[serde(default)]
+    within_symbol_allow_overload: Option<bool>,
+    /// v0.6 language filter. Required when `structural_query` is set.
+    /// Accepted values match the indexed-language identifiers.
+    #[serde(default)]
+    language: Option<Vec<String>>,
 }
 
 /// Per-mode search strategy. Compiled once in `grep()` and reused
@@ -1087,60 +1117,381 @@ pub async fn grep(
 
     let p: GrepParams = parse_params(params)?;
 
-    if p.text.is_empty() {
-        return Err(ProtocolError::new(
-            ErrorCode::InvalidParams,
-            "`text` must be 1..=1024 characters",
-        ));
-    }
-    if p.text.len() > 1024 {
-        return Err(ProtocolError::new(
-            ErrorCode::InvalidParams,
-            "`text` must be 1..=1024 characters",
-        ));
-    }
-    let limit = match p.limit {
-        None => DEFAULT_LIMIT,
-        Some(0) => {
-            return Err(ProtocolError::new(
-                ErrorCode::InvalidParams,
-                "`limit` must be >= 1",
-            ));
-        }
-        Some(n) if (n as usize) > MAX_LIMIT => {
-            return Err(ProtocolError::new(
-                ErrorCode::InvalidParams,
-                format!("`limit` must be <= {MAX_LIMIT}"),
-            ));
-        }
-        Some(n) => n as usize,
+    // v0.6 composition matrix: validate the param shape first, then
+    // dispatch to the matching scanner. v1 callers (just `text`, no
+    // new fields) take the same Literal/Regex branches they did
+    // before; the validator returns a `ValidatedGrepCall::Literal`
+    // or `ValidatedGrepCall::Regex` that maps 1:1 to v1 semantics.
+    //
+    // Structural calls land in U5; for U2 we recognize the variant
+    // but report it as `NOT_YET_IMPLEMENTED` so the wire shape is
+    // observable without committing to a half-built scanner.
+    let validation_input = super::grep_v2::compose::ValidationInput {
+        text: p.text.clone(),
+        limit: p.limit,
+        case_insensitive: p.case_insensitive,
+        regex: p.regex,
+        file_glob: p.file_glob.clone(),
+        multiline: p.multiline,
+        structural_query: p.structural_query.clone(),
+        within_symbol: p.within_symbol.clone(),
+        within_symbol_allow_overload: p.within_symbol_allow_overload,
+        language: p.language.clone(),
     };
-    let case_insensitive = p.case_insensitive.unwrap_or(true);
-    let use_regex = p.regex.unwrap_or(false);
+    let (validated, shared_filters) =
+        super::grep_v2::validate(&validation_input).map_err(|e| e.into_protocol_error())?;
 
-    // Compile the search strategy *before* we touch the index.
-    // Compile-time errors should surface as `INVALID_PARAMS` (agent
-    // can self-correct), not as `INTERNAL_ERROR` (post-mount infra
-    // failure).
-    let scanner = if use_regex {
-        let mut builder = regex::bytes::RegexBuilder::new(&p.text);
-        builder.case_insensitive(case_insensitive);
-        // The `regex` crate's default DFA size limit (10MB) is more
-        // than enough for any agent-authored pattern. Catastrophic
-        // patterns surface as compile errors here.
-        let re = builder.build().map_err(|e| {
-            ProtocolError::new(
-                ErrorCode::InvalidParams,
-                format!("`text` failed to compile as regex: {e}"),
-            )
-        })?;
-        GrepScanner::Regex(re)
-    } else {
-        GrepScanner::Literal {
-            needle: p.text.clone(),
+    // U7: bump grep_v2 sub-counters based on which v2 params were
+    // actually active in this call. The parent `index_grep` counter
+    // is bumped by the dispatcher (`methods/mod.rs`) — DO NOT bump it
+    // again here. Sub-counters fire after validation but before the
+    // heavy work, so e.g. a structural call that later times out
+    // still counts toward `Index.Grep.structural`, giving operators
+    // visibility into rejection vs failure rates. Bump-policy spec:
+    // a call with `multiline + structural + within_symbol` bumps four
+    // counters total (parent + three sub).
+    {
+        use std::sync::atomic::Ordering::Relaxed;
+        if matches!(
+            validated,
+            super::grep_v2::ValidatedGrepCall::Regex {
+                multiline: true,
+                ..
+            }
+        ) {
+            state
+                .call_counters
+                .index_grep_multiline
+                .fetch_add(1, Relaxed);
+        }
+        if matches!(
+            validated,
+            super::grep_v2::ValidatedGrepCall::Structural { .. }
+        ) {
+            state
+                .call_counters
+                .index_grep_structural
+                .fetch_add(1, Relaxed);
+        }
+        if shared_filters.within_symbol.is_some() {
+            state
+                .call_counters
+                .index_grep_within_symbol
+                .fetch_add(1, Relaxed);
+        }
+    }
+
+    if (shared_filters.limit as usize) > MAX_LIMIT {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            format!("`limit` must be <= {MAX_LIMIT}"),
+        ));
+    }
+    if shared_filters.limit == 0 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`limit` must be >= 1",
+        ));
+    }
+    let limit = shared_filters.limit as usize;
+
+    let (text_for_response, case_insensitive, multiline, scanner) = match validated {
+        super::grep_v2::ValidatedGrepCall::Literal {
+            text,
             case_insensitive,
+        } => {
+            let scanner = GrepScanner::Literal {
+                needle: text.clone(),
+                case_insensitive,
+            };
+            (text, case_insensitive, false, scanner)
+        }
+        super::grep_v2::ValidatedGrepCall::Regex {
+            pattern,
+            case_insensitive,
+            multiline,
+        } => {
+            // U3: multiline path runs through `grep_v2::multiline` so
+            // the DFA/NFA size budgets are explicit and compile
+            // failures surface as `REGEX_TOO_COMPLEX` rather than a
+            // generic INVALID_PARAMS envelope. Single-line path keeps
+            // v1 semantics (regex crate defaults; INVALID_PARAMS on
+            // syntax errors) so v1 callers see byte-identical errors.
+            let re = if multiline {
+                super::grep_v2::multiline::compile_multiline_regex(&pattern, case_insensitive)
+                    .map_err(|e| e.into_protocol_error())?
+            } else {
+                let mut builder = regex::bytes::RegexBuilder::new(&pattern);
+                builder.case_insensitive(case_insensitive);
+                builder.build().map_err(|e| {
+                    ProtocolError::new(
+                        ErrorCode::InvalidParams,
+                        format!("`text` failed to compile as regex: {e}"),
+                    )
+                })?
+            };
+            (pattern, case_insensitive, multiline, GrepScanner::Regex(re))
+        }
+        super::grep_v2::ValidatedGrepCall::Structural {
+            query,
+            languages,
+            combine,
+        } => {
+            // Structural mode owns its own response builder — the
+            // shape is a superset of the v1 grep response with
+            // per-match `captures` plus top-level truncation /
+            // partial-failure metadata. Early-return after running
+            // structural::run; do not thread through the literal/
+            // regex scan accumulation below.
+            //
+            // `combine` carries the optional literal/regex filter the
+            // caller asked to intersect with structural matches. The
+            // protocol matrix in compose.rs defines `structural + text`
+            // and `structural + regex` as INTERSECTION semantics —
+            // every returned match must satisfy *both* the structural
+            // query AND the literal/regex filter. Applied as a
+            // post-pass over `result.matches` below.
+            super::grep_v2::validate_predicates(&query).map_err(|e| e.into_protocol_error())?;
+
+            // Compile the file_glob early so a bad glob fails fast
+            // before snapshotting the store.
+            let glob = match p.file_glob.as_deref() {
+                Some(g) if g.is_empty() => {
+                    return Err(ProtocolError::new(
+                        ErrorCode::InvalidParams,
+                        "`file_glob` must be non-empty when provided",
+                    ));
+                }
+                Some(g) => {
+                    let glob = globset::Glob::new(g).map_err(|e| {
+                        ProtocolError::new(
+                            ErrorCode::InvalidParams,
+                            format!("`file_glob` failed to compile: {e}"),
+                        )
+                    })?;
+                    Some(glob.compile_matcher())
+                }
+                None => None,
+            };
+
+            let (root, store_arc) = snapshot(state)?;
+            let files = store_arc.list_indexed_files().map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InternalError,
+                    format!("list_indexed_files failed: {e}"),
+                )
+            })?;
+
+            let result = super::grep_v2::structural::run(
+                state,
+                &root,
+                &files,
+                &query,
+                &languages,
+                glob.as_ref(),
+                limit,
+            )
+            .map_err(|e| match e {
+                super::grep_v2::structural::StructuralError::AllLanguagesFailed(pfs) => {
+                    let first = pfs
+                        .first()
+                        .map(|pf| format!("{}: {}", pf.language, pf.error))
+                        .unwrap_or_else(|| "no languages compiled".to_string());
+                    let pfs_json: Vec<_> = pfs
+                        .iter()
+                        .map(|pf| {
+                            serde_json::json!({
+                                "language": pf.language,
+                                "error": pf.error,
+                            })
+                        })
+                        .collect();
+                    ProtocolError::new(
+                        ErrorCode::InvalidParams,
+                        format!(
+                            "structural query failed to compile for any requested language: {first}"
+                        ),
+                    )
+                    .with_data(serde_json::json!({
+                        "code": super::grep_v2::GrepValidationCode::StructuralQueryInvalid.as_str(),
+                        "partial_failures": pfs_json,
+                    }))
+                }
+                super::grep_v2::structural::StructuralError::Timeout => ProtocolError::new(
+                    ErrorCode::InvalidParams,
+                    "structural query exceeded the wall-clock budget",
+                )
+                .with_data(serde_json::json!({
+                    "code": super::grep_v2::GrepValidationCode::StructuralQueryTimeout.as_str(),
+                    "budget_ms": super::grep_v2::limits::STRUCTURAL_WALL_CLOCK_MS,
+                })),
+            })?;
+
+            // Apply the `combine` (literal/regex) intersection filter
+            // post-scan. The protocol matrix defines `structural + text`
+            // and `structural + regex` as intersection: a returned
+            // match must satisfy BOTH filters. Without this filter
+            // calls that combine `structural_query` with `text`/`regex`
+            // would return false-positives (structural-only matches),
+            // breaking the documented composition contract — this is
+            // exactly the bug Codex flagged on PR #110 review.
+            //
+            // Implementation: group matches by file → read each file
+            // once → slice the byte range for each match → check the
+            // literal substring (case-insensitive by default) or run
+            // the regex against the slice. Reading bytes per file is
+            // unavoidable because StructuralMatch carries byte ranges,
+            // not the matched text.
+            use super::grep_v2::compose::StructuralCombine;
+            let combine_filtered: Vec<_> = match &combine {
+                StructuralCombine::None => result.matches,
+                StructuralCombine::Literal {
+                    text,
+                    case_insensitive,
+                } => filter_structural_by_literal(&root, result.matches, text, *case_insensitive),
+                StructuralCombine::Regex {
+                    pattern,
+                    case_insensitive,
+                    multiline,
+                } => filter_structural_by_regex(
+                    &root,
+                    result.matches,
+                    pattern,
+                    *case_insensitive,
+                    *multiline,
+                )?,
+            };
+
+            // Apply within_symbol filter post-scan if requested.
+            // Mirrors the literal/regex path's filter ordering.
+            let final_matches: Vec<_> = if let Some(name) = &shared_filters.within_symbol {
+                let defs = match store_arc.find_symbol(name) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(ProtocolError::new(
+                            ErrorCode::InternalError,
+                            format!("within_symbol lookup failed: {e}"),
+                        ));
+                    }
+                };
+                if defs.is_empty() {
+                    return Err(super::grep_v2::GrepValidationError::new(
+                        super::grep_v2::GrepValidationCode::WithinSymbolNotFound,
+                        format!("`within_symbol`={name} resolved to zero defs"),
+                    )
+                    .into_protocol_error());
+                }
+                if defs.len() > super::grep_v2::WITHIN_SYMBOL_MAX_DEFS
+                    && !shared_filters.within_symbol_allow_overload
+                {
+                    return Err(super::grep_v2::GrepValidationError::new(
+                        super::grep_v2::GrepValidationCode::WithinSymbolTooManyDefs,
+                        format!(
+                            "`within_symbol`={name} resolved to {} defs (cap {}); set `within_symbol_allow_overload: true` to opt in",
+                            defs.len(),
+                            super::grep_v2::WITHIN_SYMBOL_MAX_DEFS
+                        ),
+                    )
+                    .with_data("def_count", serde_json::Value::from(defs.len()))
+                    .into_protocol_error());
+                }
+                // Filter: keep matches whose byte range lies inside
+                // any resolved def's byte range AND in the same file.
+                combine_filtered
+                    .into_iter()
+                    .filter(|m| {
+                        defs.iter().any(|d| {
+                            d.file == m.file
+                                && m.start_byte >= d.start_byte
+                                && m.end_byte <= d.end_byte
+                        })
+                    })
+                    .collect()
+            } else {
+                combine_filtered
+            };
+
+            // Serialize structural matches to JSON.
+            let match_records: Vec<serde_json::Value> = final_matches
+                .iter()
+                .map(|m| {
+                    let captures_obj: serde_json::Map<String, serde_json::Value> = m
+                        .captures
+                        .iter()
+                        .map(|(name, payloads)| {
+                            let arr: Vec<serde_json::Value> = payloads
+                                .iter()
+                                .map(|p| {
+                                    let mut obj = serde_json::Map::new();
+                                    obj.insert(
+                                        "start".into(),
+                                        serde_json::json!({"line": p.start.line, "col": p.start.col}),
+                                    );
+                                    obj.insert(
+                                        "end".into(),
+                                        serde_json::json!({"line": p.end.line, "col": p.end.col}),
+                                    );
+                                    obj.insert(
+                                        "text".into(),
+                                        serde_json::Value::String(p.text.clone()),
+                                    );
+                                    if p.truncated {
+                                        obj.insert(
+                                            "truncated".into(),
+                                            serde_json::Value::Bool(true),
+                                        );
+                                    }
+                                    serde_json::Value::Object(obj)
+                                })
+                                .collect();
+                            (name.clone(), serde_json::Value::Array(arr))
+                        })
+                        .collect();
+                    serde_json::json!({
+                        "file": m.file,
+                        "range": {
+                            "start_line": m.start_line,
+                            "end_line":   m.end_line,
+                            "start_byte": m.start_byte,
+                            "end_byte":   m.end_byte,
+                        },
+                        "captures": captures_obj,
+                    })
+                })
+                .collect();
+
+            let pfs_json: Vec<_> = result
+                .partial_failures
+                .iter()
+                .map(|pf| {
+                    serde_json::json!({
+                        "language": pf.language,
+                        "error": pf.error,
+                    })
+                })
+                .collect();
+
+            return Ok(serde_json::json!({
+                "matches": match_records,
+                "truncated": result.truncated,
+                "rows_seen": result.rows_seen,
+                "rows_returned": final_matches.len(),
+                "files_scanned": result.files_scanned,
+                "files_with_matches": result.files_with_matches,
+                "partial_failures": pfs_json,
+            }));
         }
     };
+    // Make the v1 unused-variables guard happy for the new fields
+    // until U4-U7 consume them. Keeps the v1 hot path untouched.
+    // `multiline` is consumed below to compute `end_line` for matches
+    // that span newlines; `case_insensitive` is folded into the
+    // scanner already.
+    let _ = (
+        &text_for_response,
+        case_insensitive,
+        &shared_filters.language,
+    );
 
     // Compile `file_glob` (workspace-relative path matcher) before
     // mounting the index, same reason as the regex precompile above.
@@ -1260,6 +1611,19 @@ pub async fn grep(
                 let raw_line = &bytes[line_start..line_end];
                 let line_text = bytes_to_truncated_utf8(raw_line, MAX_LINE_BYTES);
                 let one_based_line = (line_no + 1) as u32;
+                // U3: when the regex spans newlines (`multiline: true`
+                // with `.` matching `\n`), the match's end byte may
+                // sit on a later line than the start. Compute the
+                // end line from `m_end`; v1 single-line matches (and
+                // every literal match) collapse `end_line` back to
+                // `start_line` because `m_end` is inside the same
+                // line as `m_start`.
+                let one_based_end_line = if multiline && m_end > line_end {
+                    let (end_line_no, _, _) = find_line_bounds(&bytes, m_end.saturating_sub(1));
+                    (end_line_no + 1) as u32
+                } else {
+                    one_based_line
+                };
 
                 // Resolve enclosing def. `pick_innermost_def` returns
                 // the smallest line-range def covering `one_based_line`,
@@ -1303,7 +1667,7 @@ pub async fn grep(
                     "file": rel,
                     "range": {
                         "start_line": one_based_line,
-                        "end_line":   one_based_line,
+                        "end_line":   one_based_end_line,
                         "start_byte": m_start as u32,
                         "end_byte":   m_end as u32,
                     },
@@ -1337,6 +1701,63 @@ pub async fn grep(
         }
     }
 
+    // U4: within_symbol post-filter. Runs after collection (so the
+    // store lookup is paid at most once per call, not per match) and
+    // before the rank-score sort (so the response ordering remains
+    // the documented "PageRank descending" shape). Strict containment
+    // semantics — see `grep_v2::within_symbol` for the policy.
+    //
+    // Cardinality failures (`WITHIN_SYMBOL_NOT_FOUND`,
+    // `WITHIN_SYMBOL_TOO_MANY_DEFS`) are surfaced as INVALID_PARAMS
+    // envelopes per the plan; the filter never produces a partial
+    // result on a name resolution failure.
+    if let Some(name) = shared_filters.within_symbol.as_deref() {
+        let ranges: Vec<super::grep_v2::WithinSymbolMatchRange> = matches
+            .iter()
+            .map(|m| super::grep_v2::WithinSymbolMatchRange {
+                file: m["file"].as_str().unwrap_or("").to_string(),
+                start_byte: m["range"]["start_byte"].as_u64().unwrap_or(0) as u32,
+                end_byte: m["range"]["end_byte"].as_u64().unwrap_or(0) as u32,
+            })
+            .collect();
+        let kept = super::grep_v2::resolve_and_filter_within_symbol(
+            &store_arc,
+            name,
+            shared_filters.within_symbol_allow_overload,
+            ranges,
+        )
+        .map_err(|e| e.into_protocol_error())?;
+        // Re-index `matches` to only those whose (file, start_byte,
+        // end_byte) survived the filter. Build a lookup set keyed on
+        // (file, start_byte, end_byte) — matches are unique on that
+        // tuple within a single response (a match is a concrete
+        // byte slice).
+        use std::collections::HashSet;
+        let keep_keys: HashSet<(String, u32, u32)> = kept
+            .into_iter()
+            .map(|r| (r.file, r.start_byte, r.end_byte))
+            .collect();
+        let dropped_count = matches.len();
+        matches.retain(|m| {
+            let f = m["file"].as_str().unwrap_or("").to_string();
+            let s = m["range"]["start_byte"].as_u64().unwrap_or(0) as u32;
+            let e = m["range"]["end_byte"].as_u64().unwrap_or(0) as u32;
+            keep_keys.contains(&(f, s, e))
+        });
+        // `files_with_matches` was computed during collection and is
+        // now stale (a file may have contributed matches all of which
+        // got filtered out). Recompute from the surviving matches.
+        let surviving_files: HashSet<&str> =
+            matches.iter().filter_map(|m| m["file"].as_str()).collect();
+        files_with_matches = surviving_files.len();
+        // Reflect the post-filter drop in the `truncated` accounting:
+        // `total_pre_truncate` was counted pre-filter, so if the
+        // filter dropped any rows we want the existing
+        // `total_pre_truncate > matches.len()` clause to keep firing.
+        // No mutation needed; just note the invariant.
+        let _ = dropped_count;
+    }
+
     let truncated = truncated_hit_cap || total_pre_truncate > matches.len();
 
     // v0.5.5: sort by enclosing-def PageRank, descending. Ties broken
@@ -1364,6 +1785,180 @@ pub async fn grep(
         "files_scanned":      files_scanned,
         "files_with_matches": files_with_matches,
     }))
+}
+
+// ---- v0.6 Index.Grep v2 structural × literal/regex intersection
+// helpers (PR #110 Codex review C5). The structural scanner returns
+// matches as byte-range coordinates; intersection with the literal
+// or regex filter requires reading the file bytes at each match's
+// range and testing the substring/pattern against that slice.
+
+/// Filter structural matches by literal-substring intersection.
+/// Matches whose `[start_byte..end_byte]` slice contains `needle`
+/// (case-insensitive when `case_insensitive`) are kept.
+///
+/// Files are read once per file to amortize I/O. A match in a file
+/// that fails to read is silently dropped (already-present matches
+/// for other files survive); this mirrors the v1 grep handler's
+/// "log + continue" file-error policy.
+fn filter_structural_by_literal(
+    root: &std::path::Path,
+    matches: Vec<super::grep_v2::structural::StructuralMatch>,
+    needle: &str,
+    case_insensitive: bool,
+) -> Vec<super::grep_v2::structural::StructuralMatch> {
+    use std::collections::HashMap;
+    if matches.is_empty() || needle.is_empty() {
+        // Empty needle would tautologically match every slice; the
+        // validator already rejects empty `text`, but be defensive.
+        return matches;
+    }
+    let mut by_file: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, m) in matches.iter().enumerate() {
+        by_file.entry(m.file.as_str()).or_default().push(i);
+    }
+    let mut keep = vec![false; matches.len()];
+    let needle_bytes = needle.as_bytes();
+    for (file, indices) in by_file {
+        let path = root.join(file);
+        let bytes = match std::fs::read(&path) {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::debug!(
+                    target: "rts_daemon::grep_v2",
+                    error = %e,
+                    file = %file,
+                    "structural-intersection: file read failed; dropping its matches"
+                );
+                continue;
+            }
+        };
+        for &i in &indices {
+            let m = &matches[i];
+            let lo = m.start_byte as usize;
+            let hi = m.end_byte as usize;
+            if hi > bytes.len() || lo > hi {
+                continue;
+            }
+            let slice = &bytes[lo..hi];
+            let matched = if case_insensitive {
+                slice_contains_case_insensitive(slice, needle_bytes)
+            } else {
+                slice_contains_exact(slice, needle_bytes)
+            };
+            if matched {
+                keep[i] = true;
+            }
+        }
+    }
+    matches
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| keep[*i])
+        .map(|(_, m)| m)
+        .collect()
+}
+
+/// Exact byte-level substring check via windowed scan. The std
+/// library doesn't expose a `bytes.find(needle)` for arbitrary
+/// byte slices; this is a small O(n*m) helper that's fine for
+/// intersection scans where the match slices are bounded by the
+/// structural query's typical node sizes (kilobytes, not megabytes).
+fn slice_contains_exact(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    if needle.len() > haystack.len() {
+        return false;
+    }
+    haystack.windows(needle.len()).any(|w| w == needle)
+}
+
+/// Case-insensitive byte-level substring check. Works over ASCII
+/// case; non-ASCII bytes match only their exact value. This mirrors
+/// the v1 grep's literal-mode behavior, which uses the same
+/// case-fold-ASCII semantic.
+fn slice_contains_case_insensitive(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    if needle.len() > haystack.len() {
+        return false;
+    }
+    'outer: for start in 0..=haystack.len() - needle.len() {
+        for j in 0..needle.len() {
+            if haystack[start + j].to_ascii_lowercase() != needle[j].to_ascii_lowercase() {
+                continue 'outer;
+            }
+        }
+        return true;
+    }
+    false
+}
+
+/// Filter structural matches by regex intersection. Same file-once-
+/// read pattern as `filter_structural_by_literal`. Compile failures
+/// here are bubbled up as `INVALID_PARAMS` so the caller can
+/// self-correct the regex.
+fn filter_structural_by_regex(
+    root: &std::path::Path,
+    matches: Vec<super::grep_v2::structural::StructuralMatch>,
+    pattern: &str,
+    case_insensitive: bool,
+    multiline: bool,
+) -> Result<Vec<super::grep_v2::structural::StructuralMatch>, ProtocolError> {
+    use std::collections::HashMap;
+    if matches.is_empty() {
+        return Ok(matches);
+    }
+    let mut builder = regex::bytes::RegexBuilder::new(pattern);
+    builder.case_insensitive(case_insensitive);
+    if multiline {
+        builder.dot_matches_new_line(true).multi_line(true);
+    }
+    let re = builder.build().map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InvalidParams,
+            format!("`text` failed to compile as regex: {e}"),
+        )
+    })?;
+    let mut by_file: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, m) in matches.iter().enumerate() {
+        by_file.entry(m.file.as_str()).or_default().push(i);
+    }
+    let mut keep = vec![false; matches.len()];
+    for (file, indices) in by_file {
+        let path = root.join(file);
+        let bytes = match std::fs::read(&path) {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::debug!(
+                    target: "rts_daemon::grep_v2",
+                    error = %e,
+                    file = %file,
+                    "structural-intersection: file read failed; dropping its matches"
+                );
+                continue;
+            }
+        };
+        for &i in &indices {
+            let m = &matches[i];
+            let lo = m.start_byte as usize;
+            let hi = m.end_byte as usize;
+            if hi > bytes.len() || lo > hi {
+                continue;
+            }
+            if re.is_match(&bytes[lo..hi]) {
+                keep[i] = true;
+            }
+        }
+    }
+    Ok(matches
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| keep[*i])
+        .map(|(_, m)| m)
+        .collect())
 }
 
 /// Helper: given byte offset `pos` into `bytes`, return

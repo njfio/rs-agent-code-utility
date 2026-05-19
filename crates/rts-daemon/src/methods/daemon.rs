@@ -90,6 +90,23 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // "is the daemon pinned to this $PWD?" and "is indexing done?"
     // in a single round-trip. Old clients ignore the new fields.
     "daemon_stats_v2",
+    // v0.6 — Index.Grep v2: three additive capabilities on the
+    // existing `Index.Grep` method, plus a bundle. Old callers (no
+    // v2 params) get byte-for-byte the same response as v1.
+    //
+    //   - multiline:      regex `(?s)`/`(?m)` semantics over whole-file buffer
+    //   - structural:     raw tree-sitter S-expression queries with named captures
+    //   - within_symbol:  byte-range scope filter via find_symbol resolution
+    //   - bundle: clients that prefer one check can gate on `index_grep_v2`
+    //
+    // `language` is intentionally NOT a separate capability — it's
+    // a refinement of file selection that pairs with any grep mode,
+    // and clients always had to pick file scope somehow. The
+    // bundle implies it's available.
+    "index_grep_multiline",
+    "index_grep_structural",
+    "index_grep_within_symbol",
+    "index_grep_v2",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

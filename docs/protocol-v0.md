@@ -183,7 +183,11 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "find_symbol_doc_filter",       // v0.5.2+
                      "find_symbol_pre_filter_count", // v0.5.2+
                      "find_symbol_signature_field", // v0.5.3+
-                     "index_grep"],                  // v0.5.4+
+                     "index_grep",                   // v0.5.4+
+                     "index_grep_multiline",         // v0.6 alpha+
+                     "index_grep_structural",        // v0.6 alpha+
+                     "index_grep_within_symbol",     // v0.6 alpha+
+                     "index_grep_v2"],               // v0.6 alpha+ (bundle)
     "uptime_ms":    123456
   }
 }
@@ -743,6 +747,157 @@ Literal-substring search across all indexed file bytes. Closes the agent-loop ho
 
 Errors: `INVALID_PARAMS` (empty `text`, `text` > 1024 chars, `limit` outside `1..=4096`).
 
+#### v0.6 additions (capability `index_grep_v2`)
+
+`Index.Grep` gains five additive optional input fields and three new capability strings, gated independently. v1 callers (no new fields) see byte-identical responses on the unchanged code path; v2 callers MUST gate on the relevant capability string before sending new fields. The bundle capability `index_grep_v2` advertises all three new modes together for clients that prefer one check.
+
+**Additional `params`**:
+```jsonc
+{
+  // existing v1 fields preserved …
+
+  // v0.6: regex multi-line mode. Sets `dot_matches_new_line(true) + multi_line(true)`
+  // on the compiled regex and scans the file as one buffer. Requires `regex: true`;
+  // the literal path crosses newlines already, so `multiline: true` on a literal call
+  // is rejected with `MULTILINE_REQUIRES_REGEX`. Capability: `index_grep_multiline`.
+  "multiline":                     false,
+
+  // v0.6: raw tree-sitter S-expression query, evaluated against the parsed tree of
+  // every file matching the `language` filter. Captures are returned per-match (see
+  // result shape below). Validated via `Query::new` at request time and cached
+  // (`(language, query_text)` LRU, capacity 64). Capability: `index_grep_structural`.
+  // **Requires `language`** (single id or list).
+  "structural_query":              "(impl_item) @impl",
+
+  // v0.6: post-filter to matches whose byte range lies strictly inside the def byte
+  // range of a named symbol. Single exact qualified name in v1; overloaded names
+  // (>16 defs) are rejected with `WITHIN_SYMBOL_TOO_MANY_DEFS` unless the caller
+  // opts in via `within_symbol_allow_overload: true`. Capability:
+  // `index_grep_within_symbol`.
+  "within_symbol":                 "parse_request",
+  "within_symbol_allow_overload":  false,
+
+  // v0.6: file-set filter applicable to every scan mode (literal, regex, structural).
+  // **Required** when `structural_query` is set; optional otherwise. Intersects with
+  // `file_glob` (AND semantics: a file must satisfy both filters). Capability:
+  // `index_grep_v2`.
+  "language":                      ["rust"]
+}
+```
+
+**Composition matrix (binding contract).** The six axes (`text`, `regex`, `multiline`, `structural_query`, `within_symbol`, `language`) produce the following resolved scan modes. Source of truth: `crates/rts-daemon/src/methods/grep_v2/compose.rs`.
+
+| `text`     | `regex` | `multiline` | `structural_query` | `within_symbol` | `language`   | Result                                   |
+|------------|---------|-------------|--------------------|-----------------|--------------|------------------------------------------|
+| Some       | n/false | n/false     | None               | opt             | opt          | v1 literal substring scan                |
+| Some       | true    | n/false     | None               | opt             | opt          | v1 regex scan (single-line)              |
+| Some       | true    | true        | None               | opt             | opt          | multi-line regex (whole-file buffer)     |
+| None       | any     | true        | None               | —               | —            | REJECT `MULTILINE_REQUIRES_REGEX`        |
+| Some       | n/false | true        | any                | —               | —            | REJECT `MULTILINE_REQUIRES_REGEX`        |
+| None       | any     | any         | Some               | opt             | **required** | structural scan                          |
+| Some       | n/false | n/false     | Some               | opt             | **required** | structural ∩ literal                     |
+| Some       | true    | any         | Some               | opt             | **required** | structural ∩ regex                       |
+| any        | any     | any         | Some               | —               | None         | REJECT `STRUCTURAL_REQUIRES_LANGUAGE`    |
+| None       | any     | any         | None               | —               | —            | REJECT `NO_SEARCH_SOURCE_PROVIDED`       |
+| Some('')   | any     | any         | any                | —               | —            | REJECT `INVALID_TEXT_LENGTH`             |
+| Some(>1024)| any     | any         | any                | —               | —            | REJECT `INVALID_TEXT_LENGTH`             |
+
+`within_symbol` applies as a post-pass filter regardless of which mode resolved (strict containment: the match byte range must lie strictly inside the resolved def byte range). `language` is an OR set: `["rust","ts"]` matches files of either language; `file_glob ∩ language` is AND.
+
+**Additional result fields** (present-when-relevant; absent on unchanged-path v1 calls — mirrors §7.6's `pre_filter_count` precedent):
+
+```jsonc
+{
+  "matches": [
+    {
+      // existing v1 fields preserved byte-for-byte …
+      // present only on structural matches (i.e. when the call set `structural_query`):
+      "captures": {
+        "impl": [
+          { "start": {"line": 43, "col": 0}, "end": {"line": 87, "col": 1}, "text": "impl Foo for Bar { …" }
+        ],
+        "name": [
+          { "start": {"line": 43, "col": 5}, "end": {"line": 43, "col": 8}, "text": "Foo" }
+        ]
+      }
+    }
+  ],
+  // existing v1 fields preserved …
+
+  // present (top-level) when row caps, capture-byte caps, or wall-clock caps were hit;
+  // omitted otherwise. The existing v1 `truncated: bool` keeps its meaning for the
+  // limit-reached case; the new metadata block disambiguates which budget tripped.
+  "truncated":                   true,
+  "truncation_reason":           "rows_seen_exceeded_max",  // or "wall_clock", "capture_bytes"
+  "rows_seen":                   8192,
+  "rows_returned":               4096,
+
+  // present when a structural query was compiled successfully against at least one
+  // of the requested languages but failed against the others; the call succeeds
+  // with results from the languages that compiled. Absent when every requested
+  // language compiled or every one failed (the latter is `STRUCTURAL_QUERY_INVALID`).
+  "partial_failures": [
+    { "language": "ts", "error": "Query error at 1:0: invalid node type 'impl_item'" }
+  ]
+}
+```
+
+Per-capture `text` is truncated at `STRUCTURAL_MAX_CAPTURE_BYTES` (8 KiB); when truncated, the capture object gains `"truncated": true`. Position units are `{line, col}` (1-based line, 0-based col, mirroring v1 match coordinates).
+
+**Predicate whitelist (v1).** Agent-supplied S-expression queries may use only the following predicates; any other predicate (including custom `#contains?`-style extensions) fails with `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`:
+
+- `#eq?`, `#not-eq?` — string equality; no regex compile.
+- `#match?`, `#not-match?` — regex compile against a daemon-wide shared budget (each predicate regex must compile under `PREDICATE_REGEX_DFA_LIMIT`, currently 256 KiB — more conservative than the outer `MULTILINE_DFA_SIZE_LIMIT`).
+- `#any-of?` — string membership.
+- `#is?`, `#is-not?` — node-property test; no regex compile.
+
+The whitelist is documented for tree-sitter 0.26 (currently pinned). A future grammar upgrade may require re-validation.
+
+**Resource budgets.** Constants (source: `crates/rts-daemon/src/methods/grep_v2/limits.rs`, lands in U5):
+
+| Constant                              | Value         | Purpose                                              |
+|---------------------------------------|---------------|------------------------------------------------------|
+| `MULTILINE_DFA_SIZE_LIMIT`            | 32 MiB        | regex DFA cap on the `multiline: true` path          |
+| `MULTILINE_NFA_SIZE_LIMIT`            | 32 MiB        | regex NFA cap on the `multiline: true` path          |
+| `PREDICATE_REGEX_DFA_LIMIT`           | 256 KiB       | per-`#match?`/`#not-match?` predicate compile cap    |
+| `STRUCTURAL_WALL_CLOCK_MS`            | 5 000 ms      | total wall-clock budget per structural scan          |
+| `STRUCTURAL_MAX_ROWS`                 | 4 096         | hard cap on structural matches per response          |
+| `STRUCTURAL_MAX_CAPTURE_BYTES`        | 8 192         | per-capture text truncation threshold                |
+| `STRUCTURAL_MAX_CAPTURES_PER_MATCH`   | 64            | upper bound on distinct captures per match record    |
+| `WITHIN_SYMBOL_MAX_DEFS`              | 16            | overload threshold without opt-in                    |
+| `QUERY_LRU_CAPACITY`                  | 64            | compiled-`Query` LRU entry cap                       |
+
+Wall-clock budgets are checked between files (not mid-file). Cap breaches return `truncated: true` + metadata; they're not errors.
+
+**Capabilities advertised** (on `Daemon.Ping.result.capabilities`):
+
+- `index_grep_multiline` — `multiline: true` honored on the regex path.
+- `index_grep_structural` — `structural_query` honored; per-match `captures` returned.
+- `index_grep_within_symbol` — `within_symbol` (+ `within_symbol_allow_overload`) honored.
+- `index_grep_v2` — bundle string; advertised iff all three above are.
+
+Clients SHOULD gate on these strings; a pre-v0.6 daemon silently drops unknown input fields and the call falls back to v1 semantics.
+
+**New error codes** (each emits as `INVALID_PARAMS` with the listed `data.code` string; see §14):
+
+| `data.code`                              | Trigger                                                                                 |
+|------------------------------------------|-----------------------------------------------------------------------------------------|
+| `MULTILINE_REQUIRES_REGEX`               | `multiline: true` on the literal path (rejected, not silently coerced)                  |
+| `STRUCTURAL_REQUIRES_LANGUAGE`           | `structural_query` set, `language` missing or empty                                     |
+| `NO_SEARCH_SOURCE_PROVIDED`              | neither `text` nor `structural_query` provided                                          |
+| `INVALID_TEXT_LENGTH`                    | `text` is empty or > 1024 chars (mirrors v1; surfaced via the v2 envelope)              |
+| `STRUCTURAL_QUERY_INVALID`               | `Query::new(language, query_text)` failed for every requested language; `data.error_message` carries the tree-sitter diagnostic |
+| `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED` | query uses a predicate outside the v1 whitelist                                         |
+| `WITHIN_SYMBOL_NOT_FOUND`                | `within_symbol` resolved to zero defs                                                   |
+| `WITHIN_SYMBOL_TOO_MANY_DEFS`            | `within_symbol` resolved to > 16 defs without `within_symbol_allow_overload: true`; `data.def_count` carries the count |
+| `REGEX_TOO_COMPLEX`                      | regex compile exceeded `MULTILINE_DFA_SIZE_LIMIT` (or NFA equivalent)                   |
+| `STRUCTURAL_QUERY_TIMEOUT`               | structural scan exceeded `STRUCTURAL_WALL_CLOCK_MS`                                     |
+| `UNKNOWN_LANGUAGE`                       | `language` contains an identifier the daemon doesn't index                              |
+
+Note: `WITHIN_SYMBOL_NOT_FOUND`, `WITHIN_SYMBOL_TOO_MANY_DEFS`, `STRUCTURAL_QUERY_INVALID`, `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`, `REGEX_TOO_COMPLEX`, and `STRUCTURAL_QUERY_TIMEOUT` are emitted from the U4/U5 execution paths (not pure-input validation) and so depend on those units landing. Until U5 lands, the validator surfaces the input-shape codes only (`MULTILINE_REQUIRES_REGEX`, `STRUCTURAL_REQUIRES_LANGUAGE`, `NO_SEARCH_SOURCE_PROVIDED`, `INVALID_TEXT_LENGTH`).
+
+**Telemetry.** `Daemon.Stats` gains three new sub-counters as siblings of the existing `index_grep` field — `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`. Each bumps when its corresponding param is set and active (e.g., `multiline: false` does NOT bump `index_grep_multiline`); the parent `index_grep` bumps on every call. Lands with U7.
+
 ### 7.9 `Session.Open`
 
 Open a session. Returns an opaque session id the client carries on subsequent requests (v1.1: enables session-aware dedup; v0: required but otherwise inert).
@@ -976,6 +1131,12 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 | `INTERNAL_ERROR` | bug in the daemon; should be reported | Yes (rarely fixes itself) |
 
 `error.data` MAY carry structured detail (e.g. `{ "expected_uid": 501, "got_uid": 0 }` for the auth check, or `{ "files_done": 1234, "files_total": 5000 }` for `INDEX_NOT_READY` — same shape as `progress`).
+
+**`Index.Grep` v2 sub-codes (v0.6, capability `index_grep_v2`).** Every v2 validation/execution error returns the protocol-level code `INVALID_PARAMS` and carries a stable `data.code` string that lets agents branch without parsing free-form messages. The strings are documented in §7.8b's "v0.6 additions" table; the closed set is:
+
+`MULTILINE_REQUIRES_REGEX`, `STRUCTURAL_REQUIRES_LANGUAGE`, `NO_SEARCH_SOURCE_PROVIDED`, `INVALID_TEXT_LENGTH`, `STRUCTURAL_QUERY_INVALID`, `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`, `WITHIN_SYMBOL_NOT_FOUND`, `WITHIN_SYMBOL_TOO_MANY_DEFS`, `REGEX_TOO_COMPLEX`, `STRUCTURAL_QUERY_TIMEOUT`, `UNKNOWN_LANGUAGE`.
+
+Source of truth: `crates/rts-daemon/src/methods/grep_v2/errors.rs`.
 
 ---
 
@@ -1420,8 +1581,9 @@ This appendix tracks every additive wire-shape change between Draft 1 (P5 delive
 | `alpha.33` | (none — internal) | **v0.3 U3**: `closure::compute` swaps from at-query-time tree-sitter parsing to reading `SID_REFS_OUT`. Same wire shape; faster cold calls. Also fixed a latent local-variable bug in U1's `enclosing_caller_sid` that under-populated `SID_REFS_OUT`. | — |
 | `alpha.34` | `pagerank_symbolwise` | **v0.3 U4**: symbol-level PageRank fills `rank_score` in `Index.FindSymbol` and `Index.FindCallers` responses (was a `0.0` placeholder). `Index.FindSymbol.matches[]` sorts by descending rank by default; `sort: "lexical"` opts out. Single-slot generation-keyed cache mirroring `OutlineCache` (alpha.20). | §4.1, §4.2, §7.6, §18.3 |
 | `alpha.35` | `impact_of` | **v0.3 U5** (final): new method `Index.ImpactOf(name, depth?, token_budget?, max_nodes?, exclude_test_paths?)` returns the transitive caller closure via BFS over reverse edges. Four independent truncation flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell the agent why a result is partial. Test-path exclusion (`/tests/`, `_test.rs`, `.spec.ts`) is on by default. Wire shape trimmed from the plan's 9 fields to 6 per Deepening §F3 (no `signature`, no nested `callers[]`). | §4.1, §4.2, §7, §7.7d, §18.4d |
+| `v0.6 alpha` | `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2` | **`Index.Grep` v2** (`index_grep_v2` bundle): five additive optional input fields (`multiline`, `structural_query`, `within_symbol`, `within_symbol_allow_overload`, `language`); per-match `captures` on structural results; top-level `truncated`/`truncation_reason`/`rows_seen`/`rows_returned` on cap breaches; `partial_failures[]` on cross-language structural runs. 11 new `data.code` sub-codes under `INVALID_PARAMS`. Predicate whitelist (7 entries) on agent-supplied S-expression queries. Three new `Daemon.Stats` sub-counters. v1 callers unchanged byte-for-byte. | §4.1, §7.8b, §14 |
 
-Capability strings present in `Daemon.Ping.result.capabilities` after alpha.35 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`.
+Capability strings present in `Daemon.Ping.result.capabilities` after alpha.35 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`. v0.6 alpha appends `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2` (see §7.8b).
 
 **v0.3 plan complete:** all four code-graph KB capability strings (`find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`) advertised. The `call_graph` umbrella reserved string remains unused — agents branch on the four fine-grained strings instead.
 

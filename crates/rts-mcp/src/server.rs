@@ -206,7 +206,12 @@ pub struct GrepArgs {
     /// error messages, version pins, log strings, config values —
     /// that `find_symbol` can't reach because they're not symbol
     /// names or doc-comment text. Capability: `index_grep` (v0.5.4+).
-    pub text: String,
+    ///
+    /// v0.6: optional — provide `text` OR `structural_query` (or
+    /// both for intersection). When neither is set the daemon
+    /// returns `NO_SEARCH_SOURCE_PROVIDED`.
+    #[serde(default)]
+    pub text: Option<String>,
     /// Maximum number of matches to return. Defaults to 256;
     /// range 1..=4096. Above the default is almost always a tooling
     /// problem — agents should narrow the search instead.
@@ -233,6 +238,67 @@ pub struct GrepArgs {
     /// `rg --type rust foo` without leaving the indexed file set.
     #[serde(default)]
     pub file_glob: Option<String>,
+    /// v0.6 multi-line regex mode (capability `index_grep_multiline`).
+    /// When `true` AND `regex: true`, the regex engine treats indexed
+    /// file bytes as one logical buffer per file: `.` matches `\n`,
+    /// `^`/`$` match line boundaries, and `(?s)` / `(?m)` flags are
+    /// honored. Required for patterns that span newlines (multi-line
+    /// function signatures, SQL fragments, multi-line error
+    /// messages). REJECTED with `MULTILINE_REQUIRES_REGEX` when set
+    /// on the literal `text` path (literal substring search is
+    /// already byte-wise across newlines; multiline is a regex
+    /// concept only). Has its own DFA size budget (32 MB) to bound
+    /// adversarial patterns; over-budget regexes return
+    /// `REGEX_TOO_COMPLEX` instead of panicking or hanging.
+    #[serde(default)]
+    pub multiline: Option<bool>,
+    /// v0.6 raw tree-sitter S-expression structural query
+    /// (capability `index_grep_structural`). Runs the query against
+    /// the parsed tree of every file matching the `language` filter
+    /// and returns matches with a per-match `captures` map keyed by
+    /// the query's named captures. Example query for "find every
+    /// `impl` block containing an `unsafe fn`":
+    /// `(impl_item body: (declaration_list (function_item) @fn))`
+    /// — captures named `@fn`.
+    ///
+    /// Requires `language` (returns `STRUCTURAL_REQUIRES_LANGUAGE`
+    /// otherwise). Predicates whitelisted to `#eq?`, `#not-eq?`,
+    /// `#match?`, `#not-match?`, `#any-of?`, `#is?`, `#is-not?`;
+    /// anything else returns `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`.
+    /// Composes with `text`/`pattern` (intersection) and
+    /// `within_symbol` (filter); see `docs/protocol-v0.md` §7.8b.
+    #[serde(default)]
+    pub structural_query: Option<String>,
+    /// v0.6 byte-range scope filter (capability
+    /// `index_grep_within_symbol`). When set, returned matches are
+    /// filtered to those whose byte range lies strictly inside the
+    /// def byte range of the named symbol(s). Useful for
+    /// "find every `panic!` inside `fn parse_request`" — pairs
+    /// `find_symbol` resolution with `grep` filtering in one call.
+    ///
+    /// `within_symbol: "name"` resolves the name via the same
+    /// lookup as `find_symbol`. Returns `WITHIN_SYMBOL_NOT_FOUND` on
+    /// zero matches. When the name resolves to more than 16 defs
+    /// (overloaded names like `new`/`main`/`default`), returns
+    /// `WITHIN_SYMBOL_TOO_MANY_DEFS` unless
+    /// `within_symbol_allow_overload: true` is also set, in which
+    /// case matches across the union of all def byte ranges are
+    /// returned.
+    #[serde(default)]
+    pub within_symbol: Option<String>,
+    /// v0.6 opt-in to multi-def `within_symbol`. Defaults to `false`.
+    /// See `within_symbol` above.
+    #[serde(default)]
+    pub within_symbol_allow_overload: Option<bool>,
+    /// v0.6 language filter (capability `index_grep_v2`). When set,
+    /// only files whose language is in this list are scanned.
+    /// Intersects with `file_glob` (AND semantics). **Required** when
+    /// `structural_query` is set; optional otherwise. Accepted values
+    /// match the daemon's indexed-language identifiers: `rust`,
+    /// `javascript`, `typescript`, `python`, `c`, `cpp`, `go`, `java`,
+    /// `php`, `ruby`, `swift`, `csharp`.
+    #[serde(default)]
+    pub language: Option<Vec<String>>,
 }
 
 /// Empty arg struct for `daemon_stats`. The rmcp `tool_router` macro
@@ -604,14 +670,20 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Find literal-substring (or regex) matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. Default case-insensitive literal mode; set `regex: true` for `regex` crate syntax (e.g. `TODO\\(.*?\\)`, `\\bunsafe\\b`). Set `file_glob: \"*.rs\"` / `\"crates/**/*.toml\"` to scope to a path pattern. Returns the file + line range + the matched line's text for each hit. Capability: `index_grep` (regex + glob v0.5.5+, literal v0.5.4+)."
+        description = "Find literal-substring (or regex) matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. Default case-insensitive literal mode; set `regex: true` for `regex` crate syntax (e.g. `TODO\\(.*?\\)`, `\\bunsafe\\b`). Set `file_glob: \"*.rs\"` / `\"crates/**/*.toml\"` to scope to a path pattern. Returns the file + line range + the matched line's text for each hit. Capability: `index_grep` (regex + glob v0.5.5+, literal v0.5.4+). v0.6 composable extensions (capability `index_grep_v2`): `multiline: true` (+ `regex: true`) for patterns that cross newlines; `structural_query: \"(impl_item) @impl\"` + `language: [\"rust\"]` for raw tree-sitter S-expression matches (per-match `captures` returned); `within_symbol: \"parse_request\"` to keep only matches inside that symbol's def byte range. The three modes compose: `structural_query` + `text` returns the intersection, `within_symbol` post-filters either."
     )]
     async fn grep(
         &self,
         Parameters(args): Parameters<GrepArgs>,
     ) -> Result<CallToolResult, McpError> {
         let mut params = serde_json::Map::new();
-        params.insert("text".into(), Value::String(args.text));
+        // `text` is optional in v0.6 (`structural_query` may be the
+        // sole search source). Pass it through only when present so
+        // the daemon's validator sees the same shape the caller
+        // emitted.
+        if let Some(t) = args.text {
+            params.insert("text".into(), Value::String(t));
+        }
         if let Some(n) = args.limit {
             params.insert("limit".into(), Value::Number(n.into()));
         }
@@ -623,6 +695,26 @@ impl RtsServer {
         }
         if let Some(g) = args.file_glob {
             params.insert("file_glob".into(), Value::String(g));
+        }
+        // v0.6 additive fields. Forward only when set so the wire
+        // shape stays minimal on v1-shape calls.
+        if let Some(b) = args.multiline {
+            params.insert("multiline".into(), Value::Bool(b));
+        }
+        if let Some(q) = args.structural_query {
+            params.insert("structural_query".into(), Value::String(q));
+        }
+        if let Some(s) = args.within_symbol {
+            params.insert("within_symbol".into(), Value::String(s));
+        }
+        if let Some(b) = args.within_symbol_allow_overload {
+            params.insert("within_symbol_allow_overload".into(), Value::Bool(b));
+        }
+        if let Some(langs) = args.language {
+            params.insert(
+                "language".into(),
+                Value::Array(langs.into_iter().map(Value::String).collect()),
+            );
         }
         match self.call_daemon("Index.Grep", Value::Object(params)).await {
             Ok(v) => Ok(success_json(&v)),
