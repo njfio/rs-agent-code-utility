@@ -11,11 +11,32 @@ rust-version.workspace = true
 [lints]
 workspace = true
 
+[lib]
+# Library surface exists so the sibling `rts` CLI binary can reuse the
+# socket + daemon_client modules (auto-spawn, JSON-RPC framing) without
+# duplication. Server-side code (rmcp tool router) stays binary-internal.
+name = "rts_mcp"
+path = "src/lib.rs"
+
 [[bin]]
 name = "rts-mcp"
 path = "src/main.rs"
 
+[[bin]]
+# Human-facing CLI wrapper over the same JSON-RPC surface. See
+# docs/cli.md and docs/plans/2026-05-19-002-feat-human-cli-subcommand-plan.md.
+name = "rts"
+path = "src/bin/rts.rs"
+
 [dependencies]
+# Human-CLI subcommand parsing + colored terminal output. clap pulls in
+# anstream/anstyle transitively (already used for `--version`/help), and
+# `is-terminal` is one tiny crate for TTY detection. Both are added to
+# the shared crate so the `rts` binary can use them without forcing a
+# second crate.
+clap = { version = "4", features = ["derive", "wrap_help"] }
+clap_complete = "4"
+is-terminal = "0.4"
 # MCP SDK pin verified by the P0.1 spike (see spikes/p0-1-rmcp-hello/RESULTS.md):
 # - rmcp 1.6 requires schemars 1 (NOT 0.8). Mismatch produces a "two majors of
 #   schemars" duplicate-trait build failure.
