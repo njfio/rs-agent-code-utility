@@ -26,11 +26,20 @@ impl HostDetector for Cline {
         DetectionClass::Soft
     }
     fn detect(&self, ctx: &Ctx) -> HostFinding {
-        detect_impl(ctx, ctx.home.as_deref())
+        // Production path: read the live env once at the trait
+        // entry, then thread the resolved value down through the
+        // dependency-free helper(s). Tests bypass via the
+        // explicit-override entry below.
+        let xdg = std::env::var_os("XDG_CONFIG_HOME").map(std::path::PathBuf::from);
+        detect_impl(ctx, ctx.home.as_deref(), xdg.as_deref())
     }
 }
 
-pub(crate) fn detect_impl(_ctx: &Ctx, home: Option<&Path>) -> HostFinding {
+pub(crate) fn detect_impl(
+    _ctx: &Ctx,
+    home: Option<&Path>,
+    xdg_config_home: Option<&Path>,
+) -> HostFinding {
     let mut finding = HostFinding {
         host_name: "cline",
         detection_class: DetectionClass::Soft,
@@ -48,7 +57,7 @@ pub(crate) fn detect_impl(_ctx: &Ctx, home: Option<&Path>) -> HostFinding {
         return finding;
     };
 
-    let bases = candidate_global_storage_dirs(h);
+    let bases = candidate_global_storage_dirs(h, xdg_config_home);
     let mut any_dir_found = false;
     let mut any_file_found = false;
 
@@ -184,7 +193,17 @@ fn handle_settings_file(finding: &mut HostFinding, path: &Path) {
 /// Return the OS-specific list of VS Code `globalStorage/saoudrizwan.claude-dev`
 /// directories to probe. Multiple entries are returned for OSes where
 /// VS Code Insiders / VSCodium ship parallel install trees.
-fn candidate_global_storage_dirs(home: &Path) -> Vec<PathBuf> {
+///
+/// `xdg_config_home` is the resolved value of the `XDG_CONFIG_HOME`
+/// env var (Linux only). The production caller reads the env once at
+/// `detect_impl` entry and passes it down; tests pass `None` (or a
+/// synthetic path) so they don't have to mutate the process-wide env
+/// — `std::env::set_var` is `unsafe` under Rust 2024 and forbidden by
+/// the workspace's `unsafe_code = "deny"` lint.
+fn candidate_global_storage_dirs(
+    home: &Path,
+    #[cfg_attr(not(target_os = "linux"), allow(unused_variables))] xdg_config_home: Option<&Path>,
+) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let ext = "saoudrizwan.claude-dev";
 
@@ -202,8 +221,9 @@ fn candidate_global_storage_dirs(home: &Path) -> Vec<PathBuf> {
     }
     #[cfg(target_os = "linux")]
     {
-        // Honor XDG_CONFIG_HOME if set; otherwise default to ~/.config.
-        let xdg = std::env::var_os("XDG_CONFIG_HOME")
+        // Honor the passed-in XDG_CONFIG_HOME if set + absolute;
+        // otherwise default to `~/.config`.
+        let xdg = xdg_config_home
             .map(PathBuf::from)
             .filter(|p| p.is_absolute())
             .unwrap_or_else(|| home.join(".config"));
@@ -277,15 +297,18 @@ mod tests {
     #[test]
     fn absent_extension_dir_yields_info_and_skipped() {
         let home = tempdir().unwrap();
-        let f = detect_impl(&mk_ctx(), Some(home.path()));
+        // Pass `None` for the XDG override so the test stays
+        // hermetic regardless of the runner's real `XDG_CONFIG_HOME`.
+        let f = detect_impl(&mk_ctx(), Some(home.path()), None);
         assert!(f.skipped_reason.is_some());
         assert!(f.rows.iter().any(|r| r.kind == RowKind::Info));
     }
 
     /// Build a synthetic Cline-extension dir for the current OS and
-    /// drop a settings file in it.
+    /// drop a settings file in it. Mirrors what
+    /// `candidate_global_storage_dirs(home, None)` would return.
     fn write_synth_settings(home: &Path, contents: &str) -> PathBuf {
-        let dirs = candidate_global_storage_dirs(home);
+        let dirs = candidate_global_storage_dirs(home, None);
         let base = dirs.into_iter().next().expect("at least one candidate");
         let settings = base.join("settings");
         fs::create_dir_all(&settings).unwrap();
@@ -304,23 +327,9 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             fs::set_permissions(&bin, fs::Permissions::from_mode(0o755)).unwrap();
         }
-        // For Linux the XDG_CONFIG_HOME may divert candidate_global_storage_dirs
-        // away from `home`; override it locally for test determinism.
-        //
-        // Rust 2024 made `std::env::{set_var, remove_var}` `unsafe` because
-        // process-wide env mutation isn't thread-safe; tests in this module
-        // serialize themselves around XDG_CONFIG_HOME via this RAII guard
-        // and don't share an env mutation surface with concurrent tests, so
-        // the unsafe block is sound for the test's intended use.
-        #[cfg(target_os = "linux")]
-        let _guard = {
-            // We just unset to make the function fall back to ~/.config.
-            let prev = std::env::var_os("XDG_CONFIG_HOME");
-            unsafe {
-                std::env::remove_var("XDG_CONFIG_HOME");
-            }
-            scopeguard_restore(prev)
-        };
+        // No env mutation needed: pass `None` so the function
+        // defaults to `<home>/.config` on Linux (matches what
+        // `write_synth_settings` writes to).
         write_synth_settings(
             home.path(),
             &format!(
@@ -328,7 +337,7 @@ mod tests {
                 bin.display()
             ),
         );
-        let f = detect_impl(&mk_ctx(), Some(home.path()));
+        let f = detect_impl(&mk_ctx(), Some(home.path()), None);
         assert!(
             f.rows.iter().any(|r| r.kind == RowKind::Ok),
             "rows: {:?}",
@@ -339,20 +348,11 @@ mod tests {
     #[test]
     fn missing_binary_is_fail() {
         let home = tempdir().unwrap();
-        #[cfg(target_os = "linux")]
-        let _guard = {
-            let prev = std::env::var_os("XDG_CONFIG_HOME");
-            // SAFETY: see the long-form note in `ok_when_registered`.
-            unsafe {
-                std::env::remove_var("XDG_CONFIG_HOME");
-            }
-            scopeguard_restore(prev)
-        };
         write_synth_settings(
             home.path(),
             r#"{ "mcpServers": { "rts": { "command": "/nope/rts-mcp" } } }"#,
         );
-        let f = detect_impl(&mk_ctx(), Some(home.path()));
+        let f = detect_impl(&mk_ctx(), Some(home.path()), None);
         let row = f
             .rows
             .iter()
@@ -360,22 +360,5 @@ mod tests {
             .expect("vs_code_extension row");
         assert_eq!(row.kind, RowKind::Fail);
         assert_eq!(row.fix.as_ref().unwrap().class, FixClass::FixMcpBinaryPath);
-    }
-
-    // -- tiny RAII helper used only on Linux to restore XDG_CONFIG_HOME.
-    #[cfg(target_os = "linux")]
-    fn scopeguard_restore(prev: Option<std::ffi::OsString>) -> impl Drop {
-        struct R(Option<std::ffi::OsString>);
-        impl Drop for R {
-            fn drop(&mut self) {
-                if let Some(v) = self.0.take() {
-                    // SAFETY: see the long-form note in `ok_when_registered`.
-                    unsafe {
-                        std::env::set_var("XDG_CONFIG_HOME", v);
-                    }
-                }
-            }
-        }
-        R(prev)
     }
 }
