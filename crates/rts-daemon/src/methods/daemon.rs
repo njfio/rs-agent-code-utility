@@ -1,9 +1,14 @@
 //! `Daemon.*` methods. v0 ships `Daemon.Ping` plus the (notification-only)
 //! `Daemon.Telemetry`; the latter is not a request and isn't dispatched here.
+//!
+//! v0.6 adds `Daemon.Cancel { cancel_id }` for cooperative cancellation
+//! of in-flight long-running requests; see `crate::cancel`.
 
 use std::sync::Arc;
 
-use crate::error::ProtocolError;
+use serde::Deserialize;
+
+use crate::error::{ErrorCode, ProtocolError};
 use crate::state::DaemonState;
 
 /// Canonical advertised capability list. Mirrors protocol-v0.md §4.1
@@ -114,6 +119,15 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // files_removed, throttled }` object. Old clients can ignore the
     // field; this capability lets them gate on its presence.
     "reconciliation_worker",
+    // v0.6 — cooperative cancellation of in-flight requests via
+    // `Daemon.Cancel { cancel_id }`. Any request that supplies an
+    // optional top-level `cancel_id` becomes addressable; the
+    // structural scanner, multiline regex, mount cold-walk, and the
+    // other Index.* handlers cooperatively poll the token at hot-loop
+    // boundaries. Clients that don't set `cancel_id` see unchanged
+    // behavior; this is a pure additive capability. See
+    // `docs/protocol-v0.md` and `crate::cancel`.
+    "cancellable_queries",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
@@ -215,11 +229,23 @@ pub async fn stats(
         serde_json::Value::Number(cold_walk_at_ms.into())
     };
 
+    // v0.6 cancellation telemetry. Always emitted (pre-mount and
+    // post-mount alike) so operators can observe `Daemon.Cancel`
+    // traffic against a fresh daemon without needing a workspace to
+    // be mounted first. `in_flight` reads the registry size at the
+    // instant of the snapshot — it's a point-in-time gauge, not a
+    // cumulative counter.
+    let cancellations = serde_json::json!({
+        "total":     state.cancellations_total.load(Relaxed),
+        "in_flight": state.cancel_registry.in_flight().await,
+    });
+
     let mut body = serde_json::json!({
-        "uptime_ms":   uptime_ms,
-        "version":     env!("CARGO_PKG_VERSION"),
-        "total_calls": state.call_counters.total(),
-        "calls":       state.call_counters.snapshot(),
+        "uptime_ms":     uptime_ms,
+        "version":       env!("CARGO_PKG_VERSION"),
+        "total_calls":   state.call_counters.total(),
+        "calls":         state.call_counters.snapshot(),
+        "cancellations": cancellations,
     });
 
     // v2 fields are added only when a workspace is mounted; pre-mount
@@ -286,4 +312,49 @@ pub async fn stats(
     }
 
     Ok(body)
+}
+
+#[derive(Debug, Deserialize)]
+struct CancelParams {
+    cancel_id: String,
+}
+
+/// `Daemon.Cancel { cancel_id }` — trip any in-flight request that
+/// registered the given `cancel_id`. Idempotent: an unknown id (typo,
+/// already-completed request, or never-registered) returns
+/// `{ cancelled: false }` with no error.
+///
+/// Bumps `state.cancellations_total` only on a real hit (a registered
+/// token was tripped). Stale cancels don't pollute the counter — they
+/// represent client-side accounting drift, not daemon work.
+///
+/// The actual cancellation propagation is cooperative: the targeted
+/// handler must poll `CancelToken::is_cancelled()` at its hot-loop
+/// boundaries and return a `CANCELLED` envelope. Worst-case latency
+/// to abort is the time between two polls (per-match ~50µs for the
+/// structural scanner; per-file for the multiline regex; per-batch
+/// for the mount cold walk).
+pub async fn cancel(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    let p: CancelParams = serde_json::from_value(params).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InvalidParams,
+            format!("Daemon.Cancel.params failed validation: {e}"),
+        )
+    })?;
+    if p.cancel_id.is_empty() || p.cancel_id.len() > 256 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`cancel_id` must be 1..=256 characters",
+        ));
+    }
+    let cancelled = state.cancel_registry.cancel(&p.cancel_id).await;
+    if cancelled {
+        state
+            .cancellations_total
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+    Ok(serde_json::json!({ "cancelled": cancelled }))
 }

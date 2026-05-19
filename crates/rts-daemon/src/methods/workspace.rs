@@ -6,6 +6,7 @@ use std::sync::atomic::Ordering;
 
 use serde::Deserialize;
 
+use crate::cancel::CancelToken;
 use crate::error::{ErrorCode, ProtocolError};
 use crate::state::DaemonState;
 use crate::store::Store;
@@ -35,7 +36,14 @@ fn parse_params<T: for<'de> Deserialize<'de>>(
 pub async fn mount(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
+    cancel: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
+    if cancel.is_cancelled() {
+        return Err(ProtocolError::new(
+            crate::error::ErrorCode::Cancelled,
+            "cancelled",
+        ));
+    }
     let p: MountParams = parse_params(params)?;
     let _ = p.enable_telemetry; // accepted but inert in this build
     let user_path = PathBuf::from(p.root);
@@ -65,7 +73,7 @@ pub async fn mount(
         }
     }
 
-    mount_inner(user_path, state).await
+    mount_inner(user_path, state, cancel).await
 }
 
 /// Internal entry point that skips the prewarm-wait. Called from:
@@ -80,6 +88,7 @@ pub async fn mount(
 pub(super) async fn mount_inner(
     user_path: PathBuf,
     state: &Arc<DaemonState>,
+    cancel: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
     // Idempotent within a connection: a second Mount for the same canonical
     // path returns current status. Held in its own scope so the lock is
@@ -335,9 +344,26 @@ pub(super) async fn mount_inner(
     // Drain wait. Track whether we exited via "indexed >= emitted"
     // (drain_completed = true) or via the 5s timeout (false). The
     // fingerprint gate below uses this flag.
+    //
+    // Cooperative cancellation: poll the token between drain ticks
+    // (every 25 ms). The plan calls for batch-flush-boundary checks
+    // during cold walks — this is the equivalent inside the
+    // post-walk drain. We surface `CANCELLED` as an early-return
+    // *without* tearing down the store/watcher: the cold walk has
+    // already populated whatever it managed to flush, and the
+    // workspace is left unmounted (the writer + watcher slots stay
+    // empty, mount_refcount stays unchanged). A follow-up Mount
+    // will rediscover the partial state via the persisted-fp path
+    // and pick up where this one left off.
     let drain_deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     let mut drain_completed = emitted == 0; // nothing to drain → trivially done
     while emitted > 0 && std::time::Instant::now() < drain_deadline {
+        if cancel.is_cancelled() {
+            return Err(ProtocolError::new(
+                crate::error::ErrorCode::Cancelled,
+                "cancelled",
+            ));
+        }
         let indexed = store.stats().files_indexed;
         if indexed >= emitted {
             drain_completed = true;

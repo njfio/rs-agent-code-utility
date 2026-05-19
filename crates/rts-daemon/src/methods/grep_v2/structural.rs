@@ -56,6 +56,7 @@ use globset::GlobMatcher;
 use rust_tree_sitter::{Language, Parser};
 use serde_json::{Map as JsonMap, Value};
 
+use crate::cancel::CancelToken;
 use crate::path::resolve_workspace_path;
 use crate::state::DaemonState;
 
@@ -130,7 +131,8 @@ pub struct StructuralResult {
 }
 
 /// Structural-execution error. The caller maps these onto
-/// `STRUCTURAL_QUERY_INVALID` / `STRUCTURAL_QUERY_TIMEOUT` envelopes.
+/// `STRUCTURAL_QUERY_INVALID` / `STRUCTURAL_QUERY_TIMEOUT` /
+/// `CANCELLED` envelopes.
 #[derive(Debug)]
 pub enum StructuralError {
     /// `Query::new` failed for every requested language. Carries the
@@ -139,6 +141,10 @@ pub enum StructuralError {
     AllLanguagesFailed(Vec<PartialFailure>),
     /// Wall-clock budget (`STRUCTURAL_WALL_CLOCK_MS`) exceeded.
     Timeout,
+    /// Cooperative cancellation tripped via `Daemon.Cancel`. The
+    /// caller maps this to a `CANCELLED` envelope (custom code
+    /// `-32099`); see `crate::cancel`.
+    Cancelled,
 }
 
 /// Run the structural query against the file set.
@@ -153,6 +159,7 @@ pub enum StructuralError {
 /// * `glob` — compiled `file_glob` matcher, if any.
 /// * `row_limit` — caller's `limit` (capped at `STRUCTURAL_MAX_ROWS`
 ///   inside this function).
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     state: &Arc<DaemonState>,
     workspace_root: &std::path::Path,
@@ -161,6 +168,7 @@ pub fn run(
     languages: &[String],
     glob: Option<&GlobMatcher>,
     row_limit: usize,
+    cancel: &CancelToken,
 ) -> Result<StructuralResult, StructuralError> {
     // Resolve language whitelist + compile queries per language.
     // We compile up-front so a per-language compile error becomes a
@@ -210,6 +218,14 @@ pub fn run(
     let mut capture_truncated = false;
 
     'files: for rel in files {
+        // Between-file cooperative cancellation. Cheap (one relaxed
+        // atomic load); covers the common case where a structural
+        // query fans across hundreds of files and the agent loses
+        // interest mid-flight. Inner per-match check below tightens
+        // the latency to ~50µs per emission.
+        if cancel.is_cancelled() {
+            return Err(StructuralError::Cancelled);
+        }
         // Between-file wall-clock check.
         if started.elapsed() > budget {
             return Err(StructuralError::Timeout);
@@ -294,6 +310,14 @@ pub fn run(
 
         let mut file_recorded = false;
         for qm in matches {
+            // Per-match cancellation check. Plan §"Scanner integration":
+            // the structural scanner is the hot loop where in-flight
+            // queries can fan out to thousands of node visits per file.
+            // A relaxed atomic load is ~1ns — noise next to the
+            // per-match capture-extraction work.
+            if cancel.is_cancelled() {
+                return Err(StructuralError::Cancelled);
+            }
             result.rows_seen += 1;
             if result.matches.len() >= cap {
                 row_truncated = true;

@@ -68,6 +68,12 @@ pub enum ErrorCode {
     SchemaVersionNewer,
     /// Per-request 30s soft deadline tripped.
     DeadlineExceeded,
+    /// Cooperative cancellation tripped via `Daemon.Cancel { cancel_id }`.
+    /// Custom code `-32099` on the JSON-RPC numeric axis, surfaced on
+    /// the wire as `CANCELLED`. Not a programming error — clients should
+    /// treat it as an expected response when they themselves issued
+    /// the cancel.
+    Cancelled,
     /// Protocol major mismatch. (Unreachable in v0 — v0 is the only major.)
     IncompatibleVersion,
     /// Unexpected internal failure. Should be reported.
@@ -100,6 +106,7 @@ impl ErrorCode {
             ErrorCode::StorageFull => "STORAGE_FULL",
             ErrorCode::SchemaVersionNewer => "SCHEMA_VERSION_NEWER",
             ErrorCode::DeadlineExceeded => "DEADLINE_EXCEEDED",
+            ErrorCode::Cancelled => "CANCELLED",
             ErrorCode::IncompatibleVersion => "INCOMPATIBLE_VERSION",
             ErrorCode::InternalError => "INTERNAL_ERROR",
         }

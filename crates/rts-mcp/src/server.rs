@@ -23,6 +23,18 @@ use rts_mcp::daemon_client::{DaemonClient, DaemonError};
 // Built-in tool descriptions are pinned inline (the `#[tool(description = ...)]`
 // macro expects a literal string and does not accept const-path expressions).
 // Source: plan §"Tool descriptions (LLM-facing, pinned in P5)".
+//
+// v0.6 cooperative cancellation note (capability `cancellable_queries`):
+// the underlying daemon protocol accepts an optional `cancel_id: String`
+// at the JSON-RPC envelope level on any request, and exposes
+// `Daemon.Cancel { cancel_id }` that trips the matching in-flight
+// request with `error.code: CANCELLED`. The MCP tool surface here
+// does **not** expose `cancel_id` as a per-tool argument — agents
+// typically can't reframe mid-call from inside a tool invocation
+// anyway, and adding it to every tool schema would clutter the
+// agent's view. Hosts that want to wire cancellation can address
+// the daemon directly through the same Unix socket; see
+// `docs/protocol-v0.md` for the wire shape.
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct OutlineArgs {

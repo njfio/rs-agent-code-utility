@@ -81,11 +81,23 @@ Each connection is full-duplex. Multiple in-flight requests on a single connecti
 ```jsonc
 // Request
 {
-  "id":     "<u64 monotonic per connection>",   // required
-  "method": "Index.LookupSymbol",                // required
-  "params": { ... }                              // required (may be {} for verbs that take no args)
+  "id":        "<u64 monotonic per connection>", // required
+  "method":    "Index.LookupSymbol",              // required
+  "params":    { ... },                           // required (may be {} for verbs that take no args)
+  "cancel_id": "<opaque client-chosen string>"    // optional; v0.6+ (capability `cancellable_queries`)
 }
 ```
+
+The optional `cancel_id` field lets a client mark a request as
+cancellable from another connection (or a later request on the same
+connection) via `Daemon.Cancel { cancel_id }`. Format: any non-empty
+string of 1..=256 chars; the client picks (UUID, counter, etc.) and is
+responsible for uniqueness across in-flight requests. Cancellable
+handlers (v0.6+: `Index.Grep`, `Index.FindSymbol`, `Index.FindCallers`,
+`Index.ReadSymbol`, `Index.Outline`, `Workspace.Mount`) cooperatively
+poll the token at hot-loop boundaries and return `CANCELLED` (§14)
+when tripped. Pre-v0.6 daemons ignore the field; clients that don't
+set it see byte-identical behavior to v0.5.x.
 
 ```jsonc
 // Response (success)
@@ -187,7 +199,8 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "index_grep_multiline",         // v0.6 alpha+
                      "index_grep_structural",        // v0.6 alpha+
                      "index_grep_within_symbol",     // v0.6 alpha+
-                     "index_grep_v2"],               // v0.6 alpha+ (bundle)
+                     "index_grep_v2",                // v0.6 alpha+ (bundle)
+                     "cancellable_queries"],         // v0.6+
     "uptime_ms":    123456
   }
 }
@@ -331,14 +344,21 @@ The v0 method namespace is `^[A-Z][a-z]+\.[A-Z][A-Za-z]+$`. Methods are grouped 
 
 | Namespace | Verbs | Capability |
 |---|---|---|
-| `Daemon.*`   | `Ping`, `Telemetry` (notification) | always |
+| `Daemon.*`   | `Ping`, `Stats`, `Cancel` (v0.6+), `Telemetry` (notification) | always (`Cancel` gated on `cancellable_queries`) |
 | `Workspace.*` | `Mount`, `Unmount`, `Status` | always |
 | `Index.*`    | `Outline`, `FindSymbol`, `FindCallers`, `ImpactOf`, `ReadSymbol`, `ReadSymbolAt`, `ReadRange` | `outline`, `find_symbol` (+ `fuzzy_match` for `pattern`), `find_callers`, `impact_of`, `read_symbol` (+ `closure_walker` for `include_dependencies`, + `read_symbol.include_callers` for `include_callers`), `read_symbol_at`, `read_range` |
 | `Session.*`  | `Open`, `Close` | always; **v1.1**: `MarkDeduped` under `session_dedup` |
 
 Total v0 surface as of alpha.35: **13 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.FindCallers`, `Index.ImpactOf`, `Index.ReadSymbol`, `Index.ReadSymbolAt`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.) `Index.ReadSymbolAt` shipped in alpha.24; `Index.FindCallers` and `Index.ReadSymbol.include_callers` shipped in alpha.32; `Index.ImpactOf` ships in alpha.35. See [Appendix F](#appendix-f--wire-shape-evolution-by-alpha).
 
-`Daemon.Cancel` is **not** part of v0. Per-request cancellation is handled by the daemon noticing the connection closed (drop) or by Tokio `select!` against a soft deadline on the request future; both don't need a wire-level verb. v2 may introduce `Daemon.Cancel(request_id)` if mid-closure cancellation becomes worthwhile.
+`Daemon.Cancel { cancel_id }` ships in **v0.6** under the
+`cancellable_queries` capability; see §7.1b. Clients attach an
+optional `cancel_id` to the request envelope (§3.4) and later send
+`Daemon.Cancel` with the same id to trip the in-flight handler.
+Cooperative cancellation — handlers poll the token at hot-loop
+boundaries and return `CANCELLED` (§14). The pre-v0.6 behavior (close
+the socket to abandon a request, or wait for the 30 s soft deadline)
+still works and is the right choice for non-cancellable handlers.
 
 `Session.MarkDeduped` was struck from v0 per architecture review (leaky abstraction). When R6 ships in v1.1, dedup is decided by the daemon, signalled in-band as `{ body_omitted: true, see_earlier_id: ... }` in slice responses; clients don't need to mark.
 
@@ -362,6 +382,43 @@ Heartbeat + capability discovery. Idempotent, cheap, no side effects.
 ```
 
 **`result`**: see §4.1.
+
+### 7.1b `Daemon.Cancel` (v0.6+, capability `cancellable_queries`)
+
+Trip the in-flight request that registered the given `cancel_id`.
+Idempotent: an unknown id (typo, already-completed request, or one
+that was never registered) returns `{ cancelled: false }` with no
+error. Returns immediately — the actual handler abort happens
+cooperatively at the next poll inside the targeted handler (per-match
+for the structural scanner, per-file/per-match for the multiline
+regex, per-batch tick for the mount cold-walk drain).
+
+**`params`**:
+```jsonc
+{ "cancel_id": "q-42" }
+```
+
+**`result`**:
+```jsonc
+{ "cancelled": true }     // a registered token was tripped
+{ "cancelled": false }    // no such id (stale or never registered)
+```
+
+Telemetry: `Daemon.Stats.cancellations.total` increments by one on
+every real hit (not on stale cancels). `Daemon.Stats.cancellations.in_flight`
+is the current registry size — a point-in-time gauge of cancellable
+requests outstanding.
+
+Targeted requests return `CANCELLED` (§14, custom code `-32099`). This
+is not a programming error; clients that issued the cancel should
+treat it as the expected response and not retry without changing the
+plan.
+
+Handlers that honor cancellation in v0.6: `Index.Grep`,
+`Index.FindSymbol`, `Index.FindCallers`, `Index.ReadSymbol`,
+`Index.Outline`, `Workspace.Mount`. Other methods accept `cancel_id`
+silently — `Daemon.Cancel` against their ids returns
+`{ cancelled: false }` because no token gets registered for them.
 
 ### 7.2 `Workspace.Mount`
 
@@ -1127,6 +1184,7 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 | `STORAGE_FULL` | redb / segment store ran out of disk | No (operator action) |
 | `SCHEMA_VERSION_NEWER` | on-disk redb is newer than daemon binary | No (upgrade binary) |
 | `DEADLINE_EXCEEDED` | 30 s soft deadline tripped | Yes (likely indicates a pathological request) |
+| `CANCELLED` | cooperative cancellation tripped via `Daemon.Cancel { cancel_id }` (v0.6+, capability `cancellable_queries`); custom numeric `-32099`. Not a programming error — clients that issued the cancel should treat this as the expected response | No (rephrase or retry with a fresh `cancel_id`) |
 | `INCOMPATIBLE_VERSION` | protocol major mismatch (currently unreachable — v0 is the only major) | No |
 | `INTERNAL_ERROR` | bug in the daemon; should be reported | Yes (rarely fixes itself) |
 
