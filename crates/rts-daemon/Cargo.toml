@@ -15,6 +15,15 @@ workspace = true
 name = "rts-daemon"
 path = "src/main.rs"
 
+# v0.6 persisted cold-mount (capability `daemon_stats_v2` mount_source
+# field). `build.rs` parses `rts-core/Cargo.toml` at compile time and
+# bakes the tree-sitter grammar crate versions into the daemon binary
+# via the `RTS_GRAMMAR_VERSIONS` env var. `toml` is the only dep
+# needed; `serde_json` is intentionally avoided to keep build-time
+# closure minimal.
+[build-dependencies]
+toml = "0.8"
+
 [dependencies]
 # Surviving rts-core: parser, language adapters, ignore-walk, symbol table.
 rust_tree_sitter = { path = "../rts-core" }

@@ -12,6 +12,8 @@
 mod closure;
 mod error;
 mod filter;
+mod fingerprint;
+mod gitignore_hash;
 mod impact;
 mod language;
 mod lifecycle;
