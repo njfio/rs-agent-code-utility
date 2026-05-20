@@ -10,7 +10,8 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::daemon_client::{DaemonClient, DaemonError};
+use crate::connection::{ConnectionError, ConnectionManager, ResilienceConfig};
+use crate::daemon_client::DaemonClient;
 use crate::socket;
 
 /// Documented exit-code contract for the `rts` binary.
@@ -155,7 +156,20 @@ impl Style {
 /// `RTS_NO_AUTOSPAWN=1` disables the spawn — if the socket isn't there,
 /// we error out instead of starting a daemon (useful in CI / sandboxed
 /// environments where the user wants to manage the daemon lifecycle).
-pub async fn connect(workspace: &Path) -> anyhow::Result<DaemonClient> {
+///
+/// v0.6+: returns a [`ConnectionManager`] (Plan 004) rather than a bare
+/// [`DaemonClient`]. The manager owns the socket and exposes the same
+/// `call()` API the MCP shim uses; background heartbeat is *disabled*
+/// for the CLI (single-shot — no point spawning a task we'll abort
+/// 50 ms later) but the foreground reconnect-on-transport-error path
+/// still fires, so a CLI invocation that races a daemon restart
+/// transparently auto-spawns a fresh daemon instead of bailing.
+///
+/// Cross-binary parity: same code path the MCP shim's `main.rs` uses,
+/// minus the background heartbeat. The structured `DAEMON_UNAVAILABLE`
+/// / `DAEMON_DOWN` errors surface via the manager and get mapped to
+/// the documented CLI exit codes by [`render_connection_error`].
+pub async fn connect(workspace: &Path) -> anyhow::Result<ConnectionManager> {
     let daemon_bin = socket::resolve_daemon_bin()?;
 
     let no_autospawn = std::env::var_os("RTS_NO_AUTOSPAWN")
@@ -195,46 +209,51 @@ pub async fn connect(workspace: &Path) -> anyhow::Result<DaemonClient> {
             })?
     };
 
-    Ok(DaemonClient::new(
-        stream,
+    let client = DaemonClient::new(stream, daemon_bin.clone(), workspace.to_path_buf());
+    Ok(ConnectionManager::new(
+        client,
         daemon_bin,
         workspace.to_path_buf(),
+        ResilienceConfig::from_env(),
+        /* start_background_tasks */ false,
     ))
 }
 
-/// Mount + one RPC. Every CLI invocation is a single-shot — we Mount on
-/// the connection (idempotent on the daemon side) and then call the
-/// requested method. The daemon's per-workspace socket means concurrent
-/// `rts` calls share state through the daemon, not the connection.
+/// Mount + one RPC. Every CLI invocation is a single-shot — the
+/// connection manager handles Mount lazily on the first call, so this
+/// function is now a thin alias over `ConnectionManager::call`. The
+/// `workspace` parameter is unused by the manager (it tracks the path
+/// internally) and kept in the signature for source-compatibility
+/// with the pre-resilience CLI; future cleanups may drop it.
 pub async fn call_method(
-    client: &mut DaemonClient,
-    workspace: &Path,
+    client: &ConnectionManager,
+    _workspace: &Path,
     method: &str,
     params: Value,
-) -> Result<Value, DaemonError> {
-    // Mount first. The daemon makes Mount idempotent (§5.4) so repeated
-    // calls from the CLI don't reset anything.
-    let _ = client
-        .call("Workspace.Mount", serde_json::json!({ "root": workspace }))
-        .await?;
+) -> Result<Value, ConnectionError> {
     client.call(method, params).await
 }
 
-/// Map a `DaemonError` to a user-friendly stderr message and an exit
-/// code. `INDEX_NOT_READY` typically resolves in tens of milliseconds
-/// on a warm daemon; on the cold path the CLI will block on the Mount
-/// itself, so we don't add a polling loop here.
-pub fn render_daemon_error(e: &DaemonError, style: &Style) -> i32 {
+/// Map a `ConnectionError` to a user-friendly stderr message and an
+/// exit code. Pre-resilience this took a bare `DaemonError`; the
+/// signature now accepts a `ConnectionError` so it can render the
+/// new `DAEMON_UNAVAILABLE` / `DAEMON_DOWN` shapes with their
+/// `retry_after_ms` hints.
+///
+/// Both transient (`DAEMON_UNAVAILABLE`) and sustained (`DAEMON_DOWN`)
+/// disconnections map to exit code `3` (`DAEMON_ERROR`); a future
+/// release could split these but the CLI contract today is "any
+/// daemon-side problem returns 3."
+pub fn render_connection_error(e: &ConnectionError, style: &Style) -> i32 {
     eprintln!(
         "{}: {} ({})",
         style.red("rts error"),
-        e.message,
-        style.dim(&e.code)
+        e.message(),
+        style.dim(e.code())
     );
-    if e.code == "DEADLINE_EXCEEDED" {
-        exit::TIMEOUT
-    } else {
-        exit::DAEMON_ERROR
+    match e {
+        ConnectionError::Daemon(de) if de.code == "DEADLINE_EXCEEDED" => exit::TIMEOUT,
+        _ => exit::DAEMON_ERROR,
     }
 }
 

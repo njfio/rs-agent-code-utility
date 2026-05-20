@@ -289,13 +289,14 @@ async fn run_command(
     workspace: &std::path::Path,
     style: &Style,
 ) -> Result<i32, CmdError> {
-    let mut client = cli::connect(workspace).await?;
+    let client = cli::connect(workspace).await?;
 
     match &cli.cmd {
         Cmd::Mount { path } => {
-            // The connect() step has already issued Mount, but a CLI
-            // user typing `rts mount` deserves explicit confirmation
-            // (and lets us print the workspace id).
+            // The connect() + first-call lazy-Mount handle the mount
+            // implicitly. A CLI user typing `rts mount` deserves
+            // explicit confirmation, so we still issue an explicit
+            // `Workspace.Mount` here (daemon makes it idempotent).
             let target = path
                 .as_deref()
                 .map(|p| {
@@ -325,7 +326,7 @@ async fn run_command(
                     }
                     Ok(exit::OK)
                 }
-                Err(e) => Ok(cli::render_daemon_error(&e, style)),
+                Err(e) => Ok(cli::render_connection_error(&e, style)),
             }
         }
         Cmd::Find {
@@ -351,7 +352,7 @@ async fn run_command(
                 params.insert("limit".into(), Value::Number((*n).into()));
             }
             let body = match cli::call_method(
-                &mut client,
+                &client,
                 workspace,
                 "Index.FindSymbol",
                 Value::Object(params),
@@ -359,7 +360,7 @@ async fn run_command(
             .await
             {
                 Ok(v) => v,
-                Err(e) => return Ok(cli::render_daemon_error(&e, style)),
+                Err(e) => return Ok(cli::render_connection_error(&e, style)),
             };
             if cli.json {
                 println!(
@@ -400,11 +401,11 @@ async fn run_command(
                 params.insert("limit".into(), Value::Number((*n).into()));
             }
             let body =
-                match cli::call_method(&mut client, workspace, "Index.Grep", Value::Object(params))
+                match cli::call_method(&client, workspace, "Index.Grep", Value::Object(params))
                     .await
                 {
                     Ok(v) => v,
-                    Err(e) => return Ok(cli::render_daemon_error(&e, style)),
+                    Err(e) => return Ok(cli::render_connection_error(&e, style)),
                 };
             if cli.json {
                 println!(
@@ -434,7 +435,7 @@ async fn run_command(
                 params.insert("file".into(), Value::String(f.clone()));
             }
             let body = match cli::call_method(
-                &mut client,
+                &client,
                 workspace,
                 "Index.FindCallers",
                 Value::Object(params),
@@ -442,7 +443,7 @@ async fn run_command(
             .await
             {
                 Ok(v) => v,
-                Err(e) => return Ok(cli::render_daemon_error(&e, style)),
+                Err(e) => return Ok(cli::render_connection_error(&e, style)),
             };
             if cli.json {
                 println!(
@@ -469,17 +470,13 @@ async fn run_command(
             if let Some(b) = token_budget {
                 params.insert("token_budget".into(), Value::Number((*b).into()));
             }
-            let body = match cli::call_method(
-                &mut client,
-                workspace,
-                "Index.Outline",
-                Value::Object(params),
-            )
-            .await
-            {
-                Ok(v) => v,
-                Err(e) => return Ok(cli::render_daemon_error(&e, style)),
-            };
+            let body =
+                match cli::call_method(&client, workspace, "Index.Outline", Value::Object(params))
+                    .await
+                {
+                    Ok(v) => v,
+                    Err(e) => return Ok(cli::render_connection_error(&e, style)),
+                };
             if cli.json {
                 println!(
                     "{}",
@@ -510,7 +507,7 @@ async fn run_command(
                 params.insert("kind".into(), Value::String(k.clone()));
             }
             let body = match cli::call_method(
-                &mut client,
+                &client,
                 workspace,
                 "Index.ReadSymbol",
                 Value::Object(params),
@@ -518,7 +515,7 @@ async fn run_command(
             .await
             {
                 Ok(v) => v,
-                Err(e) => return Ok(cli::render_daemon_error(&e, style)),
+                Err(e) => return Ok(cli::render_connection_error(&e, style)),
             };
             if cli.json {
                 println!(
@@ -533,11 +530,10 @@ async fn run_command(
             Ok(if n == 0 { exit::NO_RESULTS } else { exit::OK })
         }
         Cmd::Stats => {
-            let body =
-                match cli::call_method(&mut client, workspace, "Daemon.Stats", json!({})).await {
-                    Ok(v) => v,
-                    Err(e) => return Ok(cli::render_daemon_error(&e, style)),
-                };
+            let body = match cli::call_method(&client, workspace, "Daemon.Stats", json!({})).await {
+                Ok(v) => v,
+                Err(e) => return Ok(cli::render_connection_error(&e, style)),
+            };
             if cli.json {
                 println!(
                     "{}",
