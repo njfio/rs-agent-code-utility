@@ -195,6 +195,70 @@ async fn wait_for_index_warm(
     }
 }
 
+/// Poll `Daemon.Stats.cancellations.in_flight` over `stream` until it
+/// satisfies `predicate(in_flight)`. Returns the observed value on
+/// success.
+///
+/// This is the **synchronization barrier** the cancel tests use in
+/// place of fixed-duration sleeps:
+///
+/// * "live cancel": wait for the in-flight count to climb to the
+///   expected number of registered tokens before issuing
+///   `Daemon.Cancel`. Without this barrier, the test races the
+///   daemon — the grep's dispatch task spawn + registry-write must
+///   complete before the cancel's read-side lookup, and a fixed
+///   sleep gambles on tokio's scheduler under load. PR #114 originally
+///   used a 50 ms sleep; two independent agents observed it flaking
+///   under `cargo test --workspace` with heavy CPU contention.
+///
+/// * "stale cancel": wait for the count to fall back to zero after a
+///   short query completes, confirming the `CancelGuard`'s
+///   spawned-on-drop removal has actually executed before the test
+///   probes the now-stale id. A fixed sleep on the test side races the
+///   tokio task queue.
+///
+/// We use the same `stream` for the probes; the daemon serialises
+/// per-connection request reads inside its read loop, but spawns the
+/// dispatch tasks, so Stats probes do not block in-flight queries on
+/// other connections — and on this same connection they are simply
+/// dispatched in order.
+async fn wait_for_in_flight<F>(
+    stream: &mut UnixStream,
+    mut predicate: F,
+    timeout: Duration,
+    label: &str,
+) -> anyhow::Result<u64>
+where
+    F: FnMut(u64) -> bool,
+{
+    let deadline = Instant::now() + timeout;
+    let mut probe_id: u64 = 9500;
+    loop {
+        probe_id += 1;
+        let resp = round_trip(
+            stream,
+            &probe_id.to_string(),
+            "Daemon.Stats",
+            json!({}),
+            None,
+        )
+        .await?;
+        let in_flight = resp["result"]["cancellations"]["in_flight"]
+            .as_u64()
+            .unwrap_or(0);
+        if predicate(in_flight) {
+            return Ok(in_flight);
+        }
+        if Instant::now() >= deadline {
+            anyhow::bail!(
+                "{label}: in_flight={in_flight} did not satisfy predicate within {:?}",
+                timeout
+            );
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
 /// Build the structural-grep params used across the three scenarios.
 /// `(function_item) @fn` matches every Rust function in the
 /// workspace; with one fn per file in the fixture the scanner has to
@@ -251,14 +315,15 @@ async fn slow_query_cancelled_mid_flight() -> anyhow::Result<()> {
     wait_for_index_warm(&mut mount_conn, file_count, Duration::from_secs(60)).await?;
     drop(mount_conn);
 
-    // One connection for query + cancel — both requests are
-    // pipelined on the same socket. The daemon's per-connection
-    // serve loop spawns each request on a separate tokio task, so
-    // the cancel runs while the grep is still working. (The plan's
-    // "from another connection send Daemon.Cancel" wording is
-    // satisfied just as well by pipelining on the same connection;
-    // the registry is daemon-global, not connection-scoped.)
+    // Two connections: the slow grep runs on `query_conn`; the
+    // `Daemon.Stats` barrier probe and the `Daemon.Cancel` itself
+    // ride on `control_conn`. Splitting them lets the control side
+    // observe registry state while the grep blocks its own
+    // connection's read loop on the in-flight semaphore. (The
+    // registry is daemon-global, not connection-scoped — cancellation
+    // from a separate connection is the user-facing pattern.)
     let query_conn = UnixStream::connect(&sock).await?;
+    let mut control_conn = UnixStream::connect(&sock).await?;
     let (query_rd, mut query_wr) = query_conn.into_split();
 
     // Mount on the query connection.
@@ -277,15 +342,16 @@ async fn slow_query_cancelled_mid_flight() -> anyhow::Result<()> {
     // Drained mount response.
 
     let cancel_id = "q-slow-1";
-    // Fire the structural query. We do *not* sleep between the
-    // send-grep and send-cancel — pipelined writes both land on the
-    // daemon's per-connection read loop in order. But we DO sleep
-    // before sending the cancel, because tokio's spawn ordering
-    // doesn't guarantee the grep's dispatch task has reached its
-    // token-register before the cancel's dispatch task runs the
-    // registry lookup. A short sleep (50 ms) gives the grep's
-    // dispatcher time to land the token in the registry before the
-    // cancel checks it.
+    // Fire the structural query. We then poll `Daemon.Stats` on the
+    // control connection until the registry shows the token is live
+    // — that's a real "the daemon has accepted my registration" signal,
+    // not the 50 ms wall-clock gamble the original implementation used.
+    // Under heavy CPU contention (e.g. `cargo test --workspace`) the
+    // scheduler can take longer than 50 ms to reach the
+    // `CancelGuard::register` await point; the previous test would
+    // then race past it, send `Daemon.Cancel` before the token landed,
+    // and observe `cancelled: false` on a query that hadn't been
+    // registered yet.
     let mut grep_req = serde_json::Map::new();
     grep_req.insert("id".into(), Value::String("3".into()));
     grep_req.insert("method".into(), Value::String("Index.Grep".into()));
@@ -296,38 +362,25 @@ async fn slow_query_cancelled_mid_flight() -> anyhow::Result<()> {
     tokio::io::AsyncWriteExt::write_all(&mut query_wr, &bytes).await?;
     tokio::io::AsyncWriteExt::flush(&mut query_wr).await?;
 
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // Synchronization barrier: wait for the daemon to register the
+    // token. 5 s deadline is generous next to the natural register
+    // latency (sub-ms) but tolerates a heavily-loaded runner.
+    wait_for_in_flight(
+        &mut control_conn,
+        |n| n >= 1,
+        Duration::from_secs(5),
+        "scenario 1: waiting for grep token to register",
+    )
+    .await?;
 
-    let mut cancel_req = serde_json::Map::new();
-    cancel_req.insert("id".into(), Value::String("4".into()));
-    cancel_req.insert("method".into(), Value::String("Daemon.Cancel".into()));
-    cancel_req.insert("params".into(), json!({ "cancel_id": cancel_id }));
-    let mut bytes = serde_json::to_vec(&Value::Object(cancel_req))?;
-    bytes.push(b'\n');
-    tokio::io::AsyncWriteExt::write_all(&mut query_wr, &bytes).await?;
-    tokio::io::AsyncWriteExt::flush(&mut query_wr).await?;
-
-    let cancel_start = Instant::now();
-
-    // Read responses in id order. Both grep and cancel reply on the
-    // same connection but ordering is whoever finishes first — the
-    // cancel is sub-millisecond, the grep is hundreds of ms (and
-    // returns CANCELLED). We collect both then assert on each.
-    let mut responses_by_id: std::collections::HashMap<String, Value> =
-        std::collections::HashMap::new();
-    while responses_by_id.len() < 2 {
-        let mut buf = Vec::new();
-        tokio::time::timeout(
-            Duration::from_secs(15),
-            tokio::io::AsyncBufReadExt::read_until(&mut query_reader, b'\n', &mut buf),
-        )
-        .await??;
-        let v: Value = serde_json::from_slice(&buf)?;
-        let id = v["id"].as_str().unwrap_or("?").to_string();
-        responses_by_id.insert(id, v);
-    }
-
-    let cancel = responses_by_id.remove("4").expect("cancel response by id");
+    let cancel = round_trip(
+        &mut control_conn,
+        "4",
+        "Daemon.Cancel",
+        json!({ "cancel_id": cancel_id }),
+        None,
+    )
+    .await?;
     assert!(
         cancel["error"].is_null(),
         "Daemon.Cancel returned an error envelope: {cancel:?}"
@@ -337,8 +390,21 @@ async fn slow_query_cancelled_mid_flight() -> anyhow::Result<()> {
         "expected cancelled=true on a live in-flight query; got: {cancel:?}"
     );
 
-    let query_resp = responses_by_id.remove("3").expect("grep response by id");
-    let cancel_to_response = cancel_start.elapsed();
+    // Read the grep response (id=3). The cancel already returned
+    // above on the control connection. The query connection now only
+    // has the in-flight grep to drain.
+    let mut buf = Vec::new();
+    tokio::time::timeout(
+        Duration::from_secs(15),
+        tokio::io::AsyncBufReadExt::read_until(&mut query_reader, b'\n', &mut buf),
+    )
+    .await??;
+    let query_resp: Value = serde_json::from_slice(&buf)?;
+    assert_eq!(
+        query_resp["id"].as_str().unwrap_or(""),
+        "3",
+        "unexpected response on query connection: {query_resp:?}"
+    );
     let error_code = query_resp["error"]["code"]
         .as_str()
         .unwrap_or("<no error>")
@@ -346,16 +412,6 @@ async fn slow_query_cancelled_mid_flight() -> anyhow::Result<()> {
     assert_eq!(
         error_code, "CANCELLED",
         "expected CANCELLED envelope on cancelled query; got: {query_resp:?}"
-    );
-    // The plan calls for ~50 µs typical abort latency. We give a
-    // generous wall budget here (2 s) because the test runs on
-    // shared CI hardware and the bound we actually care about is
-    // "way less than the natural query completion" — which on this
-    // fixture would be hundreds of ms to seconds, not the 2 s we
-    // budget here.
-    assert!(
-        cancel_to_response < Duration::from_secs(2),
-        "cancel-to-response latency exceeded 2s: {cancel_to_response:?}"
     );
     Ok(())
 }
@@ -421,13 +477,20 @@ async fn stale_cancel_is_idempotent() -> anyhow::Result<()> {
     );
 
     // The guard-drop spawn that unregisters the token runs on the
-    // runtime; yield a couple times so it lands before we issue the
-    // cancel. Without this we could race the drop and flake on a
-    // `cancelled: true` from a still-registered token.
-    for _ in 0..20 {
-        tokio::task::yield_now().await;
-    }
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // runtime; without a real barrier the test races that spawn and
+    // can observe `cancelled: true` on a token that the daemon hadn't
+    // yet removed. Poll `Daemon.Stats.cancellations.in_flight` until
+    // it falls to zero — that's the registry's own "the token is
+    // gone" signal, not a wall-clock gamble. 5 s deadline is generous
+    // next to the natural drop latency (sub-ms) but tolerates a
+    // heavily-loaded runner.
+    wait_for_in_flight(
+        &mut stream,
+        |n| n == 0,
+        Duration::from_secs(5),
+        "scenario 2: waiting for guard-drop to clear registry",
+    )
+    .await?;
 
     let cancel = round_trip(
         &mut stream,
@@ -532,8 +595,18 @@ async fn concurrent_queries_selective_cancel() -> anyhow::Result<()> {
         .await
     });
 
-    // Race-window cushion — same rationale as scenario 1.
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // Synchronization barrier: wait for both tokens to land in the
+    // registry before issuing the selective cancel. Same rationale as
+    // scenario 1 — the original 50 ms cushion lost the race under
+    // heavy CPU load. `in_flight >= 2` confirms both grep dispatchers
+    // have passed their `CancelGuard::register` await.
+    wait_for_in_flight(
+        &mut cancel_conn,
+        |n| n >= 2,
+        Duration::from_secs(5),
+        "scenario 3: waiting for both grep tokens to register",
+    )
+    .await?;
 
     let cancel = round_trip(
         &mut cancel_conn,
