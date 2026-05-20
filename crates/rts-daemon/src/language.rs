@@ -194,6 +194,125 @@ const TYPESCRIPT_REFS: &str = r#"
         property: (property_identifier) @name)) @reference.class
 "#;
 
+/// Java reference patterns. Upstream `tree-sitter-java/queries/tags.scm`
+/// ships `(method_invocation name: (identifier) @name arguments: ...
+/// @reference.call)` — we lift the `@name` capture and re-anchor
+/// `@reference.call` on the outer node to match the rest of this
+/// module's shape.
+///
+/// Chained `a.b().c()` parses as nested `method_invocation` nodes
+/// (the outer is `c`, with `object: (method_invocation ... b ...)`),
+/// so the query captures both `b` and `c` as separate call sites —
+/// the receiver `a` is just an identifier under `object:` and never
+/// matches as `name:`.
+///
+/// `object_creation_expression` covers `new Foo(...)`; the grammar's
+/// `type:` field admits the `_simple_type` supertype whose subtypes
+/// include `type_identifier`, so the pattern matches by subtype.
+const JAVA_REFS: &str = r#"
+(method_invocation
+    name: (identifier) @name) @reference.call
+
+(object_creation_expression
+    type: (type_identifier) @name) @reference.call
+"#;
+
+/// PHP reference patterns. Upstream tags.scm covers
+/// `function_call_expression`, `member_call_expression`, and
+/// `scoped_call_expression` already; we also pick up
+/// `object_creation_expression` for `new Foo(...)` / `new \Foo\Bar(...)`.
+///
+/// Edge cases:
+/// - `\Foo\bar()` parses as `function_call_expression` with
+///   `function: (qualified_name (name) @name)` — covered.
+/// - Variable-function calls `$fn()` resolve to a `variable_name`
+///   under `function:` with no static target — intentionally skipped.
+/// - `Static::method()` parses as `scoped_call_expression`; the
+///   receiver is `scope:` and the called method is `name:`.
+const PHP_REFS: &str = r#"
+(function_call_expression
+    function: (name) @name) @reference.call
+
+(function_call_expression
+    function: (qualified_name (name) @name)) @reference.call
+
+(member_call_expression
+    name: (name) @name) @reference.call
+
+(scoped_call_expression
+    name: (name) @name) @reference.call
+
+(object_creation_expression
+    (name) @name) @reference.call
+
+(object_creation_expression
+    (qualified_name (name) @name)) @reference.call
+"#;
+
+/// Swift reference patterns. Upstream `tree-sitter-swift` 0.7's
+/// `queries/tags.scm` ships only `@definition.*` captures — no
+/// `@reference.call`. Locally authored against the grammar's
+/// `node-types.json`:
+///
+/// - Bare calls (`foo(...)`) parse as `call_expression` with a
+///   `simple_identifier` child.
+/// - Method calls (`obj.foo(...)`) parse as `call_expression` whose
+///   first child is a `navigation_expression`. The called method
+///   name is the `suffix:` field of the inner `navigation_suffix`.
+/// - Trailing closures (`foo { ... }`) still parse as
+///   `call_expression`; the method name is captured by the same
+///   patterns above — no special handling needed.
+const SWIFT_REFS: &str = r#"
+(call_expression
+    (simple_identifier) @name) @reference.call
+
+(call_expression
+    (navigation_expression
+        (navigation_suffix
+            suffix: (simple_identifier) @name))) @reference.call
+"#;
+
+/// C# reference patterns. Upstream tags.scm only ships
+/// `@reference.send` for member-access invocations — locally
+/// authored here for full coverage.
+///
+/// Three call shapes:
+/// - `Foo(...)` — `invocation_expression` with `function: (identifier)`.
+/// - `obj.Foo(...)` — `invocation_expression` with
+///   `function: (member_access_expression name: (identifier))`.
+/// - `Foo<T>(...)` — `invocation_expression` with
+///   `function: (generic_name (identifier))` (bare) or
+///   `function: (member_access_expression name: (generic_name (identifier)))`
+///   (member). Both covered.
+///
+/// `object_creation_expression` (`new Foo(...)`) has a `type:` field
+/// whose declared type is the `type` supertype; `identifier` and
+/// `generic_name` are subtypes, so the patterns match by subtype.
+const CSHARP_REFS: &str = r#"
+(invocation_expression
+    function: (identifier) @name) @reference.call
+
+(invocation_expression
+    function: (member_access_expression
+        name: (identifier) @name)) @reference.call
+
+(invocation_expression
+    function: (generic_name
+        (identifier) @name)) @reference.call
+
+(invocation_expression
+    function: (member_access_expression
+        name: (generic_name
+            (identifier) @name))) @reference.call
+
+(object_creation_expression
+    type: (identifier) @name) @reference.call
+
+(object_creation_expression
+    type: (generic_name
+        (identifier) @name)) @reference.call
+"#;
+
 /// Path → [`LanguageInfo`]. The canonical extension table.
 ///
 /// `.tsx` is intentionally routed to the same TypeScript renderer as
@@ -237,7 +356,7 @@ pub fn info_for_path(rel_path: &str) -> Option<LanguageInfo> {
         "java" => Some(LanguageInfo {
             language: Language::Java,
             signature_renderer: Some(rust_tree_sitter::signature::render_java),
-            refs_query: None,
+            refs_query: Some(JAVA_REFS),
         }),
         "c" | "h" => Some(LanguageInfo {
             language: Language::C,
@@ -252,7 +371,7 @@ pub fn info_for_path(rel_path: &str) -> Option<LanguageInfo> {
         "php" | "phtml" => Some(LanguageInfo {
             language: Language::Php,
             signature_renderer: Some(rust_tree_sitter::signature::render_php),
-            refs_query: None,
+            refs_query: Some(PHP_REFS),
         }),
         "rb" | "rake" => Some(LanguageInfo {
             language: Language::Ruby,
@@ -262,12 +381,12 @@ pub fn info_for_path(rel_path: &str) -> Option<LanguageInfo> {
         "swift" => Some(LanguageInfo {
             language: Language::Swift,
             signature_renderer: Some(rust_tree_sitter::signature::render_swift),
-            refs_query: None,
+            refs_query: Some(SWIFT_REFS),
         }),
         "cs" | "csx" => Some(LanguageInfo {
             language: Language::CSharp,
             signature_renderer: Some(rust_tree_sitter::signature::render_csharp),
-            refs_query: None,
+            refs_query: Some(CSHARP_REFS),
         }),
         _ => None,
     }
@@ -294,6 +413,10 @@ static GO_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 static RUBY_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 static JAVASCRIPT_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 static TYPESCRIPT_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static JAVA_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static PHP_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static SWIFT_QUERY: OnceLock<Option<Query>> = OnceLock::new();
+static CSHARP_QUERY: OnceLock<Option<Query>> = OnceLock::new();
 
 /// Cached `Query` for `language`. Returns `Some` if the language has a
 /// tags.scm-derived `@reference.*` query *and* construction succeeded;
@@ -309,6 +432,10 @@ pub fn cached_refs_query(info: &LanguageInfo) -> Option<&'static Query> {
         Language::Ruby => &RUBY_QUERY,
         Language::JavaScript => &JAVASCRIPT_QUERY,
         Language::TypeScript => &TYPESCRIPT_QUERY,
+        Language::Java => &JAVA_QUERY,
+        Language::Php => &PHP_QUERY,
+        Language::Swift => &SWIFT_QUERY,
+        Language::CSharp => &CSHARP_QUERY,
         _ => return None,
     };
     let query_src = info.refs_query?;
@@ -423,6 +550,49 @@ mod tests {
         // `.to_ascii_lowercase()` in `info_for_path`.
         assert!(info_for_path("Demo.RS").is_some());
         assert!(info_for_path("DEMO.PY").is_some());
+    }
+
+    #[test]
+    fn java_php_swift_csharp_have_refs_query() {
+        // Coverage matrix: 10/12 languages with AST-precise call edges
+        // (Rust, Python, Go, Ruby, JS, TS already; this slice adds
+        // Java, PHP, Swift, C#). C and C++ stay on the regex fallback.
+        for (ext, lang) in [
+            ("Main.java", Language::Java),
+            ("Index.php", Language::Php),
+            ("App.swift", Language::Swift),
+            ("Program.cs", Language::CSharp),
+        ] {
+            let info = info_for_path(ext).unwrap_or_else(|| panic!("{ext} should be supported"));
+            assert_eq!(info.language, lang, "{ext} routed to wrong language");
+            assert!(
+                info.refs_query.is_some(),
+                "{ext} should carry a refs query after this slice"
+            );
+        }
+        // C and C++ stay regex-fallback this round — guard so a future
+        // change can't silently slip them in without updating tests.
+        for ext in ["a.c", "a.h", "a.cpp", "a.hpp"] {
+            assert!(
+                info_for_path(ext).unwrap().refs_query.is_none(),
+                "{ext} should stay regex-fallback (C/C++ deferred)"
+            );
+        }
+    }
+
+    #[test]
+    fn java_php_swift_csharp_cached_queries_construct_without_panic() {
+        // Forces `Query::new` for each grammar so a query-vs-grammar
+        // mismatch surfaces at unit-test time, not at first
+        // `Index.Outline` call in production.
+        for ext in ["Main.java", "Index.php", "App.swift", "Program.cs"] {
+            let info = info_for_path(ext).unwrap();
+            let q = cached_refs_query(&info);
+            assert!(
+                q.is_some(),
+                "{ext}: refs query failed to construct — check against the current grammar"
+            );
+        }
     }
 
     #[test]
