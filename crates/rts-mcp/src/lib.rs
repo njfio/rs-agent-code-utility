@@ -10,5 +10,6 @@
 //! the public API.
 
 pub mod cli;
+pub mod connection;
 pub mod daemon_client;
 pub mod socket;

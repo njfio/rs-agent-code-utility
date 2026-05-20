@@ -1190,6 +1190,44 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 
 `error.data` MAY carry structured detail (e.g. `{ "expected_uid": 501, "got_uid": 0 }` for the auth check, or `{ "files_done": 1234, "files_total": 5000 }` for `INDEX_NOT_READY` — same shape as `progress`).
 
+### 14.1 MCP-shim transport errors (`DAEMON_UNAVAILABLE` / `DAEMON_DOWN`)
+
+The `rts-mcp` shim's connection manager (Plan
+`docs/plans/2026-05-19-004-feat-mcp-server-resilience-plan.md`, v0.6+,
+capability `mcp_connection_resilience`) surfaces two **shim-emitted**
+error codes when the daemon socket is mid-reconnect. These are not
+daemon-side codes — the daemon never emits them; they originate in
+the shim and reach the MCP host with custom JSON-RPC numeric codes
+distinct from the application range:
+
+| String code | Numeric code | Meaning | Retriable? |
+|---|---|---|---|
+| `DAEMON_UNAVAILABLE` | `-32098` | Transient: the shim is in `Reconnecting` state. `error.data.retry_after_ms` carries the wall-clock hint until the next reconnect attempt. `error.data.attempt` is the current retry attempt (1-indexed). | Yes — wait `retry_after_ms` and retry. |
+| `DAEMON_DOWN` | `-32097` | Sustained: reconnect attempts exhausted after `RTS_MCP_RECONNECT_MAX_ATTEMPTS` (default 8); ceiling-interval (`RTS_MCP_RECONNECT_CEILING_SECS`, default 30) retries continue forever. `error.data.first_failure_ms_ago` carries how long the daemon has been unreachable. | Eventually — recovery promotes back to `Connected` automatically when the daemon returns; agents seeing this should surface to the user. |
+
+Both shapes set `error.data.transient: true|false` so agents can branch
+on a single boolean without parsing the code string.
+
+**Heartbeat ↔ idle-shutdown interaction.** The shim's heartbeat issues
+`Daemon.Ping` every `RTS_MCP_HEARTBEAT_INTERVAL_SECS` (default 10s).
+The daemon's idle-shutdown is already gated on `active_connections > 0`
+(§15.2), but the heartbeat additionally bumps `last_activity` so a
+future loosening of the connection-count gate still sees fresh
+traffic. **An MCP shim that's still attached keeps its daemon alive —
+this is intentional.**
+
+**Environment knobs** (all have documented defaults; nothing requires
+user setup):
+
+| Env var | Default | Effect |
+|---|---|---|
+| `RTS_MCP_HEARTBEAT_INTERVAL_SECS` | `10` | Wait between heartbeat `Daemon.Ping` calls. |
+| `RTS_MCP_HEARTBEAT_TIMEOUT_SECS` | `3` | Per-ping timeout; on timeout the manager demotes to `Reconnecting`. |
+| `RTS_MCP_RECONNECT_MAX_ATTEMPTS` | `8` | Bounded attempts before transitioning to `Down`. Retries continue at ceiling forever after. |
+| `RTS_MCP_RECONNECT_CEILING_SECS` | `30` | Backoff ceiling. Schedule is `1s, 2s, 4s, 8s, 16s, 30s, 30s, …`. |
+
+Source of truth: `crates/rts-mcp/src/connection.rs`.
+
 **`Index.Grep` v2 sub-codes (v0.6, capability `index_grep_v2`).** Every v2 validation/execution error returns the protocol-level code `INVALID_PARAMS` and carries a stable `data.code` string that lets agents branch without parsing free-form messages. The strings are documented in §7.8b's "v0.6 additions" table; the closed set is:
 
 `MULTILINE_REQUIRES_REGEX`, `STRUCTURAL_REQUIRES_LANGUAGE`, `NO_SEARCH_SOURCE_PROVIDED`, `INVALID_TEXT_LENGTH`, `STRUCTURAL_QUERY_INVALID`, `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`, `WITHIN_SYMBOL_NOT_FOUND`, `WITHIN_SYMBOL_TOO_MANY_DEFS`, `REGEX_TOO_COMPLEX`, `STRUCTURAL_QUERY_TIMEOUT`, `UNKNOWN_LANGUAGE`.
@@ -1640,6 +1678,7 @@ This appendix tracks every additive wire-shape change between Draft 1 (P5 delive
 | `alpha.34` | `pagerank_symbolwise` | **v0.3 U4**: symbol-level PageRank fills `rank_score` in `Index.FindSymbol` and `Index.FindCallers` responses (was a `0.0` placeholder). `Index.FindSymbol.matches[]` sorts by descending rank by default; `sort: "lexical"` opts out. Single-slot generation-keyed cache mirroring `OutlineCache` (alpha.20). | §4.1, §4.2, §7.6, §18.3 |
 | `alpha.35` | `impact_of` | **v0.3 U5** (final): new method `Index.ImpactOf(name, depth?, token_budget?, max_nodes?, exclude_test_paths?)` returns the transitive caller closure via BFS over reverse edges. Four independent truncation flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell the agent why a result is partial. Test-path exclusion (`/tests/`, `_test.rs`, `.spec.ts`) is on by default. Wire shape trimmed from the plan's 9 fields to 6 per Deepening §F3 (no `signature`, no nested `callers[]`). | §4.1, §4.2, §7, §7.7d, §18.4d |
 | `v0.6 alpha` | `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2` | **`Index.Grep` v2** (`index_grep_v2` bundle): five additive optional input fields (`multiline`, `structural_query`, `within_symbol`, `within_symbol_allow_overload`, `language`); per-match `captures` on structural results; top-level `truncated`/`truncation_reason`/`rows_seen`/`rows_returned` on cap breaches; `partial_failures[]` on cross-language structural runs. 11 new `data.code` sub-codes under `INVALID_PARAMS`. Predicate whitelist (7 entries) on agent-supplied S-expression queries. Three new `Daemon.Stats` sub-counters. v1 callers unchanged byte-for-byte. | §4.1, §7.8b, §14 |
+| `v0.6 alpha` | (shim-only — no daemon capability) | **MCP shim resilience** (Plan 004): `rts-mcp` connection manager adds background heartbeat (`Daemon.Ping` every `RTS_MCP_HEARTBEAT_INTERVAL_SECS`, default 10s) and reconnect-with-backoff. Tool calls during a disconnect window return two new MCP-shim error codes: `DAEMON_UNAVAILABLE` (numeric `-32098`, transient — `error.data.retry_after_ms` hint) and `DAEMON_DOWN` (numeric `-32097`, sustained). Schedule: `1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s`; ceiling-interval retries continue forever past the bounded-attempt cap. Daemon wire protocol unchanged. | §14.1 |
 
 Capability strings present in `Daemon.Ping.result.capabilities` after alpha.35 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`. v0.6 alpha appends `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2` (see §7.8b).
 

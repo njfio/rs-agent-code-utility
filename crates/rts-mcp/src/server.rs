@@ -5,8 +5,6 @@
 //! Each tool call translates to one `Index.*` request on the persistent
 //! Unix-socket connection held by the server.
 
-use std::sync::Arc;
-
 use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -16,9 +14,8 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tokio::sync::Mutex;
 
-use rts_mcp::daemon_client::{DaemonClient, DaemonError};
+use rts_mcp::connection::{ConnectionError, ConnectionManager};
 
 // Built-in tool descriptions are pinned inline (the `#[tool(description = ...)]`
 // macro expects a literal string and does not accept const-path expressions).
@@ -326,148 +323,52 @@ pub struct RtsServer {
     // rustc can't see through the macro for the dead-code analysis.
     #[allow(dead_code)]
     tool_router: ToolRouter<Self>,
-    daemon: Arc<Mutex<DaemonClient>>,
-    /// v0.4: workspace path needed for lazy `Workspace.Mount`.
-    /// rts-mcp used to call Mount immediately at startup; with the
-    /// daemon's prewarm-on-spawn (PR #51), deferring Mount until
-    /// the first agent tool call lets the daemon's background walk
-    /// overlap with the seconds-to-minutes between session start and
-    /// the user's first code question. By the time Mount fires, the
-    /// daemon's prewarm has already populated the index — Mount hits
-    /// the idempotent path and returns immediately.
-    workspace: std::path::PathBuf,
-    /// Whether `Workspace.Mount` has been called for this session.
-    /// `AtomicBool` so the (cheap) fast-path in `call_daemon` is a
-    /// single relaxed load. Synchronization for the slow-path
-    /// (do-the-mount) happens through the daemon `Mutex` we already
-    /// hold there — no double-mount race possible.
-    ///
-    /// Wrapped in `Arc` because `RtsServer: Clone` (rmcp requirement)
-    /// and `AtomicBool` itself is not `Clone`.
-    mounted: Arc<std::sync::atomic::AtomicBool>,
+    /// v0.6+: connection manager owns the daemon socket plus the
+    /// background heartbeat / reconnect tasks (see
+    /// `connection.rs` and Plan 004). Replaces the bare
+    /// `Arc<Mutex<DaemonClient>>` and the inline retry loop the
+    /// pre-resilience server carried — tool calls now see structured
+    /// `DAEMON_UNAVAILABLE` / `DAEMON_DOWN` errors when the daemon
+    /// is mid-reconnect rather than blocking on the daemon mutex.
+    connection: ConnectionManager,
     instructions: String,
 }
 
 #[tool_router]
 impl RtsServer {
-    pub fn new(daemon: DaemonClient, workspace: std::path::PathBuf, instructions: String) -> Self {
+    /// Build a server around an established [`ConnectionManager`]. The
+    /// manager owns the socket and the background heartbeat /
+    /// reconnect tasks; this struct is the rmcp tool-router shim that
+    /// translates between MCP `tools/call` envelopes and daemon RPCs.
+    pub fn new(connection: ConnectionManager, instructions: String) -> Self {
         Self {
             tool_router: Self::tool_router(),
-            daemon: Arc::new(Mutex::new(daemon)),
-            workspace,
-            mounted: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            connection,
             instructions,
         }
     }
 
-    /// Clone the inner daemon handle. Used by `main.rs` so it can
-    /// keep a reference to the daemon connection after `serve()`
-    /// consumes the server — specifically to issue a final
-    /// `Daemon.Stats` query on session shutdown (v0.5.8+).
-    ///
-    /// The lock is taken via the returned `Arc<Mutex<…>>` exactly
-    /// like every tool handler does it; concurrent access during
-    /// the session is fine and the shutdown call only runs after
-    /// `service.waiting().await` returns (i.e., the agent has
-    /// hung up stdio, no more tool calls can race).
-    pub fn daemon_handle(&self) -> Arc<Mutex<DaemonClient>> {
-        self.daemon.clone()
+    /// Clone the connection manager. Used by `main.rs` (when it needs
+    /// to keep a handle after `serve()` consumes the server) and by
+    /// test code that drives the server directly. The manager is
+    /// `Clone` (Arc-counted internals), so this is cheap.
+    #[allow(dead_code)]
+    pub fn connection(&self) -> ConnectionManager {
+        self.connection.clone()
     }
 
-    /// Forward a method to the daemon. On the FIRST call (or after
-    /// a prior `Workspace.Mount` failure), this also issues
-    /// `Workspace.Mount` so subsequent tool calls have a workspace
-    /// to read from.
+    /// Forward a method to the daemon via the connection manager.
+    /// Returns `ConnectionError`, which preserves the structured
+    /// disconnection states (`DaemonUnavailable` / `DaemonDown`) so
+    /// the tool layer can emit JSON-RPC `-32098` / `-32097` codes.
     ///
-    /// The `daemon` mutex serializes — concurrent tool calls don't
-    /// race on the mount; the first one in does the mount, the
-    /// others wait on the mutex and see `mounted == true` by the
-    /// time they get the lock.
-    async fn call_daemon(&self, method: &str, params: Value) -> Result<Value, DaemonError> {
-        // Retry-on-disconnect loop. Pre-v0.5.5 this method made a
-        // single attempt; if the daemon had died mid-session, the
-        // first transport error left the connection wedged and every
-        // subsequent tool call failed with `Broken pipe`. v0.5.5+ does
-        // one explicit reconnect (auto-spawning a fresh daemon on the
-        // per-workspace socket) and retries the call once.
-        //
-        // Why ONE retry, not infinite:
-        // - A working daemon should never need reconnects mid-session.
-        // - Repeated disconnects after one reconnect indicates the
-        //   daemon won't stay up (binary missing, crash loop, etc.);
-        //   surfacing the error to the agent beats hot-spinning the
-        //   spawn flow.
-        // - Wall-clock cost is bounded: at most two `CALL_TIMEOUT`s
-        //   (35s × 2 = 70s).
-        for attempt in 0..2 {
-            let mut guard = self.daemon.lock().await;
-            if !self.mounted.load(std::sync::atomic::Ordering::Acquire) {
-                let mount_resp = match guard
-                    .call(
-                        "Workspace.Mount",
-                        serde_json::json!({ "root": self.workspace }),
-                    )
-                    .await
-                {
-                    Ok(v) => v,
-                    Err(e) if attempt == 0 && e.is_disconnect() => {
-                        // Reconnect path on the FIRST call after spawn.
-                        // Rare in practice (the auto-spawn flow has
-                        // already verified the socket accepts a
-                        // connection), but harmless to handle.
-                        tracing::warn!(
-                            target: "rts_mcp",
-                            "daemon disconnected during Workspace.Mount; reconnecting + retrying ({})",
-                            e.message,
-                        );
-                        guard.reconnect().await?;
-                        // Mount sentinel stays false (which it already is);
-                        // the next iteration will re-Mount.
-                        drop(guard);
-                        continue;
-                    }
-                    Err(e) => return Err(e),
-                };
-                let workspace_id = mount_resp["workspace_id"].as_str().unwrap_or("<unknown>");
-                tracing::info!(
-                    target: "rts_mcp",
-                    "lazy-mounted workspace {} as id={} on first tool call (attempt={})",
-                    self.workspace.display(),
-                    workspace_id,
-                    attempt,
-                );
-                self.mounted
-                    .store(true, std::sync::atomic::Ordering::Release);
-            }
-            match guard.call(method, params.clone()).await {
-                Ok(v) => return Ok(v),
-                Err(e) if attempt == 0 && e.is_disconnect() => {
-                    tracing::warn!(
-                        target: "rts_mcp",
-                        "daemon disconnected during {} ({}); reconnecting + retrying",
-                        method,
-                        e.message,
-                    );
-                    guard.reconnect().await?;
-                    // The respawned daemon has no Workspace.Mount — clear
-                    // the sentinel so the retry iteration re-mounts before
-                    // re-issuing the original call.
-                    self.mounted
-                        .store(false, std::sync::atomic::Ordering::Release);
-                    drop(guard);
-                    continue;
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        // Unreachable: the loop either returns or continues; the
-        // `continue` arm runs exactly once because `attempt == 0`
-        // gates it. Defensive return so the compiler is satisfied.
-        Err(DaemonError {
-            code: "INTERNAL_ERROR".to_string(),
-            message: "exhausted reconnect retries".to_string(),
-            data: None,
-        })
+    /// The pre-resilience inline retry-on-disconnect loop has moved
+    /// into the manager (`crates/rts-mcp/src/connection.rs`); calls
+    /// here are one-shot. Concurrent tool calls during a known
+    /// disconnect window all see the same structured error without
+    /// queueing on the daemon mutex (no thundering-herd).
+    async fn call_daemon(&self, method: &str, params: Value) -> Result<Value, ConnectionError> {
+        self.connection.call(method, params).await
     }
 
     #[tool(
@@ -489,7 +390,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -527,7 +428,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -551,7 +452,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -581,7 +482,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -615,7 +516,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -654,7 +555,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -677,7 +578,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -730,7 +631,7 @@ impl RtsServer {
         }
         match self.call_daemon("Index.Grep", Value::Object(params)).await {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -746,7 +647,7 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 }
@@ -770,20 +671,26 @@ fn success_json(value: &Value) -> CallToolResult {
     CallToolResult::success(vec![Content::text(text)])
 }
 
-/// Map a daemon-side `error` envelope to a `CallToolResult::error`. The
-/// agent gets a structured payload `{ code, message, data }` so it can act
-/// on `INDEX_NOT_READY` (poll later), `SYMBOL_NOT_FOUND` (rephrase), or
-/// `OUT_OF_ROOT` (drop the path) without parsing English text.
+/// Map a connection-or-daemon-side error to a `CallToolResult::error`.
+/// The agent gets a structured payload `{ code, message, data }` so it
+/// can act on:
 ///
-/// Note: per protocol-v0 §7.6, `find_symbol` empty results are a *success*
-/// path with `matches: []`, not an error — so this function only fires for
-/// real protocol errors.
-fn daemon_error_to_call_result(e: &DaemonError) -> CallToolResult {
+/// - `DAEMON_UNAVAILABLE` (transient; retry in `retry_after_ms`)
+/// - `DAEMON_DOWN` (sustained outage; surface to user)
+/// - `INDEX_NOT_READY` (poll), `SYMBOL_NOT_FOUND` (rephrase),
+///   `OUT_OF_ROOT` (drop the path), etc.
+///
+/// without parsing English text.
+///
+/// Per protocol-v0 §7.6, `find_symbol` empty results are a *success*
+/// path with `matches: []`, not an error — so this function only fires
+/// for real protocol or transport errors.
+fn connection_error_to_call_result(e: &ConnectionError) -> CallToolResult {
     let body = json!({
         "error": {
-            "code":    e.code,
-            "message": e.message,
-            "data":    e.data.clone().unwrap_or(Value::Null),
+            "code":    e.code(),
+            "message": e.message(),
+            "data":    e.data(),
         }
     });
     let text = serde_json::to_string(&body).unwrap_or_else(|_| e.to_string());
