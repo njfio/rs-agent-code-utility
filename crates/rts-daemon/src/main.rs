@@ -9,6 +9,7 @@
 
 #![deny(unsafe_code)]
 
+mod cancel;
 mod closure;
 mod error;
 mod filter;

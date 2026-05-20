@@ -10,11 +10,19 @@ use std::sync::atomic::Ordering;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::cancel::CancelToken;
 use crate::error::{ErrorCode, ProtocolError};
 use crate::filter::BODY_ALLOWED_EXTENSIONS;
 use crate::state::DaemonState;
 use crate::store::{FoundSymbol, Store, SymbolKind};
 use crate::symbol_pagerank::{SymbolRanks, compute_symbol_ranks};
+
+/// Shared error builder for cooperative-cancellation hits. Code
+/// `CANCELLED` (custom JSON-RPC -32099); message stable so callers can
+/// log/branch on it without fuzzy matching.
+fn cancelled() -> ProtocolError {
+    ProtocolError::new(ErrorCode::Cancelled, "cancelled")
+}
 
 /// `Index.ReadSymbol`/`Index.ReadRange` clamp at 4 MiB of returned text. The
 /// 16 MiB wire cap (§3.3) is the hard ceiling; the 4 MiB cap leaves room for
@@ -633,6 +641,7 @@ fn symbol_ranks_lazy(
 pub async fn find_symbol(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
+    token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
     /// Default cap when no `limit` is supplied. Tuned for agent
     /// callers — most LLM contexts can't usefully digest more.
@@ -642,6 +651,9 @@ pub async fn find_symbol(
     /// score query relevance.
     const MAX_LIMIT: usize = 4096;
 
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
     let p: FindSymbolParams = parse_params(params)?;
     if p.name.is_some() && p.pattern.is_some() {
         return Err(ProtocolError::new(
@@ -1099,6 +1111,7 @@ pub async fn find_symbol(
 pub async fn grep(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
+    token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
     /// Default cap on returned matches when `limit` is unset.
     /// Matches `find_symbol`'s default — same agent-context budget.
@@ -1115,6 +1128,9 @@ pub async fn grep(
     /// ellipsis suffix so the response stays parseable.
     const MAX_LINE_BYTES: usize = 512;
 
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
     let p: GrepParams = parse_params(params)?;
 
     // v0.6 composition matrix: validate the param shape first, then
@@ -1282,16 +1298,52 @@ pub async fn grep(
                 )
             })?;
 
-            let result = super::grep_v2::structural::run(
-                state,
-                &root,
-                &files,
-                &query,
-                &languages,
-                glob.as_ref(),
-                limit,
-            )
+            // v0.6 cancellation: the structural scanner is CPU-bound
+            // (tree-sitter parse + node-visit + capture extraction per
+            // file). Running it directly on a tokio worker thread
+            // blocks that worker for the scan duration, which on
+            // wide-fanout queries delays *every* concurrent task
+            // assigned to the same worker — including the
+            // `Daemon.Cancel` handler that's supposed to flip the
+            // cancel flag this scanner polls.
+            //
+            // Move the scan to a dedicated blocking thread so the
+            // tokio runtime stays responsive: the cancel handler
+            // runs promptly on its own worker, sets the flag, and
+            // the next per-match poll inside the scanner sees it.
+            // This matches the existing `Index.Outline` /
+            // `Index.ImpactOf` pattern (both already `spawn_blocking`
+            // their CPU-bound compute) — see the v0.3.x comments
+            // around `read_symbol_body`'s closure walk for the
+            // rationale.
+            let state_clone = state.clone();
+            let root_owned = root.clone();
+            let query_owned = query.clone();
+            let languages_owned = languages.clone();
+            let glob_owned = glob.clone();
+            let files_owned = files.clone();
+            let token_owned = token.clone();
+            let result = tokio::task::spawn_blocking(move || {
+                super::grep_v2::structural::run(
+                    &state_clone,
+                    &root_owned,
+                    &files_owned,
+                    &query_owned,
+                    &languages_owned,
+                    glob_owned.as_ref(),
+                    limit,
+                    &token_owned,
+                )
+            })
+            .await
+            .map_err(|e| {
+                ProtocolError::new(
+                    ErrorCode::InternalError,
+                    format!("structural::run join error: {e}"),
+                )
+            })?
             .map_err(|e| match e {
+                super::grep_v2::structural::StructuralError::Cancelled => cancelled(),
                 super::grep_v2::structural::StructuralError::AllLanguagesFailed(pfs) => {
                     let first = pfs
                         .first()
@@ -1541,6 +1593,14 @@ pub async fn grep(
     let mut truncated_hit_cap = false;
 
     'files: for rel in &files {
+        // Cooperative cancellation: per-file boundary. Covers both the
+        // multiline-regex path (where a single file's scan is the
+        // smallest interruptible unit — the `regex` DFA can't be
+        // pre-empted mid-find) and the literal/single-line-regex paths
+        // (where per-match checks below add a sub-millisecond ceiling).
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
         // file_glob filter is path-only — applied before file read so
         // a tight glob (`crates/rts-core/**/*.rs`) keeps `files_scanned`
         // honest: we don't claim to have scanned files the user asked
@@ -1604,6 +1664,15 @@ pub async fn grep(
 
         let mut file_recorded = false;
         for (m_start, m_end) in hits {
+            // Per-match cancellation check. For the multiline regex
+            // path this is what bounds the abort latency *within* a
+            // file (the per-file check at the top of the outer loop
+            // only fires once per file). Literal-mode scans are fast
+            // enough that the per-file check usually wins; the extra
+            // load here is a relaxed atomic, ~1ns.
+            if token.is_cancelled() {
+                return Err(cancelled());
+            }
             total_pre_truncate += 1;
 
             if matches.len() < limit {
@@ -2032,9 +2101,13 @@ fn bytes_to_truncated_utf8(bytes: &[u8], max_bytes: usize) -> String {
 pub async fn find_callers(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
+    token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
     const MAX_CALLERS: usize = 256;
 
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
     let p: FindCallersParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -2456,7 +2529,11 @@ pub async fn read_range(
 pub async fn read_symbol(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
+    token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
     let p: ReadSymbolParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -2925,7 +3002,11 @@ struct OutlineParamsWire {
 pub async fn outline(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
+    token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
     let p: OutlineParamsWire = parse_params(params)?;
     let budget = check_budget(p.token_budget)?;
 

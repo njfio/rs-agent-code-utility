@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 
+use crate::cancel::CancelRegistry;
 use crate::outline::OutlineCache;
 use crate::store::Store;
 use crate::symbol_pagerank::SymbolPagerankCache;
@@ -226,6 +227,15 @@ pub struct DaemonState {
     /// than `Mutex` because reads via `Daemon.Stats` outnumber writes
     /// (one write per pass) by a large margin.
     pub reconcile_stats: Arc<RwLock<crate::reconciler::ReconcileStats>>,
+    /// In-flight cancellation tokens, keyed by client-supplied
+    /// `cancel_id`. See `crate::cancel` for the design rationale.
+    /// `Arc` so the dispatcher can hand it to `Daemon.Cancel` and to
+    /// the RAII guard without juggling `&self` lifetimes.
+    pub cancel_registry: Arc<CancelRegistry>,
+    /// Cumulative count of cancellations that actually tripped a
+    /// registered token. Surfaced as `Daemon.Stats.cancellations.total`.
+    /// Stale-cancel hits (unknown id, idempotent) do not bump this.
+    pub cancellations_total: AtomicU64,
 }
 
 /// Per-method call counts for the daemon's RPC surface. All fields
@@ -240,6 +250,7 @@ pub struct DaemonState {
 pub struct CallCounters {
     pub daemon_ping: AtomicU64,
     pub daemon_stats: AtomicU64,
+    pub daemon_cancel: AtomicU64,
     pub daemon_shutdown: AtomicU64,
     pub workspace_mount: AtomicU64,
     pub workspace_status: AtomicU64,
@@ -284,6 +295,7 @@ impl CallCounters {
         serde_json::json!({
             "Daemon.Ping":         self.daemon_ping.load(Relaxed),
             "Daemon.Stats":        self.daemon_stats.load(Relaxed),
+            "Daemon.Cancel":       self.daemon_cancel.load(Relaxed),
             "Daemon.Shutdown":     self.daemon_shutdown.load(Relaxed),
             "Workspace.Mount":     self.workspace_mount.load(Relaxed),
             "Workspace.Status":    self.workspace_status.load(Relaxed),
@@ -314,6 +326,7 @@ impl CallCounters {
         use std::sync::atomic::Ordering::Relaxed;
         self.daemon_ping.load(Relaxed)
             + self.daemon_stats.load(Relaxed)
+            + self.daemon_cancel.load(Relaxed)
             + self.daemon_shutdown.load(Relaxed)
             + self.workspace_mount.load(Relaxed)
             + self.workspace_status.load(Relaxed)
@@ -524,6 +537,8 @@ impl DaemonState {
             rehydrate_successes: AtomicU64::new(0),
             rehydrate_invalidations: Mutex::new(std::collections::BTreeMap::new()),
             reconcile_stats: Arc::new(RwLock::new(crate::reconciler::ReconcileStats::default())),
+            cancel_registry: Arc::new(CancelRegistry::new()),
+            cancellations_total: AtomicU64::new(0),
         }
     }
 
