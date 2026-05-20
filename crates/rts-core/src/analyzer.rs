@@ -2264,6 +2264,42 @@ impl CodebaseAnalyzer {
             }
         }
 
+        // Method bodies inside class_declaration / interface_declaration /
+        // trait_declaration. The bare method name is the indexed key so
+        // `Index.FindCallers("methodName")` resolves member-call and
+        // scoped-call edges (the PHP_REFS query in rts-daemon captures
+        // those references with the bare name, matching the Java/Ruby
+        // extractor convention).
+        let methods = tree.find_nodes_by_kind("method_declaration");
+        for method in methods {
+            let Some(name_node) = method.child_by_field_name("name") else {
+                continue;
+            };
+            let Ok(name) = name_node.text() else { continue };
+            let docs = self.extract_c_doc_comments(content, method.start_position().row);
+            // PHP visibility defaults to public when no modifier is
+            // present (matches the language spec).
+            let mut visibility = "public".to_string();
+            for child in method.children() {
+                if child.kind() == "visibility_modifier" {
+                    if let Ok(v) = child.text() {
+                        visibility = v.trim().to_lowercase();
+                    }
+                    break;
+                }
+            }
+            symbols.push(Symbol {
+                name: name.to_string(),
+                kind: "method".to_string(),
+                start_line: method.start_position().row + 1,
+                start_column: method.start_position().column,
+                end_line: method.end_position().row + 1,
+                end_column: method.end_position().column,
+                visibility,
+                documentation: docs,
+            });
+        }
+
         Ok(())
     }
 
@@ -2868,6 +2904,201 @@ mod tests {
             .as_ref()
             .expect("IEvictionPolicy has docs");
         assert!(policy_docs.contains("Eviction"), "got: {policy_docs:?}");
+    }
+
+    /// PHP class with a single public method: the method must be
+    /// indexed as a top-level Symbol with `kind == "method"` and the
+    /// bare method name (the form PHP_REFS captures, so
+    /// `Index.FindCallers("greet")` resolves member-call edges).
+    #[test]
+    fn php_class_method_indexed_with_bare_name() {
+        let temp_dir = TempDir::new().unwrap();
+        let php_file = temp_dir.path().join("greeter.php");
+        fs::write(
+            &php_file,
+            "<?php\n\
+             class Greeter {\n\
+                 public function greet() { return \"hi\"; }\n\
+             }\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|e| e.to_str()) == Some("php"))
+            .expect("greeter.php should be picked up");
+
+        let greet = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "greet")
+            .expect("greet method should be extracted with bare name");
+        assert_eq!(greet.kind, "method");
+        assert_eq!(greet.visibility, "public");
+    }
+
+    /// Visibility modifiers (public/private/protected) propagate to
+    /// `Symbol.visibility`. A method with no modifier defaults to
+    /// public (PHP language rule). A `static` modifier does not
+    /// change visibility.
+    #[test]
+    fn php_method_visibility_modifiers_extracted() {
+        let temp_dir = TempDir::new().unwrap();
+        let php_file = temp_dir.path().join("modifiers.php");
+        fs::write(
+            &php_file,
+            "<?php\n\
+             class Klass {\n\
+                 public function pub_method() {}\n\
+                 private function priv_method() {}\n\
+                 protected function prot_method() {}\n\
+                 public static function static_method() {}\n\
+                 function default_method() {}\n\
+             }\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|e| e.to_str()) == Some("php"))
+            .unwrap();
+
+        let visibility_of = |name: &str| -> String {
+            info.symbols
+                .iter()
+                .find(|s| s.name == name && s.kind == "method")
+                .unwrap_or_else(|| panic!("method {name} not extracted"))
+                .visibility
+                .clone()
+        };
+
+        assert_eq!(visibility_of("pub_method"), "public");
+        assert_eq!(visibility_of("priv_method"), "private");
+        assert_eq!(visibility_of("prot_method"), "protected");
+        assert_eq!(visibility_of("static_method"), "public");
+        // No visibility modifier — PHP defaults to public.
+        assert_eq!(visibility_of("default_method"), "public");
+    }
+
+    /// Interface method signatures must be indexed too: callers of
+    /// `$svc->doThing()` need the target def to resolve even when
+    /// the only def is the abstract signature in the interface.
+    #[test]
+    fn php_interface_methods_indexed() {
+        let temp_dir = TempDir::new().unwrap();
+        let php_file = temp_dir.path().join("contract.php");
+        fs::write(
+            &php_file,
+            "<?php\n\
+             interface Service {\n\
+                 public function doThing();\n\
+                 public function reset();\n\
+             }\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|e| e.to_str()) == Some("php"))
+            .unwrap();
+
+        for name in ["doThing", "reset"] {
+            assert!(
+                info.symbols
+                    .iter()
+                    .any(|s| s.name == name && s.kind == "method"),
+                "interface method {name} should be extracted; got {:?}",
+                info.symbols
+                    .iter()
+                    .map(|s| (&s.name, &s.kind))
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    /// Trait methods are first-class call targets just like class
+    /// methods; PHP `use SomeTrait;` mixes them in. The extractor
+    /// must surface them the same way.
+    #[test]
+    fn php_trait_methods_indexed() {
+        let temp_dir = TempDir::new().unwrap();
+        let php_file = temp_dir.path().join("mixin.php");
+        fs::write(
+            &php_file,
+            "<?php\n\
+             trait Loggable {\n\
+                 public function log_event(string $msg) {}\n\
+                 protected function flush() {}\n\
+             }\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|e| e.to_str()) == Some("php"))
+            .unwrap();
+
+        let log_event = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "log_event")
+            .expect("trait method log_event should be extracted");
+        assert_eq!(log_event.kind, "method");
+        assert_eq!(log_event.visibility, "public");
+
+        let flush = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "flush")
+            .expect("trait method flush should be extracted");
+        assert_eq!(flush.visibility, "protected");
+    }
+
+    /// A class declared inside a `namespace \Foo\Bar { ... }` block
+    /// still has methods indexed by their bare name — PHP_REFS
+    /// captures `scoped_call_expression` and `member_call_expression`
+    /// targets unqualified, so the indexed name must match that to
+    /// keep `FindCallers` working across namespace boundaries.
+    #[test]
+    fn php_namespaced_class_methods_indexed_by_bare_name() {
+        let temp_dir = TempDir::new().unwrap();
+        let php_file = temp_dir.path().join("ns.php");
+        fs::write(
+            &php_file,
+            "<?php\n\
+             namespace Foo\\Bar;\n\
+             class Klass {\n\
+                 public function nested_method() {}\n\
+             }\n",
+        )
+        .unwrap();
+
+        let mut analyzer = CodebaseAnalyzer::new().unwrap();
+        let result = analyzer.analyze_directory(temp_dir.path()).unwrap();
+        let info = result
+            .files
+            .iter()
+            .find(|f| f.path.extension().and_then(|e| e.to_str()) == Some("php"))
+            .unwrap();
+
+        let method = info
+            .symbols
+            .iter()
+            .find(|s| s.name == "nested_method")
+            .expect("nested_method should be extracted by bare name");
+        assert_eq!(method.kind, "method");
     }
 }
 

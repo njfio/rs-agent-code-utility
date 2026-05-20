@@ -1,18 +1,20 @@
 //! End-to-end test: PHP call edges resolve via `Index.FindCallers`.
 //!
-//! Exercises three call shapes the AST query covers and the symbol
-//! extractor today indexes targets for:
-//!   1. bare function call: `bare_target()`
-//!   2. namespace-qualified call: `\namespaced_target()`
-//!   3. object creation: `new Klass()`
+//! Exercises all five call shapes the AST query covers and the symbol
+//! extractor indexes targets for:
+//!   1. bare function call:        `bare_target()`
+//!   2. namespace-qualified call:  `\namespaced_target()`
+//!   3. object creation:           `new Klass()`
+//!   4. member call:               `$obj->member_target()`
+//!   5. scoped (static) call:      `Klass::static_target()`
 //!
-//! Member-call (`$obj->method_target()`) and scoped-call
-//! (`Klass::static_target()`) capture correctly in the AST query
-//! (see the `php_references_capture_calls_member_and_static` unit
-//! test in `refs.rs`), but `extract_php_symbols` does not currently
-//! index `method_declaration` defs — so end-to-end `FindCallers`
-//! on those targets is blocked by a pre-existing PHP-symbol-extractor
-//! gap, not by the call-edge AST query. Out of scope for this slice.
+//! Member-call and scoped-call coverage landed in the follow-up that
+//! taught `extract_php_symbols` to index `method_declaration` —
+//! shipping in the same PR as this test edit. Before that fix the
+//! AST query captured these references correctly (see
+//! `php_references_capture_calls_member_and_static` in
+//! `refs.rs`) but the targets were never indexed, so `FindCallers`
+//! returned `SYMBOL_NOT_FOUND`.
 //!
 //! Variable-function `$fn()` is intentionally NOT a call edge in the
 //! AST query (no static target); regex fallback would have included
@@ -120,9 +122,9 @@ async fn php_bare_namespaced_and_new_calls_resolve() -> anyhow::Result<()> {
          }\n",
     )?;
 
-    // Includes member and scoped calls so the AST query is exercised
-    // even though their target defs aren't indexed yet (see file-level
-    // comment).
+    // All five call shapes — bare, namespaced, new, member, scoped.
+    // Member-call and scoped-call resolution requires the
+    // method_declaration extractor branch (the gap closed in this PR).
     std::fs::write(
         workspace.path().join("caller.php"),
         "<?php\n\
@@ -170,11 +172,24 @@ async fn php_bare_namespaced_and_new_calls_resolve() -> anyhow::Result<()> {
     .await?;
     assert!(mount["error"].is_null(), "mount: {mount:?}");
 
-    for sym in ["bare_target", "namespaced_target", "Klass", "caller_entry"] {
+    for sym in [
+        "bare_target",
+        "namespaced_target",
+        "Klass",
+        "caller_entry",
+        "member_target",
+        "static_target",
+    ] {
         wait_for_symbol(&mut stream, sym, Duration::from_secs(5)).await?;
     }
 
-    for target in ["bare_target", "namespaced_target", "Klass"] {
+    for target in [
+        "bare_target",
+        "namespaced_target",
+        "Klass",
+        "member_target",
+        "static_target",
+    ] {
         let resp = round_trip(
             &mut stream,
             "10",
