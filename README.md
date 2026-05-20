@@ -79,8 +79,8 @@ no longer maintained.
 The redb store carries both halves of the code graph: `defs` + `fid_defs`
 for "where is X defined?" and (v0.3+) `refs` + `fid_refs` + `sid_refs_out`
 for "who calls X?", "what does X reference?", and transitive impact
-queries. AST-precise via tags.scm on Rust/Python/Go/Ruby/JS/TS; regex
-fallback on the remaining five languages.
+queries. AST-precise via tags.scm on Rust/Python/Go/Ruby/JS/TS/Java/PHP/Swift/C#
+(10 of the 12 indexed languages); regex fallback for C and C++.
 
 Both halves are local-only and offline. The daemon is single-uid via
 SO_PEERCRED / LOCAL_PEERCRED, refuses to run as root, sets
