@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "rts telemetry payload (schema_version 1)",
+  "description": "Wire schema for the anonymous opt-in telemetry POST. Mirrors crates/rts-mcp/src/telemetry.rs::TelemetryPayload. Bumping schema_version requires updating this file in lockstep.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "install_id",
+    "rts_version",
+    "os",
+    "arch",
+    "uptime_hours",
+    "languages_indexed",
+    "method_counts",
+    "method_latency_p50_ms",
+    "method_latency_p99_ms",
+    "error_counts",
+    "cache_hit_rate",
+    "cold_walk_ms_p50",
+    "workspace_size_bucket"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "install_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Random UUIDv4 generated locally. Hashed at ingest with rotating salt."
+    },
+    "rts_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9.]+)?$"
+    },
+    "os": {
+      "type": "string",
+      "enum": ["linux", "macos", "windows"]
+    },
+    "arch": {
+      "type": "string",
+      "enum": ["aarch64", "x86_64"]
+    },
+    "uptime_hours": { "type": "integer", "minimum": 0 },
+    "languages_indexed": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "rust", "python", "typescript", "javascript", "go",
+          "java", "c", "cpp", "php", "ruby", "swift", "csharp"
+        ]
+      }
+    },
+    "method_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(Daemon\\.Ping|Daemon\\.Stats|Daemon\\.Cancel|Daemon\\.Shutdown|Workspace\\.(Mount|Status|Unmount)|Session\\.(Open|Close)|Index\\.(FindSymbol|FindCallers|ImpactOf|ReadRange|ReadSymbol|ReadSymbolAt|Outline|Grep|Grep\\.(multiline|structural|within_symbol)))$": {
+          "type": "integer", "minimum": 0
+        }
+      }
+    },
+    "method_latency_p50_ms": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(Daemon\\.Ping|Daemon\\.Stats|Daemon\\.Cancel|Daemon\\.Shutdown|Workspace\\.(Mount|Status|Unmount)|Session\\.(Open|Close)|Index\\.(FindSymbol|FindCallers|ImpactOf|ReadRange|ReadSymbol|ReadSymbolAt|Outline|Grep|Grep\\.(multiline|structural|within_symbol)))$": {
+          "type": "integer", "minimum": 0
+        }
+      }
+    },
+    "method_latency_p99_ms": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(Daemon\\.Ping|Daemon\\.Stats|Daemon\\.Cancel|Daemon\\.Shutdown|Workspace\\.(Mount|Status|Unmount)|Session\\.(Open|Close)|Index\\.(FindSymbol|FindCallers|ImpactOf|ReadRange|ReadSymbol|ReadSymbolAt|Outline|Grep|Grep\\.(multiline|structural|within_symbol)))$": {
+          "type": "integer", "minimum": 0
+        }
+      }
+    },
+    "error_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(INVALID_PARAMS|INVALID_REQUEST|METHOD_NOT_FOUND|INTERNAL_ERROR|OUT_OF_ROOT|RANGE_OUT_OF_BOUNDS|WORKSPACE_NOT_FOUND|WORKSPACE_VANISHED|WORKSPACE_MISMATCH|INDEX_NOT_READY|DEADLINE_EXCEEDED|CANCELLED|INVALID_STRUCTURAL_QUERY|REGEX_TOO_COMPLEX|WITHIN_SYMBOL_NOT_FOUND|WITHIN_SYMBOL_TOO_MANY_DEFS|TIMEOUT)$": {
+          "type": "integer", "minimum": 0
+        }
+      }
+    },
+    "cache_hit_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+    "cold_walk_ms_p50": { "type": "integer", "minimum": 0 },
+    "workspace_size_bucket": {
+      "type": "string",
+      "enum": ["lt_1k", "1k_to_10k", "10k_to_100k", "gt_100k"]
+    }
+  }
+}
