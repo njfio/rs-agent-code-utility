@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "install_id": "11111111-1111-4111-8111-111111111111",
+  "rts_version": "0.5.5",
+  "os": "OS_PLACEHOLDER",
+  "arch": "ARCH_PLACEHOLDER",
+  "uptime_hours": 2,
+  "languages_indexed": [
+    "python",
+    "rust"
+  ],
+  "method_counts": {
+    "Index.FindSymbol": 5,
+    "Index.Grep": 12
+  },
+  "method_latency_p50_ms": {
+    "Index.FindSymbol": 2,
+    "Index.Grep": 38
+  },
+  "method_latency_p99_ms": {
+    "Index.FindSymbol": 8,
+    "Index.Grep": 412
+  },
+  "error_counts": {
+    "INVALID_STRUCTURAL_QUERY": 1,
+    "TIMEOUT": 2
+  },
+  "cache_hit_rate": 0.84,
+  "cold_walk_ms_p50": 230,
+  "workspace_size_bucket": "10k_to_100k"
+}

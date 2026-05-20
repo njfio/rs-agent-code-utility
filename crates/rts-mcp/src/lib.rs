@@ -12,3 +12,4 @@
 pub mod cli;
 pub mod daemon_client;
 pub mod socket;
+pub mod telemetry;
