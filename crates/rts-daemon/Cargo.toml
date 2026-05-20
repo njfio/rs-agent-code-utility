@@ -94,4 +94,16 @@ lru = "0.12"
 
 tempfile = "3"
 
+[features]
+default = []
+# v0.6 anonymous opt-in telemetry: enables the daemon-side 24h ticker
+# that shells out to the `rts` binary's `telemetry flush` subcommand.
+# The daemon itself still links zero HTTP code paths, per AGENTS.md
+# "Dependency hygiene" — the HTTP client lives in the `rts` binary
+# (behind its own `telemetry` feature). This daemon-side feature is
+# default-OFF; operators build with `--features telemetry` to compile
+# the ticker in. Runtime opt-in (via `rts telemetry enable`) is also
+# required before any ping fires.
+telemetry = []
+
 [dev-dependencies]
