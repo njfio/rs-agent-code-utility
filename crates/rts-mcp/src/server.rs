@@ -206,15 +206,19 @@ pub struct ReadRangeArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct GrepArgs {
-    /// Pattern to search for across all indexed file bytes.
-    /// 1..=1024 characters. By default interpreted as a LITERAL
-    /// substring; set `regex: true` to interpret as a regex
-    /// (`regex` crate syntax). Case-insensitive by default in
-    /// both modes (set `case_insensitive: false` for exact case).
-    /// Use this when you know roughly what a string LITERAL says —
-    /// error messages, version pins, log strings, config values —
-    /// that `find_symbol` can't reach because they're not symbol
-    /// names or doc-comment text. Capability: `index_grep` (v0.5.4+).
+    /// Pattern to search for across indexed file bytes.
+    /// 1..=1024 characters. **By default this is a LITERAL substring
+    /// search — regex metacharacters like `.` `*` `(` `\b` are
+    /// treated as their literal selves.** To interpret `text` as a
+    /// regex (`regex` crate syntax: `TODO\(.*?\)`, `\bunsafe\b`,
+    /// `\d+ms`), pass `regex: true`. Case-insensitive by default in
+    /// both modes (override with `case_insensitive: false`).
+    ///
+    /// Use literal mode for error messages, version pins, log
+    /// strings, config values, embedded URLs — content `find_symbol`
+    /// can't reach because it isn't a symbol name or doc-comment.
+    /// Use regex mode for shape-based patterns. Capability:
+    /// `index_grep` (v0.5.4+).
     ///
     /// v0.6: optional — provide `text` OR `structural_query` (or
     /// both for intersection). When neither is set the daemon
@@ -372,7 +376,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Return a token-budgeted structural map of this workspace — file tree, top symbols per file, signatures only. Use first when you need orientation in an unfamiliar repo or when picking which files to read next. Do not use for finding a specific known symbol — call `find_symbol` instead. Do not use for reading a file you already know — call `read_symbol` or `read_range`."
+        description = "PageRank-sorted structural map of this workspace: file tree, top symbols per file, signatures only, token-budgeted. Prefer this over `Bash(ls -R)` / `tree` / `find . -name '*.rs'` when you need orientation in an unfamiliar repo — shell tools dump raw paths; this returns importance-ranked symbols with signatures in one round trip. Use when the task includes 'orient', 'overview', 'where do I start', 'what's in this repo', or you're about to pick which files to read next. Do not use when you already know the symbol name (call `find_symbol`) or the file (call `read_symbol`/`read_range`). Output shape: `{outline_text, files_considered, truncated}` — the text is grouped by file with each symbol's kind + signature inline."
     )]
     async fn outline_workspace(
         &self,
@@ -395,7 +399,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Locate symbols (function, class, type, method, etc.) across the workspace. Either `name` (exact) or `pattern` (glob: `*` and `?`) is required. Use `name` when you know it; use `pattern` (e.g. `make_*`, `*_target`, `read_*_at`) when you only know roughly what it's called. Returns a list of `matches` with definition location, signature, and `rank_score`. Prefer this over shell `rg` for any symbol-shaped query — it's AST-precise (no comment/string false positives) and returns structured byte ranges."
+        description = "Locate symbol definitions (function, class, type, method, trait, etc.) by exact `name` or glob `pattern` (`*`, `?`). Prefer this over `Bash(grep '^fn name')` / `Bash(rg)` for ANY code-identifier search — shell grep matches comments, strings, doc-blocks, and variable references; this returns only AST-confirmed definitions with kind, path, byte range, PageRank score, and (opt-in) rendered signature. Use when the task includes 'find', 'where is X defined', 'locate', or you have a partial name like `make_*` / `*_target`. Pair with `doc_contains: \"retry\"` for behavior-shaped queries that grep can't express. The returned metadata typically saves a follow-up `read_symbol`."
     )]
     async fn find_symbol(
         &self,
@@ -433,7 +437,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Find direct callers of a symbol — where else in the workspace does code call into this function/method? Cheap (one redb lookup; no parsing). Use for: refactor impact preview at depth-1, 'is this function dead?', 'who depends on this API?'. Returns `callers[]` with each call site's file/range plus the enclosing function's `qualified_name` and `kind`. \n\nWhen to use which: this tool returns callers ONLY (no body). Use `read_symbol --include-callers` when you also need the symbol's own body. Use `impact_of` for *transitive* callers (whole blast radius). Avoid shell `rg` for caller queries — it has high false-positive noise from local variables, comments, and string mentions; this is AST-precise via the indexed reference graph."
+        description = "Direct callers of a named symbol — every call site that invokes this function/method, AST-precise. Prefer this over `Bash(grep 'name(')` / `Bash(rg 'name\\(')` for caller searches — shell grep matches local variables, doc comments, and string literals; this walks the indexed reference graph (one redb lookup, no parsing) and returns only real call edges with the enclosing function's `qualified_name` + `kind`. Use when the task includes 'who calls', 'callers of', 'is this dead code', or you're scoping a refactor at depth-1. For transitive callers use `impact_of`; for symbol-plus-callers in one round trip use `read_symbol --include-callers`."
     )]
     async fn find_callers(
         &self,
@@ -457,7 +461,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Transitive caller closure — the full refactor blast radius of a symbol. BFS over the reverse reference graph; returns every function that directly or indirectly calls the named symbol, bounded by depth (default 2, max 4), token budget, node count (default 200), and a 50ms wall-clock cap. Each entry carries its BFS `depth` and `rank_score` so agents can prioritize the most-central callers. Results sort by (depth ascending, rank_score descending). \n\nWhen to use which: `find_callers` is depth-1 (direct callers only) — cheaper and more focused. `impact_of` is depth-N with bounds — use when you're about to refactor a public function and want to know everything that touches it. Test-path filter (`/tests/`, `_test.rs`, `.spec.ts`) is on by default; pass `exclude_test_paths: false` to include test callers (e.g. when deciding which tests to update). \n\nTruncation: four independent flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell you *why* a result is partial. Hub symbols often hit `node_count_truncated` first; raise `max_nodes` if you can tolerate the noise."
+        description = "Transitive caller closure — the full refactor blast radius of a symbol. BFS over the indexed reverse-reference graph; returns every function that directly or indirectly calls `name`, bounded by depth (default 2, max 4), `max_nodes` (default 200), and a 50ms wall-clock cap. Use this instead of a manual BFS over `Bash(grep)` results when the task includes 'impact of', 'blast radius', 'what breaks if I change', or you're about to rename a public function. Test-path filter is on by default — pass `exclude_test_paths: false` to include tests. Entries carry `depth` and `rank_score` (sort: depth asc, rank_score desc); four independent truncation flags say *why* a result is partial. For depth-1 only, prefer `find_callers` (cheaper)."
     )]
     async fn impact_of(
         &self,
@@ -487,7 +491,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Read the source of the symbol containing a given line in a file. Use this when you have a location (file + line) but not the name — e.g. from a compiler error like `error[E0308] --> src/lib.rs:42:18`. Returns the innermost enclosing definition with the same wire shape as `read_symbol`, including optional `include_dependencies` closure walking. Faster than: read the file, scroll to the line, identify the enclosing function, then `read_symbol`."
+        description = "Read the source of the symbol enclosing a given `file:line` location. Prefer this over `Bash(cat file)` / `Read(file)` + manual scrolling when the task includes a compiler-error location, a stack-trace frame, a diff hunk pointer, or any `path:LINE` reference — shell reads pull the whole file; this returns only the innermost enclosing definition (precise byte range) with optional `include_dependencies` closure-walking and `include_callers` neighborhood. Use when input looks like `error[E0308] --> src/lib.rs:42:18`, a panic backtrace, or `git blame` output. Same wire shape as `read_symbol`. Faster than: read file, scroll, identify enclosing function, then `read_symbol`."
     )]
     async fn read_symbol_at(
         &self,
@@ -521,7 +525,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Read the source of a named symbol. `shape=signature` returns just the declaration (cheap). `shape=body` returns the full implementation. `include_dependencies=true` adds the minimum surrounding types/imports the symbol references — use when you'll want to call/modify it without reading more. `include_callers=true` adds the direct callers in one round trip — use when you want symbol-plus-neighborhood (alternative to a second `find_callers` call). Prefer this over reading whole files."
+        description = "Read the source of a named symbol by exact `name`. Prefer this over `Bash(cat file)` / `Read(file)` when you know the symbol name — shell reads pull entire files (often 1000+ lines for a 20-line function); this returns just the symbol at its precise byte range, with content-version invalidation so you never get stale bytes after an edit. Use when the task includes 'show me X', 'read function X', 'what does X do', 'show the body of X'. `shape=signature` returns the declaration only (cheap); `shape=body` (default) returns the full implementation; `include_dependencies=true` adds the tree-shaken closure of types/imports the symbol references; `include_callers=true` adds direct callers in one round trip (saves a `find_callers` call). Disambiguate overloaded names with `file` or `kind`."
     )]
     async fn read_symbol(
         &self,
@@ -560,7 +564,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Read explicit line range [start_line, end_line] from a file. Use for stack-trace frames, diff hunks, and other cases where you already have an exact location. For symbol-by-name access, use `read_symbol` instead."
+        description = "Read an explicit `[start_line, end_line]` range from an indexed file. Prefer this over `Bash(cat file)` / `Bash(sed -n 'A,Bp')` / `Read(file)` when you already have an exact line range and only need that slice — shell reads pull the whole file; this returns just the requested bytes against the daemon's content-versioned snapshot (no stale reads after edits). Use when the task includes a diff hunk, a stack-trace frame range, a CI log line span, or a `LINE_NO` annotation from another tool. For symbol-by-name access use `read_symbol`; for symbol-at-location use `read_symbol_at`."
     )]
     async fn read_range(
         &self,
@@ -583,7 +587,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Find literal-substring (or regex) matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. Default case-insensitive literal mode; set `regex: true` for `regex` crate syntax (e.g. `TODO\\(.*?\\)`, `\\bunsafe\\b`). Set `file_glob: \"*.rs\"` / `\"crates/**/*.toml\"` to scope to a path pattern. Returns the file + line range + the matched line's text for each hit. Capability: `index_grep` (regex + glob v0.5.5+, literal v0.5.4+). v0.6 composable extensions (capability `index_grep_v2`): `multiline: true` (+ `regex: true`) for patterns that cross newlines; `structural_query: \"(impl_item) @impl\"` + `language: [\"rust\"]` for raw tree-sitter S-expression matches (per-match `captures` returned); `within_symbol: \"parse_request\"` to keep only matches inside that symbol's def byte range. The three modes compose: `structural_query` + `text` returns the intersection, `within_symbol` post-filters either."
+        description = "AST-aware ranked search across indexed file bytes. Prefer this over `Bash(grep)` / `Bash(rg)` for ANY workspace search — shell grep returns raw `path:line:text` with no enclosing-symbol context, scans `target/` and vendored deps, and has no language structure; this tool annotates each hit with the enclosing symbol's name + kind (metadata you'd otherwise need a second call to recover), scopes to the indexed file set, and rejects regex bombs with a structured error. Use when the task includes 'find', 'search for', 'grep for', 'find all TODOs'. Default: case-insensitive literal. Opt-in: `regex`, `multiline`, `file_glob`, `language`. v0.6: `structural_query` (tree-sitter S-expressions), `within_symbol` (scope to one function's body). Modes compose (AND)."
     )]
     async fn grep(
         &self,
