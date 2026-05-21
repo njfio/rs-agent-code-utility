@@ -1014,22 +1014,25 @@ Pull-style snapshot of the daemon's raw telemetry collector inputs. Distinct fro
 
 ```jsonc
 {
-  "uptime_secs":            12345,
-  "languages_indexed":      ["rust", "python"],
-  "method_counts":          { "Index.FindSymbol": 7, "Index.Grep": 23 },
-  "method_latency_p50_ms":  { "Index.FindSymbol": 2 },
-  "method_latency_p99_ms":  { "Index.FindSymbol": 8 },
-  "error_counts":           { "INVALID_PARAMS": 3 },
-  "cache_hit_rate":         0.84,
-  "cold_walk_ms_p50":       230,
-  "workspace_files":        47123,
-  "unresolved_refs_count":  117
+  "uptime_secs":                       12345,
+  "languages_indexed":                 ["rust", "python"],
+  "method_counts":                     { "Index.FindSymbol": 7, "Index.Grep": 23 },
+  "method_latency_p50_ms":             { "Index.FindSymbol": 2 },
+  "method_latency_p99_ms":             { "Index.FindSymbol": 8 },
+  "error_counts":                      { "INVALID_PARAMS": 3 },
+  "cache_hit_rate":                    0.84,
+  "cold_walk_ms_p50":                  230,
+  "workspace_files":                   47123,
+  "unresolved_refs_count":             117,
+  "unresolved_refs_gc_runs_total":     12,
+  "unresolved_refs_gc_dropped_total":  184
 }
 ```
 
 Field notes:
 
 - `unresolved_refs_count` (u64, capability `daemon_telemetry_unresolved_refs_count`) — size of the UNRESOLVED_REFS multimap at snapshot time. Each row is a reference the resolver couldn't bind to a defined symbol; forward references decrement the count when their callee finally lands in a later commit, while true externals (stdlib `Vec`, `println!`, etc.) accumulate permanently. Lower is better. A regression that breaks an extractor surfaces as the count jumping up — the real-repo CI bench gates on this.
+- `unresolved_refs_gc_runs_total` and `unresolved_refs_gc_dropped_total` (u64 each, capability `daemon_telemetry_unresolved_refs_gc`) — cumulative counters reflecting cleanup work the daemon did on its own. `runs_total` increments once per removed file the writer processed; `dropped_total` increments by the number of orphaned `UNRESOLVED_REFS` rows the GC actually deleted (rows whose source file was deleted before its forward reference resolved). Together they **bound the growth** of `unresolved_refs_count`: a healthy long-running daemon sees `dropped_total` advance as files disappear, keeping `unresolved_refs_count` flat-ish. A jump in `unresolved_refs_count` without matching `dropped_total` advancement points at an extractor regression (the class of bug PR #118's PHP `method_declaration` gap exemplifies). Both counters reset on daemon restart.
 - Map keys are sourced from closed-enum strings (`CallCounters::snapshot`, `MethodLatencyHistograms::enumerated`, `ErrorCode::as_wire_str`, `writer::lang_tag_to_name`); no user-controlled identifiers reach the wire.
 
 ---

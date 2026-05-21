@@ -358,6 +358,42 @@ fn flush(
         })
         .collect();
 
+    // UNRESOLVED_REFS garbage collection (PR #128, capability
+    // `daemon_telemetry_unresolved_refs_gc`). When a file is removed
+    // from disk, any rows it parked in `UNRESOLVED_REFS` become
+    // orphans — no source-code call site remains behind them. PR #126
+    // exposed the row count as `Daemon.Telemetry.unresolved_refs_count`
+    // but the count was unbounded without this GC pass. Run BEFORE
+    // `commit_batch` so the count we record matches what an external
+    // observer would see; `commit_batch`'s `drop_file_entries` then
+    // finds the rows already gone and contributes no additional work.
+    if !removal_vec.is_empty() {
+        let removed_paths: Vec<PathBuf> = removal_vec.iter().map(|r| r.path.clone()).collect();
+        match store.gc_unresolved_refs_for_removed_files(&removed_paths) {
+            Ok(dropped) => {
+                state.unresolved_refs_gc_runs_total.fetch_add(
+                    removed_paths.len() as u64,
+                    std::sync::atomic::Ordering::Relaxed,
+                );
+                if dropped > 0 {
+                    state
+                        .unresolved_refs_gc_dropped_total
+                        .fetch_add(dropped, std::sync::atomic::Ordering::Relaxed);
+                }
+            }
+            Err(e) => {
+                // Best-effort: GC failure must not stop the writer from
+                // committing the file removals themselves. The next
+                // removal that lands will retry the cleanup.
+                warn!(
+                    error = %e,
+                    paths = removed_paths.len(),
+                    "unresolved_refs GC failed; continuing"
+                );
+            }
+        }
+    }
+
     let upserted = store.commit_batch(batch, removal_vec, durability)?;
     if upserted > 0 {
         state

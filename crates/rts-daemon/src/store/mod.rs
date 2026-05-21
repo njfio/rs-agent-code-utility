@@ -1395,6 +1395,112 @@ impl Store {
         };
         Ok(table.len()?)
     }
+
+    /// Drop `UNRESOLVED_REFS` rows whose source file matches any path
+    /// in `removed_files`. Returns the count of rows actually dropped.
+    ///
+    /// **Why this exists.** `UNRESOLVED_REFS` is the parking lot for
+    /// refs whose callee name wasn't yet interned at commit time
+    /// (forward references awaiting a later commit, or true externals
+    /// like stdlib `Vec` / `println!`). When the source file of one of
+    /// those parked refs is deleted on disk, the parked entry becomes
+    /// orphaned: there is no longer any source-code call site behind
+    /// it, but the row stays in the table forever, bloating the count
+    /// observed via `Daemon.Telemetry.unresolved_refs_count`.
+    ///
+    /// This helper closes that loop by walking each removed file's
+    /// outgoing unresolved refs via the `FID_UNRESOLVED` reverse
+    /// index, dropping rows where `RefSite.fid` matches. It is the
+    /// public, telemetry-counted peer of the same cleanup that
+    /// `drop_file_entries` performs inline during a full file
+    /// re-index. Calling it before `commit_batch` for the same path
+    /// is safe and idempotent — `drop_file_entries` finds the rows
+    /// already gone and returns 0 additional work.
+    ///
+    /// Idempotent and bounded: passing an unknown path (already
+    /// deleted, never indexed) returns `0` without erroring. Cost is
+    /// `O(distinct_callee_names_for_this_fid × avg_fan_out)`, the same
+    /// shape as the existing `drop_file_entries` path.
+    ///
+    /// Paths are matched against `PATH_TO_FID` as workspace-relative
+    /// strings, matching the writer's storage convention.
+    pub fn gc_unresolved_refs_for_removed_files(
+        &self,
+        removed_files: &[PathBuf],
+    ) -> Result<u64, redb::Error> {
+        if removed_files.is_empty() {
+            return Ok(0);
+        }
+        let mut dropped: u64 = 0;
+        let txn = self.db.begin_write()?;
+        {
+            let path_to_fid = match txn.open_table(PATH_TO_FID) {
+                Ok(t) => t,
+                Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+                Err(e) => return Err(e.into()),
+            };
+            let mut unresolved_refs = match txn.open_multimap_table(UNRESOLVED_REFS) {
+                Ok(t) => t,
+                Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+                Err(e) => return Err(e.into()),
+            };
+            let mut fid_unresolved = match txn.open_multimap_table(FID_UNRESOLVED) {
+                Ok(t) => t,
+                Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+                Err(e) => return Err(e.into()),
+            };
+
+            for path in removed_files {
+                let path_str = path.to_string_lossy();
+                let fid = match path_to_fid.get(path_str.as_ref())? {
+                    Some(v) => v.value(),
+                    None => continue,
+                };
+
+                // Collect this file's pending callee names from the
+                // FID_UNRESOLVED reverse index. We can't mutate while
+                // iterating a redb multimap, so snapshot first.
+                let pending_names: Vec<String> = {
+                    let mut v = Vec::new();
+                    let it = fid_unresolved.get(&fid)?;
+                    for row in it {
+                        v.push(row?.value().to_string());
+                    }
+                    v
+                };
+                fid_unresolved.remove_all(&fid)?;
+
+                for name in &pending_names {
+                    // Filter-rewrite the UNRESOLVED_REFS[name] multimap:
+                    // keep rows whose RefSite.fid != this fid; count
+                    // the rest as dropped.
+                    let mut kept: Vec<Vec<u8>> = Vec::new();
+                    let mut dropped_for_name: u64 = 0;
+                    {
+                        let it = unresolved_refs.get(name.as_str())?;
+                        for row in it {
+                            let bytes = row?.value().to_vec();
+                            match from_bytes::<RefSite>(&bytes) {
+                                Ok(rs) if rs.fid == fid => {
+                                    dropped_for_name += 1;
+                                }
+                                _ => {
+                                    kept.push(bytes);
+                                }
+                            }
+                        }
+                    }
+                    unresolved_refs.remove_all(name.as_str())?;
+                    for v in kept {
+                        unresolved_refs.insert(name.as_str(), v.as_slice())?;
+                    }
+                    dropped = dropped.saturating_add(dropped_for_name);
+                }
+            }
+        }
+        txn.commit()?;
+        Ok(dropped)
+    }
 }
 
 /// Surface struct for `Index.FindSymbol` consumers. Plain data; no redb
@@ -2856,6 +2962,149 @@ mod tests {
             0,
             "Pass-3 drain on callee landing should clear the deferred row"
         );
+    }
+
+    #[test]
+    fn gc_unresolved_refs_drops_rows_for_named_file() {
+        // PR #128: the explicit GC API drops UNRESOLVED_REFS rows
+        // whose source file appears in the input list and returns
+        // the count actually deleted. Idempotent on unknown paths.
+        let (_tmp, store) = temp_store();
+
+        // Park one unresolved ref by committing a caller whose
+        // callee is never defined.
+        let caller = FileBatchEntry {
+            path: std::path::PathBuf::from("caller.rs"),
+            meta: rust_meta(blake3::hash(b"caller").into()),
+            defs: vec![(
+                "make_call".to_string(),
+                fn_def(0, 100, 1, 10),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "phantom_target".to_string(),
+                start: 50,
+                end: 64,
+                start_line: 5,
+                end_line: 5,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![caller], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(store.unresolved_refs_count().unwrap(), 1);
+
+        // Idempotent on unknown paths: an unknown file name reports
+        // 0 dropped and doesn't disturb the live row.
+        let dropped = store
+            .gc_unresolved_refs_for_removed_files(&[std::path::PathBuf::from("does-not-exist.rs")])
+            .unwrap();
+        assert_eq!(dropped, 0, "unknown path should be a no-op");
+        assert_eq!(store.unresolved_refs_count().unwrap(), 1);
+
+        // The real removal: pass caller.rs and expect 1 row dropped.
+        let dropped = store
+            .gc_unresolved_refs_for_removed_files(&[std::path::PathBuf::from("caller.rs")])
+            .unwrap();
+        assert_eq!(
+            dropped, 1,
+            "removing caller.rs should drop its single parked row"
+        );
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            0,
+            "the parked row should be gone after GC"
+        );
+    }
+
+    #[test]
+    fn gc_unresolved_refs_preserves_other_files() {
+        // PR #128: GC keyed by `FID_UNRESOLVED[fid]` must NOT touch
+        // unresolved rows belonging to other files that happen to
+        // share the same callee name.
+        let (_tmp, store) = temp_store();
+
+        let a = FileBatchEntry {
+            path: std::path::PathBuf::from("a.rs"),
+            meta: rust_meta(blake3::hash(b"a").into()),
+            defs: vec![(
+                "a_fn".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "shared_phantom".to_string(),
+                start: 20,
+                end: 34,
+                start_line: 3,
+                end_line: 3,
+            }],
+            docs: Vec::new(),
+        };
+        let b = FileBatchEntry {
+            path: std::path::PathBuf::from("b.rs"),
+            meta: rust_meta(blake3::hash(b"b").into()),
+            defs: vec![(
+                "b_fn".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "shared_phantom".to_string(),
+                start: 20,
+                end: 34,
+                start_line: 3,
+                end_line: 3,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![a, b], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            2,
+            "both files should have parked one row each"
+        );
+
+        // Remove only a.rs: b.rs's row must survive.
+        let dropped = store
+            .gc_unresolved_refs_for_removed_files(&[std::path::PathBuf::from("a.rs")])
+            .unwrap();
+        assert_eq!(dropped, 1, "exactly a.rs's row should be dropped");
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            1,
+            "b.rs's row must survive"
+        );
+
+        // Confirm the survivor really belongs to b.rs (fid recovered
+        // from the postcard blob).
+        let txn = store.db.begin_read().unwrap();
+        let unresolved = txn.open_multimap_table(UNRESOLVED_REFS).unwrap();
+        let mut survivors = Vec::new();
+        for row in unresolved.get("shared_phantom").unwrap() {
+            let bytes = row.unwrap().value().to_vec();
+            survivors.push(from_bytes::<RefSite>(&bytes).unwrap());
+        }
+        assert_eq!(survivors.len(), 1);
+        let path_to_fid = txn.open_table(PATH_TO_FID).unwrap();
+        let b_fid = path_to_fid.get("b.rs").unwrap().unwrap().value();
+        assert_eq!(
+            survivors[0].fid, b_fid,
+            "survivor should be b.rs's row, not a.rs's"
+        );
+    }
+
+    #[test]
+    fn gc_unresolved_refs_empty_input_returns_zero() {
+        // PR #128: passing an empty slice short-circuits cleanly and
+        // does not begin a write transaction. Important because the
+        // writer calls this on every flush — including flushes with
+        // no removals.
+        let (_tmp, store) = temp_store();
+        assert_eq!(store.gc_unresolved_refs_for_removed_files(&[]).unwrap(), 0);
     }
 
     #[test]

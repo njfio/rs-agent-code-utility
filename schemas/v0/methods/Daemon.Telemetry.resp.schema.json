@@ -28,6 +28,16 @@
       "description": "Capability `daemon_telemetry_unresolved_refs_count`. Number of entries in the UNRESOLVED_REFS multimap — references the indexer couldn't bind to a defined symbol (forward references awaiting a later commit, or true externals like stdlib `Vec`/`println!`). Point-in-time; lower is better. 0 pre-Mount.",
       "type": "integer",
       "minimum": 0
+    },
+    "unresolved_refs_gc_runs_total": {
+      "description": "Capability `daemon_telemetry_unresolved_refs_gc`. Cumulative number of UNRESOLVED_REFS GC invocations since daemon start — one bump per removed file the writer processed. Paired with `unresolved_refs_gc_dropped_total` so observers can distinguish 'GC is firing but finding nothing' from 'GC is not firing'. Reset on daemon restart.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "unresolved_refs_gc_dropped_total": {
+      "description": "Capability `daemon_telemetry_unresolved_refs_gc`. Cumulative number of UNRESOLVED_REFS rows the daemon's GC has dropped — orphaned forward-reference entries whose source file was deleted. Bounds the growth of `unresolved_refs_count`. Reset on daemon restart.",
+      "type": "integer",
+      "minimum": 0
     }
   },
   "required": [
@@ -40,6 +50,8 @@
     "cache_hit_rate",
     "cold_walk_ms_p50",
     "workspace_files",
-    "unresolved_refs_count"
+    "unresolved_refs_count",
+    "unresolved_refs_gc_runs_total",
+    "unresolved_refs_gc_dropped_total"
   ]
 }
