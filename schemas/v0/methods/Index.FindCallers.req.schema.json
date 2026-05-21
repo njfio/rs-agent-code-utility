@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.FindCallers.req.schema.json",
+  "title": "Index.FindCallers request params",
+  "description": "Per protocol-v0.md §7.7c + §18.4c. v0.3 alpha.32+, capability `find_callers`.",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "kind": {
+      "type": "string",
+      "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module"]
+    },
+    "file": { "type": "string" }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Workspace.Mount.req.schema.json",
+  "title": "Workspace.Mount request params",
+  "description": "Per protocol-v0.md §7.2 + §18.1. Establish (or join) the workspace this connection will operate on. `root` MUST be an absolute path; the daemon canonicalises per §5.1.",
+  "type": "object",
+  "properties": {
+    "root":             { "type": "string", "minLength": 1 },
+    "enable_telemetry": { "type": "boolean", "default": false }
+  },
+  "required": ["root"],
+  "additionalProperties": false
+}

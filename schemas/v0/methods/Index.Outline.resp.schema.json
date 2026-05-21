@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.Outline.resp.schema.json",
+  "title": "Index.Outline result",
+  "description": "Per protocol-v0.md §7.5. grep-ast-style dotted plain text (`outline_text`) plus a structured sidecar (`outline_json`).",
+  "type": "object",
+  "properties": {
+    "outline_text":     { "type": "string" },
+    "outline_json": {
+      "type": "object",
+      "properties": {
+        "files": { "type": "array" }
+      }
+    },
+    "tokens_returned":   { "type": "integer", "minimum": 0 },
+    "token_counter":     { "type": "string" },
+    "files_considered":  { "type": "integer", "minimum": 0 },
+    "files_included":    { "type": "integer", "minimum": 0 }
+  },
+  "required": ["outline_text", "outline_json", "tokens_returned", "token_counter", "files_considered", "files_included"]
+}

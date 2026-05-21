@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.Grep.resp.schema.json",
+  "title": "Index.Grep result",
+  "description": "Per protocol-v0.md §7.8b. v1 result shape (match locations + line_text). v0.6 additions: per-match `captures` on structural results, top-level `truncation_reason`/`rows_seen`/`rows_returned` on cap breaches, optional `partial_failures` on cross-language structural runs.",
+  "type": "object",
+  "properties": {
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "range": {
+            "type": "object",
+            "properties": {
+              "start_line": { "type": "integer", "minimum": 0 },
+              "end_line":   { "type": "integer", "minimum": 0 },
+              "start_byte": { "type": "integer", "minimum": 0 },
+              "end_byte":   { "type": "integer", "minimum": 0 }
+            },
+            "required": ["start_line", "end_line", "start_byte", "end_byte"]
+          },
+          "line_text": { "type": "string" },
+          "captures": {
+            "description": "v0.6+ structural-only. Map of capture-name -> array of capture spans.",
+            "type": "object"
+          }
+        },
+        "required": ["file", "range"]
+      }
+    },
+    "truncated":          { "type": "boolean" },
+    "files_scanned":      { "type": "integer", "minimum": 0 },
+    "files_with_matches": { "type": "integer", "minimum": 0 },
+    "truncation_reason":  { "type": "string", "enum": ["rows_seen_exceeded_max", "wall_clock", "capture_bytes"] },
+    "rows_seen":          { "type": "integer", "minimum": 0 },
+    "rows_returned":      { "type": "integer", "minimum": 0 },
+    "partial_failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "language": { "type": "string" },
+          "error":    { "type": "string" }
+        },
+        "required": ["language", "error"]
+      }
+    }
+  },
+  "required": ["matches", "truncated", "files_scanned", "files_with_matches"]
+}

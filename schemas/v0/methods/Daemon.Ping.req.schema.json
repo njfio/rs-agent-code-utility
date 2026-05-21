@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Ping.req.schema.json",
+  "title": "Daemon.Ping request params",
+  "description": "Per protocol-v0.md §7.1. Heartbeat + capability discovery. Idempotent, cheap, no side effects.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

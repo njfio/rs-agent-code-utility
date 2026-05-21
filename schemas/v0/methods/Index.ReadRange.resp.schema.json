@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.ReadRange.resp.schema.json",
+  "title": "Index.ReadRange result",
+  "description": "Per protocol-v0.md §7.8. Same shape as Index.ReadSymbol body, but `qualified_name: null` and no `dependencies` / closure info.",
+  "type": "object",
+  "properties": {
+    "qualified_name": { "type": "null" },
+    "kind":           { "type": "null" },
+    "file":           { "type": "string" },
+    "range": {
+      "type": "object",
+      "properties": {
+        "start_line": { "type": "integer", "minimum": 0 },
+        "end_line":   { "type": "integer", "minimum": 0 },
+        "start_byte": { "type": "integer", "minimum": 0 },
+        "end_byte":   { "type": "integer", "minimum": 0 }
+      },
+      "required": ["start_line", "end_line", "start_byte", "end_byte"]
+    },
+    "shape":           { "type": "string" },
+    "text":            { "type": "string" },
+    "content_version": { "type": "string" },
+    "tokens_returned": { "type": "integer", "minimum": 0 },
+    "token_counter":   { "type": "string" },
+    "truncated":       { "type": "boolean" }
+  },
+  "required": ["qualified_name", "kind", "file", "range", "shape", "text", "content_version", "tokens_returned", "token_counter", "truncated"]
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/error.schema.json",
+  "title": "Error object (protocol-v0)",
+  "description": "Per protocol-v0.md §3.4 + §14. String `code` (not JSON-RPC numeric) plus a human-readable `message`. Optional `data` carries structured detail (e.g. `{expected_uid, got_uid}` or `{files_done, files_total}`).",
+  "type": "object",
+  "properties": {
+    "code": {
+      "description": "Closed-set error code string. See protocol-v0.md §14 + §14.1 + §7.8b for the canonical catalog. Custom JSON-RPC numeric `-32099` (CANCELLED), `-32098` (DAEMON_UNAVAILABLE), `-32097` (DAEMON_DOWN) overlap the string codes one-to-one.",
+      "type": "string",
+      "enum": [
+        "INVALID_FRAME",
+        "MESSAGE_TOO_LARGE",
+        "INVALID_PARAMS",
+        "INVALID_WORKSPACE_PATH",
+        "MOUNT_HAS_SYMLINK",
+        "WORKSPACE_VANISHED",
+        "WORKSPACE_MISMATCH",
+        "WORKSPACE_ON_NETWORK_MOUNT",
+        "OUT_OF_ROOT",
+        "PATH_TRAVERSAL",
+        "INDEX_NOT_READY",
+        "SYMBOL_NOT_FOUND",
+        "AMBIGUOUS_SYMBOL",
+        "FILE_NOT_INDEXED",
+        "RANGE_OUT_OF_BOUNDS",
+        "BUDGET_TOO_SMALL",
+        "BUDGET_TOO_LARGE",
+        "BUSY",
+        "STORAGE_FULL",
+        "SCHEMA_VERSION_NEWER",
+        "DEADLINE_EXCEEDED",
+        "CANCELLED",
+        "INCOMPATIBLE_VERSION",
+        "INTERNAL_ERROR",
+        "OUT_OF_ALLOWED_BODY_EXTENSIONS",
+        "DAEMON_UNAVAILABLE",
+        "DAEMON_DOWN"
+      ]
+    },
+    "message": {
+      "description": "Human-readable reason. Not machine-parsed; agents branch on `code` (and `data.code` for `INVALID_PARAMS` sub-codes per §7.8b).",
+      "type": "string"
+    },
+    "data": {
+      "description": "Optional structured detail. For Index.Grep v2 errors this carries a `code` sub-string from the closed set in §7.8b ('MULTILINE_REQUIRES_REGEX', 'STRUCTURAL_REQUIRES_LANGUAGE', etc.). For shim-emitted transport errors (§14.1) it carries `transient`, `retry_after_ms`, `attempt`, `first_failure_ms_ago`."
+    }
+  },
+  "required": ["code", "message"]
+}

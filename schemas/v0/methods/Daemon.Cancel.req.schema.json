@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Cancel.req.schema.json",
+  "title": "Daemon.Cancel request params",
+  "description": "v0.6+, capability `cancellable_queries`. Trip the in-flight request that registered the given `cancel_id`. Idempotent (unknown id returns `{ cancelled: false }`). See protocol-v0.md §7.1b.",
+  "type": "object",
+  "properties": {
+    "cancel_id": {
+      "description": "The same id the targeted request set on its envelope. 1..=256 chars, client-chosen (UUID, monotonic counter, etc.).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    }
+  },
+  "required": ["cancel_id"],
+  "additionalProperties": false
+}

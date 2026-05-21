@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Session.Open.req.schema.json",
+  "title": "Session.Open request params",
+  "description": "Per protocol-v0.md §7.9 + §18.6. `client_name` / `client_version` are observability metadata only — agent-controllable, NOT authoritative for access decisions (peer-cred check at §12.2 is the real identity).",
+  "type": "object",
+  "properties": {
+    "client_name":    { "type": "string", "maxLength": 128 },
+    "client_version": { "type": "string", "maxLength": 128 }
+  },
+  "additionalProperties": false
+}

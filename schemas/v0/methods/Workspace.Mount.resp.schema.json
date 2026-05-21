@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Workspace.Mount.resp.schema.json",
+  "title": "Workspace.Mount result",
+  "description": "Per protocol-v0.md §7.2 + §7.4. Mount returns the same shape as Workspace.Status — clients can use either response interchangeably.",
+  "type": "object",
+  "properties": {
+    "workspace_id":     { "type": "string" },
+    "state":            { "type": "string", "enum": ["indexing", "ready", "degraded", "no_workspace"] },
+    "progress": {
+      "type": "object",
+      "properties": {
+        "files_done":  { "type": "integer", "minimum": 0 },
+        "files_total": { "type": "integer", "minimum": 0 },
+        "phase":       { "type": "string" }
+      },
+      "required": ["files_done", "files_total", "phase"]
+    },
+    "index_generation":    { "type": "integer", "minimum": 0 },
+    "languages":           { "type": "array", "items": { "type": "string" } },
+    "parse_failed_files":  { "type": "integer", "minimum": 0 },
+    "watcher_status":      { "type": "string", "enum": ["ok", "polling_fallback", "overflowed_rewalking", "no_watcher"] },
+    "uptime_ms":           { "type": "integer", "minimum": 0 },
+    "memory_rss_bytes":    { "type": "integer", "minimum": 0 }
+  },
+  "required": ["workspace_id", "state", "progress", "index_generation", "languages"]
+}

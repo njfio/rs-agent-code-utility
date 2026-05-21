@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Stats.req.schema.json",
+  "title": "Daemon.Stats request params",
+  "description": "v0.5.7+, capability `daemon_stats`. Per-session call counters + workspace metadata.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

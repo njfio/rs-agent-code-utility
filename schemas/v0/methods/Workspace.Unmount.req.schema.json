@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Workspace.Unmount.req.schema.json",
+  "title": "Workspace.Unmount request params",
+  "description": "Per protocol-v0.md §7.3. Tells the daemon this client is done with the workspace. Last-unmount starts the idle-shutdown timer.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

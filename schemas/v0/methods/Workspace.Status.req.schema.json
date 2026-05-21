@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Workspace.Status.req.schema.json",
+  "title": "Workspace.Status request params",
+  "description": "Per protocol-v0.md §7.4. Poll the indexing state. Cheap; safe to call between every other request.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}
