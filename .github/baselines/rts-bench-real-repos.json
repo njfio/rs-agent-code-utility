@@ -1,34 +1,55 @@
 {
   "version": 1,
   "rts_bench_version": "0.5.5",
-  "generated_at_unix_secs": 1779377207,
+  "generated_at_unix_secs": 1779388053,
   "repos": [
     {
       "name": "tokio",
       "ref": "tokio-1.47.0",
       "files_indexed": 716,
-      "cold_walk_ms": 6444,
+      "cold_walk_ms": 9432,
       "symbol_count": 4096,
       "symbol_count_truncated": true,
-      "memory_peak_rss_kb": 42096
+      "memory_peak_rss_kb": 53024,
+      "languages_indexed": [
+        "rust"
+      ],
+      "find_symbol_latency_p50_ms": 262,
+      "find_symbol_latency_p99_ms": 262,
+      "grep_latency_p50_ms": 16,
+      "grep_latency_p99_ms": 16
     },
     {
       "name": "flask",
       "ref": "3.1.0",
       "files_indexed": 83,
-      "cold_walk_ms": 5123,
+      "cold_walk_ms": 5356,
       "symbol_count": 1588,
       "symbol_count_truncated": false,
-      "memory_peak_rss_kb": 26352
+      "memory_peak_rss_kb": 34304,
+      "languages_indexed": [
+        "python"
+      ],
+      "find_symbol_latency_p50_ms": 262,
+      "find_symbol_latency_p99_ms": 262,
+      "grep_latency_p50_ms": 16,
+      "grep_latency_p99_ms": 16
     },
     {
       "name": "gin",
       "ref": "v1.10.0",
       "files_indexed": 92,
-      "cold_walk_ms": 5130,
+      "cold_walk_ms": 5334,
       "symbol_count": 1208,
       "symbol_count_truncated": false,
-      "memory_peak_rss_kb": 26192
+      "memory_peak_rss_kb": 35456,
+      "languages_indexed": [
+        "go"
+      ],
+      "find_symbol_latency_p50_ms": 262,
+      "find_symbol_latency_p99_ms": 262,
+      "grep_latency_p50_ms": 16,
+      "grep_latency_p99_ms": 16
     }
   ]
 }

@@ -10,16 +10,18 @@
 //! | `cold_walk_ms`             | ±25 %        | cache-sensitive on cold runners                   |
 //! | `memory_peak_rss_kb`       | ±15 %        | catches leaks; slack for jemalloc thermal noise   |
 //! | `unresolved_refs_count`    | +10 %        | one-sided (skipped while not yet wired)           |
-//! | `languages_indexed`        | exact set    | skipped while not yet wired through MCP           |
-//! | `find_symbol_latency_p99`  | ±50 %        | skipped while not yet wired through MCP           |
-//! | `grep_latency_p99`         | ±50 %        | skipped while not yet wired through MCP           |
+//! | `languages_indexed`        | exact set    | extractor regression flips this immediately       |
+//! | `find_symbol_latency_p50`  | ±50 %        | wide band — single-call samples are noisy on CI   |
+//! | `find_symbol_latency_p99`  | ±50 %        | same                                              |
+//! | `grep_latency_p50`         | ±50 %        | same                                              |
+//! | `grep_latency_p99`         | ±50 %        | same                                              |
 //!
 //! Any metric outside its band is a regression. The compare process
 //! exits 1 with the diff written to stdout so the workflow run
-//! surfaces it. Metrics that haven't shipped through the MCP wire
-//! yet (latencies, language set, unresolved-ref count) skip cleanly
-//! when both sides carry `None`; if a future baseline starts
-//! recording them, the regression check picks up automatically.
+//! surfaces it. `unresolved_refs_count` still skips cleanly when
+//! both sides carry `None` (the daemon doesn't yet expose a
+//! call-graph gap counter); the other formerly-optional fields are
+//! now always recorded.
 
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +35,8 @@ pub struct TolerancePolicy {
     pub cold_walk_pct: f64,
     /// Memory peak band (±, percent). Default 15.
     pub memory_peak_pct: f64,
+    /// p50 latency band (±, percent). Applied to both find_symbol and grep. Default 50.
+    pub latency_p50_pct: f64,
     /// p99 latency band (±, percent). Applied to both find_symbol and grep. Default 50.
     pub latency_p99_pct: f64,
     /// One-sided unresolved-refs ceiling (+, percent). Default 10.
@@ -44,6 +48,7 @@ impl Default for TolerancePolicy {
         Self {
             cold_walk_pct: 25.0,
             memory_peak_pct: 15.0,
+            latency_p50_pct: 50.0,
             latency_p99_pct: 50.0,
             unresolved_refs_ceiling_pct: 10.0,
         }
@@ -204,34 +209,31 @@ fn compare_repo(
     });
 
     // languages_indexed: exact set match (sorted before compare).
-    // Skipped cleanly when either side is None — the metric isn't
-    // wired through MCP yet (see RepoMetrics TODOs).
-    if let (Some(b_langs_in), Some(c_langs_in)) =
-        (&baseline.languages_indexed, &current.languages_indexed)
-    {
-        let mut b_langs = b_langs_in.clone();
-        b_langs.sort();
-        b_langs.dedup();
-        let mut c_langs = c_langs_in.clone();
-        c_langs.sort();
-        c_langs.dedup();
-        let langs_match = b_langs == c_langs;
-        out.push(MetricDiff {
-            repo: baseline.name.clone(),
-            metric: "languages_indexed".to_string(),
-            kind: if langs_match { "pass" } else { "regression" }.to_string(),
-            baseline: serde_json::json!(b_langs),
-            current: serde_json::json!(c_langs),
-            note: if langs_match {
-                "exact set match".to_string()
-            } else {
-                format!(
-                    "languages_indexed set moved {:?} → {:?}; a language detection regressed",
-                    b_langs, c_langs
-                )
-            },
-        });
-    }
+    // PR #124 made this field mandatory (always sourced from
+    // `daemon_telemetry.languages_indexed`); both sides always carry
+    // a concrete vector now.
+    let mut b_langs = baseline.languages_indexed.clone();
+    b_langs.sort();
+    b_langs.dedup();
+    let mut c_langs = current.languages_indexed.clone();
+    c_langs.sort();
+    c_langs.dedup();
+    let langs_match = b_langs == c_langs;
+    out.push(MetricDiff {
+        repo: baseline.name.clone(),
+        metric: "languages_indexed".to_string(),
+        kind: if langs_match { "pass" } else { "regression" }.to_string(),
+        baseline: serde_json::json!(b_langs),
+        current: serde_json::json!(c_langs),
+        note: if langs_match {
+            "exact set match".to_string()
+        } else {
+            format!(
+                "languages_indexed set moved {:?} → {:?}; a language detection regressed",
+                b_langs, c_langs
+            )
+        },
+    });
 
     // cold_walk_ms: ±cold_walk_pct.
     out.push(check_band(
@@ -251,30 +253,41 @@ fn compare_repo(
         policy.memory_peak_pct,
     ));
 
-    // find_symbol_p99 / grep_p99: ±latency_p99_pct. Both skipped
-    // cleanly when None on either side (TODO(post-G) — not yet
-    // wired through MCP).
-    if let (Some(b), Some(c)) = (
+    // find_symbol / grep latency p50 + p99: ±latency_p{50,99}_pct.
+    // PR #124 wired `daemon_telemetry` through MCP, so all four are
+    // now mandatory. The band stays wide (±50%) because a single
+    // warm-up sample on a CI runner is intrinsically noisy and the
+    // bench's intent here is to catch order-of-magnitude regressions
+    // (e.g. a hot path going from microseconds to milliseconds), not
+    // tail-latency micro-drift.
+    out.push(check_band(
+        &baseline.name,
+        "find_symbol_latency_p50_ms",
+        baseline.find_symbol_latency_p50_ms,
+        current.find_symbol_latency_p50_ms,
+        policy.latency_p50_pct,
+    ));
+    out.push(check_band(
+        &baseline.name,
+        "find_symbol_latency_p99_ms",
         baseline.find_symbol_latency_p99_ms,
         current.find_symbol_latency_p99_ms,
-    ) {
-        out.push(check_band(
-            &baseline.name,
-            "find_symbol_latency_p99_ms",
-            b,
-            c,
-            policy.latency_p99_pct,
-        ));
-    }
-    if let (Some(b), Some(c)) = (baseline.grep_latency_p99_ms, current.grep_latency_p99_ms) {
-        out.push(check_band(
-            &baseline.name,
-            "grep_latency_p99_ms",
-            b,
-            c,
-            policy.latency_p99_pct,
-        ));
-    }
+        policy.latency_p99_pct,
+    ));
+    out.push(check_band(
+        &baseline.name,
+        "grep_latency_p50_ms",
+        baseline.grep_latency_p50_ms,
+        current.grep_latency_p50_ms,
+        policy.latency_p50_pct,
+    ));
+    out.push(check_band(
+        &baseline.name,
+        "grep_latency_p99_ms",
+        baseline.grep_latency_p99_ms,
+        current.grep_latency_p99_ms,
+        policy.latency_p99_pct,
+    ));
 
     // unresolved_refs_count: one-sided (current may not exceed
     // baseline + ceiling%). When the baseline doesn't have it, skip.
@@ -394,11 +407,11 @@ mod tests {
             symbol_count_truncated: false,
             memory_peak_rss_kb: 50_000,
             unresolved_refs_count: Some(10),
-            languages_indexed: Some(vec!["rust".into()]),
-            find_symbol_latency_p50_ms: Some(2),
-            find_symbol_latency_p99_ms: Some(10),
-            grep_latency_p50_ms: Some(5),
-            grep_latency_p99_ms: Some(20),
+            languages_indexed: vec!["rust".into()],
+            find_symbol_latency_p50_ms: 2,
+            find_symbol_latency_p99_ms: 10,
+            grep_latency_p50_ms: 5,
+            grep_latency_p99_ms: 20,
         }
     }
 
@@ -478,7 +491,7 @@ mod tests {
     fn languages_set_drift_regresses() {
         let b = report_with(vec![sample_metric("tokio")]);
         let mut current = sample_metric("tokio");
-        current.languages_indexed = Some(vec!["rust".into(), "markdown".into()]);
+        current.languages_indexed = vec!["rust".into(), "markdown".into()];
         let c = report_with(vec![current]);
         let d = compare(&b, &c, &TolerancePolicy::default());
         let row = d
@@ -490,20 +503,35 @@ mod tests {
     }
 
     #[test]
-    fn languages_skipped_when_both_none() {
-        let mut b = sample_metric("tokio");
-        b.languages_indexed = None;
-        let mut c = sample_metric("tokio");
-        c.languages_indexed = None;
-        let d = compare(
-            &report_with(vec![b]),
-            &report_with(vec![c]),
-            &TolerancePolicy::default(),
-        );
+    fn latency_p50_within_band_passes() {
+        let b = report_with(vec![sample_metric("tokio")]);
+        let mut current = sample_metric("tokio");
+        // baseline p50 = 2; +50% allows up to 3.
+        current.find_symbol_latency_p50_ms = 3;
+        let c = report_with(vec![current]);
+        let d = compare(&b, &c, &TolerancePolicy::default());
+        let row = d
+            .rows
+            .iter()
+            .find(|r| r.metric == "find_symbol_latency_p50_ms")
+            .expect("find_symbol_latency_p50_ms row");
+        assert_eq!(row.kind, "pass", "+50% should be inside ±50%: {row:?}");
+    }
+
+    #[test]
+    fn latency_p50_outside_band_regresses() {
+        let b = report_with(vec![sample_metric("tokio")]);
+        let mut current = sample_metric("tokio");
+        // baseline p50 = 5 (grep); +200% lands well outside ±50%.
+        current.grep_latency_p50_ms = 15;
+        let c = report_with(vec![current]);
+        let d = compare(&b, &c, &TolerancePolicy::default());
         assert!(
-            !d.rows.iter().any(|r| r.metric == "languages_indexed"),
-            "languages row should be omitted when both None: {:#?}",
-            d.rows
+            d.regressions
+                .iter()
+                .any(|r| r.metric == "grep_latency_p50_ms" && r.kind == "regression"),
+            "+200% should fail ±50% band: {:#?}",
+            d.regressions
         );
     }
 

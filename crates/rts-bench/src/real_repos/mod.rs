@@ -21,13 +21,12 @@
 //!
 //! Metrics come from what's reachable through the rts-mcp tool
 //! surface today: `daemon_stats` (cold-walk-completion timestamp,
-//! reconciliation, cache counters), `outline_workspace.files_considered`,
-//! and a `find_symbol(pattern="*")` count probe. `Daemon.Telemetry`
-//! exposes more (per-method latency p50/p99, language set) on the
-//! daemon's JSON-RPC wire but isn't routed through the MCP tool
-//! surface — adding that route is out-of-scope for this PR. See
-//! the `TODO(post-G)` fields on `RepoMetrics` for what lights up
-//! when it does.
+//! reconciliation, cache counters), `daemon_telemetry` (per-method
+//! latency p50/p99, language set — wired through MCP in PR #124),
+//! `outline_workspace.files_considered`, and a `find_symbol(pattern="*")`
+//! count probe. `unresolved_refs_count` is the last `Option`-wrapped
+//! field; the daemon doesn't yet expose a call-graph gap counter,
+//! so it stays `None` until that surface lands.
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -56,13 +55,11 @@ pub const REPOS_TOML: &str = include_str!("repos.toml");
 /// captured by `run_one_repo` and rolled up into a `BenchReport`.
 ///
 /// The field set is bounded by what's reachable via MCP today —
-/// `Daemon.Stats`, `outline_workspace.files_considered`, and the
-/// `find_symbol(pattern="*")` count probe. Fields that the daemon
-/// computes internally but doesn't yet route through the MCP tool
-/// surface (per-method latencies, language set) carry a TODO(post-G)
-/// in the source and stay `None`. Per the v1 plan, we don't add new
-/// MCP tools in this PR — the regression check focuses on metrics
-/// that already had a wire path.
+/// `Daemon.Stats`, `Daemon.Telemetry`, `outline_workspace.files_considered`,
+/// and the `find_symbol(pattern="*")` count probe. The latency / language
+/// fields lit up in PR #124 (which routed `daemon_telemetry` through the
+/// MCP tool list). `unresolved_refs_count` stays `Option<u64>` until the
+/// daemon exposes a call-graph gap counter (parallel follow-up).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepoMetrics {
     pub name: String,
@@ -98,38 +95,34 @@ pub struct RepoMetrics {
     /// cold-mount → settled window. Reuses `footprint.rs`'s sampler;
     /// 0 when `pgrep` is unavailable or the daemon can't be resolved.
     pub memory_peak_rss_kb: u64,
-    /// TODO(post-G): no daemon-side surface for unresolved-ref count
-    /// yet (`Daemon.Stats` exposes `reconciliation` + cache counters
-    /// but not call-graph gap metrics). When that lands, populate
-    /// from the new field. Until then, this stays `None` and the
-    /// regression check skips it.
+    /// Optional: no daemon-side surface for unresolved-ref count yet
+    /// (`Daemon.Stats` exposes `reconciliation` + cache counters but
+    /// not call-graph gap metrics). When that lands, populate from
+    /// the new field. Until then, this stays `None` and the regression
+    /// check skips it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unresolved_refs_count: Option<u64>,
-    /// TODO(post-G): `Daemon.Telemetry` exposes `languages_indexed`
-    /// but that RPC isn't yet routed through the rts-mcp tool
-    /// surface — only `daemon_stats` is. Adding a `daemon_telemetry`
-    /// MCP tool is a one-line addition to `crates/rts-mcp/src/server.rs`
-    /// but is out-of-scope for this PR per the v1 plan ("don't add
-    /// new daemon-side counters; use what's wire-reachable today").
-    /// When that tool lands, populate this from
-    /// `daemon_telemetry.languages_indexed` and tighten the diff
-    /// machinery to gate on exact set match.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub languages_indexed: Option<Vec<String>>,
-    /// TODO(post-G): per-method latency p50/p99 are tracked
-    /// daemon-side (`MethodLatencyHistograms`) and surfaced via
-    /// `Daemon.Telemetry` — but, like `languages_indexed`, that RPC
-    /// isn't routed through the MCP tool surface today. Same
-    /// out-of-scope rationale; same one-line follow-up to populate
-    /// these from `method_latency_p50_ms` / `method_latency_p99_ms`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub find_symbol_latency_p50_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub find_symbol_latency_p99_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub grep_latency_p50_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub grep_latency_p99_ms: Option<u64>,
+    /// Sorted unique list of languages the daemon has actually
+    /// extracted symbols for, sourced from
+    /// `daemon_telemetry.languages_indexed`. Exact set match in the
+    /// regression diff — a language dropping out (extractor regression)
+    /// or appearing (new grammar wired in) both surface immediately.
+    pub languages_indexed: Vec<String>,
+    /// `Index.FindSymbol` p50 latency (ms) from
+    /// `daemon_telemetry.method_latency_p50_ms`. 0 when the daemon
+    /// hasn't seen a sample yet (e.g. handler returned an empty
+    /// histogram); the diff machinery's `check_band` treats 0 → 0
+    /// as a pass and 0 → nonzero as a regression.
+    pub find_symbol_latency_p50_ms: u64,
+    /// `Index.FindSymbol` p99 latency (ms) from
+    /// `daemon_telemetry.method_latency_p99_ms`.
+    pub find_symbol_latency_p99_ms: u64,
+    /// `Index.Grep` p50 latency (ms) from
+    /// `daemon_telemetry.method_latency_p50_ms`.
+    pub grep_latency_p50_ms: u64,
+    /// `Index.Grep` p99 latency (ms) from
+    /// `daemon_telemetry.method_latency_p99_ms`.
+    pub grep_latency_p99_ms: u64,
 }
 
 /// Top-level report: one envelope, N `RepoMetrics`. Stable wire shape;
@@ -269,6 +262,46 @@ pub async fn run_one_repo(
         .unwrap_or(0);
     let symbol_count_truncated = probe_body["truncated"].as_bool().unwrap_or(false);
 
+    // Warm the `Index.Grep` histogram so the daemon's telemetry has
+    // at least one sample to report for the grep p50/p99 buckets.
+    // Without this the find_symbol path is the only call type the
+    // daemon has seen and grep latencies come back as 0. Pattern is
+    // intentionally one a real codebase has many of (`fn ` for Rust,
+    // `def ` for Python, `func ` for Go) so the probe doesn't itself
+    // measure an empty-result code path.
+    let _ = session
+        .tools_call(
+            "grep",
+            json!({ "text": "fn ", "limit": 64, "language": ["rust", "python", "go"] }),
+            5,
+        )
+        .await;
+
+    // Pull `daemon_telemetry` now that both find_symbol and grep have
+    // produced at least one sample. PR #124 wired this RPC through the
+    // MCP tool list; before that, the bench had to skip these fields.
+    let telemetry = session.tools_call("daemon_telemetry", json!({}), 5).await?;
+    let telemetry_body = telemetry.result_body.clone().unwrap_or_else(|| json!({}));
+    let languages_indexed = telemetry_body["languages_indexed"]
+        .as_array()
+        .map(|arr| {
+            let mut langs: Vec<String> = arr
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect();
+            langs.sort();
+            langs.dedup();
+            langs
+        })
+        .unwrap_or_default();
+    let latency_at = |bucket: &str, method: &str| -> u64 {
+        telemetry_body[bucket][method].as_u64().unwrap_or(0)
+    };
+    let find_symbol_latency_p50_ms = latency_at("method_latency_p50_ms", "Index.FindSymbol");
+    let find_symbol_latency_p99_ms = latency_at("method_latency_p99_ms", "Index.FindSymbol");
+    let grep_latency_p50_ms = latency_at("method_latency_p50_ms", "Index.Grep");
+    let grep_latency_p99_ms = latency_at("method_latency_p99_ms", "Index.Grep");
+
     session.close().await?;
 
     Ok(RepoMetrics {
@@ -279,13 +312,13 @@ pub async fn run_one_repo(
         symbol_count,
         symbol_count_truncated,
         memory_peak_rss_kb,
-        // TODO(post-G): see field-level docs on `RepoMetrics`.
+        // Optional: daemon doesn't yet expose a call-graph gap counter.
         unresolved_refs_count: None,
-        languages_indexed: None,
-        find_symbol_latency_p50_ms: None,
-        find_symbol_latency_p99_ms: None,
-        grep_latency_p50_ms: None,
-        grep_latency_p99_ms: None,
+        languages_indexed,
+        find_symbol_latency_p50_ms,
+        find_symbol_latency_p99_ms,
+        grep_latency_p50_ms,
+        grep_latency_p99_ms,
     })
 }
 
@@ -544,11 +577,11 @@ mod tests {
             symbol_count_truncated: false,
             memory_peak_rss_kb: 100_000,
             unresolved_refs_count: None,
-            languages_indexed: None,
-            find_symbol_latency_p50_ms: None,
-            find_symbol_latency_p99_ms: None,
-            grep_latency_p50_ms: None,
-            grep_latency_p99_ms: None,
+            languages_indexed: vec!["rust".into()],
+            find_symbol_latency_p50_ms: 1,
+            find_symbol_latency_p99_ms: 5,
+            grep_latency_p50_ms: 2,
+            grep_latency_p99_ms: 8,
         }
     }
 
@@ -573,8 +606,9 @@ mod tests {
         m.git_ref = "tokio-1.47.0".into();
         m.symbol_count_truncated = true;
         m.unresolved_refs_count = Some(7);
-        m.languages_indexed = Some(vec!["rust".into(), "markdown".into()]);
-        m.find_symbol_latency_p50_ms = Some(2);
+        m.languages_indexed = vec!["markdown".into(), "rust".into()];
+        m.find_symbol_latency_p50_ms = 2;
+        m.find_symbol_latency_p99_ms = 9;
         let report = BenchReport {
             version: 1,
             rts_bench_version: "0.0.0-test".into(),
@@ -590,15 +624,19 @@ mod tests {
         assert_eq!(back.repos[0].unresolved_refs_count, Some(7));
         assert_eq!(
             back.repos[0].languages_indexed,
-            Some(vec!["rust".into(), "markdown".into()])
+            vec!["markdown".to_string(), "rust".to_string()]
         );
-        assert_eq!(back.repos[0].find_symbol_latency_p50_ms, Some(2));
+        assert_eq!(back.repos[0].find_symbol_latency_p50_ms, 2);
+        assert_eq!(back.repos[0].find_symbol_latency_p99_ms, 9);
         // Field uses `ref` as the wire name — confirm we don't double-escape.
         assert!(s.contains("\"ref\":\"tokio-1.47.0\""));
     }
 
     #[test]
-    fn optional_fields_omitted_when_none() {
+    fn unresolved_refs_omitted_when_none() {
+        // `unresolved_refs_count` is the last `Option<u64>` field; the
+        // daemon doesn't expose it yet, so the bench always records
+        // `None` and the JSON omits the key entirely.
         let report = BenchReport {
             version: 1,
             rts_bench_version: "0.0.0-test".into(),
@@ -606,18 +644,31 @@ mod tests {
             repos: vec![sample("tokio", 0, 0)],
         };
         let s = serde_json::to_string(&report).unwrap();
-        for omitted in [
-            "unresolved_refs_count",
-            "languages_indexed",
-            "find_symbol_latency_p50_ms",
-            "find_symbol_latency_p99_ms",
-            "grep_latency_p50_ms",
-            "grep_latency_p99_ms",
-        ] {
-            assert!(
-                !s.contains(omitted),
-                "field `{omitted}` should be skipped when None: {s}"
-            );
-        }
+        assert!(
+            !s.contains("unresolved_refs_count"),
+            "unresolved_refs_count should be skipped when None: {s}"
+        );
+    }
+
+    #[test]
+    fn latency_p50_does_not_exceed_p99() {
+        // Sanity invariant: a percentile-50 latency can never legally
+        // exceed the percentile-99 latency for the same method. The
+        // bench reads both from the same `daemon_telemetry` snapshot,
+        // so a violation here would mean either the daemon's
+        // histogram regressed or the field-mapping crossed buckets.
+        let m = sample("tokio", 100, 500);
+        assert!(
+            m.find_symbol_latency_p50_ms <= m.find_symbol_latency_p99_ms,
+            "find_symbol p50 ({}) must not exceed p99 ({})",
+            m.find_symbol_latency_p50_ms,
+            m.find_symbol_latency_p99_ms,
+        );
+        assert!(
+            m.grep_latency_p50_ms <= m.grep_latency_p99_ms,
+            "grep p50 ({}) must not exceed p99 ({})",
+            m.grep_latency_p50_ms,
+            m.grep_latency_p99_ms,
+        );
     }
 }
