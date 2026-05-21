@@ -144,6 +144,16 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // real-repo CI bench gates on this. Lets clients gate on the
     // field's presence without protocol version sniffing.
     "daemon_telemetry_unresolved_refs_count",
+    // v0.6+ — `Daemon.Telemetry.unresolved_refs_gc_runs_total` and
+    // `unresolved_refs_gc_dropped_total` (u64 each): cumulative
+    // counters reflecting the daemon's own GC of orphaned
+    // UNRESOLVED_REFS rows (file-removal-driven, see PR #128). With
+    // these the otherwise-monotonically-growing `unresolved_refs_count`
+    // becomes bounded — a healthy daemon's GC counters advance as
+    // files are removed; a sudden jump in `unresolved_refs_count`
+    // without matching GC activity points at an extractor regression
+    // (e.g. PR #118's PHP `method_declaration` gap class).
+    "daemon_telemetry_unresolved_refs_gc",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
@@ -441,17 +451,27 @@ pub async fn telemetry(
     }
     let languages_indexed: Vec<&'static str> = languages_indexed.into_iter().collect();
 
+    // PR #128 (capability `daemon_telemetry_unresolved_refs_gc`).
+    // Cumulative counters describing the daemon's own GC activity
+    // against orphaned UNRESOLVED_REFS rows. Reading is one relaxed
+    // load apiece; cheap to include unconditionally.
+    use std::sync::atomic::Ordering::Relaxed;
+    let unresolved_refs_gc_runs_total = state.unresolved_refs_gc_runs_total.load(Relaxed);
+    let unresolved_refs_gc_dropped_total = state.unresolved_refs_gc_dropped_total.load(Relaxed);
+
     Ok(serde_json::json!({
-        "uptime_secs":           uptime_secs,
-        "languages_indexed":     languages_indexed,
-        "method_counts":         serde_json::Value::Object(method_counts),
-        "method_latency_p50_ms": p50,
-        "method_latency_p99_ms": p99,
-        "error_counts":          error_counts,
-        "cache_hit_rate":        cache_hit_rate,
-        "cold_walk_ms_p50":      cold_walk_ms_p50,
-        "workspace_files":       workspace_files,
-        "unresolved_refs_count": unresolved_refs_count,
+        "uptime_secs":                       uptime_secs,
+        "languages_indexed":                 languages_indexed,
+        "method_counts":                     serde_json::Value::Object(method_counts),
+        "method_latency_p50_ms":             p50,
+        "method_latency_p99_ms":             p99,
+        "error_counts":                      error_counts,
+        "cache_hit_rate":                    cache_hit_rate,
+        "cold_walk_ms_p50":                  cold_walk_ms_p50,
+        "workspace_files":                   workspace_files,
+        "unresolved_refs_count":             unresolved_refs_count,
+        "unresolved_refs_gc_runs_total":     unresolved_refs_gc_runs_total,
+        "unresolved_refs_gc_dropped_total":  unresolved_refs_gc_dropped_total,
     }))
 }
 

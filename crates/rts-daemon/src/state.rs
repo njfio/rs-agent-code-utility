@@ -274,6 +274,22 @@ pub struct DaemonState {
     /// FIFO eviction). The `Daemon.Telemetry` snapshot computes p50
     /// over this window.
     pub cold_walk_durations_ms: Mutex<VecDeque<u64>>,
+    /// v0.6+ telemetry counter (PR #128, capability
+    /// `daemon_telemetry_unresolved_refs_gc`). Cumulative number of
+    /// UNRESOLVED_REFS garbage-collection invocations: one bump per
+    /// removed file the writer processed. Paired with
+    /// `unresolved_refs_gc_dropped_total` so an external observer can
+    /// distinguish "GC is firing but finding nothing" from "GC is not
+    /// firing." Reset on daemon restart, same convention as
+    /// `cancellations_total`.
+    pub unresolved_refs_gc_runs_total: AtomicU64,
+    /// v0.6+ telemetry counter (PR #128). Cumulative number of
+    /// UNRESOLVED_REFS rows the GC has dropped — orphaned forward-
+    /// reference entries whose source file was deleted. Bounds the
+    /// growth of `Daemon.Telemetry.unresolved_refs_count`; a healthy
+    /// long-running daemon should see this advance whenever files
+    /// disappear and `unresolved_refs_count` stay bounded.
+    pub unresolved_refs_gc_dropped_total: AtomicU64,
 }
 
 /// Cache hit/miss counters shared across the daemon's four query-time
@@ -656,6 +672,8 @@ impl DaemonState {
             cache_counters: CacheCounters::default(),
             cold_walk_started_at_ms: AtomicU64::new(0),
             cold_walk_durations_ms: Mutex::new(VecDeque::with_capacity(COLD_WALK_WINDOW)),
+            unresolved_refs_gc_runs_total: AtomicU64::new(0),
+            unresolved_refs_gc_dropped_total: AtomicU64::new(0),
         }
     }
 
