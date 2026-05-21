@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/envelope.schema.json",
+  "title": "JSON-RPC envelope (protocol-v0)",
+  "description": "Per protocol-v0.md §3.4. Newline-delimited JSON; one envelope per line. `id` is a decimal-u64 string (string, not number, to survive JS float-precision round-tripping). Requests carry `method` + `params`; responses carry `result` xor `error`; notifications omit `id` entirely.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "Monotonic per-connection request id. Decimal u64 as a JSON string.",
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "method": {
+      "description": "Capability + verb, dot-separated. Per protocol-v0.md §3.4: `^[A-Z][A-Za-z]+\\.[A-Z][A-Za-z]+$`.",
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z]+\\.[A-Z][A-Za-z]+$"
+    },
+    "params": {
+      "description": "Method-specific parameters object. MUST be an object (never null, array, or scalar) per §3.4.",
+      "type": "object"
+    },
+    "cancel_id": {
+      "description": "Optional client-chosen cancellation token (v0.6+, capability `cancellable_queries`). 1..=256 chars. See protocol-v0.md §7.1b.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "result": {
+      "description": "Method-specific success payload. Object on every v0 verb."
+    },
+    "error": {
+      "description": "Error object. See error.schema.json for the standalone definition; inlined here for self-containment so this envelope schema compiles without an external retriever. Mutually exclusive with `result`.",
+      "type": "object",
+      "properties": {
+        "code":    { "type": "string" },
+        "message": { "type": "string" },
+        "data":    {}
+      },
+      "required": ["code", "message"]
+    },
+    "partial": {
+      "description": "Optional best-effort flag on retrieval results when the index is mid-build (protocol-v0.md §3.5).",
+      "type": "boolean"
+    },
+    "progress": {
+      "description": "Optional progress sub-object emitted alongside `partial: true` (protocol-v0.md §3.5).",
+      "type": "object",
+      "properties": {
+        "files_done": { "type": "integer", "minimum": 0 },
+        "files_total": { "type": "integer", "minimum": 0 },
+        "phase": { "type": "string" }
+      },
+      "required": ["files_done", "files_total", "phase"]
+    }
+  },
+  "oneOf": [
+    {
+      "title": "Request",
+      "required": ["id", "method", "params"],
+      "not": { "anyOf": [ { "required": ["result"] }, { "required": ["error"] } ] }
+    },
+    {
+      "title": "Response (success)",
+      "required": ["id", "result"],
+      "not": { "anyOf": [ { "required": ["method"] }, { "required": ["error"] } ] }
+    },
+    {
+      "title": "Response (error)",
+      "required": ["id", "error"],
+      "not": { "anyOf": [ { "required": ["method"] }, { "required": ["result"] } ] }
+    },
+    {
+      "title": "Notification (no id)",
+      "required": ["method", "params"],
+      "not": { "anyOf": [ { "required": ["id"] }, { "required": ["result"] }, { "required": ["error"] } ] }
+    }
+  ]
+}
