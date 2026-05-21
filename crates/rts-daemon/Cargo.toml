@@ -112,3 +112,9 @@ telemetry = []
 # 0.x line speaks JSON Schema 2020-12, which is what
 # `schemas/v0/*.schema.json` declare via `$schema`.
 jsonschema = { version = "0.46", default-features = false }
+
+# Property-based / adversarial input testing. Test-only — see
+# `tests/adversarial_proptest.rs` and the `RESILIENCE.md` threat model
+# at the repo root. Pinned to the latest stable 1.x; runs under
+# default `cargo test` (no nightly required).
+proptest = { version = "1", default-features = false, features = ["std"] }
