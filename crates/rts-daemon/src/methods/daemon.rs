@@ -128,6 +128,13 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // behavior; this is a pure additive capability. See
     // `docs/protocol-v0.md` and `crate::cancel`.
     "cancellable_queries",
+    // v0.6+ — `Daemon.Telemetry` RPC returns the **raw** collector
+    // inputs that feed `rts telemetry preview` and the (separately
+    // feature-gated) 24h ticker. The bounded-enum filter still runs
+    // in `rts-mcp`; this RPC just hands the collectors their data
+    // without forcing the CLI to mount the workspace twice. Clients
+    // that don't ship the telemetry feature ignore the capability.
+    "daemon_telemetry",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
@@ -312,6 +319,113 @@ pub async fn stats(
     }
 
     Ok(body)
+}
+
+/// `Daemon.Telemetry` — return the **raw inputs** that feed the
+/// `2026-05-19-003-feat-anonymous-opt-in-telemetry-plan.md` wire
+/// schema's collector fields. The bounded-enum filter still runs on
+/// the rts-mcp side (`telemetry::build_payload`); this RPC just
+/// hands the collectors their data so the CLI doesn't need to
+/// re-implement per-method counter / latency / cache snapshots.
+///
+/// **What this RPC does NOT do:**
+///
+/// - Apply any bounded-enum filtering. The caller's
+///   `telemetry::build_payload` is responsible for dropping any keys
+///   outside `METHOD_NAMES` / `ERROR_CODES` / `LANGUAGE_NAMES`.
+///   Defense-in-depth: this RPC's output map keys are themselves
+///   sourced from closed-enum strings (`CallCounters::snapshot`,
+///   `MethodLatencyHistograms::enumerated`, `ErrorCode::as_wire_str`,
+///   `writer::lang_tag_to_name`), so no user-controlled string can
+///   reach the wire.
+/// - Send any network traffic. The telemetry HTTP POST lives in
+///   the `rts` binary's `telemetry flush` subcommand, behind its own
+///   `--features telemetry` gate. This RPC is HTTP-free.
+///
+/// Wire shape (response):
+/// ```jsonc
+/// {
+///   "uptime_secs":            12345,
+///   "languages_indexed":      ["rust", "python"],
+///   "method_counts":          { "Index.FindSymbol": 7, ... },
+///   "method_latency_p50_ms":  { "Index.FindSymbol": 2, ... },
+///   "method_latency_p99_ms":  { "Index.FindSymbol": 8, ... },
+///   "error_counts":           { "INVALID_PARAMS": 3 },
+///   "cache_hit_rate":         0.84,
+///   "cold_walk_ms_p50":       230,
+///   "workspace_files":        47123
+/// }
+/// ```
+///
+/// Method counts use the same `CallCounters::snapshot` map shape as
+/// `Daemon.Stats`; the `unknown_method` synthetic key is filtered
+/// out here so it never reaches the receiver-side bounded enum.
+pub async fn telemetry(
+    _params: serde_json::Value,
+    state: &Arc<DaemonState>,
+) -> Result<serde_json::Value, ProtocolError> {
+    let uptime_secs = state.uptime().as_secs();
+
+    // method_counts: drop `unknown_method` so the receiver's bounded
+    // filter never has to consider it. Everything else comes from the
+    // hardcoded enumerate in `CallCounters::snapshot`.
+    let snapshot = state.call_counters.snapshot();
+    let mut method_counts = serde_json::Map::new();
+    if let Some(obj) = snapshot.as_object() {
+        for (k, v) in obj {
+            if k == "unknown_method" {
+                continue;
+            }
+            // Drop zero counts so the wire stays compact and matches
+            // the "empty histogram" shape (`snapshot_percentile_ms`
+            // similarly omits zero-sample methods).
+            if v.as_u64() == Some(0) {
+                continue;
+            }
+            method_counts.insert(k.clone(), v.clone());
+        }
+    }
+
+    let p50 = state.method_latency.snapshot_percentile_ms(0.5);
+    let p99 = state.method_latency.snapshot_percentile_ms(0.99);
+
+    let error_counts = state.error_counts_snapshot();
+
+    let cache_hit_rate = state.aggregate_cache_hit_rate();
+
+    let cold_walk_ms_p50 = state.cold_walk_ms_p50();
+
+    // languages_indexed: scan the store's FILES table for `lang`
+    // tags, map each to its telemetry-bounded enum string. Unknown
+    // tags (corrupt META, schema-newer rows) silently drop —
+    // defense in depth against bounded-enum violations.
+    let mut languages_indexed: std::collections::BTreeSet<&'static str> = Default::default();
+    let mut workspace_files: u64 = 0;
+    if let Ok(store_guard) = state.store.lock() {
+        if let Some(store) = store_guard.as_ref() {
+            if let Ok(tag_counts) = store.language_tag_counts() {
+                for (tag, count) in &tag_counts {
+                    if let Some(name) = crate::writer::lang_tag_to_name(*tag) {
+                        languages_indexed.insert(name);
+                    }
+                    workspace_files = workspace_files.saturating_add(*count);
+                }
+            }
+        }
+    }
+    let languages_indexed: Vec<&'static str> = languages_indexed.into_iter().collect();
+
+    Ok(serde_json::json!({
+        "uptime_secs":           uptime_secs,
+        "languages_indexed":     languages_indexed,
+        "method_counts":         serde_json::Value::Object(method_counts),
+        "method_latency_p50_ms": p50,
+        "method_latency_p99_ms": p99,
+        "error_counts":          error_counts,
+        "cache_hit_rate":        cache_hit_rate,
+        "cold_walk_ms_p50":      cold_walk_ms_p50,
+        "workspace_files":       workspace_files,
+    }))
 }
 
 #[derive(Debug, Deserialize)]

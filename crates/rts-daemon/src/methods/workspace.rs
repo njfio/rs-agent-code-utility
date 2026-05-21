@@ -326,6 +326,20 @@ pub(super) async fn mount_inner(
         initial_walk_ok = true;
         0
     } else {
+        // v0.6+ telemetry collector: stamp the cold-walk start time
+        // so the `ColdWalkComplete` handler in `writer.rs` can
+        // compute the duration and push it onto the rolling window
+        // that feeds `cold_walk_ms_p50`. We use `SystemTime` (not
+        // `Instant`) because pairs across the writer-task boundary
+        // need a portable representation; the writer reads
+        // `cold_walk_started_at_ms` via `state` after Mount returns.
+        let started_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        state
+            .cold_walk_started_at_ms
+            .store(started_ms, std::sync::atomic::Ordering::Relaxed);
         match initial.spawn().await {
             Ok(Ok(n)) => {
                 initial_walk_ok = true;

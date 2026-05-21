@@ -185,6 +185,22 @@ async fn run(
                             now_ms,
                             std::sync::atomic::Ordering::Relaxed,
                         );
+                        // v0.6+ telemetry collector: push this cold
+                        // walk's duration onto the rolling window
+                        // that feeds `cold_walk_ms_p50`. We compute
+                        // the duration as `completed - started` —
+                        // `started` was stamped in `methods::workspace::
+                        // mount_inner` just before `initial.spawn`.
+                        // If `started` is 0 (rehydrate path, or the
+                        // workspace was unmounted before this code
+                        // ran) we skip the push rather than report a
+                        // garbage 1748-billion-ms outlier.
+                        let started_ms = state
+                            .cold_walk_started_at_ms
+                            .load(std::sync::atomic::Ordering::Relaxed);
+                        if started_ms > 0 && now_ms >= started_ms {
+                            state.record_cold_walk_duration_ms(now_ms - started_ms);
+                        }
                     }
                     Some(WatchEvent::Rescan) => {
                         // Kernel watch buffer overflowed; index state may be
@@ -651,6 +667,31 @@ fn lang_tag(language: Language) -> u8 {
         Language::Swift => 11,
         Language::CSharp => 12,
     }
+}
+
+/// Inverse of `lang_tag`: turn a stored numeric tag back into the
+/// telemetry-bounded language enum string (matches the
+/// `rts-mcp::telemetry::LANGUAGE_NAMES` allowlist exactly).
+///
+/// Returns `None` for unknown tags so the telemetry collector silently
+/// drops them — defense in depth against an old / corrupt META row
+/// leaking through the bounded-enum boundary.
+pub fn lang_tag_to_name(tag: u8) -> Option<&'static str> {
+    Some(match tag {
+        1 => "rust",
+        2 => "javascript",
+        3 => "typescript",
+        4 => "python",
+        5 => "c",
+        6 => "cpp",
+        7 => "go",
+        8 => "java",
+        9 => "php",
+        10 => "ruby",
+        11 => "swift",
+        12 => "csharp",
+        _ => return None,
+    })
 }
 
 /// Per-call parser facade. v0 created a fresh `CodebaseAnalyzer` per

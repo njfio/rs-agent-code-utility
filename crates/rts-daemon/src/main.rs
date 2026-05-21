@@ -17,6 +17,7 @@ mod fingerprint;
 mod gitignore_hash;
 mod impact;
 mod language;
+mod latency;
 mod lifecycle;
 mod methods;
 mod outline;

@@ -1324,6 +1324,33 @@ impl Store {
         Ok(())
     }
 
+    /// Histogram of stored `FileMeta.lang` tags. Used by the
+    /// telemetry collector to compute `languages_indexed` without
+    /// per-file random reads. Returns a map `tag → count`; callers
+    /// (in `methods/daemon.rs::telemetry`) translate tags to the
+    /// telemetry-bounded language enum via `writer::lang_tag` order.
+    ///
+    /// Best-effort: returns an empty map if the FILES table is
+    /// missing (pre-Mount) rather than erroring.
+    pub fn language_tag_counts(&self) -> anyhow::Result<std::collections::BTreeMap<u8, u64>> {
+        let read_txn = self.db.begin_read().context("begin_read")?;
+        let files = match read_txn.open_table(schema::FILES) {
+            Ok(t) => t,
+            Err(redb::TableError::TableDoesNotExist(_)) => {
+                return Ok(std::collections::BTreeMap::new());
+            }
+            Err(e) => return Err(e.into()),
+        };
+        let mut out: std::collections::BTreeMap<u8, u64> = std::collections::BTreeMap::new();
+        for row in files.iter()? {
+            let row = row?;
+            if let Ok(meta) = from_bytes::<FileMeta>(row.1.value()) {
+                *out.entry(meta.lang).or_insert(0) += 1;
+            }
+        }
+        Ok(out)
+    }
+
     /// Count of entries in the FILES table. U5 uses this to
     /// distinguish "first-ever mount" (empty FILES) from "subsequent
     /// mount with a valid snapshot." Implemented by counting the
