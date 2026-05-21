@@ -42,10 +42,17 @@ fn rts_daemon_bin() -> PathBuf {
     parent.join("rts-daemon")
 }
 
-/// The eight agent-facing tools whose descriptions must compete with
-/// `Bash`-based defaults. `daemon_stats` is excluded — it's an
-/// introspection tool with no `Bash` analog to compete against, so the
-/// comparative-clause / trigger-phrase rules don't usefully apply.
+/// The agent-facing tools whose descriptions must compete with
+/// `Bash`-based defaults or with sibling rts tools. `daemon_stats` is
+/// excluded — it's an introspection tool with no `Bash` analog to
+/// compete against, so the comparative-clause / trigger-phrase rules
+/// don't usefully apply.
+///
+/// `daemon_telemetry` IS included even though it has no `Bash` analog:
+/// its comparative target is `daemon_stats` (the sibling counter RPC),
+/// and the selection moment it has to win is "the agent needs latency
+/// percentiles / cache-hit rate" → it must clearly differentiate from
+/// the cheaper `daemon_stats` rather than be skimmed past.
 const AUDITED_TOOLS: &[&str] = &[
     "outline_workspace",
     "find_symbol",
@@ -55,6 +62,7 @@ const AUDITED_TOOLS: &[&str] = &[
     "find_callers",
     "impact_of",
     "grep",
+    "daemon_telemetry",
 ];
 
 async fn read_one_response(reader: &mut BufReader<ChildStdout>) -> Result<Value> {
