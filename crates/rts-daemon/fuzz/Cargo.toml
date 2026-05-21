@@ -1,0 +1,65 @@
+[package]
+name = "rts-daemon-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+# Standard cargo-fuzz layout: not a workspace member; depends on the
+# parent rts-daemon crate via path. This Cargo.toml is consumed by
+# `cargo +nightly fuzz run <target>` from the parent directory.
+#
+# Rationale for keeping the fuzz crate out of the workspace:
+#   - libfuzzer-sys is nightly-only (needs `-Cpasses=sancov-module`),
+#     so wiring it into the stable-toolchain workspace would block
+#     `cargo build --workspace` on stable.
+#   - cargo-fuzz expects this exact layout (its `cargo fuzz init`
+#     scaffolds the same structure).
+#   - The targets here exercise the same library code under
+#     `rts_daemon_fuzz_*`-prefixed re-exports; see
+#     `RESILIENCE.md` for the threat model these target.
+#
+# Excluded from the workspace via the top-level `Cargo.toml` `exclude`
+# list (see workspace root).
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# We depend on `regex` directly rather than reach into the daemon crate
+# (which is a binary, not a library, so it has no usable exports).
+# This is a deliberate scope choice: the fuzz target's job is to
+# exercise the SAME compile/run code path the daemon takes. Pin to the
+# same major as the workspace and feed identical RegexBuilder flags.
+regex = "1"
+# Tree-sitter for the structural-query fuzz target. We compile a small
+# rust grammar reference via the rts-core re-export and call
+# `Query::new(language, query_text)` against it — the same call the
+# daemon's structural::run path makes for every requested language.
+rust_tree_sitter = { path = "../../rts-core" }
+
+# Prevent this manifest from being picked up by `cargo test
+# --workspace`. Without this guard, cargo emits a "current package
+# believes it's in a workspace" warning even when the parent
+# `[workspace] exclude` list covers us.
+[workspace]
+
+# Explicit [[bin]] entries are the cargo-fuzz convention: each target
+# is its own binary with `test = false` / `doc = false` / `bench = false`
+# so `cargo build` outside of `cargo fuzz` doesn't try to link
+# libfuzzer-sys into a normal binary (libfuzzer only links cleanly under
+# the nightly `-C passes=sancov-module` flags that `cargo fuzz` sets).
+
+[[bin]]
+name = "grep_regex"
+path = "fuzz_targets/grep_regex.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "grep_structural"
+path = "fuzz_targets/grep_structural.rs"
+test = false
+doc = false
+bench = false
