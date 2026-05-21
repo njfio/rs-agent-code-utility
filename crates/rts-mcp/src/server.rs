@@ -654,6 +654,22 @@ impl RtsServer {
             Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
+
+    #[tool(
+        description = "Daemon-side counter and latency snapshot for telemetry analysis. Use INSTEAD OF `daemon_stats` when you need per-method latency percentiles (p50/p99), cache-hit-rate aggregation, or error-code frequencies — `daemon_stats` returns raw counters but no derived metrics. Use when the task includes 'how fast is X', 'is the cache effective', 'what error codes appear most', 'workspace size'. Returns ~12 collector fields in a single round-trip; computing equivalents from `daemon_stats` requires the caller to maintain its own histogram state across snapshots. Counters are the same population that opt-in telemetry pings would send (see `rts telemetry preview`). No paths, no symbol names, no content."
+    )]
+    async fn daemon_telemetry(
+        &self,
+        Parameters(_): Parameters<EmptyArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match self
+            .call_daemon("Daemon.Telemetry", Value::Object(serde_json::Map::new()))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
 }
 
 #[tool_handler]
