@@ -42,9 +42,32 @@ fn rts_daemon_bin() -> PathBuf {
     parent.join("rts-daemon")
 }
 
-async fn read_one_response(reader: &mut BufReader<ChildStdout>) -> Result<Value> {
+/// Read one newline-delimited JSON-RPC response from the MCP shim's
+/// stdout, bounded by `deadline`.
+///
+/// Synchronization-barrier pattern (mirrors `wait_for_in_flight` in
+/// `crates/rts-daemon/tests/cancel_in_flight.rs`, PR #119): the timeout
+/// is a parameter from the *caller's* outer deadline, not a hardcoded
+/// inner wall clock. Pre-fix this read used a hard `Duration::from_secs(8)`
+/// cap; under parallel-test load (4 scenarios × 4 daemons × concurrent
+/// cold-mount across them) the first response can legitimately take more
+/// than 8 seconds — the daemon's `Workspace.Mount` is awaited inside the
+/// shim's `ConnectionManager::call`, and the cold walk + first writer-
+/// batch flush of 4 daemons booting in parallel can exceed the cap even
+/// on a 1-file workspace. The outer poll loops already encode the
+/// real per-scenario tolerance (10 s for first-call, 30 s for SIGKILL
+/// recovery); without this parameter the inner 8 s cap short-circuited
+/// every outer deadline > 8 s, making the resilience layer's intended
+/// recovery windows untestable.
+async fn read_one_response(
+    reader: &mut BufReader<ChildStdout>,
+    deadline: Instant,
+) -> Result<Value> {
     let mut buf = Vec::new();
-    let n = tokio::time::timeout(Duration::from_secs(8), reader.read_until(b'\n', &mut buf))
+    let remaining = deadline
+        .checked_duration_since(Instant::now())
+        .unwrap_or(Duration::ZERO);
+    let n = tokio::time::timeout(remaining, reader.read_until(b'\n', &mut buf))
         .await
         .map_err(|_| anyhow!("timeout reading MCP response"))??;
     if n == 0 {
@@ -62,7 +85,15 @@ async fn send_request(stdin: &mut ChildStdin, req: &Value) -> Result<()> {
 }
 
 /// Standard MCP handshake: `initialize` + `notifications/initialized`.
-async fn handshake(stdin: &mut ChildStdin, reader: &mut BufReader<ChildStdout>) -> Result<()> {
+///
+/// `deadline` bounds the `initialize` response read; it lets the
+/// per-scenario tolerance govern (cold-mount of 4 parallel daemons can
+/// exceed any small fixed cap on the first response).
+async fn handshake(
+    stdin: &mut ChildStdin,
+    reader: &mut BufReader<ChildStdout>,
+    deadline: Instant,
+) -> Result<()> {
     send_request(
         stdin,
         &json!({
@@ -77,7 +108,7 @@ async fn handshake(stdin: &mut ChildStdin, reader: &mut BufReader<ChildStdout>) 
         }),
     )
     .await?;
-    let _ = read_one_response(reader).await?;
+    let _ = read_one_response(reader, deadline).await?;
     send_request(
         stdin,
         &json!({
@@ -113,7 +144,7 @@ async fn poll_find_symbol_success(
             }),
         )
         .await?;
-        let resp = read_one_response(reader).await?;
+        let resp = read_one_response(reader, deadline).await?;
         if resp["result"]["isError"] == Value::Bool(false) {
             let body = resp["result"]["content"][0]["text"].as_str().unwrap_or("");
             let parsed: Value = serde_json::from_str(body).unwrap_or(Value::Null);
@@ -227,9 +258,14 @@ async fn scenario_1_idle_shutdown_survival() -> Result<()> {
     let mut stdin = child.stdin.take().expect("piped stdin");
     let mut reader = BufReader::new(child.stdout.take().expect("piped stdout"));
 
-    handshake(&mut stdin, &mut reader).await?;
+    handshake(
+        &mut stdin,
+        &mut reader,
+        Instant::now() + Duration::from_secs(30),
+    )
+    .await?;
     let mut next_id: u64 = 10;
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     poll_find_symbol_success(
         &mut stdin,
         &mut reader,
@@ -246,7 +282,7 @@ async fn scenario_1_idle_shutdown_survival() -> Result<()> {
 
     // Second tool call. If it succeeds (with or without a transient
     // reconnect), we know the manager survived idle-shutdown.
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     poll_find_symbol_success(
         &mut stdin,
         &mut reader,
@@ -300,9 +336,14 @@ async fn scenario_2_sigkill_recovery() -> Result<()> {
     let mut stdin = child.stdin.take().expect("piped stdin");
     let mut reader = BufReader::new(child.stdout.take().expect("piped stdout"));
 
-    handshake(&mut stdin, &mut reader).await?;
+    handshake(
+        &mut stdin,
+        &mut reader,
+        Instant::now() + Duration::from_secs(30),
+    )
+    .await?;
     let mut next_id: u64 = 10;
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     poll_find_symbol_success(
         &mut stdin,
         &mut reader,
@@ -353,7 +394,10 @@ async fn scenario_2_sigkill_recovery() -> Result<()> {
         }),
     )
     .await?;
-    let resp = read_one_response(&mut reader).await?;
+    // 30 s deadline matches the post-kill recovery window below — a
+    // freshly auto-spawned daemon paying cold-mount + first-batch
+    // commit is the longest acceptable wait for this single response.
+    let resp = read_one_response(&mut reader, Instant::now() + Duration::from_secs(30)).await?;
     // Two acceptable shapes: DAEMON_UNAVAILABLE (during window) OR
     // an immediate success (if the reconnect race resolved in our
     // favor). Both prove the resilience layer is active.
@@ -449,9 +493,14 @@ async fn scenario_3_shim_crash_leaves_daemon_alive() -> Result<()> {
     )?;
     let mut stdin1 = child1.stdin.take().expect("piped stdin");
     let mut reader1 = BufReader::new(child1.stdout.take().expect("piped stdout"));
-    handshake(&mut stdin1, &mut reader1).await?;
+    handshake(
+        &mut stdin1,
+        &mut reader1,
+        Instant::now() + Duration::from_secs(30),
+    )
+    .await?;
     let mut next_id: u64 = 10;
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     poll_find_symbol_success(
         &mut stdin1,
         &mut reader1,
@@ -496,9 +545,14 @@ async fn scenario_3_shim_crash_leaves_daemon_alive() -> Result<()> {
     )?;
     let mut stdin2 = child2.stdin.take().expect("piped stdin");
     let mut reader2 = BufReader::new(child2.stdout.take().expect("piped stdout"));
-    handshake(&mut stdin2, &mut reader2).await?;
+    handshake(
+        &mut stdin2,
+        &mut reader2,
+        Instant::now() + Duration::from_secs(30),
+    )
+    .await?;
     let mut next_id: u64 = 10;
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     poll_find_symbol_success(
         &mut stdin2,
         &mut reader2,
@@ -565,9 +619,14 @@ async fn scenario_4_concurrent_calls_during_reconnect() -> Result<()> {
     )?;
     let mut stdin = child.stdin.take().expect("piped stdin");
     let mut reader = BufReader::new(child.stdout.take().expect("piped stdout"));
-    handshake(&mut stdin, &mut reader).await?;
+    handshake(
+        &mut stdin,
+        &mut reader,
+        Instant::now() + Duration::from_secs(30),
+    )
+    .await?;
     let mut next_id: u64 = 10;
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     poll_find_symbol_success(
         &mut stdin,
         &mut reader,
@@ -635,12 +694,20 @@ async fn scenario_4_concurrent_calls_during_reconnect() -> Result<()> {
 
     // Collect responses. Each must be a parseable MCP envelope; we
     // count how many returned DAEMON_UNAVAILABLE vs success.
+    //
+    // 30 s deadline for the whole drain — well above the reconnect
+    // ceiling (30 s) and well above the natural per-response latency
+    // (sub-second once the manager has settled). The deadline applies
+    // to each read; in practice the herd drains in ms once the first
+    // response arrives, because the shim queues responses on stdout
+    // serially.
+    let response_deadline = Instant::now() + Duration::from_secs(30);
     let mut unavailable_count = 0usize;
     let mut success_count = 0usize;
     let mut other_error_count = 0usize;
     let mut retry_after_values: Vec<u64> = Vec::new();
     for _ in 0..herd_size {
-        let resp = read_one_response(&mut reader).await?;
+        let resp = read_one_response(&mut reader, response_deadline).await?;
         if resp["result"]["isError"] == Value::Bool(true) {
             let body_str = resp["result"]["content"][0]["text"].as_str().unwrap_or("");
             let parsed: Value = serde_json::from_str(body_str).unwrap_or(Value::Null);
