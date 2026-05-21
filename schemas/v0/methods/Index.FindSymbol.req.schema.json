@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.FindSymbol.req.schema.json",
+  "title": "Index.FindSymbol request params",
+  "description": "Per protocol-v0.md §7.6 + §18.3. `name` xor `pattern`; both is INVALID_PARAMS. Doc/limit/signature fields gate on the matching capability strings — pre-cap daemons silently drop unknown fields.",
+  "type": "object",
+  "properties": {
+    "name":              { "type": "string", "minLength": 1, "maxLength": 256 },
+    "pattern":           { "type": "string", "minLength": 1, "maxLength": 256 },
+    "kind": {
+      "type": "string",
+      "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module"]
+    },
+    "file":              { "type": "string" },
+    "sort":              { "type": "string", "enum": ["rank", "lexical"] },
+    "limit":             { "type": "integer", "minimum": 1, "maximum": 4096 },
+    "doc_contains":      { "type": "string" },
+    "include_signature": { "type": "boolean" }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    { "required": ["name"],    "not": { "required": ["pattern"] } },
+    { "required": ["pattern"], "not": { "required": ["name"] } }
+  ]
+}

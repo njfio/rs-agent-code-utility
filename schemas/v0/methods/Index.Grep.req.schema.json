@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.Grep.req.schema.json",
+  "title": "Index.Grep request params",
+  "description": "Per protocol-v0.md §7.8b. v0.5.4+ literal/regex search; v0.6+ adds multiline, structural_query, within_symbol, and language filters under the `index_grep_v2` capability bundle. v1 callers (just `text`) see byte-identical behavior. At least one of `text` or `structural_query` is required.",
+  "type": "object",
+  "properties": {
+    "text":                         { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "limit":                        { "type": "integer", "minimum": 1, "maximum": 4096 },
+    "case_insensitive":             { "type": "boolean" },
+    "regex":                        { "type": "boolean" },
+    "file_glob":                    { "type": "string" },
+    "multiline":                    { "type": "boolean" },
+    "structural_query":             { "type": "string" },
+    "within_symbol":                { "type": "string" },
+    "within_symbol_allow_overload": { "type": "boolean" },
+    "language": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false,
+  "anyOf": [
+    { "required": ["text"] },
+    { "required": ["structural_query"] }
+  ]
+}

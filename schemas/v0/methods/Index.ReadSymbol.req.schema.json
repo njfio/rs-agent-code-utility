@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.ReadSymbol.req.schema.json",
+  "title": "Index.ReadSymbol request params",
+  "description": "Per protocol-v0.md §7.7 + §18.4. `include_callers` gates on capability `read_symbol.include_callers` (v0.3 alpha.32+). `force_resend` is accepted but inert until v1.1's session_dedup ships.",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "file": { "type": "string" },
+    "kind": {
+      "type": "string",
+      "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module"]
+    },
+    "shape":                { "type": "string", "enum": ["signature", "body", "both"] },
+    "token_budget":         { "type": "integer", "minimum": 50, "maximum": 200000 },
+    "include_dependencies": { "type": "boolean" },
+    "include_callers":      { "type": "boolean" },
+    "force_resend":         { "type": "boolean" }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

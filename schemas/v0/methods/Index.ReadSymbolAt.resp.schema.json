@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.ReadSymbolAt.resp.schema.json",
+  "title": "Index.ReadSymbolAt result",
+  "description": "Per protocol-v0.md §7.7b. Same wire shape as Index.ReadSymbol — re-uses the shared response builder.",
+  "type": "object",
+  "properties": {
+    "qualified_name": { "type": "string" },
+    "kind":           { "type": "string" },
+    "file":           { "type": "string" },
+    "range": {
+      "type": "object",
+      "properties": {
+        "start_line": { "type": "integer", "minimum": 0 },
+        "end_line":   { "type": "integer", "minimum": 0 },
+        "start_byte": { "type": "integer", "minimum": 0 },
+        "end_byte":   { "type": "integer", "minimum": 0 }
+      },
+      "required": ["start_line", "end_line", "start_byte", "end_byte"]
+    },
+    "shape":           { "type": "string", "enum": ["signature", "body", "both"] },
+    "text":            { "type": "string" },
+    "signature":       { "type": ["string", "null"] },
+    "visibility":      { "type": "string" },
+    "content_version": { "type": "string" },
+    "tokens_returned": { "type": "integer", "minimum": 0 },
+    "token_counter":   { "type": "string" },
+    "dependencies":      { "type": "array", "items": { "type": "object" } },
+    "closure_truncated": { "type": "boolean" },
+    "callers":           { "type": "array", "items": { "type": "object" } },
+    "callers_truncated": { "type": "boolean" },
+    "truncated":         { "type": "boolean" },
+    "truncated_symbols": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["qualified_name", "kind", "file", "range", "shape", "text", "content_version", "tokens_returned", "token_counter", "truncated", "truncated_symbols"]
+}

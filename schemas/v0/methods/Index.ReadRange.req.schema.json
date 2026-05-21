@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.ReadRange.req.schema.json",
+  "title": "Index.ReadRange request params",
+  "description": "Per protocol-v0.md §7.8 + §18.5. Reads explicit line range from a file (stack traces, diff hunks, exact spans). Daemons may validate `start_line <= end_line` semantically; cross-field constraints are informational in the schema.",
+  "type": "object",
+  "properties": {
+    "file":         { "type": "string", "minLength": 1 },
+    "start_line":   { "type": "integer", "minimum": 1 },
+    "end_line":     { "type": "integer", "minimum": 1 },
+    "token_budget": { "type": "integer", "minimum": 50, "maximum": 200000 }
+  },
+  "required": ["file", "start_line", "end_line"],
+  "additionalProperties": false
+}

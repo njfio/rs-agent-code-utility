@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.Outline.req.schema.json",
+  "title": "Index.Outline request params",
+  "description": "Per protocol-v0.md §7.5 + §18.2. Token-budgeted structural map; `mentioned_files` / `mentioned_idents` bias PageRank personalisation.",
+  "type": "object",
+  "properties": {
+    "token_budget":     { "type": "integer", "minimum": 50, "maximum": 200000 },
+    "glob":             { "type": "string" },
+    "mentioned_files":  { "type": "array", "items": { "type": "string" } },
+    "mentioned_idents": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.ImpactOf.req.schema.json",
+  "title": "Index.ImpactOf request params",
+  "description": "Per protocol-v0.md §7.7d + §18.4d. v0.3 alpha.35+, capability `impact_of`. Out-of-window depth/max_nodes are clamped, not rejected.",
+  "type": "object",
+  "properties": {
+    "name":               { "type": "string", "minLength": 1, "maxLength": 256 },
+    "depth":              { "type": "integer", "minimum": 1, "maximum": 4 },
+    "token_budget":       { "type": "integer", "minimum": 50, "maximum": 200000 },
+    "max_nodes":          { "type": "integer", "minimum": 1, "maximum": 10000 },
+    "exclude_test_paths": { "type": "boolean" }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

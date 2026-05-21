@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Telemetry.req.schema.json",
+  "title": "Daemon.Telemetry request params",
+  "description": "v0.6+, capability `daemon_telemetry`. Returns raw collector inputs that feed the opt-in telemetry pipeline; the bounded-enum filter runs on the rts-mcp side. Also emitted as a notification (no `id`) when a connection opts in via `Workspace.Mount.enable_telemetry`.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}
