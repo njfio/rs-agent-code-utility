@@ -107,3 +107,8 @@ default = []
 telemetry = []
 
 [dev-dependencies]
+# Static-file JSON Schema validation for the protocol-v0 schema export
+# (`schemas/v0/`). Test-only — see `tests/protocol_schemas.rs`. The
+# 0.x line speaks JSON Schema 2020-12, which is what
+# `schemas/v0/*.schema.json` declare via `$schema`.
+jsonschema = { version = "0.46", default-features = false }
