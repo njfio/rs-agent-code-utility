@@ -427,3 +427,91 @@ async fn error_responses_match_error_schema() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// **Property 5 (telemetry-specific).** `Daemon.Telemetry` exposes
+/// `unresolved_refs_count` as a non-negative integer. The real-repo CI
+/// bench (PR #123) gates regressions on this field — if the daemon
+/// stops emitting it, that bench's `Option<u64>` collapses to `None`
+/// and the regression check silently no-ops.
+///
+/// We assert the field's presence + type live (not just via the
+/// schema-drift property), because the schema property only fires
+/// under `--include-ignored`. This test runs there too — but the
+/// assertion is direct so the failure message points at the missing
+/// field rather than a generic "schema mismatch".
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "spawns the daemon binary; opt-in via --include-ignored"]
+async fn unresolved_refs_count_appears_in_telemetry_response() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // Plant a tiny Rust fixture so the workspace mounts cleanly.
+    // The exact contents don't matter for this assertion — we only
+    // care that the field is present and well-typed.
+    let fixture_src = workspace.path().join("src");
+    std::fs::create_dir_all(&fixture_src)?;
+    std::fs::write(
+        fixture_src.join("lib.rs"),
+        "pub fn answer() -> u32 { 42 }\n",
+    )?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill_on_drop = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "mnt",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(
+        mount["error"].is_null(),
+        "Workspace.Mount unexpectedly errored: {mount:?}"
+    );
+
+    let resp = round_trip(&mut stream, "t", "Daemon.Telemetry", json!({})).await?;
+    assert!(
+        resp["error"].is_null(),
+        "Daemon.Telemetry errored: {resp:?}"
+    );
+    let result = &resp["result"];
+    let count = result
+        .get("unresolved_refs_count")
+        .unwrap_or_else(|| panic!("missing unresolved_refs_count in {result}"));
+    let n = count
+        .as_u64()
+        .unwrap_or_else(|| panic!("unresolved_refs_count not a u64: {count:?}"));
+    // Implicit >=0 via u64; explicit assert for the human reader.
+    let _ = n;
+
+    Ok(())
+}

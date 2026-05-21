@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use anyhow::{Context, anyhow};
 use postcard::{from_bytes, to_allocvec};
-use redb::{Database, Durability, ReadableMultimapTable, ReadableTable};
+use redb::{Database, Durability, ReadableMultimapTable, ReadableTable, ReadableTableMetadata};
 
 use schema::{
     DEFS, FID_DEFS, FID_REFS, FID_TO_PATH, FID_UNRESOLVED, FILES, META, NAME_TO_SID, PATH_TO_FID,
@@ -1370,6 +1370,30 @@ impl Store {
             count += 1;
         }
         Ok(count)
+    }
+
+    /// Count of entries in the UNRESOLVED_REFS multimap. Used by the
+    /// telemetry collector to surface call-graph completeness — every
+    /// row is a reference the resolver couldn't bind to a defined
+    /// symbol (forward reference awaiting a later commit, or a true
+    /// external like stdlib `Vec` / `println!`).
+    ///
+    /// O(1): redb's `MultimapTable::len()` returns the
+    /// `num_values` counter the table maintains across commits, so
+    /// the cost is one read-txn + one table-open. Point-in-time
+    /// snapshot — same semantics as `files_count`.
+    ///
+    /// Best-effort: returns `0` if the table is missing (pre-Mount,
+    /// or a schema-1/2 store predating UNRESOLVED_REFS) rather than
+    /// erroring.
+    pub fn unresolved_refs_count(&self) -> Result<u64, redb::Error> {
+        let read_txn = self.db.begin_read()?;
+        let table = match read_txn.open_multimap_table(schema::UNRESOLVED_REFS) {
+            Ok(t) => t,
+            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+            Err(e) => return Err(e.into()),
+        };
+        Ok(table.len()?)
     }
 }
 
@@ -2767,6 +2791,70 @@ mod tests {
         assert!(
             callers.is_empty(),
             "after caller.rs removal, no zombie ref should resurface; got {callers:?}"
+        );
+    }
+
+    #[test]
+    fn unresolved_refs_count_reflects_table_size() {
+        // The telemetry helper must return the live UNRESOLVED_REFS row
+        // count: 0 on an empty store, 1 after a single unresolved ref
+        // is committed, back to 0 after the callee def is interned
+        // (Pass-3 drains the deferred entry).
+        let (_tmp, store) = temp_store();
+
+        // Empty store: helper returns 0 without erroring even though
+        // the table was just opened for the first time.
+        assert_eq!(store.unresolved_refs_count().unwrap(), 0);
+
+        // Commit a ref to `target` before any def of `target` exists.
+        // Pass 2 defers the row to UNRESOLVED_REFS — the helper
+        // should now see exactly 1.
+        let caller = FileBatchEntry {
+            path: std::path::PathBuf::from("caller.rs"),
+            meta: rust_meta(blake3::hash(b"caller").into()),
+            defs: vec![(
+                "make_call".to_string(),
+                fn_def(0, 100, 1, 10),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "target".to_string(),
+                start: 50,
+                end: 56,
+                start_line: 5,
+                end_line: 5,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![caller], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            1,
+            "deferred ref to undefined `target` should bump the count"
+        );
+
+        // Land the callee def. Pass 3 drains the deferred entry into
+        // REFS; the unresolved count drops back to 0.
+        let target = FileBatchEntry {
+            path: std::path::PathBuf::from("target.rs"),
+            meta: rust_meta(blake3::hash(b"target").into()),
+            defs: vec![(
+                "target".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![target], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            0,
+            "Pass-3 drain on callee landing should clear the deferred row"
         );
     }
 
