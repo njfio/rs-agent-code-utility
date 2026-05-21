@@ -21,8 +21,10 @@ mod baseline;
 mod corpus;
 mod doctor;
 mod footprint;
+mod footprint_helpers;
 mod latency;
 mod mcp_runner;
+mod real_repos;
 mod report;
 mod semantic;
 mod tasks;
@@ -177,6 +179,20 @@ enum Cmd {
         /// Workspace path to inspect. Defaults to the current directory.
         #[arg(long)]
         workspace: Option<PathBuf>,
+    },
+    /// Real-repo CI fixture (v1): clone tokio/flask/gin at pinned
+    /// refs, index each, capture core metrics, compare against the
+    /// committed baseline. See `docs/plans/` for the rationale —
+    /// surfaces latent extractor bugs and cancel-test flakes that
+    /// synthetic fixtures historically missed.
+    ///
+    /// Subcommands:
+    ///   run      — clone + index + emit JSON report to stdout
+    ///   baseline — same as `run`, but write the report to --baseline
+    ///   compare  — read --baseline + run fresh; exit 1 on regression
+    RealRepos {
+        #[command(subcommand)]
+        sub: RealReposCmd,
     },
     Semantic {
         /// Path to a TOML corpus file.
@@ -395,6 +411,51 @@ enum QueryCmd {
 }
 
 #[derive(Subcommand, Debug)]
+enum RealReposCmd {
+    /// Clone (shallow, pinned) each repo in the v1 set, index it with
+    /// rts, capture metrics, and emit a JSON or text report to stdout.
+    /// Use this for ad-hoc local checks; CI runs `compare`.
+    Run {
+        /// Pool directory the bench clones repos into. Reused across
+        /// invocations — first run pays the network cost, subsequent
+        /// runs reuse the worktrees. Default: `/tmp/rts-real-repos`.
+        #[arg(long, default_value = "/tmp/rts-real-repos")]
+        workspace_pool: PathBuf,
+        /// Output format. `json` (default) is the nightly-workflow
+        /// shape; `text` is one summary line per repo.
+        #[arg(long, value_enum, default_value_t = real_repos::ReportFormat::Json)]
+        report: real_repos::ReportFormat,
+    },
+    /// Same wall-clock work as `run`, but write the JSON report to
+    /// the path given by `--baseline`. Used by the maintainer after
+    /// an intentional daemon change: `rts-bench real-repos baseline
+    /// --baseline .github/baselines/rts-bench-real-repos.json`, then
+    /// commit the result.
+    Baseline {
+        #[arg(long, default_value = "/tmp/rts-real-repos")]
+        workspace_pool: PathBuf,
+        /// Where to write the baseline JSON.
+        #[arg(long)]
+        baseline: PathBuf,
+    },
+    /// Read the committed baseline + run fresh; emit a structured
+    /// diff. Exit 0 if all metrics within tolerance; exit 1 if any
+    /// metric exceeds tolerance. The nightly CI workflow invokes
+    /// this and surfaces regressions as failed workflow runs.
+    Compare {
+        #[arg(long, default_value = "/tmp/rts-real-repos")]
+        workspace_pool: PathBuf,
+        /// Path to the committed baseline JSON.
+        #[arg(long)]
+        baseline: PathBuf,
+        /// Output format. `json` for CI consumption; `text` for human
+        /// triage of a failed compare.
+        #[arg(long, value_enum, default_value_t = real_repos::ReportFormat::Json)]
+        report: real_repos::ReportFormat,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 enum TaskCmd {
     /// List the five baseline tasks (running them is `task run <id>`).
     List,
@@ -554,6 +615,79 @@ async fn main() -> Result<()> {
             dry_run,
             check_coverage,
         } => run_semantic(corpus, workspace, top_k, out, dry_run, check_coverage).await,
+        Cmd::RealRepos { sub } => run_real_repos(sub).await,
+    }
+}
+
+/// `rts-bench real-repos` dispatcher.
+///
+/// All three subcommands share the same measurement pipeline (clone
+/// → mount → cold-walk-gate → telemetry capture). The differences:
+/// - `Run`      prints the report to stdout.
+/// - `Baseline` writes the report to a path on disk.
+/// - `Compare`  reads a baseline + measures + diffs; exits 1 on regression.
+async fn run_real_repos(cmd: RealReposCmd) -> Result<()> {
+    let repos = real_repos::RepoSet::default_v1()?;
+
+    match cmd {
+        RealReposCmd::Run {
+            workspace_pool,
+            report,
+        } => {
+            let rts_mcp_bin = resolve_bin("rts-mcp")?;
+            let rts_daemon_bin = resolve_bin("rts-daemon")?;
+            let bench =
+                real_repos::run_all(&repos, &workspace_pool, &rts_mcp_bin, &rts_daemon_bin).await?;
+            real_repos::print_report(&bench, report)?;
+            Ok(())
+        }
+        RealReposCmd::Baseline {
+            workspace_pool,
+            baseline,
+        } => {
+            let rts_mcp_bin = resolve_bin("rts-mcp")?;
+            let rts_daemon_bin = resolve_bin("rts-daemon")?;
+            let bench =
+                real_repos::run_all(&repos, &workspace_pool, &rts_mcp_bin, &rts_daemon_bin).await?;
+            real_repos::write_report_json(&baseline, &bench)?;
+            eprintln!("wrote baseline {}", baseline.display());
+            // Also echo the JSON to stdout so the operator running the
+            // command from a terminal can see what got written.
+            real_repos::print_report(&bench, real_repos::ReportFormat::Json)?;
+            Ok(())
+        }
+        RealReposCmd::Compare {
+            workspace_pool,
+            baseline,
+            report,
+        } => {
+            // Read the baseline FIRST so a missing/malformed file
+            // fails clean with a baseline-related error message
+            // before we touch the daemon binary resolution.
+            let baseline_report = real_repos::read_report_json(&baseline)?;
+            let rts_mcp_bin = resolve_bin("rts-mcp")?;
+            let rts_daemon_bin = resolve_bin("rts-daemon")?;
+            let current =
+                real_repos::run_all(&repos, &workspace_pool, &rts_mcp_bin, &rts_daemon_bin).await?;
+            let policy = real_repos::TolerancePolicy::default();
+            let cmp = real_repos::diff::compare(&baseline_report, &current, &policy);
+            match report {
+                real_repos::ReportFormat::Json => {
+                    println!("{}", serde_json::to_string_pretty(&cmp)?);
+                }
+                real_repos::ReportFormat::Text => {
+                    print!("{}", real_repos::diff::render_compare_text(&cmp));
+                }
+            }
+            if !cmp.regressions.is_empty() {
+                eprintln!(
+                    "real-repos: {} regression(s) — see report above",
+                    cmp.regressions.len()
+                );
+                std::process::exit(1);
+            }
+            Ok(())
+        }
     }
 }
 

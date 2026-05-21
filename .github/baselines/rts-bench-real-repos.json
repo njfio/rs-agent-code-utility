@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "rts_bench_version": "0.5.5",
+  "generated_at_unix_secs": 1779377207,
+  "repos": [
+    {
+      "name": "tokio",
+      "ref": "tokio-1.47.0",
+      "files_indexed": 716,
+      "cold_walk_ms": 6444,
+      "symbol_count": 4096,
+      "symbol_count_truncated": true,
+      "memory_peak_rss_kb": 42096
+    },
+    {
+      "name": "flask",
+      "ref": "3.1.0",
+      "files_indexed": 83,
+      "cold_walk_ms": 5123,
+      "symbol_count": 1588,
+      "symbol_count_truncated": false,
+      "memory_peak_rss_kb": 26352
+    },
+    {
+      "name": "gin",
+      "ref": "v1.10.0",
+      "files_indexed": 92,
+      "cold_walk_ms": 5130,
+      "symbol_count": 1208,
+      "symbol_count_truncated": false,
+      "memory_peak_rss_kb": 26192
+    }
+  ]
+}

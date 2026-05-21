@@ -1,0 +1,25 @@
+# Real-repo CI fixture set (v1).
+#
+# Three pinned OSS repos give cross-language coverage (Rust + Python +
+# Go) at <2 min total index time on a CI runner. Adding more repos =
+# append a `[[repo]]` table here. Bumping a `ref` is a deliberate act
+# that should land alongside a baseline-regen commit; otherwise the
+# `symbol_count` exact-match band will trip the regression check.
+
+[[repo]]
+name = "tokio"
+url = "https://github.com/tokio-rs/tokio"
+ref = "tokio-1.47.0"
+description = "Async runtime (Rust, ~70k LOC)"
+
+[[repo]]
+name = "flask"
+url = "https://github.com/pallets/flask"
+ref = "3.1.0"
+description = "Python web framework (~10k LOC)"
+
+[[repo]]
+name = "gin"
+url = "https://github.com/gin-gonic/gin"
+ref = "v1.10.0"
+description = "Go HTTP framework (~10k LOC)"
