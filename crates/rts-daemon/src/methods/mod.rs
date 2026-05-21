@@ -75,7 +75,13 @@ pub async fn dispatch(
         _ => None,
     };
 
-    match method {
+    // v0.6+ telemetry collector: time every dispatch so the
+    // `method_latency_p50_ms` / `method_latency_p99_ms` collectors
+    // have data. We record into the per-method histogram on both
+    // success and error paths — an erroring handler still represents
+    // dispatch work the daemon paid for.
+    let started = std::time::Instant::now();
+    let result = match method {
         "Daemon.Ping" => {
             counters.daemon_ping.fetch_add(1, Relaxed);
             daemon::ping(params, state).await
@@ -83,6 +89,13 @@ pub async fn dispatch(
         "Daemon.Stats" => {
             counters.daemon_stats.fetch_add(1, Relaxed);
             daemon::stats(params, state).await
+        }
+        "Daemon.Telemetry" => {
+            // No call counter, by design: `Daemon.Telemetry` is the
+            // collector-snapshot RPC; counting its own calls would
+            // introduce a feedback loop where every `rts telemetry
+            // preview` skews the very statistics it's previewing.
+            daemon::telemetry(params, state).await
         }
         "Daemon.Cancel" => {
             counters.daemon_cancel.fetch_add(1, Relaxed);
@@ -149,7 +162,22 @@ pub async fn dispatch(
                 format!("unknown method: {other}"),
             ))
         }
+    };
+    let elapsed_micros = started.elapsed().as_micros().min(u128::from(u64::MAX)) as u64;
+    state.method_latency.record(method, elapsed_micros);
+
+    // v0.6+ telemetry collector: error-count bookkeeping. We record
+    // the **closed-enum wire string** (`ErrorCode::as_wire_str`),
+    // never the human-readable message; the dispatcher cannot leak
+    // user-controlled strings into the `error_counts` map. The
+    // `unknown_method` arm above produces `INVALID_PARAMS` for
+    // unknown method names (so the attacker-controlled `other`
+    // string never reaches the error map).
+    if let Err(e) = &result {
+        state.record_error(e.code.as_wire_str());
     }
+
+    result
 }
 
 /// Which methods honor cooperative cancellation. The dispatcher only

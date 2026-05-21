@@ -90,6 +90,11 @@ impl OutlineCacheKey {
 #[derive(Default)]
 pub struct OutlineCache {
     inner: Mutex<Option<CachedEntry>>,
+    /// v0.6+ telemetry collector. Bumped in `get` on hit/miss so
+    /// `DaemonState` can aggregate a `cache_hit_rate` across all
+    /// four caches without each call site needing to know.
+    hits: std::sync::atomic::AtomicU64,
+    misses: std::sync::atomic::AtomicU64,
 }
 
 struct CachedEntry {
@@ -104,15 +109,28 @@ impl OutlineCache {
         Self::default()
     }
 
-    /// Return the cached result if the key matches. Cheap: one mutex
-    /// + one Arc clone.
+    /// Return the cached result if the key matches. Cheap: one
+    /// mutex acquire plus one Arc clone. Bumps the hit/miss counters
+    /// as a side-effect (read by `DaemonState::aggregate_cache_hits`
+    /// for telemetry).
     pub fn get(&self, key: &OutlineCacheKey) -> Option<Arc<OutlineResult>> {
-        let g = self.inner.lock().ok()?;
-        let entry = g.as_ref()?;
-        if &entry.key == key {
-            Some(entry.result.clone())
-        } else {
-            None
+        use std::sync::atomic::Ordering::Relaxed;
+        let g = match self.inner.lock() {
+            Ok(g) => g,
+            Err(_) => {
+                self.misses.fetch_add(1, Relaxed);
+                return None;
+            }
+        };
+        match g.as_ref() {
+            Some(entry) if &entry.key == key => {
+                self.hits.fetch_add(1, Relaxed);
+                Some(entry.result.clone())
+            }
+            _ => {
+                self.misses.fetch_add(1, Relaxed);
+                None
+            }
         }
     }
 
@@ -121,6 +139,13 @@ impl OutlineCache {
         if let Ok(mut g) = self.inner.lock() {
             *g = Some(CachedEntry { key, result });
         }
+    }
+
+    /// Snapshot `(hits, misses)`. Used by `DaemonState`'s telemetry
+    /// collector to compute `cache_hit_rate`.
+    pub fn hits_misses(&self) -> (u64, u64) {
+        use std::sync::atomic::Ordering::Relaxed;
+        (self.hits.load(Relaxed), self.misses.load(Relaxed))
     }
 }
 

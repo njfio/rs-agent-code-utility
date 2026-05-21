@@ -213,7 +213,7 @@ fn main() -> ExitCode {
         // gracefully degrades to "all-zero counters" if the daemon
         // isn't reachable. Either way the command runs synchronously
         // without spinning up a workspace runtime.
-        return run_telemetry(action, &style, cli.json);
+        return run_telemetry(action, &style, cli.json, cli.workspace.as_deref());
     }
 
     // Resolve workspace before we open a runtime — workspace errors are
@@ -562,7 +562,12 @@ fn io_to_anyhow(e: std::io::Error) -> CmdError {
 /// the one exception: it does open a network connection (when
 /// compiled with `--features telemetry`), but that runs on the
 /// `ureq` blocking client, not Tokio.
-fn run_telemetry(action: &TelemetryCmd, style: &Style, json: bool) -> ExitCode {
+fn run_telemetry(
+    action: &TelemetryCmd,
+    style: &Style,
+    json: bool,
+    workspace_override: Option<&std::path::Path>,
+) -> ExitCode {
     use rts_mcp::telemetry as tlm;
 
     // Resolve the user's actual config dir up front. Honors
@@ -606,7 +611,7 @@ fn run_telemetry(action: &TelemetryCmd, style: &Style, json: bool) -> ExitCode {
             let id = tlm::read_install_id_in(&dir)
                 .unwrap_or(None)
                 .unwrap_or_else(|| "00000000-0000-4000-8000-000000000000".into());
-            let inputs = collect_payload_inputs_best_effort();
+            let inputs = collect_payload_inputs_best_effort(workspace_override);
             let payload = tlm::build_payload(&id, &inputs);
             println!("{}", tlm::payload_to_pretty_json(&payload));
             ExitCode::from(exit::OK as u8)
@@ -656,28 +661,152 @@ fn run_telemetry(action: &TelemetryCmd, style: &Style, json: bool) -> ExitCode {
                 ExitCode::from(exit::DAEMON_ERROR as u8)
             }
         },
-        TelemetryCmd::Flush => run_telemetry_flush(&dir, style, json),
+        TelemetryCmd::Flush => run_telemetry_flush(&dir, style, json, workspace_override),
     }
 }
 
-/// Collect inputs for the payload. For the v0 PR, latency
-/// percentiles aren't yet tracked on the daemon side (counters only);
-/// we surface zero maps so the wire shape stays stable while the
-/// future per-method timer work lands. Languages and workspace size
-/// are also placeholder zeros — populating them requires a daemon
-/// round-trip that the `_in`-without-mount surface doesn't yet
-/// expose, and adding it would balloon this PR. Future PRs can
-/// populate these without changing the wire shape.
-fn collect_payload_inputs_best_effort() -> rts_mcp::telemetry::PayloadInputs {
-    // Default-empty inputs. The flush path could add a `Daemon.Stats`
-    // call here later; for the privacy-review-blocked v0 we keep the
-    // wire shape stable but the values mostly zero. This is
-    // documented in `docs/telemetry.md` so users can see what's sent.
-    rts_mcp::telemetry::PayloadInputs::default()
+/// Collect inputs for the telemetry payload.
+///
+/// Best-effort: if a workspace marker is reachable and a daemon
+/// socket exists for that workspace, we fire one `Daemon.Telemetry`
+/// RPC (without auto-spawning a daemon — see
+/// [`fetch_daemon_telemetry`]) to pull the live collector snapshot.
+/// If anything in that chain fails (no workspace marker, no daemon
+/// running, RPC errors, malformed response) we fall back to the
+/// default zero-shaped inputs.
+///
+/// Why this matters: `rts telemetry preview` and `rts telemetry
+/// flush` both call this, and an unsuspecting user running `preview`
+/// before having mounted anything still sees a sensible "all zeros"
+/// payload — never a startup error.
+///
+/// Privacy: the daemon RPC's response is already bounded-enum keyed
+/// (`Daemon.Telemetry` constructs its map keys from closed enums in
+/// the daemon binary). The receiver-side `build_payload` runs the
+/// same allowlist filter a second time, so even a hypothetical
+/// daemon-side enum-allowlist regression cannot leak through.
+fn collect_payload_inputs_best_effort(
+    workspace_override: Option<&std::path::Path>,
+) -> rts_mcp::telemetry::PayloadInputs {
+    let workspace = match rts_mcp::cli::resolve_workspace(workspace_override) {
+        Ok(p) => p,
+        Err(_) => return rts_mcp::telemetry::PayloadInputs::default(),
+    };
+    fetch_daemon_telemetry(&workspace).unwrap_or_default()
+}
+
+/// Try to fetch `Daemon.Telemetry` from a daemon running for
+/// `workspace`. Returns `None` (not an error) on every failure
+/// mode — the caller falls back to zero-shaped inputs and the user
+/// sees a clean preview rather than a stack trace.
+///
+/// Auto-spawn is intentionally disabled: telemetry preview should
+/// never spin up a daemon as a side effect. Users who want fresh
+/// counters can `rts mount` first.
+fn fetch_daemon_telemetry(
+    workspace: &std::path::Path,
+) -> Option<rts_mcp::telemetry::PayloadInputs> {
+    use rts_mcp::socket;
+    // Build a single-threaded runtime for the one-shot RPC.
+    // Telemetry preview is a CLI command; latency matters more than
+    // throughput.
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .ok()?;
+    rt.block_on(async {
+        let canon = workspace.canonicalize().ok()?;
+        let sock_path = socket::workspace_socket_path(&canon).ok()?;
+        let stream = socket::try_connect(&sock_path).await?;
+        let daemon_bin = socket::resolve_daemon_bin().ok()?;
+        let mut client =
+            rts_mcp::daemon_client::DaemonClient::new(stream, daemon_bin, canon.clone());
+        // Bound the call: telemetry preview must never hang the CLI
+        // on a slow / hung daemon. 2s is generous — the RPC is
+        // synthetic (no disk I/O beyond one redb read-only iter).
+        let resp = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            client.call("Daemon.Telemetry", serde_json::json!({})),
+        )
+        .await
+        .ok()?
+        .ok()?;
+        parse_daemon_telemetry(&resp)
+    })
+}
+
+/// Parse the `Daemon.Telemetry` response into a `PayloadInputs`.
+/// Returns `None` if the response is missing required shape — the
+/// caller falls back to defaults.
+///
+/// The privacy boundary is enforced TWICE: the daemon constructs
+/// its response from closed-enum strings; the receiver's
+/// `build_payload` filters again through `METHOD_NAMES` /
+/// `ERROR_CODES` / `LANGUAGE_NAMES`. This function does not
+/// itself filter — it's a raw shape adaptor.
+fn parse_daemon_telemetry(resp: &serde_json::Value) -> Option<rts_mcp::telemetry::PayloadInputs> {
+    let obj = resp.as_object()?;
+    let uptime_secs = obj.get("uptime_secs").and_then(|v| v.as_u64()).unwrap_or(0);
+
+    let languages_raw: Vec<String> = obj
+        .get("languages_indexed")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let to_u64_map = |v: Option<&serde_json::Value>| -> std::collections::BTreeMap<String, u64> {
+        let mut out = std::collections::BTreeMap::new();
+        if let Some(obj) = v.and_then(|x| x.as_object()) {
+            for (k, val) in obj {
+                if let Some(n) = val.as_u64() {
+                    out.insert(k.clone(), n);
+                }
+            }
+        }
+        out
+    };
+    let method_counts_raw = to_u64_map(obj.get("method_counts"));
+    let method_latency_p50_raw = to_u64_map(obj.get("method_latency_p50_ms"));
+    let method_latency_p99_raw = to_u64_map(obj.get("method_latency_p99_ms"));
+    let error_counts_raw = to_u64_map(obj.get("error_counts"));
+
+    let cache_hit_rate = obj
+        .get("cache_hit_rate")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0);
+    let cold_walk_ms_p50 = obj
+        .get("cold_walk_ms_p50")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let workspace_files = obj
+        .get("workspace_files")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    Some(rts_mcp::telemetry::PayloadInputs {
+        uptime_secs,
+        languages_raw,
+        method_counts_raw,
+        method_latency_p50_raw,
+        method_latency_p99_raw,
+        error_counts_raw,
+        cache_hit_rate,
+        cold_walk_ms_p50,
+        workspace_files,
+    })
 }
 
 #[cfg(feature = "telemetry")]
-fn run_telemetry_flush(dir: &std::path::Path, style: &Style, json: bool) -> ExitCode {
+fn run_telemetry_flush(
+    dir: &std::path::Path,
+    style: &Style,
+    json: bool,
+    workspace_override: Option<&std::path::Path>,
+) -> ExitCode {
     use rts_mcp::telemetry as tlm;
     // Hard opt-in gate. Read both files; if either is missing or the
     // flag is false, refuse to send.
@@ -711,7 +840,7 @@ fn run_telemetry_flush(dir: &std::path::Path, style: &Style, json: bool) -> Exit
         return ExitCode::from(exit::DAEMON_ERROR as u8);
     }
 
-    let inputs = collect_payload_inputs_best_effort();
+    let inputs = collect_payload_inputs_best_effort(workspace_override);
     let payload = tlm::build_payload(&install_id, &inputs);
     let body = tlm::payload_to_compact_json(&payload);
 
@@ -763,7 +892,12 @@ fn run_telemetry_flush(dir: &std::path::Path, style: &Style, json: bool) -> Exit
 }
 
 #[cfg(not(feature = "telemetry"))]
-fn run_telemetry_flush(_dir: &std::path::Path, style: &Style, _json: bool) -> ExitCode {
+fn run_telemetry_flush(
+    _dir: &std::path::Path,
+    style: &Style,
+    _json: bool,
+    _workspace_override: Option<&std::path::Path>,
+) -> ExitCode {
     eprintln!(
         "{}: this binary was built without `--features telemetry`. \
          `flush` requires the HTTP client; rebuild with \

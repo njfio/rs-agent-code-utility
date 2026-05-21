@@ -91,6 +91,11 @@ impl SymbolRanks {
 #[derive(Default)]
 pub struct SymbolPagerankCache {
     inner: Mutex<Option<Arc<SymbolRanks>>>,
+    /// v0.6+ telemetry collector. Aggregated alongside the other
+    /// caches' counters in `DaemonState::aggregate_cache_hits` to
+    /// build the `cache_hit_rate` telemetry field.
+    hits: std::sync::atomic::AtomicU64,
+    misses: std::sync::atomic::AtomicU64,
 }
 
 impl SymbolPagerankCache {
@@ -101,15 +106,33 @@ impl SymbolPagerankCache {
     /// Return the cached ranks if they match `generation`. Cheap:
     /// one mutex acquire + one Arc clone. Returns `None` when the
     /// cache is empty or stale; the caller invokes [`Self::put`] to
-    /// fill the slot after a recompute.
+    /// fill the slot after a recompute. Bumps hit/miss counters as
+    /// a side-effect for telemetry aggregation.
     pub fn get(&self, generation: u64) -> Option<Arc<SymbolRanks>> {
-        let g = self.inner.lock().ok()?;
-        let entry = g.as_ref()?;
-        if entry.generation == generation {
-            Some(entry.clone())
-        } else {
-            None
+        use std::sync::atomic::Ordering::Relaxed;
+        let g = match self.inner.lock() {
+            Ok(g) => g,
+            Err(_) => {
+                self.misses.fetch_add(1, Relaxed);
+                return None;
+            }
+        };
+        match g.as_ref() {
+            Some(entry) if entry.generation == generation => {
+                self.hits.fetch_add(1, Relaxed);
+                Some(entry.clone())
+            }
+            _ => {
+                self.misses.fetch_add(1, Relaxed);
+                None
+            }
         }
+    }
+
+    /// Snapshot `(hits, misses)` for telemetry aggregation.
+    pub fn hits_misses(&self) -> (u64, u64) {
+        use std::sync::atomic::Ordering::Relaxed;
+        (self.hits.load(Relaxed), self.misses.load(Relaxed))
     }
 
     /// Replace the cache slot. The stored ranks are wrapped in `Arc`
