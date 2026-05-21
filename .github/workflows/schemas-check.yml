@@ -1,0 +1,50 @@
+name: protocol-v0 schemas check
+
+# Runs the `protocol_schemas` test suite (both the static-file
+# tests and the daemon-round-trip tests) on every PR. The
+# `--include-ignored` flag opts back into the two #[ignore]-by-default
+# tests that spawn the daemon binary — these are the ones that catch
+# schema-vs-code drift.
+#
+# Dedicated workflow file so concurrent PRs touching `.github/workflows/ci.yml`
+# don't conflict here. See `schemas/v0/README.md` for the
+# schema-versioning convention this guards.
+
+on:
+  push:
+    branches: [main, master, feature/**, feat/**]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  schemas:
+    name: protocol-v0 schemas drift check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-schemas-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build rts-daemon (so the round-trip test can spawn it)
+        run: cargo build -p rts-daemon --bin rts-daemon
+
+      - name: Schemas check (static parse + dispatcher coverage)
+        run: cargo test -p rts-daemon --test protocol_schemas
+
+      - name: Schemas check (live daemon round-trip)
+        run: cargo test -p rts-daemon --test protocol_schemas -- --include-ignored
