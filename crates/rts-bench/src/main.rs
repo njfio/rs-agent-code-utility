@@ -20,6 +20,7 @@ use serde_json::json;
 mod baseline;
 mod corpus;
 mod doctor;
+mod dogfood;
 mod footprint;
 mod footprint_helpers;
 mod latency;
@@ -218,6 +219,41 @@ enum Cmd {
         /// Default: no check, exits 0 regardless of metrics.
         #[arg(long)]
         check_coverage: Option<f64>,
+    },
+    /// Self-dogfood telemetry harness. Ingests a Claude Code session
+    /// JSONL transcript and reports how often the agent reached for
+    /// `Bash(grep|rg|find|cat|ls)` when an `mcp__rts__*` tool would
+    /// have served the same intent. Closes the evidence loop on
+    /// PR #121's tool-description audit: lets the maintainer measure
+    /// whether discoverability changes actually move the rts-vs-Bash
+    /// ratio in real sessions, instead of relying on vibes. Client-
+    /// side only — reads JSONL files already on disk; no daemon
+    /// counters; no opt-in telemetry pipeline (that's PR #115).
+    Dogfood {
+        /// Path to the Claude Code session JSONL (typically
+        /// `~/.claude/projects/<encoded-cwd>/<uuid>.jsonl`), or `-`
+        /// to read from stdin.
+        session: PathBuf,
+        /// Output format. `text` (default) renders a human checklist
+        /// with section headings the smoke tests pattern-match on;
+        /// `json` emits a schema-pinned report
+        /// (`schema_version: "dogfood-v0"`) for post-hoc pipelines.
+        #[arg(long, value_enum, default_value_t = dogfood::ReportFormat::Text)]
+        report: dogfood::ReportFormat,
+        /// Restrict candidate counting to sessions where rts appears
+        /// mounted (a `mcp__rts__*` tool_use appeared anywhere in the
+        /// transcript). Default: true — the "did the audit help?"
+        /// question is only meaningful when rts was actually available.
+        /// Pass `--rts-mounted-only=false` to score every Bash call
+        /// regardless of session context.
+        #[arg(
+            long,
+            default_value_t = true,
+            action = clap::ArgAction::Set,
+            num_args = 0..=1,
+            default_missing_value = "true"
+        )]
+        rts_mounted_only: bool,
     },
 }
 
@@ -616,6 +652,20 @@ async fn main() -> Result<()> {
             check_coverage,
         } => run_semantic(corpus, workspace, top_k, out, dry_run, check_coverage).await,
         Cmd::RealRepos { sub } => run_real_repos(sub).await,
+        Cmd::Dogfood {
+            session,
+            report,
+            rts_mounted_only,
+        } => {
+            // Dogfood is a pure CPU/file-IO operation — no daemon, no
+            // network, no tokio handles. Block on the synchronous
+            // implementation rather than spawning anything.
+            dogfood::run(dogfood::DogfoodArgs {
+                session,
+                report,
+                rts_mounted_only,
+            })
+        }
     }
 }
 
