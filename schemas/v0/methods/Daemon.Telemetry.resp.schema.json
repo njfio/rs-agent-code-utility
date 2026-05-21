@@ -23,7 +23,12 @@
       "description": "p50 cold-walk duration in ms; `null` until at least one cold walk has completed.",
       "type": ["integer", "null"]
     },
-    "workspace_files":        { "type": "integer", "minimum": 0 }
+    "workspace_files":        { "type": "integer", "minimum": 0 },
+    "unresolved_refs_count": {
+      "description": "Capability `daemon_telemetry_unresolved_refs_count`. Number of entries in the UNRESOLVED_REFS multimap — references the indexer couldn't bind to a defined symbol (forward references awaiting a later commit, or true externals like stdlib `Vec`/`println!`). Point-in-time; lower is better. 0 pre-Mount.",
+      "type": "integer",
+      "minimum": 0
+    }
   },
   "required": [
     "uptime_secs",
@@ -34,6 +39,7 @@
     "error_counts",
     "cache_hit_rate",
     "cold_walk_ms_p50",
-    "workspace_files"
+    "workspace_files",
+    "unresolved_refs_count"
   ]
 }

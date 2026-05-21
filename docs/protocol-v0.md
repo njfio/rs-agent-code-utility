@@ -1005,6 +1005,33 @@ Emitted iff the connection opted in via `Workspace.Mount`'s `enable_telemetry: t
 }
 ```
 
+### 7.11b `Daemon.Telemetry` (RPC, v0.6+, capability `daemon_telemetry`)
+
+Pull-style snapshot of the daemon's raw telemetry collector inputs. Distinct from the §7.11 notification (which is push-style and per-event). The receiver-side bounded-enum filter still runs in `rts-mcp`; this RPC just hands the collectors their data without forcing the CLI to mount the workspace twice. HTTP-free — the telemetry POST lives behind a separate `--features telemetry` gate in the `rts` binary.
+
+**`params`**: `{}`
+**`result`**:
+
+```jsonc
+{
+  "uptime_secs":            12345,
+  "languages_indexed":      ["rust", "python"],
+  "method_counts":          { "Index.FindSymbol": 7, "Index.Grep": 23 },
+  "method_latency_p50_ms":  { "Index.FindSymbol": 2 },
+  "method_latency_p99_ms":  { "Index.FindSymbol": 8 },
+  "error_counts":           { "INVALID_PARAMS": 3 },
+  "cache_hit_rate":         0.84,
+  "cold_walk_ms_p50":       230,
+  "workspace_files":        47123,
+  "unresolved_refs_count":  117
+}
+```
+
+Field notes:
+
+- `unresolved_refs_count` (u64, capability `daemon_telemetry_unresolved_refs_count`) — size of the UNRESOLVED_REFS multimap at snapshot time. Each row is a reference the resolver couldn't bind to a defined symbol; forward references decrement the count when their callee finally lands in a later commit, while true externals (stdlib `Vec`, `println!`, etc.) accumulate permanently. Lower is better. A regression that breaks an extractor surfaces as the count jumping up — the real-repo CI bench gates on this.
+- Map keys are sourced from closed-enum strings (`CallCounters::snapshot`, `MethodLatencyHistograms::enumerated`, `ErrorCode::as_wire_str`, `writer::lang_tag_to_name`); no user-controlled identifiers reach the wire.
+
 ---
 
 ## 8. Cold-state semantics

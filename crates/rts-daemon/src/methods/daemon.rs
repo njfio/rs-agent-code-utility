@@ -135,6 +135,15 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // without forcing the CLI to mount the workspace twice. Clients
     // that don't ship the telemetry feature ignore the capability.
     "daemon_telemetry",
+    // v0.6+ — `Daemon.Telemetry.unresolved_refs_count` (u64): the
+    // size of the UNRESOLVED_REFS multimap at snapshot time. Each
+    // row is a reference the resolver couldn't bind to a defined
+    // symbol — forward references awaiting a later commit, or true
+    // externals (stdlib `Vec`, `println!`, etc). A regression that
+    // breaks an extractor surfaces as the count jumping up; the
+    // real-repo CI bench gates on this. Lets clients gate on the
+    // field's presence without protocol version sniffing.
+    "daemon_telemetry_unresolved_refs_count",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
@@ -353,9 +362,19 @@ pub async fn stats(
 ///   "error_counts":           { "INVALID_PARAMS": 3 },
 ///   "cache_hit_rate":         0.84,
 ///   "cold_walk_ms_p50":       230,
-///   "workspace_files":        47123
+///   "workspace_files":        47123,
+///   "unresolved_refs_count":  117
 /// }
 /// ```
+///
+/// `unresolved_refs_count` (u64, capability
+/// `daemon_telemetry_unresolved_refs_count`) is the size of the
+/// UNRESOLVED_REFS multimap at snapshot time: references the resolver
+/// couldn't bind to a defined symbol. Forward references decrement the
+/// count when their callee finally lands in a later commit; true
+/// externals (stdlib `Vec`, `println!`, etc.) accumulate permanently.
+/// Lower is better. Real-repo CI bench (PR #123) gates regressions on
+/// this metric.
 ///
 /// Method counts use the same `CallCounters::snapshot` map shape as
 /// `Daemon.Stats`; the `unknown_method` synthetic key is filtered
@@ -399,8 +418,12 @@ pub async fn telemetry(
     // tags, map each to its telemetry-bounded enum string. Unknown
     // tags (corrupt META, schema-newer rows) silently drop —
     // defense in depth against bounded-enum violations.
+    //
+    // unresolved_refs_count comes from the same store snapshot so we
+    // amortize the workspace-mutex lock to one acquisition.
     let mut languages_indexed: std::collections::BTreeSet<&'static str> = Default::default();
     let mut workspace_files: u64 = 0;
+    let mut unresolved_refs_count: u64 = 0;
     if let Ok(store_guard) = state.store.lock() {
         if let Some(store) = store_guard.as_ref() {
             if let Ok(tag_counts) = store.language_tag_counts() {
@@ -410,6 +433,9 @@ pub async fn telemetry(
                     }
                     workspace_files = workspace_files.saturating_add(*count);
                 }
+            }
+            if let Ok(n) = store.unresolved_refs_count() {
+                unresolved_refs_count = n;
             }
         }
     }
@@ -425,6 +451,7 @@ pub async fn telemetry(
         "cache_hit_rate":        cache_hit_rate,
         "cold_walk_ms_p50":      cold_walk_ms_p50,
         "workspace_files":       workspace_files,
+        "unresolved_refs_count": unresolved_refs_count,
     }))
 }
 
