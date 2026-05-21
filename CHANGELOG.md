@@ -7,6 +7,305 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+The v0.6 capability arc — 22 PRs (#109–#129) landed across 2026-05-19 /
+05-20 / 05-21 — broadens the retrieval surface (Grep v2, AST-precise
+call edges for 4 new languages, the `rts` human CLI, machine-readable
+JSON Schemas), hardens the daemon for long-running agent loops
+(persisted cold-mount + reconciliation worker, cancellable queries, MCP
+heartbeat + reconnect, telemetry collectors, `unresolved_refs` GC), and
+puts an operability surface around the first-run path (`rts-bench
+doctor`, `Daemon.Stats v2`, opt-in `rts telemetry`, daemon-side latency
+collectors exposed as the new `daemon_telemetry` MCP tool, a real-repo
+nightly regression bench against tokio / flask / gin). Per-PR
+fragments live under [`changelog.d/`](changelog.d/) and will be
+concatenated into a single version section when the maintainer cuts
+the `v0.6.0` tag.
+
+### Added
+
+#### Retrieval surface
+
+- **`Index.Grep` v2 — multi-line regex + structural queries +
+  within-symbol scope (#110).** Five additive optional input fields
+  (`multiline`, `structural_query`, `within_symbol` +
+  `within_symbol_allow_overload`, `language`) compose on the same MCP
+  tool. v1 callers see byte-identical responses on the unchanged code
+  path. Adds 11 new `data.code` sub-codes under `INVALID_PARAMS`, a
+  predicate whitelist on agent-supplied S-expression queries, an LRU
+  cache keyed on `(language, query_text)`, three new `Daemon.Stats`
+  sub-counters, and four new capability strings (`index_grep_multiline`,
+  `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2`).
+  Resource budgets — `MULTILINE_DFA_SIZE_LIMIT = 32 MiB`,
+  `STRUCTURAL_WALL_CLOCK_MS = 5 000`, `STRUCTURAL_MAX_ROWS = 4 096`,
+  `STRUCTURAL_MAX_CAPTURE_BYTES = 8 192`, `WITHIN_SYMBOL_MAX_DEFS = 16`,
+  `QUERY_LRU_CAPACITY = 64` — return `truncated: true` + metadata, not
+  errors. See [`docs/plans/2026-05-18-002-feat-index-grep-v2-plan.md`](docs/plans/2026-05-18-002-feat-index-grep-v2-plan.md)
+  and `crates/rts-daemon/src/methods/grep_v2/`.
+
+- **AST-precise call edges for Java, PHP, Swift, and C# (#116).**
+  `Index.FindCallers` and the closure walker now use tree-sitter
+  queries (not regex) on Java, PHP, Swift, and C# files. Coverage of
+  AST-precise call edges goes from 6 of 12 indexed languages
+  (Rust/Python/Go/Ruby/JS/TS) to 10 of 12. C and C++ remain on the
+  regex fallback for now — function pointers parse identical to
+  identifier references, so the precision win there is smaller. Four
+  new query strings in `crates/rts-daemon/src/language.rs` (`JAVA_REFS`,
+  `PHP_REFS`, `SWIFT_REFS`, `CSHARP_REFS`) registered against the
+  central `LanguageInfo` table and the `cached_refs_query` cache.
+
+- **PHP `method_declaration` symbols (#118).** `extract_php_symbols`
+  now indexes methods inside `class_declaration`,
+  `interface_declaration`, and `trait_declaration`, emitting
+  `Symbol { kind: "method", ... }` with the bare method name (matching
+  the PHP_REFS query's capture and the Java/Ruby extractor
+  convention). Visibility modifiers (`public`/`private`/`protected`)
+  propagate to `Symbol.visibility`; methods without an explicit
+  modifier default to `public` per the PHP language rule. End-to-end
+  PHP `find_callers` unblocked.
+
+#### Daemon lifecycle + correctness
+
+- **Persisted cold-mount (#111).** Daemon restarts now trust the
+  existing on-disk redb when a composite `META` fingerprint matches —
+  no more paying the ~6 s cold-walk tax per daemon restart. Five new
+  META keys (`daemon_binary_version`, `grammar_versions`,
+  `gitignore_content_hash`, `fingerprint_combined`,
+  `reconciliation_in_progress`); a new `crates/rts-daemon/build.rs`
+  bakes the grammar version list into the binary at compile time.
+  `Workspace.Mount` branches on the fingerprint with diagnostic-quality
+  reason labels (`schema:3→4`, `binary:0.5.5→0.6.0`,
+  `grammar:tree-sitter-rust:0.23→0.24`, `gitignore`,
+  `empty_or_missing_fingerprint`). `wipe_data_tables()` drops every
+  data table inside one redb write txn with `Durability::Immediate`
+  while preserving META.
+
+- **Reconciliation worker (#112).** A new `crates/rts-daemon/src/reconciler.rs`
+  module runs once on the `MountSource::Rehydrate` branch (fresh,
+  cold-walk, and wipe-after-invalidation mounts skip it). Walks the
+  mount root with the same ignore-respecting `ignore::WalkBuilder` used
+  by the cold-walk path, compares on-disk `mtime_ns` against the stored
+  `FileMeta`, confirms drift with a blake3 hash, and emits
+  `WatchEvent::Touched` / `WatchEvent::Removed` events into the
+  existing watcher channel. A token-bucket rate-limits emission at 64
+  events/sec by default so a branch-switch with thousands of touched
+  files won't stall the foreground writer. Surfaces a
+  `Daemon.Stats.reconciliation` object with
+  `{ last_run_ns, files_scanned, files_changed, files_removed, throttled }`
+  and advertises a `reconciliation_worker` capability.
+
+- **Cancellable queries (#114).** Optional `cancel_id: String` field on
+  every JSON-RPC request envelope; a new `Daemon.Cancel { cancel_id }`
+  method returns `{ cancelled: bool }` (idempotent on unknown ids); a
+  new `CANCELLED` error code (custom JSON-RPC `-32099`) is returned by
+  handlers whose token tripped. Cancellable handlers in v0.6:
+  `Index.Grep`, `Index.FindSymbol`, `Index.FindCallers`,
+  `Index.ReadSymbol`, `Index.Outline`, `Workspace.Mount`. Registry
+  lifecycle is RAII via `CancelGuard` — handlers that panic, error, or
+  return normally all clean up the same way. New capability string
+  `cancellable_queries`; clients gate on this before sending `cancel_id`
+  against an unknown daemon vintage. `Daemon.Stats.cancellations.total`
+  + `Daemon.Stats.cancellations.in_flight` expose registry telemetry.
+
+- **MCP shim resilience — heartbeat, reconnect-with-backoff, structured
+  disconnection (#117).** A new `crates/rts-mcp/src/connection.rs`
+  module wraps the per-workspace `DaemonClient` plus two background
+  tokio tasks. Heartbeat loop issues `Daemon.Ping` every
+  `RTS_MCP_HEARTBEAT_INTERVAL_SECS` (default 10s) with a per-call
+  timeout of `RTS_MCP_HEARTBEAT_TIMEOUT_SECS` (default 3s); a failed
+  ping demotes state to `Reconnecting`. Reconnect schedule is
+  `1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s` (configurable via
+  `RTS_MCP_RECONNECT_MAX_ATTEMPTS` and `RTS_MCP_RECONNECT_CEILING_SECS`);
+  after the bounded attempts state transitions to `Down`, but retries
+  continue at the ceiling forever. Three-state machine
+  (`Connected | Reconnecting | Down`) wrapped in `Arc<RwLock<…>>`.
+  Two new shim-emitted error codes: `DAEMON_UNAVAILABLE` (`-32098`,
+  transient, with `retry_after_ms` hint) and `DAEMON_DOWN` (`-32097`,
+  sustained outage, with `first_failure_ms_ago`). Both `rts-mcp` and
+  the `rts` CLI binary share the `ConnectionManager`.
+
+#### Operability + the human + telemetry surface
+
+- **`rts-bench doctor` + `Daemon.Stats v2` (#109).** New `rts-bench doctor`
+  subcommand exposes five sections (`binary`, `daemon`,
+  `mcp_registration`, `hook`, `workspace_index`) in normative order
+  with snapshot-stable output and an explicit exit-code contract
+  (`0` no-FAIL, `1` at-least-one-FAIL, `2` doctor itself failed,
+  `>=3` reserved). MCP-registration probing covers Claude Code,
+  Cursor, Continue, Aider, Cline. Every WARN/FAIL row may carry an
+  inline `fix` block with a closed-class taxonomy of 10 fix variants
+  and a copy-pasteable `command`. The companion `Daemon.Stats v2`
+  surface adds `pinned_workspace_path`, `workspace_id`,
+  `index_generation`, and `cold_walk_completed_at_ms` under a new
+  `daemon_stats_v2` capability; pre-mount calls keep the v1 shape
+  exactly. JSON output schema versioned as `doctor-v0` in
+  [`docs/doctor-schema.md`](docs/doctor-schema.md).
+
+- **`rts` — human-facing CLI over the same JSON-RPC surface (#113).** A
+  second binary `rts` on the `rts-mcp` crate wraps every method the
+  MCP server already exposes to agents, sharing `socket` +
+  `daemon_client` plumbing via the crate's library surface (so MCP and
+  CLI paths can never drift). Subcommands: `mount`, `find`, `grep`,
+  `callers`, `outline`, `read`, `stats`, `doctor` (delegates), plus
+  `completions <SHELL>` for bash/zsh/fish/powershell/elvish. Global
+  flags `--workspace`, `--json` (machine-readable, composes with
+  `jq`), `--no-color` (honors `NO_COLOR`), `--timeout <MS>`. Exit
+  codes documented as a public contract (0 success, 1 zero-results
+  matches `rg`, 2 invalid argument, 3 daemon error, 4 timeout, 5
+  workspace resolution error). Reuses the auto-spawn flow; set
+  `RTS_NO_AUTOSPAWN=1` to disable. Documented in
+  [`docs/cli.md`](docs/cli.md).
+
+- **Anonymous opt-in telemetry (#115).** `rts` ships **opt-in**
+  telemetry — counters and latencies only, no paths/content/symbol
+  names — off by default. Activate with `rts telemetry enable`; the
+  daemon's once-per-day ticker sends a single anonymous JSON payload
+  to the receiver and stops on `rts telemetry disable` (which deletes
+  the local install-id). Subcommands `rts telemetry status / preview /
+  enable / disable / flush`. Schema frozen at `schema_version: 1`;
+  every map key is a static `&'static str` from a bounded allowlist
+  in `crates/rts-mcp/src/telemetry.rs`. HTTP support is feature-gated
+  (`--features telemetry` on `rts-mcp` and `rts-daemon`), so default
+  workspace builds still link zero HTTP code paths. Reference
+  receiver in-tree under `telemetry-receiver/`. See
+  [`docs/telemetry.md`](docs/telemetry.md).
+
+- **JSON Schema export for the protocol-v0 wire contract (#122).** New
+  [`schemas/v0/`](schemas/v0/) directory exports JSON Schema 2020-12
+  documents for every `params` and `result` shape the daemon serves:
+  `envelope.schema.json`, `error.schema.json`, and `.req` / `.resp`
+  schema files for all 17 methods the daemon dispatcher routes (34
+  method-schema files total). New
+  `crates/rts-daemon/tests/protocol_schemas.rs` enforces four
+  properties: every dispatcher method has both schema files, every
+  schema parses as a valid JSON Schema 2020-12 document, every real
+  response validates against its `.resp` schema (CI-only), and error
+  responses match `error.schema.json` (CI-only). A dedicated
+  `.github/workflows/schemas-check.yml` runs the full suite on every
+  PR.
+
+- **Real-repo CI regression bench (#123).** `rts-bench` gains a
+  `real-repos` subcommand (`run` / `baseline` / `compare`) that clones
+  a pinned set of representative OSS repos (tokio @ 1.47.0, flask @
+  3.1.0, gin @ v1.10.0), indexes each, captures core indexer metrics,
+  and compares them against a committed baseline. A new nightly
+  GitHub Actions workflow (`real-repo-bench.yml`) runs `compare` at
+  07:00 UTC. Gated metrics: `symbol_count` (exact), `files_indexed`
+  (exact), `cold_walk_ms` (±25 %), `memory_peak_rss_kb` (±15 %).
+  Latency / language-set fields shipped as `Option`-wrapped with
+  `TODO(post-G)` callouts pending the `daemon_telemetry` MCP wiring
+  that landed in #124 + #127.
+
+- **`Daemon.Telemetry` exposed as an MCP tool (#124).** Adds the 10th
+  `#[tool]` function `daemon_telemetry` to `crates/rts-mcp/src/server.rs`,
+  forwarding the existing `Daemon.Telemetry` JSON-RPC method over the
+  connection manager. Response includes `uptime_secs`,
+  `languages_indexed`, `method_counts`, `method_latency_p50_ms`,
+  `method_latency_p99_ms`, `error_counts`, `cache_hit_rate`,
+  `cold_walk_ms_p50`, `workspace_files`. Pure routing addition; the
+  daemon-side handler is already covered by #115 and #120's tests.
+
+- **`rts-bench dogfood` — measure rts vs Bash tool-selection (#125).**
+  Round-12 honorable-mention companion to #121's tool-descriptions
+  audit. Ingests a Claude Code session JSONL file (or stdin with `-`)
+  and reports tool calls per source, `Bash` calls that pattern-match
+  workspace navigation and could have used an `mcp__rts__*` tool, and
+  the rts-vs-Bash ratio in code-navigation contexts. Classifier
+  patterns documented in `crates/rts-bench/src/dogfood/classify.rs`.
+  Client-side local analysis only — no network, no daemon counters,
+  no remote pings. Manual maintainer tool.
+
+- **`Daemon.Telemetry.unresolved_refs_count` (#126).** New
+  `Store::unresolved_refs_count() -> Result<u64, redb::Error>` reads
+  the size of the `UNRESOLVED_REFS` multimap via `MultimapTable::len()`
+  (O(1)). `Daemon.Telemetry` emits the value as a new top-level
+  `unresolved_refs_count: u64` field, gated by capability
+  `daemon_telemetry_unresolved_refs_count`. A regression that breaks
+  an extractor surfaces as the count jumping up for that language's
+  fixtures — exactly the class of bug that #118's PHP
+  `method_declaration` gap would have moved early.
+
+- **`UNRESOLVED_REFS` GC + bounded telemetry counters (#129).** New
+  `Store::gc_unresolved_refs_for_removed_files()` walks each
+  removed-file path through the `FID_UNRESOLVED` reverse index and
+  drops `UNRESOLVED_REFS[name]` rows whose `RefSite.fid` matches.
+  Invoked by the writer's `flush()` before each `commit_batch` that
+  carries removals. Two new `AtomicU64` counters on `DaemonState`
+  (`unresolved_refs_gc_runs_total`, `unresolved_refs_gc_dropped_total`)
+  surface as new top-level u64 fields on `Daemon.Telemetry`, gated by
+  capability `daemon_telemetry_unresolved_refs_gc`. Strategy A
+  (file-removal-driven, no background timer, no policy knobs);
+  Strategy B (TTL-driven) explicitly deferred until evidence lands.
+  With GC wired in, `unresolved_refs_count` becomes a true regression
+  signal: a sudden jump without `unresolved_refs_gc_dropped_total`
+  advancing means an extractor regression, not a deletion event.
+
+### Changed
+
+- **Daemon-side telemetry latency + cache-hit collectors populated
+  (#120).** PR #115 reserved the collector fields in the
+  `Daemon.Telemetry` payload; #120 fills them in with real values
+  from the per-method histograms and the response cache, so the
+  payload stops shipping zeros for `method_latency_p50_ms`,
+  `method_latency_p99_ms`, and `cache_hit_rate`.
+
+- **MCP tool descriptions audit (#121).** Rewrote every agent-facing
+  tool's `description` string in `crates/rts-mcp/src/server.rs` (8
+  audited tools) to follow a comparative + trigger-phrase template
+  — `<one-line what-it-does>. <when-to-use vs Bash alternative>.
+  <trigger phrases>. <cost-asymmetry claim>.` Motivation: during the
+  2026-05-19/20/21 multi-day session the orchestrating agent used
+  `Bash(grep)` 30+ times against rts's own source code instead of
+  `mcp__rts__grep`, even with rts mounted and the `PreToolUse:Bash`
+  nudge hook firing on every call. The hook firing without correction
+  is the signal: only stronger descriptions can pre-empt the wrong
+  tool choice. New
+  `crates/rts-mcp/tests/tool_descriptions.rs` asserts comparative
+  clauses, trigger phrases, [80, 800] char bounds, and JSON round-trip
+  on the live `tools/list` response.
+
+- **`rts-bench real-repos`: drop `Option` wrapping on latency + language
+  fields (#127).** PR #123 had to mark `languages_indexed`,
+  `find_symbol_latency_p50_ms`, `find_symbol_latency_p99_ms`,
+  `grep_latency_p50_ms`, and `grep_latency_p99_ms` as `Option` because
+  `Daemon.Telemetry` was reachable on the daemon's JSON-RPC wire but
+  not routed through the MCP tool list. #124 closed that gap;
+  #127 finishes the work — `run_one_repo` now calls `daemon_telemetry`
+  via the MCP tool surface and populates the five fields as bare
+  types. `TolerancePolicy` gains a `latency_p50_pct: f64` (default
+  50 %, intentionally wide for single-warm-up CI noise) alongside the
+  existing `latency_p99_pct`. `unresolved_refs_count` stays
+  `Option<u64>` until the daemon-side surface lands (which it did, in
+  #126).
+
+### Fixed
+
+- **`cancel_in_flight` integration tests stabilized (#119).** The three
+  tests in `crates/rts-daemon/tests/cancel_in_flight.rs` (added in
+  #114) flaked under `cargo test --workspace` from wall-clock cushions
+  (`tokio::time::sleep(50ms)`) that lost the race under parallel-test
+  CPU contention. Replace every fixed sleep with a barrier that polls
+  `Daemon.Stats.cancellations.in_flight` until it satisfies the
+  test's precondition (`>= 1` for live cancel, `== 0` for stale
+  cancel). Test 1 also moves `Daemon.Cancel` onto a separate
+  connection from the slow grep so the test can probe `Daemon.Stats`
+  mid-flight to synchronize. Verified 20/20 passing in release mode
+  at default parallel test-threads, and 20/20 passing under 8-core
+  CPU pressure.
+
+- **`connection_resilience` integration tests stabilized (#128).** The
+  four tests in `crates/rts-mcp/tests/connection_resilience.rs`
+  (added in #117) flaked under `cargo test --release -p rts-mcp`
+  because the test helper `read_one_response` capped each MCP response
+  read at a hardcoded `Duration::from_secs(8)`. The outer poll loops
+  already encoded the real per-scenario tolerance (10 s for first
+  call, 30 s for SIGKILL recovery + cold respawn), but the inner 8 s
+  cap short-circuited any outer deadline > 8 s, so the resilience
+  layer's intended recovery windows were untestable under
+  parallel-cold-mount contention. Fix replaces the hardcoded duration
+  with a `deadline: Instant` parameter threaded from the caller.
+  Verified 20/20 passing in release at default parallel test-threads,
+  20/20 in debug, and 20/20 under 20-core CPU pressure.
+
 ## [0.5.5] - 2026-05-16
 
 ### `rts-daemon` writer — cold-walk hold-off fixes silent ref-graph holes
