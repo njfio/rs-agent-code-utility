@@ -19,6 +19,22 @@ mentions `evict`, regardless of identifier name. The graph-only ranker
 sits at **100% answerable coverage** on a verified rts-core corpus (see
 [CHANGELOG](CHANGELOG.md) for the per-PR journey from 40% → 100%).
 
+**v0.6 (HEAD, untagged)** broadens the retrieval surface and hardens the
+daemon for long-running agent loops: `Index.Grep` v2 composes multiline
+regex, structural tree-sitter queries, and within-symbol scoping on the
+same tool; AST-precise call edges now cover 10 of the 12 indexed
+languages (added Java, PHP, Swift, C#); persisted cold-mount lets the
+daemon trust an existing redb across restarts and falls back to a
+reconciliation worker that catches on-disk drift; in-flight queries are
+cancellable through a new `Daemon.Cancel` method; the MCP shim survives
+daemon hiccups via a heartbeat + reconnect-with-backoff loop; opt-in
+anonymous telemetry (`rts telemetry`) lets the project make roadmap
+calls on aggregate signal; a new `rts` human CLI (`find`, `grep`,
+`callers`, `outline`, `read`, `stats`) sits alongside `rts-mcp`; every
+protocol-v0 method now ships a machine-readable JSON Schema under
+[`schemas/v0/`](schemas/v0/); and a nightly real-repo regression bench
+against tokio / flask / gin gates indexer metrics in CI.
+
 | measurement | baseline | MCP | reduction |
 |---|---:|---:|---:|
 | Locate a function's definition (`parse` in `rts-core`) | 259,607 tokens | 148 tokens | **99.9%** |
@@ -33,11 +49,13 @@ Anthropic SDK oracle (`--with-network`) lands later.
 
 ## Status
 
-**Active pre-release.** Latest tag: `v0.5.1`. The v0.3 code-graph KB plan
-is complete and v0.5 lights up doc-comment retrieval across 10
-languages; see [CHANGELOG.md](CHANGELOG.md) for the per-PR trail.
-Pre-pivot library + CLI live in [`archive/`](archive/) for git history;
-no longer maintained.
+**Active pre-release.** Latest tag: `v0.5.5`. The v0.6 capability surface
+(Grep v2, persisted cold-mount + reconciliation, cancellable queries,
+opt-in telemetry, the `rts` human CLI, AST-precise call edges for
+Java/PHP/Swift/C#, JSON Schemas under [`schemas/v0/`](schemas/v0/), and
+a real-repo CI regression bench) is on HEAD; the `v0.6.0` tag cut is the
+maintainer's next release action. Pre-pivot library + CLI live in
+[`archive/`](archive/) for git history; no longer maintained.
 
 | Phase | Status |
 |---|---|
@@ -53,27 +71,41 @@ no longer maintained.
 | **v0.3 — Persistent code-graph KB** | ✅ (`Index.FindCallers`, `Index.ImpactOf`, symbol PageRank, indexed closure walker; U0-U5 shipped alpha.31-alpha.35) |
 | **v0.4 — Semantic eval harness** | ✅ (graph-only ranker driven from a verified rts-core corpus; CI invariant locks `combined_answerable_rate`) |
 | **v0.5 — Doc-comment retrieval** | ✅ (extractor for 10 languages, `find_symbol.doc` + `doc_contains` + `pre_filter_count`, doc-IDF in the ranker; 100% answerable coverage on the rts-core corpus) |
+| **v0.6 — Retrieval breadth (HEAD)** | ✅ (`Index.Grep` v2: multiline regex + structural tree-sitter queries + within-symbol scope; AST-precise call edges for 10/12 languages incl. Java/PHP/Swift/C#) |
+| **v0.6 — Daemon resilience (HEAD)** | ✅ (persisted cold-mount + reconciliation worker, cancellable queries via `Daemon.Cancel`, MCP heartbeat + reconnect-with-backoff with `DAEMON_UNAVAILABLE`/`DAEMON_DOWN` error codes) |
+| **v0.6 — Operability (HEAD)** | ✅ (`rts-bench doctor`, `Daemon.Stats v2`, `rts` human CLI, opt-in `rts telemetry`, machine-readable JSON Schemas under `schemas/v0/`, nightly real-repo regression bench, `daemon_telemetry` MCP tool) |
 
 ## Architecture
 
 ```
-   Agent (Claude Code, Cursor, …)
-              │ stdio JSON-RPC, rmcp 1.6
-              ▼
-       crates/rts-mcp        ◀── per-agent process; exposes 7 tools
-              │ Unix-domain socket, protocol-v0
-              ▼
-      crates/rts-daemon      ◀── workspace-pinned, auto-spawned
-              │
-      ┌───────┴────────────────┐
-      ▼                        ▼
-   redb index             notify watcher
-   ┌─────────────────┐    (150 ms debounce,
-   │ files, defs,    │     gitignore-aware,
-   │ refs (v0.3),    │     poll fallback)
-   │ fid_refs,       │
-   │ sid_refs_out    │
-   └─────────────────┘
+   Agent (Claude Code, Cursor, …)        Terminal user
+              │ stdio JSON-RPC                 │
+              │ rmcp 1.6                       │
+              ▼                                ▼
+       crates/rts-mcp                  rts (human CLI; v0.6+)
+       (10 MCP tools;                  shares the rts-mcp library:
+        heartbeat + reconnect          socket + daemon_client +
+        with backoff; v0.6+)           ConnectionManager
+              │                                │
+              └──────────────┬─────────────────┘
+                             │ Unix-domain socket, protocol-v0
+                             ▼
+                     crates/rts-daemon   ◀── workspace-pinned, auto-spawned
+                             │
+                ┌────────────┴─────────────┐
+                ▼                          ▼
+          redb index                  notify watcher
+          ┌─────────────────────┐    (150 ms debounce,
+          │ META (v0.6+):       │     gitignore-aware,
+          │   schema_version,   │     poll fallback)
+          │   fingerprint_*     │    + reconciliation
+          │ FILES, DEFS,        │      worker on rehydrate
+          │   PATH_TO_FID,      │      (v0.6+)
+          │ REFS, FID_REFS,     │
+          │   SID_REFS_OUT,     │
+          │ UNRESOLVED_REFS     │
+          │   (+ GC, v0.6+)     │
+          └─────────────────────┘
 ```
 
 The redb store carries both halves of the code graph: `defs` + `fid_defs`
@@ -81,6 +113,16 @@ for "where is X defined?" and (v0.3+) `refs` + `fid_refs` + `sid_refs_out`
 for "who calls X?", "what does X reference?", and transitive impact
 queries. AST-precise via tags.scm on Rust/Python/Go/Ruby/JS/TS/Java/PHP/Swift/C#
 (10 of the 12 indexed languages); regex fallback for C and C++.
+
+The v0.6 `META` table persists a composite fingerprint
+(`daemon_binary_version`, `grammar_versions`, `gitignore_content_hash`,
+`fingerprint_combined`) so daemon restarts can skip the cold walk and
+**rehydrate** from the existing redb when the fingerprint matches —
+`Daemon.Stats` reports the decision via the `mount_source` field
+(`rehydrate` / `cold_walk` / `cold_walk_after_invalidation:<reason>` /
+`cold_walk_after_crash`). The reconciliation worker scans for on-disk
+drift after a rehydrate and emits `WatchEvent::Touched`/`Removed` events
+into the same writer drain that handles live edits.
 
 Both halves are local-only and offline. The daemon is single-uid via
 SO_PEERCRED / LOCAL_PEERCRED, refuses to run as root, sets
@@ -114,7 +156,7 @@ below.
 
 ```sh
 # Pick the right target for your platform
-VERSION=0.5.1
+VERSION=0.5.5
 TARGET=aarch64-apple-darwin
 URL="https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz"
 
@@ -160,34 +202,40 @@ Other agents and the full troubleshooting matrix live in
 [docs/install.md](docs/install.md). The human-facing CLI surface is
 documented in [docs/cli.md](docs/cli.md).
 
-## The seven tools
+## The ten MCP tools
 
 All `readOnlyHint=true`, `destructiveHint=false`, `openWorldHint=false`,
 `idempotentHint=true`. Full descriptions (with explicit when-to-use-which
-prose) are pinned per protocol-v0 §7 in
+prose, audited in v0.6 to win the tool-selection moment) are pinned per
+protocol-v0 §7 in
 [crates/rts-mcp/src/server.rs](crates/rts-mcp/src/server.rs).
 
 | tool | input | returns |
 |---|---|---|
 | `outline_workspace` | `{ glob?, token_budget?, mentioned_files?, mentioned_idents? }` | Token-budgeted structural map with file-level PageRank (Aider repo-map algorithm). |
-| `find_symbol` | `{ name? \| pattern?, kind?, file?, sort?, limit?, doc_contains? }` | List of matches with `qualified_name`, `kind`, `file`, byte range, **real `rank_score`** (symbol-level PageRank), and `doc` (extracted comment, 10 languages). `pattern` is glob (`*`/`?`); default sort is descending rank; pass `sort: "lexical"` to opt out. `doc_contains` substring-filters by doc text (case-insensitive) for behavior-shaped queries; when the filter is active the response also carries `pre_filter_count` so an empty result set is distinguishable from "nothing matched the name". |
+| `find_symbol` | `{ name? \| pattern?, kind?, file?, sort?, limit?, doc_contains?, include_signature? }` | List of matches with `qualified_name`, `kind`, `file`, byte range, **real `rank_score`** (symbol-level PageRank), and `doc` (extracted comment, 10 languages). `pattern` is glob (`*`/`?`); default sort is descending rank; pass `sort: "lexical"` to opt out. `doc_contains` substring-filters by doc text (case-insensitive) for behavior-shaped queries; when the filter is active the response also carries `pre_filter_count` so an empty result set is distinguishable from "nothing matched the name". |
 | `find_callers` | `{ name, kind?, file? }` | Direct callers — one redb lookup. Each entry carries the enclosing fn's `qualified_name`, `kind`, def range, call-site range, and `rank_score`. AST-precise; replaces `rg <name>`. |
 | `impact_of` | `{ name, depth?, token_budget?, max_nodes?, exclude_test_paths? }` | Transitive caller closure (BFS depth N, default 2, max 4). Refactor blast-radius query. Four independent truncation flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell agents *why* a result is partial. |
 | `read_symbol` | `{ name, file?, kind?, shape?, token_budget?, include_dependencies?, include_callers?, force_resend? }` | Body bytes + `content_version` + optional tree-shaken dependency closure (alpha.22+) + optional direct callers (alpha.32+). |
 | `read_symbol_at` | `{ file, line, column?, shape?, token_budget?, include_dependencies?, include_callers? }` | Line-anchored read for compiler-error flow (`error[E0308] --> src/foo.rs:42:18`). Same wire shape as `read_symbol`. |
 | `read_range` | `{ file, start_line, end_line, token_budget? }` | Line slice + `content_version`. For stack traces, diff hunks. |
+| `grep` | `{ text?, regex?, case_insensitive?, file_glob?, limit?, multiline?, structural_query?, within_symbol?, within_symbol_allow_overload?, language? }` | AST-aware ranked search across indexed bytes. v0.6 Grep v2 composes multiline regex, structural tree-sitter queries, and within-symbol scoping on the same tool surface; v1 callers pass nothing new and see byte-identical responses on the unchanged code path. |
+| `daemon_stats` | `{}` | Per-method call counters for this daemon process (Daemon.Stats v2: `pinned_workspace_path`, `workspace_id`, `index_generation`, `cold_walk_completed_at_ms`, `mount_source`, rehydrate / reconciliation counters). |
+| `daemon_telemetry` | `{}` | Counter + latency snapshot for telemetry analysis: per-method `latency_p50_ms`/`p99_ms`, `cache_hit_rate`, `cold_walk_ms_p50`, `languages_indexed`, `error_counts`, `unresolved_refs_count` + GC counters. Same population that the opt-in `rts telemetry` ping would send. |
 
 Every body-returning response carries a `content_version`
 (`blake3(content)[:16]@mtime_ns+index_generation`) so v2 safe-edit flows
 can detect stale views.
 
-The 22 capability strings the daemon advertises via `Daemon.Ping` —
+The 35 capability strings the daemon advertises via `Daemon.Ping` —
 including the v0.3 graph quartet (`find_callers`, `impact_of`,
-`read_symbol.include_callers`, `pagerank_symbolwise`) and the v0.5 doc
+`read_symbol.include_callers`, `pagerank_symbolwise`), the v0.5 doc
 quartet (`find_symbol_limit_param`, `find_symbol_doc_field`,
-`find_symbol_doc_filter`, `find_symbol_pre_filter_count`) — are
-documented in [docs/protocol-v0.md](docs/protocol-v0.md) §4.1 +
-Appendix F.
+`find_symbol_doc_filter`, `find_symbol_pre_filter_count`), and the v0.6
+additions (`index_grep_v2` + sub-capabilities, `reconciliation_worker`,
+`cancellable_queries`, `daemon_telemetry` + `unresolved_refs_count` /
+`unresolved_refs_gc`, `daemon_stats_v2`) — are documented in
+[docs/protocol-v0.md](docs/protocol-v0.md) §4.1 + Appendix F.
 
 ## Known limitations
 
@@ -379,11 +427,16 @@ Rust, JavaScript, TypeScript, Python, C, C++, Go, Java, PHP, Ruby,
 Swift, C#. Kotlin is paused pending an upstream `tree-sitter 0.26+`
 release (see [CHANGELOG.md](CHANGELOG.md) entry for v0.2.0-alpha.2).
 
-Doc-comment extraction (v0.5+) covers all 12 in-tree languages: Rust
-`///` + `//!`, JS/TS/Java/PHP/C/C++ `/** */`, Python `"""..."""`, Go
-`//`, Ruby `#`, Swift `///`, C# `///` (XML doc-comments). Doc text is
-queryable through `find_symbol.doc_contains` and influences ranker
-scoring via a doc-IDF weight separate from name-IDF.
+Different features cover different subsets of the 12 indexed languages
+— same alphabet, different "10":
+
+| feature | coverage | notes |
+|---|---|---|
+| **Symbol extraction** (Index.Outline / Index.FindSymbol) | 12 / 12 | all in-tree grammars |
+| **Doc-comment retrieval** (v0.5: `find_symbol.doc` + `doc_contains`) | 10 / 12 | Rust `///` + `//!`, JS/TS/Java/PHP/C/C++ `/** */`, Python `"""..."""`, Go `//`, Ruby `#`, Swift `///`, C# `///`. Doc text influences ranker scoring via a doc-IDF weight separate from name-IDF. |
+| **AST-precise call edges** (v0.3 → v0.6: tree-sitter `@reference.call`) | 10 / 12 | Rust, Python, Go, Ruby, JS, TS were on the AST-precise path through v0.5; v0.6 added Java, PHP, Swift, C# (#116). C and C++ remain on the regex fallback — function pointers parse identical to identifier references there. |
+| **PHP method indexing** (v0.6) | + | `method_declaration` inside class/interface/trait now indexed (#118), unblocking end-to-end PHP `find_callers`. |
+| **Index.Grep v2 modes** | 12 / 12 (literal + regex) | structural queries (`structural_query`) supported on every grammar with a compiled tree-sitter parser (v0.6, #110). |
 
 ## Documentation
 
