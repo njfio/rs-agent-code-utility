@@ -265,7 +265,7 @@ pub fn write_report(path: &Path, report: &FootprintReport) -> Result<()> {
 /// executable name contains `needle`. Uses `pgrep -P <pid>` then `ps -o
 /// comm=` for each candidate. Returns `None` if pgrep is missing,
 /// returns no rows, or no candidate matches.
-fn find_child_pid(parent_pid: u32, needle: &str) -> Option<u32> {
+pub(crate) fn find_child_pid(parent_pid: u32, needle: &str) -> Option<u32> {
     // Retry briefly — the daemon child may take a few ms to appear
     // after the mcp handshake returns.
     let deadline = Instant::now() + Duration::from_millis(500);
@@ -320,7 +320,7 @@ fn ps_comm(pid: u32) -> Option<String> {
 }
 
 /// Sample RSS at 25ms cadence until `stop` is set.
-async fn sample_rss_loop(pid: u32, peak: Arc<AtomicU64>, stop: Arc<AtomicU64>) {
+pub(crate) async fn sample_rss_loop(pid: u32, peak: Arc<AtomicU64>, stop: Arc<AtomicU64>) {
     while stop.load(Ordering::Relaxed) == 0 {
         if let Some(rss) = ps_rss_bytes(pid) {
             let cur = peak.load(Ordering::Relaxed);
@@ -357,7 +357,7 @@ fn ps_rss_bytes(pid: u32) -> Option<u64> {
 
 /// On Linux, parse `/proc/<pid>/status:VmHWM` (kilobytes). Returns
 /// `None` on macOS / when /proc is unavailable.
-fn linux_vm_hwm_bytes(pid: u32) -> Option<u64> {
+pub(crate) fn linux_vm_hwm_bytes(pid: u32) -> Option<u64> {
     let path = format!("/proc/{pid}/status");
     let content = std::fs::read_to_string(&path).ok()?;
     for line in content.lines() {

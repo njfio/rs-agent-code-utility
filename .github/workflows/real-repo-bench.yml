@@ -1,0 +1,146 @@
+# Nightly regression bench against three real OSS repos.
+#
+# Why: synthetic fixtures missed two latent bugs in the 2026-05-19/20/21
+# series (PR #117 cancel-test flake, PR #116 PHP method_declaration
+# extractor gap). Both surfaced when full-workspace tests hit a real
+# codebase. This workflow runs that real-codebase gate on a schedule
+# so regressions show up the night they land, not the week the next
+# unrelated PR happens to brush them.
+#
+# Coverage (v1):
+#   tokio  @ tokio-1.47.0   (Rust,   ~70k LOC)
+#   flask  @ 3.1.0          (Python, ~10k LOC)
+#   gin    @ v1.10.0        (Go,     ~10k LOC)
+#
+# Adding repos = edit `crates/rts-bench/src/real_repos/repos.toml`,
+# regenerate the baseline, commit.
+#
+# First-run note: the committed `.github/baselines/rts-bench-real-repos.json`
+# is the maintainer's measurement from their worktree. The nightly
+# workflow expects metrics within the tolerance bands declared in
+# `crates/rts-bench/src/real_repos/diff.rs::TolerancePolicy`. If a
+# daemon-side change deliberately moves a metric, the same PR should
+# regen the baseline:
+#
+#     cargo build --release -p rts-daemon -p rts-mcp -p rts-bench
+#     ./target/release/rts-bench real-repos baseline \
+#         --baseline .github/baselines/rts-bench-real-repos.json
+#
+# Then commit the new baseline JSON.
+
+name: real-repo-bench
+
+on:
+  # Nightly at 07:00 UTC. Picked to (a) avoid clashing with the
+  # release workflow, which fires on tag push, and (b) finish before
+  # most contributors start their workday so the regression chip is
+  # green when they pick up.
+  schedule:
+    - cron: "0 7 * * *"
+  # Manual trigger from the Actions tab. Useful for verifying a
+  # baseline-regen commit before merge.
+  workflow_dispatch:
+
+# Allow one run at a time; if a slow run is still going when the next
+# nightly fires, cancel the old one — the newer measurement against
+# the newer HEAD is what we want, and concurrent daemons fighting over
+# the same workspace-pool dir would just thrash the cache.
+concurrency:
+  group: real-repo-bench
+  cancel-in-progress: false
+
+jobs:
+  bench:
+    name: Real-repo regression bench
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-real-repo-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-real-repo-bench-
+            ${{ runner.os }}-cargo-
+
+      # Cache the cloned worktrees too. The repos are pinned to
+      # specific refs, so cache hits = a near-instant `git checkout`
+      # instead of a fresh shallow clone every night.
+      - name: Cache real-repo workspace pool
+        uses: actions/cache@v4
+        with:
+          path: /tmp/rts-real-repos
+          key: ${{ runner.os }}-real-repos-${{ hashFiles('crates/rts-bench/src/real_repos/repos.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-real-repos-
+
+      - name: Build release binaries
+        run: cargo build --release -p rts-daemon -p rts-mcp -p rts-bench
+
+      # Smoke test: confirms the subcommand surface is wired up and
+      # the binaries are all built. Runs the #[ignore]'d tests under
+      # --include-ignored. Cheap (~5s) so we run it before the real
+      # bench to fail fast on a wiring error.
+      - name: Real-repo smoke test
+        run: |
+          cargo test --release -p rts-bench --test real_repos_smoke \
+            -- --include-ignored --nocapture
+        env:
+          RTS_MCP_BIN: ${{ github.workspace }}/target/release/rts-mcp
+          RTS_DAEMON_BIN: ${{ github.workspace }}/target/release/rts-daemon
+
+      - name: Run real-repo compare against baseline
+        run: |
+          ./target/release/rts-bench real-repos compare \
+            --baseline .github/baselines/rts-bench-real-repos.json \
+            --workspace-pool /tmp/rts-real-repos \
+            --report json \
+            > /tmp/real-repo-compare.json
+        env:
+          RTS_MCP_BIN: ${{ github.workspace }}/target/release/rts-mcp
+          RTS_DAEMON_BIN: ${{ github.workspace }}/target/release/rts-daemon
+        # `compare` exits non-zero on regression. Don't short-circuit
+        # the rest of the steps — we still want to upload the diff
+        # as an artifact + annotate the run.
+        continue-on-error: true
+        id: compare
+
+      - name: Annotate regressions
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -s /tmp/real-repo-compare.json ]; then
+            echo "::warning::compare emitted no JSON; check the bench step logs"
+            exit 0
+          fi
+          regressions=$(jq '.regressions | length' /tmp/real-repo-compare.json)
+          echo "::notice::Real-repo bench: $regressions regression(s)"
+          if [ "$regressions" -gt 0 ]; then
+            jq -r '.regressions[] | "::error title=real-repo regression::\(.repo)::\(.metric) — \(.note)"' \
+              /tmp/real-repo-compare.json
+          fi
+
+      - name: Upload compare JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-repo-compare
+          path: /tmp/real-repo-compare.json
+          if-no-files-found: warn
+
+      - name: Fail the workflow if any regression
+        if: steps.compare.outcome == 'failure'
+        run: |
+          echo "real-repo-bench: regressions detected; see annotations + artifact"
+          exit 1
