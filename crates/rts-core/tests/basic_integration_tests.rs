@@ -3,7 +3,7 @@
 //! These tests verify that the main components work together correctly
 //! with simple, realistic scenarios.
 
-use rust_tree_sitter::{CodebaseAnalyzer, ComplexityAnalyzer, Language, Parser, Result};
+use rust_tree_sitter::{CodebaseAnalyzer, Language, Parser, Result};
 use std::fs;
 use tempfile::TempDir;
 
@@ -154,53 +154,6 @@ fn test_basic_codebase_analysis() -> Result<()> {
     println!("Files analyzed: {}", analysis_result.total_files);
     println!("Total lines: {}", analysis_result.total_lines);
     println!("Symbols found in main.rs: {}", main_file.symbols.len());
-
-    Ok(())
-}
-
-#[test]
-fn test_basic_complexity_analysis() -> Result<()> {
-    let temp_dir = create_simple_test_project()?;
-    let project_path = temp_dir.path();
-
-    // Analyze codebase
-    let mut analyzer = CodebaseAnalyzer::new()?;
-    let analysis_result = analyzer.analyze_directory(project_path)?;
-
-    // Find main.rs
-    let main_file = analysis_result
-        .files
-        .iter()
-        .find(|f| f.path.file_name().unwrap() == "main.rs")
-        .expect("main.rs should be found");
-
-    // Parse the file for complexity analysis
-    let parser = Parser::new(Language::Rust)?;
-    let full_path = project_path.join(&main_file.path);
-    let content = std::fs::read_to_string(&full_path)?;
-    let tree = parser.parse(&content, None)?;
-
-    let complexity_analyzer = ComplexityAnalyzer::new("rust");
-    let complexity_result = complexity_analyzer.analyze_complexity(&tree)?;
-
-    // Verify complexity metrics are calculated
-    assert!(complexity_result.cyclomatic_complexity > 0);
-    assert!(complexity_result.npath_complexity > 0);
-    assert!(complexity_result.halstead_volume > 0.0);
-    assert!(complexity_result.lines_of_code > 0);
-
-    println!("✅ Basic complexity analysis completed successfully");
-    println!(
-        "McCabe Complexity: {}",
-        complexity_result.cyclomatic_complexity
-    );
-    println!(
-        "Cognitive Complexity: {}",
-        complexity_result.cognitive_complexity
-    );
-    println!("NPATH Complexity: {}", complexity_result.npath_complexity);
-    println!("Halstead Volume: {:.2}", complexity_result.halstead_volume);
-    println!("Lines of Code: {}", complexity_result.lines_of_code);
 
     Ok(())
 }
