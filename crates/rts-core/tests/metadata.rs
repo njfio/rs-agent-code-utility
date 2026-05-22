@@ -22,11 +22,8 @@ use std::path::PathBuf;
 /// Substrings that, if present in any author entry, indicate
 /// placeholder identity rather than a real maintainer. Each one
 /// individually flags the value as bogus.
-const PLACEHOLDER_AUTHOR_FRAGMENTS: &[&str] = &[
-    "Your Name",
-    "your.email@example.com",
-    "example.com",
-];
+const PLACEHOLDER_AUTHOR_FRAGMENTS: &[&str] =
+    &["Your Name", "your.email@example.com", "example.com"];
 
 fn workspace_root_cargo_toml() -> PathBuf {
     // `CARGO_MANIFEST_DIR` is `crates/rts-core/`. The workspace root
@@ -39,22 +36,17 @@ fn workspace_root_cargo_toml() -> PathBuf {
 
 fn workspace_package_table() -> toml::Table {
     let path = workspace_root_cargo_toml();
-    let contents = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-    let parsed: toml::Table = toml::from_str(&contents)
-        .unwrap_or_else(|e| panic!("parse {}: {e}", path.display()));
+    let contents =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let parsed: toml::Table =
+        toml::from_str(&contents).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()));
     parsed
         .get("workspace")
         .and_then(|v| v.as_table())
         .and_then(|t| t.get("package"))
         .and_then(|v| v.as_table())
         .cloned()
-        .unwrap_or_else(|| {
-            panic!(
-                "{} missing [workspace.package] table",
-                path.display()
-            )
-        })
+        .unwrap_or_else(|| panic!("{} missing [workspace.package] table", path.display()))
 }
 
 #[test]
