@@ -1,21 +1,26 @@
-use rust_tree_sitter::*;
-use std::fs;
+//! Performance optimization integration tests.
+//!
+//! Rewritten in PR-B (B4) to exercise `parse_content` / `Parser`
+//! directly instead of the deleted
+//! `CodebaseAnalyzer::analyze_directory` workspace-walker. The
+//! daemon's writer hot path is `parse_content` — that's what these
+//! tests should pin.
+
+use rust_tree_sitter::{Language, Parser, parse_content};
 use std::time::Instant;
-use tempfile::TempDir;
 
 #[test]
-fn test_memory_allocation_efficiency() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test that we pre-allocate collections efficiently
-    let temp_dir = TempDir::new()?;
-    let src_dir = temp_dir.path().join("src");
-    fs::create_dir_all(&src_dir)?;
+fn parse_content_handles_many_calls_efficiently()
+-> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Mirrors the pre-B4 `test_memory_allocation_efficiency` value:
+    // running parse_content over many distinct sources stays fast.
+    // Each call constructs a fresh `Parser`, so this also exercises
+    // that fresh-parser construction isn't catastrophically slow.
+    let start = Instant::now();
 
-    // Create multiple test files to test collection pre-allocation
     for i in 0..100 {
-        fs::write(
-            src_dir.join(format!("file_{}.rs", i)),
-            format!(
-                r#"
+        let source = format!(
+            r#"
 fn function_{}() {{
     println!("Hello from function {}", {});
 }}
@@ -30,35 +35,25 @@ impl Struct{} {{
     }}
 }}
 "#,
-                i, i, i, i, i, i
-            ),
-        )?;
+            i, i, i, i, i, i
+        );
+        let outcome = parse_content(&source, Language::Rust)?;
+        assert!(!outcome.symbols.is_empty(), "expected symbols on iter {i}");
     }
 
-    let start = Instant::now();
-    let mut analyzer = CodebaseAnalyzer::new()?;
-    let result = analyzer.analyze_directory(&src_dir)?;
     let duration = start.elapsed();
-
-    // Verify analysis completed successfully
-    assert!(!result.files.is_empty());
-    assert!(result.files.len() >= 100);
-
-    // Performance should be reasonable (increased timeout for different hardware)
     assert!(
         duration.as_secs() < 10,
-        "Analysis took too long: {:?}",
+        "100 parse_content calls took too long: {:?}",
         duration
     );
-
-    println!("Analyzed {} files in {:?}", result.files.len(), duration);
-
+    println!("Parsed 100 sources via parse_content in {:?}", duration);
     Ok(())
 }
 
 #[test]
-fn test_string_allocation_optimization() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test that we don't unnecessarily clone strings
+fn parser_string_handling_efficient() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Test that repeated `Parser::parse` on the same source is fast.
     let parser = Parser::new(Language::Rust)?;
     let source = r#"
 fn test_function() {
@@ -69,154 +64,60 @@ fn test_function() {
 
     let start = Instant::now();
 
-    // Parse the same source multiple times to test string handling efficiency
     for _ in 0..1000 {
         let tree = parser.parse(source, None)?;
         let _root = tree.root_node();
     }
 
     let duration = start.elapsed();
-
-    // Should complete quickly (less than 1 second for 1000 parses)
     assert!(
         duration.as_millis() < 1000,
         "String handling inefficient: {:?}",
         duration
     );
-
     println!("Completed 1000 parses in {:?}", duration);
-
     Ok(())
 }
 
 #[test]
-fn test_collection_capacity_optimization() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test that collections are pre-allocated with appropriate capacity
-    let temp_dir = TempDir::new()?;
-    let src_dir = temp_dir.path().join("src");
-    fs::create_dir_all(&src_dir)?;
-
-    // Create a file with many symbols to test collection growth
-    let mut large_file_content = String::with_capacity(10000);
+fn parse_content_finds_many_symbols_in_one_pass()
+-> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Mirrors the pre-B4 `test_collection_capacity_optimization`
+    // shape: exercise that a file dense with symbols extracts the
+    // expected count efficiently.
+    let mut source = String::with_capacity(10000);
     for i in 0..500 {
-        large_file_content.push_str(&format!(
-            r#"
-fn function_{}() {{
-    let var_{} = {};
-}}
-"#,
+        source.push_str(&format!(
+            "fn function_{}() {{ let var_{} = {}; }}\n",
             i, i, i
         ));
     }
 
-    fs::write(src_dir.join("large_file.rs"), large_file_content)?;
-
     let start = Instant::now();
-    let mut analyzer = CodebaseAnalyzer::new()?;
-    let result = analyzer.analyze_directory(&src_dir)?;
+    let outcome = parse_content(&source, Language::Rust)?;
     let duration = start.elapsed();
 
-    // Verify we found symbols (adjust expectation to be realistic)
-    let total_symbols: usize = result.files.iter().map(|f| f.symbols.len()).sum();
     assert!(
-        total_symbols > 100,
+        outcome.symbols.len() > 100,
         "Should find many symbols, found: {}",
-        total_symbols
+        outcome.symbols.len()
     );
-
-    // Should complete efficiently (increased timeout for different hardware)
     assert!(
         duration.as_millis() < 5000,
         "Collection handling inefficient: {:?}",
         duration
     );
-
-    println!("Analyzed {} symbols in {:?}", total_symbols, duration);
-
-    Ok(())
-}
-
-#[test]
-fn test_memory_usage_bounds() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test that memory usage stays within reasonable bounds
-    let temp_dir = TempDir::new()?;
-    let src_dir = temp_dir.path().join("src");
-    fs::create_dir_all(&src_dir)?;
-
-    // Create files with varying sizes
-    for i in 0..50 {
-        let size = (i + 1) * 100; // Increasing file sizes
-        let mut content = String::with_capacity(size * 20);
-        for j in 0..size {
-            content.push_str(&format!("let var_{} = {};\n", j, j));
-        }
-        fs::write(src_dir.join(format!("file_{}.rs", i)), content)?;
-    }
-
-    let mut analyzer = CodebaseAnalyzer::new()?;
-    let result = analyzer.analyze_directory(&src_dir)?;
-
-    // Verify analysis completed
-    assert_eq!(result.files.len(), 50);
-
-    // Memory usage should be proportional to input size
-    // This is a basic sanity check - in a real scenario you'd use a memory profiler
-    let total_symbols: usize = result.files.iter().map(|f| f.symbols.len()).sum();
-    assert!(
-        total_symbols > 50,
-        "Should find symbols, found: {}",
-        total_symbols
+    println!(
+        "Extracted {} symbols via parse_content in {:?}",
+        outcome.symbols.len(),
+        duration
     );
-
     Ok(())
 }
 
 #[test]
-fn test_concurrent_analysis_performance() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test that concurrent analysis doesn't degrade performance significantly
-    let temp_dir = TempDir::new()?;
-    let src_dir = temp_dir.path().join("src");
-    fs::create_dir_all(&src_dir)?;
-
-    // Create test files
-    for i in 0..20 {
-        fs::write(
-            src_dir.join(format!("file_{}.rs", i)),
-            format!(
-                r#"
-fn function_{}() {{
-    for i in 0..{} {{
-        println!("Iteration: {{}}", i);
-    }}
-}}
-"#,
-                i,
-                i * 10
-            ),
-        )?;
-    }
-
-    // Sequential analysis
-    let start = Instant::now();
-    let mut analyzer1 = CodebaseAnalyzer::new()?;
-    let _result1 = analyzer1.analyze_directory(&src_dir)?;
-    let sequential_duration = start.elapsed();
-
-    // The analysis should be fast enough for practical use
-    assert!(
-        sequential_duration.as_millis() < 3000,
-        "Sequential analysis too slow: {:?}",
-        sequential_duration
-    );
-
-    println!("Sequential analysis completed in {:?}", sequential_duration);
-
-    Ok(())
-}
-
-#[test]
-fn test_parser_reuse_efficiency() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test that parser reuse is efficient
+fn parser_reuse_efficient() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Test that parser reuse is efficient.
     let parser = Parser::new(Language::Rust)?;
 
     let sources = vec![
@@ -229,7 +130,6 @@ fn test_parser_reuse_efficiency() -> std::result::Result<(), Box<dyn std::error:
 
     let start = Instant::now();
 
-    // Parse multiple sources with the same parser
     for _ in 0..200 {
         for source in &sources {
             let tree = parser.parse(source, None)?;
@@ -238,30 +138,23 @@ fn test_parser_reuse_efficiency() -> std::result::Result<(), Box<dyn std::error:
     }
 
     let duration = start.elapsed();
-
-    // Should be very fast due to parser reuse
     assert!(
         duration.as_millis() < 500,
         "Parser reuse inefficient: {:?}",
         duration
     );
-
     println!("Completed 1000 parses with reuse in {:?}", duration);
-
     Ok(())
 }
 
 #[test]
-fn test_large_file_handling() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    // Test handling of large files without excessive memory usage
-    let temp_dir = TempDir::new()?;
-    let large_file = temp_dir.path().join("large.rs");
-
-    // Create a moderately large file (optimized for CI performance)
+fn parse_content_handles_large_source() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Mirrors the pre-B4 `test_large_file_handling` value:
+    // a single large source string parses + extracts symbols in
+    // bounded time.
     let mut content = String::with_capacity(50000);
-    content.push_str("// Large file test\n");
+    content.push_str("// Large source test\n");
 
-    // Reduce the number of functions to make test more reasonable
     for i in 0..1000 {
         content.push_str(&format!(
             r#"
@@ -276,32 +169,24 @@ fn function_{}() {{
         ));
     }
 
-    fs::write(&large_file, content)?;
-
     let start = Instant::now();
-    let mut analyzer = CodebaseAnalyzer::new()?;
-    let result = analyzer.analyze_directory(temp_dir.path())?;
+    let outcome = parse_content(&content, Language::Rust)?;
     let duration = start.elapsed();
 
-    // Should handle large files efficiently (more generous timeout for different hardware)
-    let total_symbols: usize = result.files.iter().map(|f| f.symbols.len()).sum();
     assert!(
-        total_symbols > 50,
+        outcome.symbols.len() > 50,
         "Should find symbols, found: {}",
-        total_symbols
+        outcome.symbols.len()
     );
-
-    // More reasonable timeout - 30 seconds should work on most hardware
     assert!(
         duration.as_secs() < 30,
-        "Large file handling too slow: {:?}",
+        "Large source handling too slow: {:?}",
         duration
     );
-
     println!(
-        "Analyzed large file ({} symbols) in {:?}",
-        total_symbols, duration
+        "Parsed large source ({} symbols) in {:?}",
+        outcome.symbols.len(),
+        duration
     );
-
     Ok(())
 }

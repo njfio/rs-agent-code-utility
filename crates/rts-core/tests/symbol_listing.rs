@@ -5,7 +5,7 @@
 //! Exercises the same value (symbols are extracted from a known
 //! fixture) against the post-cleanup public surface.
 
-use rust_tree_sitter::{parse_content, Language};
+use rust_tree_sitter::{Language, parse_content};
 
 #[test]
 fn parse_content_extracts_symbols_from_phase2_demo() -> Result<(), Box<dyn std::error::Error>> {

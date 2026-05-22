@@ -6,7 +6,7 @@
 //! surface — multi-symbol extraction, parser tree shape — but
 //! against the post-cleanup public API.
 
-use rust_tree_sitter::{parse_content, Language, Parser, Result};
+use rust_tree_sitter::{Language, Parser, Result, parse_content};
 
 #[test]
 fn parse_content_extracts_main_and_struct_from_rust_source() -> Result<()> {
