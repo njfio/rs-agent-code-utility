@@ -1,7 +1,7 @@
 ---
 title: Pre-Pivot Cleanup and Public-Surface Tightening (3-PR Arc)
 type: refactor
-status: active
+status: completed
 date: 2026-05-22
 origin: docs/brainstorms/2026-05-22-pre-pivot-cleanup-and-public-surface-tightening-requirements.md
 ---
