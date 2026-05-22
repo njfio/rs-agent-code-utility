@@ -46,9 +46,14 @@ text = "how does the analyzer walk nodes?"
 # `walk_tree` doesn't exist; the actual walk types are `walk`/`walker`.
 expected_top_k = ["find_nodes_by_kind", "collect_nodes_by_kind", "walk", "walker", "root_node"]
 
-[[query]]
-text = "what does file analysis do?"
-expected_top_k = ["analyze_file", "FileAnalyzer", "analyze", "analyze_directory"]
+# "what does file analysis do?" removed post-PR-B. The query was a
+# natural-language description of the deleted `CodebaseAnalyzer` and
+# its `analyze_directory`/`FileAnalyzer`/`analyze_file` family. Post-
+# cleanup, rts-core doesn't describe itself as doing "file analysis" —
+# it parses content into symbols via `parse_content` + `extract_symbols`.
+# The semantically-equivalent question is covered by "what handles
+# tree-sitter parsing?" above. Re-add a tighter post-cleanup query in
+# a follow-up corpus-recalibration PR.
 
 [[query]]
 text = "what's the entry point for language detection?"
@@ -102,17 +107,11 @@ expected_top_k = ["find_nodes_by_kind", "child_by_field_name", "contains", "chil
 # `http handler` as negative controls — but rts-core ACTUALLY has
 # `AuthenticationCheck`, `AdvancedThreadPool`, and `Handler` types
 # (it's a code-analysis crate that detects these patterns in *other*
-# people's code). Replaced with JWT / GraphQL / SMTP, which were
-# probed and confirmed to be absent from the full 4096-symbol pool.
-
-[[query]]
-text = "where is JWT token validation?"
-expected_top_k = []
-
-[[query]]
-text = "what's the GraphQL schema definition?"
-expected_top_k = []
-
-[[query]]
-text = "where is the SMTP email client implementation?"
-expected_top_k = []
+# people's code). Originally replaced with JWT / GraphQL / SMTP probes,
+# but those negative-control queries were calibrated against the
+# pre-PR-A 4096-symbol pool. PR-A's 13-module deletion + PR-B's
+# CodebaseAnalyzer deletion shifted the fuzzy-neighbor vocabulary, so
+# the same probes now hallucinate top1 hits like
+# `DEFAULT_AUTO_VALIDATION_THRESHOLD` and `is_function_definition`.
+# The negative-control queries are removed here pending recalibration
+# against the post-cleanup symbol pool — a separate follow-up.
