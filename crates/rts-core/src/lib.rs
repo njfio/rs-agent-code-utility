@@ -46,8 +46,6 @@ pub mod analysis_utils;
 pub mod analyzer;
 /// Configuration constants and shared defaults.
 pub mod constants;
-/// Control-flow graph construction.
-pub mod control_flow;
 /// Error types for the crate.
 pub mod error;
 /// In-memory file content cache.
@@ -82,7 +80,6 @@ pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // Analysis modules surviving the cut (under review for P4)
-pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
 pub use semantic_graph::{
     GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
     SemanticGraphQuery,
