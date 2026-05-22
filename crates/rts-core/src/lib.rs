@@ -46,8 +46,6 @@ pub mod analysis_utils;
 pub mod analyzer;
 /// Code mapping (call graph, module graph) for repo-level views.
 pub mod code_map;
-/// Cyclomatic / cognitive / Halstead complexity metrics.
-pub mod complexity_analysis;
 /// Configuration constants and shared defaults.
 pub mod constants;
 /// Control-flow graph construction.
@@ -95,7 +93,6 @@ pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // Analysis modules surviving the cut (under review for P4)
 pub use code_map::{CallGraph, ModuleGraph, build_call_graph, build_module_graph};
-pub use complexity_analysis::{ComplexityAnalyzer, ComplexityMetrics, HalsteadMetrics};
 pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
 pub use dependency_analysis::{
     Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,
