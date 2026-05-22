@@ -36,8 +36,6 @@
 
 // ---------- Surviving modules ----------
 
-/// Parallel-processing primitives (under review for P4 slimdown).
-pub mod advanced_parallel;
 /// Shared analysis helpers.
 pub mod analysis_common;
 /// Code-analysis utility helpers.
