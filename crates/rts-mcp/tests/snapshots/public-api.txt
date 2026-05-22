@@ -1,0 +1,508 @@
+pub mod rts_mcp
+pub mod rts_mcp::cli
+pub mod rts_mcp::cli::exit
+pub const rts_mcp::cli::exit::DAEMON_ERROR: i32
+pub const rts_mcp::cli::exit::NO_RESULTS: i32
+pub const rts_mcp::cli::exit::OK: i32
+pub const rts_mcp::cli::exit::TIMEOUT: i32
+pub const rts_mcp::cli::exit::WORKSPACE_ERROR: i32
+pub struct rts_mcp::cli::Style
+pub rts_mcp::cli::Style::enabled: bool
+impl rts_mcp::cli::Style
+pub fn rts_mcp::cli::Style::auto(no_color_flag: bool) -> Self
+pub fn rts_mcp::cli::Style::bold(&self, s: &str) -> alloc::string::String
+pub fn rts_mcp::cli::Style::cyan(&self, s: &str) -> alloc::string::String
+pub fn rts_mcp::cli::Style::dim(&self, s: &str) -> alloc::string::String
+pub fn rts_mcp::cli::Style::green(&self, s: &str) -> alloc::string::String
+pub fn rts_mcp::cli::Style::magenta(&self, s: &str) -> alloc::string::String
+pub fn rts_mcp::cli::Style::new(enabled: bool) -> Self
+pub fn rts_mcp::cli::Style::red(&self, s: &str) -> alloc::string::String
+pub fn rts_mcp::cli::Style::yellow(&self, s: &str) -> alloc::string::String
+impl core::marker::Freeze for rts_mcp::cli::Style
+impl core::marker::Send for rts_mcp::cli::Style
+impl core::marker::Sync for rts_mcp::cli::Style
+impl core::marker::Unpin for rts_mcp::cli::Style
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::cli::Style
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::cli::Style
+impl<T, U> core::convert::Into<U> for rts_mcp::cli::Style where U: core::convert::From<T>
+pub fn rts_mcp::cli::Style::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::cli::Style where U: core::convert::Into<T>
+pub type rts_mcp::cli::Style::Error = core::convert::Infallible
+pub fn rts_mcp::cli::Style::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::cli::Style where U: core::convert::TryFrom<T>
+pub type rts_mcp::cli::Style::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::cli::Style::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for rts_mcp::cli::Style where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::cli::Style::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::cli::Style where T: ?core::marker::Sized
+pub fn rts_mcp::cli::Style::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::cli::Style where T: ?core::marker::Sized
+pub fn rts_mcp::cli::Style::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for rts_mcp::cli::Style
+pub fn rts_mcp::cli::Style::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::cli::Style
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::cli::Style
+pub async fn rts_mcp::cli::call_method(client: &rts_mcp::connection::ConnectionManager, _workspace: &std::path::Path, method: &str, params: serde_json::value::Value) -> core::result::Result<serde_json::value::Value, rts_mcp::connection::ConnectionError>
+pub async fn rts_mcp::cli::connect(workspace: &std::path::Path) -> anyhow::Result<rts_mcp::connection::ConnectionManager>
+pub fn rts_mcp::cli::detect_workspace_from(start: &std::path::Path) -> core::option::Option<std::path::PathBuf>
+pub fn rts_mcp::cli::render_callers_tree<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::render_connection_error(e: &rts_mcp::connection::ConnectionError, style: &rts_mcp::cli::Style) -> i32
+pub fn rts_mcp::cli::render_find_table<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::render_grep_lines<W: std::io::Write>(body: &serde_json::value::Value, pattern: &str, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::render_outline<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::render_read<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::render_stats<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::resolve_workspace(override_path: core::option::Option<&std::path::Path>) -> anyhow::Result<std::path::PathBuf>
+pub mod rts_mcp::connection
+pub enum rts_mcp::connection::ConnectionError
+pub rts_mcp::connection::ConnectionError::Daemon(rts_mcp::daemon_client::DaemonError)
+pub rts_mcp::connection::ConnectionError::DaemonDown
+pub rts_mcp::connection::ConnectionError::DaemonDown::first_failure_ms_ago: u64
+pub rts_mcp::connection::ConnectionError::DaemonDown::last_error: alloc::string::String
+pub rts_mcp::connection::ConnectionError::DaemonUnavailable
+pub rts_mcp::connection::ConnectionError::DaemonUnavailable::attempt: u32
+pub rts_mcp::connection::ConnectionError::DaemonUnavailable::last_error: alloc::string::String
+pub rts_mcp::connection::ConnectionError::DaemonUnavailable::retry_after_ms: u64
+impl rts_mcp::connection::ConnectionError
+pub fn rts_mcp::connection::ConnectionError::code(&self) -> &str
+pub fn rts_mcp::connection::ConnectionError::data(&self) -> serde_json::value::Value
+pub fn rts_mcp::connection::ConnectionError::is_disconnection(&self) -> bool
+pub fn rts_mcp::connection::ConnectionError::message(&self) -> alloc::string::String
+impl core::clone::Clone for rts_mcp::connection::ConnectionError
+pub fn rts_mcp::connection::ConnectionError::clone(&self) -> rts_mcp::connection::ConnectionError
+impl core::error::Error for rts_mcp::connection::ConnectionError
+impl core::fmt::Debug for rts_mcp::connection::ConnectionError
+pub fn rts_mcp::connection::ConnectionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for rts_mcp::connection::ConnectionError
+pub fn rts_mcp::connection::ConnectionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::connection::ConnectionError
+impl core::marker::Send for rts_mcp::connection::ConnectionError
+impl core::marker::Sync for rts_mcp::connection::ConnectionError
+impl core::marker::Unpin for rts_mcp::connection::ConnectionError
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::connection::ConnectionError
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::connection::ConnectionError
+impl<T, U> core::convert::Into<U> for rts_mcp::connection::ConnectionError where U: core::convert::From<T>
+pub fn rts_mcp::connection::ConnectionError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::connection::ConnectionError where U: core::convert::Into<T>
+pub type rts_mcp::connection::ConnectionError::Error = core::convert::Infallible
+pub fn rts_mcp::connection::ConnectionError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::connection::ConnectionError where U: core::convert::TryFrom<T>
+pub type rts_mcp::connection::ConnectionError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::connection::ConnectionError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::connection::ConnectionError where T: core::clone::Clone
+pub type rts_mcp::connection::ConnectionError::Owned = T
+pub fn rts_mcp::connection::ConnectionError::clone_into(&self, target: &mut T)
+pub fn rts_mcp::connection::ConnectionError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for rts_mcp::connection::ConnectionError where T: core::fmt::Display + ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for rts_mcp::connection::ConnectionError where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::connection::ConnectionError where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::connection::ConnectionError where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::connection::ConnectionError where T: core::clone::Clone
+pub unsafe fn rts_mcp::connection::ConnectionError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::connection::ConnectionError
+pub fn rts_mcp::connection::ConnectionError::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::connection::ConnectionError
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::ConnectionError
+pub enum rts_mcp::connection::ConnectionState
+pub rts_mcp::connection::ConnectionState::Connected
+pub rts_mcp::connection::ConnectionState::Connected::last_pong_at: tokio::time::instant::Instant
+pub rts_mcp::connection::ConnectionState::Down
+pub rts_mcp::connection::ConnectionState::Down::first_failure_at: tokio::time::instant::Instant
+pub rts_mcp::connection::ConnectionState::Down::last_error: alloc::string::String
+pub rts_mcp::connection::ConnectionState::Reconnecting
+pub rts_mcp::connection::ConnectionState::Reconnecting::attempt: u32
+pub rts_mcp::connection::ConnectionState::Reconnecting::last_error: alloc::string::String
+pub rts_mcp::connection::ConnectionState::Reconnecting::next_retry_at: tokio::time::instant::Instant
+impl core::clone::Clone for rts_mcp::connection::ConnectionState
+pub fn rts_mcp::connection::ConnectionState::clone(&self) -> rts_mcp::connection::ConnectionState
+impl core::fmt::Debug for rts_mcp::connection::ConnectionState
+pub fn rts_mcp::connection::ConnectionState::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::connection::ConnectionState
+impl core::marker::Send for rts_mcp::connection::ConnectionState
+impl core::marker::Sync for rts_mcp::connection::ConnectionState
+impl core::marker::Unpin for rts_mcp::connection::ConnectionState
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::connection::ConnectionState
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::connection::ConnectionState
+impl<T, U> core::convert::Into<U> for rts_mcp::connection::ConnectionState where U: core::convert::From<T>
+pub fn rts_mcp::connection::ConnectionState::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::connection::ConnectionState where U: core::convert::Into<T>
+pub type rts_mcp::connection::ConnectionState::Error = core::convert::Infallible
+pub fn rts_mcp::connection::ConnectionState::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::connection::ConnectionState where U: core::convert::TryFrom<T>
+pub type rts_mcp::connection::ConnectionState::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::connection::ConnectionState::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::connection::ConnectionState where T: core::clone::Clone
+pub type rts_mcp::connection::ConnectionState::Owned = T
+pub fn rts_mcp::connection::ConnectionState::clone_into(&self, target: &mut T)
+pub fn rts_mcp::connection::ConnectionState::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::connection::ConnectionState where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionState::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::connection::ConnectionState where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionState::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::connection::ConnectionState where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionState::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::connection::ConnectionState where T: core::clone::Clone
+pub unsafe fn rts_mcp::connection::ConnectionState::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::connection::ConnectionState
+pub fn rts_mcp::connection::ConnectionState::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::connection::ConnectionState
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::ConnectionState
+pub struct rts_mcp::connection::ConnectionManager
+impl rts_mcp::connection::ConnectionManager
+pub async fn rts_mcp::connection::ConnectionManager::call(&self, method: &str, params: serde_json::value::Value) -> core::result::Result<serde_json::value::Value, rts_mcp::connection::ConnectionError>
+pub async fn rts_mcp::connection::ConnectionManager::is_connected(&self) -> bool
+pub fn rts_mcp::connection::ConnectionManager::new(client: rts_mcp::daemon_client::DaemonClient, daemon_bin: std::path::PathBuf, workspace: std::path::PathBuf, config: rts_mcp::connection::ResilienceConfig, start_background_tasks: bool) -> Self
+pub fn rts_mcp::connection::ConnectionManager::start_background_tasks(&self)
+pub async fn rts_mcp::connection::ConnectionManager::state(&self) -> rts_mcp::connection::ConnectionState
+impl core::clone::Clone for rts_mcp::connection::ConnectionManager
+pub fn rts_mcp::connection::ConnectionManager::clone(&self) -> rts_mcp::connection::ConnectionManager
+impl core::fmt::Debug for rts_mcp::connection::ConnectionManager
+pub fn rts_mcp::connection::ConnectionManager::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::connection::ConnectionManager
+impl core::marker::Send for rts_mcp::connection::ConnectionManager
+impl core::marker::Sync for rts_mcp::connection::ConnectionManager
+impl core::marker::Unpin for rts_mcp::connection::ConnectionManager
+impl !core::panic::unwind_safe::RefUnwindSafe for rts_mcp::connection::ConnectionManager
+impl !core::panic::unwind_safe::UnwindSafe for rts_mcp::connection::ConnectionManager
+impl<T, U> core::convert::Into<U> for rts_mcp::connection::ConnectionManager where U: core::convert::From<T>
+pub fn rts_mcp::connection::ConnectionManager::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::connection::ConnectionManager where U: core::convert::Into<T>
+pub type rts_mcp::connection::ConnectionManager::Error = core::convert::Infallible
+pub fn rts_mcp::connection::ConnectionManager::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::connection::ConnectionManager where U: core::convert::TryFrom<T>
+pub type rts_mcp::connection::ConnectionManager::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::connection::ConnectionManager::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::connection::ConnectionManager where T: core::clone::Clone
+pub type rts_mcp::connection::ConnectionManager::Owned = T
+pub fn rts_mcp::connection::ConnectionManager::clone_into(&self, target: &mut T)
+pub fn rts_mcp::connection::ConnectionManager::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::connection::ConnectionManager where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionManager::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::connection::ConnectionManager where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionManager::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::connection::ConnectionManager where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ConnectionManager::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::connection::ConnectionManager where T: core::clone::Clone
+pub unsafe fn rts_mcp::connection::ConnectionManager::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::connection::ConnectionManager
+pub fn rts_mcp::connection::ConnectionManager::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::connection::ConnectionManager
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::ConnectionManager
+pub struct rts_mcp::connection::ResilienceConfig
+pub rts_mcp::connection::ResilienceConfig::heartbeat_interval: core::time::Duration
+pub rts_mcp::connection::ResilienceConfig::heartbeat_timeout: core::time::Duration
+pub rts_mcp::connection::ResilienceConfig::max_reconnect_attempts: u32
+pub rts_mcp::connection::ResilienceConfig::reconnect_ceiling: core::time::Duration
+impl rts_mcp::connection::ResilienceConfig
+pub fn rts_mcp::connection::ResilienceConfig::from_env() -> Self
+impl core::clone::Clone for rts_mcp::connection::ResilienceConfig
+pub fn rts_mcp::connection::ResilienceConfig::clone(&self) -> rts_mcp::connection::ResilienceConfig
+impl core::default::Default for rts_mcp::connection::ResilienceConfig
+pub fn rts_mcp::connection::ResilienceConfig::default() -> Self
+impl core::fmt::Debug for rts_mcp::connection::ResilienceConfig
+pub fn rts_mcp::connection::ResilienceConfig::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::connection::ResilienceConfig
+impl core::marker::Send for rts_mcp::connection::ResilienceConfig
+impl core::marker::Sync for rts_mcp::connection::ResilienceConfig
+impl core::marker::Unpin for rts_mcp::connection::ResilienceConfig
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::connection::ResilienceConfig
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::connection::ResilienceConfig
+impl<T, U> core::convert::Into<U> for rts_mcp::connection::ResilienceConfig where U: core::convert::From<T>
+pub fn rts_mcp::connection::ResilienceConfig::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::connection::ResilienceConfig where U: core::convert::Into<T>
+pub type rts_mcp::connection::ResilienceConfig::Error = core::convert::Infallible
+pub fn rts_mcp::connection::ResilienceConfig::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::connection::ResilienceConfig where U: core::convert::TryFrom<T>
+pub type rts_mcp::connection::ResilienceConfig::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::connection::ResilienceConfig::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::connection::ResilienceConfig where T: core::clone::Clone
+pub type rts_mcp::connection::ResilienceConfig::Owned = T
+pub fn rts_mcp::connection::ResilienceConfig::clone_into(&self, target: &mut T)
+pub fn rts_mcp::connection::ResilienceConfig::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::connection::ResilienceConfig where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::connection::ResilienceConfig::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::connection::ResilienceConfig where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ResilienceConfig::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::connection::ResilienceConfig where T: ?core::marker::Sized
+pub fn rts_mcp::connection::ResilienceConfig::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::connection::ResilienceConfig where T: core::clone::Clone
+pub unsafe fn rts_mcp::connection::ResilienceConfig::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::connection::ResilienceConfig
+pub fn rts_mcp::connection::ResilienceConfig::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::connection::ResilienceConfig
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::ResilienceConfig
+pub const rts_mcp::connection::DAEMON_DOWN_CODE: i32
+pub const rts_mcp::connection::DAEMON_DOWN_STRING: &str
+pub const rts_mcp::connection::DAEMON_UNAVAILABLE_CODE: i32
+pub const rts_mcp::connection::DAEMON_UNAVAILABLE_STRING: &str
+pub mod rts_mcp::daemon_client
+pub struct rts_mcp::daemon_client::DaemonClient
+impl rts_mcp::daemon_client::DaemonClient
+pub async fn rts_mcp::daemon_client::DaemonClient::call(&mut self, method: &str, params: serde_json::value::Value) -> core::result::Result<serde_json::value::Value, rts_mcp::daemon_client::DaemonError>
+pub fn rts_mcp::daemon_client::DaemonClient::new(stream: tokio::net::unix::stream::UnixStream, daemon_bin: std::path::PathBuf, workspace: std::path::PathBuf) -> Self
+pub async fn rts_mcp::daemon_client::DaemonClient::reconnect(&mut self) -> core::result::Result<(), rts_mcp::daemon_client::DaemonError>
+impl !core::marker::Freeze for rts_mcp::daemon_client::DaemonClient
+impl core::marker::Send for rts_mcp::daemon_client::DaemonClient
+impl core::marker::Sync for rts_mcp::daemon_client::DaemonClient
+impl core::marker::Unpin for rts_mcp::daemon_client::DaemonClient
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::daemon_client::DaemonClient
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::daemon_client::DaemonClient
+impl<T, U> core::convert::Into<U> for rts_mcp::daemon_client::DaemonClient where U: core::convert::From<T>
+pub fn rts_mcp::daemon_client::DaemonClient::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::daemon_client::DaemonClient where U: core::convert::Into<T>
+pub type rts_mcp::daemon_client::DaemonClient::Error = core::convert::Infallible
+pub fn rts_mcp::daemon_client::DaemonClient::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::daemon_client::DaemonClient where U: core::convert::TryFrom<T>
+pub type rts_mcp::daemon_client::DaemonClient::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::daemon_client::DaemonClient::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for rts_mcp::daemon_client::DaemonClient where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::daemon_client::DaemonClient::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::daemon_client::DaemonClient where T: ?core::marker::Sized
+pub fn rts_mcp::daemon_client::DaemonClient::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::daemon_client::DaemonClient where T: ?core::marker::Sized
+pub fn rts_mcp::daemon_client::DaemonClient::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for rts_mcp::daemon_client::DaemonClient
+pub fn rts_mcp::daemon_client::DaemonClient::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::daemon_client::DaemonClient
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::daemon_client::DaemonClient
+pub struct rts_mcp::daemon_client::DaemonError
+pub rts_mcp::daemon_client::DaemonError::code: alloc::string::String
+pub rts_mcp::daemon_client::DaemonError::data: core::option::Option<serde_json::value::Value>
+pub rts_mcp::daemon_client::DaemonError::message: alloc::string::String
+impl rts_mcp::daemon_client::DaemonError
+pub fn rts_mcp::daemon_client::DaemonError::is_disconnect(&self) -> bool
+impl core::clone::Clone for rts_mcp::daemon_client::DaemonError
+pub fn rts_mcp::daemon_client::DaemonError::clone(&self) -> rts_mcp::daemon_client::DaemonError
+impl core::convert::From<anyhow::Error> for rts_mcp::daemon_client::DaemonError
+pub fn rts_mcp::daemon_client::DaemonError::from(e: anyhow::Error) -> Self
+impl core::error::Error for rts_mcp::daemon_client::DaemonError
+impl core::fmt::Debug for rts_mcp::daemon_client::DaemonError
+pub fn rts_mcp::daemon_client::DaemonError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for rts_mcp::daemon_client::DaemonError
+pub fn rts_mcp::daemon_client::DaemonError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::daemon_client::DaemonError
+impl core::marker::Send for rts_mcp::daemon_client::DaemonError
+impl core::marker::Sync for rts_mcp::daemon_client::DaemonError
+impl core::marker::Unpin for rts_mcp::daemon_client::DaemonError
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::daemon_client::DaemonError
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::daemon_client::DaemonError
+impl<T, U> core::convert::Into<U> for rts_mcp::daemon_client::DaemonError where U: core::convert::From<T>
+pub fn rts_mcp::daemon_client::DaemonError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::daemon_client::DaemonError where U: core::convert::Into<T>
+pub type rts_mcp::daemon_client::DaemonError::Error = core::convert::Infallible
+pub fn rts_mcp::daemon_client::DaemonError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::daemon_client::DaemonError where U: core::convert::TryFrom<T>
+pub type rts_mcp::daemon_client::DaemonError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::daemon_client::DaemonError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::daemon_client::DaemonError where T: core::clone::Clone
+pub type rts_mcp::daemon_client::DaemonError::Owned = T
+pub fn rts_mcp::daemon_client::DaemonError::clone_into(&self, target: &mut T)
+pub fn rts_mcp::daemon_client::DaemonError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for rts_mcp::daemon_client::DaemonError where T: core::fmt::Display + ?core::marker::Sized
+pub fn rts_mcp::daemon_client::DaemonError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for rts_mcp::daemon_client::DaemonError where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::daemon_client::DaemonError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::daemon_client::DaemonError where T: ?core::marker::Sized
+pub fn rts_mcp::daemon_client::DaemonError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::daemon_client::DaemonError where T: ?core::marker::Sized
+pub fn rts_mcp::daemon_client::DaemonError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::daemon_client::DaemonError where T: core::clone::Clone
+pub unsafe fn rts_mcp::daemon_client::DaemonError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::daemon_client::DaemonError
+pub fn rts_mcp::daemon_client::DaemonError::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::daemon_client::DaemonError
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::daemon_client::DaemonError
+pub const rts_mcp::daemon_client::MAX_FRAME_BYTES: usize
+pub mod rts_mcp::socket
+pub async fn rts_mcp::socket::connect_with_auto_spawn(daemon_bin: &std::path::Path, prewarm_workspace: core::option::Option<&std::path::Path>) -> anyhow::Result<tokio::net::unix::stream::UnixStream>
+pub fn rts_mcp::socket::default_socket_path() -> anyhow::Result<std::path::PathBuf>
+pub fn rts_mcp::socket::resolve_daemon_bin() -> anyhow::Result<std::path::PathBuf>
+pub async fn rts_mcp::socket::try_connect(path: &std::path::Path) -> core::option::Option<tokio::net::unix::stream::UnixStream>
+pub fn rts_mcp::socket::workspace_socket_path(canonical_workspace: &std::path::Path) -> anyhow::Result<std::path::PathBuf>
+pub mod rts_mcp::telemetry
+pub struct rts_mcp::telemetry::LocalConfig
+pub rts_mcp::telemetry::LocalConfig::enabled: bool
+pub rts_mcp::telemetry::LocalConfig::last_ping_unix_ms: core::option::Option<u64>
+impl core::clone::Clone for rts_mcp::telemetry::LocalConfig
+pub fn rts_mcp::telemetry::LocalConfig::clone(&self) -> rts_mcp::telemetry::LocalConfig
+impl core::default::Default for rts_mcp::telemetry::LocalConfig
+pub fn rts_mcp::telemetry::LocalConfig::default() -> rts_mcp::telemetry::LocalConfig
+impl core::fmt::Debug for rts_mcp::telemetry::LocalConfig
+pub fn rts_mcp::telemetry::LocalConfig::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for rts_mcp::telemetry::LocalConfig
+pub fn rts_mcp::telemetry::LocalConfig::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rts_mcp::telemetry::LocalConfig
+pub fn rts_mcp::telemetry::LocalConfig::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rts_mcp::telemetry::LocalConfig
+impl core::marker::Send for rts_mcp::telemetry::LocalConfig
+impl core::marker::Sync for rts_mcp::telemetry::LocalConfig
+impl core::marker::Unpin for rts_mcp::telemetry::LocalConfig
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::telemetry::LocalConfig
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::telemetry::LocalConfig
+impl<T, U> core::convert::Into<U> for rts_mcp::telemetry::LocalConfig where U: core::convert::From<T>
+pub fn rts_mcp::telemetry::LocalConfig::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::telemetry::LocalConfig where U: core::convert::Into<T>
+pub type rts_mcp::telemetry::LocalConfig::Error = core::convert::Infallible
+pub fn rts_mcp::telemetry::LocalConfig::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::telemetry::LocalConfig where U: core::convert::TryFrom<T>
+pub type rts_mcp::telemetry::LocalConfig::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::telemetry::LocalConfig::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::telemetry::LocalConfig where T: core::clone::Clone
+pub type rts_mcp::telemetry::LocalConfig::Owned = T
+pub fn rts_mcp::telemetry::LocalConfig::clone_into(&self, target: &mut T)
+pub fn rts_mcp::telemetry::LocalConfig::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::telemetry::LocalConfig where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::telemetry::LocalConfig::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::telemetry::LocalConfig where T: ?core::marker::Sized
+pub fn rts_mcp::telemetry::LocalConfig::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::telemetry::LocalConfig where T: ?core::marker::Sized
+pub fn rts_mcp::telemetry::LocalConfig::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::telemetry::LocalConfig where T: core::clone::Clone
+pub unsafe fn rts_mcp::telemetry::LocalConfig::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::telemetry::LocalConfig
+pub fn rts_mcp::telemetry::LocalConfig::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rts_mcp::telemetry::LocalConfig where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tracing::instrument::Instrument for rts_mcp::telemetry::LocalConfig
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::telemetry::LocalConfig
+pub struct rts_mcp::telemetry::PayloadInputs
+pub rts_mcp::telemetry::PayloadInputs::cache_hit_rate: f64
+pub rts_mcp::telemetry::PayloadInputs::cold_walk_ms_p50: u64
+pub rts_mcp::telemetry::PayloadInputs::error_counts_raw: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>
+pub rts_mcp::telemetry::PayloadInputs::languages_raw: alloc::vec::Vec<alloc::string::String>
+pub rts_mcp::telemetry::PayloadInputs::method_counts_raw: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>
+pub rts_mcp::telemetry::PayloadInputs::method_latency_p50_raw: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>
+pub rts_mcp::telemetry::PayloadInputs::method_latency_p99_raw: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>
+pub rts_mcp::telemetry::PayloadInputs::uptime_secs: u64
+pub rts_mcp::telemetry::PayloadInputs::workspace_files: u64
+impl core::clone::Clone for rts_mcp::telemetry::PayloadInputs
+pub fn rts_mcp::telemetry::PayloadInputs::clone(&self) -> rts_mcp::telemetry::PayloadInputs
+impl core::default::Default for rts_mcp::telemetry::PayloadInputs
+pub fn rts_mcp::telemetry::PayloadInputs::default() -> rts_mcp::telemetry::PayloadInputs
+impl core::fmt::Debug for rts_mcp::telemetry::PayloadInputs
+pub fn rts_mcp::telemetry::PayloadInputs::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::telemetry::PayloadInputs
+impl core::marker::Send for rts_mcp::telemetry::PayloadInputs
+impl core::marker::Sync for rts_mcp::telemetry::PayloadInputs
+impl core::marker::Unpin for rts_mcp::telemetry::PayloadInputs
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::telemetry::PayloadInputs
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::telemetry::PayloadInputs
+impl<T, U> core::convert::Into<U> for rts_mcp::telemetry::PayloadInputs where U: core::convert::From<T>
+pub fn rts_mcp::telemetry::PayloadInputs::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::telemetry::PayloadInputs where U: core::convert::Into<T>
+pub type rts_mcp::telemetry::PayloadInputs::Error = core::convert::Infallible
+pub fn rts_mcp::telemetry::PayloadInputs::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::telemetry::PayloadInputs where U: core::convert::TryFrom<T>
+pub type rts_mcp::telemetry::PayloadInputs::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::telemetry::PayloadInputs::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::telemetry::PayloadInputs where T: core::clone::Clone
+pub type rts_mcp::telemetry::PayloadInputs::Owned = T
+pub fn rts_mcp::telemetry::PayloadInputs::clone_into(&self, target: &mut T)
+pub fn rts_mcp::telemetry::PayloadInputs::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::telemetry::PayloadInputs where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::telemetry::PayloadInputs::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::telemetry::PayloadInputs where T: ?core::marker::Sized
+pub fn rts_mcp::telemetry::PayloadInputs::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::telemetry::PayloadInputs where T: ?core::marker::Sized
+pub fn rts_mcp::telemetry::PayloadInputs::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::telemetry::PayloadInputs where T: core::clone::Clone
+pub unsafe fn rts_mcp::telemetry::PayloadInputs::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::telemetry::PayloadInputs
+pub fn rts_mcp::telemetry::PayloadInputs::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::telemetry::PayloadInputs
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::telemetry::PayloadInputs
+pub struct rts_mcp::telemetry::TelemetryPayload
+pub rts_mcp::telemetry::TelemetryPayload::arch: &'static str
+pub rts_mcp::telemetry::TelemetryPayload::cache_hit_rate: f64
+pub rts_mcp::telemetry::TelemetryPayload::cold_walk_ms_p50: u64
+pub rts_mcp::telemetry::TelemetryPayload::error_counts: alloc::collections::btree::map::BTreeMap<&'static str, u64>
+pub rts_mcp::telemetry::TelemetryPayload::install_id: alloc::string::String
+pub rts_mcp::telemetry::TelemetryPayload::languages_indexed: alloc::vec::Vec<&'static str>
+pub rts_mcp::telemetry::TelemetryPayload::method_counts: alloc::collections::btree::map::BTreeMap<&'static str, u64>
+pub rts_mcp::telemetry::TelemetryPayload::method_latency_p50_ms: alloc::collections::btree::map::BTreeMap<&'static str, u64>
+pub rts_mcp::telemetry::TelemetryPayload::method_latency_p99_ms: alloc::collections::btree::map::BTreeMap<&'static str, u64>
+pub rts_mcp::telemetry::TelemetryPayload::os: &'static str
+pub rts_mcp::telemetry::TelemetryPayload::rts_version: alloc::string::String
+pub rts_mcp::telemetry::TelemetryPayload::schema_version: u32
+pub rts_mcp::telemetry::TelemetryPayload::uptime_hours: u64
+pub rts_mcp::telemetry::TelemetryPayload::workspace_size_bucket: &'static str
+impl core::clone::Clone for rts_mcp::telemetry::TelemetryPayload
+pub fn rts_mcp::telemetry::TelemetryPayload::clone(&self) -> rts_mcp::telemetry::TelemetryPayload
+impl core::cmp::PartialEq for rts_mcp::telemetry::TelemetryPayload
+pub fn rts_mcp::telemetry::TelemetryPayload::eq(&self, other: &rts_mcp::telemetry::TelemetryPayload) -> bool
+impl core::fmt::Debug for rts_mcp::telemetry::TelemetryPayload
+pub fn rts_mcp::telemetry::TelemetryPayload::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rts_mcp::telemetry::TelemetryPayload
+impl serde_core::ser::Serialize for rts_mcp::telemetry::TelemetryPayload
+pub fn rts_mcp::telemetry::TelemetryPayload::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rts_mcp::telemetry::TelemetryPayload
+impl core::marker::Send for rts_mcp::telemetry::TelemetryPayload
+impl core::marker::Sync for rts_mcp::telemetry::TelemetryPayload
+impl core::marker::Unpin for rts_mcp::telemetry::TelemetryPayload
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::telemetry::TelemetryPayload
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::telemetry::TelemetryPayload
+impl<T, U> core::convert::Into<U> for rts_mcp::telemetry::TelemetryPayload where U: core::convert::From<T>
+pub fn rts_mcp::telemetry::TelemetryPayload::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::telemetry::TelemetryPayload where U: core::convert::Into<T>
+pub type rts_mcp::telemetry::TelemetryPayload::Error = core::convert::Infallible
+pub fn rts_mcp::telemetry::TelemetryPayload::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::telemetry::TelemetryPayload where U: core::convert::TryFrom<T>
+pub type rts_mcp::telemetry::TelemetryPayload::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::telemetry::TelemetryPayload::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::telemetry::TelemetryPayload where T: core::clone::Clone
+pub type rts_mcp::telemetry::TelemetryPayload::Owned = T
+pub fn rts_mcp::telemetry::TelemetryPayload::clone_into(&self, target: &mut T)
+pub fn rts_mcp::telemetry::TelemetryPayload::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::telemetry::TelemetryPayload where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::telemetry::TelemetryPayload::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::telemetry::TelemetryPayload where T: ?core::marker::Sized
+pub fn rts_mcp::telemetry::TelemetryPayload::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::telemetry::TelemetryPayload where T: ?core::marker::Sized
+pub fn rts_mcp::telemetry::TelemetryPayload::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::telemetry::TelemetryPayload where T: core::clone::Clone
+pub unsafe fn rts_mcp::telemetry::TelemetryPayload::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::telemetry::TelemetryPayload
+pub fn rts_mcp::telemetry::TelemetryPayload::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::telemetry::TelemetryPayload
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::telemetry::TelemetryPayload
+pub const rts_mcp::telemetry::DEFAULT_ENDPOINT: &str
+pub const rts_mcp::telemetry::ERROR_CODES: &[&str]
+pub const rts_mcp::telemetry::LANGUAGE_NAMES: &[&str]
+pub const rts_mcp::telemetry::METHOD_NAMES: &[&str]
+pub const rts_mcp::telemetry::SCHEMA_VERSION: u32
+pub const rts_mcp::telemetry::USER_AGENT_PREFIX: &str
+pub const rts_mcp::telemetry::WORKSPACE_SIZE_BUCKETS: &[&str]
+pub fn rts_mcp::telemetry::arch_label() -> &'static str
+pub fn rts_mcp::telemetry::bucket_workspace_size(files: u64) -> &'static str
+pub fn rts_mcp::telemetry::build_payload(install_id: &str, inputs: &rts_mcp::telemetry::PayloadInputs) -> rts_mcp::telemetry::TelemetryPayload
+pub fn rts_mcp::telemetry::config_dir() -> anyhow::Result<std::path::PathBuf>
+pub fn rts_mcp::telemetry::config_path() -> anyhow::Result<std::path::PathBuf>
+pub fn rts_mcp::telemetry::config_path_in(dir: &std::path::Path) -> std::path::PathBuf
+pub fn rts_mcp::telemetry::disable() -> anyhow::Result<()>
+pub fn rts_mcp::telemetry::disable_in(dir: &std::path::Path) -> anyhow::Result<()>
+pub fn rts_mcp::telemetry::enable() -> anyhow::Result<alloc::string::String>
+pub fn rts_mcp::telemetry::enable_in(dir: &std::path::Path) -> anyhow::Result<alloc::string::String>
+pub fn rts_mcp::telemetry::endpoint() -> alloc::string::String
+pub fn rts_mcp::telemetry::error_code_to_enum(code: &str) -> core::option::Option<&'static str>
+pub fn rts_mcp::telemetry::generate_install_id() -> anyhow::Result<alloc::string::String>
+pub fn rts_mcp::telemetry::install_id_path() -> anyhow::Result<std::path::PathBuf>
+pub fn rts_mcp::telemetry::install_id_path_in(dir: &std::path::Path) -> std::path::PathBuf
+pub fn rts_mcp::telemetry::is_enabled() -> bool
+pub fn rts_mcp::telemetry::is_enabled_in(dir: &std::path::Path) -> bool
+pub fn rts_mcp::telemetry::language_to_enum(language: &str) -> core::option::Option<&'static str>
+pub fn rts_mcp::telemetry::method_name_to_enum(name: &str) -> core::option::Option<&'static str>
+pub fn rts_mcp::telemetry::os_label() -> &'static str
+pub fn rts_mcp::telemetry::payload_to_compact_json(payload: &rts_mcp::telemetry::TelemetryPayload) -> alloc::string::String
+pub fn rts_mcp::telemetry::payload_to_pretty_json(payload: &rts_mcp::telemetry::TelemetryPayload) -> alloc::string::String
+pub fn rts_mcp::telemetry::read_config() -> anyhow::Result<rts_mcp::telemetry::LocalConfig>
+pub fn rts_mcp::telemetry::read_config_in(dir: &std::path::Path) -> anyhow::Result<rts_mcp::telemetry::LocalConfig>
+pub fn rts_mcp::telemetry::read_install_id() -> anyhow::Result<core::option::Option<alloc::string::String>>
+pub fn rts_mcp::telemetry::read_install_id_in(dir: &std::path::Path) -> anyhow::Result<core::option::Option<alloc::string::String>>
+pub fn rts_mcp::telemetry::render_status(cfg: &rts_mcp::telemetry::LocalConfig, install_id: core::option::Option<&str>) -> alloc::string::String
+pub fn rts_mcp::telemetry::write_config(cfg: &rts_mcp::telemetry::LocalConfig) -> anyhow::Result<()>
+pub fn rts_mcp::telemetry::write_config_in(dir: &std::path::Path, cfg: &rts_mcp::telemetry::LocalConfig) -> anyhow::Result<()>
+pub fn rts_mcp::telemetry::write_install_id(id: &str) -> anyhow::Result<()>
+pub fn rts_mcp::telemetry::write_install_id_in(dir: &std::path::Path, id: &str) -> anyhow::Result<()>
