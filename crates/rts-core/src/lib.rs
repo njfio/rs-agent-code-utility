@@ -64,8 +64,6 @@ pub mod memory_tracker;
 pub mod pagerank;
 /// Tree-sitter parser wrapper.
 pub mod parser;
-/// Performance-hotspot heuristics.
-pub mod performance_analysis;
 /// Tree-sitter query API.
 pub mod query;
 /// Data-flow / sanitisation primitives used by the tree-shake closure walker.
@@ -96,9 +94,6 @@ pub use code_map::{CallGraph, ModuleGraph, build_call_graph, build_module_graph}
 pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
 pub use dependency_analysis::{
     Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,
-};
-pub use performance_analysis::{
-    PerformanceAnalysisResult, PerformanceAnalyzer, PerformanceConfig, PerformanceHotspot,
 };
 pub use semantic_context::{DataFlowAnalysis, SemanticContext, SemanticContextAnalyzer};
 pub use semantic_graph::{
