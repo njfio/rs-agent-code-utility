@@ -66,8 +66,6 @@ pub mod pagerank;
 pub mod parser;
 /// Tree-sitter query API.
 pub mod query;
-/// Data-flow / sanitisation primitives used by the tree-shake closure walker.
-pub mod semantic_context;
 /// Symbol-graph queries for repo-map ranking and reasoning.
 pub mod semantic_graph;
 /// Per-language signature renderer for `Index.ReadSymbol shape=signature`.
@@ -95,7 +93,6 @@ pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
 pub use dependency_analysis::{
     Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,
 };
-pub use semantic_context::{DataFlowAnalysis, SemanticContext, SemanticContextAnalyzer};
 pub use semantic_graph::{
     GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
     SemanticGraphQuery,
