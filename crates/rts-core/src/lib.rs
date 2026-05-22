@@ -54,8 +54,6 @@ pub mod error;
 pub mod file_cache;
 /// Programming-language adapters (tree-sitter grammars for 12 languages).
 pub mod languages;
-/// Memory-allocation tracking analysis.
-pub mod memory_tracker;
 /// Personalised PageRank for `Index.Outline` symbol ranking.
 pub mod pagerank;
 /// Tree-sitter parser wrapper.
@@ -97,12 +95,6 @@ pub use symbol_table::{
 // Utilities
 pub use constants::common::RiskLevel;
 pub use file_cache::{CacheStats, FileCache};
-pub use memory_tracker::{
-    AllocationCallStack, AllocationHotspot, AllocationImpact, AllocationLocation,
-    AllocationPattern, AllocationType, FragmentationAnalysis, LeakType, LifetimeStatistics,
-    MemoryLeakCandidate, MemorySnapshot, MemoryStatistics, MemoryTracker, MemoryTrackingConfig,
-    MemoryTrackingResult, UsagePattern,
-};
 
 // Tree-sitter type passthroughs
 pub use tree_sitter::{InputEdit, Point, Range};
