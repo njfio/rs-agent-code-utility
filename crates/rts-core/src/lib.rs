@@ -48,8 +48,6 @@ pub mod analyzer;
 pub mod constants;
 /// Control-flow graph construction.
 pub mod control_flow;
-/// Package-manager dependency parsing (Cargo.toml, package.json, etc.).
-pub mod dependency_analysis;
 /// Error types for the crate.
 pub mod error;
 /// In-memory file content cache.
@@ -87,9 +85,6 @@ pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // Analysis modules surviving the cut (under review for P4)
 pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
-pub use dependency_analysis::{
-    Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,
-};
 pub use semantic_graph::{
     GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
     SemanticGraphQuery,
