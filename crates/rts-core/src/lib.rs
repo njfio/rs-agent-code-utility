@@ -36,8 +36,6 @@
 
 // ---------- Surviving modules ----------
 
-/// Shared analysis helpers.
-pub mod analysis_common;
 /// Code-analysis utility helpers.
 pub mod analysis_utils;
 /// Codebase analyzer: walks a workspace and produces structured `AnalysisResult`s.
