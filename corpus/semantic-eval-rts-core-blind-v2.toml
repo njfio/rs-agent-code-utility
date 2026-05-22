@@ -59,16 +59,6 @@ text = "what runs first when analysis starts?"
 expected_top_k = ["FileAnalyzer", "CodebaseAnalyzer", "analyze", "analyze_file"]
 
 [[query]]
-text = "how does the cache get populated?"
-expected_top_k = [
-    "FileCache",
-    "cache_tree",
-    "calculate_cache_key",
-    "cache_key",
-    "cache_capacity",
-]
-
-[[query]]
 text = "what cleans up after analysis?"
 expected_top_k = ["clear", "clear_cache", "reset", "reset_statistics"]
 

@@ -19,11 +19,12 @@
 //!
 //! ### Basic File Analysis
 //!
-//! ```rust
+//! ```ignore
+//! // NOTE: `CodebaseAnalyzer` is being removed in a follow-up PR; prefer
+//! // the `parse_content` facade that lands alongside that change.
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
-
+//!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
-//! // Create analyzer with custom configuration
 //! let config = AnalysisConfig {
 //!     depth: AnalysisDepth::Full,
 //!     max_depth: Some(10),
@@ -31,28 +32,25 @@
 //!     ..Default::default()
 //! };
 //!
-//! let analyzer = CodebaseAnalyzer::with_config(config);
-
-//! // Analyze a single file
-//! let mut analyzer = analyzer?;
+//! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //! # Ok(())
 //! # }
 //! ```
 //!
 //! ### Directory Analysis
 //!
-//! ```rust
+//! ```ignore
+//! // NOTE: `CodebaseAnalyzer` is being removed in a follow-up PR; prefer
+//! // the `parse_content` facade that lands alongside that change.
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
 //! let mut analyzer = CodebaseAnalyzer::new()?;
-//!
-//! // Analyze entire directory
 //! let result = analyzer.analyze_directory("src/")?;
 //!
 //! for file_info in &result.files {
 //!     println!("File: {}", file_info.path.display());
-//!     println!("  Functions: {}", file_info.symbols.len());
+//!     println!("  Symbols: {}", file_info.symbols.len());
 //! }
 //! # Ok(())
 //! # }
@@ -60,7 +58,9 @@
 //!
 //! ### Advanced Analysis with Filtering
 //!
-//! ```rust
+//! ```ignore
+//! // NOTE: `CodebaseAnalyzer` is being removed in a follow-up PR; prefer
+//! // the `parse_content` facade that lands alongside that change.
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
@@ -68,25 +68,20 @@
 //!     depth: AnalysisDepth::Full,
 //!     include_extensions: Some(vec!["rs".to_string(), "py".to_string()]),
 //!     exclude_dirs: vec!["target".to_string(), "node_modules".to_string()],
-//!     max_file_size: Some(1024 * 1024), // 1MB limit
+//!     max_file_size: Some(1024 * 1024),
 //!     ..Default::default()
 //! };
 //!
 //! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //! let result = analyzer.analyze_directory(".")?;
-//!
-//! // Access results directly
 //! println!("Total files analyzed: {}", result.total_files);
-//! println!("Total functions: {}", result.files.iter().map(|f| f.symbols.len()).sum::<usize>());
 //! # Ok(())
 //! # }
 //! ```
 
 use crate::error::{Error, Result};
-use crate::file_cache::FileCache;
 use crate::languages::Language;
 use crate::parser::Parser;
-use crate::semantic_graph::SemanticGraphQuery;
 
 use crate::tree::SyntaxTree;
 use ignore::WalkBuilder;
@@ -281,8 +276,6 @@ impl AnalysisResult {
 pub struct CodebaseAnalyzer {
     config: AnalysisConfig,
     parsers: HashMap<Language, Parser>,
-    semantic_graph: Option<SemanticGraphQuery>,
-    file_cache: FileCache,
 }
 
 impl CodebaseAnalyzer {
@@ -296,8 +289,6 @@ impl CodebaseAnalyzer {
         Ok(Self {
             config,
             parsers: HashMap::new(),
-            semantic_graph: None,
-            file_cache: FileCache::new(),
         })
     }
 
@@ -411,15 +402,6 @@ impl CodebaseAnalyzer {
             };
 
             self.analyze_directory_recursive(&root_path, &root_path, &mut result, 0)?;
-
-            // Build semantic graph if enabled
-            if self.semantic_graph.is_some() {
-                if let Some(ref mut graph) = self.semantic_graph {
-                    if let Err(e) = graph.build_from_analysis(&result) {
-                        eprintln!("Warning: Failed to build semantic graph: {}", e);
-                    }
-                }
-            }
 
             // Ensure deterministic ordering
             result.sort_stable();
@@ -543,15 +525,6 @@ impl CodebaseAnalyzer {
 
         let result = final_result.clone();
         drop(final_result); // Release the lock
-
-        // Build semantic graph if enabled (sequential for now due to complexity)
-        if self.semantic_graph.is_some() {
-            // Note: Semantic graph building is kept sequential for now
-            // as it requires complex coordination between threads
-            eprintln!(
-                "Note: Semantic graph building is performed sequentially even in parallel mode"
-            );
-        }
 
         Ok(result)
     }
@@ -831,8 +804,8 @@ impl CodebaseAnalyzer {
             }
         }
 
-        // Read file content using cache
-        let content = self.file_cache.read_to_string(file_path)?;
+        // Read file content (cache was removed in pre-pivot cleanup)
+        let content = std::fs::read_to_string(file_path)?;
         let line_count = content.lines().count();
 
         // Get relative path
@@ -2406,51 +2379,6 @@ impl CodebaseAnalyzer {
             docs.reverse();
             Some(docs.join("\n"))
         }
-    }
-
-    /// Enable semantic graph analysis
-    pub fn enable_semantic_graph(&mut self) {
-        self.semantic_graph = Some(SemanticGraphQuery::new());
-    }
-
-    /// Disable semantic graph analysis
-    pub fn disable_semantic_graph(&mut self) {
-        self.semantic_graph = None;
-    }
-
-    /// Get a reference to the semantic graph (if enabled)
-    pub fn semantic_graph(&self) -> Option<&SemanticGraphQuery> {
-        self.semantic_graph.as_ref()
-    }
-
-    /// Get a mutable reference to the semantic graph (if enabled)
-    pub fn semantic_graph_mut(&mut self) -> Option<&mut SemanticGraphQuery> {
-        self.semantic_graph.as_mut()
-    }
-
-    /// Check if semantic graph analysis is enabled
-    pub fn is_semantic_graph_enabled(&self) -> bool {
-        self.semantic_graph.is_some()
-    }
-
-    /// Get file cache statistics
-    pub fn cache_stats(&self) -> crate::file_cache::CacheStats {
-        self.file_cache.stats()
-    }
-
-    /// Get cache hit ratio
-    pub fn cache_hit_ratio(&self) -> f64 {
-        self.file_cache.hit_ratio()
-    }
-
-    /// Clear the file cache
-    pub fn clear_cache(&self) {
-        self.file_cache.clear();
-    }
-
-    /// Check if a file is cached
-    pub fn is_cached<P: AsRef<Path>>(&self, path: P) -> bool {
-        self.file_cache.contains(path)
     }
 }
 

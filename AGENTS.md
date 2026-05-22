@@ -2,7 +2,7 @@
 
 This file is the canonical project-coding-standards reference. Treat it
 as the source of truth when conventions diverge from anything you find
-in pre-pivot artifacts under `archive/`.
+in the git history of pre-pivot artifacts.
 
 AGENTS.md — 12-rule template
 These rules apply to every task in this project unless explicitly overridden.
@@ -281,7 +281,7 @@ bash, no `bats` or other deps required; needs `jq` + `python3`).
 ### Where shell `grep` / `rg` is still the right tool
 
 - Searching files outside the indexed workspace (vendored deps,
-  `target/`, `archive/`, anything `.rtsignore`'d).
+  `target/`, anything `.rtsignore`'d).
 - Non-text content that the daemon's body-extension allowlist refuses
   (binary diffs, generated files).
 - Multi-line regex matches across newlines — `Index.Grep`'s regex
@@ -305,8 +305,6 @@ Cargo workspace with `resolver = "3"`, Rust 2024 edition, MSRV 1.85.
   operator-facing CLI in the v0.2 stack.
 - `docs/protocol-v0.md` — daemon ↔ MCP wire spec.
 - `docs/plans/` and `docs/brainstorms/` — active design artifacts.
-- `archive/` — pre-pivot library + CLI + ~30 k LOC of AI/security
-  analyzers. Excluded from the workspace; preserved for git history.
 - `spikes/p0-*` — independent crates carrying the P0 validation
   experiments (rmcp 1.6, redb 2, notify+debouncer). Excluded from the
   workspace; reproducible via the per-spike README.
@@ -441,8 +439,7 @@ version bump together.
 
 If you go looking for a feature that the pre-pivot library shipped
 (AI analyzers, taint analysis, SARIF output, the `tree-sitter-cli`
-binary), it's in `archive/src/` with the original module names
-preserved. Recovery is `git mv archive/src/<mod> src/<mod>` plus the
-`pub mod` declaration; the v0.2 product surface deliberately omits all
-of it. See [CHANGELOG.md](CHANGELOG.md)'s v0.2.0-alpha.1 entry for the
-full archive manifest and rationale.
+binary), it's in the git history before the pre-pivot cleanup PR.
+Recovery is a manual port from that history; the v0.2 product surface
+deliberately omits all of it. See [CHANGELOG.md](CHANGELOG.md)'s
+v0.2.0-alpha.1 entry for the full archive manifest and rationale.

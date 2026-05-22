@@ -1,83 +1,48 @@
-//! # rust_tree_sitter (0.2.0-alpha: in-progress retrieval pivot)
+//! # rust_tree_sitter
 //!
-//! Tree-sitter-backed code parsing and analysis primitives, kept lean to feed
-//! the upcoming `rts-daemon` + `rts-mcp` retrieval stack (see
-//! [`docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md`]).
+//! Tree-sitter-backed parsing primitives consumed by `rts-daemon` and
+//! `rts-mcp` to power the agentic-retrieval stack.
 //!
-//! ## Public surface (post-cut)
+//! ## Public surface
 //!
 //! - **Parsing**: [`Parser`], [`SyntaxTree`], [`Node`], [`TreeCursor`], [`Language`]
 //! - **Querying**: [`Query`], [`QueryBuilder`], [`QueryMatch`], [`QueryCapture`]
-//! - **Analysis**: [`CodebaseAnalyzer`], [`AnalysisConfig`], [`AnalysisResult`], [`FileInfo`], [`Symbol`]
-//! - **Symbols**: [`SymbolTable`], [`SymbolDefinition`], [`SymbolReference`]
-//! - **Graphs**: [`SemanticGraphQuery`], `code_map::build_call_graph`
-//!
-//! ## Removed in 0.2.0
-//!
-//! The 0.1.x outbound AI service layer, security analyzers (taint, SQL/cmd
-//! injection, OWASP), refactoring engines, wiki generator, and dev-tooling
-//! modules have been archived for the agentic-retrieval pivot. See
-//! `archive/README.md` and `CHANGELOG.md` for the full kill list.
+//! - **Symbols**: the [`Symbol`] payload used by the daemon's serialization layer
+//! - **Ranking**: [`pagerank`] (used by `Index.Outline`)
+//! - **Signatures**: per-language [`signature::render_rust`] etc. (used by `Index.ReadSymbol`)
+//! - **Errors**: [`Error`], [`Result`]
 //!
 //! ## Quick start
 //!
 //! ```rust,no_run
-//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig};
+//! use rust_tree_sitter::{Language, Parser};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
-//! let mut analyzer = CodebaseAnalyzer::new()?;
-//! let result = analyzer.analyze_directory("src/")?;
-//! for file in &result.files {
-//!     println!("{}: {} symbols", file.path.display(), file.symbols.len());
-//! }
+//! let parser = Parser::new(Language::Rust)?;
+//! let tree = parser.parse("fn main() {}", None)?;
+//! println!("root kind: {}", tree.root_node().kind());
 //! # Ok(())
 //! # }
 //! ```
 
 // ---------- Surviving modules ----------
 
-/// Parallel-processing primitives (under review for P4 slimdown).
-pub mod advanced_parallel;
-/// Shared analysis helpers.
-pub mod analysis_common;
-/// Code-analysis utility helpers.
-pub mod analysis_utils;
 /// Codebase analyzer: walks a workspace and produces structured `AnalysisResult`s.
 pub mod analyzer;
-/// Code mapping (call graph, module graph) for repo-level views.
-pub mod code_map;
-/// Cyclomatic / cognitive / Halstead complexity metrics.
-pub mod complexity_analysis;
 /// Configuration constants and shared defaults.
 pub mod constants;
-/// Control-flow graph construction.
-pub mod control_flow;
-/// Package-manager dependency parsing (Cargo.toml, package.json, etc.).
-pub mod dependency_analysis;
 /// Error types for the crate.
 pub mod error;
-/// In-memory file content cache.
-pub mod file_cache;
 /// Programming-language adapters (tree-sitter grammars for 12 languages).
 pub mod languages;
-/// Memory-allocation tracking analysis.
-pub mod memory_tracker;
 /// Personalised PageRank for `Index.Outline` symbol ranking.
 pub mod pagerank;
 /// Tree-sitter parser wrapper.
 pub mod parser;
-/// Performance-hotspot heuristics.
-pub mod performance_analysis;
 /// Tree-sitter query API.
 pub mod query;
-/// Data-flow / sanitisation primitives used by the tree-shake closure walker.
-pub mod semantic_context;
-/// Symbol-graph queries for repo-map ranking and reasoning.
-pub mod semantic_graph;
 /// Per-language signature renderer for `Index.ReadSymbol shape=signature`.
 pub mod signature;
-/// Symbol table construction and lexical-scope resolution.
-pub mod symbol_table;
 /// Syntax-tree traversal helpers.
 pub mod tree;
 
@@ -93,35 +58,8 @@ pub use parser::{ParseOptions, Parser, create_edit};
 pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
-// Analysis modules surviving the cut (under review for P4)
-pub use code_map::{CallGraph, ModuleGraph, build_call_graph, build_module_graph};
-pub use complexity_analysis::{ComplexityAnalyzer, ComplexityMetrics, HalsteadMetrics};
-pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
-pub use dependency_analysis::{
-    Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,
-};
-pub use performance_analysis::{
-    PerformanceAnalysisResult, PerformanceAnalyzer, PerformanceConfig, PerformanceHotspot,
-};
-pub use semantic_context::{DataFlowAnalysis, SemanticContext, SemanticContextAnalyzer};
-pub use semantic_graph::{
-    GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
-    SemanticGraphQuery,
-};
-pub use symbol_table::{
-    ReferenceType, Scope, ScopeType, SymbolAnalysisResult, SymbolDefinition, SymbolReference,
-    SymbolTable, SymbolTableAnalyzer, SymbolType,
-};
-
 // Utilities
 pub use constants::common::RiskLevel;
-pub use file_cache::{CacheStats, FileCache};
-pub use memory_tracker::{
-    AllocationCallStack, AllocationHotspot, AllocationImpact, AllocationLocation,
-    AllocationPattern, AllocationType, FragmentationAnalysis, LeakType, LifetimeStatistics,
-    MemoryLeakCandidate, MemorySnapshot, MemoryStatistics, MemoryTracker, MemoryTrackingConfig,
-    MemoryTrackingResult, UsagePattern,
-};
 
 // Tree-sitter type passthroughs
 pub use tree_sitter::{InputEdit, Point, Range};
