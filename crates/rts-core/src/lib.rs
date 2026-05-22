@@ -44,8 +44,6 @@ pub mod analysis_common;
 pub mod analysis_utils;
 /// Codebase analyzer: walks a workspace and produces structured `AnalysisResult`s.
 pub mod analyzer;
-/// Code mapping (call graph, module graph) for repo-level views.
-pub mod code_map;
 /// Configuration constants and shared defaults.
 pub mod constants;
 /// Control-flow graph construction.
@@ -88,7 +86,6 @@ pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // Analysis modules surviving the cut (under review for P4)
-pub use code_map::{CallGraph, ModuleGraph, build_call_graph, build_module_graph};
 pub use control_flow::{CfgBuilder, CfgNodeType, ControlFlowGraph};
 pub use dependency_analysis::{
     Dependency, DependencyAnalysisResult, DependencyAnalyzer, DependencyConfig, PackageManager,
