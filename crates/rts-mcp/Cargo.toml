@@ -104,3 +104,13 @@ telemetry = ["dep:ureq"]
 
 [dev-dependencies]
 tempfile = "3"
+
+# Public-API drift gate (see docs/public-api-gate.md + crates/rts-mcp/tests/public_api.rs).
+# These deps power a `cargo test`-time check that fails when the crate's
+# pub surface changes without an explicit snapshot update. Pattern matches
+# `cargo-public-api`'s own canonical CI recipe; no separate CI workflow.
+# Library exposes `MINIMUM_NIGHTLY_RUST_VERSION` — the nightly version is
+# pinned via the library, not a separate tool pin.
+public-api = "0.51"
+rustdoc-json = "0.9"
+rustup-toolchain = "0.1"
