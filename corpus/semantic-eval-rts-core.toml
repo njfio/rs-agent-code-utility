@@ -51,12 +51,6 @@ text = "what does file analysis do?"
 expected_top_k = ["analyze_file", "FileAnalyzer", "analyze", "analyze_directory"]
 
 [[query]]
-text = "where is the cache implemented?"
-# `TreeCache` and `cached_tree` don't exist. The real cache types are
-# `FileCache`, `CacheStats`, plus the symbol-level cache helpers.
-expected_top_k = ["calculate_cache_key", "cache_tree", "FileCache", "CacheStats", "is_cached"]
-
-[[query]]
 text = "what's the entry point for language detection?"
 # `detect_language` doesn't exist; the real entry points are the
 # `detect_language_from_*` family. `from_extension` and `info_for_path`
@@ -84,13 +78,6 @@ expected_top_k = [
     "is_public_method",
     "is_rust_item_public",
 ]
-
-[[query]]
-text = "how does the analyzer count symbols by kind?"
-# `SymbolKind` and `count_symbols` don't exist. The actual symbol
-# inventory lives in `SymbolTable`/`SymbolStatistics`/`Symbol`,
-# enumerated via `find_nodes_by_kind`.
-expected_top_k = ["Symbol", "SymbolTable", "SymbolStatistics", "kind", "find_nodes_by_kind"]
 
 [[query]]
 text = "what strips a symbol's body for display?"

@@ -64,7 +64,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # LRU cache (replaces prior random-eviction HashMap caches)
 lru = "0.12"
 
-# Dependency-manifest parsing (for the `dependency_analysis` module)
+# TOML parsing (used by integration tests + future workspace tooling)
 toml = "0.8"
 
 [dev-dependencies]

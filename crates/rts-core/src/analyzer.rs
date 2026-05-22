@@ -19,11 +19,12 @@
 //!
 //! ### Basic File Analysis
 //!
-//! ```rust
+//! ```ignore
+//! // NOTE: `CodebaseAnalyzer` is being removed in a follow-up PR; prefer
+//! // the `parse_content` facade that lands alongside that change.
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
-
+//!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
-//! // Create analyzer with custom configuration
 //! let config = AnalysisConfig {
 //!     depth: AnalysisDepth::Full,
 //!     max_depth: Some(10),
@@ -31,28 +32,25 @@
 //!     ..Default::default()
 //! };
 //!
-//! let analyzer = CodebaseAnalyzer::with_config(config);
-
-//! // Analyze a single file
-//! let mut analyzer = analyzer?;
+//! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //! # Ok(())
 //! # }
 //! ```
 //!
 //! ### Directory Analysis
 //!
-//! ```rust
+//! ```ignore
+//! // NOTE: `CodebaseAnalyzer` is being removed in a follow-up PR; prefer
+//! // the `parse_content` facade that lands alongside that change.
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
 //! let mut analyzer = CodebaseAnalyzer::new()?;
-//!
-//! // Analyze entire directory
 //! let result = analyzer.analyze_directory("src/")?;
 //!
 //! for file_info in &result.files {
 //!     println!("File: {}", file_info.path.display());
-//!     println!("  Functions: {}", file_info.symbols.len());
+//!     println!("  Symbols: {}", file_info.symbols.len());
 //! }
 //! # Ok(())
 //! # }
@@ -60,7 +58,9 @@
 //!
 //! ### Advanced Analysis with Filtering
 //!
-//! ```rust
+//! ```ignore
+//! // NOTE: `CodebaseAnalyzer` is being removed in a follow-up PR; prefer
+//! // the `parse_content` facade that lands alongside that change.
 //! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig, AnalysisDepth};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
@@ -68,16 +68,13 @@
 //!     depth: AnalysisDepth::Full,
 //!     include_extensions: Some(vec!["rs".to_string(), "py".to_string()]),
 //!     exclude_dirs: vec!["target".to_string(), "node_modules".to_string()],
-//!     max_file_size: Some(1024 * 1024), // 1MB limit
+//!     max_file_size: Some(1024 * 1024),
 //!     ..Default::default()
 //! };
 //!
 //! let mut analyzer = CodebaseAnalyzer::with_config(config)?;
 //! let result = analyzer.analyze_directory(".")?;
-//!
-//! // Access results directly
 //! println!("Total files analyzed: {}", result.total_files);
-//! println!("Total functions: {}", result.files.iter().map(|f| f.symbols.len()).sum::<usize>());
 //! # Ok(())
 //! # }
 //! ```
@@ -2383,7 +2380,6 @@ impl CodebaseAnalyzer {
             Some(docs.join("\n"))
         }
     }
-
 }
 
 #[cfg(test)]

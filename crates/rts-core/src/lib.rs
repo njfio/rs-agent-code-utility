@@ -1,35 +1,26 @@
-//! # rust_tree_sitter (0.2.0-alpha: in-progress retrieval pivot)
+//! # rust_tree_sitter
 //!
-//! Tree-sitter-backed code parsing and analysis primitives, kept lean to feed
-//! the upcoming `rts-daemon` + `rts-mcp` retrieval stack (see
-//! [`docs/plans/2026-05-10-001-feat-pivot-to-agentic-retrieval-mcp-server-plan.md`]).
+//! Tree-sitter-backed parsing primitives consumed by `rts-daemon` and
+//! `rts-mcp` to power the agentic-retrieval stack.
 //!
-//! ## Public surface (post-cut)
+//! ## Public surface
 //!
 //! - **Parsing**: [`Parser`], [`SyntaxTree`], [`Node`], [`TreeCursor`], [`Language`]
 //! - **Querying**: [`Query`], [`QueryBuilder`], [`QueryMatch`], [`QueryCapture`]
-//! - **Analysis**: [`CodebaseAnalyzer`], [`AnalysisConfig`], [`AnalysisResult`], [`FileInfo`], [`Symbol`]
-//! - **Symbols**: [`SymbolTable`], [`SymbolDefinition`], [`SymbolReference`]
-//! - **Graphs**: [`SemanticGraphQuery`], `code_map::build_call_graph`
-//!
-//! ## Removed in 0.2.0
-//!
-//! The 0.1.x outbound AI service layer, security analyzers (taint, SQL/cmd
-//! injection, OWASP), refactoring engines, wiki generator, and dev-tooling
-//! modules have been archived for the agentic-retrieval pivot. See
-//! `archive/README.md` and `CHANGELOG.md` for the full kill list.
+//! - **Symbols**: the [`Symbol`] payload used by the daemon's serialization layer
+//! - **Ranking**: [`pagerank`] (used by `Index.Outline`)
+//! - **Signatures**: per-language [`signature::render_rust`] etc. (used by `Index.ReadSymbol`)
+//! - **Errors**: [`Error`], [`Result`]
 //!
 //! ## Quick start
 //!
 //! ```rust,no_run
-//! use rust_tree_sitter::{CodebaseAnalyzer, AnalysisConfig};
+//! use rust_tree_sitter::{Language, Parser};
 //!
 //! # fn main() -> Result<(), rust_tree_sitter::Error> {
-//! let mut analyzer = CodebaseAnalyzer::new()?;
-//! let result = analyzer.analyze_directory("src/")?;
-//! for file in &result.files {
-//!     println!("{}: {} symbols", file.path.display(), file.symbols.len());
-//! }
+//! let parser = Parser::new(Language::Rust)?;
+//! let tree = parser.parse("fn main() {}", None)?;
+//! println!("root kind: {}", tree.root_node().kind());
 //! # Ok(())
 //! # }
 //! ```

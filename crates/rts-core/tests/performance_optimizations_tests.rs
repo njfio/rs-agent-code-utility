@@ -183,4 +183,3 @@ fn test_memory_allocation_optimization() -> std::result::Result<(), Box<dyn std:
 
     Ok(())
 }
-
