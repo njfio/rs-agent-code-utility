@@ -42,8 +42,6 @@ pub mod analyzer;
 pub mod constants;
 /// Error types for the crate.
 pub mod error;
-/// In-memory file content cache.
-pub mod file_cache;
 /// Programming-language adapters (tree-sitter grammars for 12 languages).
 pub mod languages;
 /// Personalised PageRank for `Index.Outline` symbol ranking.
@@ -79,7 +77,6 @@ pub use semantic_graph::{
 
 // Utilities
 pub use constants::common::RiskLevel;
-pub use file_cache::{CacheStats, FileCache};
 
 // Tree-sitter type passthroughs
 pub use tree_sitter::{InputEdit, Point, Range};
