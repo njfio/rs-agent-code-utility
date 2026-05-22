@@ -3,13 +3,15 @@
 
   "_comment_alwaysLoad": "alwaysLoad: true promotes mcp__rts__* tools out of Claude Code's deferred-loading surface so they appear in the top-of-prompt tool list every session — no ToolSearch round-trip required. Requires Claude Code v2.1.121+. On older versions the field is silently ignored and the AGENTS.md soft-load directive (call ToolSearch once at session start) remains the fallback path.",
 
-  "_comment_bins": "command: \"rts-mcp\" assumes the binary is on PATH. Build with `cargo build --release -p rts-mcp -p rts-daemon` and put target/release on PATH, or replace with an absolute path. RTS_DAEMON_BIN tells rts-mcp where to find the daemon binary if it isn't a sibling of rts-mcp on disk.",
+  "_comment_bins": "command: \"rts-mcp\" assumes the binary is on PATH. Build with `cargo build --release -p rts-mcp -p rts-daemon` and put target/release on PATH (or copy to ~/bin), or replace with an absolute path. RTS_DAEMON_BIN tells rts-mcp where to find the daemon binary if it isn't a sibling of rts-mcp on disk.",
+
+  "_comment_workspace": "Claude Code does NOT support VS Code's ${workspaceFolder}; it only expands ${ENV_VAR} / ${ENV_VAR:-default}. Claude Code sets CLAUDE_PROJECT_DIR to the project root in the spawned server's env, and spawns stdio servers with CWD = project root. ${CLAUDE_PROJECT_DIR:-.} resolves to the worktree root portably across contributors and git worktrees; the `.` fallback covers CC versions/contexts that don't set the var (CWD is the project root anyway).",
 
   "mcpServers": {
     "rts": {
       "type": "stdio",
       "command": "rts-mcp",
-      "args": ["--workspace", "${workspaceFolder}"],
+      "args": ["--workspace", "${CLAUDE_PROJECT_DIR:-.}"],
       "env": {
         "RTS_DAEMON_BIN": "rts-daemon",
         "RTS_LOG": "rts_mcp=info,warn"
