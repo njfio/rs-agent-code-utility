@@ -83,7 +83,6 @@
 //! ```
 
 use crate::error::{Error, Result};
-use crate::file_cache::FileCache;
 use crate::languages::Language;
 use crate::parser::Parser;
 use crate::semantic_graph::SemanticGraphQuery;
@@ -282,7 +281,6 @@ pub struct CodebaseAnalyzer {
     config: AnalysisConfig,
     parsers: HashMap<Language, Parser>,
     semantic_graph: Option<SemanticGraphQuery>,
-    file_cache: FileCache,
 }
 
 impl CodebaseAnalyzer {
@@ -297,7 +295,6 @@ impl CodebaseAnalyzer {
             config,
             parsers: HashMap::new(),
             semantic_graph: None,
-            file_cache: FileCache::new(),
         })
     }
 
@@ -831,8 +828,8 @@ impl CodebaseAnalyzer {
             }
         }
 
-        // Read file content using cache
-        let content = self.file_cache.read_to_string(file_path)?;
+        // Read file content (cache was removed in pre-pivot cleanup)
+        let content = std::fs::read_to_string(file_path)?;
         let line_count = content.lines().count();
 
         // Get relative path
@@ -2431,26 +2428,6 @@ impl CodebaseAnalyzer {
     /// Check if semantic graph analysis is enabled
     pub fn is_semantic_graph_enabled(&self) -> bool {
         self.semantic_graph.is_some()
-    }
-
-    /// Get file cache statistics
-    pub fn cache_stats(&self) -> crate::file_cache::CacheStats {
-        self.file_cache.stats()
-    }
-
-    /// Get cache hit ratio
-    pub fn cache_hit_ratio(&self) -> f64 {
-        self.file_cache.hit_ratio()
-    }
-
-    /// Clear the file cache
-    pub fn clear_cache(&self) {
-        self.file_cache.clear();
-    }
-
-    /// Check if a file is cached
-    pub fn is_cached<P: AsRef<Path>>(&self, path: P) -> bool {
-        self.file_cache.contains(path)
     }
 }
 
