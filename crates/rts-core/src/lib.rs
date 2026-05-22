@@ -62,8 +62,6 @@ pub mod query;
 pub mod semantic_graph;
 /// Per-language signature renderer for `Index.ReadSymbol shape=signature`.
 pub mod signature;
-/// Symbol table construction and lexical-scope resolution.
-pub mod symbol_table;
 /// Syntax-tree traversal helpers.
 pub mod tree;
 
@@ -83,10 +81,6 @@ pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 pub use semantic_graph::{
     GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
     SemanticGraphQuery,
-};
-pub use symbol_table::{
-    ReferenceType, Scope, ScopeType, SymbolAnalysisResult, SymbolDefinition, SymbolReference,
-    SymbolTable, SymbolTableAnalyzer, SymbolType,
 };
 
 // Utilities
