@@ -33,6 +33,8 @@ pub mod analyzer;
 pub mod constants;
 /// Error types for the crate.
 pub mod error;
+/// Per-language symbol extraction from tree-sitter parse trees.
+pub(crate) mod extraction;
 /// Programming-language adapters (tree-sitter grammars for 12 languages).
 pub mod languages;
 /// Personalised PageRank for `Index.Outline` symbol ranking.
