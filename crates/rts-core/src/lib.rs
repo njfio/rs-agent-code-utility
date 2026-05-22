@@ -50,8 +50,6 @@ pub mod pagerank;
 pub mod parser;
 /// Tree-sitter query API.
 pub mod query;
-/// Symbol-graph queries for repo-map ranking and reasoning.
-pub mod semantic_graph;
 /// Per-language signature renderer for `Index.ReadSymbol shape=signature`.
 pub mod signature;
 /// Syntax-tree traversal helpers.
@@ -68,12 +66,6 @@ pub use languages::Language;
 pub use parser::{ParseOptions, Parser, create_edit};
 pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
-
-// Analysis modules surviving the cut (under review for P4)
-pub use semantic_graph::{
-    GraphEdge, GraphNode, GraphStatistics, NodeType, QueryConfig, QueryResult, RelationshipType,
-    SemanticGraphQuery,
-};
 
 // Utilities
 pub use constants::common::RiskLevel;
