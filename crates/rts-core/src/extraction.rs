@@ -10,9 +10,9 @@
 //! `parse_content` facade and any future direct consumer can call
 //! into it without instantiating a stateful analyzer.
 
-use crate::analyzer::Symbol;
 use crate::error::Result;
 use crate::languages::Language;
+use crate::symbol::Symbol;
 use crate::tree::SyntaxTree;
 
 pub(crate) fn extract_symbols(
@@ -1279,5 +1279,429 @@ pub(crate) fn extract_c_doc_comments(content: &str, start_row: usize) -> Option<
     } else {
         docs.reverse();
         Some(docs.join("\n"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Language;
+    use crate::parse_content;
+
+    /// Go-style doc comments (// lines immediately above) flow through
+    /// to `Symbol::documentation`. A blank line severs the comment from
+    /// the declaration (Go convention).
+    #[test]
+    fn go_doc_comments_extracted() {
+        let src = "package main\n\n// Greet returns a friendly hello message.\n// Used as the default response when no name is provided.\nfunc Greet() string {\n    return \"hello\"\n}\n\n// Counter holds a running total.\ntype Counter struct {\n    n int\n}\n";
+        let outcome = parse_content(src, Language::Go).unwrap();
+
+        let greet = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "Greet")
+            .expect("Greet symbol should be extracted");
+        let docs = greet
+            .documentation
+            .as_ref()
+            .expect("Greet should have docs");
+        assert!(docs.contains("friendly hello"), "got docs={docs:?}");
+        assert!(docs.contains("default response"), "got docs={docs:?}");
+
+        let counter = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "Counter")
+            .expect("Counter type should be extracted");
+        assert_eq!(
+            counter.documentation.as_deref(),
+            Some("Counter holds a running total."),
+            "Counter docs should be the single comment line"
+        );
+    }
+
+    /// Go convention: a blank line between the comment and the
+    /// declaration means the comment is NOT documentation.
+    #[test]
+    fn go_doc_comments_blank_line_severs() {
+        let src = "package main\n\n// This is not documentation, just a stray comment.\n\nfunc Orphan() {}\n";
+        let outcome = parse_content(src, Language::Go).unwrap();
+        let orphan = outcome.symbols.iter().find(|s| s.name == "Orphan").unwrap();
+        assert!(
+            orphan.documentation.is_none(),
+            "Orphan should have no docs (blank line severs): got {:?}",
+            orphan.documentation
+        );
+    }
+
+    /// JSDoc /** ... */ blocks should flow through to
+    /// `Symbol::documentation`. The cosmetic `*` on continuation lines
+    /// is stripped.
+    #[test]
+    fn jsdoc_extraction_for_javascript() {
+        let src = "/**\n * Greet returns a friendly hello message.\n * Used when no name is provided.\n */\nfunction greet() { return \"hi\"; }\n\n/** Single-line JSDoc. */\nclass Counter { }\n";
+        let outcome = parse_content(src, Language::JavaScript).unwrap();
+
+        let greet = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "greet")
+            .expect("greet symbol should be extracted");
+        let docs = greet
+            .documentation
+            .as_ref()
+            .expect("greet should have docs");
+        assert!(
+            !docs.starts_with('*'),
+            "JSDoc opening `*` should be stripped, got: {docs:?}"
+        );
+        assert!(docs.contains("friendly hello"), "got docs={docs:?}");
+
+        let counter = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "Counter")
+            .expect("Counter class should be extracted");
+        let counter_docs = counter
+            .documentation
+            .as_ref()
+            .expect("Counter should have docs");
+        assert_eq!(
+            counter_docs, "Single-line JSDoc.",
+            "single-line JSDoc should strip leading `*`"
+        );
+    }
+
+    /// Module-level `const` and `static` declarations surface as
+    /// symbols so agents can look them up by name.
+    #[test]
+    fn rust_const_and_static_extraction() {
+        let src = "/// The default request limit.\npub const DEFAULT_LIMIT: usize = 256;\n\n/// Maximum supported.\npub const MAX_LIMIT: usize = 4096;\n\nstatic INTERNAL_FLAG: bool = false;\n";
+        let outcome = parse_content(src, Language::Rust).unwrap();
+
+        let default_limit = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "DEFAULT_LIMIT")
+            .expect("DEFAULT_LIMIT should be extracted as a symbol");
+        assert_eq!(default_limit.kind, "const");
+        assert_eq!(default_limit.visibility, "public");
+        assert_eq!(
+            default_limit.documentation.as_deref(),
+            Some("The default request limit."),
+            "const doc should flow through"
+        );
+
+        let max_limit = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "MAX_LIMIT")
+            .expect("MAX_LIMIT should be extracted");
+        assert_eq!(max_limit.kind, "const");
+
+        let internal_flag = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "INTERNAL_FLAG")
+            .expect("static INTERNAL_FLAG should be extracted as a symbol");
+        assert_eq!(internal_flag.kind, "static");
+        assert_eq!(internal_flag.visibility, "private");
+    }
+
+    /// Ruby doc comments (#-prefixed lines, no shebang).
+    #[test]
+    fn ruby_doc_extraction() {
+        let src = "# Greeter returns hello strings.\n# Use the static `hello` method for the default.\nclass Greeter\n  # The default greeting.\n  def hello\n    return \"hi\"\n  end\nend\n";
+        let outcome = parse_content(src, Language::Ruby).unwrap();
+
+        if let Some(greeter) = outcome.symbols.iter().find(|s| s.name == "Greeter") {
+            let docs = greeter
+                .documentation
+                .as_ref()
+                .expect("Greeter should have docs");
+            assert!(docs.contains("returns hello"), "got docs={docs:?}");
+        }
+        if let Some(hello) = outcome.symbols.iter().find(|s| s.name == "hello") {
+            assert_eq!(
+                hello.documentation.as_deref(),
+                Some("The default greeting.")
+            );
+        }
+    }
+
+    /// Javadoc /** ... */ flows through with cosmetic `*` strip.
+    #[test]
+    fn java_doc_extraction() {
+        let src = "/**\n * Greeter returns hello strings.\n * Use the static `hello()` for the default.\n */\npublic class Greeter {\n    /** The default greeting. */\n    public String hello() { return \"hi\"; }\n}\n";
+        let outcome = parse_content(src, Language::Java).unwrap();
+
+        if let Some(greeter) = outcome.symbols.iter().find(|s| s.name == "Greeter") {
+            let docs = greeter
+                .documentation
+                .as_ref()
+                .expect("Greeter should have Javadoc");
+            assert!(docs.contains("returns hello"), "got docs={docs:?}");
+            assert!(!docs.starts_with('*'), "Javadoc `*` should be stripped");
+        }
+    }
+
+    /// Swift uses `///` like Rust. The extractor reuses the Rust path.
+    #[test]
+    fn swift_doc_extraction() {
+        let src = "/// Greeter returns hello strings.\n/// Use the static `hello()` for the default.\nclass Greeter {\n    /// The default greeting.\n    func hello() -> String { return \"hi\" }\n}\n";
+        let outcome = parse_content(src, Language::Swift).unwrap();
+
+        if let Some(greeter) = outcome.symbols.iter().find(|s| s.name == "Greeter") {
+            let docs = greeter
+                .documentation
+                .as_ref()
+                .expect("Greeter should have docs");
+            assert!(docs.contains("returns hello"), "got docs={docs:?}");
+        }
+        if let Some(hello) = outcome.symbols.iter().find(|s| s.name == "hello") {
+            assert_eq!(
+                hello.documentation.as_deref(),
+                Some("The default greeting.")
+            );
+        }
+    }
+
+    /// C# uses `///` XML doc comments and surfaces class/method/
+    /// interface/record symbols.
+    #[test]
+    fn csharp_extraction() {
+        let src = "namespace Demo;\n\n\
+             /// <summary>\n\
+             /// Greeter returns hello strings.\n\
+             /// </summary>\n\
+             public class Greeter\n\
+             {\n\
+             /// <summary>The default greeting.</summary>\n\
+             public string Hello() { return \"hi\"; }\n\
+             }\n\n\
+             /// <summary>A record for caching.</summary>\n\
+             public record CacheKey(string Name);\n\n\
+             /// <summary>Eviction policy contract.</summary>\n\
+             public interface IEvictionPolicy { void Evict(); }\n";
+        let outcome = parse_content(src, Language::CSharp).unwrap();
+
+        let greeter = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "Greeter")
+            .expect("Greeter class should be extracted");
+        let docs = greeter.documentation.as_ref().expect("Greeter has docs");
+        assert!(
+            docs.contains("Greeter returns hello"),
+            "Greeter doc should preserve XML payload, got: {docs:?}"
+        );
+
+        let hello = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "Hello")
+            .expect("Hello method should be extracted");
+        assert_eq!(hello.kind, "method");
+        let hello_docs = hello.documentation.as_ref().expect("Hello has docs");
+        assert!(
+            hello_docs.contains("default greeting"),
+            "got: {hello_docs:?}"
+        );
+
+        let cache_key = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "CacheKey")
+            .expect("CacheKey record should be extracted");
+        assert_eq!(
+            cache_key.kind, "class",
+            "records surface as class kind for wire stability"
+        );
+
+        let policy = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "IEvictionPolicy")
+            .expect("IEvictionPolicy interface should be extracted");
+        assert_eq!(policy.kind, "interface");
+        let policy_docs = policy
+            .documentation
+            .as_ref()
+            .expect("IEvictionPolicy has docs");
+        assert!(policy_docs.contains("Eviction"), "got: {policy_docs:?}");
+    }
+
+    /// PHP class with a single public method: the method must be
+    /// indexed as a top-level Symbol with `kind == "method"` and the
+    /// bare method name (the form PHP_REFS captures).
+    #[test]
+    fn php_class_method_indexed_with_bare_name() {
+        let src = "<?php\n\
+             class Greeter {\n\
+                 public function greet() { return \"hi\"; }\n\
+             }\n";
+        let outcome = parse_content(src, Language::Php).unwrap();
+
+        let greet = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "greet")
+            .expect("greet method should be extracted with bare name");
+        assert_eq!(greet.kind, "method");
+        assert_eq!(greet.visibility, "public");
+    }
+
+    /// Visibility modifiers (public/private/protected) propagate to
+    /// `Symbol.visibility`. A method with no modifier defaults to
+    /// public (PHP language rule). `static` does not change visibility.
+    #[test]
+    fn php_method_visibility_modifiers_extracted() {
+        let src = "<?php\n\
+             class Klass {\n\
+                 public function pub_method() {}\n\
+                 private function priv_method() {}\n\
+                 protected function prot_method() {}\n\
+                 public static function static_method() {}\n\
+                 function default_method() {}\n\
+             }\n";
+        let outcome = parse_content(src, Language::Php).unwrap();
+        let visibility_of = |name: &str| -> String {
+            outcome
+                .symbols
+                .iter()
+                .find(|s| s.name == name && s.kind == "method")
+                .unwrap_or_else(|| panic!("method {name} not extracted"))
+                .visibility
+                .clone()
+        };
+
+        assert_eq!(visibility_of("pub_method"), "public");
+        assert_eq!(visibility_of("priv_method"), "private");
+        assert_eq!(visibility_of("prot_method"), "protected");
+        assert_eq!(visibility_of("static_method"), "public");
+        assert_eq!(visibility_of("default_method"), "public");
+    }
+
+    /// Interface method signatures are indexed so callers of
+    /// `$svc->doThing()` resolve through the interface signature.
+    #[test]
+    fn php_interface_methods_indexed() {
+        let src = "<?php\n\
+             interface Service {\n\
+                 public function doThing();\n\
+                 public function reset();\n\
+             }\n";
+        let outcome = parse_content(src, Language::Php).unwrap();
+
+        for name in ["doThing", "reset"] {
+            assert!(
+                outcome
+                    .symbols
+                    .iter()
+                    .any(|s| s.name == name && s.kind == "method"),
+                "interface method {name} should be extracted; got {:?}",
+                outcome
+                    .symbols
+                    .iter()
+                    .map(|s| (&s.name, &s.kind))
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    /// Trait methods are call targets just like class methods.
+    #[test]
+    fn php_trait_methods_indexed() {
+        let src = "<?php\n\
+             trait Loggable {\n\
+                 public function log_event(string $msg) {}\n\
+                 protected function flush() {}\n\
+             }\n";
+        let outcome = parse_content(src, Language::Php).unwrap();
+
+        let log_event = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "log_event")
+            .expect("trait method log_event should be extracted");
+        assert_eq!(log_event.kind, "method");
+        assert_eq!(log_event.visibility, "public");
+
+        let flush = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "flush")
+            .expect("trait method flush should be extracted");
+        assert_eq!(flush.visibility, "protected");
+    }
+
+    /// A class inside a `namespace \Foo\Bar { ... }` block still has
+    /// methods indexed by bare name (PHP_REFS captures unqualified).
+    #[test]
+    fn php_namespaced_class_methods_indexed_by_bare_name() {
+        let src = "<?php\n\
+             namespace Foo\\Bar;\n\
+             class Klass {\n\
+                 public function nested_method() {}\n\
+             }\n";
+        let outcome = parse_content(src, Language::Php).unwrap();
+
+        let method = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "nested_method")
+            .expect("nested_method should be extracted by bare name");
+        assert_eq!(method.kind, "method");
+    }
+
+    /// Rust trait/type/union/macro all surface as symbols. Closes
+    /// v0.5.4 dogfood gap: `find_symbol --name Log` on `rust-lang/log`
+    /// returned empty pre-fix because `pub trait Log` wasn't extracted.
+    #[test]
+    fn rust_trait_type_union_macro_all_extracted() {
+        let src = "\
+/// A trait encapsulating logging.
+pub trait Log: Send + Sync {
+    fn enabled(&self) -> bool;
+}
+
+/// Result alias.
+pub type LogResult<T> = std::result::Result<T, std::io::Error>;
+
+pub union Word {
+    int: u32,
+    bytes: [u8; 4],
+}
+
+macro_rules! log_at {
+    ($level:expr, $($arg:tt)+) => {};
+}
+";
+        let outcome = parse_content(src, Language::Rust).unwrap();
+        let by_name = |n: &str, k: &str| outcome.symbols.iter().any(|s| s.name == n && s.kind == k);
+        assert!(
+            by_name("Log", "trait"),
+            "trait extraction missing: {:?}",
+            outcome
+                .symbols
+                .iter()
+                .map(|s| (&s.name, &s.kind))
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            by_name("LogResult", "type"),
+            "type-alias extraction missing"
+        );
+        assert!(by_name("Word", "union"), "union extraction missing");
+        assert!(by_name("log_at", "macro"), "macro extraction missing");
+
+        let log = outcome
+            .symbols
+            .iter()
+            .find(|s| s.name == "Log" && s.kind == "trait")
+            .unwrap();
+        assert_eq!(
+            log.documentation.as_deref(),
+            Some("A trait encapsulating logging.")
+        );
     }
 }

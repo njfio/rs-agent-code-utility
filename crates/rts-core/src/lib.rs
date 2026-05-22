@@ -28,8 +28,6 @@
 
 // ---------- Surviving modules ----------
 
-/// Codebase analyzer: walks a workspace and produces structured `AnalysisResult`s.
-pub mod analyzer;
 /// Configuration constants and shared defaults.
 pub mod constants;
 /// Error types for the crate.
@@ -46,19 +44,18 @@ pub mod parser;
 pub mod query;
 /// Per-language signature renderer for `Index.ReadSymbol shape=signature`.
 pub mod signature;
+/// The [`Symbol`] payload produced by [`parse_content`].
+pub mod symbol;
 /// Syntax-tree traversal helpers.
 pub mod tree;
 
 // ---------- Re-exports ----------
 
-// Core analysis types
-pub use analyzer::{
-    AnalysisConfig, AnalysisDepth, AnalysisResult, CodebaseAnalyzer, FileInfo, Symbol,
-};
 pub use error::{Error, Result};
 pub use languages::Language;
 pub use parser::{ParseOptions, Parser, create_edit};
 pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
+pub use symbol::Symbol;
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
 
 // ---------- parse_content facade ----------
@@ -315,21 +312,21 @@ mod tests {
     }
 
     #[test]
-    fn parse_content_matches_codebase_analyzer_output() {
-        // Equivalence: parse_content must be a behavioural alias for
-        // `CodebaseAnalyzer::new()?.analyze_content(...)`. This test
-        // pins the equivalence so B2/B3 can safely swap callers.
+    fn parse_content_extracts_multiple_rust_kinds() {
+        // Replaces the B2-era `parse_content_matches_codebase_analyzer_output`
+        // equivalence test that pinned the drop-in replacement contract.
+        // After B3 deletes `CodebaseAnalyzer`, the contract is implicit
+        // (parse_content IS the only path) but the multi-kind sanity
+        // check remains valuable.
         let src = "pub fn alpha() {}\npub struct Beta;\nfn gamma() {}\n";
-        let via_facade = parse_content(src, Language::Rust).unwrap();
-        let mut analyzer = CodebaseAnalyzer::new().unwrap();
-        let via_analyzer = analyzer.analyze_content(src, Language::Rust).unwrap();
-        assert_eq!(
-            via_facade.symbols.len(),
-            via_analyzer.len(),
-            "symbol counts must match"
-        );
-        for (a, b) in via_facade.symbols.iter().zip(via_analyzer.iter()) {
-            assert_eq!((&a.name, &a.kind), (&b.name, &b.kind));
-        }
+        let outcome = parse_content(src, Language::Rust).unwrap();
+        let names: Vec<_> = outcome
+            .symbols
+            .iter()
+            .map(|s| (s.name.as_str(), s.kind.as_str()))
+            .collect();
+        assert!(names.contains(&("alpha", "function")), "got {names:?}");
+        assert!(names.contains(&("Beta", "struct")), "got {names:?}");
+        assert!(names.contains(&("gamma", "function")), "got {names:?}");
     }
 }
