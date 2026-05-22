@@ -81,9 +81,9 @@ dirs = "5"
 unicode-normalization = "0.1"
 
 # Parallel parse fan-out in the writer's flush hot path. tree-sitter `Parser`
-# isn't `Sync`, but our `ParserPool::parse_and_extract` uses a fresh local
-# `CodebaseAnalyzer` per call — the parser-pool lock just seeds an unused
-# cache entry, so the heavy work runs concurrently.
+# isn't `Sync`, but our `ParserPool::parse_and_extract` calls
+# `rust_tree_sitter::parse_content`, which constructs a fresh local parser
+# per call. No shared mutable state across rayon workers.
 rayon = "1"
 
 # v0.5.5+ Index.Grep v2 structural-query cache. 64-entry LRU keyed on
