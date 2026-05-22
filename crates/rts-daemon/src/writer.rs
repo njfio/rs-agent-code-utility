@@ -315,9 +315,8 @@ fn flush(
     // Fan parses out across rayon's pool. The parse step is the heavy
     // work in a flush (tree-sitter parse + symbol extraction +
     // tempfile-driven analyzer call), and `ParserPool::parse_and_extract`
-    // is safe to call concurrently — the per-language parser cache
-    // entry is short-locked just to seed-if-vacant, and the actual
-    // parse uses a fresh local `CodebaseAnalyzer` per call.
+    // is safe to call concurrently — `parse_content` constructs a fresh
+    // local parser per call and shares no state across threads.
     use rayon::prelude::*;
     let paths: Vec<PathBuf> = upserts.drain().map(|(p, _)| p).collect();
     let results: Vec<(PathBuf, Result<FileBatchEntry, ParseRejected>)> = paths
@@ -734,16 +733,16 @@ pub fn lang_tag_to_name(tag: u8) -> Option<&'static str> {
 /// call and round-tripped the content through a tempfile via
 /// `analyzer.analyze_file`; the alpha.29 perf reviewer audit (H1)
 /// flagged that as the writer's biggest hot-path waste — tree-sitter
-/// accepts content directly through `analyze_content`, no tempfile
-/// or re-read needed.
+/// accepts content directly. Post-PR-B (B2), this delegates to
+/// `rust_tree_sitter::parse_content`, the daemon-facing facade built
+/// over `Parser::new` + the hoisted `extract_symbols` free function.
 ///
 /// The type is kept around (vs an inline call) for two reasons:
 ///
 /// 1. The writer's `flush()` rayon `into_par_iter().map(...)` closure
-///    captures `&ParserPool` (originally for the mutex-protected
-///    parser cache). Keeping the type lets us extend it later with
-///    rayon-thread-local analyzer storage, when/if benches show that
-///    `CodebaseAnalyzer::new()` per call is itself measurable.
+///    captures `&ParserPool`. Keeping the type lets us extend it
+///    later with rayon-thread-local parser storage, when/if benches
+///    show that fresh-`Parser` per call is itself measurable.
 /// 2. Tests in the writer module exercise this surface via
 ///    `ParserPool::new().parse_and_extract(...)`.
 struct ParserPool;
@@ -756,13 +755,12 @@ impl ParserPool {
     /// Parse `content` for `language` and return the extracted symbols.
     ///
     /// Bypasses the filesystem entirely — content goes straight into
-    /// `CodebaseAnalyzer::analyze_content`, which parses with
-    /// tree-sitter and runs the per-language symbol extractor. No
-    /// tempfile, no disk round-trip.
+    /// `rust_tree_sitter::parse_content`, which parses with tree-sitter
+    /// and runs the per-language symbol extractor. No tempfile, no
+    /// disk round-trip.
     fn parse_and_extract(&self, language: Language, content: &str) -> anyhow::Result<Vec<Symbol>> {
-        use rust_tree_sitter::CodebaseAnalyzer;
-        let mut analyzer = CodebaseAnalyzer::new()?;
-        Ok(analyzer.analyze_content(content, language)?)
+        let outcome = rust_tree_sitter::parse_content(content, language)?;
+        Ok(outcome.symbols)
     }
 }
 
@@ -804,15 +802,17 @@ mod tests {
         );
     }
 
-    /// **Known issue**: as of `0.2.0-alpha.15` the analyzer's
+    /// **Known issue**: as of `0.2.0-alpha.15` the
     /// `extract_java_symbols` / `extract_c_symbols` / `extract_cpp_symbols`
-    /// paths return empty when called via the writer's tempfile route
-    /// (the `extract_*_symbols` methods in `rust_tree_sitter::analyzer`
-    /// are TODO-stubbed for these languages). The SignatureRenderer for
-    /// these languages works (covered by 22 unit tests in
+    /// paths return empty when called via `parse_content`
+    /// (these per-language extractors in `rust_tree_sitter::extraction`
+    /// are TODO-stubbed). The SignatureRenderer for these languages
+    /// works (covered by 22 unit tests in
     /// `rust_tree_sitter::signature::tests`), but they won't get
-    /// signature-rendered through `Index.ReadSymbol` until the writer's
-    /// upstream extraction is fixed in a follow-up PR. Go works.
+    /// signature-rendered through `Index.ReadSymbol` until the
+    /// extractors are filled in. Go works. Post-PR-B (B1) the
+    /// `ParseOutcome::partial_errors` slot reserves room for the
+    /// extractors to self-report this gap without a breaking change.
     #[test]
     fn parse_and_extract_returns_go_symbols() {
         let pool = ParserPool::new();
