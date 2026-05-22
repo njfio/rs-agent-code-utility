@@ -2,331 +2,6 @@ pub mod rust_tree_sitter
 pub use rust_tree_sitter::InputEdit
 pub use rust_tree_sitter::Point
 pub use rust_tree_sitter::Range
-pub mod rust_tree_sitter::analyzer
-pub enum rust_tree_sitter::analyzer::AnalysisDepth
-pub rust_tree_sitter::analyzer::AnalysisDepth::Basic
-pub rust_tree_sitter::analyzer::AnalysisDepth::Deep
-pub rust_tree_sitter::analyzer::AnalysisDepth::Full
-impl core::clone::Clone for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::clone(&self) -> rust_tree_sitter::analyzer::AnalysisDepth
-impl core::cmp::Eq for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::cmp::PartialEq for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::eq(&self, other: &rust_tree_sitter::analyzer::AnalysisDepth) -> bool
-impl core::default::Default for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::default() -> rust_tree_sitter::analyzer::AnalysisDepth
-impl core::fmt::Debug for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::str::traits::FromStr for rust_tree_sitter::analyzer::AnalysisDepth
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Err = ()
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::from_str(s: &str) -> core::result::Result<Self, Self::Err>
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::marker::Send for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::marker::Sync for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::marker::Unpin for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::AnalysisDepth
-impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::analyzer::AnalysisDepth where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::equivalent(&self, key: &K) -> bool
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::AnalysisDepth where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::AnalysisDepth where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::AnalysisDepth where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::AnalysisDepth where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Owned = T
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::AnalysisDepth where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::AnalysisDepth where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::AnalysisDepth where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::AnalysisDepth where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::AnalysisDepth
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Init = T
-pub const rust_tree_sitter::analyzer::AnalysisDepth::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::AnalysisDepth
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::AnalysisDepth where T: for<'de> serde_core::de::Deserialize<'de>
-pub struct rust_tree_sitter::analyzer::AnalysisConfig
-pub rust_tree_sitter::analyzer::AnalysisConfig::depth: rust_tree_sitter::analyzer::AnalysisDepth
-pub rust_tree_sitter::analyzer::AnalysisConfig::enable_parallel: bool
-pub rust_tree_sitter::analyzer::AnalysisConfig::exclude_dirs: alloc::vec::Vec<alloc::string::String>
-pub rust_tree_sitter::analyzer::AnalysisConfig::exclude_extensions: alloc::vec::Vec<alloc::string::String>
-pub rust_tree_sitter::analyzer::AnalysisConfig::follow_symlinks: bool
-pub rust_tree_sitter::analyzer::AnalysisConfig::include_extensions: core::option::Option<alloc::vec::Vec<alloc::string::String>>
-pub rust_tree_sitter::analyzer::AnalysisConfig::include_hidden: bool
-pub rust_tree_sitter::analyzer::AnalysisConfig::max_depth: core::option::Option<usize>
-pub rust_tree_sitter::analyzer::AnalysisConfig::max_file_size: core::option::Option<usize>
-pub rust_tree_sitter::analyzer::AnalysisConfig::parallel_threshold: usize
-pub rust_tree_sitter::analyzer::AnalysisConfig::thread_count: core::option::Option<usize>
-impl core::clone::Clone for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::clone(&self) -> rust_tree_sitter::analyzer::AnalysisConfig
-impl core::default::Default for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::default() -> Self
-impl core::fmt::Debug for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::marker::Send for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::marker::Sync for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::marker::Unpin for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::AnalysisConfig
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::AnalysisConfig where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::AnalysisConfig where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::AnalysisConfig where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::AnalysisConfig where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Owned = T
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::AnalysisConfig where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::AnalysisConfig where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::AnalysisConfig where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::AnalysisConfig where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::AnalysisConfig
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Init = T
-pub const rust_tree_sitter::analyzer::AnalysisConfig::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::AnalysisConfig
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::AnalysisConfig where T: for<'de> serde_core::de::Deserialize<'de>
-pub struct rust_tree_sitter::analyzer::AnalysisResult
-pub rust_tree_sitter::analyzer::AnalysisResult::config: rust_tree_sitter::analyzer::AnalysisConfig
-pub rust_tree_sitter::analyzer::AnalysisResult::error_files: usize
-pub rust_tree_sitter::analyzer::AnalysisResult::files: alloc::vec::Vec<rust_tree_sitter::analyzer::FileInfo>
-pub rust_tree_sitter::analyzer::AnalysisResult::languages: std::collections::hash::map::HashMap<alloc::string::String, usize>
-pub rust_tree_sitter::analyzer::AnalysisResult::parsed_files: usize
-pub rust_tree_sitter::analyzer::AnalysisResult::root_path: std::path::PathBuf
-pub rust_tree_sitter::analyzer::AnalysisResult::total_files: usize
-pub rust_tree_sitter::analyzer::AnalysisResult::total_lines: usize
-impl rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::new() -> Self
-pub fn rust_tree_sitter::analyzer::AnalysisResult::sort_stable(&mut self)
-impl core::clone::Clone for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::clone(&self) -> rust_tree_sitter::analyzer::AnalysisResult
-impl core::default::Default for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::default() -> Self
-impl core::fmt::Debug for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::AnalysisResult
-impl core::marker::Send for rust_tree_sitter::analyzer::AnalysisResult
-impl core::marker::Sync for rust_tree_sitter::analyzer::AnalysisResult
-impl core::marker::Unpin for rust_tree_sitter::analyzer::AnalysisResult
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::AnalysisResult
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::AnalysisResult
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::AnalysisResult where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::AnalysisResult::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::AnalysisResult where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::AnalysisResult::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::AnalysisResult::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::AnalysisResult where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::AnalysisResult::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::AnalysisResult::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::AnalysisResult where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::AnalysisResult::Owned = T
-pub fn rust_tree_sitter::analyzer::AnalysisResult::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::AnalysisResult::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::AnalysisResult where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisResult::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::AnalysisResult where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisResult::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::AnalysisResult where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisResult::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::AnalysisResult where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::AnalysisResult
-pub type rust_tree_sitter::analyzer::AnalysisResult::Init = T
-pub const rust_tree_sitter::analyzer::AnalysisResult::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::AnalysisResult
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::AnalysisResult where T: for<'de> serde_core::de::Deserialize<'de>
-pub struct rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::analyze_content(&mut self, content: &str, language: rust_tree_sitter::languages::Language) -> rust_tree_sitter::error::Result<alloc::vec::Vec<rust_tree_sitter::analyzer::Symbol>>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::analyze_directory<P: core::convert::AsRef<std::path::Path>>(&mut self, path: P) -> rust_tree_sitter::error::Result<rust_tree_sitter::analyzer::AnalysisResult>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::analyze_file<P: core::convert::AsRef<std::path::Path>>(&mut self, file_path: P) -> rust_tree_sitter::error::Result<rust_tree_sitter::analyzer::AnalysisResult>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::new() -> rust_tree_sitter::error::Result<Self>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::with_config(config: rust_tree_sitter::analyzer::AnalysisConfig) -> rust_tree_sitter::error::Result<Self>
-impl core::default::Default for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::default() -> rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Freeze for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Send for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Sync for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Unpin for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::CodebaseAnalyzer where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::CodebaseAnalyzer where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::CodebaseAnalyzer::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::CodebaseAnalyzer where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::CodebaseAnalyzer::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> core::any::Any for rust_tree_sitter::analyzer::CodebaseAnalyzer where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::CodebaseAnalyzer where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::CodebaseAnalyzer where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::borrow_mut(&mut self) -> &mut T
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub type rust_tree_sitter::analyzer::CodebaseAnalyzer::Init = T
-pub const rust_tree_sitter::analyzer::CodebaseAnalyzer::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub struct rust_tree_sitter::analyzer::FileInfo
-pub rust_tree_sitter::analyzer::FileInfo::language: alloc::string::String
-pub rust_tree_sitter::analyzer::FileInfo::lines: usize
-pub rust_tree_sitter::analyzer::FileInfo::parse_errors: alloc::vec::Vec<alloc::string::String>
-pub rust_tree_sitter::analyzer::FileInfo::parsed_successfully: bool
-pub rust_tree_sitter::analyzer::FileInfo::path: std::path::PathBuf
-pub rust_tree_sitter::analyzer::FileInfo::size: usize
-pub rust_tree_sitter::analyzer::FileInfo::symbols: alloc::vec::Vec<rust_tree_sitter::analyzer::Symbol>
-impl core::clone::Clone for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::clone(&self) -> rust_tree_sitter::analyzer::FileInfo
-impl core::fmt::Debug for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::FileInfo
-impl core::marker::Send for rust_tree_sitter::analyzer::FileInfo
-impl core::marker::Sync for rust_tree_sitter::analyzer::FileInfo
-impl core::marker::Unpin for rust_tree_sitter::analyzer::FileInfo
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::FileInfo
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::FileInfo
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::FileInfo where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::FileInfo::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::FileInfo where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::FileInfo::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::FileInfo::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::FileInfo where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::FileInfo::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::FileInfo::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::FileInfo where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::FileInfo::Owned = T
-pub fn rust_tree_sitter::analyzer::FileInfo::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::FileInfo::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::FileInfo where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::FileInfo::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::FileInfo where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::FileInfo::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::FileInfo where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::FileInfo::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::FileInfo where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::FileInfo
-pub type rust_tree_sitter::analyzer::FileInfo::Init = T
-pub const rust_tree_sitter::analyzer::FileInfo::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::FileInfo
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::FileInfo where T: for<'de> serde_core::de::Deserialize<'de>
-pub struct rust_tree_sitter::analyzer::Symbol
-pub rust_tree_sitter::analyzer::Symbol::documentation: core::option::Option<alloc::string::String>
-pub rust_tree_sitter::analyzer::Symbol::end_column: usize
-pub rust_tree_sitter::analyzer::Symbol::end_line: usize
-pub rust_tree_sitter::analyzer::Symbol::kind: alloc::string::String
-pub rust_tree_sitter::analyzer::Symbol::name: alloc::string::String
-pub rust_tree_sitter::analyzer::Symbol::start_column: usize
-pub rust_tree_sitter::analyzer::Symbol::start_line: usize
-pub rust_tree_sitter::analyzer::Symbol::visibility: alloc::string::String
-impl core::clone::Clone for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::clone(&self) -> rust_tree_sitter::analyzer::Symbol
-impl core::fmt::Debug for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::Symbol
-impl core::marker::Send for rust_tree_sitter::analyzer::Symbol
-impl core::marker::Sync for rust_tree_sitter::analyzer::Symbol
-impl core::marker::Unpin for rust_tree_sitter::analyzer::Symbol
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::Symbol
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::Symbol
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::Symbol where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::Symbol::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::Symbol where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::Symbol::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::Symbol::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::Symbol where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::Symbol::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::Symbol::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::Symbol where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::Symbol::Owned = T
-pub fn rust_tree_sitter::analyzer::Symbol::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::Symbol::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::Symbol where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::Symbol::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::Symbol where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::Symbol::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::Symbol where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::Symbol::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::Symbol where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::Symbol
-pub type rust_tree_sitter::analyzer::Symbol::Init = T
-pub const rust_tree_sitter::analyzer::Symbol::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::Symbol
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::Symbol where T: for<'de> serde_core::de::Deserialize<'de>
 pub mod rust_tree_sitter::constants
 pub mod rust_tree_sitter::constants::code_evolution
 pub const rust_tree_sitter::constants::code_evolution::DEFAULT_PATTERN_CONFIDENCE_THRESHOLD: f64
@@ -392,14 +67,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::constants::common::Effo
 pub unsafe fn rust_tree_sitter::constants::common::EffortLevel::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::constants::common::EffortLevel
 pub fn rust_tree_sitter::constants::common::EffortLevel::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::constants::common::EffortLevel
-pub type rust_tree_sitter::constants::common::EffortLevel::Init = T
-pub const rust_tree_sitter::constants::common::EffortLevel::ALIGN: usize
-pub unsafe fn rust_tree_sitter::constants::common::EffortLevel::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::constants::common::EffortLevel::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::constants::common::EffortLevel::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::constants::common::EffortLevel::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::constants::common::EffortLevel
 impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::constants::common::EffortLevel where T: for<'de> serde_core::de::Deserialize<'de>
 pub enum rust_tree_sitter::constants::common::Priority
 pub rust_tree_sitter::constants::common::Priority::Critical
@@ -461,14 +128,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::constants::common::Prio
 pub unsafe fn rust_tree_sitter::constants::common::Priority::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::constants::common::Priority
 pub fn rust_tree_sitter::constants::common::Priority::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::constants::common::Priority
-pub type rust_tree_sitter::constants::common::Priority::Init = T
-pub const rust_tree_sitter::constants::common::Priority::ALIGN: usize
-pub unsafe fn rust_tree_sitter::constants::common::Priority::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::constants::common::Priority::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::constants::common::Priority::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::constants::common::Priority::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::constants::common::Priority
 impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::constants::common::Priority where T: for<'de> serde_core::de::Deserialize<'de>
 pub enum rust_tree_sitter::constants::common::RiskLevel
 pub rust_tree_sitter::constants::common::RiskLevel::Critical
@@ -530,14 +189,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::constants::common::Risk
 pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::constants::common::RiskLevel
 pub fn rust_tree_sitter::constants::common::RiskLevel::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::constants::common::RiskLevel
-pub type rust_tree_sitter::constants::common::RiskLevel::Init = T
-pub const rust_tree_sitter::constants::common::RiskLevel::ALIGN: usize
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::constants::common::RiskLevel
 impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::constants::common::RiskLevel where T: for<'de> serde_core::de::Deserialize<'de>
 pub enum rust_tree_sitter::constants::common::Severity
 pub rust_tree_sitter::constants::common::Severity::Critical
@@ -600,14 +251,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::constants::common::Seve
 pub unsafe fn rust_tree_sitter::constants::common::Severity::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::constants::common::Severity
 pub fn rust_tree_sitter::constants::common::Severity::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::constants::common::Severity
-pub type rust_tree_sitter::constants::common::Severity::Init = T
-pub const rust_tree_sitter::constants::common::Severity::ALIGN: usize
-pub unsafe fn rust_tree_sitter::constants::common::Severity::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::constants::common::Severity::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::constants::common::Severity::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::constants::common::Severity::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::constants::common::Severity
 impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::constants::common::Severity where T: for<'de> serde_core::de::Deserialize<'de>
 pub mod rust_tree_sitter::constants::file_processing
 pub const rust_tree_sitter::constants::file_processing::DEFAULT_MAX_FILE_SIZE: usize
@@ -824,14 +467,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::error::Error where T: ?
 pub fn rust_tree_sitter::error::Error::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::error::Error
 pub fn rust_tree_sitter::error::Error::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::Error
-pub type rust_tree_sitter::error::Error::Init = T
-pub const rust_tree_sitter::error::Error::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::Error::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::Error::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::Error::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::Error::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::Error
 pub enum rust_tree_sitter::error::QueryErrorType
 pub rust_tree_sitter::error::QueryErrorType::CompilationError
 pub rust_tree_sitter::error::QueryErrorType::ExecutionError
@@ -873,14 +508,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::error::QueryErrorType w
 pub unsafe fn rust_tree_sitter::error::QueryErrorType::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::error::QueryErrorType
 pub fn rust_tree_sitter::error::QueryErrorType::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::QueryErrorType
-pub type rust_tree_sitter::error::QueryErrorType::Init = T
-pub const rust_tree_sitter::error::QueryErrorType::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::QueryErrorType::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::QueryErrorType::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::QueryErrorType::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::QueryErrorType::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::QueryErrorType
 pub struct rust_tree_sitter::error::InvalidInputDetails
 pub rust_tree_sitter::error::InvalidInputDetails::actual: alloc::string::String
 pub rust_tree_sitter::error::InvalidInputDetails::expected: alloc::string::String
@@ -918,14 +545,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::error::InvalidInputDeta
 pub unsafe fn rust_tree_sitter::error::InvalidInputDetails::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::error::InvalidInputDetails
 pub fn rust_tree_sitter::error::InvalidInputDetails::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::InvalidInputDetails
-pub type rust_tree_sitter::error::InvalidInputDetails::Init = T
-pub const rust_tree_sitter::error::InvalidInputDetails::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::InvalidInputDetails::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::InvalidInputDetails::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::InvalidInputDetails::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::InvalidInputDetails::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::InvalidInputDetails
 pub struct rust_tree_sitter::error::LanguageErrorDetails
 pub rust_tree_sitter::error::LanguageErrorDetails::language_name: alloc::string::String
 pub rust_tree_sitter::error::LanguageErrorDetails::operation: alloc::string::String
@@ -962,14 +581,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::error::LanguageErrorDet
 pub unsafe fn rust_tree_sitter::error::LanguageErrorDetails::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::error::LanguageErrorDetails
 pub fn rust_tree_sitter::error::LanguageErrorDetails::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::LanguageErrorDetails
-pub type rust_tree_sitter::error::LanguageErrorDetails::Init = T
-pub const rust_tree_sitter::error::LanguageErrorDetails::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::LanguageErrorDetails::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::LanguageErrorDetails::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::LanguageErrorDetails::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::LanguageErrorDetails::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::LanguageErrorDetails
 pub struct rust_tree_sitter::error::ParseErrorDetails
 pub rust_tree_sitter::error::ParseErrorDetails::column: core::option::Option<usize>
 pub rust_tree_sitter::error::ParseErrorDetails::error_kind: alloc::string::String
@@ -1008,14 +619,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::error::ParseErrorDetail
 pub unsafe fn rust_tree_sitter::error::ParseErrorDetails::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::error::ParseErrorDetails
 pub fn rust_tree_sitter::error::ParseErrorDetails::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::ParseErrorDetails
-pub type rust_tree_sitter::error::ParseErrorDetails::Init = T
-pub const rust_tree_sitter::error::ParseErrorDetails::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::ParseErrorDetails::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::ParseErrorDetails::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::ParseErrorDetails::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::ParseErrorDetails::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::ParseErrorDetails
 pub struct rust_tree_sitter::error::QueryErrorDetails
 pub rust_tree_sitter::error::QueryErrorDetails::error_type: rust_tree_sitter::error::QueryErrorType
 pub rust_tree_sitter::error::QueryErrorDetails::language: alloc::string::String
@@ -1053,14 +656,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::error::QueryErrorDetail
 pub unsafe fn rust_tree_sitter::error::QueryErrorDetails::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::error::QueryErrorDetails
 pub fn rust_tree_sitter::error::QueryErrorDetails::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::QueryErrorDetails
-pub type rust_tree_sitter::error::QueryErrorDetails::Init = T
-pub const rust_tree_sitter::error::QueryErrorDetails::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::QueryErrorDetails::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::QueryErrorDetails::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::QueryErrorDetails::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::QueryErrorDetails::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::QueryErrorDetails
 pub struct rust_tree_sitter::error::TreeErrorDetails
 pub rust_tree_sitter::error::TreeErrorDetails::context: core::option::Option<alloc::string::String>
 pub rust_tree_sitter::error::TreeErrorDetails::node_kind: core::option::Option<alloc::string::String>
@@ -1098,14 +693,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::error::TreeErrorDetails
 pub unsafe fn rust_tree_sitter::error::TreeErrorDetails::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::error::TreeErrorDetails
 pub fn rust_tree_sitter::error::TreeErrorDetails::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::TreeErrorDetails
-pub type rust_tree_sitter::error::TreeErrorDetails::Init = T
-pub const rust_tree_sitter::error::TreeErrorDetails::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::TreeErrorDetails::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::TreeErrorDetails::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::TreeErrorDetails::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::TreeErrorDetails::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::TreeErrorDetails
 pub type rust_tree_sitter::error::Result<T> = core::result::Result<T, rust_tree_sitter::error::Error>
 pub mod rust_tree_sitter::languages
 pub mod rust_tree_sitter::languages::c
@@ -1175,14 +762,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::c::CSyntax w
 pub fn rust_tree_sitter::languages::c::CSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::c::CSyntax
 pub fn rust_tree_sitter::languages::c::CSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::c::CSyntax
-pub type rust_tree_sitter::languages::c::CSyntax::Init = T
-pub const rust_tree_sitter::languages::c::CSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::c::CSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::c::CSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::c::CSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::c::CSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::c::CSyntax
 pub mod rust_tree_sitter::languages::cpp
 pub struct rust_tree_sitter::languages::cpp::CppSyntax
 impl rust_tree_sitter::languages::cpp::CppSyntax
@@ -1239,14 +818,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::cpp::CppSynt
 pub fn rust_tree_sitter::languages::cpp::CppSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::cpp::CppSyntax
 pub fn rust_tree_sitter::languages::cpp::CppSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::cpp::CppSyntax
-pub type rust_tree_sitter::languages::cpp::CppSyntax::Init = T
-pub const rust_tree_sitter::languages::cpp::CppSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::cpp::CppSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::cpp::CppSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::cpp::CppSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::cpp::CppSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::cpp::CppSyntax
 pub mod rust_tree_sitter::languages::go
 pub struct rust_tree_sitter::languages::go::GoSyntax
 impl rust_tree_sitter::languages::go::GoSyntax
@@ -1313,14 +884,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::go::GoSyntax
 pub fn rust_tree_sitter::languages::go::GoSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::go::GoSyntax
 pub fn rust_tree_sitter::languages::go::GoSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::go::GoSyntax
-pub type rust_tree_sitter::languages::go::GoSyntax::Init = T
-pub const rust_tree_sitter::languages::go::GoSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::go::GoSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::go::GoSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::go::GoSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::go::GoSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::go::GoSyntax
 pub struct rust_tree_sitter::languages::go::PackageAnalysis
 pub rust_tree_sitter::languages::go::PackageAnalysis::exported_functions: usize
 pub rust_tree_sitter::languages::go::PackageAnalysis::exported_types: usize
@@ -1361,14 +924,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::languages::go::PackageA
 pub unsafe fn rust_tree_sitter::languages::go::PackageAnalysis::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::go::PackageAnalysis
 pub fn rust_tree_sitter::languages::go::PackageAnalysis::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::go::PackageAnalysis
-pub type rust_tree_sitter::languages::go::PackageAnalysis::Init = T
-pub const rust_tree_sitter::languages::go::PackageAnalysis::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::go::PackageAnalysis::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::go::PackageAnalysis::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::go::PackageAnalysis::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::go::PackageAnalysis::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::go::PackageAnalysis
 pub mod rust_tree_sitter::languages::java
 pub struct rust_tree_sitter::languages::java::JavaSyntax
 impl rust_tree_sitter::languages::java::JavaSyntax
@@ -1419,14 +974,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::java::JavaSy
 pub fn rust_tree_sitter::languages::java::JavaSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::java::JavaSyntax
 pub fn rust_tree_sitter::languages::java::JavaSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::java::JavaSyntax
-pub type rust_tree_sitter::languages::java::JavaSyntax::Init = T
-pub const rust_tree_sitter::languages::java::JavaSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::java::JavaSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::java::JavaSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::java::JavaSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::java::JavaSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::java::JavaSyntax
 pub mod rust_tree_sitter::languages::javascript
 pub struct rust_tree_sitter::languages::javascript::JavaScriptSyntax
 impl rust_tree_sitter::languages::javascript::JavaScriptSyntax
@@ -1492,14 +1039,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::javascript::
 pub fn rust_tree_sitter::languages::javascript::JavaScriptSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::javascript::JavaScriptSyntax
 pub fn rust_tree_sitter::languages::javascript::JavaScriptSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::javascript::JavaScriptSyntax
-pub type rust_tree_sitter::languages::javascript::JavaScriptSyntax::Init = T
-pub const rust_tree_sitter::languages::javascript::JavaScriptSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::javascript::JavaScriptSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::javascript::JavaScriptSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::javascript::JavaScriptSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::javascript::JavaScriptSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::javascript::JavaScriptSyntax
 pub mod rust_tree_sitter::languages::php
 pub struct rust_tree_sitter::languages::php::PhpSyntax
 impl rust_tree_sitter::languages::php::PhpSyntax
@@ -1551,14 +1090,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::php::PhpSynt
 pub fn rust_tree_sitter::languages::php::PhpSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::php::PhpSyntax
 pub fn rust_tree_sitter::languages::php::PhpSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::php::PhpSyntax
-pub type rust_tree_sitter::languages::php::PhpSyntax::Init = T
-pub const rust_tree_sitter::languages::php::PhpSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::php::PhpSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::php::PhpSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::php::PhpSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::php::PhpSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::php::PhpSyntax
 pub mod rust_tree_sitter::languages::python
 pub struct rust_tree_sitter::languages::python::PythonSyntax
 impl rust_tree_sitter::languages::python::PythonSyntax
@@ -1628,14 +1159,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::python::Pyth
 pub fn rust_tree_sitter::languages::python::PythonSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::python::PythonSyntax
 pub fn rust_tree_sitter::languages::python::PythonSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::python::PythonSyntax
-pub type rust_tree_sitter::languages::python::PythonSyntax::Init = T
-pub const rust_tree_sitter::languages::python::PythonSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::python::PythonSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::python::PythonSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::python::PythonSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::python::PythonSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::python::PythonSyntax
 pub mod rust_tree_sitter::languages::ruby
 pub struct rust_tree_sitter::languages::ruby::RubySyntax
 impl rust_tree_sitter::languages::ruby::RubySyntax
@@ -1687,14 +1210,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::ruby::RubySy
 pub fn rust_tree_sitter::languages::ruby::RubySyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::ruby::RubySyntax
 pub fn rust_tree_sitter::languages::ruby::RubySyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::ruby::RubySyntax
-pub type rust_tree_sitter::languages::ruby::RubySyntax::Init = T
-pub const rust_tree_sitter::languages::ruby::RubySyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::ruby::RubySyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::ruby::RubySyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::ruby::RubySyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::ruby::RubySyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::ruby::RubySyntax
 pub mod rust_tree_sitter::languages::rust
 pub struct rust_tree_sitter::languages::rust::RustSyntax
 impl rust_tree_sitter::languages::rust::RustSyntax
@@ -1746,14 +1261,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::rust::RustSy
 pub fn rust_tree_sitter::languages::rust::RustSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::rust::RustSyntax
 pub fn rust_tree_sitter::languages::rust::RustSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::rust::RustSyntax
-pub type rust_tree_sitter::languages::rust::RustSyntax::Init = T
-pub const rust_tree_sitter::languages::rust::RustSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::rust::RustSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::rust::RustSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::rust::RustSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::rust::RustSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::rust::RustSyntax
 pub mod rust_tree_sitter::languages::swift
 pub struct rust_tree_sitter::languages::swift::SwiftSyntax
 impl rust_tree_sitter::languages::swift::SwiftSyntax
@@ -1806,14 +1313,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::swift::Swift
 pub fn rust_tree_sitter::languages::swift::SwiftSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::swift::SwiftSyntax
 pub fn rust_tree_sitter::languages::swift::SwiftSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::swift::SwiftSyntax
-pub type rust_tree_sitter::languages::swift::SwiftSyntax::Init = T
-pub const rust_tree_sitter::languages::swift::SwiftSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::swift::SwiftSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::swift::SwiftSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::swift::SwiftSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::swift::SwiftSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::swift::SwiftSyntax
 pub mod rust_tree_sitter::languages::typescript
 pub struct rust_tree_sitter::languages::typescript::TypeScriptSyntax
 impl rust_tree_sitter::languages::typescript::TypeScriptSyntax
@@ -1889,14 +1388,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::languages::typescript::
 pub fn rust_tree_sitter::languages::typescript::TypeScriptSyntax::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::typescript::TypeScriptSyntax
 pub fn rust_tree_sitter::languages::typescript::TypeScriptSyntax::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::typescript::TypeScriptSyntax
-pub type rust_tree_sitter::languages::typescript::TypeScriptSyntax::Init = T
-pub const rust_tree_sitter::languages::typescript::TypeScriptSyntax::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::typescript::TypeScriptSyntax::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::typescript::TypeScriptSyntax::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::typescript::TypeScriptSyntax::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::typescript::TypeScriptSyntax::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::typescript::TypeScriptSyntax
 pub enum rust_tree_sitter::languages::Language
 pub rust_tree_sitter::languages::Language::C
 pub rust_tree_sitter::languages::Language::CSharp
@@ -1968,14 +1459,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::languages::Language whe
 pub unsafe fn rust_tree_sitter::languages::Language::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::Language
 pub fn rust_tree_sitter::languages::Language::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::Language
-pub type rust_tree_sitter::languages::Language::Init = T
-pub const rust_tree_sitter::languages::Language::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::Language::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::Language::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::Language::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::Language::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::Language
 pub fn rust_tree_sitter::languages::detect_language_from_path<P: core::convert::AsRef<std::path::Path>>(path: P) -> core::option::Option<rust_tree_sitter::languages::Language>
 pub mod rust_tree_sitter::pagerank
 pub struct rust_tree_sitter::pagerank::Edge
@@ -2015,14 +1498,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::pagerank::Edge where T:
 pub unsafe fn rust_tree_sitter::pagerank::Edge::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::pagerank::Edge
 pub fn rust_tree_sitter::pagerank::Edge::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::pagerank::Edge
-pub type rust_tree_sitter::pagerank::Edge::Init = T
-pub const rust_tree_sitter::pagerank::Edge::ALIGN: usize
-pub unsafe fn rust_tree_sitter::pagerank::Edge::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::pagerank::Edge::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::pagerank::Edge::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::pagerank::Edge::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::pagerank::Edge
 pub const rust_tree_sitter::pagerank::DAMPING: f64
 pub const rust_tree_sitter::pagerank::MAX_ITER: u32
 pub const rust_tree_sitter::pagerank::TOL: f64
@@ -2068,14 +1543,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::parser::ParseOptions wh
 pub unsafe fn rust_tree_sitter::parser::ParseOptions::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::parser::ParseOptions
 pub fn rust_tree_sitter::parser::ParseOptions::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::parser::ParseOptions
-pub type rust_tree_sitter::parser::ParseOptions::Init = T
-pub const rust_tree_sitter::parser::ParseOptions::ALIGN: usize
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::parser::ParseOptions
 pub struct rust_tree_sitter::parser::Parser
 impl rust_tree_sitter::parser::Parser
 pub fn rust_tree_sitter::parser::Parser::cache_stats(&self) -> rust_tree_sitter::error::Result<(usize, usize)>
@@ -2123,14 +1590,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::parser::Parser where T:
 pub unsafe fn rust_tree_sitter::parser::Parser::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::parser::Parser
 pub fn rust_tree_sitter::parser::Parser::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::parser::Parser
-pub type rust_tree_sitter::parser::Parser::Init = T
-pub const rust_tree_sitter::parser::Parser::ALIGN: usize
-pub unsafe fn rust_tree_sitter::parser::Parser::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::parser::Parser::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::parser::Parser::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::parser::Parser::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::parser::Parser
 pub fn rust_tree_sitter::parser::create_edit(start_byte: usize, old_end_byte: usize, new_end_byte: usize, start_row: usize, start_column: usize, old_end_row: usize, old_end_column: usize, new_end_row: usize, new_end_column: usize) -> tree_sitter::InputEdit
 pub mod rust_tree_sitter::query
 pub struct rust_tree_sitter::query::Query
@@ -2167,14 +1626,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::query::Query where T: ?
 pub fn rust_tree_sitter::query::Query::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::query::Query
 pub fn rust_tree_sitter::query::Query::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::Query
-pub type rust_tree_sitter::query::Query::Init = T
-pub const rust_tree_sitter::query::Query::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::Query::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::Query::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::Query::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::Query::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::Query
 pub struct rust_tree_sitter::query::QueryBuilder
 impl rust_tree_sitter::query::QueryBuilder
 pub fn rust_tree_sitter::query::QueryBuilder::add_pattern(self, pattern: &str) -> Self
@@ -2204,14 +1655,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::query::QueryBuilder whe
 pub fn rust_tree_sitter::query::QueryBuilder::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::query::QueryBuilder
 pub fn rust_tree_sitter::query::QueryBuilder::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::QueryBuilder
-pub type rust_tree_sitter::query::QueryBuilder::Init = T
-pub const rust_tree_sitter::query::QueryBuilder::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::QueryBuilder
 pub struct rust_tree_sitter::query::QueryCapture<'a>
 impl<'a> rust_tree_sitter::query::QueryCapture<'a>
 pub fn rust_tree_sitter::query::QueryCapture<'a>::byte_range(&self) -> tree_sitter::Range
@@ -2251,14 +1694,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::query::QueryCapture<'a>
 pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::query::QueryCapture<'a>
 pub fn rust_tree_sitter::query::QueryCapture<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::QueryCapture<'a>
-pub type rust_tree_sitter::query::QueryCapture<'a>::Init = T
-pub const rust_tree_sitter::query::QueryCapture<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::QueryCapture<'a>
 pub struct rust_tree_sitter::query::QueryMatch<'a>
 impl<'a> rust_tree_sitter::query::QueryMatch<'a>
 pub fn rust_tree_sitter::query::QueryMatch<'a>::capture_by_name(&self, query: &rust_tree_sitter::query::Query, name: &str) -> core::option::Option<rust_tree_sitter::query::QueryCapture<'a>>
@@ -2286,14 +1721,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::query::QueryMatch<'a> w
 pub fn rust_tree_sitter::query::QueryMatch<'a>::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::query::QueryMatch<'a>
 pub fn rust_tree_sitter::query::QueryMatch<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::QueryMatch<'a>
-pub type rust_tree_sitter::query::QueryMatch<'a>::Init = T
-pub const rust_tree_sitter::query::QueryMatch<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::QueryMatch<'a>
 pub mod rust_tree_sitter::signature
 pub fn rust_tree_sitter::signature::render_c(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_cpp(bytes: &[u8]) -> core::option::Option<alloc::string::String>
@@ -2307,6 +1734,53 @@ pub fn rust_tree_sitter::signature::render_ruby(bytes: &[u8]) -> core::option::O
 pub fn rust_tree_sitter::signature::render_rust(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_swift(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_typescript(bytes: &[u8]) -> core::option::Option<alloc::string::String>
+pub mod rust_tree_sitter::symbol
+pub struct rust_tree_sitter::symbol::Symbol
+pub rust_tree_sitter::symbol::Symbol::documentation: core::option::Option<alloc::string::String>
+pub rust_tree_sitter::symbol::Symbol::end_column: usize
+pub rust_tree_sitter::symbol::Symbol::end_line: usize
+pub rust_tree_sitter::symbol::Symbol::kind: alloc::string::String
+pub rust_tree_sitter::symbol::Symbol::name: alloc::string::String
+pub rust_tree_sitter::symbol::Symbol::start_column: usize
+pub rust_tree_sitter::symbol::Symbol::start_line: usize
+pub rust_tree_sitter::symbol::Symbol::visibility: alloc::string::String
+impl core::clone::Clone for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::clone(&self) -> rust_tree_sitter::symbol::Symbol
+impl core::fmt::Debug for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::symbol::Symbol
+impl core::marker::Send for rust_tree_sitter::symbol::Symbol
+impl core::marker::Sync for rust_tree_sitter::symbol::Symbol
+impl core::marker::Unpin for rust_tree_sitter::symbol::Symbol
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::symbol::Symbol
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::symbol::Symbol
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::symbol::Symbol where U: core::convert::From<T>
+pub fn rust_tree_sitter::symbol::Symbol::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::symbol::Symbol where U: core::convert::Into<T>
+pub type rust_tree_sitter::symbol::Symbol::Error = core::convert::Infallible
+pub fn rust_tree_sitter::symbol::Symbol::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::symbol::Symbol where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::symbol::Symbol::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::symbol::Symbol::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::symbol::Symbol where T: core::clone::Clone
+pub type rust_tree_sitter::symbol::Symbol::Owned = T
+pub fn rust_tree_sitter::symbol::Symbol::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::symbol::Symbol::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::symbol::Symbol where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::symbol::Symbol::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::symbol::Symbol where T: ?core::marker::Sized
+pub fn rust_tree_sitter::symbol::Symbol::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::symbol::Symbol where T: ?core::marker::Sized
+pub fn rust_tree_sitter::symbol::Symbol::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::symbol::Symbol where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::symbol::Symbol::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::symbol::Symbol where T: for<'de> serde_core::de::Deserialize<'de>
 pub mod rust_tree_sitter::tree
 pub struct rust_tree_sitter::tree::Node<'a>
 impl<'a> rust_tree_sitter::tree::Node<'a>
@@ -2368,14 +1842,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::tree::Node<'a> where T:
 pub unsafe fn rust_tree_sitter::tree::Node<'a>::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::tree::Node<'a>
 pub fn rust_tree_sitter::tree::Node<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::tree::Node<'a>
-pub type rust_tree_sitter::tree::Node<'a>::Init = T
-pub const rust_tree_sitter::tree::Node<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::tree::Node<'a>
 pub struct rust_tree_sitter::tree::SyntaxTree
 impl rust_tree_sitter::tree::SyntaxTree
 pub fn rust_tree_sitter::tree::SyntaxTree::changed_ranges(&self, old_tree: &rust_tree_sitter::tree::SyntaxTree) -> alloc::vec::Vec<tree_sitter::Range>
@@ -2418,14 +1884,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::tree::SyntaxTree where 
 pub unsafe fn rust_tree_sitter::tree::SyntaxTree::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::tree::SyntaxTree
 pub fn rust_tree_sitter::tree::SyntaxTree::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::tree::SyntaxTree
-pub type rust_tree_sitter::tree::SyntaxTree::Init = T
-pub const rust_tree_sitter::tree::SyntaxTree::ALIGN: usize
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::tree::SyntaxTree
 pub struct rust_tree_sitter::tree::TreeCursor<'a>
 impl<'a> rust_tree_sitter::tree::TreeCursor<'a>
 pub fn rust_tree_sitter::tree::TreeCursor<'a>::field_name(&self) -> core::option::Option<&str>
@@ -2456,75 +1914,7 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::tree::TreeCursor<'a> wh
 pub fn rust_tree_sitter::tree::TreeCursor<'a>::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::tree::TreeCursor<'a>
 pub fn rust_tree_sitter::tree::TreeCursor<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::tree::TreeCursor<'a>
-pub type rust_tree_sitter::tree::TreeCursor<'a>::Init = T
-pub const rust_tree_sitter::tree::TreeCursor<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::tree::TreeCursor<'a>
 pub type rust_tree_sitter::tree::TreeEdit = tree_sitter::InputEdit
-pub enum rust_tree_sitter::AnalysisDepth
-pub rust_tree_sitter::AnalysisDepth::Basic
-pub rust_tree_sitter::AnalysisDepth::Deep
-pub rust_tree_sitter::AnalysisDepth::Full
-impl core::clone::Clone for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::clone(&self) -> rust_tree_sitter::analyzer::AnalysisDepth
-impl core::cmp::Eq for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::cmp::PartialEq for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::eq(&self, other: &rust_tree_sitter::analyzer::AnalysisDepth) -> bool
-impl core::default::Default for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::default() -> rust_tree_sitter::analyzer::AnalysisDepth
-impl core::fmt::Debug for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::str::traits::FromStr for rust_tree_sitter::analyzer::AnalysisDepth
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Err = ()
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::from_str(s: &str) -> core::result::Result<Self, Self::Err>
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::marker::Send for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::marker::Sync for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::marker::Unpin for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::AnalysisDepth
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::AnalysisDepth
-impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::analyzer::AnalysisDepth where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::equivalent(&self, key: &K) -> bool
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::AnalysisDepth where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::AnalysisDepth where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::AnalysisDepth where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::AnalysisDepth where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Owned = T
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::AnalysisDepth where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::AnalysisDepth where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::AnalysisDepth where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::AnalysisDepth where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::AnalysisDepth
-pub fn rust_tree_sitter::analyzer::AnalysisDepth::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::AnalysisDepth
-pub type rust_tree_sitter::analyzer::AnalysisDepth::Init = T
-pub const rust_tree_sitter::analyzer::AnalysisDepth::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisDepth::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::AnalysisDepth
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::AnalysisDepth where T: for<'de> serde_core::de::Deserialize<'de>
 pub enum rust_tree_sitter::Error
 pub rust_tree_sitter::Error::AnalysisError
 pub rust_tree_sitter::Error::AnalysisError::component: alloc::string::String
@@ -2677,14 +2067,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::error::Error where T: ?
 pub fn rust_tree_sitter::error::Error::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::error::Error
 pub fn rust_tree_sitter::error::Error::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::error::Error
-pub type rust_tree_sitter::error::Error::Init = T
-pub const rust_tree_sitter::error::Error::ALIGN: usize
-pub unsafe fn rust_tree_sitter::error::Error::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::error::Error::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::error::Error::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::error::Error::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::error::Error
 pub enum rust_tree_sitter::Language
 pub rust_tree_sitter::Language::C
 pub rust_tree_sitter::Language::CSharp
@@ -2756,14 +2138,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::languages::Language whe
 pub unsafe fn rust_tree_sitter::languages::Language::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::Language
 pub fn rust_tree_sitter::languages::Language::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::languages::Language
-pub type rust_tree_sitter::languages::Language::Init = T
-pub const rust_tree_sitter::languages::Language::ALIGN: usize
-pub unsafe fn rust_tree_sitter::languages::Language::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::languages::Language::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::languages::Language::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::languages::Language::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::languages::Language
 pub enum rust_tree_sitter::RiskLevel
 pub rust_tree_sitter::RiskLevel::Critical
 pub rust_tree_sitter::RiskLevel::High
@@ -2824,225 +2198,7 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::constants::common::Risk
 pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::constants::common::RiskLevel
 pub fn rust_tree_sitter::constants::common::RiskLevel::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::constants::common::RiskLevel
-pub type rust_tree_sitter::constants::common::RiskLevel::Init = T
-pub const rust_tree_sitter::constants::common::RiskLevel::ALIGN: usize
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::constants::common::RiskLevel
 impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::constants::common::RiskLevel where T: for<'de> serde_core::de::Deserialize<'de>
-pub struct rust_tree_sitter::AnalysisConfig
-pub rust_tree_sitter::AnalysisConfig::depth: rust_tree_sitter::analyzer::AnalysisDepth
-pub rust_tree_sitter::AnalysisConfig::enable_parallel: bool
-pub rust_tree_sitter::AnalysisConfig::exclude_dirs: alloc::vec::Vec<alloc::string::String>
-pub rust_tree_sitter::AnalysisConfig::exclude_extensions: alloc::vec::Vec<alloc::string::String>
-pub rust_tree_sitter::AnalysisConfig::follow_symlinks: bool
-pub rust_tree_sitter::AnalysisConfig::include_extensions: core::option::Option<alloc::vec::Vec<alloc::string::String>>
-pub rust_tree_sitter::AnalysisConfig::include_hidden: bool
-pub rust_tree_sitter::AnalysisConfig::max_depth: core::option::Option<usize>
-pub rust_tree_sitter::AnalysisConfig::max_file_size: core::option::Option<usize>
-pub rust_tree_sitter::AnalysisConfig::parallel_threshold: usize
-pub rust_tree_sitter::AnalysisConfig::thread_count: core::option::Option<usize>
-impl core::clone::Clone for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::clone(&self) -> rust_tree_sitter::analyzer::AnalysisConfig
-impl core::default::Default for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::default() -> Self
-impl core::fmt::Debug for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::marker::Send for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::marker::Sync for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::marker::Unpin for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::AnalysisConfig
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::AnalysisConfig
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::AnalysisConfig where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::AnalysisConfig where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::AnalysisConfig where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::AnalysisConfig where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Owned = T
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::AnalysisConfig where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::AnalysisConfig where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::AnalysisConfig where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::AnalysisConfig where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::AnalysisConfig
-pub fn rust_tree_sitter::analyzer::AnalysisConfig::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::AnalysisConfig
-pub type rust_tree_sitter::analyzer::AnalysisConfig::Init = T
-pub const rust_tree_sitter::analyzer::AnalysisConfig::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisConfig::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::AnalysisConfig
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::AnalysisConfig where T: for<'de> serde_core::de::Deserialize<'de>
-pub struct rust_tree_sitter::AnalysisResult
-pub rust_tree_sitter::AnalysisResult::config: rust_tree_sitter::analyzer::AnalysisConfig
-pub rust_tree_sitter::AnalysisResult::error_files: usize
-pub rust_tree_sitter::AnalysisResult::files: alloc::vec::Vec<rust_tree_sitter::analyzer::FileInfo>
-pub rust_tree_sitter::AnalysisResult::languages: std::collections::hash::map::HashMap<alloc::string::String, usize>
-pub rust_tree_sitter::AnalysisResult::parsed_files: usize
-pub rust_tree_sitter::AnalysisResult::root_path: std::path::PathBuf
-pub rust_tree_sitter::AnalysisResult::total_files: usize
-pub rust_tree_sitter::AnalysisResult::total_lines: usize
-impl rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::new() -> Self
-pub fn rust_tree_sitter::analyzer::AnalysisResult::sort_stable(&mut self)
-impl core::clone::Clone for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::clone(&self) -> rust_tree_sitter::analyzer::AnalysisResult
-impl core::default::Default for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::default() -> Self
-impl core::fmt::Debug for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::AnalysisResult
-impl core::marker::Send for rust_tree_sitter::analyzer::AnalysisResult
-impl core::marker::Sync for rust_tree_sitter::analyzer::AnalysisResult
-impl core::marker::Unpin for rust_tree_sitter::analyzer::AnalysisResult
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::AnalysisResult
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::AnalysisResult
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::AnalysisResult where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::AnalysisResult::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::AnalysisResult where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::AnalysisResult::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::AnalysisResult::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::AnalysisResult where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::AnalysisResult::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::AnalysisResult::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::AnalysisResult where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::AnalysisResult::Owned = T
-pub fn rust_tree_sitter::analyzer::AnalysisResult::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::AnalysisResult::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::AnalysisResult where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisResult::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::AnalysisResult where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisResult::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::AnalysisResult where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::AnalysisResult::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::AnalysisResult where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::AnalysisResult
-pub fn rust_tree_sitter::analyzer::AnalysisResult::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::AnalysisResult
-pub type rust_tree_sitter::analyzer::AnalysisResult::Init = T
-pub const rust_tree_sitter::analyzer::AnalysisResult::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::AnalysisResult::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::AnalysisResult
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::AnalysisResult where T: for<'de> serde_core::de::Deserialize<'de>
-pub struct rust_tree_sitter::CodebaseAnalyzer
-impl rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::analyze_content(&mut self, content: &str, language: rust_tree_sitter::languages::Language) -> rust_tree_sitter::error::Result<alloc::vec::Vec<rust_tree_sitter::analyzer::Symbol>>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::analyze_directory<P: core::convert::AsRef<std::path::Path>>(&mut self, path: P) -> rust_tree_sitter::error::Result<rust_tree_sitter::analyzer::AnalysisResult>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::analyze_file<P: core::convert::AsRef<std::path::Path>>(&mut self, file_path: P) -> rust_tree_sitter::error::Result<rust_tree_sitter::analyzer::AnalysisResult>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::new() -> rust_tree_sitter::error::Result<Self>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::with_config(config: rust_tree_sitter::analyzer::AnalysisConfig) -> rust_tree_sitter::error::Result<Self>
-impl core::default::Default for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::default() -> rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Freeze for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Send for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Sync for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::marker::Unpin for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::CodebaseAnalyzer
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::CodebaseAnalyzer where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::CodebaseAnalyzer where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::CodebaseAnalyzer::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::CodebaseAnalyzer where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::CodebaseAnalyzer::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> core::any::Any for rust_tree_sitter::analyzer::CodebaseAnalyzer where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::CodebaseAnalyzer where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::CodebaseAnalyzer where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::borrow_mut(&mut self) -> &mut T
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub fn rust_tree_sitter::analyzer::CodebaseAnalyzer::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub type rust_tree_sitter::analyzer::CodebaseAnalyzer::Init = T
-pub const rust_tree_sitter::analyzer::CodebaseAnalyzer::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::CodebaseAnalyzer::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::CodebaseAnalyzer
-pub struct rust_tree_sitter::FileInfo
-pub rust_tree_sitter::FileInfo::language: alloc::string::String
-pub rust_tree_sitter::FileInfo::lines: usize
-pub rust_tree_sitter::FileInfo::parse_errors: alloc::vec::Vec<alloc::string::String>
-pub rust_tree_sitter::FileInfo::parsed_successfully: bool
-pub rust_tree_sitter::FileInfo::path: std::path::PathBuf
-pub rust_tree_sitter::FileInfo::size: usize
-pub rust_tree_sitter::FileInfo::symbols: alloc::vec::Vec<rust_tree_sitter::analyzer::Symbol>
-impl core::clone::Clone for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::clone(&self) -> rust_tree_sitter::analyzer::FileInfo
-impl core::fmt::Debug for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::FileInfo
-impl core::marker::Send for rust_tree_sitter::analyzer::FileInfo
-impl core::marker::Sync for rust_tree_sitter::analyzer::FileInfo
-impl core::marker::Unpin for rust_tree_sitter::analyzer::FileInfo
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::FileInfo
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::FileInfo
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::FileInfo where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::FileInfo::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::FileInfo where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::FileInfo::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::FileInfo::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::FileInfo where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::FileInfo::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::FileInfo::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::FileInfo where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::FileInfo::Owned = T
-pub fn rust_tree_sitter::analyzer::FileInfo::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::FileInfo::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::FileInfo where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::FileInfo::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::FileInfo where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::FileInfo::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::FileInfo where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::FileInfo::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::FileInfo where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::FileInfo
-pub fn rust_tree_sitter::analyzer::FileInfo::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::FileInfo
-pub type rust_tree_sitter::analyzer::FileInfo::Init = T
-pub const rust_tree_sitter::analyzer::FileInfo::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::FileInfo::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::FileInfo
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::FileInfo where T: for<'de> serde_core::de::Deserialize<'de>
 pub struct rust_tree_sitter::LanguageInfo
 pub rust_tree_sitter::LanguageInfo::file_extensions: &'static [&'static str]
 pub rust_tree_sitter::LanguageInfo::name: &'static str
@@ -3079,14 +2235,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::LanguageInfo where T: c
 pub unsafe fn rust_tree_sitter::LanguageInfo::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::LanguageInfo
 pub fn rust_tree_sitter::LanguageInfo::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::LanguageInfo
-pub type rust_tree_sitter::LanguageInfo::Init = T
-pub const rust_tree_sitter::LanguageInfo::ALIGN: usize
-pub unsafe fn rust_tree_sitter::LanguageInfo::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::LanguageInfo::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::LanguageInfo::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::LanguageInfo::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::LanguageInfo
 pub struct rust_tree_sitter::Node<'a>
 impl<'a> rust_tree_sitter::tree::Node<'a>
 pub fn rust_tree_sitter::tree::Node<'a>::byte_range(&self) -> tree_sitter::Range
@@ -3147,14 +2295,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::tree::Node<'a> where T:
 pub unsafe fn rust_tree_sitter::tree::Node<'a>::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::tree::Node<'a>
 pub fn rust_tree_sitter::tree::Node<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::tree::Node<'a>
-pub type rust_tree_sitter::tree::Node<'a>::Init = T
-pub const rust_tree_sitter::tree::Node<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::tree::Node<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::tree::Node<'a>
 pub struct rust_tree_sitter::ParseOptions
 pub rust_tree_sitter::ParseOptions::include_extras: bool
 pub rust_tree_sitter::ParseOptions::max_bytes: core::option::Option<usize>
@@ -3194,14 +2334,43 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::parser::ParseOptions wh
 pub unsafe fn rust_tree_sitter::parser::ParseOptions::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::parser::ParseOptions
 pub fn rust_tree_sitter::parser::ParseOptions::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::parser::ParseOptions
-pub type rust_tree_sitter::parser::ParseOptions::Init = T
-pub const rust_tree_sitter::parser::ParseOptions::ALIGN: usize
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::parser::ParseOptions::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::parser::ParseOptions
+pub struct rust_tree_sitter::ParseOutcome
+pub rust_tree_sitter::ParseOutcome::partial_errors: alloc::vec::Vec<alloc::string::String>
+pub rust_tree_sitter::ParseOutcome::symbols: alloc::vec::Vec<rust_tree_sitter::symbol::Symbol>
+impl core::clone::Clone for rust_tree_sitter::ParseOutcome
+pub fn rust_tree_sitter::ParseOutcome::clone(&self) -> rust_tree_sitter::ParseOutcome
+impl core::default::Default for rust_tree_sitter::ParseOutcome
+pub fn rust_tree_sitter::ParseOutcome::default() -> rust_tree_sitter::ParseOutcome
+impl core::fmt::Debug for rust_tree_sitter::ParseOutcome
+pub fn rust_tree_sitter::ParseOutcome::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rust_tree_sitter::ParseOutcome
+impl core::marker::Send for rust_tree_sitter::ParseOutcome
+impl core::marker::Sync for rust_tree_sitter::ParseOutcome
+impl core::marker::Unpin for rust_tree_sitter::ParseOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::ParseOutcome
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::ParseOutcome
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::ParseOutcome where U: core::convert::From<T>
+pub fn rust_tree_sitter::ParseOutcome::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::ParseOutcome where U: core::convert::Into<T>
+pub type rust_tree_sitter::ParseOutcome::Error = core::convert::Infallible
+pub fn rust_tree_sitter::ParseOutcome::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::ParseOutcome where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::ParseOutcome::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::ParseOutcome::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::ParseOutcome where T: core::clone::Clone
+pub type rust_tree_sitter::ParseOutcome::Owned = T
+pub fn rust_tree_sitter::ParseOutcome::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::ParseOutcome::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::ParseOutcome where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::ParseOutcome::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::ParseOutcome where T: ?core::marker::Sized
+pub fn rust_tree_sitter::ParseOutcome::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::ParseOutcome where T: ?core::marker::Sized
+pub fn rust_tree_sitter::ParseOutcome::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::ParseOutcome where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::ParseOutcome::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::ParseOutcome
+pub fn rust_tree_sitter::ParseOutcome::from(t: T) -> T
 pub struct rust_tree_sitter::Parser
 impl rust_tree_sitter::parser::Parser
 pub fn rust_tree_sitter::parser::Parser::cache_stats(&self) -> rust_tree_sitter::error::Result<(usize, usize)>
@@ -3249,14 +2418,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::parser::Parser where T:
 pub unsafe fn rust_tree_sitter::parser::Parser::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::parser::Parser
 pub fn rust_tree_sitter::parser::Parser::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::parser::Parser
-pub type rust_tree_sitter::parser::Parser::Init = T
-pub const rust_tree_sitter::parser::Parser::ALIGN: usize
-pub unsafe fn rust_tree_sitter::parser::Parser::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::parser::Parser::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::parser::Parser::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::parser::Parser::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::parser::Parser
 pub struct rust_tree_sitter::Query
 impl rust_tree_sitter::query::Query
 pub fn rust_tree_sitter::query::Query::capture_names(&self) -> alloc::vec::Vec<&str>
@@ -3291,14 +2452,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::query::Query where T: ?
 pub fn rust_tree_sitter::query::Query::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::query::Query
 pub fn rust_tree_sitter::query::Query::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::Query
-pub type rust_tree_sitter::query::Query::Init = T
-pub const rust_tree_sitter::query::Query::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::Query::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::Query::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::Query::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::Query::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::Query
 pub struct rust_tree_sitter::QueryBuilder
 impl rust_tree_sitter::query::QueryBuilder
 pub fn rust_tree_sitter::query::QueryBuilder::add_pattern(self, pattern: &str) -> Self
@@ -3328,14 +2481,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::query::QueryBuilder whe
 pub fn rust_tree_sitter::query::QueryBuilder::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::query::QueryBuilder
 pub fn rust_tree_sitter::query::QueryBuilder::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::QueryBuilder
-pub type rust_tree_sitter::query::QueryBuilder::Init = T
-pub const rust_tree_sitter::query::QueryBuilder::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::QueryBuilder::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::QueryBuilder
 pub struct rust_tree_sitter::QueryCapture<'a>
 impl<'a> rust_tree_sitter::query::QueryCapture<'a>
 pub fn rust_tree_sitter::query::QueryCapture<'a>::byte_range(&self) -> tree_sitter::Range
@@ -3375,14 +2520,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::query::QueryCapture<'a>
 pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::query::QueryCapture<'a>
 pub fn rust_tree_sitter::query::QueryCapture<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::QueryCapture<'a>
-pub type rust_tree_sitter::query::QueryCapture<'a>::Init = T
-pub const rust_tree_sitter::query::QueryCapture<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::QueryCapture<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::QueryCapture<'a>
 pub struct rust_tree_sitter::QueryMatch<'a>
 impl<'a> rust_tree_sitter::query::QueryMatch<'a>
 pub fn rust_tree_sitter::query::QueryMatch<'a>::capture_by_name(&self, query: &rust_tree_sitter::query::Query, name: &str) -> core::option::Option<rust_tree_sitter::query::QueryCapture<'a>>
@@ -3410,14 +2547,6 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::query::QueryMatch<'a> w
 pub fn rust_tree_sitter::query::QueryMatch<'a>::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::query::QueryMatch<'a>
 pub fn rust_tree_sitter::query::QueryMatch<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::query::QueryMatch<'a>
-pub type rust_tree_sitter::query::QueryMatch<'a>::Init = T
-pub const rust_tree_sitter::query::QueryMatch<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::query::QueryMatch<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::query::QueryMatch<'a>
 pub struct rust_tree_sitter::Symbol
 pub rust_tree_sitter::Symbol::documentation: core::option::Option<alloc::string::String>
 pub rust_tree_sitter::Symbol::end_column: usize
@@ -3427,51 +2556,43 @@ pub rust_tree_sitter::Symbol::name: alloc::string::String
 pub rust_tree_sitter::Symbol::start_column: usize
 pub rust_tree_sitter::Symbol::start_line: usize
 pub rust_tree_sitter::Symbol::visibility: alloc::string::String
-impl core::clone::Clone for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::clone(&self) -> rust_tree_sitter::analyzer::Symbol
-impl core::fmt::Debug for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl serde_core::ser::Serialize for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
-impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
-impl core::marker::Freeze for rust_tree_sitter::analyzer::Symbol
-impl core::marker::Send for rust_tree_sitter::analyzer::Symbol
-impl core::marker::Sync for rust_tree_sitter::analyzer::Symbol
-impl core::marker::Unpin for rust_tree_sitter::analyzer::Symbol
-impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::analyzer::Symbol
-impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::analyzer::Symbol
-impl<T, U> core::convert::Into<U> for rust_tree_sitter::analyzer::Symbol where U: core::convert::From<T>
-pub fn rust_tree_sitter::analyzer::Symbol::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::analyzer::Symbol where U: core::convert::Into<T>
-pub type rust_tree_sitter::analyzer::Symbol::Error = core::convert::Infallible
-pub fn rust_tree_sitter::analyzer::Symbol::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::analyzer::Symbol where U: core::convert::TryFrom<T>
-pub type rust_tree_sitter::analyzer::Symbol::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn rust_tree_sitter::analyzer::Symbol::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for rust_tree_sitter::analyzer::Symbol where T: core::clone::Clone
-pub type rust_tree_sitter::analyzer::Symbol::Owned = T
-pub fn rust_tree_sitter::analyzer::Symbol::clone_into(&self, target: &mut T)
-pub fn rust_tree_sitter::analyzer::Symbol::to_owned(&self) -> T
-impl<T> core::any::Any for rust_tree_sitter::analyzer::Symbol where T: 'static + ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::Symbol::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for rust_tree_sitter::analyzer::Symbol where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::Symbol::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::analyzer::Symbol where T: ?core::marker::Sized
-pub fn rust_tree_sitter::analyzer::Symbol::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for rust_tree_sitter::analyzer::Symbol where T: core::clone::Clone
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::clone_to_uninit(&self, dest: *mut u8)
-impl<T> core::convert::From<T> for rust_tree_sitter::analyzer::Symbol
-pub fn rust_tree_sitter::analyzer::Symbol::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::analyzer::Symbol
-pub type rust_tree_sitter::analyzer::Symbol::Init = T
-pub const rust_tree_sitter::analyzer::Symbol::ALIGN: usize
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::analyzer::Symbol::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::analyzer::Symbol
-impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::analyzer::Symbol where T: for<'de> serde_core::de::Deserialize<'de>
+impl core::clone::Clone for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::clone(&self) -> rust_tree_sitter::symbol::Symbol
+impl core::fmt::Debug for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::symbol::Symbol
+impl core::marker::Send for rust_tree_sitter::symbol::Symbol
+impl core::marker::Sync for rust_tree_sitter::symbol::Symbol
+impl core::marker::Unpin for rust_tree_sitter::symbol::Symbol
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::symbol::Symbol
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::symbol::Symbol
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::symbol::Symbol where U: core::convert::From<T>
+pub fn rust_tree_sitter::symbol::Symbol::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::symbol::Symbol where U: core::convert::Into<T>
+pub type rust_tree_sitter::symbol::Symbol::Error = core::convert::Infallible
+pub fn rust_tree_sitter::symbol::Symbol::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::symbol::Symbol where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::symbol::Symbol::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::symbol::Symbol::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::symbol::Symbol where T: core::clone::Clone
+pub type rust_tree_sitter::symbol::Symbol::Owned = T
+pub fn rust_tree_sitter::symbol::Symbol::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::symbol::Symbol::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::symbol::Symbol where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::symbol::Symbol::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::symbol::Symbol where T: ?core::marker::Sized
+pub fn rust_tree_sitter::symbol::Symbol::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::symbol::Symbol where T: ?core::marker::Sized
+pub fn rust_tree_sitter::symbol::Symbol::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::symbol::Symbol where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::symbol::Symbol::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::symbol::Symbol
+pub fn rust_tree_sitter::symbol::Symbol::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::symbol::Symbol where T: for<'de> serde_core::de::Deserialize<'de>
 pub struct rust_tree_sitter::SyntaxTree
 impl rust_tree_sitter::tree::SyntaxTree
 pub fn rust_tree_sitter::tree::SyntaxTree::changed_ranges(&self, old_tree: &rust_tree_sitter::tree::SyntaxTree) -> alloc::vec::Vec<tree_sitter::Range>
@@ -3514,14 +2635,6 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::tree::SyntaxTree where 
 pub unsafe fn rust_tree_sitter::tree::SyntaxTree::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::tree::SyntaxTree
 pub fn rust_tree_sitter::tree::SyntaxTree::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::tree::SyntaxTree
-pub type rust_tree_sitter::tree::SyntaxTree::Init = T
-pub const rust_tree_sitter::tree::SyntaxTree::ALIGN: usize
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::tree::SyntaxTree::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::tree::SyntaxTree
 pub struct rust_tree_sitter::TreeCursor<'a>
 impl<'a> rust_tree_sitter::tree::TreeCursor<'a>
 pub fn rust_tree_sitter::tree::TreeCursor<'a>::field_name(&self) -> core::option::Option<&str>
@@ -3552,18 +2665,11 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::tree::TreeCursor<'a> wh
 pub fn rust_tree_sitter::tree::TreeCursor<'a>::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::tree::TreeCursor<'a>
 pub fn rust_tree_sitter::tree::TreeCursor<'a>::from(t: T) -> T
-impl<T> crossbeam_epoch::atomic::Pointable for rust_tree_sitter::tree::TreeCursor<'a>
-pub type rust_tree_sitter::tree::TreeCursor<'a>::Init = T
-pub const rust_tree_sitter::tree::TreeCursor<'a>::ALIGN: usize
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::deref<'a>(ptr: usize) -> &'a T
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::deref_mut<'a>(ptr: usize) -> &'a mut T
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::drop(ptr: usize)
-pub unsafe fn rust_tree_sitter::tree::TreeCursor<'a>::init(init: <T as crossbeam_epoch::atomic::Pointable>::Init) -> usize
-impl<T> either::into_either::IntoEither for rust_tree_sitter::tree::TreeCursor<'a>
 pub const rust_tree_sitter::VERSION: &str
 pub fn rust_tree_sitter::create_edit(start_byte: usize, old_end_byte: usize, new_end_byte: usize, start_row: usize, start_column: usize, old_end_row: usize, old_end_column: usize, new_end_row: usize, new_end_column: usize) -> tree_sitter::InputEdit
 pub fn rust_tree_sitter::detect_language_from_extension(extension: &str) -> core::option::Option<rust_tree_sitter::languages::Language>
 pub fn rust_tree_sitter::detect_language_from_path(path: &str) -> core::option::Option<rust_tree_sitter::languages::Language>
+pub fn rust_tree_sitter::parse_content(content: &str, language: rust_tree_sitter::languages::Language) -> rust_tree_sitter::error::Result<rust_tree_sitter::ParseOutcome>
 pub fn rust_tree_sitter::supported_languages() -> alloc::vec::Vec<rust_tree_sitter::LanguageInfo>
 pub type rust_tree_sitter::Result<T> = core::result::Result<T, rust_tree_sitter::error::Error>
 pub type rust_tree_sitter::TreeEdit = tree_sitter::InputEdit
