@@ -36,30 +36,6 @@ anyhow = "1.0"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml = "0.9"
-
-# Core analysis helpers
-regex = "1.10"
-sha2 = "0.10"
-rayon = "1.8"
-petgraph = "0.6"
-ignore = "0.4"
-walkdir = "2.4"
-parking_lot = "0.12"
-crossbeam-channel = "0.5"
-memmap2 = "0.9"
-dashmap = "5.5"
-num_cpus = "1.0"
-
-# Time / IDs / paths
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-dirs = "5.0"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # LRU cache (replaces prior random-eviction HashMap caches)
 lru = "0.12"
@@ -69,7 +45,6 @@ toml = "0.8"
 
 [dev-dependencies]
 tempfile = "3.0"
-criterion = "0.5"
 
 # Public-API drift gate (see docs/public-api-gate.md + crates/rts-core/tests/public_api.rs).
 # These deps power a `cargo test`-time check that fails when the crate's
