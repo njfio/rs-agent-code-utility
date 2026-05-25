@@ -210,6 +210,15 @@ curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
+Releases from v0.6.1 onward also carry a keyless [Sigstore build-provenance
+attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds).
+This proves a tarball was built by this repo's release workflow (authenticity),
+not merely that its bytes match a published hash (integrity):
+
+```sh
+gh attestation verify "rts-${VERSION}-${TARGET}.tar.gz" --repo njfio/rs-agent-code-utility
+```
+
 > **macOS (Apple Silicon):** if you download the tarball via a browser
 > instead of `curl`, macOS tags it with `com.apple.quarantine` and
 > Gatekeeper blocks the un-notarized binaries on first run. Clear it

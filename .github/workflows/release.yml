@@ -53,6 +53,11 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # Opt all JavaScript actions (checkout, cache, upload/download-artifact,
+  # action-gh-release) into the Node.js 24 runtime ahead of the 2026-06-02
+  # forced migration off Node 20. Reversible; drop once these actions ship
+  # Node-24 manifests by default.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # Strip debug symbols from release binaries for ~30% smaller artifacts.
   # Operators tarball this onto end-user laptops; debug syms are dead
   # weight unless they're running gdb against the daemon, which is rare.
@@ -162,6 +167,20 @@ jobs:
           echo "tarball=${STAGE}.tar.gz" >> "$GITHUB_OUTPUT"
           echo "checksum=${STAGE}.tar.gz.sha256" >> "$GITHUB_OUTPUT"
 
+      - name: Verify macOS code signature on staged binaries
+        # Apple Silicon binaries must carry a valid (ad-hoc) signature or
+        # AMFI SIGKILLs them on launch; strip+copy can invalidate it.
+        # Verify the *staged* copies (what actually ships in the tarball)
+        # before we hand a broken binary to a user.
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: |
+          set -euo pipefail
+          STAGE="rts-${{ steps.version.outputs.value }}-${{ matrix.target }}"
+          for b in rts-daemon rts-mcp rts-bench; do
+            codesign --verify --strict --verbose=2 "$STAGE/$b"
+          done
+          echo "ad-hoc code signatures intact on staged macOS binaries"
+
       - name: Upload artifact (always — workflow_dispatch consumes these too)
         uses: actions/upload-artifact@v4
         with:
@@ -195,17 +214,34 @@ jobs:
     #
     # `success() || failure()` (not `always()`) — runs once the build
     # matrix has finished, even if one entry failed, but skips when the
-    # job was cancelled. Pre-fix this job required ALL matrix entries
-    # to succeed; the broken Intel Mac entry meant SHA256SUMS never
-    # published on v0.5.0, v0.5.1, or v0.5.2. With Intel Mac dropped
-    # and this guard, the aggregator publishes from whatever survived.
+    # job was cancelled. The "Assert all 3 target tarballs present" step
+    # below then refuses to publish a partial SHA256SUMS (pre-2026-05 this
+    # job published checksums over whatever survived, which could ship a
+    # complete-looking SHA256SUMS covering fewer than 3 tarballs).
     if: github.ref_type == 'tag' && (success() || failure())
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # upload SHA256SUMS to the draft release
+      id-token: write      # Sigstore OIDC for build-provenance attestation
+      attestations: write  # write the build-provenance attestation
     steps:
-      - name: Download all checksums
+      - name: Download all artifacts (tarballs + sidecars)
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Assert all 3 target tarballs are present
+        # fail-fast: false means a failed target would otherwise leave a
+        # "complete-looking" SHA256SUMS over <3 tarballs that
+        # `sha256sum -c --ignore-missing` silently passes. Refuse instead.
+        run: |
+          set -euo pipefail
+          count=$(find artifacts -name '*.tar.gz' | wc -l | tr -d ' ')
+          echo "target tarballs present: ${count}"
+          if [ "${count}" -ne 3 ]; then
+            echo "::error::expected 3 target tarballs, found ${count} — a build target failed; refusing to publish a partial release"
+            exit 1
+          fi
 
       - name: Concatenate SHA256SUMS
         run: |
@@ -222,3 +258,12 @@ jobs:
           draft: true
           files: SHA256SUMS
           fail_on_unmatched_files: true
+
+      - name: Attest build provenance for release tarballs
+        # Keyless Sigstore (SLSA) provenance for each tarball. Users verify
+        # authenticity (not just integrity) with:
+        #   gh attestation verify <tarball> --repo njfio/rs-agent-code-utility
+        # Free for public repos; needs id-token + attestations write perms.
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'artifacts/**/*.tar.gz'
