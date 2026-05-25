@@ -21,7 +21,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "0.6.0"
+version = "0.6.1"
 authors = ["njfio <7220+njfio@users.noreply.github.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/njfio/rs-agent-code-utility"
