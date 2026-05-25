@@ -1,6 +1,6 @@
 [package]
 name = "rust_tree_sitter"
-description = "Tree-sitter-backed code parsing and analysis primitives for the upcoming rts-daemon + rts-mcp retrieval stack"
+description = "Tree-sitter-backed code parsing and analysis primitives powering the rts-daemon + rts-mcp code KB"
 keywords = ["parsing", "tree-sitter", "syntax", "ast", "source-code"]
 categories = ["parsing", "development-tools"]
 version.workspace = true

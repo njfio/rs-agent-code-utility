@@ -138,41 +138,68 @@ pub struct LanguageInfo {
 
 /// Information about all supported languages.
 pub fn supported_languages() -> Vec<LanguageInfo> {
+    // Grammar versions track the `tree-sitter-*` pins in this crate's
+    // Cargo.toml; extensions mirror `detect_language_from_extension`.
     vec![
         LanguageInfo {
             name: "Rust",
-            version: "0.21.0",
+            version: "0.23",
             file_extensions: &["rs"],
         },
         LanguageInfo {
             name: "JavaScript",
-            version: "0.21.0",
-            file_extensions: &["js", "mjs", "jsx"],
+            version: "0.23",
+            file_extensions: &["js", "mjs", "cjs", "jsx"],
+        },
+        LanguageInfo {
+            name: "TypeScript",
+            version: "0.23",
+            file_extensions: &["ts", "tsx", "mts", "cts"],
         },
         LanguageInfo {
             name: "Python",
-            version: "0.21.0",
+            version: "0.23",
             file_extensions: &["py", "pyi"],
         },
         LanguageInfo {
             name: "C",
-            version: "0.21.0",
+            version: "0.23",
             file_extensions: &["c", "h"],
         },
         LanguageInfo {
             name: "C++",
-            version: "0.22.0",
-            file_extensions: &["cpp", "cxx", "cc", "hpp", "hxx"],
-        },
-        LanguageInfo {
-            name: "TypeScript",
-            version: "0.21.0",
-            file_extensions: &["ts", "tsx", "mts", "cts"],
+            version: "0.23",
+            file_extensions: &["cpp", "cxx", "cc", "hpp", "hxx", "hh"],
         },
         LanguageInfo {
             name: "Go",
-            version: "0.21.0",
+            version: "0.23",
             file_extensions: &["go"],
+        },
+        LanguageInfo {
+            name: "Java",
+            version: "0.23",
+            file_extensions: &["java"],
+        },
+        LanguageInfo {
+            name: "PHP",
+            version: "0.23",
+            file_extensions: &["php", "phtml"],
+        },
+        LanguageInfo {
+            name: "Ruby",
+            version: "0.23",
+            file_extensions: &["rb", "rake"],
+        },
+        LanguageInfo {
+            name: "Swift",
+            version: "0.7",
+            file_extensions: &["swift"],
+        },
+        LanguageInfo {
+            name: "C#",
+            version: "0.23",
+            file_extensions: &["cs", "csx"],
         },
     ]
 }
