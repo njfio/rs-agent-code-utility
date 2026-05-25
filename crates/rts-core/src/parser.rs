@@ -274,6 +274,10 @@ impl Clone for Parser {
 }
 
 /// Helper function to create an InputEdit from simple parameters
+// The 9 parameters mirror `tree_sitter::InputEdit`'s three `Point` fields
+// flattened to scalars; collapsing them would change this public constructor's
+// signature, so the arg count is intrinsic rather than a code smell.
+#[allow(clippy::too_many_arguments)]
 pub fn create_edit(
     start_byte: usize,
     old_end_byte: usize,

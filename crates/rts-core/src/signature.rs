@@ -19,8 +19,6 @@
 //! `0.2.0-alpha.17`. Callers fall through to body returns when this
 //! module returns `None`.
 
-use streaming_iterator::StreamingIterator as _;
-
 /// Render the signature of a Rust top-level item. Returns `None` when the
 /// input doesn't parse as a single top-level item or the item kind has no
 /// meaningful signature distinction (the caller should fall back to the
@@ -33,8 +31,6 @@ use streaming_iterator::StreamingIterator as _;
 /// whitespace is trimmed; doc comments at the front of the item are
 /// retained (they're useful to the agent and cheap to carry).
 pub fn render_rust(bytes: &[u8]) -> Option<String> {
-    let _ = streaming_iterator_present_check();
-
     let mut parser = tree_sitter::Parser::new();
     let language: tree_sitter::Language = tree_sitter_rust::LANGUAGE.into();
     parser.set_language(&language).ok()?;
@@ -169,14 +165,6 @@ fn body_start(item: &tree_sitter::Node<'_>, _bytes: &[u8]) -> Option<usize> {
     }
     None
 }
-
-/// Tiny no-op that pulls `streaming_iterator::StreamingIterator` into scope
-/// so the import is preserved even though this file doesn't iterate
-/// `QueryMatches` directly. Keeps the `use streaming_iterator` line
-/// visible at the top so future query-based renderers don't have to
-/// rediscover that rts-core uses it.
-#[inline]
-fn streaming_iterator_present_check() {}
 
 /// Render the signature of a Python top-level item.
 ///
@@ -520,23 +508,6 @@ fn render_strip_body_with_recursive_body(
         return None;
     }
     Some(signature)
-}
-
-fn descend_for_body(node: &tree_sitter::Node<'_>, kinds: &[&str], out: &mut Option<usize>) {
-    if out.is_some() {
-        return;
-    }
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        if kinds.contains(&child.kind()) {
-            *out = Some(child.start_byte());
-            return;
-        }
-        descend_for_body(&child, kinds, out);
-        if out.is_some() {
-            return;
-        }
-    }
 }
 
 fn trim_trailing_open_brace(s: &str) -> String {
