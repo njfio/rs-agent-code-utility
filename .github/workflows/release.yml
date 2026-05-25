@@ -28,7 +28,7 @@
 #   rts-${VERSION}-${TARGET}.tar.gz
 # containing:
 #   rts-${VERSION}-${TARGET}/
-#     rts-daemon, rts-mcp, rts-bench,
+#     rts-daemon, rts-mcp, rts-bench, rts,
 #     LICENSE-MIT, LICENSE-APACHE, README.md
 #
 # SHA256SUMS file aggregates checksums for all tarballs. The upload step
@@ -120,7 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           BIN_DIR="target/${{ matrix.target }}/release"
-          for b in rts-daemon rts-mcp rts-bench; do
+          for b in rts-daemon rts-mcp rts-bench rts; do
             test -x "$BIN_DIR/$b" || (echo "missing $b"; exit 1)
             file "$BIN_DIR/$b"
             out=$("$BIN_DIR/$b" --version)
@@ -154,7 +154,7 @@ jobs:
           STAGE="rts-${V}-${T}"
           BIN_DIR="target/${T}/release"
           mkdir -p "$STAGE"
-          cp "$BIN_DIR/rts-daemon" "$BIN_DIR/rts-mcp" "$BIN_DIR/rts-bench" "$STAGE/"
+          cp "$BIN_DIR/rts-daemon" "$BIN_DIR/rts-mcp" "$BIN_DIR/rts-bench" "$BIN_DIR/rts" "$STAGE/"
           cp LICENSE-MIT LICENSE-APACHE README.md "$STAGE/"
           tar -czf "${STAGE}.tar.gz" "$STAGE"
           # Per-artifact SHA256 to a sidecar file the aggregate step
@@ -176,7 +176,7 @@ jobs:
         run: |
           set -euo pipefail
           STAGE="rts-${{ steps.version.outputs.value }}-${{ matrix.target }}"
-          for b in rts-daemon rts-mcp rts-bench; do
+          for b in rts-daemon rts-mcp rts-bench rts; do
             codesign --verify --strict --verbose=2 "$STAGE/$b"
           done
           echo "ad-hoc code signatures intact on staged macOS binaries"

@@ -1,11 +1,14 @@
 # Installation
 
-`rts` is two binaries plus a benchmark harness:
+`rts` ships the daemon, the MCP server, an optional human CLI, and a benchmark harness:
 
 - **`rts-mcp`** — the agent-facing MCP server. This is the binary you
   wire into Claude Code / Cursor / Cline / Aider / Continue.
 - **`rts-daemon`** — the workspace-pinned indexer. **You do not start
   this by hand**; `rts-mcp` auto-spawns it on first connect.
+- **`rts`** — optional human CLI (`rts find`, `rts grep`, `rts callers`,
+  `rts read`, …) for driving the daemon from the terminal. Not required
+  for agent use.
 - **`rts-bench`** — operator-only benchmark harness. Not required for
   agent use.
 
@@ -40,8 +43,16 @@ at are `rts-mcp` (always) and `rts-daemon` (only via `RTS_DAEMON_BIN`
 when you want to pin a different version than the sibling of
 `rts-mcp`).
 
-> Prebuilt binaries (Linux + macOS, x86_64 + arm64) are a P9
-> deliverable still in flight; for now build from source.
+**Prebuilt binaries** (no Rust toolchain) ship with each release for
+macOS arm64 and Linux x86_64/arm64:
+
+```sh
+VERSION=0.6.1 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
+curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz" | tar -xz
+sudo install "rts-${VERSION}-${TARGET}"/{rts-daemon,rts-mcp,rts-bench,rts} /usr/local/bin/
+```
+
+(macOS browser downloads need `xattr -dr com.apple.quarantine "rts-${VERSION}-${TARGET}/"` before first run; the `curl | tar` path above is unaffected.)
 
 ## Smoke test the build
 

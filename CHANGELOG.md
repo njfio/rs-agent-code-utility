@@ -9,6 +9,162 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.6.1] - 2026-05-25
+
+### `README.md` rewrite + `docs/demo.md` + `docs/development.md` split
+
+The repo's `README.md` had grown into a 403-line maintenance doc — phase tables, known-limitations essays, internal architecture notes, contribution workflow — all of which is **useful to someone already invested in the project**, none of which is the *pitch* a first-time visitor needs.
+
+After eight rounds of *"is the product great?"* reflection, the structural answer was clearer: the product works, the observability is complete, the habit intervention is live, the measurement harness is in flight — but the README isn't reaching anyone outside this conversation, which keeps the user count at 1. README's are the first 60 seconds of every potential adoption.
+
+#### What changed
+
+- **`README.md`**: rewritten from 403 → 142 lines. Pitch-first ("AST-precise code search for AI coding agents"). Real side-by-side `rg` vs `rts find-callers` example in the third paragraph showing the load-bearing difference: bash grep returns *where the match appears*; `rts` returns *which function contains it*. Token-reduction table. Quick-start install + `claude mcp add` one-liner. Eight-tool surface in a single intent → tool table. Architecture diagram + 2 sentences. Honest status section noting what's *not* done (Windows port, public agent-bench baseline, Docker patch-eval).
+- **`docs/development.md`** (new, ~250 lines): the maintainer content lifted out of the old README — phase status table, known limitations, building from source, crate / dir layout, full benchmark commands, full eight-tool schemas, contributing workflow. Cross-references back to `AGENTS.md` for coding standards.
+- **`docs/demo.md`** (new, ~130 lines): five reproducible side-by-side demos against the rts repo itself: `find_callers`, `read_symbol`, `find_symbol --pattern '*'` (PageRank ranking), `grep` with enclosing-function names, and Unix-pipe composability. Every command is paste-runnable. Asciinema-recording instructions at the end.
+
+#### Decisions worth flagging
+
+- **Pitch lead is one sentence.** Tagline ("AST-precise code search for AI coding agents") plus *"99.9% less context for the same answer."* If a visitor doesn't bounce in the first sentence, the second paragraph commits them with the killer demo.
+- **The headline demo is `find_callers`, not `find_symbol`.** find_symbol is what the agent uses most — but `find_callers` is the one that *can't be matched by `rg`*, so it's the visceral pitch. Two screenshots' worth of side-by-side; the reader sees the value without scrolling.
+- **Status section says "Active pre-1.0, used daily by the author."** Honest. Doesn't oversell. Explicitly asks for outside users via the issue tracker.
+- **Eight-tool table replaces seven sub-headings.** Maintenance pressure was the seven-tools section growing every time a tool was added; the table format scales.
+- **`agent-bench/` gets one line in the status section + one pointer in More documentation.** Resists the temptation to over-promote a Phase-2 PR-A that hasn't shipped its first real measurement yet.
+
+#### Verification
+
+- All cross-references in the new README + `docs/development.md` resolve (verified via a grep of `[text](path)` link extraction + filesystem `[[ -e ]]`; external URLs not checked).
+- README front matter renders correctly on GitHub (shield badges, table, fenced code blocks).
+- Original token-reduction numbers in the table preserved verbatim from prior README (`docs/development.md` retains the full reproducer commands).
+
+#### Out of scope (filed for follow-up)
+
+- **Asciinema recording.** The `docs/demo.md` script is ready to record; the actual `.cast` file lands when the next session has a fresh terminal. Adding a recorded gif/cast to README's demo block is the next visible-discoverability step.
+- **Homebrew formula.** Currently install is `curl | tar -xz` or `cargo build`. A `brew install rts` path is the lowest-friction discovery moment after the README + demo lands.
+- **GitHub topic tags + repo description.** The repository's own metadata (topics, description, README preview snippet) is set via the GitHub UI, not committed in this PR.
+- **Public agent-bench baseline result.** Once Phase 2 PR-B (`agent-bench/` runner + corpus + first run) lands, the README's "Why" section can quote a real tool-use-ratio number instead of an anecdotal pitch.
+
+### Version & metadata hygiene — accurate `supported_languages()`, version-agnostic telemetry golden, code-KB crate description
+
+- **`supported_languages()` (rts-core)** now lists all 12 indexed languages with grammar versions matching the `tree-sitter-*` pins in `Cargo.toml` (previously only 7 languages, stuck at `0.21`/`0.22`); file extensions now mirror `detect_language_from_extension`.
+- **Telemetry schema golden** (`telemetry_v1.golden.json`) uses a `VERSION_PLACEHOLDER` substituted from `CARGO_PKG_VERSION` (like the existing `OS_PLACEHOLDER` / `ARCH_PLACEHOLDER`), so `schema_golden_matches_fixture` no longer fails on every release version bump.
+- **`rust_tree_sitter` crate description** dropped the stale "upcoming … retrieval stack" wording in favor of the current "code KB" noun.
+
+### Semantic-eval corpora — negative controls recalibrated post-cleanup
+
+The pre-pivot cleanup (PRs #132–#134) deleted a large rts-core symbol
+surface. During that cleanup the negative-control queries in both
+semantic-eval corpora were *removed* rather than recalibrated, because
+the vocabulary shift made the old probes hallucinate confident top-1
+hits (`not_supported_error`, `Handler`, `cache`, `rate_limit_error`, …).
+
+This re-adds 6 negative controls per corpus, calibrated against the
+**current** (post-cleanup) rts-core symbol pool:
+
+- `corpus/semantic-eval-rts-core.toml`: cipher/AES, DNS/TTL, SMTP,
+  GraphQL, Kafka, Bluetooth.
+- `corpus/semantic-eval-rts-core-blind-v2.toml`: HTTP router, WebSocket,
+  DB migrations, cron scheduler, TLS certificates, GPU shader.
+
+Each topic was chosen so its content tokens have zero lexical overlap
+with any pooled symbol (including `test_files/` and `tests/`, which the
+CI-mounted `crates/rts-core` workspace contains), avoiding the live
+fuzzy-neighbor traps — the `error.rs` builder family, `constants.rs`
+remnants, the `cache_*` family, and the per-language `render_*` family.
+Each control was verified to return an unrelated PageRank-fallback top-1
+(e.g. `clone_parser`, `render_go`, `new`, `duration`), not a confident
+topical match.
+
+`expected_top_k = []` excludes these queries from `answerable_coverage`,
+so the CI semantic-eval gate is unaffected: v1 holds at 1.000 (gate
+0.95) and blind-v2 at 0.857 (gate 0.75).
+
+### Release pipeline hardening — provenance, partial-release guard, macOS signature check, Node 24
+
+`release.yml` and the install docs gained several supply-chain and robustness
+improvements (all exercised on the next tagged release):
+
+- **Build-provenance attestation.** `aggregate-checksums` now runs
+  `actions/attest-build-provenance` (keyless Sigstore/SLSA) over the release
+  tarballs. Users verify authenticity with `gh attestation verify <tarball>
+  --repo njfio/rs-agent-code-utility` — authenticity on top of the existing
+  `SHA256SUMS` integrity check. README documents the command.
+- **Partial-release guard.** `aggregate-checksums` now asserts all 3 target
+  tarballs are present before publishing `SHA256SUMS`. Previously a failed build
+  target (matrix is `fail-fast: false`) could publish a complete-looking
+  `SHA256SUMS` over fewer than 3 tarballs that `sha256sum -c --ignore-missing`
+  silently passes.
+- **macOS signature check.** The build job now `codesign --verify --strict`s the
+  staged Apple-Silicon binaries before tarring, catching the strip/copy
+  signature-poisoning that AMFI-SIGKILLs binaries on launch.
+- **Node 24 readiness.** `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` opts the workflow's
+  JavaScript actions into Node.js 24 ahead of the 2026-06-02 forced migration
+  off the deprecated Node 20 runtime.
+- **Docs.** `docs/release-tooling-evaluation.md` records the release-tooling
+  evaluation (recommend adopting `cargo-semver-checks` next; keep the homegrown
+  flow otherwise) and the macOS notarization runbook (deferred — needs Apple
+  Developer secrets).
+
+### Removed unused dependencies (cargo-shear)
+
+Stripped 28 unused dependency declarations across the workspace, flagged
+by [`cargo-shear`](https://github.com/Boshen/cargo-shear). These were
+left orphaned by the v0.6 pre-pivot cleanup (deletion of
+`CodebaseAnalyzer` and the pre-pivot weight in `rts-core`); nothing in
+the surviving code paths referenced them.
+
+- **rts-core (`rust_tree_sitter`)**: `serde_json`, `serde_yaml`, `regex`,
+  `sha2`, `rayon`, `petgraph`, `ignore`, `walkdir`, `parking_lot`,
+  `crossbeam-channel`, `memmap2`, `dashmap`, `num_cpus`, `chrono`,
+  `uuid`, `dirs`, `tracing`, `tracing-subscriber`, and the `criterion`
+  dev-dependency.
+- **rts-daemon**: `tokio-stream`, `futures-util`.
+- **rts-mcp**: `thiserror`, `hex`, `unicode-normalization`, `nix`,
+  `libc`.
+- **rts-bench**: `thiserror`, `ignore`.
+
+No false positives: every removal was verified against
+`cargo build --workspace --all-targets`, `--all-features`, the
+per-crate `telemetry`/`experimental` feature builds, and
+`cargo test --workspace`. No cargo-shear ignore list was needed.
+
+### rts-core — cleared the clippy advisory baseline
+
+`cargo clippy -p rust_tree_sitter --all-targets` is now warning-free. The
+crate carried ~88 advisory clippy warnings (CI does not run `-D` for
+rts-core, so they never failed a build). All are resolved with no runtime
+behavior change:
+
+- `assertions_on_constants` (35×, `constants.rs` tests) — compile-time
+  invariant `assert!`s moved into `const { … }` blocks, so they now fail the
+  build (not just the test) if a constant drifts out of range.
+- `type_complexity` (2×) — the tuple return types of `RustSyntax::find_impl_blocks`
+  and `PythonSyntax::find_typed_functions` are named via private (transparent)
+  type aliases; the public API surface is unchanged.
+- `only_used_in_recursion` (2×) — `SyntaxTree`'s private `collect_*` helpers
+  no longer take an unused `&self`.
+- `if_same_then_else` (2×) — merged identical C/Python declarator branches.
+- `let_unit_value` + the no-op `streaming_iterator_present_check` shim and its
+  dead `as _` import (`signature.rs`) removed; the dependency stays live via
+  `query.rs`.
+- dead `descend_for_body` (`signature.rs`) removed.
+- `too_many_arguments` on the public `create_edit` constructor — site-specific
+  `#[allow]` with justification; its 9 args mirror `InputEdit`'s three flattened
+  `Point` fields and collapsing them would change a public signature.
+
+### Fix: ship the `rts` human CLI in the release tarball
+
+The v0.6.0 prebuilt tarballs shipped `rts-daemon`, `rts-mcp`, and
+`rts-bench` but **omitted the `rts` human CLI** (`rts find`, `rts grep`,
+`rts callers`, `rts read`, …) even though the docs reference it.
+`release.yml` now copies `rts` into the tarball and includes it in the
+`--version` smoke test and the macOS `codesign --verify` check;
+`docs/install.md` lists `rts` among the shipped binaries and carries
+current prebuilt-install instructions. (Agent/MCP use never required
+`rts` — `rts-mcp` auto-spawns the daemon — but terminal users now get
+the CLI from the tarball instead of having to build from source.)
+
+
 ## [0.6.0] - 2026-05-25
 
 ### `rts-bench query --output lines` + `AGENTS.md` "use rts, not grep" cheatsheet
