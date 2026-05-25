@@ -1,6 +1,6 @@
-# rts — Retrieval for agentic coding
+# rts — a local code KB for agentic coding
 
-`rts` is a workspace-pinned local retrieval daemon plus an MCP (Model
+`rts` is a workspace-pinned local code knowledge base (code KB) daemon plus an MCP (Model
 Context Protocol) bridge that gives AI coding agents (Claude Code,
 Cursor, Cline, Aider, Continue) precise, token-cheap access to your
 codebase. Replaces "the agent ripgreps and then reads whole files" with
@@ -19,7 +19,7 @@ mentions `evict`, regardless of identifier name. The graph-only ranker
 sits at **100% answerable coverage** on a verified rts-core corpus (see
 [CHANGELOG](CHANGELOG.md) for the per-PR journey from 40% → 100%).
 
-**v0.6 (HEAD, untagged)** broadens the retrieval surface and hardens the
+**v0.6.0** broadens the query surface and hardens the
 daemon for long-running agent loops: `Index.Grep` v2 composes multiline
 regex, structural tree-sitter queries, and within-symbol scoping on the
 same tool; AST-precise call edges now cover 10 of the 12 indexed
@@ -49,13 +49,37 @@ Anthropic SDK oracle (`--with-network`) lands later.
 
 ## Status
 
-**Active pre-release.** Latest tag: `v0.5.5`. The v0.6 capability surface
-(Grep v2, persisted cold-mount + reconciliation, cancellable queries,
-opt-in telemetry, the `rts` human CLI, AST-precise call edges for
-Java/PHP/Swift/C#, JSON Schemas under [`schemas/v0/`](schemas/v0/), and
-a real-repo CI regression bench) is on HEAD; the `v0.6.0` tag cut is the
-maintainer's next release action. Pre-pivot library + CLI live in
-[`archive/`](archive/) for git history; no longer maintained.
+**v0.6 — stable for daily use.** Latest tag: `v0.6.0`. Pre-1.0 means the
+**wire protocol (protocol-v0)** may change additively and the **on-disk
+redb index** may change between minor versions — the daemon auto-rebuilds
+its index on upgrade, so schema changes are invisible (a *downgrade* across
+a schema bump needs a one-time state-dir wipe). The **user-facing surface
+will not break without a version bump.**
+
+### Stable surface (frozen in v0.6)
+
+Frozen = tool/subcommand **names and argument shapes**. Additive flags
+within a tool/subcommand are *not* frozen, so the CLI can close flag-parity
+with the MCP tools without a major bump.
+
+- **10 MCP tools:** `outline_workspace`, `find_symbol`, `read_symbol`,
+  `read_symbol_at`, `read_range`, `find_callers`, `impact_of`, `grep`,
+  `daemon_stats`, `daemon_telemetry`
+- **10 `rts` CLI subcommands:** `mount`, `find`, `grep`, `callers`,
+  `outline`, `read`, `stats`, `doctor`, `completions`, `telemetry`
+
+Deliberate CLI↔MCP asymmetries (by design, not omissions): `impact_of`
+(transitive blast radius) is MCP-only — CLI users get depth-1 `callers`;
+`doctor` is human/CI install tooling — agents use `daemon_telemetry` for
+live index health; `telemetry enable/disable/flush` is a human consent
+action — agents get read-only `daemon_telemetry`.
+
+**Not frozen (pre-1.0 mutable):** protocol-v0 wire format (additive changes
+only; the response fields today's tools surface are frozen *with* the
+tools) and the on-disk redb schema (auto-rebuilt on upgrade).
+
+Pre-pivot library + CLI live in [`archive/`](archive/) for git history; no
+longer maintained.
 
 | Phase | Status |
 |---|---|
@@ -71,9 +95,9 @@ maintainer's next release action. Pre-pivot library + CLI live in
 | **v0.3 — Persistent code-graph KB** | ✅ (`Index.FindCallers`, `Index.ImpactOf`, symbol PageRank, indexed closure walker; U0-U5 shipped alpha.31-alpha.35) |
 | **v0.4 — Semantic eval harness** | ✅ (graph-only ranker driven from a verified rts-core corpus; CI invariant locks `combined_answerable_rate`) |
 | **v0.5 — Doc-comment retrieval** | ✅ (extractor for 10 languages, `find_symbol.doc` + `doc_contains` + `pre_filter_count`, doc-IDF in the ranker; 100% answerable coverage on the rts-core corpus) |
-| **v0.6 — Retrieval breadth (HEAD)** | ✅ (`Index.Grep` v2: multiline regex + structural tree-sitter queries + within-symbol scope; AST-precise call edges for 10/12 languages incl. Java/PHP/Swift/C#) |
-| **v0.6 — Daemon resilience (HEAD)** | ✅ (persisted cold-mount + reconciliation worker, cancellable queries via `Daemon.Cancel`, MCP heartbeat + reconnect-with-backoff with `DAEMON_UNAVAILABLE`/`DAEMON_DOWN` error codes) |
-| **v0.6 — Operability (HEAD)** | ✅ (`rts-bench doctor`, `Daemon.Stats v2`, `rts` human CLI, opt-in `rts telemetry`, machine-readable JSON Schemas under `schemas/v0/`, nightly real-repo regression bench, `daemon_telemetry` MCP tool) |
+| **v0.6 — Query breadth (v0.6.0)** | ✅ (`Index.Grep` v2: multiline regex + structural tree-sitter queries + within-symbol scope; AST-precise call edges for 10/12 languages incl. Java/PHP/Swift/C#) |
+| **v0.6 — Daemon resilience (v0.6.0)** | ✅ (persisted cold-mount + reconciliation worker, cancellable queries via `Daemon.Cancel`, MCP heartbeat + reconnect-with-backoff with `DAEMON_UNAVAILABLE`/`DAEMON_DOWN` error codes) |
+| **v0.6 — Operability (v0.6.0)** | ✅ (`rts-bench doctor`, `Daemon.Stats v2`, `rts` human CLI, opt-in `rts telemetry`, machine-readable JSON Schemas under `schemas/v0/`, nightly real-repo regression bench, `daemon_telemetry` MCP tool) |
 
 ## Architecture
 
@@ -156,7 +180,7 @@ below.
 
 ```sh
 # Pick the right target for your platform
-VERSION=0.5.5
+VERSION=0.6.0
 TARGET=aarch64-apple-darwin
 URL="https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz"
 
@@ -185,6 +209,12 @@ Each release ships a `SHA256SUMS` file you can verify against:
 curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/SHA256SUMS" -o SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing
 ```
+
+> **macOS (Apple Silicon):** if you download the tarball via a browser
+> instead of `curl`, macOS tags it with `com.apple.quarantine` and
+> Gatekeeper blocks the un-notarized binaries on first run. Clear it
+> first: `xattr -dr com.apple.quarantine rts-${VERSION}-${TARGET}/`.
+> The `curl | tar` path above is unaffected.
 
 ### Option B: build from source
 

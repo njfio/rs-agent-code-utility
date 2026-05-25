@@ -8,6 +8,16 @@
 //! The MCP server itself (`server.rs`, `RtsServer`) is binary-internal —
 //! it depends on the rmcp macro-generated tool router and is not part of
 //! the public API.
+//!
+//! ## Feature flags
+//!
+//! - `default` — none. The stable build links zero HTTP and gates no
+//!   experimental surface.
+//! - `telemetry` — compiles the opt-in anonymous-telemetry HTTP client
+//!   (`dep:ureq`) plus the `rts telemetry flush` send path. Off by default.
+//! - `experimental` — gates unstable MCP tools / `rts` CLI subcommands
+//!   behind `#[cfg(feature = "experimental")]` until they're promoted to
+//!   the frozen surface in a release. Off by default; empty today.
 
 pub mod cli;
 pub mod connection;

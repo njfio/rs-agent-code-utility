@@ -1,7 +1,7 @@
 //! # rust_tree_sitter
 //!
 //! Tree-sitter-backed parsing primitives consumed by `rts-daemon` and
-//! `rts-mcp` to power the agentic-retrieval stack.
+//! `rts-mcp` to power the local code KB.
 //!
 //! ## Public surface
 //!
