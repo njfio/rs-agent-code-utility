@@ -256,30 +256,40 @@ mod tests {
 
     #[test]
     fn test_security_constants() {
-        assert!(security::DEFAULT_MIN_CONFIDENCE > 0.0);
-        assert!(security::DEFAULT_MIN_CONFIDENCE <= 1.0);
+        // These invariants hold over compile-time constants, so assert them in
+        // `const {}` blocks: they fail the build (not just the test) if a
+        // constant is ever set out of range, and clippy doesn't flag them as
+        // constant-folded runtime asserts.
+        const {
+            assert!(security::DEFAULT_MIN_CONFIDENCE > 0.0);
+            assert!(security::DEFAULT_MIN_CONFIDENCE <= 1.0);
+        }
         assert_eq!(security::MAX_SECURITY_SCORE, 100);
         assert_eq!(security::PERFECT_SECURITY_SCORE, 100);
         assert_eq!(security::BASE_SECURITY_SCORE, 100);
-        assert!(security::COVERAGE_CALCULATION_DIVISOR > 0.0);
+        const { assert!(security::COVERAGE_CALCULATION_DIVISOR > 0.0) };
         assert_eq!(security::HIGH_SECRETS_COMPLIANCE, 100);
         assert_eq!(security::MEDIUM_SECRETS_COMPLIANCE, 80);
-        assert!(security::HIGH_SEVERITY_EFFORT > security::MEDIUM_SEVERITY_EFFORT);
-        assert!(security::MEDIUM_SEVERITY_EFFORT > security::LOW_SEVERITY_EFFORT);
+        const {
+            assert!(security::HIGH_SEVERITY_EFFORT > security::MEDIUM_SEVERITY_EFFORT);
+            assert!(security::MEDIUM_SEVERITY_EFFORT > security::LOW_SEVERITY_EFFORT);
+        }
     }
 
     #[test]
     fn test_intent_mapping_constants() {
-        assert!(intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD > 0.0);
-        assert!(intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD <= 1.0);
-        assert!(
-            intent_mapping::DEFAULT_AUTO_VALIDATION_THRESHOLD
-                > intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD
-        );
-        assert!(
-            intent_mapping::DEFAULT_MAX_MAPPING_DISTANCE
-                > intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD
-        );
+        const {
+            assert!(intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD > 0.0);
+            assert!(intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD <= 1.0);
+            assert!(
+                intent_mapping::DEFAULT_AUTO_VALIDATION_THRESHOLD
+                    > intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD
+            );
+            assert!(
+                intent_mapping::DEFAULT_MAX_MAPPING_DISTANCE
+                    > intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD
+            );
+        }
 
         // Test validation weights sum to 1.0
         let total_weight = intent_mapping::VALIDATION_CONFIDENCE_WEIGHT
@@ -288,30 +298,40 @@ mod tests {
             + intent_mapping::VALIDATION_QUALITY_WEIGHT;
         assert!((total_weight - 1.0).abs() < 0.001);
 
-        // Test thresholds are in logical order
-        assert!(
-            intent_mapping::VALIDATION_VALID_THRESHOLD
-                > intent_mapping::VALIDATION_REVIEW_THRESHOLD
-        );
-        assert!(intent_mapping::COVERAGE_THRESHOLD > intent_mapping::QUALITY_COVERAGE_THRESHOLD);
+        const {
+            // Test thresholds are in logical order
+            assert!(
+                intent_mapping::VALIDATION_VALID_THRESHOLD
+                    > intent_mapping::VALIDATION_REVIEW_THRESHOLD
+            );
+            assert!(
+                intent_mapping::COVERAGE_THRESHOLD > intent_mapping::QUALITY_COVERAGE_THRESHOLD
+            );
+        }
 
         // Test default values are reasonable
         assert_eq!(intent_mapping::DEFAULT_COVERAGE, 0.0);
         assert_eq!(intent_mapping::DEFAULT_COMPLEXITY, 1.0);
-        assert!(intent_mapping::DEFAULT_MAINTAINABILITY > 0.0);
-        assert!(intent_mapping::DEFAULT_PERFORMANCE > 0.0);
-        assert!(intent_mapping::DEFAULT_SECURITY > 0.0);
+        const {
+            assert!(intent_mapping::DEFAULT_MAINTAINABILITY > 0.0);
+            assert!(intent_mapping::DEFAULT_PERFORMANCE > 0.0);
+            assert!(intent_mapping::DEFAULT_SECURITY > 0.0);
+        }
     }
 
     #[test]
     fn test_performance_constants() {
         assert_eq!(performance::MAX_PERFORMANCE_SCORE, 100);
-        assert!(performance::FUNCTION_LENGTH_HIGH_THRESHOLD > 0);
-        assert!(performance::LARGE_CODEBASE_THRESHOLD > 0);
-        assert!(performance::LINES_PER_COMPLEXITY_UNIT > 0.0);
+        const {
+            assert!(performance::FUNCTION_LENGTH_HIGH_THRESHOLD > 0);
+            assert!(performance::LARGE_CODEBASE_THRESHOLD > 0);
+            assert!(performance::LINES_PER_COMPLEXITY_UNIT > 0.0);
+        }
         assert_eq!(performance::BASE_PERFORMANCE_SCORE, 100.0);
-        assert!(performance::COMPLEXITY_CPU_MULTIPLIER > 0.0);
-        assert!(performance::COMPLEXITY_OVERALL_MULTIPLIER > 0.0);
+        const {
+            assert!(performance::COMPLEXITY_CPU_MULTIPLIER > 0.0);
+            assert!(performance::COMPLEXITY_OVERALL_MULTIPLIER > 0.0);
+        }
         assert_eq!(performance::MAX_CPU_IMPACT, 100.0);
         assert_eq!(performance::MAX_OVERALL_IMPACT, 100.0);
     }
@@ -325,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_refactoring_constants() {
-        assert!(refactoring::LARGE_FILE_THRESHOLD > 0);
+        const { assert!(refactoring::LARGE_FILE_THRESHOLD > 0) };
         assert_eq!(refactoring::BASE_REFACTORING_SCORE, 100);
     }
 
@@ -334,7 +354,7 @@ mod tests {
         assert_eq!(file_processing::DEFAULT_MAX_FILE_SIZE, 1024 * 1024);
         assert_eq!(file_processing::MEGABYTE, 1024 * 1024);
         assert_eq!(file_processing::KILOBYTE, 1024);
-        assert!(file_processing::MEGABYTE > file_processing::KILOBYTE);
+        const { assert!(file_processing::MEGABYTE > file_processing::KILOBYTE) };
     }
 
     #[test]
@@ -343,7 +363,7 @@ mod tests {
         assert_eq!(scoring::MAX_SCORE, 100.0);
         assert_eq!(scoring::PERFECT_SCORE, 100.0);
         assert_eq!(scoring::PERCENTAGE_FACTOR, 100.0);
-        assert!(scoring::MAX_SCORE > scoring::MIN_SCORE);
+        const { assert!(scoring::MAX_SCORE > scoring::MIN_SCORE) };
     }
 
     #[test]
@@ -374,56 +394,62 @@ mod tests {
 
     #[test]
     fn test_constants_ranges() {
-        // Test that confidence thresholds are in valid range [0.0, 1.0]
-        assert!(security::DEFAULT_MIN_CONFIDENCE >= 0.0 && security::DEFAULT_MIN_CONFIDENCE <= 1.0);
-        assert!(
-            intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD >= 0.0
-                && intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD <= 1.0
-        );
-        assert!(
-            intent_mapping::DEFAULT_MAX_MAPPING_DISTANCE >= 0.0
-                && intent_mapping::DEFAULT_MAX_MAPPING_DISTANCE <= 1.0
-        );
-        assert!(
-            intent_mapping::DEFAULT_AUTO_VALIDATION_THRESHOLD >= 0.0
-                && intent_mapping::DEFAULT_AUTO_VALIDATION_THRESHOLD <= 1.0
-        );
+        const {
+            // Test that confidence thresholds are in valid range [0.0, 1.0]
+            assert!(
+                security::DEFAULT_MIN_CONFIDENCE >= 0.0 && security::DEFAULT_MIN_CONFIDENCE <= 1.0
+            );
+            assert!(
+                intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD >= 0.0
+                    && intent_mapping::DEFAULT_CONFIDENCE_THRESHOLD <= 1.0
+            );
+            assert!(
+                intent_mapping::DEFAULT_MAX_MAPPING_DISTANCE >= 0.0
+                    && intent_mapping::DEFAULT_MAX_MAPPING_DISTANCE <= 1.0
+            );
+            assert!(
+                intent_mapping::DEFAULT_AUTO_VALIDATION_THRESHOLD >= 0.0
+                    && intent_mapping::DEFAULT_AUTO_VALIDATION_THRESHOLD <= 1.0
+            );
 
-        // Test that validation weights are in valid range [0.0, 1.0]
-        assert!(
-            intent_mapping::VALIDATION_CONFIDENCE_WEIGHT >= 0.0
-                && intent_mapping::VALIDATION_CONFIDENCE_WEIGHT <= 1.0
-        );
-        assert!(
-            intent_mapping::VALIDATION_REQUIREMENT_WEIGHT >= 0.0
-                && intent_mapping::VALIDATION_REQUIREMENT_WEIGHT <= 1.0
-        );
-        assert!(
-            intent_mapping::VALIDATION_IMPLEMENTATION_WEIGHT >= 0.0
-                && intent_mapping::VALIDATION_IMPLEMENTATION_WEIGHT <= 1.0
-        );
-        assert!(
-            intent_mapping::VALIDATION_QUALITY_WEIGHT >= 0.0
-                && intent_mapping::VALIDATION_QUALITY_WEIGHT <= 1.0
-        );
+            // Test that validation weights are in valid range [0.0, 1.0]
+            assert!(
+                intent_mapping::VALIDATION_CONFIDENCE_WEIGHT >= 0.0
+                    && intent_mapping::VALIDATION_CONFIDENCE_WEIGHT <= 1.0
+            );
+            assert!(
+                intent_mapping::VALIDATION_REQUIREMENT_WEIGHT >= 0.0
+                    && intent_mapping::VALIDATION_REQUIREMENT_WEIGHT <= 1.0
+            );
+            assert!(
+                intent_mapping::VALIDATION_IMPLEMENTATION_WEIGHT >= 0.0
+                    && intent_mapping::VALIDATION_IMPLEMENTATION_WEIGHT <= 1.0
+            );
+            assert!(
+                intent_mapping::VALIDATION_QUALITY_WEIGHT >= 0.0
+                    && intent_mapping::VALIDATION_QUALITY_WEIGHT <= 1.0
+            );
 
-        // Test that pattern matching weights are reasonable
-        assert!(
-            intent_mapping::USER_STORY_API_WEIGHT >= 0.0
-                && intent_mapping::USER_STORY_API_WEIGHT <= 1.0
-        );
-        assert!(
-            intent_mapping::FUNCTIONAL_FUNCTION_WEIGHT >= 0.0
-                && intent_mapping::FUNCTIONAL_FUNCTION_WEIGHT <= 1.0
-        );
-        assert!(
-            intent_mapping::TECHNICAL_MODULE_WEIGHT >= 0.0
-                && intent_mapping::TECHNICAL_MODULE_WEIGHT <= 1.0
-        );
-        assert!(intent_mapping::SECURITY_WEIGHT >= 0.0 && intent_mapping::SECURITY_WEIGHT <= 1.0);
-        assert!(
-            intent_mapping::KEYWORD_SIMILARITY_WEIGHT >= 0.0
-                && intent_mapping::KEYWORD_SIMILARITY_WEIGHT <= 1.0
-        );
+            // Test that pattern matching weights are reasonable
+            assert!(
+                intent_mapping::USER_STORY_API_WEIGHT >= 0.0
+                    && intent_mapping::USER_STORY_API_WEIGHT <= 1.0
+            );
+            assert!(
+                intent_mapping::FUNCTIONAL_FUNCTION_WEIGHT >= 0.0
+                    && intent_mapping::FUNCTIONAL_FUNCTION_WEIGHT <= 1.0
+            );
+            assert!(
+                intent_mapping::TECHNICAL_MODULE_WEIGHT >= 0.0
+                    && intent_mapping::TECHNICAL_MODULE_WEIGHT <= 1.0
+            );
+            assert!(
+                intent_mapping::SECURITY_WEIGHT >= 0.0 && intent_mapping::SECURITY_WEIGHT <= 1.0
+            );
+            assert!(
+                intent_mapping::KEYWORD_SIMILARITY_WEIGHT >= 0.0
+                    && intent_mapping::KEYWORD_SIMILARITY_WEIGHT <= 1.0
+            );
+        }
     }
 }

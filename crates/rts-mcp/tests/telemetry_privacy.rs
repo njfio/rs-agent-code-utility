@@ -208,7 +208,10 @@ fn schema_golden_matches_fixture() {
     .expect("golden file must exist at the documented path");
     let golden = golden_raw
         .replace("OS_PLACEHOLDER", tlm::os_label())
-        .replace("ARCH_PLACEHOLDER", tlm::arch_label());
+        .replace("ARCH_PLACEHOLDER", tlm::arch_label())
+        // Version-agnostic: rts_version tracks CARGO_PKG_VERSION and would
+        // otherwise force a golden edit on every release bump.
+        .replace("VERSION_PLACEHOLDER", env!("CARGO_PKG_VERSION"));
 
     // Strip trailing newline if the file editor added one — serde's
     // `to_string_pretty` doesn't emit a trailing newline.

@@ -103,15 +103,60 @@ expected_top_k = ["find_nodes_by_kind", "child_by_field_name", "contains", "chil
 
 # ─── Negative controls — topics genuinely absent from rts-core ───
 #
-# The previous corpus had `auth`, `database connection pool`, and
-# `http handler` as negative controls — but rts-core ACTUALLY has
-# `AuthenticationCheck`, `AdvancedThreadPool`, and `Handler` types
-# (it's a code-analysis crate that detects these patterns in *other*
-# people's code). Originally replaced with JWT / GraphQL / SMTP probes,
-# but those negative-control queries were calibrated against the
+# History: the original corpus used `auth`, `database connection pool`,
+# and `http handler` — but rts-core ACTUALLY had `AuthenticationCheck`,
+# `AdvancedThreadPool`, and `Handler` types (it was a code-analysis
+# crate that detected these patterns in *other* people's code). Those
+# were replaced with JWT / GraphQL / SMTP probes calibrated against the
 # pre-PR-A 4096-symbol pool. PR-A's 13-module deletion + PR-B's
 # CodebaseAnalyzer deletion shifted the fuzzy-neighbor vocabulary, so
-# the same probes now hallucinate top1 hits like
-# `DEFAULT_AUTO_VALIDATION_THRESHOLD` and `is_function_definition`.
-# The negative-control queries are removed here pending recalibration
-# against the post-cleanup symbol pool — a separate follow-up.
+# the same probes started hallucinating top1 hits like
+# `DEFAULT_AUTO_VALIDATION_THRESHOLD` and `is_function_definition`, and
+# the controls were removed pending recalibration. This is that
+# recalibration against the post-cleanup (PRs #132–#134) symbol pool.
+#
+# A negative control is a query phrased like a plausible code question
+# whose topic is genuinely absent from post-cleanup rts-core (now a
+# parsing / extraction / signature-rendering crate). `expected_top_k = []`
+# marks it: the scorer excludes empty-expected queries from
+# `answerable_coverage` (numerator AND denominator — see
+# `crates/rts-bench/src/semantic.rs`), so these never move the CI gate;
+# they only verify the ranker doesn't return a confident false top1.
+#
+# Calibration: probed `find_symbol(pattern="*", limit=4096)` against
+# `crates/rts-core` (the CI-mounted workspace, which INCLUDES
+# `test_files/` + `tests/`) and chose topics whose content tokens have
+# ZERO lexical overlap with any pooled symbol. The live traps in the
+# post-cleanup pool are the `error.rs` builder family (`rate_limit_error`,
+# `auth_error`, `network_error`, `not_supported_error`, `timeout_error`,
+# …), the `constants.rs` scoring remnants, the `cache_*` family, and the
+# per-language `render_*` family — so these controls avoid
+# rate-limit/auth/cache/render/validate/parse/query wording. Each was
+# verified to return an unrelated PageRank-fallback top1 (`cpp_using_keeps_whole`,
+# `java_record_strips_body`, `clone_parser`, `new`, `after_macro_rules`,
+# `end`), not a confident topical match. Re-verify after any future
+# symbol-surface shift.
+
+[[query]]
+text = "what cipher encrypts payloads using AES before they are persisted?"
+expected_top_k = []
+
+[[query]]
+text = "how does the DNS resolver look up records by their TTL?"
+expected_top_k = []
+
+[[query]]
+text = "where is the SMTP client configured to deliver outbound mail?"
+expected_top_k = []
+
+[[query]]
+text = "how does the GraphQL schema resolve nested subscriptions?"
+expected_top_k = []
+
+[[query]]
+text = "how is the Kafka consumer offset committed after each poll?"
+expected_top_k = []
+
+[[query]]
+text = "where does the Bluetooth device complete its pairing handshake?"
+expected_top_k = []

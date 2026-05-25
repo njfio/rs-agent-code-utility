@@ -8,6 +8,10 @@ use crate::query::Query;
 use crate::tree::{Node, SyntaxTree};
 use tree_sitter::Point;
 
+/// One type-hinted function discovered by [`PythonSyntax::find_typed_functions`]:
+/// `(name, parameter_types, return_type, start_point, end_point)`.
+type TypedFunction = (String, Vec<String>, Option<String>, Point, Point);
+
 /// Python-specific syntax utilities
 pub struct PythonSyntax;
 
@@ -155,11 +159,10 @@ impl PythonSyntax {
 
         if let Some(superclasses_node) = node.child_by_field_name("superclasses") {
             for child in superclasses_node.children() {
-                if child.kind() == "identifier" {
-                    if let Ok(base) = child.text() {
-                        bases.push(base.to_string());
-                    }
-                } else if child.kind() == "attribute" {
+                // A base class is either a bare name (`identifier`) or a
+                // dotted path (`attribute`, e.g. `abc.ABC`); both are recorded
+                // verbatim from their source text.
+                if child.kind() == "identifier" || child.kind() == "attribute" {
                     if let Ok(base) = child.text() {
                         bases.push(base.to_string());
                     }
@@ -845,16 +848,7 @@ impl PythonSyntax {
     }
 
     /// Find functions with comprehensive type hints
-    pub fn find_typed_functions(
-        tree: &SyntaxTree,
-        source: &str,
-    ) -> Vec<(
-        String,
-        Vec<String>,
-        Option<String>,
-        tree_sitter::Point,
-        tree_sitter::Point,
-    )> {
+    pub fn find_typed_functions(tree: &SyntaxTree, source: &str) -> Vec<TypedFunction> {
         let mut typed_functions = Vec::new();
         let function_nodes = tree.find_nodes_by_kind("function_definition");
 

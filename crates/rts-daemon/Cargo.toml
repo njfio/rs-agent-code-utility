@@ -31,8 +31,6 @@ rust_tree_sitter = { path = "../rts-core" }
 # Async runtime + Unix-socket plumbing
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util", "signal", "fs", "sync", "time", "process"] }
 tokio-util = { version = "0.7", features = ["codec"] }
-tokio-stream = "0.1"
-futures-util = "0.3"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
