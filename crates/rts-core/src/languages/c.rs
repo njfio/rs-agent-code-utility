@@ -247,21 +247,12 @@ impl CSyntax {
                     return Some(param_name.to_string());
                 }
             }
-            // Look for identifier in pointer_declarator
-            else if child.kind() == "pointer_declarator" {
-                for pointer_child in child.children() {
-                    if pointer_child.kind() == "identifier" {
-                        if let Ok(param_name) = pointer_child.text() {
-                            return Some(param_name.to_string());
-                        }
-                    }
-                }
-            }
-            // Look for identifier in array_declarator
-            else if child.kind() == "array_declarator" {
-                for array_child in child.children() {
-                    if array_child.kind() == "identifier" {
-                        if let Ok(param_name) = array_child.text() {
+            // Look for identifier nested in a pointer_declarator or
+            // array_declarator (both wrap the identifier the same way).
+            else if child.kind() == "pointer_declarator" || child.kind() == "array_declarator" {
+                for nested_child in child.children() {
+                    if nested_child.kind() == "identifier" {
+                        if let Ok(param_name) = nested_child.text() {
                             return Some(param_name.to_string());
                         }
                     }

@@ -57,35 +57,35 @@ impl SyntaxTree {
     /// Get all nodes with errors
     pub fn error_nodes(&self) -> Vec<Node<'_>> {
         let mut errors = Vec::new();
-        self.collect_error_nodes(self.root_node(), &mut errors);
+        Self::collect_error_nodes(self.root_node(), &mut errors);
         errors
     }
 
-    fn collect_error_nodes<'a>(&self, node: Node<'a>, errors: &mut Vec<Node<'a>>) {
+    fn collect_error_nodes<'a>(node: Node<'a>, errors: &mut Vec<Node<'a>>) {
         if node.is_error() || node.is_missing() {
             errors.push(node);
         }
 
         for child in node.children() {
-            self.collect_error_nodes(child, errors);
+            Self::collect_error_nodes(child, errors);
         }
     }
 
     /// Find all nodes of a specific kind (optimized with pre-allocation)
     pub fn find_nodes_by_kind(&self, kind: &str) -> Vec<Node<'_>> {
         let mut nodes = Vec::with_capacity(32); // Pre-allocate for common case
-        self.collect_nodes_by_kind(self.root_node(), kind, &mut nodes);
+        Self::collect_nodes_by_kind(self.root_node(), kind, &mut nodes);
         nodes.shrink_to_fit(); // Reclaim unused memory
         nodes
     }
 
-    fn collect_nodes_by_kind<'a>(&self, node: Node<'a>, kind: &str, nodes: &mut Vec<Node<'a>>) {
+    fn collect_nodes_by_kind<'a>(node: Node<'a>, kind: &str, nodes: &mut Vec<Node<'a>>) {
         if node.kind() == kind {
             nodes.push(node);
         }
 
         for child in node.children() {
-            self.collect_nodes_by_kind(child, kind, nodes);
+            Self::collect_nodes_by_kind(child, kind, nodes);
         }
     }
 

@@ -5,6 +5,16 @@ use crate::query::Query;
 use crate::tree::SyntaxTree;
 use tree_sitter::Node;
 
+/// One impl block discovered by [`RustSyntax::find_impl_blocks`]:
+/// `(type_name, trait_name, method_names, start_point, end_point)`.
+type ImplBlock = (
+    String,
+    Option<String>,
+    Vec<String>,
+    tree_sitter::Point,
+    tree_sitter::Point,
+);
+
 /// Rust-specific syntax tree utilities
 pub struct RustSyntax;
 
@@ -280,16 +290,7 @@ impl RustSyntax {
     }
 
     /// Find impl blocks in a syntax tree
-    pub fn find_impl_blocks(
-        tree: &SyntaxTree,
-        source: &str,
-    ) -> Vec<(
-        String,
-        Option<String>,
-        Vec<String>,
-        tree_sitter::Point,
-        tree_sitter::Point,
-    )> {
+    pub fn find_impl_blocks(tree: &SyntaxTree, source: &str) -> Vec<ImplBlock> {
         let mut impl_blocks = Vec::new();
         let impl_nodes = tree.find_nodes_by_kind("impl_item");
 
