@@ -155,3 +155,12 @@ agent-bench/runs/
 # across releases is part of git history). Only the raw subdirs
 # inside any results dir are ignored:
 bench-results/**/raw/
+
+# cargo-fuzz state. The `corpus/` subdirectory under
+# `crates/rts-daemon/fuzz/` IS committed (those are curated
+# adversarial seeds — see `RESILIENCE.md`); the per-run state
+# (target/, artifacts/) is not.
+crates/rts-daemon/fuzz/target/
+crates/rts-daemon/fuzz/artifacts/
+crates/rts-daemon/fuzz/coverage/
+crates/rts-daemon/fuzz/Cargo.lock

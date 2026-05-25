@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Session.Close.req.schema.json",
+  "title": "Session.Close request params",
+  "description": "Per protocol-v0.md §7.10 + §18.7. Releases the session immediately.",
+  "type": "object",
+  "properties": {
+    "session_id": { "type": "string", "pattern": "^sess_[0-9a-f]{16,}$" }
+  },
+  "required": ["session_id"],
+  "additionalProperties": false
+}

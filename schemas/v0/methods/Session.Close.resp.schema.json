@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Session.Close.resp.schema.json",
+  "title": "Session.Close result",
+  "description": "Per protocol-v0.md §7.10. Inert payload — empty object on success.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

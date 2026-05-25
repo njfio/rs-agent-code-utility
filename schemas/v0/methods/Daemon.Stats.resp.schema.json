@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Stats.resp.schema.json",
+  "title": "Daemon.Stats result",
+  "description": "v0.5.7 base shape + v0.6 v2 fields (capability `daemon_stats_v2`). Pre-mount Stats omits the v2 fields entirely; post-mount Stats carries the pinned workspace context.",
+  "type": "object",
+  "properties": {
+    "uptime_ms":     { "type": "integer", "minimum": 0 },
+    "version":       { "type": "string" },
+    "total_calls":   { "type": "integer", "minimum": 0 },
+    "calls": {
+      "description": "Map of method-name -> call count for this daemon process. Per protocol-v0 the keys are bounded to the closed method enum.",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "cancellations": {
+      "description": "v0.6+, capability `cancellable_queries`. `total` = cumulative successful cancels (stale cancels not counted); `in_flight` = point-in-time gauge of registered cancellable requests.",
+      "type": "object",
+      "properties": {
+        "total":     { "type": "integer", "minimum": 0 },
+        "in_flight": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["total", "in_flight"]
+    },
+    "pinned_workspace_path": {
+      "description": "v0.6+ (capability `daemon_stats_v2`). Present only when a workspace is mounted.",
+      "type": "string"
+    },
+    "workspace_id": {
+      "description": "v0.6+ (capability `daemon_stats_v2`). 16-char hex blake3 fingerprint. Present only when a workspace is mounted.",
+      "type": "string"
+    },
+    "index_generation": {
+      "description": "v0.6+ (capability `daemon_stats_v2`). Bumps on every committed write.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "cold_walk_completed_at_ms": {
+      "description": "v0.6+ (capability `daemon_stats_v2`). Unix-epoch ms when the writer's ColdWalkComplete flush committed, or null if cold walk hasn't finished.",
+      "type": ["integer", "null"]
+    },
+    "mount_source": {
+      "description": "v0.6+ (capability `daemon_stats_v2`). Persisted-cold-mount decision: 'cold_walk' | 'cold_walk_after_invalidation' | 'cold_walk_after_crash' | 'rehydrate'.",
+      "type": "string"
+    },
+    "rehydrate_attempts_total": {
+      "description": "v0.6+. Cumulative count of Workspace.Mount calls (resets on daemon restart).",
+      "type": "integer",
+      "minimum": 0
+    },
+    "rehydrate_successes_total": {
+      "description": "v0.6+. Cumulative count of mounts that took the Rehydrate fast path.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "rehydrate_invalidations_by_reason": {
+      "description": "v0.6+. Per-reason tally of why a rehydrate was rejected ('crash', 'EmptyOrMissingFingerprint', etc.).",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "reconciliation": {
+      "description": "v0.6+ (capability `reconciliation_worker`). Most-recent reconciliation pass stats.",
+      "type": "object"
+    }
+  },
+  "required": ["uptime_ms", "version", "total_calls", "calls", "cancellations"]
+}

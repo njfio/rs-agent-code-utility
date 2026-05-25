@@ -2,7 +2,7 @@
 
 This file is the canonical project-coding-standards reference. Treat it
 as the source of truth when conventions diverge from anything you find
-in pre-pivot artifacts under `archive/`.
+in the git history of pre-pivot artifacts.
 
 AGENTS.md — 12-rule template
 These rules apply to every task in this project unless explicitly overridden.
@@ -190,6 +190,36 @@ enclosing-symbol metadata, and survives across editor sessions.
 | Orient in an unfamiliar repo | `mcp__rts__outline_workspace` or `rts-bench query outline` | `find . -name '*.rs'` |
 | Read a symbol's body | `mcp__rts__read_symbol` or `rts-bench query read-symbol` | `cat`, `Read` whole file |
 
+### `grep` v2 — multi-line, structural, within-symbol (v0.6 alpha)
+
+The cases agents have historically dropped to `rg` for — patterns that cross newlines, "find every `impl` that contains an `unsafe fn`", "find every `panic!` inside `fn parse_request`" — now compose on the same tool. Capability gate: `index_grep_v2` (or the three fine-grained strings `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`). Wire details: protocol-v0 §7.8b.
+
+- **Multi-line regex.** Pass `multiline: true` *and* `regex: true`. The compiled pattern gets `(?ms)` semantics (`.` matches `\n`, `^/$` are per-line) and the file is scanned as one buffer. Use for multi-line `fn` signatures, multi-line error messages, embedded SQL. Adversarial patterns (`(?s).*` on a 4 MiB file) return `REGEX_TOO_COMPLEX`, not OOM.
+
+  ```jsonc
+  // "find every `pub async fn` whose return type spans multiple lines"
+  { "text": "pub async fn[^{]*->\\s*\\n[^{]*\\{", "regex": true, "multiline": true }
+  ```
+
+- **Structural tree-sitter queries.** Pass `structural_query` (a raw S-expression) and `language` (required). Results carry per-match `captures: {name: [{start, end, text, truncated?}]}`. Predicates limited to the v1 whitelist (`#eq?`, `#not-eq?`, `#match?`, `#not-match?`, `#any-of?`, `#is?`, `#is-not?`).
+
+  ```jsonc
+  // "every impl block in the workspace"
+  { "structural_query": "(impl_item) @impl", "language": ["rust"] }
+
+  // intersection: every `impl` block that also contains the literal `unsafe fn`
+  { "text": "unsafe fn", "structural_query": "(impl_item) @impl", "language": ["rust"] }
+  ```
+
+- **Within-symbol scope.** Pass `within_symbol: "name"` to keep only matches whose byte range lies strictly inside that symbol's def. Overloaded names (>16 defs) reject with `WITHIN_SYMBOL_TOO_MANY_DEFS` unless you opt in via `within_symbol_allow_overload: true`.
+
+  ```jsonc
+  // "find every `panic!` inside fn parse_request"
+  { "text": "panic!", "within_symbol": "parse_request" }
+  ```
+
+All three modes compose with each other, with `file_glob`, and with `language` (AND semantics). v1 callers that pass none of the new fields see byte-identical responses.
+
 ### Two CLI shapes
 
 `rts-bench query <sub>` returns the daemon's full JSON response —
@@ -251,7 +281,7 @@ bash, no `bats` or other deps required; needs `jq` + `python3`).
 ### Where shell `grep` / `rg` is still the right tool
 
 - Searching files outside the indexed workspace (vendored deps,
-  `target/`, `archive/`, anything `.rtsignore`'d).
+  `target/`, anything `.rtsignore`'d).
 - Non-text content that the daemon's body-extension allowlist refuses
   (binary diffs, generated files).
 - Multi-line regex matches across newlines — `Index.Grep`'s regex
@@ -275,8 +305,6 @@ Cargo workspace with `resolver = "3"`, Rust 2024 edition, MSRV 1.85.
   operator-facing CLI in the v0.2 stack.
 - `docs/protocol-v0.md` — daemon ↔ MCP wire spec.
 - `docs/plans/` and `docs/brainstorms/` — active design artifacts.
-- `archive/` — pre-pivot library + CLI + ~30 k LOC of AI/security
-  analyzers. Excluded from the workspace; preserved for git history.
 - `spikes/p0-*` — independent crates carrying the P0 validation
   experiments (rmcp 1.6, redb 2, notify+debouncer). Excluded from the
   workspace; reproducible via the per-spike README.
@@ -383,6 +411,16 @@ and clear the fragments dir. The release commit then bundles the
 CHANGELOG update, the fragment deletions, and the `Cargo.toml`
 version bump together.
 
+### Experimental surface gate (v0.6+)
+
+New MCP tools and `rts` CLI subcommands land behind
+`#[cfg(feature = "experimental")]` (the `experimental` Cargo feature, off by
+default) until they're promoted to the stable, frozen surface in a release —
+no promotion ladder, no `experimental_*` prefix, no per-feature paperwork.
+Daemon-side or core-side experimental code declares its own `experimental`
+feature in that crate, since Cargo features don't cross the
+rts-mcp↔rts-daemon socket boundary.
+
 ## Security & configuration
 
 - **Never** commit secrets. The `.gitignore` excludes `.env`,
@@ -411,8 +449,7 @@ version bump together.
 
 If you go looking for a feature that the pre-pivot library shipped
 (AI analyzers, taint analysis, SARIF output, the `tree-sitter-cli`
-binary), it's in `archive/src/` with the original module names
-preserved. Recovery is `git mv archive/src/<mod> src/<mod>` plus the
-`pub mod` declaration; the v0.2 product surface deliberately omits all
-of it. See [CHANGELOG.md](CHANGELOG.md)'s v0.2.0-alpha.1 entry for the
-full archive manifest and rationale.
+binary), it's in the git history before the pre-pivot cleanup PR.
+Recovery is a manual port from that history; the v0.2 product surface
+deliberately omits all of it. See [CHANGELOG.md](CHANGELOG.md)'s
+v0.2.0-alpha.1 entry for the full archive manifest and rationale.

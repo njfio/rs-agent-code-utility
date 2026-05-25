@@ -6,21 +6,25 @@ members = [
     "crates/rts-mcp",
     "crates/rts-bench",
 ]
-# `spikes/*` and `archive/*` are deliberately excluded — they're scratch
-# binaries (P0 validation) and historical retired code, not part of the
-# product build. Each `spikes/p0-*` directory is its own independent crate.
+# `spikes/*` are deliberately excluded — they're scratch binaries
+# (P0 validation), not part of the product build. Each `spikes/p0-*`
+# directory is its own independent crate.
 exclude = [
     "spikes/p0-1-rmcp-hello",
     "spikes/p0-2-redb-smoke",
     "spikes/p0-3-notify-smoke",
-    "archive",
+    # cargo-fuzz crate: nightly-only (libfuzzer-sys requires sancov
+    # passes that aren't available on stable). Built via
+    # `cd crates/rts-daemon && cargo +nightly fuzz run <target>` per
+    # `RESILIENCE.md` §"Running the fuzz harnesses locally".
+    "crates/rts-daemon/fuzz",
 ]
 
 [workspace.package]
-version = "0.5.5"
-authors = ["Your Name <your.email@example.com>"]
+version = "0.6.0"
+authors = ["njfio <7220+njfio@users.noreply.github.com>"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/rust_tree_sitter"
+repository = "https://github.com/njfio/rs-agent-code-utility"
 edition = "2024"
 rust-version = "1.85"
 

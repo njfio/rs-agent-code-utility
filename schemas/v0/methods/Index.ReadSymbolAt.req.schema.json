@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.ReadSymbolAt.req.schema.json",
+  "title": "Index.ReadSymbolAt request params",
+  "description": "Per protocol-v0.md §7.7b + §18.4b. v0 alpha.24+, capability `read_symbol_at`. The compiler-error flow primitive: resolves `(file, line)` to the innermost enclosing def. `column` is accepted but inert in v0 (lands with v1.1 incremental parser reuse).",
+  "type": "object",
+  "properties": {
+    "file":                 { "type": "string", "minLength": 1 },
+    "line":                 { "type": "integer", "minimum": 1 },
+    "column":               { "type": "integer", "minimum": 1 },
+    "shape":                { "type": "string", "enum": ["signature", "body", "both"] },
+    "token_budget":         { "type": "integer", "minimum": 50, "maximum": 200000 },
+    "include_dependencies": { "type": "boolean" },
+    "include_callers":      { "type": "boolean" },
+    "force_resend":         { "type": "boolean" }
+  },
+  "required": ["file", "line"],
+  "additionalProperties": false
+}

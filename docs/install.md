@@ -200,6 +200,52 @@ rm -f "$XDG_RUNTIME_DIR/rts/default.sock"            # Linux
 The daemon's `flock`-based PID file is authoritative; stale sockets
 without a live process are cleaned up at next bind.
 
+## Verifying your install
+
+After running any of the per-agent install snippets above, run
+`rts-bench doctor` to verify the install end-to-end:
+
+```sh
+rts-bench doctor
+```
+
+Doctor inspects five surfaces in a single sub-second run:
+
+1. **`binary`** — `rts-daemon` and `rts-mcp` on `$PATH`, version-drift
+   detection between them.
+2. **`daemon`** — per-workspace socket probe; one round-trip to the
+   daemon's `Daemon.Stats v2` RPC (gracefully degrades on pre-v2
+   daemons).
+3. **`mcp_registration`** — rts MCP entry presence across Claude Code,
+   Cursor, Continue, Aider, and Cline; cross-scope drift detection
+   (e.g. Claude Code user-scope and project-scope registering different
+   binaries).
+4. **`hook`** — `.claude/hooks/rts-nudge.sh` presence, executability,
+   version-marker match.
+5. **`workspace_index`** — pinned-workspace path match against `$PWD`,
+   cold-walk completion timestamp, index generation, file count.
+
+Each row is `[OK]`, `[WARN]`, or `[FAIL]`; every WARN/FAIL row carries
+a copy-pasteable one-line fix on the next line. Exit codes are a
+public contract — `0` means healthy (any WARNs allowed), `1` means at
+least one FAIL row, `2` means doctor itself failed.
+
+For machine-readable output (e.g. for an agent-bench preflight),
+`rts-bench doctor --output json` produces a versioned JSON document
+per the schema in [`doctor-schema.md`](doctor-schema.md).
+
+```sh
+# Exit-code-driven CI gate:
+rts-bench doctor || { echo "rts install is broken — see output above"; exit 1; }
+
+# Just check whether all 5 host detectors found rts:
+rts-bench doctor --output json \
+  | jq '.sections[] | select(.name=="mcp_registration") | .rows[] | select(.kind=="fail")'
+```
+
+`NO_COLOR=1` (or `--no-color`) disables ANSI; useful in pipelines and
+snapshot tests.
+
 ## Uninstalling
 
 The build produces no installed files outside the cargo target dir.
@@ -224,5 +270,7 @@ cargo clean
 
 - [docs/protocol-v0.md](protocol-v0.md) — daemon ↔ MCP wire-protocol
   spec.
+- [docs/doctor-schema.md](doctor-schema.md) — `rts-bench doctor`
+  `--output json` schema and exit-code contract.
 - [AGENTS.md](../AGENTS.md) — project structure + coding conventions.
 - [CHANGELOG.md](../CHANGELOG.md) — per-alpha release notes.

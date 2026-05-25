@@ -1,0 +1,153 @@
+# Nightly adversarial-input fuzz + property test sweep.
+#
+# Why: until this workflow landed, the daemon's API surface had zero
+# adversarial-input coverage. The wire-shape regression tests
+# (PRs #121, #122, #123) catch protocol drift; this workflow catches
+# behaviour under malicious input. See RESILIENCE.md at the repo root
+# for the threat model these targets validate.
+#
+# Coverage (v1):
+#   - proptest suite (32 → 256 cases per property) on stable Rust
+#   - cargo-fuzz target `grep_regex` (60s) on nightly Rust
+#   - cargo-fuzz target `grep_structural` (60s) on nightly Rust
+#
+# Cron schedule: one hour after the existing real-repo-bench at
+# 07:00 UTC so the two don't compete for runner allocation.
+#
+# Crash handling: any crash artefact landed in
+# `crates/rts-daemon/fuzz/artifacts/<target>/` is uploaded as a
+# workflow artifact AND surfaced via `::error` annotations. Maintainer
+# is then expected to triage in a follow-up PR, NOT to file the crash
+# back into this workflow's corpus blindly (the corpus is for known
+# adversarial shapes; a real crash needs a real fix).
+
+name: fuzz-bench
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+# Allow one run at a time; if a slow run is still going when the next
+# nightly fires, cancel the old one. We want measurements against the
+# newer HEAD, not concurrent fuzz processes fighting for the runner.
+concurrency:
+  group: fuzz-bench
+  cancel-in-progress: false
+
+jobs:
+  proptest:
+    name: Adversarial property tests (stable)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-fuzz-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-fuzz-bench-
+            ${{ runner.os }}-cargo-
+
+      - name: Build daemon binary
+        # The property tests spawn the real daemon and round-trip the
+        # protocol over its socket. Build once, share with the test step.
+        run: cargo build -p rts-daemon --tests
+
+      - name: Run proptest suite (256 cases per property)
+        run: |
+          cargo test -p rts-daemon --test adversarial_proptest \
+            -- --test-threads=1 --nocapture
+        env:
+          RTS_PROPTEST_CASES: "256"
+          RUST_BACKTRACE: "1"
+
+  fuzz:
+    name: cargo-fuzz targets (nightly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (nightly)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Cache cargo/target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/rts-daemon/fuzz/target
+          key: ${{ runner.os }}-fuzz-${{ hashFiles('crates/rts-daemon/fuzz/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-fuzz-
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      # Each fuzz target runs for 60s of wall-clock. libFuzzer's `-max_total_time`
+      # is what we cap on; this is the same knob the upstream cargo-fuzz
+      # tutorial uses. Crash artefacts land in `fuzz/artifacts/<target>/`.
+      - name: Fuzz grep_regex (60s)
+        working-directory: crates/rts-daemon
+        run: |
+          cargo +nightly fuzz run grep_regex -- -max_total_time=60 2>&1 | tee fuzz_regex.log
+        continue-on-error: true
+        id: fuzz_regex
+
+      - name: Fuzz grep_structural (60s)
+        working-directory: crates/rts-daemon
+        run: |
+          cargo +nightly fuzz run grep_structural -- -max_total_time=60 2>&1 | tee fuzz_structural.log
+        continue-on-error: true
+        id: fuzz_structural
+
+      - name: Surface crash artefacts
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -d crates/rts-daemon/fuzz/artifacts ]; then
+            crash_count=$(find crates/rts-daemon/fuzz/artifacts -type f | wc -l)
+            echo "::notice::Fuzz crash count: $crash_count"
+            if [ "$crash_count" -gt 0 ]; then
+              find crates/rts-daemon/fuzz/artifacts -type f \
+                -exec echo "::error title=fuzz crash::{} — promote to regression test in tests/adversarial_proptest.rs" \;
+            fi
+          else
+            echo "::notice::No fuzz/artifacts directory created — no crashes."
+          fi
+
+      - name: Upload fuzz crash artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artefacts
+          path: |
+            crates/rts-daemon/fuzz/artifacts/
+            crates/rts-daemon/fuzz_*.log
+          if-no-files-found: ignore
+
+      - name: Fail if any target crashed
+        if: |
+          steps.fuzz_regex.outcome == 'failure' ||
+          steps.fuzz_structural.outcome == 'failure'
+        run: |
+          echo "fuzz-bench: one or more targets crashed; see annotations + artefact"
+          exit 1

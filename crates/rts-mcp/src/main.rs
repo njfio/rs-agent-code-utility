@@ -13,11 +13,11 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use rmcp::service::ServiceExt;
 
-mod daemon_client;
 mod server;
-mod socket;
 
-use daemon_client::DaemonClient;
+use rts_mcp::connection::{ConnectionManager, ResilienceConfig};
+use rts_mcp::daemon_client::DaemonClient;
+use rts_mcp::socket;
 use server::RtsServer;
 
 /// CLI flags, parsed manually so we don't pull in `clap` for two flags.
@@ -110,18 +110,26 @@ async fn main() -> Result<()> {
     // re-resolve the binary path or route to the per-workspace socket.
     let daemon = DaemonClient::new(stream, daemon_bin.clone(), workspace.clone());
 
-    // v0.4: Workspace.Mount is now deferred — see `RtsServer::call_daemon`.
-    // The first agent tool call (find_symbol / outline_workspace / etc.)
-    // triggers the Mount. Daemon prewarm overlaps with the seconds the
-    // user spends typing their first question, so Mount is effectively
-    // free.
-    //
-    // Pre-v0.4 behavior was to Mount synchronously here at startup,
-    // which paid the 6 s cold-walk tax during rts-mcp boot — before
-    // the agent's first tool call could even be served. The deferred
-    // approach lets Claude Code / Cursor / etc. show tools as
-    // available immediately and amortizes the walk into the user's
-    // typing time.
+    // v0.6+: wrap the bare DaemonClient in a ConnectionManager so the
+    // shim gets heartbeat + reconnect-with-backoff + structured
+    // disconnection state (Plan 004). The heartbeat task is enabled
+    // for the long-lived MCP shim; the CLI variant disables it (see
+    // `cli::connect`). Env vars `RTS_MCP_HEARTBEAT_*` /
+    // `RTS_MCP_RECONNECT_*` override the defaults; see
+    // `connection.rs` for the full list.
+    let connection = ConnectionManager::new(
+        daemon,
+        daemon_bin.clone(),
+        workspace.clone(),
+        ResilienceConfig::from_env(),
+        /* start_background_tasks */ true,
+    );
+
+    // v0.4: Workspace.Mount is now deferred — see
+    // `ConnectionManager::call`. The first agent tool call
+    // (find_symbol / outline_workspace / etc.) triggers the Mount.
+    // Daemon prewarm overlaps with the seconds the user spends
+    // typing their first question, so Mount is effectively free.
 
     let instructions = format!(
         "rts-mcp serves four read-only retrieval tools for the workspace at {}. \
@@ -129,14 +137,13 @@ async fn main() -> Result<()> {
          first for orientation, then `find_symbol`/`read_symbol` for targeted reads.",
         workspace.display()
     );
-    let server = RtsServer::new(daemon, workspace.clone(), instructions);
-    // v0.5.8: hold a clone of the daemon Arc so we can issue one
+    let server = RtsServer::new(connection.clone(), instructions);
+    // v0.5.8: hold a clone of the connection so we can issue one
     // last `Daemon.Stats` after `service.waiting()` returns —
     // `serve()` consumes the server, so this is the only window we
-    // have to grab a handle. The Mutex is uncontested at shutdown
-    // (stdio is closed → no tool calls can race), so the lock + RPC
-    // round-trip is sub-millisecond.
-    let daemon_for_shutdown = server.daemon_handle();
+    // have to grab a handle. The manager is `Clone` (Arc-counted
+    // internals), no Mutex contention at shutdown.
+    let connection_for_shutdown = connection.clone();
     let service = server
         .serve(rmcp::transport::stdio())
         .await
@@ -150,7 +157,7 @@ async fn main() -> Result<()> {
     // point on its way out. Failures here are non-fatal: stderr
     // logging is observational, not load-bearing for the daemon
     // lifecycle.
-    dump_session_stats(&daemon_for_shutdown).await;
+    dump_session_stats(&connection_for_shutdown).await;
     tracing::info!(target: "rts_mcp", "rts-mcp shut down cleanly");
     Ok(())
 }
@@ -165,10 +172,8 @@ async fn main() -> Result<()> {
 /// crashed before we got here, or the socket may already be gone)
 /// is reported via a single `tracing::warn!` and the function
 /// returns. Shutdown should never block on observability.
-async fn dump_session_stats(daemon: &std::sync::Arc<tokio::sync::Mutex<DaemonClient>>) {
-    let mut guard = daemon.lock().await;
-    let result = guard.call("Daemon.Stats", serde_json::json!({})).await;
-    drop(guard);
+async fn dump_session_stats(connection: &ConnectionManager) {
+    let result = connection.call("Daemon.Stats", serde_json::json!({})).await;
 
     let body = match result {
         Ok(v) => v,
@@ -180,7 +185,7 @@ async fn dump_session_stats(daemon: &std::sync::Arc<tokio::sync::Mutex<DaemonCli
             tracing::debug!(
                 target: "rts_mcp",
                 error = %e,
-                "Daemon.Stats unavailable (likely pre-v0.5.7 daemon); skipping shutdown dump"
+                "Daemon.Stats unavailable (likely pre-v0.5.7 daemon or mid-reconnect); skipping shutdown dump"
             );
             return;
         }

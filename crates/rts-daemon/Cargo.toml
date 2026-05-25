@@ -15,6 +15,15 @@ workspace = true
 name = "rts-daemon"
 path = "src/main.rs"
 
+# v0.6 persisted cold-mount (capability `daemon_stats_v2` mount_source
+# field). `build.rs` parses `rts-core/Cargo.toml` at compile time and
+# bakes the tree-sitter grammar crate versions into the daemon binary
+# via the `RTS_GRAMMAR_VERSIONS` env var. `toml` is the only dep
+# needed; `serde_json` is intentionally avoided to keep build-time
+# closure minimal.
+[build-dependencies]
+toml = "0.8"
+
 [dependencies]
 # Surviving rts-core: parser, language adapters, ignore-walk, symbol table.
 rust_tree_sitter = { path = "../rts-core" }
@@ -72,11 +81,40 @@ dirs = "5"
 unicode-normalization = "0.1"
 
 # Parallel parse fan-out in the writer's flush hot path. tree-sitter `Parser`
-# isn't `Sync`, but our `ParserPool::parse_and_extract` uses a fresh local
-# `CodebaseAnalyzer` per call — the parser-pool lock just seeds an unused
-# cache entry, so the heavy work runs concurrently.
+# isn't `Sync`, but our `ParserPool::parse_and_extract` calls
+# `rust_tree_sitter::parse_content`, which constructs a fresh local parser
+# per call. No shared mutable state across rayon workers.
 rayon = "1"
+
+# v0.5.5+ Index.Grep v2 structural-query cache. 64-entry LRU keyed on
+# `(Language, query_text)`; Query::new compilation is amortized across
+# repeated structural calls with the same shape. See
+# `crates/rts-daemon/src/methods/grep_v2/query_cache.rs`.
+lru = "0.12"
 
 tempfile = "3"
 
+[features]
+default = []
+# v0.6 anonymous opt-in telemetry: enables the daemon-side 24h ticker
+# that shells out to the `rts` binary's `telemetry flush` subcommand.
+# The daemon itself still links zero HTTP code paths, per AGENTS.md
+# "Dependency hygiene" — the HTTP client lives in the `rts` binary
+# (behind its own `telemetry` feature). This daemon-side feature is
+# default-OFF; operators build with `--features telemetry` to compile
+# the ticker in. Runtime opt-in (via `rts telemetry enable`) is also
+# required before any ping fires.
+telemetry = []
+
 [dev-dependencies]
+# Static-file JSON Schema validation for the protocol-v0 schema export
+# (`schemas/v0/`). Test-only — see `tests/protocol_schemas.rs`. The
+# 0.x line speaks JSON Schema 2020-12, which is what
+# `schemas/v0/*.schema.json` declare via `$schema`.
+jsonschema = { version = "0.46", default-features = false }
+
+# Property-based / adversarial input testing. Test-only — see
+# `tests/adversarial_proptest.rs` and the `RESILIENCE.md` threat model
+# at the repo root. Pinned to the latest stable 1.x; runs under
+# default `cargo test` (no nightly required).
+proptest = { version = "1", default-features = false, features = ["std"] }

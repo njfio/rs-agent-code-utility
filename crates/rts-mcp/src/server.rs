@@ -5,8 +5,6 @@
 //! Each tool call translates to one `Index.*` request on the persistent
 //! Unix-socket connection held by the server.
 
-use std::sync::Arc;
-
 use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -16,13 +14,24 @@ use rmcp::{
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tokio::sync::Mutex;
 
-use crate::daemon_client::{DaemonClient, DaemonError};
+use rts_mcp::connection::{ConnectionError, ConnectionManager};
 
 // Built-in tool descriptions are pinned inline (the `#[tool(description = ...)]`
 // macro expects a literal string and does not accept const-path expressions).
 // Source: plan §"Tool descriptions (LLM-facing, pinned in P5)".
+//
+// v0.6 cooperative cancellation note (capability `cancellable_queries`):
+// the underlying daemon protocol accepts an optional `cancel_id: String`
+// at the JSON-RPC envelope level on any request, and exposes
+// `Daemon.Cancel { cancel_id }` that trips the matching in-flight
+// request with `error.code: CANCELLED`. The MCP tool surface here
+// does **not** expose `cancel_id` as a per-tool argument — agents
+// typically can't reframe mid-call from inside a tool invocation
+// anyway, and adding it to every tool schema would clutter the
+// agent's view. Hosts that want to wire cancellation can address
+// the daemon directly through the same Unix socket; see
+// `docs/protocol-v0.md` for the wire shape.
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct OutlineArgs {
@@ -197,16 +206,25 @@ pub struct ReadRangeArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct GrepArgs {
-    /// Pattern to search for across all indexed file bytes.
-    /// 1..=1024 characters. By default interpreted as a LITERAL
-    /// substring; set `regex: true` to interpret as a regex
-    /// (`regex` crate syntax). Case-insensitive by default in
-    /// both modes (set `case_insensitive: false` for exact case).
-    /// Use this when you know roughly what a string LITERAL says —
-    /// error messages, version pins, log strings, config values —
-    /// that `find_symbol` can't reach because they're not symbol
-    /// names or doc-comment text. Capability: `index_grep` (v0.5.4+).
-    pub text: String,
+    /// Pattern to search for across indexed file bytes.
+    /// 1..=1024 characters. **By default this is a LITERAL substring
+    /// search — regex metacharacters like `.` `*` `(` `\b` are
+    /// treated as their literal selves.** To interpret `text` as a
+    /// regex (`regex` crate syntax: `TODO\(.*?\)`, `\bunsafe\b`,
+    /// `\d+ms`), pass `regex: true`. Case-insensitive by default in
+    /// both modes (override with `case_insensitive: false`).
+    ///
+    /// Use literal mode for error messages, version pins, log
+    /// strings, config values, embedded URLs — content `find_symbol`
+    /// can't reach because it isn't a symbol name or doc-comment.
+    /// Use regex mode for shape-based patterns. Capability:
+    /// `index_grep` (v0.5.4+).
+    ///
+    /// v0.6: optional — provide `text` OR `structural_query` (or
+    /// both for intersection). When neither is set the daemon
+    /// returns `NO_SEARCH_SOURCE_PROVIDED`.
+    #[serde(default)]
+    pub text: Option<String>,
     /// Maximum number of matches to return. Defaults to 256;
     /// range 1..=4096. Above the default is almost always a tooling
     /// problem — agents should narrow the search instead.
@@ -233,6 +251,67 @@ pub struct GrepArgs {
     /// `rg --type rust foo` without leaving the indexed file set.
     #[serde(default)]
     pub file_glob: Option<String>,
+    /// v0.6 multi-line regex mode (capability `index_grep_multiline`).
+    /// When `true` AND `regex: true`, the regex engine treats indexed
+    /// file bytes as one logical buffer per file: `.` matches `\n`,
+    /// `^`/`$` match line boundaries, and `(?s)` / `(?m)` flags are
+    /// honored. Required for patterns that span newlines (multi-line
+    /// function signatures, SQL fragments, multi-line error
+    /// messages). REJECTED with `MULTILINE_REQUIRES_REGEX` when set
+    /// on the literal `text` path (literal substring search is
+    /// already byte-wise across newlines; multiline is a regex
+    /// concept only). Has its own DFA size budget (32 MB) to bound
+    /// adversarial patterns; over-budget regexes return
+    /// `REGEX_TOO_COMPLEX` instead of panicking or hanging.
+    #[serde(default)]
+    pub multiline: Option<bool>,
+    /// v0.6 raw tree-sitter S-expression structural query
+    /// (capability `index_grep_structural`). Runs the query against
+    /// the parsed tree of every file matching the `language` filter
+    /// and returns matches with a per-match `captures` map keyed by
+    /// the query's named captures. Example query for "find every
+    /// `impl` block containing an `unsafe fn`":
+    /// `(impl_item body: (declaration_list (function_item) @fn))`
+    /// — captures named `@fn`.
+    ///
+    /// Requires `language` (returns `STRUCTURAL_REQUIRES_LANGUAGE`
+    /// otherwise). Predicates whitelisted to `#eq?`, `#not-eq?`,
+    /// `#match?`, `#not-match?`, `#any-of?`, `#is?`, `#is-not?`;
+    /// anything else returns `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`.
+    /// Composes with `text`/`pattern` (intersection) and
+    /// `within_symbol` (filter); see `docs/protocol-v0.md` §7.8b.
+    #[serde(default)]
+    pub structural_query: Option<String>,
+    /// v0.6 byte-range scope filter (capability
+    /// `index_grep_within_symbol`). When set, returned matches are
+    /// filtered to those whose byte range lies strictly inside the
+    /// def byte range of the named symbol(s). Useful for
+    /// "find every `panic!` inside `fn parse_request`" — pairs
+    /// `find_symbol` resolution with `grep` filtering in one call.
+    ///
+    /// `within_symbol: "name"` resolves the name via the same
+    /// lookup as `find_symbol`. Returns `WITHIN_SYMBOL_NOT_FOUND` on
+    /// zero matches. When the name resolves to more than 16 defs
+    /// (overloaded names like `new`/`main`/`default`), returns
+    /// `WITHIN_SYMBOL_TOO_MANY_DEFS` unless
+    /// `within_symbol_allow_overload: true` is also set, in which
+    /// case matches across the union of all def byte ranges are
+    /// returned.
+    #[serde(default)]
+    pub within_symbol: Option<String>,
+    /// v0.6 opt-in to multi-def `within_symbol`. Defaults to `false`.
+    /// See `within_symbol` above.
+    #[serde(default)]
+    pub within_symbol_allow_overload: Option<bool>,
+    /// v0.6 language filter (capability `index_grep_v2`). When set,
+    /// only files whose language is in this list are scanned.
+    /// Intersects with `file_glob` (AND semantics). **Required** when
+    /// `structural_query` is set; optional otherwise. Accepted values
+    /// match the daemon's indexed-language identifiers: `rust`,
+    /// `javascript`, `typescript`, `python`, `c`, `cpp`, `go`, `java`,
+    /// `php`, `ruby`, `swift`, `csharp`.
+    #[serde(default)]
+    pub language: Option<Vec<String>>,
 }
 
 /// Empty arg struct for `daemon_stats`. The rmcp `tool_router` macro
@@ -248,152 +327,56 @@ pub struct RtsServer {
     // rustc can't see through the macro for the dead-code analysis.
     #[allow(dead_code)]
     tool_router: ToolRouter<Self>,
-    daemon: Arc<Mutex<DaemonClient>>,
-    /// v0.4: workspace path needed for lazy `Workspace.Mount`.
-    /// rts-mcp used to call Mount immediately at startup; with the
-    /// daemon's prewarm-on-spawn (PR #51), deferring Mount until
-    /// the first agent tool call lets the daemon's background walk
-    /// overlap with the seconds-to-minutes between session start and
-    /// the user's first code question. By the time Mount fires, the
-    /// daemon's prewarm has already populated the index — Mount hits
-    /// the idempotent path and returns immediately.
-    workspace: std::path::PathBuf,
-    /// Whether `Workspace.Mount` has been called for this session.
-    /// `AtomicBool` so the (cheap) fast-path in `call_daemon` is a
-    /// single relaxed load. Synchronization for the slow-path
-    /// (do-the-mount) happens through the daemon `Mutex` we already
-    /// hold there — no double-mount race possible.
-    ///
-    /// Wrapped in `Arc` because `RtsServer: Clone` (rmcp requirement)
-    /// and `AtomicBool` itself is not `Clone`.
-    mounted: Arc<std::sync::atomic::AtomicBool>,
+    /// v0.6+: connection manager owns the daemon socket plus the
+    /// background heartbeat / reconnect tasks (see
+    /// `connection.rs` and Plan 004). Replaces the bare
+    /// `Arc<Mutex<DaemonClient>>` and the inline retry loop the
+    /// pre-resilience server carried — tool calls now see structured
+    /// `DAEMON_UNAVAILABLE` / `DAEMON_DOWN` errors when the daemon
+    /// is mid-reconnect rather than blocking on the daemon mutex.
+    connection: ConnectionManager,
     instructions: String,
 }
 
 #[tool_router]
 impl RtsServer {
-    pub fn new(daemon: DaemonClient, workspace: std::path::PathBuf, instructions: String) -> Self {
+    /// Build a server around an established [`ConnectionManager`]. The
+    /// manager owns the socket and the background heartbeat /
+    /// reconnect tasks; this struct is the rmcp tool-router shim that
+    /// translates between MCP `tools/call` envelopes and daemon RPCs.
+    pub fn new(connection: ConnectionManager, instructions: String) -> Self {
         Self {
             tool_router: Self::tool_router(),
-            daemon: Arc::new(Mutex::new(daemon)),
-            workspace,
-            mounted: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            connection,
             instructions,
         }
     }
 
-    /// Clone the inner daemon handle. Used by `main.rs` so it can
-    /// keep a reference to the daemon connection after `serve()`
-    /// consumes the server — specifically to issue a final
-    /// `Daemon.Stats` query on session shutdown (v0.5.8+).
-    ///
-    /// The lock is taken via the returned `Arc<Mutex<…>>` exactly
-    /// like every tool handler does it; concurrent access during
-    /// the session is fine and the shutdown call only runs after
-    /// `service.waiting().await` returns (i.e., the agent has
-    /// hung up stdio, no more tool calls can race).
-    pub fn daemon_handle(&self) -> Arc<Mutex<DaemonClient>> {
-        self.daemon.clone()
+    /// Clone the connection manager. Used by `main.rs` (when it needs
+    /// to keep a handle after `serve()` consumes the server) and by
+    /// test code that drives the server directly. The manager is
+    /// `Clone` (Arc-counted internals), so this is cheap.
+    #[allow(dead_code)]
+    pub fn connection(&self) -> ConnectionManager {
+        self.connection.clone()
     }
 
-    /// Forward a method to the daemon. On the FIRST call (or after
-    /// a prior `Workspace.Mount` failure), this also issues
-    /// `Workspace.Mount` so subsequent tool calls have a workspace
-    /// to read from.
+    /// Forward a method to the daemon via the connection manager.
+    /// Returns `ConnectionError`, which preserves the structured
+    /// disconnection states (`DaemonUnavailable` / `DaemonDown`) so
+    /// the tool layer can emit JSON-RPC `-32098` / `-32097` codes.
     ///
-    /// The `daemon` mutex serializes — concurrent tool calls don't
-    /// race on the mount; the first one in does the mount, the
-    /// others wait on the mutex and see `mounted == true` by the
-    /// time they get the lock.
-    async fn call_daemon(&self, method: &str, params: Value) -> Result<Value, DaemonError> {
-        // Retry-on-disconnect loop. Pre-v0.5.5 this method made a
-        // single attempt; if the daemon had died mid-session, the
-        // first transport error left the connection wedged and every
-        // subsequent tool call failed with `Broken pipe`. v0.5.5+ does
-        // one explicit reconnect (auto-spawning a fresh daemon on the
-        // per-workspace socket) and retries the call once.
-        //
-        // Why ONE retry, not infinite:
-        // - A working daemon should never need reconnects mid-session.
-        // - Repeated disconnects after one reconnect indicates the
-        //   daemon won't stay up (binary missing, crash loop, etc.);
-        //   surfacing the error to the agent beats hot-spinning the
-        //   spawn flow.
-        // - Wall-clock cost is bounded: at most two `CALL_TIMEOUT`s
-        //   (35s × 2 = 70s).
-        for attempt in 0..2 {
-            let mut guard = self.daemon.lock().await;
-            if !self.mounted.load(std::sync::atomic::Ordering::Acquire) {
-                let mount_resp = match guard
-                    .call(
-                        "Workspace.Mount",
-                        serde_json::json!({ "root": self.workspace }),
-                    )
-                    .await
-                {
-                    Ok(v) => v,
-                    Err(e) if attempt == 0 && e.is_disconnect() => {
-                        // Reconnect path on the FIRST call after spawn.
-                        // Rare in practice (the auto-spawn flow has
-                        // already verified the socket accepts a
-                        // connection), but harmless to handle.
-                        tracing::warn!(
-                            target: "rts_mcp",
-                            "daemon disconnected during Workspace.Mount; reconnecting + retrying ({})",
-                            e.message,
-                        );
-                        guard.reconnect().await?;
-                        // Mount sentinel stays false (which it already is);
-                        // the next iteration will re-Mount.
-                        drop(guard);
-                        continue;
-                    }
-                    Err(e) => return Err(e),
-                };
-                let workspace_id = mount_resp["workspace_id"].as_str().unwrap_or("<unknown>");
-                tracing::info!(
-                    target: "rts_mcp",
-                    "lazy-mounted workspace {} as id={} on first tool call (attempt={})",
-                    self.workspace.display(),
-                    workspace_id,
-                    attempt,
-                );
-                self.mounted
-                    .store(true, std::sync::atomic::Ordering::Release);
-            }
-            match guard.call(method, params.clone()).await {
-                Ok(v) => return Ok(v),
-                Err(e) if attempt == 0 && e.is_disconnect() => {
-                    tracing::warn!(
-                        target: "rts_mcp",
-                        "daemon disconnected during {} ({}); reconnecting + retrying",
-                        method,
-                        e.message,
-                    );
-                    guard.reconnect().await?;
-                    // The respawned daemon has no Workspace.Mount — clear
-                    // the sentinel so the retry iteration re-mounts before
-                    // re-issuing the original call.
-                    self.mounted
-                        .store(false, std::sync::atomic::Ordering::Release);
-                    drop(guard);
-                    continue;
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        // Unreachable: the loop either returns or continues; the
-        // `continue` arm runs exactly once because `attempt == 0`
-        // gates it. Defensive return so the compiler is satisfied.
-        Err(DaemonError {
-            code: "INTERNAL_ERROR".to_string(),
-            message: "exhausted reconnect retries".to_string(),
-            data: None,
-        })
+    /// The pre-resilience inline retry-on-disconnect loop has moved
+    /// into the manager (`crates/rts-mcp/src/connection.rs`); calls
+    /// here are one-shot. Concurrent tool calls during a known
+    /// disconnect window all see the same structured error without
+    /// queueing on the daemon mutex (no thundering-herd).
+    async fn call_daemon(&self, method: &str, params: Value) -> Result<Value, ConnectionError> {
+        self.connection.call(method, params).await
     }
 
     #[tool(
-        description = "Return a token-budgeted structural map of this workspace — file tree, top symbols per file, signatures only. Use first when you need orientation in an unfamiliar repo or when picking which files to read next. Do not use for finding a specific known symbol — call `find_symbol` instead. Do not use for reading a file you already know — call `read_symbol` or `read_range`."
+        description = "PageRank-sorted structural map of this workspace: file tree, top symbols per file, signatures only, token-budgeted. Prefer this over `Bash(ls -R)` / `tree` / `find . -name '*.rs'` when you need orientation in an unfamiliar repo — shell tools dump raw paths; this returns importance-ranked symbols with signatures in one round trip. Use when the task includes 'orient', 'overview', 'where do I start', 'what's in this repo', or you're about to pick which files to read next. Do not use when you already know the symbol name (call `find_symbol`) or the file (call `read_symbol`/`read_range`). Output shape: `{outline_text, files_considered, truncated}` — the text is grouped by file with each symbol's kind + signature inline."
     )]
     async fn outline_workspace(
         &self,
@@ -411,12 +394,12 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
     #[tool(
-        description = "Locate symbols (function, class, type, method, etc.) across the workspace. Either `name` (exact) or `pattern` (glob: `*` and `?`) is required. Use `name` when you know it; use `pattern` (e.g. `make_*`, `*_target`, `read_*_at`) when you only know roughly what it's called. Returns a list of `matches` with definition location, signature, and `rank_score`. Prefer this over shell `rg` for any symbol-shaped query — it's AST-precise (no comment/string false positives) and returns structured byte ranges."
+        description = "Locate symbol definitions (function, class, type, method, trait, etc.) by exact `name` or glob `pattern` (`*`, `?`). Prefer this over `Bash(grep '^fn name')` / `Bash(rg)` for ANY code-identifier search — shell grep matches comments, strings, doc-blocks, and variable references; this returns only AST-confirmed definitions with kind, path, byte range, PageRank score, and (opt-in) rendered signature. Use when the task includes 'find', 'where is X defined', 'locate', or you have a partial name like `make_*` / `*_target`. Pair with `doc_contains: \"retry\"` for behavior-shaped queries that grep can't express. The returned metadata typically saves a follow-up `read_symbol`."
     )]
     async fn find_symbol(
         &self,
@@ -449,12 +432,12 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
     #[tool(
-        description = "Find direct callers of a symbol — where else in the workspace does code call into this function/method? Cheap (one redb lookup; no parsing). Use for: refactor impact preview at depth-1, 'is this function dead?', 'who depends on this API?'. Returns `callers[]` with each call site's file/range plus the enclosing function's `qualified_name` and `kind`. \n\nWhen to use which: this tool returns callers ONLY (no body). Use `read_symbol --include-callers` when you also need the symbol's own body. Use `impact_of` for *transitive* callers (whole blast radius). Avoid shell `rg` for caller queries — it has high false-positive noise from local variables, comments, and string mentions; this is AST-precise via the indexed reference graph."
+        description = "Direct callers of a named symbol — every call site that invokes this function/method, AST-precise. Prefer this over `Bash(grep 'name(')` / `Bash(rg 'name\\(')` for caller searches — shell grep matches local variables, doc comments, and string literals; this walks the indexed reference graph (one redb lookup, no parsing) and returns only real call edges with the enclosing function's `qualified_name` + `kind`. Use when the task includes 'who calls', 'callers of', 'is this dead code', or you're scoping a refactor at depth-1. For transitive callers use `impact_of`; for symbol-plus-callers in one round trip use `read_symbol --include-callers`."
     )]
     async fn find_callers(
         &self,
@@ -473,12 +456,12 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
     #[tool(
-        description = "Transitive caller closure — the full refactor blast radius of a symbol. BFS over the reverse reference graph; returns every function that directly or indirectly calls the named symbol, bounded by depth (default 2, max 4), token budget, node count (default 200), and a 50ms wall-clock cap. Each entry carries its BFS `depth` and `rank_score` so agents can prioritize the most-central callers. Results sort by (depth ascending, rank_score descending). \n\nWhen to use which: `find_callers` is depth-1 (direct callers only) — cheaper and more focused. `impact_of` is depth-N with bounds — use when you're about to refactor a public function and want to know everything that touches it. Test-path filter (`/tests/`, `_test.rs`, `.spec.ts`) is on by default; pass `exclude_test_paths: false` to include test callers (e.g. when deciding which tests to update). \n\nTruncation: four independent flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell you *why* a result is partial. Hub symbols often hit `node_count_truncated` first; raise `max_nodes` if you can tolerate the noise."
+        description = "Transitive caller closure — the full refactor blast radius of a symbol. BFS over the indexed reverse-reference graph; returns every function that directly or indirectly calls `name`, bounded by depth (default 2, max 4), `max_nodes` (default 200), and a 50ms wall-clock cap. Use this instead of a manual BFS over `Bash(grep)` results when the task includes 'impact of', 'blast radius', 'what breaks if I change', or you're about to rename a public function. Test-path filter is on by default — pass `exclude_test_paths: false` to include tests. Entries carry `depth` and `rank_score` (sort: depth asc, rank_score desc); four independent truncation flags say *why* a result is partial. For depth-1 only, prefer `find_callers` (cheaper)."
     )]
     async fn impact_of(
         &self,
@@ -503,12 +486,12 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
     #[tool(
-        description = "Read the source of the symbol containing a given line in a file. Use this when you have a location (file + line) but not the name — e.g. from a compiler error like `error[E0308] --> src/lib.rs:42:18`. Returns the innermost enclosing definition with the same wire shape as `read_symbol`, including optional `include_dependencies` closure walking. Faster than: read the file, scroll to the line, identify the enclosing function, then `read_symbol`."
+        description = "Read the source of the symbol enclosing a given `file:line` location. Prefer this over `Bash(cat file)` / `Read(file)` + manual scrolling when the task includes a compiler-error location, a stack-trace frame, a diff hunk pointer, or any `path:LINE` reference — shell reads pull the whole file; this returns only the innermost enclosing definition (precise byte range) with optional `include_dependencies` closure-walking and `include_callers` neighborhood. Use when input looks like `error[E0308] --> src/lib.rs:42:18`, a panic backtrace, or `git blame` output. Same wire shape as `read_symbol`. Faster than: read file, scroll, identify enclosing function, then `read_symbol`."
     )]
     async fn read_symbol_at(
         &self,
@@ -537,12 +520,12 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
     #[tool(
-        description = "Read the source of a named symbol. `shape=signature` returns just the declaration (cheap). `shape=body` returns the full implementation. `include_dependencies=true` adds the minimum surrounding types/imports the symbol references — use when you'll want to call/modify it without reading more. `include_callers=true` adds the direct callers in one round trip — use when you want symbol-plus-neighborhood (alternative to a second `find_callers` call). Prefer this over reading whole files."
+        description = "Read the source of a named symbol by exact `name`. Prefer this over `Bash(cat file)` / `Read(file)` when you know the symbol name — shell reads pull entire files (often 1000+ lines for a 20-line function); this returns just the symbol at its precise byte range, with content-version invalidation so you never get stale bytes after an edit. Use when the task includes 'show me X', 'read function X', 'what does X do', 'show the body of X'. `shape=signature` returns the declaration only (cheap); `shape=body` (default) returns the full implementation; `include_dependencies=true` adds the tree-shaken closure of types/imports the symbol references; `include_callers=true` adds direct callers in one round trip (saves a `find_callers` call). Disambiguate overloaded names with `file` or `kind`."
     )]
     async fn read_symbol(
         &self,
@@ -576,12 +559,12 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
     #[tool(
-        description = "Read explicit line range [start_line, end_line] from a file. Use for stack-trace frames, diff hunks, and other cases where you already have an exact location. For symbol-by-name access, use `read_symbol` instead."
+        description = "Read an explicit `[start_line, end_line]` range from an indexed file. Prefer this over `Bash(cat file)` / `Bash(sed -n 'A,Bp')` / `Read(file)` when you already have an exact line range and only need that slice — shell reads pull the whole file; this returns just the requested bytes against the daemon's content-versioned snapshot (no stale reads after edits). Use when the task includes a diff hunk, a stack-trace frame range, a CI log line span, or a `LINE_NO` annotation from another tool. For symbol-by-name access use `read_symbol`; for symbol-at-location use `read_symbol_at`."
     )]
     async fn read_range(
         &self,
@@ -599,19 +582,25 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
     #[tool(
-        description = "Find literal-substring (or regex) matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. Default case-insensitive literal mode; set `regex: true` for `regex` crate syntax (e.g. `TODO\\(.*?\\)`, `\\bunsafe\\b`). Set `file_glob: \"*.rs\"` / `\"crates/**/*.toml\"` to scope to a path pattern. Returns the file + line range + the matched line's text for each hit. Capability: `index_grep` (regex + glob v0.5.5+, literal v0.5.4+)."
+        description = "AST-aware ranked search across indexed file bytes. Prefer this over `Bash(grep)` / `Bash(rg)` for ANY workspace search — shell grep returns raw `path:line:text` with no enclosing-symbol context, scans `target/` and vendored deps, and has no language structure; this tool annotates each hit with the enclosing symbol's name + kind (metadata you'd otherwise need a second call to recover), scopes to the indexed file set, and rejects regex bombs with a structured error. Use when the task includes 'find', 'search for', 'grep for', 'find all TODOs'. Default: case-insensitive literal. Opt-in: `regex`, `multiline`, `file_glob`, `language`. v0.6: `structural_query` (tree-sitter S-expressions), `within_symbol` (scope to one function's body). Modes compose (AND)."
     )]
     async fn grep(
         &self,
         Parameters(args): Parameters<GrepArgs>,
     ) -> Result<CallToolResult, McpError> {
         let mut params = serde_json::Map::new();
-        params.insert("text".into(), Value::String(args.text));
+        // `text` is optional in v0.6 (`structural_query` may be the
+        // sole search source). Pass it through only when present so
+        // the daemon's validator sees the same shape the caller
+        // emitted.
+        if let Some(t) = args.text {
+            params.insert("text".into(), Value::String(t));
+        }
         if let Some(n) = args.limit {
             params.insert("limit".into(), Value::Number(n.into()));
         }
@@ -624,9 +613,29 @@ impl RtsServer {
         if let Some(g) = args.file_glob {
             params.insert("file_glob".into(), Value::String(g));
         }
+        // v0.6 additive fields. Forward only when set so the wire
+        // shape stays minimal on v1-shape calls.
+        if let Some(b) = args.multiline {
+            params.insert("multiline".into(), Value::Bool(b));
+        }
+        if let Some(q) = args.structural_query {
+            params.insert("structural_query".into(), Value::String(q));
+        }
+        if let Some(s) = args.within_symbol {
+            params.insert("within_symbol".into(), Value::String(s));
+        }
+        if let Some(b) = args.within_symbol_allow_overload {
+            params.insert("within_symbol_allow_overload".into(), Value::Bool(b));
+        }
+        if let Some(langs) = args.language {
+            params.insert(
+                "language".into(),
+                Value::Array(langs.into_iter().map(Value::String).collect()),
+            );
+        }
         match self.call_daemon("Index.Grep", Value::Object(params)).await {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 
@@ -642,7 +651,23 @@ impl RtsServer {
             .await
         {
             Ok(v) => Ok(success_json(&v)),
-            Err(e) => Ok(daemon_error_to_call_result(&e)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Daemon-side counter and latency snapshot for telemetry analysis. Use INSTEAD OF `daemon_stats` when you need per-method latency percentiles (p50/p99), cache-hit-rate aggregation, or error-code frequencies — `daemon_stats` returns raw counters but no derived metrics. Use when the task includes 'how fast is X', 'is the cache effective', 'what error codes appear most', 'workspace size'. Returns ~12 collector fields in a single round-trip; computing equivalents from `daemon_stats` requires the caller to maintain its own histogram state across snapshots. Counters are the same population that opt-in telemetry pings would send (see `rts telemetry preview`). No paths, no symbol names, no content."
+    )]
+    async fn daemon_telemetry(
+        &self,
+        Parameters(_): Parameters<EmptyArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match self
+            .call_daemon("Daemon.Telemetry", Value::Object(serde_json::Map::new()))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
         }
     }
 }
@@ -666,20 +691,26 @@ fn success_json(value: &Value) -> CallToolResult {
     CallToolResult::success(vec![Content::text(text)])
 }
 
-/// Map a daemon-side `error` envelope to a `CallToolResult::error`. The
-/// agent gets a structured payload `{ code, message, data }` so it can act
-/// on `INDEX_NOT_READY` (poll later), `SYMBOL_NOT_FOUND` (rephrase), or
-/// `OUT_OF_ROOT` (drop the path) without parsing English text.
+/// Map a connection-or-daemon-side error to a `CallToolResult::error`.
+/// The agent gets a structured payload `{ code, message, data }` so it
+/// can act on:
 ///
-/// Note: per protocol-v0 §7.6, `find_symbol` empty results are a *success*
-/// path with `matches: []`, not an error — so this function only fires for
-/// real protocol errors.
-fn daemon_error_to_call_result(e: &DaemonError) -> CallToolResult {
+/// - `DAEMON_UNAVAILABLE` (transient; retry in `retry_after_ms`)
+/// - `DAEMON_DOWN` (sustained outage; surface to user)
+/// - `INDEX_NOT_READY` (poll), `SYMBOL_NOT_FOUND` (rephrase),
+///   `OUT_OF_ROOT` (drop the path), etc.
+///
+/// without parsing English text.
+///
+/// Per protocol-v0 §7.6, `find_symbol` empty results are a *success*
+/// path with `matches: []`, not an error — so this function only fires
+/// for real protocol or transport errors.
+fn connection_error_to_call_result(e: &ConnectionError) -> CallToolResult {
     let body = json!({
         "error": {
-            "code":    e.code,
-            "message": e.message,
-            "data":    e.data.clone().unwrap_or(Value::Null),
+            "code":    e.code(),
+            "message": e.message(),
+            "data":    e.data(),
         }
     });
     let text = serde_json::to_string(&body).unwrap_or_else(|_| e.to_string());

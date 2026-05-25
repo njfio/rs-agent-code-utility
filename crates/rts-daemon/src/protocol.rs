@@ -15,12 +15,20 @@ pub const MAX_MESSAGE_BYTES: usize = 16 * 1024 * 1024;
 ///
 /// `id` is a stringified `u64` per protocol-v0 §3.4 (strings survive JS-style
 /// number-precision in tooling). `params` MUST be a JSON object.
+///
+/// `cancel_id` is an optional client-supplied string used to address
+/// this request from a subsequent `Daemon.Cancel { cancel_id }`. It
+/// lives in the envelope (not `params`) so handlers don't have to
+/// thread it through their own param shapes. Defaults to `None` so
+/// existing clients work unchanged.
 #[derive(Debug, Deserialize)]
 pub struct Request {
     pub id: String,
     pub method: String,
     #[serde(default = "empty_object")]
     pub params: serde_json::Value,
+    #[serde(default)]
+    pub cancel_id: Option<String>,
 }
 
 fn empty_object() -> serde_json::Value {

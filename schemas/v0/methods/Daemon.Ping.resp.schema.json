@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Ping.resp.schema.json",
+  "title": "Daemon.Ping result",
+  "description": "Per protocol-v0.md §4.1 + §7.1. Capability negotiation surface. `capabilities` is an additive array — new strings appear; old strings never disappear without a protocol-major bump.",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "description": "Semver-style major version of this wire protocol. `\"0\"` for the v0 draft.",
+      "type": "string",
+      "enum": ["0"]
+    },
+    "daemon": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "git_sha": { "type": "string" }
+      },
+      "required": ["name", "version", "git_sha"]
+    },
+    "capabilities": {
+      "description": "Closed set of feature strings the daemon advertises. Clients gate on these before sending opt-in params.",
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "uptime_ms": {
+      "description": "Milliseconds since the daemon process started.",
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": ["protocol", "daemon", "capabilities", "uptime_ms"]
+}

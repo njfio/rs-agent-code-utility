@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Session.Open.resp.schema.json",
+  "title": "Session.Open result",
+  "description": "Per protocol-v0.md §7.9. Opaque 128-bit session id (`sess_` + 16 hex chars).",
+  "type": "object",
+  "properties": {
+    "session_id":          { "type": "string", "pattern": "^sess_[0-9a-f]{16,}$" },
+    "reconnect_window_ms": { "type": "integer", "minimum": 0 },
+    "dedup_ttl_ms":        { "type": "integer", "minimum": 0 }
+  },
+  "required": ["session_id", "reconnect_window_ms", "dedup_ttl_ms"]
+}

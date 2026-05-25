@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use anyhow::{Context, anyhow};
 use postcard::{from_bytes, to_allocvec};
-use redb::{Database, Durability, ReadableMultimapTable, ReadableTable};
+use redb::{Database, Durability, ReadableMultimapTable, ReadableTable, ReadableTableMetadata};
 
 use schema::{
     DEFS, FID_DEFS, FID_REFS, FID_TO_PATH, FID_UNRESOLVED, FILES, META, NAME_TO_SID, PATH_TO_FID,
@@ -44,6 +44,21 @@ pub const SCHEMA_VERSION: u32 = 3;
 const META_SCHEMA_VERSION: &str = "schema_version";
 const META_NEXT_FID: &str = "next_fid";
 const META_NEXT_SID: &str = "next_sid";
+
+// ---- v0.6 persisted-cold-mount fingerprint keys (capability
+// `daemon_stats_v2` / `mount_source`). The schema_version key above
+// is part of the fingerprint too; these are the additional parts the
+// plan U3 lays out. All values are UTF-8 byte strings except
+// META_RECONCILIATION_IN_PROGRESS which is a single byte (0 or 1).
+const META_DAEMON_BINARY_VERSION: &str = "daemon_binary_version";
+const META_GRAMMAR_VERSIONS: &str = "grammar_versions";
+const META_GITIGNORE_CONTENT_HASH: &str = "gitignore_content_hash";
+const META_FINGERPRINT_COMBINED: &str = "fingerprint_combined";
+/// Sentinel written before the reconciliation worker starts emitting
+/// synthetic WatchEvents and cleared after the new fingerprint lands.
+/// Observing it set on next mount means the daemon crashed mid-
+/// reconciliation; the next mount must wipe + re-walk.
+const META_RECONCILIATION_IN_PROGRESS: &str = "reconciliation_in_progress";
 
 /// Why the writer rejected a file.
 #[derive(Debug, Clone, Copy)]
@@ -1121,6 +1136,373 @@ impl Store {
     }
 }
 
+// ---- v0.6 persisted-cold-mount fingerprint helpers (capability
+// `daemon_stats_v2` / `mount_source`). Read/write the composite
+// fingerprint to META and probe the reconciliation-in-progress
+// sentinel. Used by U5's mount-time decision branch.
+
+impl Store {
+    /// Read the persisted fingerprint from META. Returns `None` when
+    /// any required key is missing (treat as
+    /// `InvalidationReason::EmptyOrMissingFingerprint`).
+    pub fn read_fingerprint(&self) -> Result<Option<crate::fingerprint::Fingerprint>, redb::Error> {
+        let read_txn = self.db.begin_read()?;
+        let meta = match read_txn.open_table(schema::META) {
+            Ok(t) => t,
+            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+
+        let schema_version = match meta.get(META_SCHEMA_VERSION)? {
+            Some(v) => {
+                let bytes = v.value();
+                if bytes.len() != 4 {
+                    return Ok(None);
+                }
+                let mut arr = [0u8; 4];
+                arr.copy_from_slice(bytes);
+                u32::from_le_bytes(arr)
+            }
+            None => return Ok(None),
+        };
+
+        let bin_version = match meta.get(META_DAEMON_BINARY_VERSION)? {
+            Some(v) => match std::str::from_utf8(v.value()) {
+                Ok(s) => s.to_string(),
+                Err(_) => return Ok(None),
+            },
+            None => return Ok(None),
+        };
+        let grammar_versions = match meta.get(META_GRAMMAR_VERSIONS)? {
+            Some(v) => match std::str::from_utf8(v.value()) {
+                Ok(s) => s.to_string(),
+                Err(_) => return Ok(None),
+            },
+            None => return Ok(None),
+        };
+        let gitignore_hash = match meta.get(META_GITIGNORE_CONTENT_HASH)? {
+            Some(v) => match std::str::from_utf8(v.value()) {
+                Ok(s) => s.to_string(),
+                Err(_) => return Ok(None),
+            },
+            None => return Ok(None),
+        };
+        let combined = match meta.get(META_FINGERPRINT_COMBINED)? {
+            Some(v) => match std::str::from_utf8(v.value()) {
+                Ok(s) => s.to_string(),
+                Err(_) => return Ok(None),
+            },
+            None => return Ok(None),
+        };
+
+        Ok(Some(crate::fingerprint::Fingerprint {
+            schema_version,
+            daemon_binary_version: bin_version,
+            grammar_versions,
+            gitignore_hash,
+            combined,
+        }))
+    }
+
+    /// Write the fingerprint to META. Atomic via redb's write
+    /// transaction. Called by U5 after a cold-walk OR a reconciliation
+    /// completes. Also clears the reconciliation-in-progress sentinel.
+    pub fn write_fingerprint(
+        &self,
+        fp: &crate::fingerprint::Fingerprint,
+    ) -> Result<(), redb::Error> {
+        let mut write_txn = self.db.begin_write()?;
+        {
+            let mut meta = write_txn.open_table(schema::META)?;
+            meta.insert(META_SCHEMA_VERSION, &fp.schema_version.to_le_bytes()[..])?;
+            meta.insert(
+                META_DAEMON_BINARY_VERSION,
+                fp.daemon_binary_version.as_bytes(),
+            )?;
+            meta.insert(META_GRAMMAR_VERSIONS, fp.grammar_versions.as_bytes())?;
+            meta.insert(META_GITIGNORE_CONTENT_HASH, fp.gitignore_hash.as_bytes())?;
+            meta.insert(META_FINGERPRINT_COMBINED, fp.combined.as_bytes())?;
+            meta.remove(META_RECONCILIATION_IN_PROGRESS)?;
+        }
+        write_txn.set_durability(redb::Durability::Immediate);
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Set or clear the reconciliation-in-progress sentinel. U5 sets
+    /// it before emitting synthetic WatchEvents; the next-mount path
+    /// observing it set treats the redb as torn and re-walks.
+    pub fn set_reconciliation_in_progress(&self, in_progress: bool) -> Result<(), redb::Error> {
+        let mut write_txn = self.db.begin_write()?;
+        {
+            let mut meta = write_txn.open_table(schema::META)?;
+            if in_progress {
+                meta.insert(META_RECONCILIATION_IN_PROGRESS, &[1u8][..])?;
+            } else {
+                meta.remove(META_RECONCILIATION_IN_PROGRESS)?;
+            }
+        }
+        write_txn.set_durability(redb::Durability::Immediate);
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// True iff the reconciliation-in-progress sentinel is set.
+    /// Observed by U5 at mount time to detect crash-during-reconcile.
+    pub fn reconciliation_in_progress(&self) -> Result<bool, redb::Error> {
+        let read_txn = self.db.begin_read()?;
+        let meta = match read_txn.open_table(schema::META) {
+            Ok(t) => t,
+            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(false),
+            Err(e) => return Err(e.into()),
+        };
+        Ok(meta.get(META_RECONCILIATION_IN_PROGRESS)?.is_some())
+    }
+
+    /// Clear every data table while preserving META. Used by U5's
+    /// mount-time decision when the stored fingerprint mismatches the
+    /// current one (or when crashed-mid-reconciliation is detected).
+    /// META must survive the wipe so the next cold-walk can write the
+    /// *new* fingerprint without first re-establishing other META
+    /// invariants (next_fid, next_sid, schema_version).
+    ///
+    /// All data tables get cleared inside one redb write txn so
+    /// readers concurrent with the wipe see either the fully-
+    /// populated or fully-empty state, never a torn intermediate.
+    /// Commit is `Durability::Immediate` so a crash between wipe
+    /// and cold-walk can't observe a fingerprint that promises
+    /// data the FILES table no longer has.
+    pub fn wipe_data_tables(&self) -> Result<(), redb::Error> {
+        let mut write_txn = self.db.begin_write()?;
+        {
+            // delete_table / delete_multimap_table drops the entire
+            // table; the next `open_table` re-creates it empty. This
+            // is cheaper than per-row retain and is the canonical
+            // redb "clear" idiom for tables of unbounded size.
+            // META intentionally NOT touched — it carries the
+            // load-bearing schema_version + fingerprint state that
+            // survives a data-only wipe.
+            let _ = write_txn.delete_table(schema::FILES);
+            let _ = write_txn.delete_table(schema::PATH_TO_FID);
+            let _ = write_txn.delete_table(schema::FID_TO_PATH);
+            let _ = write_txn.delete_table(schema::NAME_TO_SID);
+            let _ = write_txn.delete_table(schema::SID_TO_NAME);
+            let _ = write_txn.delete_multimap_table(schema::DEFS);
+            let _ = write_txn.delete_multimap_table(schema::FID_DEFS);
+            let _ = write_txn.delete_multimap_table(schema::REFS);
+            let _ = write_txn.delete_multimap_table(schema::FID_REFS);
+            let _ = write_txn.delete_multimap_table(schema::SID_REFS_OUT);
+            let _ = write_txn.delete_multimap_table(schema::SID_DOCS);
+            let _ = write_txn.delete_multimap_table(schema::UNRESOLVED_REFS);
+            let _ = write_txn.delete_multimap_table(schema::FID_UNRESOLVED);
+            // Re-create them empty so subsequent reads don't trip
+            // TableError::TableDoesNotExist on the cold-walk path.
+            let _ = write_txn.open_table(schema::FILES)?;
+            let _ = write_txn.open_table(schema::PATH_TO_FID)?;
+            let _ = write_txn.open_table(schema::FID_TO_PATH)?;
+            let _ = write_txn.open_table(schema::NAME_TO_SID)?;
+            let _ = write_txn.open_table(schema::SID_TO_NAME)?;
+            let _ = write_txn.open_multimap_table(schema::DEFS)?;
+            let _ = write_txn.open_multimap_table(schema::FID_DEFS)?;
+            let _ = write_txn.open_multimap_table(schema::REFS)?;
+            let _ = write_txn.open_multimap_table(schema::FID_REFS)?;
+            let _ = write_txn.open_multimap_table(schema::SID_REFS_OUT)?;
+            let _ = write_txn.open_multimap_table(schema::SID_DOCS)?;
+            let _ = write_txn.open_multimap_table(schema::UNRESOLVED_REFS)?;
+            let _ = write_txn.open_multimap_table(schema::FID_UNRESOLVED)?;
+        }
+        write_txn.set_durability(redb::Durability::Immediate);
+        write_txn.commit()?;
+
+        // Reset in-memory counters that mirror META so the daemon's
+        // `next_fid` / `next_sid` don't keep handing out IDs that
+        // collide with the (now empty) on-disk tables. The values
+        // currently in META are still valid as monotonic counters —
+        // we don't reset them — but documenting that explicit
+        // invariant here matters: META keeps growing, data tables
+        // start fresh.
+        Ok(())
+    }
+
+    /// Histogram of stored `FileMeta.lang` tags. Used by the
+    /// telemetry collector to compute `languages_indexed` without
+    /// per-file random reads. Returns a map `tag → count`; callers
+    /// (in `methods/daemon.rs::telemetry`) translate tags to the
+    /// telemetry-bounded language enum via `writer::lang_tag` order.
+    ///
+    /// Best-effort: returns an empty map if the FILES table is
+    /// missing (pre-Mount) rather than erroring.
+    pub fn language_tag_counts(&self) -> anyhow::Result<std::collections::BTreeMap<u8, u64>> {
+        let read_txn = self.db.begin_read().context("begin_read")?;
+        let files = match read_txn.open_table(schema::FILES) {
+            Ok(t) => t,
+            Err(redb::TableError::TableDoesNotExist(_)) => {
+                return Ok(std::collections::BTreeMap::new());
+            }
+            Err(e) => return Err(e.into()),
+        };
+        let mut out: std::collections::BTreeMap<u8, u64> = std::collections::BTreeMap::new();
+        for row in files.iter()? {
+            let row = row?;
+            if let Ok(meta) = from_bytes::<FileMeta>(row.1.value()) {
+                *out.entry(meta.lang).or_insert(0) += 1;
+            }
+        }
+        Ok(out)
+    }
+
+    /// Count of entries in the FILES table. U5 uses this to
+    /// distinguish "first-ever mount" (empty FILES) from "subsequent
+    /// mount with a valid snapshot." Implemented by counting the
+    /// iter() because redb's `ReadOnlyTable` doesn't expose a `len`
+    /// method directly.
+    pub fn files_count(&self) -> Result<usize, redb::Error> {
+        let read_txn = self.db.begin_read()?;
+        let files = match read_txn.open_table(schema::FILES) {
+            Ok(t) => t,
+            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+            Err(e) => return Err(e.into()),
+        };
+        let iter = files.iter()?;
+        let mut count = 0usize;
+        for entry in iter {
+            entry?;
+            count += 1;
+        }
+        Ok(count)
+    }
+
+    /// Count of entries in the UNRESOLVED_REFS multimap. Used by the
+    /// telemetry collector to surface call-graph completeness — every
+    /// row is a reference the resolver couldn't bind to a defined
+    /// symbol (forward reference awaiting a later commit, or a true
+    /// external like stdlib `Vec` / `println!`).
+    ///
+    /// O(1): redb's `MultimapTable::len()` returns the
+    /// `num_values` counter the table maintains across commits, so
+    /// the cost is one read-txn + one table-open. Point-in-time
+    /// snapshot — same semantics as `files_count`.
+    ///
+    /// Best-effort: returns `0` if the table is missing (pre-Mount,
+    /// or a schema-1/2 store predating UNRESOLVED_REFS) rather than
+    /// erroring.
+    pub fn unresolved_refs_count(&self) -> Result<u64, redb::Error> {
+        let read_txn = self.db.begin_read()?;
+        let table = match read_txn.open_multimap_table(schema::UNRESOLVED_REFS) {
+            Ok(t) => t,
+            Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+            Err(e) => return Err(e.into()),
+        };
+        Ok(table.len()?)
+    }
+
+    /// Drop `UNRESOLVED_REFS` rows whose source file matches any path
+    /// in `removed_files`. Returns the count of rows actually dropped.
+    ///
+    /// **Why this exists.** `UNRESOLVED_REFS` is the parking lot for
+    /// refs whose callee name wasn't yet interned at commit time
+    /// (forward references awaiting a later commit, or true externals
+    /// like stdlib `Vec` / `println!`). When the source file of one of
+    /// those parked refs is deleted on disk, the parked entry becomes
+    /// orphaned: there is no longer any source-code call site behind
+    /// it, but the row stays in the table forever, bloating the count
+    /// observed via `Daemon.Telemetry.unresolved_refs_count`.
+    ///
+    /// This helper closes that loop by walking each removed file's
+    /// outgoing unresolved refs via the `FID_UNRESOLVED` reverse
+    /// index, dropping rows where `RefSite.fid` matches. It is the
+    /// public, telemetry-counted peer of the same cleanup that
+    /// `drop_file_entries` performs inline during a full file
+    /// re-index. Calling it before `commit_batch` for the same path
+    /// is safe and idempotent — `drop_file_entries` finds the rows
+    /// already gone and returns 0 additional work.
+    ///
+    /// Idempotent and bounded: passing an unknown path (already
+    /// deleted, never indexed) returns `0` without erroring. Cost is
+    /// `O(distinct_callee_names_for_this_fid × avg_fan_out)`, the same
+    /// shape as the existing `drop_file_entries` path.
+    ///
+    /// Paths are matched against `PATH_TO_FID` as workspace-relative
+    /// strings, matching the writer's storage convention.
+    pub fn gc_unresolved_refs_for_removed_files(
+        &self,
+        removed_files: &[PathBuf],
+    ) -> Result<u64, redb::Error> {
+        if removed_files.is_empty() {
+            return Ok(0);
+        }
+        let mut dropped: u64 = 0;
+        let txn = self.db.begin_write()?;
+        {
+            let path_to_fid = match txn.open_table(PATH_TO_FID) {
+                Ok(t) => t,
+                Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+                Err(e) => return Err(e.into()),
+            };
+            let mut unresolved_refs = match txn.open_multimap_table(UNRESOLVED_REFS) {
+                Ok(t) => t,
+                Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+                Err(e) => return Err(e.into()),
+            };
+            let mut fid_unresolved = match txn.open_multimap_table(FID_UNRESOLVED) {
+                Ok(t) => t,
+                Err(redb::TableError::TableDoesNotExist(_)) => return Ok(0),
+                Err(e) => return Err(e.into()),
+            };
+
+            for path in removed_files {
+                let path_str = path.to_string_lossy();
+                let fid = match path_to_fid.get(path_str.as_ref())? {
+                    Some(v) => v.value(),
+                    None => continue,
+                };
+
+                // Collect this file's pending callee names from the
+                // FID_UNRESOLVED reverse index. We can't mutate while
+                // iterating a redb multimap, so snapshot first.
+                let pending_names: Vec<String> = {
+                    let mut v = Vec::new();
+                    let it = fid_unresolved.get(&fid)?;
+                    for row in it {
+                        v.push(row?.value().to_string());
+                    }
+                    v
+                };
+                fid_unresolved.remove_all(&fid)?;
+
+                for name in &pending_names {
+                    // Filter-rewrite the UNRESOLVED_REFS[name] multimap:
+                    // keep rows whose RefSite.fid != this fid; count
+                    // the rest as dropped.
+                    let mut kept: Vec<Vec<u8>> = Vec::new();
+                    let mut dropped_for_name: u64 = 0;
+                    {
+                        let it = unresolved_refs.get(name.as_str())?;
+                        for row in it {
+                            let bytes = row?.value().to_vec();
+                            match from_bytes::<RefSite>(&bytes) {
+                                Ok(rs) if rs.fid == fid => {
+                                    dropped_for_name += 1;
+                                }
+                                _ => {
+                                    kept.push(bytes);
+                                }
+                            }
+                        }
+                    }
+                    unresolved_refs.remove_all(name.as_str())?;
+                    for v in kept {
+                        unresolved_refs.insert(name.as_str(), v.as_slice())?;
+                    }
+                    dropped = dropped.saturating_add(dropped_for_name);
+                }
+            }
+        }
+        txn.commit()?;
+        Ok(dropped)
+    }
+}
+
 /// Surface struct for `Index.FindSymbol` consumers. Plain data; no redb
 /// Single defined symbol — surface for `Index.Outline`.
 #[derive(Debug, Clone)]
@@ -1476,6 +1858,135 @@ mod tests {
             parse_status: ParseStatus::Ok,
             oversize: false,
         }
+    }
+
+    // ---- v0.6 persisted-cold-mount fingerprint round-trip (U3) ----
+
+    fn synth_fingerprint() -> crate::fingerprint::Fingerprint {
+        // Construct a synthetic Fingerprint without touching the
+        // filesystem so the round-trip test stays hermetic.
+        let schema_version = 99u32;
+        let bin = "0.6.0-test".to_string();
+        let gram = "tree-sitter-rust=0.23,tree-sitter-ts=0.23".to_string();
+        let gi = "deadbeefdeadbeefcafebabecafebabe".to_string();
+        // Mirror the production `compute_combined`. Re-deriving the
+        // hash here is fine; the canonical implementation is exercised
+        // separately in fingerprint::tests.
+        let combined = {
+            let mut h = blake3::Hasher::new();
+            h.update(b"rts-fingerprint-v1");
+            h.update(&schema_version.to_le_bytes());
+            h.update(b"\0bin\0");
+            h.update(bin.as_bytes());
+            h.update(b"\0gram\0");
+            h.update(gram.as_bytes());
+            h.update(b"\0gi\0");
+            h.update(gi.as_bytes());
+            let bytes = h.finalize();
+            let mut out = String::with_capacity(32);
+            for b in &bytes.as_bytes()[..16] {
+                use std::fmt::Write;
+                let _ = write!(&mut out, "{b:02x}");
+            }
+            out
+        };
+        crate::fingerprint::Fingerprint {
+            schema_version,
+            daemon_binary_version: bin,
+            grammar_versions: gram,
+            gitignore_hash: gi,
+            combined,
+        }
+    }
+
+    #[test]
+    fn fresh_store_has_no_fingerprint() {
+        let (_tmp, store) = temp_store();
+        assert!(store.read_fingerprint().unwrap().is_none());
+        assert!(!store.reconciliation_in_progress().unwrap());
+        assert_eq!(store.files_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn fingerprint_round_trip_through_meta() {
+        let (_tmp, store) = temp_store();
+        let fp = synth_fingerprint();
+        store.write_fingerprint(&fp).unwrap();
+        let read_back = store.read_fingerprint().unwrap().expect("fp present");
+        assert_eq!(read_back, fp);
+    }
+
+    #[test]
+    fn reconciliation_in_progress_round_trips() {
+        let (_tmp, store) = temp_store();
+        assert!(!store.reconciliation_in_progress().unwrap());
+        store.set_reconciliation_in_progress(true).unwrap();
+        assert!(store.reconciliation_in_progress().unwrap());
+        store.set_reconciliation_in_progress(false).unwrap();
+        assert!(!store.reconciliation_in_progress().unwrap());
+    }
+
+    #[test]
+    fn wipe_data_tables_clears_files_but_preserves_meta() {
+        let (_tmp, store) = temp_store();
+        // 1. Populate something so files_count > 0. Use the shape
+        // the existing `commit_batch` test fixture would build —
+        // FileBatchEntry holds (defs, refs, docs) tuples.
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("src/lib.rs"),
+            meta: rust_meta(blake3::hash(b"v1").into()),
+            defs: vec![(
+                "hello".to_string(),
+                schema::DefSite {
+                    fid: 0, // batch path overwrites
+                    start: 0,
+                    end: 16,
+                    start_line: 1,
+                    end_line: 1,
+                    visibility: Visibility::Public,
+                    kind: SymbolKind::Function,
+                },
+                SymbolKind::Function,
+            )],
+            refs: vec![],
+            docs: vec![],
+        };
+        store
+            .commit_batch(vec![entry], vec![], redb::Durability::Immediate)
+            .unwrap();
+        assert!(
+            store.files_count().unwrap() > 0,
+            "preconditions: store should have committed entries"
+        );
+
+        // 2. Also write a fingerprint so we can verify META survives.
+        let fp = synth_fingerprint();
+        store.write_fingerprint(&fp).unwrap();
+        assert!(store.read_fingerprint().unwrap().is_some());
+
+        // 3. Wipe data tables.
+        store.wipe_data_tables().unwrap();
+
+        // 4. Data tables are empty; META is intact.
+        assert_eq!(store.files_count().unwrap(), 0, "FILES should be empty");
+        let after = store
+            .read_fingerprint()
+            .unwrap()
+            .expect("fingerprint survives wipe");
+        assert_eq!(after, fp, "META fingerprint must round-trip across wipe");
+    }
+
+    #[test]
+    fn write_fingerprint_clears_reconciliation_sentinel() {
+        // The plan's invariant: after a clean fingerprint write
+        // (either at cold-walk completion or end-of-reconciliation),
+        // the in-progress sentinel must be cleared so the next mount
+        // doesn't see a stale "crashed mid-reconcile" signal.
+        let (_tmp, store) = temp_store();
+        store.set_reconciliation_in_progress(true).unwrap();
+        assert!(store.reconciliation_in_progress().unwrap());
+        store.write_fingerprint(&synth_fingerprint()).unwrap();
+        assert!(!store.reconciliation_in_progress().unwrap());
     }
 
     #[test]
@@ -2387,6 +2898,213 @@ mod tests {
             callers.is_empty(),
             "after caller.rs removal, no zombie ref should resurface; got {callers:?}"
         );
+    }
+
+    #[test]
+    fn unresolved_refs_count_reflects_table_size() {
+        // The telemetry helper must return the live UNRESOLVED_REFS row
+        // count: 0 on an empty store, 1 after a single unresolved ref
+        // is committed, back to 0 after the callee def is interned
+        // (Pass-3 drains the deferred entry).
+        let (_tmp, store) = temp_store();
+
+        // Empty store: helper returns 0 without erroring even though
+        // the table was just opened for the first time.
+        assert_eq!(store.unresolved_refs_count().unwrap(), 0);
+
+        // Commit a ref to `target` before any def of `target` exists.
+        // Pass 2 defers the row to UNRESOLVED_REFS — the helper
+        // should now see exactly 1.
+        let caller = FileBatchEntry {
+            path: std::path::PathBuf::from("caller.rs"),
+            meta: rust_meta(blake3::hash(b"caller").into()),
+            defs: vec![(
+                "make_call".to_string(),
+                fn_def(0, 100, 1, 10),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "target".to_string(),
+                start: 50,
+                end: 56,
+                start_line: 5,
+                end_line: 5,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![caller], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            1,
+            "deferred ref to undefined `target` should bump the count"
+        );
+
+        // Land the callee def. Pass 3 drains the deferred entry into
+        // REFS; the unresolved count drops back to 0.
+        let target = FileBatchEntry {
+            path: std::path::PathBuf::from("target.rs"),
+            meta: rust_meta(blake3::hash(b"target").into()),
+            defs: vec![(
+                "target".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![target], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            0,
+            "Pass-3 drain on callee landing should clear the deferred row"
+        );
+    }
+
+    #[test]
+    fn gc_unresolved_refs_drops_rows_for_named_file() {
+        // PR #128: the explicit GC API drops UNRESOLVED_REFS rows
+        // whose source file appears in the input list and returns
+        // the count actually deleted. Idempotent on unknown paths.
+        let (_tmp, store) = temp_store();
+
+        // Park one unresolved ref by committing a caller whose
+        // callee is never defined.
+        let caller = FileBatchEntry {
+            path: std::path::PathBuf::from("caller.rs"),
+            meta: rust_meta(blake3::hash(b"caller").into()),
+            defs: vec![(
+                "make_call".to_string(),
+                fn_def(0, 100, 1, 10),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "phantom_target".to_string(),
+                start: 50,
+                end: 64,
+                start_line: 5,
+                end_line: 5,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![caller], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(store.unresolved_refs_count().unwrap(), 1);
+
+        // Idempotent on unknown paths: an unknown file name reports
+        // 0 dropped and doesn't disturb the live row.
+        let dropped = store
+            .gc_unresolved_refs_for_removed_files(&[std::path::PathBuf::from("does-not-exist.rs")])
+            .unwrap();
+        assert_eq!(dropped, 0, "unknown path should be a no-op");
+        assert_eq!(store.unresolved_refs_count().unwrap(), 1);
+
+        // The real removal: pass caller.rs and expect 1 row dropped.
+        let dropped = store
+            .gc_unresolved_refs_for_removed_files(&[std::path::PathBuf::from("caller.rs")])
+            .unwrap();
+        assert_eq!(
+            dropped, 1,
+            "removing caller.rs should drop its single parked row"
+        );
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            0,
+            "the parked row should be gone after GC"
+        );
+    }
+
+    #[test]
+    fn gc_unresolved_refs_preserves_other_files() {
+        // PR #128: GC keyed by `FID_UNRESOLVED[fid]` must NOT touch
+        // unresolved rows belonging to other files that happen to
+        // share the same callee name.
+        let (_tmp, store) = temp_store();
+
+        let a = FileBatchEntry {
+            path: std::path::PathBuf::from("a.rs"),
+            meta: rust_meta(blake3::hash(b"a").into()),
+            defs: vec![(
+                "a_fn".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "shared_phantom".to_string(),
+                start: 20,
+                end: 34,
+                start_line: 3,
+                end_line: 3,
+            }],
+            docs: Vec::new(),
+        };
+        let b = FileBatchEntry {
+            path: std::path::PathBuf::from("b.rs"),
+            meta: rust_meta(blake3::hash(b"b").into()),
+            defs: vec![(
+                "b_fn".to_string(),
+                fn_def(0, 50, 1, 5),
+                SymbolKind::Function,
+            )],
+            refs: vec![RefHit {
+                name: "shared_phantom".to_string(),
+                start: 20,
+                end: 34,
+                start_line: 3,
+                end_line: 3,
+            }],
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![a, b], vec![], Durability::Immediate)
+            .unwrap();
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            2,
+            "both files should have parked one row each"
+        );
+
+        // Remove only a.rs: b.rs's row must survive.
+        let dropped = store
+            .gc_unresolved_refs_for_removed_files(&[std::path::PathBuf::from("a.rs")])
+            .unwrap();
+        assert_eq!(dropped, 1, "exactly a.rs's row should be dropped");
+        assert_eq!(
+            store.unresolved_refs_count().unwrap(),
+            1,
+            "b.rs's row must survive"
+        );
+
+        // Confirm the survivor really belongs to b.rs (fid recovered
+        // from the postcard blob).
+        let txn = store.db.begin_read().unwrap();
+        let unresolved = txn.open_multimap_table(UNRESOLVED_REFS).unwrap();
+        let mut survivors = Vec::new();
+        for row in unresolved.get("shared_phantom").unwrap() {
+            let bytes = row.unwrap().value().to_vec();
+            survivors.push(from_bytes::<RefSite>(&bytes).unwrap());
+        }
+        assert_eq!(survivors.len(), 1);
+        let path_to_fid = txn.open_table(PATH_TO_FID).unwrap();
+        let b_fid = path_to_fid.get("b.rs").unwrap().unwrap().value();
+        assert_eq!(
+            survivors[0].fid, b_fid,
+            "survivor should be b.rs's row, not a.rs's"
+        );
+    }
+
+    #[test]
+    fn gc_unresolved_refs_empty_input_returns_zero() {
+        // PR #128: passing an empty slice short-circuits cleanly and
+        // does not begin a write transaction. Important because the
+        // writer calls this on every flush — including flushes with
+        // no removals.
+        let (_tmp, store) = temp_store();
+        assert_eq!(store.gc_unresolved_refs_for_removed_files(&[]).unwrap(), 0);
     }
 
     #[test]

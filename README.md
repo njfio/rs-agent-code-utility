@@ -62,8 +62,10 @@ The headline number: on the rts-core crate itself, getting one function's body c
 
 ```sh
 # Prebuilt binaries (macOS arm64, Linux x86_64, Linux arm64):
-VERSION=0.5.6 TARGET=$(uname -m)-$(uname -s | tr '[:upper:]' '[:lower:]')   # rough sketch — see install.md for the canonical mapping
+VERSION=0.6.0 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
 curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz" | tar -xz
+# Verify: SHA256SUMS (integrity) + `gh attestation verify` (authenticity, v0.6.1+).
+# Browser-downloaded macOS tarballs need `xattr -dr com.apple.quarantine "rts-${VERSION}-${TARGET}/"`.
 
 # Or build from source:
 cargo build --workspace --release
@@ -81,7 +83,7 @@ That's it. The MCP server auto-spawns the daemon on first connect; the daemon wa
 
 ## What it gives your agent
 
-Eight tools, all read-only, all AST-precise. Full schemas in [`docs/protocol-v0.md`](docs/protocol-v0.md):
+Ten tools, all read-only. Eight are AST-precise query tools (below); two are observability tools. Full schemas in [`docs/protocol-v0.md`](docs/protocol-v0.md):
 
 | tool | when to reach for it |
 |---|---|
@@ -94,7 +96,7 @@ Eight tools, all read-only, all AST-precise. Full schemas in [`docs/protocol-v0.
 | `outline_workspace` | "I'm new to this repo — where do I start?" Token-budgeted structural map; Aider-style PageRank file ranking. |
 | `grep` | Literal substring or regex over indexed bytes. Returns matches with `enclosing_qualified_name` — the only `grep` you've used that says *which function the match is in*. |
 
-The MCP server also exposes `daemon_stats` for telemetry — per-method call counts so you (and your agent) can see actual usage rather than guess.
+The MCP server also exposes two observability tools — `daemon_stats` (per-method call counts) and `daemon_telemetry` (latency percentiles + cache-hit snapshot) — so you (and your agent) can see actual usage rather than guess.
 
 ## How it's built
 
@@ -102,7 +104,7 @@ The MCP server also exposes `daemon_stats` for telemetry — per-method call cou
    AI coding agent (Claude Code / Cursor / Continue / Aider / Cline)
               │ stdio JSON-RPC, MCP
               ▼
-       crates/rts-mcp        per-agent process; exposes 8 tools
+       crates/rts-mcp        per-agent process; exposes 10 tools
               │ Unix-domain socket, protocol-v0
               ▼
       crates/rts-daemon      workspace-pinned, auto-spawned
@@ -115,18 +117,24 @@ The MCP server also exposes `daemon_stats` for telemetry — per-method call cou
    · enclosing        poll fallback)
 ```
 
-**Single-uid**. Refuses to run as root. Sets `umask(0077)`, disables core dumps. **Zero outbound HTTP code paths** in the daemon and MCP build trees (asserted via `cargo tree` in CI). 12 languages indexed via tree-sitter — Rust, JS, TS, Python, C, C++, Go, Java, PHP, Ruby, Swift, C# — with AST-precise call edges on the first six and regex fallback on the rest.
+**Single-uid**. Refuses to run as root. Sets `umask(0077)`, disables core dumps. **Zero outbound HTTP code paths** in the daemon and MCP build trees (asserted via `cargo tree` in CI). 12 languages indexed via tree-sitter — Rust, JS, TS, Python, C, C++, Go, Java, PHP, Ruby, Swift, C# — with AST-precise call edges on 10 of the 12 (added Java, PHP, Swift, C#) and regex fallback on C and C++.
 
 ## Status
 
-**Active pre-1.0.** Used daily by the author for development on the rts codebase itself. Looking for outside users — file an issue or a discussion.
+**v0.6 — stable for daily use.** Latest tag: `v0.6.0`. Used daily by the author on the rts codebase itself; looking for outside users — file an issue or a discussion.
 
-- **Reference graph correctness**: both cold-walk and live-edit paths ship complete call graphs (#100, #103).
-- **PageRank ranker invariant**: `answerable_coverage = 1.000` on the rts-core v1 audited corpus and the blind-v2 corpus.
-- **Active behavior nudge**: a `.claude/hooks/rts-nudge.sh` PreToolUse hook nudges agents toward rts when they reach for `Bash grep`/`rg`/`find` (#106). Opt out via `RTS_HOOK_DISABLED=1`.
-- **Agent-bench harness**: SWE-bench-lite A/B harness foundation (`agent-bench/`) measures whether the nudge actually shifts agent tool-use ratio (#107).
+Pre-1.0 means the **wire protocol (protocol-v0)** may change additively and the **on-disk redb index** may change between minor versions (the daemon auto-rebuilds on upgrade; a *downgrade* across a schema bump needs a one-time state-dir wipe). The **user-facing surface will not break without a version bump.**
 
-What's *not* yet done: macOS Intel prebuilt binaries (build from source), Windows port (Unix sockets; v1.x candidate), public agent-bench baseline (`agent-bench/` PR-B), Docker patch-validation eval (x86_64 Linux only).
+**Frozen in v0.6** (tool/subcommand *names + argument shapes*; additive flags are not frozen):
+
+- **10 MCP tools** — `outline_workspace`, `find_symbol`, `read_symbol`, `read_symbol_at`, `read_range`, `find_callers`, `impact_of`, `grep`, `daemon_stats`, `daemon_telemetry`
+- **10 `rts` CLI subcommands** — `mount`, `find`, `grep`, `callers`, `outline`, `read`, `stats`, `doctor`, `completions`, `telemetry`
+
+**Not frozen (pre-1.0 mutable):** the protocol-v0 wire format (additive changes only) and the on-disk redb schema (auto-rebuilt on upgrade).
+
+Also live: the `.claude/hooks/rts-nudge.sh` PreToolUse hook that nudges agents toward rts when they reach for `Bash grep`/`rg`/`find` (opt out via `RTS_HOOK_DISABLED=1`); the PageRank ranker holds `answerable_coverage = 1.000` on the rts-core audited corpus.
+
+What's *not* yet done: macOS Intel prebuilt binaries (build from source), Windows port (Unix sockets; v1.x candidate), full macOS notarization (browser-downloaded tarballs need `xattr -dr com.apple.quarantine`), public agent-bench baseline.
 
 ## More documentation
 

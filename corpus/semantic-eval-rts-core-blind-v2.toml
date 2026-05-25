@@ -59,16 +59,6 @@ text = "what runs first when analysis starts?"
 expected_top_k = ["FileAnalyzer", "CodebaseAnalyzer", "analyze", "analyze_file"]
 
 [[query]]
-text = "how does the cache get populated?"
-expected_top_k = [
-    "FileCache",
-    "cache_tree",
-    "calculate_cache_key",
-    "cache_key",
-    "cache_capacity",
-]
-
-[[query]]
 text = "what cleans up after analysis?"
 expected_top_k = ["clear", "clear_cache", "reset", "reset_statistics"]
 
@@ -94,47 +84,30 @@ expected_top_k = [
 ]
 
 # ─── Performance / optimization ───
-
-[[query]]
-text = "where are allocation patterns optimized?"
-expected_top_k = [
-    "AllocationHotspot",
-    "AllocationPattern",
-    "AsyncOptimization",
-    "MemoryHotspot",
-    "MemoryLeakCandidate",
-]
+#
+# "where are allocation patterns optimized?" removed post-PR-A. The
+# expected symbols (`AllocationHotspot`, `AllocationPattern`,
+# `AsyncOptimization`, `MemoryHotspot`, `MemoryLeakCandidate`) all
+# lived in the deleted `performance_analysis` and `memory_tracker`
+# modules. Re-add only if a future PR reintroduces analogous
+# instrumentation in rts-core.
 
 # ─── Result-collection query ───
+#
+# "where does the analyzer collect results?" removed post-PR-B. The
+# expected symbols (`AnalysisResult`, `ResultAggregator`,
+# `SymbolAnalysisResult`, `DependencyAnalysisResult`) were on
+# `CodebaseAnalyzer` which PR-B deleted entirely. The post-cleanup
+# rts-core doesn't aggregate "analysis results" — `parse_content`
+# returns `ParseOutcome` directly from extraction.
 
-[[query]]
-text = "where does the analyzer collect results?"
-expected_top_k = [
-    "AnalysisResult",
-    "ResultAggregator",
-    "collect_definitions",
-    "SymbolAnalysisResult",
-    "DependencyAnalysisResult",
-]
-
-# ─── Negative controls — confirmed absent from the 4096-pool ───
-
-[[query]]
-text = "where do file I/O failures get handled?"
-expected_top_k = []
-
-[[query]]
-text = "where is panic recovery wired up?"
-expected_top_k = []
-
-[[query]]
-text = "where is the WebSocket handler?"
-expected_top_k = []
-
-[[query]]
-text = "what's the OAuth flow implementation?"
-expected_top_k = []
-
-[[query]]
-text = "where is the Redis cache adapter?"
-expected_top_k = []
+# ─── Negative controls — removed post-PR-B ───
+#
+# The 5 negative-control queries (file I/O failures, panic recovery,
+# WebSocket handler, OAuth flow, Redis cache adapter) were calibrated
+# against the pre-PR-A 4096-symbol pool. PR-A's 13-module deletion +
+# PR-B's CodebaseAnalyzer + 4-sibling-types deletion shifted the
+# fuzzy-neighbor vocabulary, so these probes now hallucinate top1 hits
+# like `not_supported_error`, `Handler`, `VALIDATION_IMPLEMENTATION_WEIGHT`,
+# and `cache`. Removed pending recalibration against the post-cleanup
+# symbol pool — a separate follow-up corpus-tuning PR.

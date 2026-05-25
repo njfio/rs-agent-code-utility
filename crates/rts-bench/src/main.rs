@@ -19,9 +19,13 @@ use serde_json::json;
 
 mod baseline;
 mod corpus;
+mod doctor;
+mod dogfood;
 mod footprint;
+mod footprint_helpers;
 mod latency;
 mod mcp_runner;
+mod real_repos;
 mod report;
 mod semantic;
 mod tasks;
@@ -148,6 +152,49 @@ enum Cmd {
     /// example. Each query has `text` (the natural-language query)
     /// and `expected_top_k` (hand-graded list of symbol names that
     /// should appear in the top-K results).
+    /// Read-only first-run health check. Inspects rts install state
+    /// (binary version, daemon reachability, MCP registration in 5
+    /// agent hosts, hook file presence) and per-workspace index state
+    /// (daemon PID, pinned-workspace path, index generation, cold-walk
+    /// completion). Prints an OK/WARN/FAIL checklist with copy-pasteable
+    /// fix snippets for every failing row.
+    ///
+    /// Exit codes are a documented public API:
+    /// - 0 — no FAIL rows (any WARN allowed)
+    /// - 1 — at least one FAIL row
+    /// - 2 — doctor itself failed (panic, unreadable own binary)
+    ///
+    /// Plan: docs/plans/2026-05-18-001-feat-rts-bench-doctor-plan.md
+    Doctor {
+        /// Output format. `human` (default) renders a checklist with
+        /// inline fix snippets and ANSI when stdout is a TTY and
+        /// `NO_COLOR` is unset. `json` produces a machine-readable
+        /// document with `schema_version: "doctor-v0"` for agent
+        /// consumption (e.g. agent-bench preflight).
+        #[arg(long, value_enum, default_value_t = doctor::DoctorOutput::Human)]
+        output: doctor::DoctorOutput,
+        /// Disable ANSI color even on a TTY. `NO_COLOR=1` env var has
+        /// the same effect.
+        #[arg(long)]
+        no_color: bool,
+        /// Workspace path to inspect. Defaults to the current directory.
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+    },
+    /// Real-repo CI fixture (v1): clone tokio/flask/gin at pinned
+    /// refs, index each, capture core metrics, compare against the
+    /// committed baseline. See `docs/plans/` for the rationale —
+    /// surfaces latent extractor bugs and cancel-test flakes that
+    /// synthetic fixtures historically missed.
+    ///
+    /// Subcommands:
+    ///   run      — clone + index + emit JSON report to stdout
+    ///   baseline — same as `run`, but write the report to --baseline
+    ///   compare  — read --baseline + run fresh; exit 1 on regression
+    RealRepos {
+        #[command(subcommand)]
+        sub: RealReposCmd,
+    },
     Semantic {
         /// Path to a TOML corpus file.
         #[arg(long)]
@@ -172,6 +219,41 @@ enum Cmd {
         /// Default: no check, exits 0 regardless of metrics.
         #[arg(long)]
         check_coverage: Option<f64>,
+    },
+    /// Self-dogfood telemetry harness. Ingests a Claude Code session
+    /// JSONL transcript and reports how often the agent reached for
+    /// `Bash(grep|rg|find|cat|ls)` when an `mcp__rts__*` tool would
+    /// have served the same intent. Closes the evidence loop on
+    /// PR #121's tool-description audit: lets the maintainer measure
+    /// whether discoverability changes actually move the rts-vs-Bash
+    /// ratio in real sessions, instead of relying on vibes. Client-
+    /// side only — reads JSONL files already on disk; no daemon
+    /// counters; no opt-in telemetry pipeline (that's PR #115).
+    Dogfood {
+        /// Path to the Claude Code session JSONL (typically
+        /// `~/.claude/projects/<encoded-cwd>/<uuid>.jsonl`), or `-`
+        /// to read from stdin.
+        session: PathBuf,
+        /// Output format. `text` (default) renders a human checklist
+        /// with section headings the smoke tests pattern-match on;
+        /// `json` emits a schema-pinned report
+        /// (`schema_version: "dogfood-v0"`) for post-hoc pipelines.
+        #[arg(long, value_enum, default_value_t = dogfood::ReportFormat::Text)]
+        report: dogfood::ReportFormat,
+        /// Restrict candidate counting to sessions where rts appears
+        /// mounted (a `mcp__rts__*` tool_use appeared anywhere in the
+        /// transcript). Default: true — the "did the audit help?"
+        /// question is only meaningful when rts was actually available.
+        /// Pass `--rts-mounted-only=false` to score every Bash call
+        /// regardless of session context.
+        #[arg(
+            long,
+            default_value_t = true,
+            action = clap::ArgAction::Set,
+            num_args = 0..=1,
+            default_missing_value = "true"
+        )]
+        rts_mounted_only: bool,
     },
 }
 
@@ -365,6 +447,51 @@ enum QueryCmd {
 }
 
 #[derive(Subcommand, Debug)]
+enum RealReposCmd {
+    /// Clone (shallow, pinned) each repo in the v1 set, index it with
+    /// rts, capture metrics, and emit a JSON or text report to stdout.
+    /// Use this for ad-hoc local checks; CI runs `compare`.
+    Run {
+        /// Pool directory the bench clones repos into. Reused across
+        /// invocations — first run pays the network cost, subsequent
+        /// runs reuse the worktrees. Default: `/tmp/rts-real-repos`.
+        #[arg(long, default_value = "/tmp/rts-real-repos")]
+        workspace_pool: PathBuf,
+        /// Output format. `json` (default) is the nightly-workflow
+        /// shape; `text` is one summary line per repo.
+        #[arg(long, value_enum, default_value_t = real_repos::ReportFormat::Json)]
+        report: real_repos::ReportFormat,
+    },
+    /// Same wall-clock work as `run`, but write the JSON report to
+    /// the path given by `--baseline`. Used by the maintainer after
+    /// an intentional daemon change: `rts-bench real-repos baseline
+    /// --baseline .github/baselines/rts-bench-real-repos.json`, then
+    /// commit the result.
+    Baseline {
+        #[arg(long, default_value = "/tmp/rts-real-repos")]
+        workspace_pool: PathBuf,
+        /// Where to write the baseline JSON.
+        #[arg(long)]
+        baseline: PathBuf,
+    },
+    /// Read the committed baseline + run fresh; emit a structured
+    /// diff. Exit 0 if all metrics within tolerance; exit 1 if any
+    /// metric exceeds tolerance. The nightly CI workflow invokes
+    /// this and surfaces regressions as failed workflow runs.
+    Compare {
+        #[arg(long, default_value = "/tmp/rts-real-repos")]
+        workspace_pool: PathBuf,
+        /// Path to the committed baseline JSON.
+        #[arg(long)]
+        baseline: PathBuf,
+        /// Output format. `json` for CI consumption; `text` for human
+        /// triage of a failed compare.
+        #[arg(long, value_enum, default_value_t = real_repos::ReportFormat::Json)]
+        report: real_repos::ReportFormat,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 enum TaskCmd {
     /// List the five baseline tasks (running them is `task run <id>`).
     List,
@@ -500,6 +627,22 @@ async fn main() -> Result<()> {
             dry_run,
         } => run_footprint(synth_loc, out, dry_run).await,
         Cmd::Query { output, sub } => run_query(sub, output).await,
+        Cmd::Doctor {
+            output,
+            no_color,
+            workspace,
+        } => {
+            // doctor::run returns the process exit code (0/1/2 per the
+            // documented contract); we plumb it through std::process::exit
+            // because anyhow::Result<()> from main only gives us 0/1.
+            let code = doctor::run(doctor::DoctorArgs {
+                output,
+                no_color,
+                workspace,
+            })
+            .await;
+            std::process::exit(code);
+        }
         Cmd::Semantic {
             corpus,
             workspace,
@@ -508,6 +651,93 @@ async fn main() -> Result<()> {
             dry_run,
             check_coverage,
         } => run_semantic(corpus, workspace, top_k, out, dry_run, check_coverage).await,
+        Cmd::RealRepos { sub } => run_real_repos(sub).await,
+        Cmd::Dogfood {
+            session,
+            report,
+            rts_mounted_only,
+        } => {
+            // Dogfood is a pure CPU/file-IO operation — no daemon, no
+            // network, no tokio handles. Block on the synchronous
+            // implementation rather than spawning anything.
+            dogfood::run(dogfood::DogfoodArgs {
+                session,
+                report,
+                rts_mounted_only,
+            })
+        }
+    }
+}
+
+/// `rts-bench real-repos` dispatcher.
+///
+/// All three subcommands share the same measurement pipeline (clone
+/// → mount → cold-walk-gate → telemetry capture). The differences:
+/// - `Run`      prints the report to stdout.
+/// - `Baseline` writes the report to a path on disk.
+/// - `Compare`  reads a baseline + measures + diffs; exits 1 on regression.
+async fn run_real_repos(cmd: RealReposCmd) -> Result<()> {
+    let repos = real_repos::RepoSet::default_v1()?;
+
+    match cmd {
+        RealReposCmd::Run {
+            workspace_pool,
+            report,
+        } => {
+            let rts_mcp_bin = resolve_bin("rts-mcp")?;
+            let rts_daemon_bin = resolve_bin("rts-daemon")?;
+            let bench =
+                real_repos::run_all(&repos, &workspace_pool, &rts_mcp_bin, &rts_daemon_bin).await?;
+            real_repos::print_report(&bench, report)?;
+            Ok(())
+        }
+        RealReposCmd::Baseline {
+            workspace_pool,
+            baseline,
+        } => {
+            let rts_mcp_bin = resolve_bin("rts-mcp")?;
+            let rts_daemon_bin = resolve_bin("rts-daemon")?;
+            let bench =
+                real_repos::run_all(&repos, &workspace_pool, &rts_mcp_bin, &rts_daemon_bin).await?;
+            real_repos::write_report_json(&baseline, &bench)?;
+            eprintln!("wrote baseline {}", baseline.display());
+            // Also echo the JSON to stdout so the operator running the
+            // command from a terminal can see what got written.
+            real_repos::print_report(&bench, real_repos::ReportFormat::Json)?;
+            Ok(())
+        }
+        RealReposCmd::Compare {
+            workspace_pool,
+            baseline,
+            report,
+        } => {
+            // Read the baseline FIRST so a missing/malformed file
+            // fails clean with a baseline-related error message
+            // before we touch the daemon binary resolution.
+            let baseline_report = real_repos::read_report_json(&baseline)?;
+            let rts_mcp_bin = resolve_bin("rts-mcp")?;
+            let rts_daemon_bin = resolve_bin("rts-daemon")?;
+            let current =
+                real_repos::run_all(&repos, &workspace_pool, &rts_mcp_bin, &rts_daemon_bin).await?;
+            let policy = real_repos::TolerancePolicy::default();
+            let cmp = real_repos::diff::compare(&baseline_report, &current, &policy);
+            match report {
+                real_repos::ReportFormat::Json => {
+                    println!("{}", serde_json::to_string_pretty(&cmp)?);
+                }
+                real_repos::ReportFormat::Text => {
+                    print!("{}", real_repos::diff::render_compare_text(&cmp));
+                }
+            }
+            if !cmp.regressions.is_empty() {
+                eprintln!(
+                    "real-repos: {} regression(s) — see report above",
+                    cmp.regressions.len()
+                );
+                std::process::exit(1);
+            }
+            Ok(())
+        }
     }
 }
 

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Cancel.resp.schema.json",
+  "title": "Daemon.Cancel result",
+  "description": "`cancelled: true` when a registered token was tripped; `cancelled: false` for stale / unknown ids (no error). Per protocol-v0.md §7.1b.",
+  "type": "object",
+  "properties": {
+    "cancelled": { "type": "boolean" }
+  },
+  "required": ["cancelled"]
+}

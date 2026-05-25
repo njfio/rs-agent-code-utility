@@ -18,7 +18,7 @@ path = "src/main.rs"
 [dependencies]
 # Runtime. Bench tasks subprocess `rts-mcp` and `rg` and consume their stdio
 # concurrently, so we want the full multi-thread Tokio runtime.
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "process", "time", "fs"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "process", "time", "fs", "net"] }
 
 # Wire encoding for MCP JSON-RPC + corpus.lock + bench-*.json output.
 serde = { version = "1", features = ["derive"] }
@@ -40,6 +40,13 @@ hex = "0.4"
 # CLI subcommands. `clap` is cheap to bring in for the bench-only surface.
 clap = { version = "4", features = ["derive"] }
 
+# XDG-aware home/config dir resolution. Used by `rts-bench doctor`
+# (U2+) for per-agent-host config file discovery (`~/.cursor/mcp.json`,
+# `~/.continue/config.yaml`, etc.). Same crate (`dirs = "5"`) is
+# already a transitive dep via rts-daemon; promote to direct here so
+# the doctor surface doesn't depend on it indirectly.
+dirs = "5"
+
 # Filesystem walking (mirrors rts-core's filter).
 ignore = "0.4"
 
@@ -52,3 +59,9 @@ tempfile = "3"
 
 # TOML parsing for the semantic-eval corpus format. Pure-Rust, small.
 toml = "0.8"
+
+# YAML parsing for Continue's `~/.continue/config.yaml` (and Aider's
+# `~/.aider.conf.yml`). Pulled in for the `doctor` subcommand's per-host
+# MCP-registration detectors (U7); same crate is already in use by
+# rts-core, so this does not introduce a new transitive dep.
+serde_yaml = "0.9"

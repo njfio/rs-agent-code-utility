@@ -81,11 +81,23 @@ Each connection is full-duplex. Multiple in-flight requests on a single connecti
 ```jsonc
 // Request
 {
-  "id":     "<u64 monotonic per connection>",   // required
-  "method": "Index.LookupSymbol",                // required
-  "params": { ... }                              // required (may be {} for verbs that take no args)
+  "id":        "<u64 monotonic per connection>", // required
+  "method":    "Index.LookupSymbol",              // required
+  "params":    { ... },                           // required (may be {} for verbs that take no args)
+  "cancel_id": "<opaque client-chosen string>"    // optional; v0.6+ (capability `cancellable_queries`)
 }
 ```
+
+The optional `cancel_id` field lets a client mark a request as
+cancellable from another connection (or a later request on the same
+connection) via `Daemon.Cancel { cancel_id }`. Format: any non-empty
+string of 1..=256 chars; the client picks (UUID, counter, etc.) and is
+responsible for uniqueness across in-flight requests. Cancellable
+handlers (v0.6+: `Index.Grep`, `Index.FindSymbol`, `Index.FindCallers`,
+`Index.ReadSymbol`, `Index.Outline`, `Workspace.Mount`) cooperatively
+poll the token at hot-loop boundaries and return `CANCELLED` (§14)
+when tripped. Pre-v0.6 daemons ignore the field; clients that don't
+set it see byte-identical behavior to v0.5.x.
 
 ```jsonc
 // Response (success)
@@ -183,7 +195,12 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "find_symbol_doc_filter",       // v0.5.2+
                      "find_symbol_pre_filter_count", // v0.5.2+
                      "find_symbol_signature_field", // v0.5.3+
-                     "index_grep"],                  // v0.5.4+
+                     "index_grep",                   // v0.5.4+
+                     "index_grep_multiline",         // v0.6 alpha+
+                     "index_grep_structural",        // v0.6 alpha+
+                     "index_grep_within_symbol",     // v0.6 alpha+
+                     "index_grep_v2",                // v0.6 alpha+ (bundle)
+                     "cancellable_queries"],         // v0.6+
     "uptime_ms":    123456
   }
 }
@@ -327,14 +344,21 @@ The v0 method namespace is `^[A-Z][a-z]+\.[A-Z][A-Za-z]+$`. Methods are grouped 
 
 | Namespace | Verbs | Capability |
 |---|---|---|
-| `Daemon.*`   | `Ping`, `Telemetry` (notification) | always |
+| `Daemon.*`   | `Ping`, `Stats`, `Cancel` (v0.6+), `Telemetry` (notification) | always (`Cancel` gated on `cancellable_queries`) |
 | `Workspace.*` | `Mount`, `Unmount`, `Status` | always |
 | `Index.*`    | `Outline`, `FindSymbol`, `FindCallers`, `ImpactOf`, `ReadSymbol`, `ReadSymbolAt`, `ReadRange` | `outline`, `find_symbol` (+ `fuzzy_match` for `pattern`), `find_callers`, `impact_of`, `read_symbol` (+ `closure_walker` for `include_dependencies`, + `read_symbol.include_callers` for `include_callers`), `read_symbol_at`, `read_range` |
 | `Session.*`  | `Open`, `Close` | always; **v1.1**: `MarkDeduped` under `session_dedup` |
 
 Total v0 surface as of alpha.35: **13 methods + 1 notification**. (`Workspace.Mount`, `Workspace.Unmount`, `Workspace.Status`, `Daemon.Ping`, `Session.Open`, `Session.Close`, `Index.Outline`, `Index.FindSymbol`, `Index.FindCallers`, `Index.ImpactOf`, `Index.ReadSymbol`, `Index.ReadSymbolAt`, `Index.ReadRange`, plus `Daemon.Telemetry` notification.) `Index.ReadSymbolAt` shipped in alpha.24; `Index.FindCallers` and `Index.ReadSymbol.include_callers` shipped in alpha.32; `Index.ImpactOf` ships in alpha.35. See [Appendix F](#appendix-f--wire-shape-evolution-by-alpha).
 
-`Daemon.Cancel` is **not** part of v0. Per-request cancellation is handled by the daemon noticing the connection closed (drop) or by Tokio `select!` against a soft deadline on the request future; both don't need a wire-level verb. v2 may introduce `Daemon.Cancel(request_id)` if mid-closure cancellation becomes worthwhile.
+`Daemon.Cancel { cancel_id }` ships in **v0.6** under the
+`cancellable_queries` capability; see §7.1b. Clients attach an
+optional `cancel_id` to the request envelope (§3.4) and later send
+`Daemon.Cancel` with the same id to trip the in-flight handler.
+Cooperative cancellation — handlers poll the token at hot-loop
+boundaries and return `CANCELLED` (§14). The pre-v0.6 behavior (close
+the socket to abandon a request, or wait for the 30 s soft deadline)
+still works and is the right choice for non-cancellable handlers.
 
 `Session.MarkDeduped` was struck from v0 per architecture review (leaky abstraction). When R6 ships in v1.1, dedup is decided by the daemon, signalled in-band as `{ body_omitted: true, see_earlier_id: ... }` in slice responses; clients don't need to mark.
 
@@ -358,6 +382,43 @@ Heartbeat + capability discovery. Idempotent, cheap, no side effects.
 ```
 
 **`result`**: see §4.1.
+
+### 7.1b `Daemon.Cancel` (v0.6+, capability `cancellable_queries`)
+
+Trip the in-flight request that registered the given `cancel_id`.
+Idempotent: an unknown id (typo, already-completed request, or one
+that was never registered) returns `{ cancelled: false }` with no
+error. Returns immediately — the actual handler abort happens
+cooperatively at the next poll inside the targeted handler (per-match
+for the structural scanner, per-file/per-match for the multiline
+regex, per-batch tick for the mount cold-walk drain).
+
+**`params`**:
+```jsonc
+{ "cancel_id": "q-42" }
+```
+
+**`result`**:
+```jsonc
+{ "cancelled": true }     // a registered token was tripped
+{ "cancelled": false }    // no such id (stale or never registered)
+```
+
+Telemetry: `Daemon.Stats.cancellations.total` increments by one on
+every real hit (not on stale cancels). `Daemon.Stats.cancellations.in_flight`
+is the current registry size — a point-in-time gauge of cancellable
+requests outstanding.
+
+Targeted requests return `CANCELLED` (§14, custom code `-32099`). This
+is not a programming error; clients that issued the cancel should
+treat it as the expected response and not retry without changing the
+plan.
+
+Handlers that honor cancellation in v0.6: `Index.Grep`,
+`Index.FindSymbol`, `Index.FindCallers`, `Index.ReadSymbol`,
+`Index.Outline`, `Workspace.Mount`. Other methods accept `cancel_id`
+silently — `Daemon.Cancel` against their ids returns
+`{ cancelled: false }` because no token gets registered for them.
 
 ### 7.2 `Workspace.Mount`
 
@@ -743,6 +804,157 @@ Literal-substring search across all indexed file bytes. Closes the agent-loop ho
 
 Errors: `INVALID_PARAMS` (empty `text`, `text` > 1024 chars, `limit` outside `1..=4096`).
 
+#### v0.6 additions (capability `index_grep_v2`)
+
+`Index.Grep` gains five additive optional input fields and three new capability strings, gated independently. v1 callers (no new fields) see byte-identical responses on the unchanged code path; v2 callers MUST gate on the relevant capability string before sending new fields. The bundle capability `index_grep_v2` advertises all three new modes together for clients that prefer one check.
+
+**Additional `params`**:
+```jsonc
+{
+  // existing v1 fields preserved …
+
+  // v0.6: regex multi-line mode. Sets `dot_matches_new_line(true) + multi_line(true)`
+  // on the compiled regex and scans the file as one buffer. Requires `regex: true`;
+  // the literal path crosses newlines already, so `multiline: true` on a literal call
+  // is rejected with `MULTILINE_REQUIRES_REGEX`. Capability: `index_grep_multiline`.
+  "multiline":                     false,
+
+  // v0.6: raw tree-sitter S-expression query, evaluated against the parsed tree of
+  // every file matching the `language` filter. Captures are returned per-match (see
+  // result shape below). Validated via `Query::new` at request time and cached
+  // (`(language, query_text)` LRU, capacity 64). Capability: `index_grep_structural`.
+  // **Requires `language`** (single id or list).
+  "structural_query":              "(impl_item) @impl",
+
+  // v0.6: post-filter to matches whose byte range lies strictly inside the def byte
+  // range of a named symbol. Single exact qualified name in v1; overloaded names
+  // (>16 defs) are rejected with `WITHIN_SYMBOL_TOO_MANY_DEFS` unless the caller
+  // opts in via `within_symbol_allow_overload: true`. Capability:
+  // `index_grep_within_symbol`.
+  "within_symbol":                 "parse_request",
+  "within_symbol_allow_overload":  false,
+
+  // v0.6: file-set filter applicable to every scan mode (literal, regex, structural).
+  // **Required** when `structural_query` is set; optional otherwise. Intersects with
+  // `file_glob` (AND semantics: a file must satisfy both filters). Capability:
+  // `index_grep_v2`.
+  "language":                      ["rust"]
+}
+```
+
+**Composition matrix (binding contract).** The six axes (`text`, `regex`, `multiline`, `structural_query`, `within_symbol`, `language`) produce the following resolved scan modes. Source of truth: `crates/rts-daemon/src/methods/grep_v2/compose.rs`.
+
+| `text`     | `regex` | `multiline` | `structural_query` | `within_symbol` | `language`   | Result                                   |
+|------------|---------|-------------|--------------------|-----------------|--------------|------------------------------------------|
+| Some       | n/false | n/false     | None               | opt             | opt          | v1 literal substring scan                |
+| Some       | true    | n/false     | None               | opt             | opt          | v1 regex scan (single-line)              |
+| Some       | true    | true        | None               | opt             | opt          | multi-line regex (whole-file buffer)     |
+| None       | any     | true        | None               | —               | —            | REJECT `MULTILINE_REQUIRES_REGEX`        |
+| Some       | n/false | true        | any                | —               | —            | REJECT `MULTILINE_REQUIRES_REGEX`        |
+| None       | any     | any         | Some               | opt             | **required** | structural scan                          |
+| Some       | n/false | n/false     | Some               | opt             | **required** | structural ∩ literal                     |
+| Some       | true    | any         | Some               | opt             | **required** | structural ∩ regex                       |
+| any        | any     | any         | Some               | —               | None         | REJECT `STRUCTURAL_REQUIRES_LANGUAGE`    |
+| None       | any     | any         | None               | —               | —            | REJECT `NO_SEARCH_SOURCE_PROVIDED`       |
+| Some('')   | any     | any         | any                | —               | —            | REJECT `INVALID_TEXT_LENGTH`             |
+| Some(>1024)| any     | any         | any                | —               | —            | REJECT `INVALID_TEXT_LENGTH`             |
+
+`within_symbol` applies as a post-pass filter regardless of which mode resolved (strict containment: the match byte range must lie strictly inside the resolved def byte range). `language` is an OR set: `["rust","ts"]` matches files of either language; `file_glob ∩ language` is AND.
+
+**Additional result fields** (present-when-relevant; absent on unchanged-path v1 calls — mirrors §7.6's `pre_filter_count` precedent):
+
+```jsonc
+{
+  "matches": [
+    {
+      // existing v1 fields preserved byte-for-byte …
+      // present only on structural matches (i.e. when the call set `structural_query`):
+      "captures": {
+        "impl": [
+          { "start": {"line": 43, "col": 0}, "end": {"line": 87, "col": 1}, "text": "impl Foo for Bar { …" }
+        ],
+        "name": [
+          { "start": {"line": 43, "col": 5}, "end": {"line": 43, "col": 8}, "text": "Foo" }
+        ]
+      }
+    }
+  ],
+  // existing v1 fields preserved …
+
+  // present (top-level) when row caps, capture-byte caps, or wall-clock caps were hit;
+  // omitted otherwise. The existing v1 `truncated: bool` keeps its meaning for the
+  // limit-reached case; the new metadata block disambiguates which budget tripped.
+  "truncated":                   true,
+  "truncation_reason":           "rows_seen_exceeded_max",  // or "wall_clock", "capture_bytes"
+  "rows_seen":                   8192,
+  "rows_returned":               4096,
+
+  // present when a structural query was compiled successfully against at least one
+  // of the requested languages but failed against the others; the call succeeds
+  // with results from the languages that compiled. Absent when every requested
+  // language compiled or every one failed (the latter is `STRUCTURAL_QUERY_INVALID`).
+  "partial_failures": [
+    { "language": "ts", "error": "Query error at 1:0: invalid node type 'impl_item'" }
+  ]
+}
+```
+
+Per-capture `text` is truncated at `STRUCTURAL_MAX_CAPTURE_BYTES` (8 KiB); when truncated, the capture object gains `"truncated": true`. Position units are `{line, col}` (1-based line, 0-based col, mirroring v1 match coordinates).
+
+**Predicate whitelist (v1).** Agent-supplied S-expression queries may use only the following predicates; any other predicate (including custom `#contains?`-style extensions) fails with `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`:
+
+- `#eq?`, `#not-eq?` — string equality; no regex compile.
+- `#match?`, `#not-match?` — regex compile against a daemon-wide shared budget (each predicate regex must compile under `PREDICATE_REGEX_DFA_LIMIT`, currently 256 KiB — more conservative than the outer `MULTILINE_DFA_SIZE_LIMIT`).
+- `#any-of?` — string membership.
+- `#is?`, `#is-not?` — node-property test; no regex compile.
+
+The whitelist is documented for tree-sitter 0.26 (currently pinned). A future grammar upgrade may require re-validation.
+
+**Resource budgets.** Constants (source: `crates/rts-daemon/src/methods/grep_v2/limits.rs`, lands in U5):
+
+| Constant                              | Value         | Purpose                                              |
+|---------------------------------------|---------------|------------------------------------------------------|
+| `MULTILINE_DFA_SIZE_LIMIT`            | 32 MiB        | regex DFA cap on the `multiline: true` path          |
+| `MULTILINE_NFA_SIZE_LIMIT`            | 32 MiB        | regex NFA cap on the `multiline: true` path          |
+| `PREDICATE_REGEX_DFA_LIMIT`           | 256 KiB       | per-`#match?`/`#not-match?` predicate compile cap    |
+| `STRUCTURAL_WALL_CLOCK_MS`            | 5 000 ms      | total wall-clock budget per structural scan          |
+| `STRUCTURAL_MAX_ROWS`                 | 4 096         | hard cap on structural matches per response          |
+| `STRUCTURAL_MAX_CAPTURE_BYTES`        | 8 192         | per-capture text truncation threshold                |
+| `STRUCTURAL_MAX_CAPTURES_PER_MATCH`   | 64            | upper bound on distinct captures per match record    |
+| `WITHIN_SYMBOL_MAX_DEFS`              | 16            | overload threshold without opt-in                    |
+| `QUERY_LRU_CAPACITY`                  | 64            | compiled-`Query` LRU entry cap                       |
+
+Wall-clock budgets are checked between files (not mid-file). Cap breaches return `truncated: true` + metadata; they're not errors.
+
+**Capabilities advertised** (on `Daemon.Ping.result.capabilities`):
+
+- `index_grep_multiline` — `multiline: true` honored on the regex path.
+- `index_grep_structural` — `structural_query` honored; per-match `captures` returned.
+- `index_grep_within_symbol` — `within_symbol` (+ `within_symbol_allow_overload`) honored.
+- `index_grep_v2` — bundle string; advertised iff all three above are.
+
+Clients SHOULD gate on these strings; a pre-v0.6 daemon silently drops unknown input fields and the call falls back to v1 semantics.
+
+**New error codes** (each emits as `INVALID_PARAMS` with the listed `data.code` string; see §14):
+
+| `data.code`                              | Trigger                                                                                 |
+|------------------------------------------|-----------------------------------------------------------------------------------------|
+| `MULTILINE_REQUIRES_REGEX`               | `multiline: true` on the literal path (rejected, not silently coerced)                  |
+| `STRUCTURAL_REQUIRES_LANGUAGE`           | `structural_query` set, `language` missing or empty                                     |
+| `NO_SEARCH_SOURCE_PROVIDED`              | neither `text` nor `structural_query` provided                                          |
+| `INVALID_TEXT_LENGTH`                    | `text` is empty or > 1024 chars (mirrors v1; surfaced via the v2 envelope)              |
+| `STRUCTURAL_QUERY_INVALID`               | `Query::new(language, query_text)` failed for every requested language; `data.error_message` carries the tree-sitter diagnostic |
+| `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED` | query uses a predicate outside the v1 whitelist                                         |
+| `WITHIN_SYMBOL_NOT_FOUND`                | `within_symbol` resolved to zero defs                                                   |
+| `WITHIN_SYMBOL_TOO_MANY_DEFS`            | `within_symbol` resolved to > 16 defs without `within_symbol_allow_overload: true`; `data.def_count` carries the count |
+| `REGEX_TOO_COMPLEX`                      | regex compile exceeded `MULTILINE_DFA_SIZE_LIMIT` (or NFA equivalent)                   |
+| `STRUCTURAL_QUERY_TIMEOUT`               | structural scan exceeded `STRUCTURAL_WALL_CLOCK_MS`                                     |
+| `UNKNOWN_LANGUAGE`                       | `language` contains an identifier the daemon doesn't index                              |
+
+Note: `WITHIN_SYMBOL_NOT_FOUND`, `WITHIN_SYMBOL_TOO_MANY_DEFS`, `STRUCTURAL_QUERY_INVALID`, `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`, `REGEX_TOO_COMPLEX`, and `STRUCTURAL_QUERY_TIMEOUT` are emitted from the U4/U5 execution paths (not pure-input validation) and so depend on those units landing. Until U5 lands, the validator surfaces the input-shape codes only (`MULTILINE_REQUIRES_REGEX`, `STRUCTURAL_REQUIRES_LANGUAGE`, `NO_SEARCH_SOURCE_PROVIDED`, `INVALID_TEXT_LENGTH`).
+
+**Telemetry.** `Daemon.Stats` gains three new sub-counters as siblings of the existing `index_grep` field — `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`. Each bumps when its corresponding param is set and active (e.g., `multiline: false` does NOT bump `index_grep_multiline`); the parent `index_grep` bumps on every call. Lands with U7.
+
 ### 7.9 `Session.Open`
 
 Open a session. Returns an opaque session id the client carries on subsequent requests (v1.1: enables session-aware dedup; v0: required but otherwise inert).
@@ -792,6 +1004,36 @@ Emitted iff the connection opted in via `Workspace.Mount`'s `enable_telemetry: t
   }
 }
 ```
+
+### 7.11b `Daemon.Telemetry` (RPC, v0.6+, capability `daemon_telemetry`)
+
+Pull-style snapshot of the daemon's raw telemetry collector inputs. Distinct from the §7.11 notification (which is push-style and per-event). The receiver-side bounded-enum filter still runs in `rts-mcp`; this RPC just hands the collectors their data without forcing the CLI to mount the workspace twice. HTTP-free — the telemetry POST lives behind a separate `--features telemetry` gate in the `rts` binary.
+
+**`params`**: `{}`
+**`result`**:
+
+```jsonc
+{
+  "uptime_secs":                       12345,
+  "languages_indexed":                 ["rust", "python"],
+  "method_counts":                     { "Index.FindSymbol": 7, "Index.Grep": 23 },
+  "method_latency_p50_ms":             { "Index.FindSymbol": 2 },
+  "method_latency_p99_ms":             { "Index.FindSymbol": 8 },
+  "error_counts":                      { "INVALID_PARAMS": 3 },
+  "cache_hit_rate":                    0.84,
+  "cold_walk_ms_p50":                  230,
+  "workspace_files":                   47123,
+  "unresolved_refs_count":             117,
+  "unresolved_refs_gc_runs_total":     12,
+  "unresolved_refs_gc_dropped_total":  184
+}
+```
+
+Field notes:
+
+- `unresolved_refs_count` (u64, capability `daemon_telemetry_unresolved_refs_count`) — size of the UNRESOLVED_REFS multimap at snapshot time. Each row is a reference the resolver couldn't bind to a defined symbol; forward references decrement the count when their callee finally lands in a later commit, while true externals (stdlib `Vec`, `println!`, etc.) accumulate permanently. Lower is better. A regression that breaks an extractor surfaces as the count jumping up — the real-repo CI bench gates on this.
+- `unresolved_refs_gc_runs_total` and `unresolved_refs_gc_dropped_total` (u64 each, capability `daemon_telemetry_unresolved_refs_gc`) — cumulative counters reflecting cleanup work the daemon did on its own. `runs_total` increments once per removed file the writer processed; `dropped_total` increments by the number of orphaned `UNRESOLVED_REFS` rows the GC actually deleted (rows whose source file was deleted before its forward reference resolved). Together they **bound the growth** of `unresolved_refs_count`: a healthy long-running daemon sees `dropped_total` advance as files disappear, keeping `unresolved_refs_count` flat-ish. A jump in `unresolved_refs_count` without matching `dropped_total` advancement points at an extractor regression (the class of bug PR #118's PHP `method_declaration` gap exemplifies). Both counters reset on daemon restart.
+- Map keys are sourced from closed-enum strings (`CallCounters::snapshot`, `MethodLatencyHistograms::enumerated`, `ErrorCode::as_wire_str`, `writer::lang_tag_to_name`); no user-controlled identifiers reach the wire.
 
 ---
 
@@ -972,10 +1214,55 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 | `STORAGE_FULL` | redb / segment store ran out of disk | No (operator action) |
 | `SCHEMA_VERSION_NEWER` | on-disk redb is newer than daemon binary | No (upgrade binary) |
 | `DEADLINE_EXCEEDED` | 30 s soft deadline tripped | Yes (likely indicates a pathological request) |
+| `CANCELLED` | cooperative cancellation tripped via `Daemon.Cancel { cancel_id }` (v0.6+, capability `cancellable_queries`); custom numeric `-32099`. Not a programming error — clients that issued the cancel should treat this as the expected response | No (rephrase or retry with a fresh `cancel_id`) |
 | `INCOMPATIBLE_VERSION` | protocol major mismatch (currently unreachable — v0 is the only major) | No |
 | `INTERNAL_ERROR` | bug in the daemon; should be reported | Yes (rarely fixes itself) |
 
 `error.data` MAY carry structured detail (e.g. `{ "expected_uid": 501, "got_uid": 0 }` for the auth check, or `{ "files_done": 1234, "files_total": 5000 }` for `INDEX_NOT_READY` — same shape as `progress`).
+
+### 14.1 MCP-shim transport errors (`DAEMON_UNAVAILABLE` / `DAEMON_DOWN`)
+
+The `rts-mcp` shim's connection manager (Plan
+`docs/plans/2026-05-19-004-feat-mcp-server-resilience-plan.md`, v0.6+,
+capability `mcp_connection_resilience`) surfaces two **shim-emitted**
+error codes when the daemon socket is mid-reconnect. These are not
+daemon-side codes — the daemon never emits them; they originate in
+the shim and reach the MCP host with custom JSON-RPC numeric codes
+distinct from the application range:
+
+| String code | Numeric code | Meaning | Retriable? |
+|---|---|---|---|
+| `DAEMON_UNAVAILABLE` | `-32098` | Transient: the shim is in `Reconnecting` state. `error.data.retry_after_ms` carries the wall-clock hint until the next reconnect attempt. `error.data.attempt` is the current retry attempt (1-indexed). | Yes — wait `retry_after_ms` and retry. |
+| `DAEMON_DOWN` | `-32097` | Sustained: reconnect attempts exhausted after `RTS_MCP_RECONNECT_MAX_ATTEMPTS` (default 8); ceiling-interval (`RTS_MCP_RECONNECT_CEILING_SECS`, default 30) retries continue forever. `error.data.first_failure_ms_ago` carries how long the daemon has been unreachable. | Eventually — recovery promotes back to `Connected` automatically when the daemon returns; agents seeing this should surface to the user. |
+
+Both shapes set `error.data.transient: true|false` so agents can branch
+on a single boolean without parsing the code string.
+
+**Heartbeat ↔ idle-shutdown interaction.** The shim's heartbeat issues
+`Daemon.Ping` every `RTS_MCP_HEARTBEAT_INTERVAL_SECS` (default 10s).
+The daemon's idle-shutdown is already gated on `active_connections > 0`
+(§15.2), but the heartbeat additionally bumps `last_activity` so a
+future loosening of the connection-count gate still sees fresh
+traffic. **An MCP shim that's still attached keeps its daemon alive —
+this is intentional.**
+
+**Environment knobs** (all have documented defaults; nothing requires
+user setup):
+
+| Env var | Default | Effect |
+|---|---|---|
+| `RTS_MCP_HEARTBEAT_INTERVAL_SECS` | `10` | Wait between heartbeat `Daemon.Ping` calls. |
+| `RTS_MCP_HEARTBEAT_TIMEOUT_SECS` | `3` | Per-ping timeout; on timeout the manager demotes to `Reconnecting`. |
+| `RTS_MCP_RECONNECT_MAX_ATTEMPTS` | `8` | Bounded attempts before transitioning to `Down`. Retries continue at ceiling forever after. |
+| `RTS_MCP_RECONNECT_CEILING_SECS` | `30` | Backoff ceiling. Schedule is `1s, 2s, 4s, 8s, 16s, 30s, 30s, …`. |
+
+Source of truth: `crates/rts-mcp/src/connection.rs`.
+
+**`Index.Grep` v2 sub-codes (v0.6, capability `index_grep_v2`).** Every v2 validation/execution error returns the protocol-level code `INVALID_PARAMS` and carries a stable `data.code` string that lets agents branch without parsing free-form messages. The strings are documented in §7.8b's "v0.6 additions" table; the closed set is:
+
+`MULTILINE_REQUIRES_REGEX`, `STRUCTURAL_REQUIRES_LANGUAGE`, `NO_SEARCH_SOURCE_PROVIDED`, `INVALID_TEXT_LENGTH`, `STRUCTURAL_QUERY_INVALID`, `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`, `WITHIN_SYMBOL_NOT_FOUND`, `WITHIN_SYMBOL_TOO_MANY_DEFS`, `REGEX_TOO_COMPLEX`, `STRUCTURAL_QUERY_TIMEOUT`, `UNKNOWN_LANGUAGE`.
+
+Source of truth: `crates/rts-daemon/src/methods/grep_v2/errors.rs`.
 
 ---
 
@@ -1420,8 +1707,10 @@ This appendix tracks every additive wire-shape change between Draft 1 (P5 delive
 | `alpha.33` | (none — internal) | **v0.3 U3**: `closure::compute` swaps from at-query-time tree-sitter parsing to reading `SID_REFS_OUT`. Same wire shape; faster cold calls. Also fixed a latent local-variable bug in U1's `enclosing_caller_sid` that under-populated `SID_REFS_OUT`. | — |
 | `alpha.34` | `pagerank_symbolwise` | **v0.3 U4**: symbol-level PageRank fills `rank_score` in `Index.FindSymbol` and `Index.FindCallers` responses (was a `0.0` placeholder). `Index.FindSymbol.matches[]` sorts by descending rank by default; `sort: "lexical"` opts out. Single-slot generation-keyed cache mirroring `OutlineCache` (alpha.20). | §4.1, §4.2, §7.6, §18.3 |
 | `alpha.35` | `impact_of` | **v0.3 U5** (final): new method `Index.ImpactOf(name, depth?, token_budget?, max_nodes?, exclude_test_paths?)` returns the transitive caller closure via BFS over reverse edges. Four independent truncation flags (`closure_truncated`, `wall_clock_truncated`, `depth_truncated`, `node_count_truncated`) tell the agent why a result is partial. Test-path exclusion (`/tests/`, `_test.rs`, `.spec.ts`) is on by default. Wire shape trimmed from the plan's 9 fields to 6 per Deepening §F3 (no `signature`, no nested `callers[]`). | §4.1, §4.2, §7, §7.7d, §18.4d |
+| `v0.6 alpha` | `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2` | **`Index.Grep` v2** (`index_grep_v2` bundle): five additive optional input fields (`multiline`, `structural_query`, `within_symbol`, `within_symbol_allow_overload`, `language`); per-match `captures` on structural results; top-level `truncated`/`truncation_reason`/`rows_seen`/`rows_returned` on cap breaches; `partial_failures[]` on cross-language structural runs. 11 new `data.code` sub-codes under `INVALID_PARAMS`. Predicate whitelist (7 entries) on agent-supplied S-expression queries. Three new `Daemon.Stats` sub-counters. v1 callers unchanged byte-for-byte. | §4.1, §7.8b, §14 |
+| `v0.6 alpha` | (shim-only — no daemon capability) | **MCP shim resilience** (Plan 004): `rts-mcp` connection manager adds background heartbeat (`Daemon.Ping` every `RTS_MCP_HEARTBEAT_INTERVAL_SECS`, default 10s) and reconnect-with-backoff. Tool calls during a disconnect window return two new MCP-shim error codes: `DAEMON_UNAVAILABLE` (numeric `-32098`, transient — `error.data.retry_after_ms` hint) and `DAEMON_DOWN` (numeric `-32097`, sustained). Schedule: `1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s`; ceiling-interval retries continue forever past the bounded-attempt cap. Daemon wire protocol unchanged. | §14.1 |
 
-Capability strings present in `Daemon.Ping.result.capabilities` after alpha.35 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`.
+Capability strings present in `Daemon.Ping.result.capabilities` after alpha.35 (canonical list, in advertisement order): `outline`, `find_symbol`, `read_symbol`, `read_range`, `rank_score`, `tree_shake`, `partial_responses`, `content_version`, `secrets_blocklist`, `pagerank_filewise`, `closure_walker`, `read_symbol_at`, `fuzzy_match`, `polling_fallback`, `find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`. v0.6 alpha appends `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2` (see §7.8b).
 
 **v0.3 plan complete:** all four code-graph KB capability strings (`find_callers`, `read_symbol.include_callers`, `pagerank_symbolwise`, `impact_of`) advertised. The `call_graph` umbrella reserved string remains unused — agents branch on the four fine-grained strings instead.
 

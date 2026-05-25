@@ -9,21 +9,28 @@
 
 #![deny(unsafe_code)]
 
+mod cancel;
 mod closure;
 mod error;
 mod filter;
+mod fingerprint;
+mod gitignore_hash;
 mod impact;
 mod language;
+mod latency;
 mod lifecycle;
 mod methods;
 mod outline;
 mod path;
 mod protocol;
+mod reconciler;
 mod refs;
 mod socket;
 mod state;
 mod store;
 mod symbol_pagerank;
+#[cfg(feature = "telemetry")]
+mod telemetry_ticker;
 mod watcher;
 mod workspace;
 mod writer;
@@ -240,6 +247,18 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
         lifecycle::idle_shutdown_timer(idle_state, idle, idle_cancel).await;
     });
+
+    // Opt-in telemetry ticker (feature-gated). The ticker itself only
+    // schedules and shells out to `rts telemetry flush`; the daemon
+    // links zero HTTP code paths regardless of feature state.
+    #[cfg(feature = "telemetry")]
+    {
+        let tcancel = cancel.clone();
+        let tstate = state.clone();
+        tokio::spawn(async move {
+            telemetry_ticker::run(tstate, tcancel).await;
+        });
+    }
 
     let result = socket::accept_loop(listener, state, cancel.clone()).await;
 

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Daemon.Telemetry.resp.schema.json",
+  "title": "Daemon.Telemetry result",
+  "description": "v0.6+, capability `daemon_telemetry`. Raw collector snapshot. Keys are sourced from closed-enum strings — no user-controlled identifiers reach the wire.",
+  "type": "object",
+  "properties": {
+    "uptime_secs":            { "type": "integer", "minimum": 0 },
+    "languages_indexed":      { "type": "array", "items": { "type": "string" } },
+    "method_counts": {
+      "description": "Map of method-name -> call count. Zero counts and `unknown_method` are dropped.",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "method_latency_p50_ms":  { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+    "method_latency_p99_ms":  { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+    "error_counts":           { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+    "cache_hit_rate": {
+      "description": "Aggregate cache hit rate in [0.0, 1.0]; `null` when no cache observations have been recorded.",
+      "type": ["number", "null"]
+    },
+    "cold_walk_ms_p50": {
+      "description": "p50 cold-walk duration in ms; `null` until at least one cold walk has completed.",
+      "type": ["integer", "null"]
+    },
+    "workspace_files":        { "type": "integer", "minimum": 0 },
+    "unresolved_refs_count": {
+      "description": "Capability `daemon_telemetry_unresolved_refs_count`. Number of entries in the UNRESOLVED_REFS multimap — references the indexer couldn't bind to a defined symbol (forward references awaiting a later commit, or true externals like stdlib `Vec`/`println!`). Point-in-time; lower is better. 0 pre-Mount.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "unresolved_refs_gc_runs_total": {
+      "description": "Capability `daemon_telemetry_unresolved_refs_gc`. Cumulative number of UNRESOLVED_REFS GC invocations since daemon start — one bump per removed file the writer processed. Paired with `unresolved_refs_gc_dropped_total` so observers can distinguish 'GC is firing but finding nothing' from 'GC is not firing'. Reset on daemon restart.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "unresolved_refs_gc_dropped_total": {
+      "description": "Capability `daemon_telemetry_unresolved_refs_gc`. Cumulative number of UNRESOLVED_REFS rows the daemon's GC has dropped — orphaned forward-reference entries whose source file was deleted. Bounds the growth of `unresolved_refs_count`. Reset on daemon restart.",
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "uptime_secs",
+    "languages_indexed",
+    "method_counts",
+    "method_latency_p50_ms",
+    "method_latency_p99_ms",
+    "error_counts",
+    "cache_hit_rate",
+    "cold_walk_ms_p50",
+    "workspace_files",
+    "unresolved_refs_count",
+    "unresolved_refs_gc_runs_total",
+    "unresolved_refs_gc_dropped_total"
+  ]
+}

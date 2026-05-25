@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.ImpactOf.resp.schema.json",
+  "title": "Index.ImpactOf result",
+  "description": "Per protocol-v0.md §7.7d. Transitive caller closure via BFS over reverse edges. Four independent truncation flags tell agents why a result is partial.",
+  "type": "object",
+  "properties": {
+    "impact": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qualified_name": { "type": "string" },
+          "kind":           { "type": "string" },
+          "file":           { "type": "string" },
+          "range": {
+            "type": "object",
+            "properties": {
+              "start_byte": { "type": "integer", "minimum": 0 },
+              "end_byte":   { "type": "integer", "minimum": 0 },
+              "start_line": { "type": "integer", "minimum": 0 },
+              "end_line":   { "type": "integer", "minimum": 0 }
+            },
+            "required": ["start_byte", "end_byte", "start_line", "end_line"]
+          },
+          "depth":      { "type": "integer", "minimum": 1 },
+          "rank_score": { "type": "number" }
+        },
+        "required": ["qualified_name", "kind", "file", "range", "depth", "rank_score"]
+      }
+    },
+    "closure_truncated":    { "type": "boolean" },
+    "wall_clock_truncated": { "type": "boolean" },
+    "depth_truncated":      { "type": "boolean" },
+    "node_count_truncated": { "type": "boolean" },
+    "tokens_returned":      { "type": "integer", "minimum": 0 },
+    "token_counter":        { "type": "string" }
+  },
+  "required": ["impact", "closure_truncated", "wall_clock_truncated", "depth_truncated", "node_count_truncated", "tokens_returned", "token_counter"]
+}

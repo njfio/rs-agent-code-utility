@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.FindCallers.resp.schema.json",
+  "title": "Index.FindCallers result",
+  "description": "Per protocol-v0.md §7.7c. Direct callers of the named symbol. Capped at 256 entries.",
+  "type": "object",
+  "properties": {
+    "callers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "enclosing_qualified_name": { "type": ["string", "null"] },
+          "kind":                     { "type": ["string", "null"] },
+          "file":                     { "type": "string" },
+          "range": {
+            "type": "object",
+            "properties": {
+              "start_byte": { "type": "integer", "minimum": 0 },
+              "end_byte":   { "type": "integer", "minimum": 0 },
+              "start_line": { "type": "integer", "minimum": 0 },
+              "end_line":   { "type": "integer", "minimum": 0 }
+            },
+            "required": ["start_byte", "end_byte", "start_line", "end_line"]
+          },
+          "enclosing_def_range": {
+            "description": "Null when caller_sid is None (file-scope call).",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "properties": {
+                  "start_byte": { "type": "integer", "minimum": 0 },
+                  "end_byte":   { "type": "integer", "minimum": 0 },
+                  "start_line": { "type": "integer", "minimum": 0 },
+                  "end_line":   { "type": "integer", "minimum": 0 }
+                },
+                "required": ["start_byte", "end_byte", "start_line", "end_line"]
+              }
+            ]
+          },
+          "rank_score": { "type": "number" }
+        },
+        "required": ["enclosing_qualified_name", "kind", "file", "range", "enclosing_def_range", "rank_score"]
+      }
+    },
+    "truncated": { "type": "boolean" }
+  },
+  "required": ["callers", "truncated"]
+}

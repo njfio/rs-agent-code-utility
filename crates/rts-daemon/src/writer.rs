@@ -169,6 +169,38 @@ async fn run(
                         );
                         cold_walk_in_progress = false;
                         last_durability_flush = Instant::now();
+                        // v0.6 Daemon.Stats v2 (`daemon_stats_v2`
+                        // capability): stamp the cold-walk completion
+                        // time once the batch is durable. Read by
+                        // doctor + agent-bench preflight to tell
+                        // "indexing in progress" from "index ready"
+                        // without polling Workspace.Status. Set after
+                        // the flush so a reader observing a non-zero
+                        // value is guaranteed the index is committed.
+                        let now_ms = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_millis() as u64)
+                            .unwrap_or(0);
+                        state.cold_walk_completed_at_ms.store(
+                            now_ms,
+                            std::sync::atomic::Ordering::Relaxed,
+                        );
+                        // v0.6+ telemetry collector: push this cold
+                        // walk's duration onto the rolling window
+                        // that feeds `cold_walk_ms_p50`. We compute
+                        // the duration as `completed - started` —
+                        // `started` was stamped in `methods::workspace::
+                        // mount_inner` just before `initial.spawn`.
+                        // If `started` is 0 (rehydrate path, or the
+                        // workspace was unmounted before this code
+                        // ran) we skip the push rather than report a
+                        // garbage 1748-billion-ms outlier.
+                        let started_ms = state
+                            .cold_walk_started_at_ms
+                            .load(std::sync::atomic::Ordering::Relaxed);
+                        if started_ms > 0 && now_ms >= started_ms {
+                            state.record_cold_walk_duration_ms(now_ms - started_ms);
+                        }
                     }
                     Some(WatchEvent::Rescan) => {
                         // Kernel watch buffer overflowed; index state may be
@@ -283,9 +315,8 @@ fn flush(
     // Fan parses out across rayon's pool. The parse step is the heavy
     // work in a flush (tree-sitter parse + symbol extraction +
     // tempfile-driven analyzer call), and `ParserPool::parse_and_extract`
-    // is safe to call concurrently — the per-language parser cache
-    // entry is short-locked just to seed-if-vacant, and the actual
-    // parse uses a fresh local `CodebaseAnalyzer` per call.
+    // is safe to call concurrently — `parse_content` constructs a fresh
+    // local parser per call and shares no state across threads.
     use rayon::prelude::*;
     let paths: Vec<PathBuf> = upserts.drain().map(|(p, _)| p).collect();
     let results: Vec<(PathBuf, Result<FileBatchEntry, ParseRejected>)> = paths
@@ -325,6 +356,42 @@ fn flush(
             FileBatchRemoval { path: rel }
         })
         .collect();
+
+    // UNRESOLVED_REFS garbage collection (PR #128, capability
+    // `daemon_telemetry_unresolved_refs_gc`). When a file is removed
+    // from disk, any rows it parked in `UNRESOLVED_REFS` become
+    // orphans — no source-code call site remains behind them. PR #126
+    // exposed the row count as `Daemon.Telemetry.unresolved_refs_count`
+    // but the count was unbounded without this GC pass. Run BEFORE
+    // `commit_batch` so the count we record matches what an external
+    // observer would see; `commit_batch`'s `drop_file_entries` then
+    // finds the rows already gone and contributes no additional work.
+    if !removal_vec.is_empty() {
+        let removed_paths: Vec<PathBuf> = removal_vec.iter().map(|r| r.path.clone()).collect();
+        match store.gc_unresolved_refs_for_removed_files(&removed_paths) {
+            Ok(dropped) => {
+                state.unresolved_refs_gc_runs_total.fetch_add(
+                    removed_paths.len() as u64,
+                    std::sync::atomic::Ordering::Relaxed,
+                );
+                if dropped > 0 {
+                    state
+                        .unresolved_refs_gc_dropped_total
+                        .fetch_add(dropped, std::sync::atomic::Ordering::Relaxed);
+                }
+            }
+            Err(e) => {
+                // Best-effort: GC failure must not stop the writer from
+                // committing the file removals themselves. The next
+                // removal that lands will retry the cleanup.
+                warn!(
+                    error = %e,
+                    paths = removed_paths.len(),
+                    "unresolved_refs GC failed; continuing"
+                );
+            }
+        }
+    }
 
     let upserted = store.commit_batch(batch, removal_vec, durability)?;
     if upserted > 0 {
@@ -637,20 +704,45 @@ fn lang_tag(language: Language) -> u8 {
     }
 }
 
+/// Inverse of `lang_tag`: turn a stored numeric tag back into the
+/// telemetry-bounded language enum string (matches the
+/// `rts-mcp::telemetry::LANGUAGE_NAMES` allowlist exactly).
+///
+/// Returns `None` for unknown tags so the telemetry collector silently
+/// drops them — defense in depth against an old / corrupt META row
+/// leaking through the bounded-enum boundary.
+pub fn lang_tag_to_name(tag: u8) -> Option<&'static str> {
+    Some(match tag {
+        1 => "rust",
+        2 => "javascript",
+        3 => "typescript",
+        4 => "python",
+        5 => "c",
+        6 => "cpp",
+        7 => "go",
+        8 => "java",
+        9 => "php",
+        10 => "ruby",
+        11 => "swift",
+        12 => "csharp",
+        _ => return None,
+    })
+}
+
 /// Per-call parser facade. v0 created a fresh `CodebaseAnalyzer` per
 /// call and round-tripped the content through a tempfile via
 /// `analyzer.analyze_file`; the alpha.29 perf reviewer audit (H1)
 /// flagged that as the writer's biggest hot-path waste — tree-sitter
-/// accepts content directly through `analyze_content`, no tempfile
-/// or re-read needed.
+/// accepts content directly. Post-PR-B (B2), this delegates to
+/// `rust_tree_sitter::parse_content`, the daemon-facing facade built
+/// over `Parser::new` + the hoisted `extract_symbols` free function.
 ///
 /// The type is kept around (vs an inline call) for two reasons:
 ///
 /// 1. The writer's `flush()` rayon `into_par_iter().map(...)` closure
-///    captures `&ParserPool` (originally for the mutex-protected
-///    parser cache). Keeping the type lets us extend it later with
-///    rayon-thread-local analyzer storage, when/if benches show that
-///    `CodebaseAnalyzer::new()` per call is itself measurable.
+///    captures `&ParserPool`. Keeping the type lets us extend it
+///    later with rayon-thread-local parser storage, when/if benches
+///    show that fresh-`Parser` per call is itself measurable.
 /// 2. Tests in the writer module exercise this surface via
 ///    `ParserPool::new().parse_and_extract(...)`.
 struct ParserPool;
@@ -663,13 +755,12 @@ impl ParserPool {
     /// Parse `content` for `language` and return the extracted symbols.
     ///
     /// Bypasses the filesystem entirely — content goes straight into
-    /// `CodebaseAnalyzer::analyze_content`, which parses with
-    /// tree-sitter and runs the per-language symbol extractor. No
-    /// tempfile, no disk round-trip.
+    /// `rust_tree_sitter::parse_content`, which parses with tree-sitter
+    /// and runs the per-language symbol extractor. No tempfile, no
+    /// disk round-trip.
     fn parse_and_extract(&self, language: Language, content: &str) -> anyhow::Result<Vec<Symbol>> {
-        use rust_tree_sitter::CodebaseAnalyzer;
-        let mut analyzer = CodebaseAnalyzer::new()?;
-        Ok(analyzer.analyze_content(content, language)?)
+        let outcome = rust_tree_sitter::parse_content(content, language)?;
+        Ok(outcome.symbols)
     }
 }
 
@@ -711,15 +802,17 @@ mod tests {
         );
     }
 
-    /// **Known issue**: as of `0.2.0-alpha.15` the analyzer's
+    /// **Known issue**: as of `0.2.0-alpha.15` the
     /// `extract_java_symbols` / `extract_c_symbols` / `extract_cpp_symbols`
-    /// paths return empty when called via the writer's tempfile route
-    /// (the `extract_*_symbols` methods in `rust_tree_sitter::analyzer`
-    /// are TODO-stubbed for these languages). The SignatureRenderer for
-    /// these languages works (covered by 22 unit tests in
+    /// paths return empty when called via `parse_content`
+    /// (these per-language extractors in `rust_tree_sitter::extraction`
+    /// are TODO-stubbed). The SignatureRenderer for these languages
+    /// works (covered by 22 unit tests in
     /// `rust_tree_sitter::signature::tests`), but they won't get
-    /// signature-rendered through `Index.ReadSymbol` until the writer's
-    /// upstream extraction is fixed in a follow-up PR. Go works.
+    /// signature-rendered through `Index.ReadSymbol` until the
+    /// extractors are filled in. Go works. Post-PR-B (B1) the
+    /// `ParseOutcome::partial_errors` slot reserves room for the
+    /// extractors to self-report this gap without a breaking change.
     #[test]
     fn parse_and_extract_returns_go_symbols() {
         let pool = ParserPool::new();

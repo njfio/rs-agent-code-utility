@@ -26,17 +26,11 @@
 //!
 //! ### Scope (v0)
 //!
-//! Tags.scm precision is wired for **Rust, Python, Go, Ruby** — the
-//! four languages whose upstream `tree-sitter-*/queries/tags.scm`
-//! ships clean `@reference.call` (and `@reference.implementation`
-//! for Rust) captures with `@name` sub-captures.
-//!
-//! For the other seven languages (C, C++, Java, JavaScript, TypeScript,
-//! PHP, Swift), the upstream tags.scm either omits `@reference.*`
-//! captures or uses different conventions. Those fall through to the
-//! existing regex tokenizer — **no regression** vs alpha.26. A v1.1
-//! slice adds locally-authored query overrides for the remaining
-//! languages once they have a concrete user asking.
+//! Tags.scm precision is wired for **Rust, Python, Go, Ruby,
+//! JavaScript, TypeScript, Java, PHP, Swift, C#** — 10 of the 12
+//! indexed languages. C and C++ stay on the regex tokenizer for now
+//! (function-pointer calls look identical to identifier references,
+//! so the precision win is smaller).
 
 use rust_tree_sitter::{Language, Parser, query::Query};
 
@@ -143,14 +137,13 @@ pub(crate) fn references_for_path(rel_path: &str, content: &str) -> Vec<String> 
 /// writer (v0.3 U1) to populate the persistent ref graph.
 ///
 /// For languages with a tags.scm reference query (Rust, Python, Go,
-/// Ruby, JavaScript, TypeScript), each hit carries a precise byte
-/// range from the `@name` capture. For fallback-regex languages
-/// (C, C++, Java, PHP, Swift) we synthesize the byte range as
-/// `start = end = 0` and 1-based `start_line = end_line = 1` —
-/// enough to populate the index for "who calls X?" queries but not
-/// precise enough for "show me the call site." This trade-off
-/// matches v0.2 behavior: those languages already use the regex
-/// path for closure-walker identifier extraction.
+/// Ruby, JavaScript, TypeScript, Java, PHP, Swift, C#), each hit
+/// carries a precise byte range from the `@name` capture. For the
+/// remaining regex-fallback languages (C, C++) we synthesize the
+/// byte range as `start = end = 0` and 1-based
+/// `start_line = end_line = 1` — enough to populate the index for
+/// "who calls X?" queries but not precise enough for "show me the
+/// call site."
 pub(crate) fn references_with_ranges(rel_path: &str, content: &str) -> Vec<RefHit> {
     if let Some(info) = crate::language::info_for_path(rel_path) {
         if let Some(query) = crate::language::cached_refs_query(&info) {
@@ -350,16 +343,148 @@ function caller(): JSX.Element {
     }
 
     #[test]
-    fn unsupported_language_returns_none_from_extract() {
-        // Java isn't wired in this slice; should return None and let
-        // the dispatcher fall through.
-        // (We can't pass an unsupported Language variant — the enum is
-        // exhaustive — but we can confirm the path-driven dispatcher
-        // routes via the regex.)
-        let src = "public class C { void f() { other(); } }";
-        let refs = references_for_path("X.java", src);
-        // Regex fallback picks up everything, including class/void/etc.
-        // The point is: it returns something non-empty.
-        assert!(!refs.is_empty());
+    fn java_references_capture_calls_and_object_creation() {
+        // `other()` is a call site; `new Widget()` is object creation.
+        // `local` is a local variable — regex tokenizer would include
+        // it; tags.scm-style query does not.
+        let src = "\
+public class C {
+    void caller() {
+        int local = 0;
+        other(local);
+        Widget w = new Widget(local);
+    }
+}";
+        let refs = references_for_path("C.java", src);
+        assert!(
+            refs.iter().any(|n| n == "other"),
+            "method call should be captured; got {refs:?}"
+        );
+        assert!(
+            refs.iter().any(|n| n == "Widget"),
+            "object creation should be captured; got {refs:?}"
+        );
+        assert!(
+            !refs.iter().any(|n| n == "local"),
+            "local var should not be a ref; got {refs:?}"
+        );
+        assert!(
+            !refs.iter().any(|n| n == "caller"),
+            "caller is a def, not a ref; got {refs:?}"
+        );
+    }
+
+    #[test]
+    fn php_references_capture_calls_member_and_static() {
+        // Mixes function call, member call, scoped (static) call,
+        // namespace-qualified call, and `new`. All should resolve;
+        // `$x` local variable should not.
+        let src = "<?php
+function caller() {
+    $x = 0;
+    bare_call($x);
+    $obj->member_call();
+    Klass::static_call();
+    \\Foo\\namespaced_call();
+    $w = new Widget();
+}
+";
+        let refs = references_for_path("a.php", src);
+        for expected in [
+            "bare_call",
+            "member_call",
+            "static_call",
+            "namespaced_call",
+            "Widget",
+        ] {
+            assert!(
+                refs.iter().any(|n| n == expected),
+                "expected {expected:?} in php refs; got {refs:?}"
+            );
+        }
+        assert!(
+            !refs.iter().any(|n| n == "x"),
+            "variable name should not be a ref; got {refs:?}"
+        );
+        assert!(
+            !refs.iter().any(|n| n == "caller"),
+            "caller is a def, not a ref; got {refs:?}"
+        );
+    }
+
+    #[test]
+    fn swift_references_capture_bare_and_method_calls() {
+        // Bare call, method call via navigation, and a trailing-closure
+        // call should all resolve.
+        let src = "\
+func caller() {
+    let local = 0
+    bareCall(local)
+    obj.methodName()
+    runWithClosure { _ in }
+}
+";
+        let refs = references_for_path("App.swift", src);
+        assert!(
+            refs.iter().any(|n| n == "bareCall"),
+            "bare call should be captured; got {refs:?}"
+        );
+        assert!(
+            refs.iter().any(|n| n == "methodName"),
+            "method call should be captured; got {refs:?}"
+        );
+        assert!(
+            refs.iter().any(|n| n == "runWithClosure"),
+            "trailing-closure call should be captured; got {refs:?}"
+        );
+        assert!(
+            !refs.iter().any(|n| n == "local"),
+            "local var should not be a ref; got {refs:?}"
+        );
+        assert!(
+            !refs.iter().any(|n| n == "caller"),
+            "caller is a def, not a ref; got {refs:?}"
+        );
+    }
+
+    #[test]
+    fn csharp_references_capture_calls_generics_and_new() {
+        // Bare, member, generic, generic-member, and `new` — all
+        // shapes should resolve. `local` should not.
+        let src = "\
+class C {
+    void Caller() {
+        int local = 0;
+        Bare(local);
+        obj.MemberCall(local);
+        Generic<int>(local);
+        obj.GenericMember<int>(local);
+        var w = new Widget(local);
+        var lst = new List<int>();
+    }
+}
+";
+        let refs = references_for_path("Program.cs", src);
+        for expected in [
+            "Bare",
+            "MemberCall",
+            "Generic",
+            "GenericMember",
+            "Widget",
+            "List",
+        ] {
+            assert!(
+                refs.iter().any(|n| n == expected),
+                "expected {expected:?} in c# refs; got {refs:?}"
+            );
+        }
+        assert!(
+            !refs.iter().any(|n| n == "local"),
+            "local var should not be a ref; got {refs:?}"
+        );
+        assert!(
+            !refs.iter().any(|n| n == "Caller"),
+            "Caller is a def, not a ref; got {refs:?}"
+        );
     }
 }

@@ -11,11 +11,32 @@ rust-version.workspace = true
 [lints]
 workspace = true
 
+[lib]
+# Library surface exists so the sibling `rts` CLI binary can reuse the
+# socket + daemon_client modules (auto-spawn, JSON-RPC framing) without
+# duplication. Server-side code (rmcp tool router) stays binary-internal.
+name = "rts_mcp"
+path = "src/lib.rs"
+
 [[bin]]
 name = "rts-mcp"
 path = "src/main.rs"
 
+[[bin]]
+# Human-facing CLI wrapper over the same JSON-RPC surface. See
+# docs/cli.md and docs/plans/2026-05-19-002-feat-human-cli-subcommand-plan.md.
+name = "rts"
+path = "src/bin/rts.rs"
+
 [dependencies]
+# Human-CLI subcommand parsing + colored terminal output. clap pulls in
+# anstream/anstyle transitively (already used for `--version`/help), and
+# `is-terminal` is one tiny crate for TTY detection. Both are added to
+# the shared crate so the `rts` binary can use them without forcing a
+# second crate.
+clap = { version = "4", features = ["derive", "wrap_help"] }
+clap_complete = "4"
+is-terminal = "0.4"
 # MCP SDK pin verified by the P0.1 spike (see spikes/p0-1-rmcp-hello/RESULTS.md):
 # - rmcp 1.6 requires schemars 1 (NOT 0.8). Mismatch produces a "two majors of
 #   schemars" duplicate-trait build failure.
@@ -56,5 +77,45 @@ unicode-normalization = "0.1"
 nix = { version = "0.29", features = ["user", "fs"] }
 libc = "0.2"
 
+# v0.6 anonymous opt-in telemetry: TOML for the local opt-in flag.
+# Pure-Rust, already in the workspace via rts-bench/rts-core; no new
+# transitive deps. Used only for `~/.config/rts/telemetry.toml` —
+# never for anything network-bound.
+toml = "0.8"
+
+# v0.6 anonymous opt-in telemetry HTTP client. Gated behind the
+# `telemetry` feature (default OFF) so the default build of the
+# `rts-mcp` and `rts` binaries still link zero HTTP code paths,
+# per AGENTS.md's "Dependency hygiene" rule. Operators / packagers
+# who want to ship telemetry support do `cargo build --features
+# telemetry`; the daemon's ticker is also feature-gated and shells
+# out to the `rts` binary for the actual POST, so the daemon itself
+# stays HTTP-free.
+ureq = { version = "2", default-features = false, features = ["tls"], optional = true }
+
+[features]
+default = []
+# Forward-looking gate for unstable surface. New MCP tools / `rts` CLI
+# subcommands land behind `#[cfg(feature = "experimental")]` until they're
+# promoted to the stable, frozen surface in a release (see AGENTS.md
+# "Experimental surface gate"). Off by default; empty today — nothing gated.
+experimental = []
+# Compile the HTTP client + `rts telemetry flush` send path. Opt-in
+# both at build time (this feature) and at runtime (`rts telemetry
+# enable`). Without this feature, `rts telemetry {status,preview,
+# enable,disable}` still work (they're local-only); `flush` returns
+# a "telemetry support not compiled in" error.
+telemetry = ["dep:ureq"]
+
 [dev-dependencies]
 tempfile = "3"
+
+# Public-API drift gate (see docs/public-api-gate.md + crates/rts-mcp/tests/public_api.rs).
+# These deps power a `cargo test`-time check that fails when the crate's
+# pub surface changes without an explicit snapshot update. Pattern matches
+# `cargo-public-api`'s own canonical CI recipe; no separate CI workflow.
+# Library exposes `MINIMUM_NIGHTLY_RUST_VERSION` — the nightly version is
+# pinned via the library, not a separate tool pin.
+public-api = "0.51"
+rustdoc-json = "0.9"
+rustup-toolchain = "0.1"
