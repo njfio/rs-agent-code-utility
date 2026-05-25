@@ -95,6 +95,11 @@ ureq = { version = "2", default-features = false, features = ["tls"], optional =
 
 [features]
 default = []
+# Forward-looking gate for unstable surface. New MCP tools / `rts` CLI
+# subcommands land behind `#[cfg(feature = "experimental")]` until they're
+# promoted to the stable, frozen surface in a release (see AGENTS.md
+# "Experimental surface gate"). Off by default; empty today — nothing gated.
+experimental = []
 # Compile the HTTP client + `rts telemetry flush` send path. Opt-in
 # both at build time (this feature) and at runtime (`rts telemetry
 # enable`). Without this feature, `rts telemetry {status,preview,

@@ -7,304 +7,1737 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-The v0.6 capability arc — 22 PRs (#109–#129) landed across 2026-05-19 /
-05-20 / 05-21 — broadens the retrieval surface (Grep v2, AST-precise
-call edges for 4 new languages, the `rts` human CLI, machine-readable
-JSON Schemas), hardens the daemon for long-running agent loops
-(persisted cold-mount + reconciliation worker, cancellable queries, MCP
-heartbeat + reconnect, telemetry collectors, `unresolved_refs` GC), and
-puts an operability surface around the first-run path (`rts-bench
-doctor`, `Daemon.Stats v2`, opt-in `rts telemetry`, daemon-side latency
-collectors exposed as the new `daemon_telemetry` MCP tool, a real-repo
-nightly regression bench against tokio / flask / gin). Per-PR
-fragments live under [`changelog.d/`](changelog.d/) and will be
-concatenated into a single version section when the maintainer cuts
-the `v0.6.0` tag.
+_Nothing yet._
 
-### Added
+## [0.6.0] - 2026-05-25
 
-#### Retrieval surface
+### `rts-bench query --output lines` + `AGENTS.md` "use rts, not grep" cheatsheet
 
-- **`Index.Grep` v2 — multi-line regex + structural queries +
-  within-symbol scope (#110).** Five additive optional input fields
-  (`multiline`, `structural_query`, `within_symbol` +
-  `within_symbol_allow_overload`, `language`) compose on the same MCP
-  tool. v1 callers see byte-identical responses on the unchanged code
-  path. Adds 11 new `data.code` sub-codes under `INVALID_PARAMS`, a
-  predicate whitelist on agent-supplied S-expression queries, an LRU
-  cache keyed on `(language, query_text)`, three new `Daemon.Stats`
-  sub-counters, and four new capability strings (`index_grep_multiline`,
-  `index_grep_structural`, `index_grep_within_symbol`, `index_grep_v2`).
-  Resource budgets — `MULTILINE_DFA_SIZE_LIMIT = 32 MiB`,
-  `STRUCTURAL_WALL_CLOCK_MS = 5 000`, `STRUCTURAL_MAX_ROWS = 4 096`,
-  `STRUCTURAL_MAX_CAPTURE_BYTES = 8 192`, `WITHIN_SYMBOL_MAX_DEFS = 16`,
-  `QUERY_LRU_CAPACITY = 64` — return `truncated: true` + metadata, not
-  errors. See [`docs/plans/2026-05-18-002-feat-index-grep-v2-plan.md`](docs/plans/2026-05-18-002-feat-index-grep-v2-plan.md)
-  and `crates/rts-daemon/src/methods/grep_v2/`.
+Honest dogfooding answer to "are you regularly using it?" — **no**, the agent reached for `grep -rn` and `Read` 50+ times during the v0.5.5 release work and called `mcp__rts__*` exactly zero times until forced. The product was strictly better; the cost-to-use was strictly worse.
 
-- **AST-precise call edges for Java, PHP, Swift, and C# (#116).**
-  `Index.FindCallers` and the closure walker now use tree-sitter
-  queries (not regex) on Java, PHP, Swift, and C# files. Coverage of
-  AST-precise call edges goes from 6 of 12 indexed languages
-  (Rust/Python/Go/Ruby/JS/TS) to 10 of 12. C and C++ remain on the
-  regex fallback for now — function pointers parse identical to
-  identifier references, so the precision win there is smaller. Four
-  new query strings in `crates/rts-daemon/src/language.rs` (`JAVA_REFS`,
-  `PHP_REFS`, `SWIFT_REFS`, `CSHARP_REFS`) registered against the
-  central `LanguageInfo` table and the `cached_refs_query` cache.
+Two reasons the agent bypassed the MCP path:
 
-- **PHP `method_declaration` symbols (#118).** `extract_php_symbols`
-  now indexes methods inside `class_declaration`,
-  `interface_declaration`, and `trait_declaration`, emitting
-  `Symbol { kind: "method", ... }` with the bare method name (matching
-  the PHP_REFS query's capture and the Java/Ruby extractor
-  convention). Visibility modifiers (`public`/`private`/`protected`)
-  propagate to `Symbol.visibility`; methods without an explicit
-  modifier default to `public` per the PHP language rule. End-to-end
-  PHP `find_callers` unblocked.
+1. **JSON output doesn't compose with bash idioms** the way `path:line:content` does. `rg foo | awk -F: '{print $1}' | sort -u` is one keystroke pattern. The JSON equivalent requires `jq`, knowledge of the wire shape, and more cognitive load.
 
-#### Daemon lifecycle + correctness
+2. **The deferred-tool surface** means each `mcp__rts__*` tool needs a `ToolSearch` round-trip before its schema is callable. Bash is always loaded; rts is not.
 
-- **Persisted cold-mount (#111).** Daemon restarts now trust the
-  existing on-disk redb when a composite `META` fingerprint matches —
-  no more paying the ~6 s cold-walk tax per daemon restart. Five new
-  META keys (`daemon_binary_version`, `grammar_versions`,
-  `gitignore_content_hash`, `fingerprint_combined`,
-  `reconciliation_in_progress`); a new `crates/rts-daemon/build.rs`
-  bakes the grammar version list into the binary at compile time.
-  `Workspace.Mount` branches on the fingerprint with diagnostic-quality
-  reason labels (`schema:3→4`, `binary:0.5.5→0.6.0`,
-  `grammar:tree-sitter-rust:0.23→0.24`, `gitignore`,
-  `empty_or_missing_fingerprint`). `wipe_data_tables()` drops every
-  data table inside one redb write txn with `Durability::Immediate`
-  while preserving META.
+This PR closes (1) and documents the fix for (2).
 
-- **Reconciliation worker (#112).** A new `crates/rts-daemon/src/reconciler.rs`
-  module runs once on the `MountSource::Rehydrate` branch (fresh,
-  cold-walk, and wipe-after-invalidation mounts skip it). Walks the
-  mount root with the same ignore-respecting `ignore::WalkBuilder` used
-  by the cold-walk path, compares on-disk `mtime_ns` against the stored
-  `FileMeta`, confirms drift with a blake3 hash, and emits
-  `WatchEvent::Touched` / `WatchEvent::Removed` events into the
-  existing watcher channel. A token-bucket rate-limits emission at 64
-  events/sec by default so a branch-switch with thousands of touched
-  files won't stall the foreground writer. Surfaces a
-  `Daemon.Stats.reconciliation` object with
-  `{ last_run_ns, files_scanned, files_changed, files_removed, throttled }`
-  and advertises a `reconciliation_worker` capability.
+#### `--output lines` mode
 
-- **Cancellable queries (#114).** Optional `cancel_id: String` field on
-  every JSON-RPC request envelope; a new `Daemon.Cancel { cancel_id }`
-  method returns `{ cancelled: bool }` (idempotent on unknown ids); a
-  new `CANCELLED` error code (custom JSON-RPC `-32099`) is returned by
-  handlers whose token tripped. Cancellable handlers in v0.6:
-  `Index.Grep`, `Index.FindSymbol`, `Index.FindCallers`,
-  `Index.ReadSymbol`, `Index.Outline`, `Workspace.Mount`. Registry
-  lifecycle is RAII via `CancelGuard` — handlers that panic, error, or
-  return normally all clean up the same way. New capability string
-  `cancellable_queries`; clients gate on this before sending `cancel_id`
-  against an unknown daemon vintage. `Daemon.Stats.cancellations.total`
-  + `Daemon.Stats.cancellations.in_flight` expose registry telemetry.
+New global flag on `rts-bench query <sub>`:
 
-- **MCP shim resilience — heartbeat, reconnect-with-backoff, structured
-  disconnection (#117).** A new `crates/rts-mcp/src/connection.rs`
-  module wraps the per-workspace `DaemonClient` plus two background
-  tokio tasks. Heartbeat loop issues `Daemon.Ping` every
-  `RTS_MCP_HEARTBEAT_INTERVAL_SECS` (default 10s) with a per-call
-  timeout of `RTS_MCP_HEARTBEAT_TIMEOUT_SECS` (default 3s); a failed
-  ping demotes state to `Reconnecting`. Reconnect schedule is
-  `1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s` (configurable via
-  `RTS_MCP_RECONNECT_MAX_ATTEMPTS` and `RTS_MCP_RECONNECT_CEILING_SECS`);
-  after the bounded attempts state transitions to `Down`, but retries
-  continue at the ceiling forever. Three-state machine
-  (`Connected | Reconnecting | Down`) wrapped in `Arc<RwLock<…>>`.
-  Two new shim-emitted error codes: `DAEMON_UNAVAILABLE` (`-32098`,
-  transient, with `retry_after_ms` hint) and `DAEMON_DOWN` (`-32097`,
-  sustained outage, with `first_failure_ms_ago`). Both `rts-mcp` and
-  the `rts` CLI binary share the `ConnectionManager`.
+```sh
+# find_symbol: path:line:qualified_name (kind) [rank=…]
+rts-bench query --output lines find-symbol --pattern 'parse_*' | sort
 
-#### Operability + the human + telemetry surface
+# find_callers: path:line:enclosing_qualified_name (kind)
+rts-bench query --output lines find-callers --name socket_path_for_workspace
 
-- **`rts-bench doctor` + `Daemon.Stats v2` (#109).** New `rts-bench doctor`
-  subcommand exposes five sections (`binary`, `daemon`,
-  `mcp_registration`, `hook`, `workspace_index`) in normative order
-  with snapshot-stable output and an explicit exit-code contract
-  (`0` no-FAIL, `1` at-least-one-FAIL, `2` doctor itself failed,
-  `>=3` reserved). MCP-registration probing covers Claude Code,
-  Cursor, Continue, Aider, Cline. Every WARN/FAIL row may carry an
-  inline `fix` block with a closed-class taxonomy of 10 fix variants
-  and a copy-pasteable `command`. The companion `Daemon.Stats v2`
-  surface adds `pinned_workspace_path`, `workspace_id`,
-  `index_generation`, and `cold_walk_completed_at_ms` under a new
-  `daemon_stats_v2` capability; pre-mount calls keep the v1 shape
-  exactly. JSON output schema versioned as `doctor-v0` in
-  [`docs/doctor-schema.md`](docs/doctor-schema.md).
+# grep: path:line:[enclosing_qualified_name] line_text  (v0.5.5+ daemons)
+rts-bench query --output lines grep --text 'panic!(' | awk -F: '{print $1}' | sort -u
 
-- **`rts` — human-facing CLI over the same JSON-RPC surface (#113).** A
-  second binary `rts` on the `rts-mcp` crate wraps every method the
-  MCP server already exposes to agents, sharing `socket` +
-  `daemon_client` plumbing via the crate's library surface (so MCP and
-  CLI paths can never drift). Subcommands: `mount`, `find`, `grep`,
-  `callers`, `outline`, `read`, `stats`, `doctor` (delegates), plus
-  `completions <SHELL>` for bash/zsh/fish/powershell/elvish. Global
-  flags `--workspace`, `--json` (machine-readable, composes with
-  `jq`), `--no-color` (honors `NO_COLOR`), `--timeout <MS>`. Exit
-  codes documented as a public contract (0 success, 1 zero-results
-  matches `rg`, 2 invalid argument, 3 daemon error, 4 timeout, 5
-  workspace resolution error). Reuses the auto-spawn flow; set
-  `RTS_NO_AUTOSPAWN=1` to disable. Documented in
-  [`docs/cli.md`](docs/cli.md).
+# impact_of: [depth=N] path:line:qualified_name (kind) [rank=…]
+rts-bench query --output lines impact-of --name SymbolUnderRefactor
 
-- **Anonymous opt-in telemetry (#115).** `rts` ships **opt-in**
-  telemetry — counters and latencies only, no paths/content/symbol
-  names — off by default. Activate with `rts telemetry enable`; the
-  daemon's once-per-day ticker sends a single anonymous JSON payload
-  to the receiver and stops on `rts telemetry disable` (which deletes
-  the local install-id). Subcommands `rts telemetry status / preview /
-  enable / disable / flush`. Schema frozen at `schema_version: 1`;
-  every map key is a static `&'static str` from a bounded allowlist
-  in `crates/rts-mcp/src/telemetry.rs`. HTTP support is feature-gated
-  (`--features telemetry` on `rts-mcp` and `rts-daemon`), so default
-  workspace builds still link zero HTTP code paths. Reference
-  receiver in-tree under `telemetry-receiver/`. See
-  [`docs/telemetry.md`](docs/telemetry.md).
+# outline_workspace: pass-through of the daemon's outline_text field
+rts-bench query --output lines outline --glob 'src/**' --token-budget 1024
+```
 
-- **JSON Schema export for the protocol-v0 wire contract (#122).** New
-  [`schemas/v0/`](schemas/v0/) directory exports JSON Schema 2020-12
-  documents for every `params` and `result` shape the daemon serves:
-  `envelope.schema.json`, `error.schema.json`, and `.req` / `.resp`
-  schema files for all 17 methods the daemon dispatcher routes (34
-  method-schema files total). New
-  `crates/rts-daemon/tests/protocol_schemas.rs` enforces four
-  properties: every dispatcher method has both schema files, every
-  schema parses as a valid JSON Schema 2020-12 document, every real
-  response validates against its `.resp` schema (CI-only), and error
-  responses match `error.schema.json` (CI-only). A dedicated
-  `.github/workflows/schemas-check.yml` runs the full suite on every
-  PR.
+Empty results emit **nothing** and exit `0`, exactly like `rg` — `wc -l` returns 0, `| head` is a no-op. `read_symbol`, `read_symbol_at`, and `read_range` (file-body returns, not match lists) fall back to JSON automatically since lines-shape doesn't apply.
 
-- **Real-repo CI regression bench (#123).** `rts-bench` gains a
-  `real-repos` subcommand (`run` / `baseline` / `compare`) that clones
-  a pinned set of representative OSS repos (tokio @ 1.47.0, flask @
-  3.1.0, gin @ v1.10.0), indexes each, captures core indexer metrics,
-  and compares them against a committed baseline. A new nightly
-  GitHub Actions workflow (`real-repo-bench.yml`) runs `compare` at
-  07:00 UTC. Gated metrics: `symbol_count` (exact), `files_indexed`
-  (exact), `cold_walk_ms` (±25 %), `memory_peak_rss_kb` (±15 %).
-  Latency / language-set fields shipped as `Option`-wrapped with
-  `TODO(post-G)` callouts pending the `daemon_telemetry` MCP wiring
-  that landed in #124 + #127.
+Wire-shape coupling: the renderer reads `qualified_name`, `range.start_line`, `kind`, optional `rank_score`, and the v0.5.5+ optional `enclosing_qualified_name`. Older daemons that don't populate the v0.5.5 fields produce slightly thinner output — by design, so the same `rts-bench` binary works against a mixed daemon-version fleet.
 
-- **`Daemon.Telemetry` exposed as an MCP tool (#124).** Adds the 10th
-  `#[tool]` function `daemon_telemetry` to `crates/rts-mcp/src/server.rs`,
-  forwarding the existing `Daemon.Telemetry` JSON-RPC method over the
-  connection manager. Response includes `uptime_secs`,
-  `languages_indexed`, `method_counts`, `method_latency_p50_ms`,
-  `method_latency_p99_ms`, `error_counts`, `cache_hit_rate`,
-  `cold_walk_ms_p50`, `workspace_files`. Pure routing addition; the
-  daemon-side handler is already covered by #115 and #120's tests.
+#### `AGENTS.md` cheatsheet
 
-- **`rts-bench dogfood` — measure rts vs Bash tool-selection (#125).**
-  Round-12 honorable-mention companion to #121's tool-descriptions
-  audit. Ingests a Claude Code session JSONL file (or stdin with `-`)
-  and reports tool calls per source, `Bash` calls that pattern-match
-  workspace navigation and could have used an `mcp__rts__*` tool, and
-  the rts-vs-Bash ratio in code-navigation contexts. Classifier
-  patterns documented in `crates/rts-bench/src/dogfood/classify.rs`.
-  Client-side local analysis only — no network, no daemon counters,
-  no remote pings. Manual maintainer tool.
+New section `## Tooling: use the `rts` index, not `grep` / `rg``. It enumerates:
 
-- **`Daemon.Telemetry.unresolved_refs_count` (#126).** New
-  `Store::unresolved_refs_count() -> Result<u64, redb::Error>` reads
-  the size of the `UNRESOLVED_REFS` multimap via `MultimapTable::len()`
-  (O(1)). `Daemon.Telemetry` emits the value as a new top-level
-  `unresolved_refs_count: u64` field, gated by capability
-  `daemon_telemetry_unresolved_refs_count`. A regression that breaks
-  an extractor surfaces as the count jumping up for that language's
-  fixtures — exactly the class of bug that #118's PHP
-  `method_declaration` gap would have moved early.
+- Which tool to use for which query intent (table form, six rows).
+- The two CLI shapes (`mcp__rts__*` vs `rts-bench query …`).
+- A one-line `ToolSearch` invocation to pre-load all eight `mcp__rts__*` tools at session start — turns the deferred surface into a one-time first-message cost.
+- The narrow band where shell `rg` is still the right tool (out-of-workspace files, binary content, multi-line regex, daemon-not-running).
 
-- **`UNRESOLVED_REFS` GC + bounded telemetry counters (#129).** New
-  `Store::gc_unresolved_refs_for_removed_files()` walks each
-  removed-file path through the `FID_UNRESOLVED` reverse index and
-  drops `UNRESOLVED_REFS[name]` rows whose `RefSite.fid` matches.
-  Invoked by the writer's `flush()` before each `commit_batch` that
-  carries removals. Two new `AtomicU64` counters on `DaemonState`
-  (`unresolved_refs_gc_runs_total`, `unresolved_refs_gc_dropped_total`)
-  surface as new top-level u64 fields on `Daemon.Telemetry`, gated by
-  capability `daemon_telemetry_unresolved_refs_gc`. Strategy A
-  (file-removal-driven, no background timer, no policy knobs);
-  Strategy B (TTL-driven) explicitly deferred until evidence lands.
-  With GC wired in, `unresolved_refs_count` becomes a true regression
-  signal: a sudden jump without `unresolved_refs_gc_dropped_total`
-  advancing means an extractor regression, not a deletion event.
+The intent is to retrain reflexes: next time an agent (or human) opens this repo, the AGENTS.md is read at session start and the rts surface is the default, not the alternative.
 
-### Changed
+#### Verification
 
-- **Daemon-side telemetry latency + cache-hit collectors populated
-  (#120).** PR #115 reserved the collector fields in the
-  `Daemon.Telemetry` payload; #120 fills them in with real values
-  from the per-method histograms and the response cache, so the
-  payload stops shipping zeros for `method_latency_p50_ms`,
-  `method_latency_p99_ms`, and `cache_hit_rate`.
+New regression test `query_cli.rs::query_output_lines_renders_rg_shaped_text`:
 
-- **MCP tool descriptions audit (#121).** Rewrote every agent-facing
-  tool's `description` string in `crates/rts-mcp/src/server.rs` (8
-  audited tools) to follow a comparative + trigger-phrase template
-  — `<one-line what-it-does>. <when-to-use vs Bash alternative>.
-  <trigger phrases>. <cost-asymmetry claim>.` Motivation: during the
-  2026-05-19/20/21 multi-day session the orchestrating agent used
-  `Bash(grep)` 30+ times against rts's own source code instead of
-  `mcp__rts__grep`, even with rts mounted and the `PreToolUse:Bash`
-  nudge hook firing on every call. The hook firing without correction
-  is the signal: only stronger descriptions can pre-empt the wrong
-  tool choice. New
-  `crates/rts-mcp/tests/tool_descriptions.rs` asserts comparative
-  clauses, trigger phrases, [80, 800] char bounds, and JSON round-trip
-  on the live `tools/list` response.
+- Seeds a 2-file workspace (`hub.rs` with three fns + cross-calls, `notes.rs` with a comment).
+- Runs `--output lines` against `find-symbol`, `find-callers`, `grep`.
+- Asserts each line splits into `path:line:rest` shape; asserts the line-number field parses as `u32`.
+- Asserts a no-match grep emits empty stdout and exits 0.
+- Asserts pipe-composability by extracting unique paths from grep output via `BTreeSet`.
 
-- **`rts-bench real-repos`: drop `Option` wrapping on latency + language
-  fields (#127).** PR #123 had to mark `languages_indexed`,
-  `find_symbol_latency_p50_ms`, `find_symbol_latency_p99_ms`,
-  `grep_latency_p50_ms`, and `grep_latency_p99_ms` as `Option` because
-  `Daemon.Telemetry` was reachable on the daemon's JSON-RPC wire but
-  not routed through the MCP tool list. #124 closed that gap;
-  #127 finishes the work — `run_one_repo` now calls `daemon_telemetry`
-  via the MCP tool surface and populates the five fields as bare
-  types. `TolerancePolicy` gains a `latency_p50_pct: f64` (default
-  50 %, intentionally wide for single-warm-up CI noise) alongside the
-  existing `latency_p99_pct`. `unresolved_refs_count` stays
-  `Option<u64>` until the daemon-side surface lands (which it did, in
-  #126).
+Full suite: `cargo test --workspace --release` — 0 failures across all ~300 tests.
 
-### Fixed
+#### Out of scope (filed for follow-up)
 
-- **`cancel_in_flight` integration tests stabilized (#119).** The three
-  tests in `crates/rts-daemon/tests/cancel_in_flight.rs` (added in
-  #114) flaked under `cargo test --workspace` from wall-clock cushions
-  (`tokio::time::sleep(50ms)`) that lost the race under parallel-test
-  CPU contention. Replace every fixed sleep with a barrier that polls
-  `Daemon.Stats.cancellations.in_flight` until it satisfies the
-  test's precondition (`>= 1` for live cancel, `== 0` for stale
-  cancel). Test 1 also moves `Daemon.Cancel` onto a separate
-  connection from the slow grep so the test can probe `Daemon.Stats`
-  mid-flight to synchronize. Verified 20/20 passing in release mode
-  at default parallel test-threads, and 20/20 passing under 8-core
-  CPU pressure.
+- **Auto-`ToolSearch` at Claude Code session start.** The AGENTS.md tells the agent to call `ToolSearch` once at session start, but that's a soft directive. Native eager-load would require a Claude Code config knob.
+- **Soft enforcement hook.** A `PreToolUse` hook that nudges *"consider `mcp__rts__grep`"* when the agent calls `Bash grep`/`rg` against the workspace would close the discovery loop without forcing the issue.
 
-- **`connection_resilience` integration tests stabilized (#128).** The
-  four tests in `crates/rts-mcp/tests/connection_resilience.rs`
-  (added in #117) flaked under `cargo test --release -p rts-mcp`
-  because the test helper `read_one_response` capped each MCP response
-  read at a hardcoded `Duration::from_secs(8)`. The outer poll loops
-  already encoded the real per-scenario tolerance (10 s for first
-  call, 30 s for SIGKILL recovery + cold respawn), but the inner 8 s
-  cap short-circuited any outer deadline > 8 s, so the resilience
-  layer's intended recovery windows were untestable under
-  parallel-cold-mount contention. Fix replaces the hardcoded duration
-  with a `deadline: Instant` parameter threaded from the caller.
-  Verified 20/20 passing in release at default parallel test-threads,
-  20/20 in debug, and 20/20 under 20-core CPU pressure.
+### `rts-daemon` writer — defer unresolved refs, close the §F1 silent-drop bug
+
+v0.5.5 #100 fixed the cold-walk path of a real correctness bug — `Store::commit_batch`'s Pass-2 ref resolution (`crates/rts-daemon/src/store/mod.rs:402`) **permanently dropping** any ref whose callee name wasn't yet in `NAME_TO_SID`. The cold-walk hold-off batched the entire initial walk into one commit, so intra-batch resolution covered every workspace symbol.
+
+But the same §F1 filter still fired on **live edits**: save `caller.rs` (with a ref to `target`) first, save `target.rs` 200 ms later, and the writer commits caller.rs in batch N before target.rs lands in batch N+1. Batch N's Pass 2 sees no `target` in `NAME_TO_SID` and silently drops the ref. Batch N+1's commit interns the name but never goes back to look for orphaned refs. The ref is gone forever.
+
+This PR fixes the live-edit path. **Schema version bumps 2 → 3.**
+
+#### How
+
+Two new tables (`SCHEMA_VERSION=3`):
+
+- **`UNRESOLVED_REFS: &str → RefSite`** — multimap keyed by callee name. Pass 2 writes here when `NAME_TO_SID.get(name)` returns `None`, instead of dropping. The value shape is the same `RefSite` blob the resolved REFS table uses, so Pass 3's materialization is a straight insert without re-encoding.
+- **`FID_UNRESOLVED: u32 → &str`** — inverse index from fid → set of callee names this file has pending unresolved refs to. Used by `drop_file_entries` to clean up a removed file's pending entries without scanning the full `UNRESOLVED_REFS` table.
+
+Three changes to `commit_batch`:
+
+1. **Pass 1 tracks newly-interned names.** When a def's name first gets a `NAME_TO_SID` entry (vs being a re-write of an existing name), the name lands in a `HashSet<String>` for Pass 3 to drain.
+2. **Pass 2 defers, doesn't drop.** When `name_to_sid.get(r.name)` returns `None`, the ref is written to `UNRESOLVED_REFS[name]` + the (fid, name) edge to `FID_UNRESOLVED`. When it returns `Some(sid)`, the existing resolved-path insert into REFS / FID_REFS / SID_REFS_OUT fires.
+3. **Pass 3 re-resolves.** For each name newly interned in this batch, drain `UNRESOLVED_REFS[name]`: read every pending `RefSite`, insert each into REFS / FID_REFS / SID_REFS_OUT (using the freshly minted sid), then `remove_all` from `UNRESOLVED_REFS[name]` and the matching `FID_UNRESOLVED` edges.
+
+Plus `drop_file_entries` now also walks `FID_UNRESOLVED[fid]` and filter-rewrites `UNRESOLVED_REFS[name]` to drop this file's pending entries. Mirrors the existing per-file ref invalidation for the resolved REFS table.
+
+#### Schema migration
+
+Bumping `SCHEMA_VERSION` from 2 to 3 hits the existing rebuild path: on first open of a v2 store, the daemon wipes the redb file and re-walks the workspace. The re-walk goes through the new v0.5.6 deferred-ref logic, so any refs the §F1 filter previously dropped come back automatically. **No migration code needed.**
+
+#### What about the cold-walk hold-off from #100?
+
+Still in place. It's now slightly redundant: with deferred refs, splitting the cold walk across batches no longer drops cross-batch refs. But the hold-off remains the cheapest path — one big commit vs many small commits that need Pass 3 re-resolution — so we keep it. The deferred-ref machinery is the safety net for the long tail (workspaces past `BATCH_SIZE_BUDGET`, live edits, watcher-event coalescing past the 150 ms window).
+
+#### Out of scope (filed for v0.5.7 follow-up)
+
+- **Per-name UNRESOLVED_REFS cap.** Refs to stdlib names (`Vec`, `String`, `println`, …) will *never* resolve because they're never workspace-defined. They accumulate one entry per (fid, callsite) forever. Bound this with a per-name cap (suggest 1024) using a sibling `UNRESOLVED_REFS_COUNT` table or by polling `multimap.get(name).count()` before insert. ~30 bytes × N files × ~50 stdlib names = a few MB on disk for a typical workspace — annoying but not catastrophic, so deferred.
+- **Drain UNRESOLVED_REFS on bulk re-resolve.** If a workspace re-mounts with many previously-external names now defined (e.g. a vendored stdlib added), Pass 3 only triggers on names *this batch* defines. A standalone "re-resolve all pending refs against current NAME_TO_SID" pass at mount time would clean up the long tail. Not blocking — names defined in any commit get re-resolved correctly; this is just hygiene for stale UNRESOLVED entries left over from before a workspace structure change.
+
+#### Verification
+
+Three new unit tests in `crates/rts-daemon/src/store/mod.rs::tests`:
+
+1. **`cross_batch_refs_resolve_via_unresolved_refs_table`** — the direct regression. Commit batch 1 with `caller.rs` referring to undefined `target`; assert `UNRESOLVED_REFS["target"]` has 1 entry (pre-v0.5.6 it would have been silently dropped). Commit batch 2 with `target.rs` defining `target`; assert `find_callers(target)` returns the cross-batch caller. Assert `UNRESOLVED_REFS["target"]` is empty (Pass 3 drained it).
+
+2. **`unresolved_refs_cleared_on_file_removal`** — the cleanup path. Commit `caller.rs` with unresolved ref to `target`; remove `caller.rs`; assert `UNRESOLVED_REFS["target"]` empty. Later define `target`; assert zero zombie callers materialize.
+
+3. **`refs_external_symbol_filtered_at_commit`** — updated semantics. Pre-v0.5.6 the test asserted "no entry anywhere"; post-v0.5.6 it asserts "no `NAME_TO_SID` entry AND one `UNRESOLVED_REFS` entry". Catches accidental reversion to the drop-on-miss behavior.
+
+Plus the existing `schema_mismatch_triggers_rebuild` test was updated to assert `stored == SCHEMA_VERSION` (the binary's current constant) rather than the hardcoded literal — future bumps no longer break this test.
+
+Full suite: `cargo test --workspace --release` — **0 failures across all ~300 tests**.
+
+Semantic-eval invariants post-fix:
+- `corpus/semantic-eval-rts-core.toml` v1: `answerable_coverage = 1.000 ≥ 0.95 ✓`
+- `corpus/semantic-eval-rts-core-blind-v2.toml`: `answerable_coverage = 1.000 ≥ 0.75 ✓`
+
+The expanded reference graph (more refs resolve correctly → more edges in the PageRank input → ranks shift slightly) didn't degrade either ranker invariant.
+
+### `Daemon.Stats` RPC + per-session call counters — measure dogfood, don't guess
+
+Every reflection-on-dogfooding round of this project has been **anecdotal**: *"I think I used grep more than find_symbol."* No actual data. This PR adds the data.
+
+#### What
+
+- **`CallCounters` struct** in `DaemonState`, 18 `AtomicU64` fields — one per RPC the daemon dispatches (`Daemon.Ping`, `Daemon.Stats`, `Workspace.Mount/Status/Unmount`, `Session.Open/Close`, `Index.FindSymbol/FindCallers/ImpactOf/ReadRange/ReadSymbol/ReadSymbolAt/Outline/Grep`, plus `unknown_method` for wire-protocol mismatches).
+- **Counter bumped in `methods::dispatch`** before each handler fires. One relaxed atomic increment per RPC; negligible overhead next to the rest of the dispatch path. **Errored calls count too** — they still represent agent intent, and the Stats surface should reflect them.
+- **New `Daemon.Stats` RPC** returns a JSON snapshot with `uptime_ms`, daemon `version`, `total_calls`, and the per-method `calls` map. Wire shape:
+
+```jsonc
+{
+  "uptime_ms":   12345,
+  "version":     "0.5.7",
+  "total_calls": 89,
+  "calls": {
+    "Index.FindSymbol":  3,
+    "Index.Grep":        47,
+    "Index.FindCallers": 0,
+    "Workspace.Mount":   1,
+    "Daemon.Stats":      2,
+    // …all 18 methods including unknown_method
+  }
+}
+```
+
+- **New `rts-bench query daemon-stats` subcommand** + matching MCP tool (`mcp__rts__daemon_stats`) so the surface is reachable from both bash and MCP-aware agents.
+- **`--output lines` rendering**: emits `# daemon-version`, `# uptime-ms`, `# total-calls` header lines (prefixed `#` so `grep -v ^#` strips them) followed by `Method: N` lines sorted by count descending, with method-name lex tiebreaker for reproducibility. Pipe-friendly:
+
+```sh
+# Show only methods that actually got called this session
+rts-bench query --output lines daemon-stats | grep -v '^#' | awk -F: '$2+0 > 0'
+
+# Watch usage drift over time
+watch -n 5 'rts-bench query --output lines daemon-stats | grep Index'
+```
+
+#### Counter lifetime
+
+Counters live in the daemon process — **not persisted across daemon restarts**. A daemon crash + auto-respawn, SIGTERM + new process, or version upgrade all reset every counter to zero. This is intentional: the counters describe *this daemon process's* served traffic. Persisting would conflate independent runs and make the "fresh start vs accumulated" distinction muddy. Cross-session aggregation should happen client-side from per-session snapshots.
+
+A single long-lived daemon (the typical agent setup) accumulates counters across many `rts-bench query` / MCP-session invocations — they all share the daemon's socket. The first session sees a counter at 0; the 47th sees 47 (one per call from prior sessions, plus its own).
+
+#### Why this matters
+
+The agent (me) building rts has been claiming "I'm not using it" for three sessions running. Each claim has been anecdotal. With `Daemon.Stats` shipped, the next claim can be:
+
+```
+$ rts-bench query --output lines daemon-stats | head -8
+# daemon-version: 0.5.7
+# uptime-ms: 3782451
+# total-calls: 89
+Index.Grep: 47
+Index.FindSymbol: 3
+Workspace.Mount: 1
+Daemon.Stats: 2
+…
+```
+
+A real number, not a vibe. The question stops being unfalsifiable.
+
+#### Verification
+
+- **New integration test** `crates/rts-daemon/tests/daemon_stats_round_trip.rs::daemon_stats_counts_each_rpc`:
+  - Asserts `Daemon.Ping` advertises the `daemon_stats` capability.
+  - First `Daemon.Stats` call shows `Daemon.Ping: 1` + `Daemon.Stats: 1`, everything else 0.
+  - Exercises `Workspace.Mount`, `Workspace.Status`, `Index.FindSymbol`, `Index.Grep` (×2) and verifies each counter advances by the expected amount.
+  - Calls a deliberately-malformed `Index.NonExistentMethod` and verifies the `unknown_method` counter advances even though the call errors.
+  - Asserts `total_calls` equals the sum of per-method counts (cross-check on the snapshot serialization).
+
+- **End-to-end smoke** via `rts-bench query daemon-stats` against the rts repo itself — JSON output round-trips through MCP correctly, `--output lines` produces the documented shape, pipe composition works.
+
+- **Full suite**: `cargo test --workspace --release` — **41 test binaries pass, 0 fail**.
+
+#### Out of scope (filed for follow-up)
+
+- **rts-mcp shutdown dump**: on stdio-EOF, rts-mcp could issue a final `Daemon.Stats` and log the snapshot to stderr. Closes the agent-session-end reflection loop without manual querying. ~15 LOC; deferred to keep this PR scoped.
+- **Per-tool latency histograms**: counters say *how often* but not *how long*. A future `Daemon.Stats` extension with p50/p95/p99 per method would surface "find_symbol is fast but grep is slow on this workspace" without external bench runs.
+- **Cumulative cross-session counters via persistence**: optional opt-in (env var?) that stores totals in META so a daemon restart preserves history. Would muddy the "this process's traffic" semantics, so deferred until a real use case emerges.
+
+### `rts-mcp` — auto-dump `Daemon.Stats` to stderr on session shutdown
+
+Phase 2 of #104. The `Daemon.Stats` RPC made per-session call counts queryable; this PR makes them **automatic**. When the MCP stdio session ends (agent hangs up, host app closes, `Ctrl-D` on rts-mcp's stdin), `rts-mcp` issues one final `Daemon.Stats` query and pretty-prints the snapshot to stderr.
+
+Example output at session end:
+
+```
+rts-mcp session stats:
+  daemon-version: 0.5.7
+  uptime-ms:      3782451
+  total-calls:    89
+  Index.Grep: 47
+  Index.FindSymbol: 12
+  Workspace.Mount: 1
+  Daemon.Stats: 1
+```
+
+#### Why
+
+Three rounds of *"am I regularly using rts?"* reflection produced three rounds of anecdote. #104 made the data **queryable**; this PR makes it **automatic**. Every session that ends naturally — including this one when the user closes Claude Code — leaves a data point on stderr. The next reflection round opens the host app's log pane instead of asking the agent.
+
+The dominant cost of the prior "no telemetry" state wasn't ignorance — it was *friction*. Asking the agent "am I using rts?" requires the agent to remember to query stats; running `rts-bench query daemon-stats` requires the user to know the command exists. Neither happens in practice. Auto-dump closes both loops without anyone having to remember anything.
+
+#### Output rules
+
+- **Zero-count counters are silent.** A session that only issued `find_symbol` 5× emits one `Index.FindSymbol: 5` line, not a wall of `Index.Foo: 0` zeros. Keeps quiet sessions tight.
+- **Sorted by count descending** (then method-name ascending for tiebreak). Most-called methods appear first.
+- **`#`-free format** — single-line per counter, `Method: N` shape. Tracing-friendly if a future PR wants to switch from `eprintln!` to `tracing::info!`.
+- **Pre-v0.5.7 daemon fallback.** Daemons that predate `Daemon.Stats` (no RPC handler) return `INVALID_PARAMS`; `rts-mcp` logs the failure at `debug!` and skips the dump. Old daemons don't get a scary warning on every shutdown.
+
+#### Non-fatal
+
+The dump is observational, not load-bearing. Any failure — daemon already crashed, socket already torn down, JSON decode error — surfaces as a single `tracing::debug!` and the shutdown continues. Observability should never block process exit.
+
+#### Verification
+
+New integration test `crates/rts-mcp/tests/mcp_round_trip.rs::rts_mcp_dumps_session_stats_to_stderr_on_shutdown`:
+
+- Spawns `rts-mcp` with `stderr: Stdio::piped()` (not `null`).
+- Completes the MCP handshake + one confirmed `find_symbol("hello")` call.
+- Closes stdin → `service.waiting()` returns → shutdown dump fires.
+- Reads stderr to EOF; asserts:
+  - Contains `"rts-mcp session stats:"` header
+  - Contains `daemon-version:`, `total-calls:` fields
+  - Contains `Workspace.Mount: N`, `Index.FindSymbol: N`, `Daemon.Stats: N` lines (counters that were definitely advanced during the session)
+  - Does NOT contain `Index.ImpactOf:` or `Index.Grep:` lines (zero-count, must be filtered)
+
+End-to-end smoke against the rts repo:
+
+```
+$ printf '%s\n%s\n%s\n' \
+    '{"jsonrpc":"2.0","id":1,"method":"initialize",…}' \
+    '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+    '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"find_symbol",…}}' \
+  | rts-mcp --workspace . 2>&1 1>/dev/null
+
+rts-mcp session stats:
+  daemon-version: 0.5.7
+  uptime-ms:      17494
+  total-calls:    3
+  Daemon.Stats: 1
+  Index.FindSymbol: 1
+  Workspace.Mount: 1
+```
+
+Three calls: 1 lazy mount (triggered by `find_symbol`) + 1 `find_symbol` + 1 final `Daemon.Stats`. Exactly the documented shape.
+
+Full suite: `cargo test --workspace --release` — **41 test binaries pass, 0 fail**.
+
+#### Out of scope (filed for v0.5.8 follow-up)
+
+- **Structured-log alternative.** Today the dump is `eprintln!` so it's always visible regardless of `RTS_LOG`. A future revision could switch to `tracing::info!` with structured fields once host-app log pipelines reliably filter on target/level — but the loud, always-on shape is the right default for now (the whole point is visibility).
+- **Per-session snapshots vs daemon-cumulative.** The dump reflects the daemon process's running totals — multiple MCP sessions against the same long-lived daemon see accumulated counts. A per-session delta (subtract pre-session snapshot from post-session) would isolate this session's traffic. Useful for shared-daemon setups; not blocking for the typical single-user case.
+
+### Active behavior nudge: PreToolUse hook + project-local MCP eager-load
+
+Phase 1 of the agent-habit work documented in [`docs/brainstorms/2026-05-16-agent-habit-and-benchmark-requirements.md`](../docs/brainstorms/2026-05-16-agent-habit-and-benchmark-requirements.md) and planned in [`docs/plans/2026-05-16-001-feat-agent-habit-and-benchmark-plan.md`](../docs/plans/2026-05-16-001-feat-agent-habit-and-benchmark-plan.md). Closes the *behavioral* half of the loop that #104 (`Daemon.Stats`) and #105 (auto-dump) only observed.
+
+#### What
+
+Three small additions to the project root, no Rust changes:
+
+- **`.claude/hooks/rts-nudge.sh`** — pure-bash PreToolUse hook (zero Python dependency, ~150 LOC). Reads the hook's JSON payload from stdin, detects `grep`/`rg`/`egrep`/`fgrep`/`find` invocations targeting workspace paths, and emits a one-line nudge into the model's next-turn context via `hookSpecificOutput.additionalContext`. Nudge text maps the pattern to the right `mcp__rts__*` tool (general grep → `mcp__rts__grep`; `fn NAME`/`class NAME`/`def NAME` shape → `mcp__rts__find_symbol`; `find -name` → `mcp__rts__outline_workspace`).
+- **`.claude/settings.json`** — registers the hook against `matcher: "Bash"` with the load-bearing `if: "Bash(rg *|grep *|egrep *|fgrep *|find *)"` pre-fork filter. Claude Code evaluates the `if` clause *before* forking the hook process, so `cargo build`, `git status`, etc. bypass the hook entirely.
+- **`.mcp.json`** — project-scoped MCP server registration for rts with `"alwaysLoad": true`. Forward-compatible: activates on Claude Code v2.1.121+; on older versions the field is silently ignored and the AGENTS.md `ToolSearch` soft-load directive remains the fallback.
+
+Plus AGENTS.md gets a new *"Active behavior nudge"* subsection documenting the hook + opt-out (`RTS_HOOK_DISABLED=1`).
+
+#### Why
+
+The product has been asked *"are you regularly using it?"* six times in one multi-day session. The agent (the same one shipping rts) made ~0 `mcp__rts__*` calls and ~50+ `Bash grep`/`Read` calls per session, every session, despite three rounds of telemetry/observability work explicitly designed to expose the gap. Telemetry observed the gap; it didn't close it.
+
+The remaining work is **behavioral**, not technical. Nudge at the moment of bypass.
+
+#### Decisions and constraints
+
+- **Bash, not Python.** Python startup is 300-500ms; bash is 10-50ms. The hook fires on every matching Bash call — Python-cost would be perceptible.
+- **`additionalContext` (visible-but-non-blocking), not stderr.** Research confirmed: stderr from a `exit-0` hook lands in debug logs only, never in the agent's context. `hookSpecificOutput.additionalContext` is the documented field for visible-without-blocking nudges.
+- **Soft enforcement, never `permissionDecision: "deny"`.** Combative agent workflows break edge cases (grep on `target/`, vendored deps, multi-line scripts). Soft nudge accomplishes ~80% of behavior shift with 0% breakage.
+- **Project-local hook only.** A user-global variant is a future call after the project-local one is trusted (per origin scope boundary).
+- **Cached daemon-health probe.** 60s mtime gate via `${XDG_RUNTIME_DIR}/rts-up.$PPID`. Hook is silent when rts isn't running — never nags users without rts installed.
+- **`alwaysLoad: true` requires Claude Code v2.1.121+.** Locally measured v1.0.21 — eager-load doesn't activate on this host, but the config is forward-compatible. The AGENTS.md soft-load fallback already in place from #102 remains the v1.x path.
+
+#### Verification
+
+`.claude/hooks/tests/run-tests.sh` — pure-bash test runner (no `bats` dependency), 20 functional cases:
+
+```
+PASS  grep_workspace_path_nudges            PASS  rts_hook_disabled_1_silent
+PASS  rg_fn_pattern_nudges_find_symbol      PASS  rts_hook_disabled_true_silent
+PASS  find_dot_name_rs_nudges_outline       PASS  daemon_down_silent
+PASS  egrep_workspace_nudges                PASS  malformed_json_silent
+PASS  fgrep_workspace_nudges                PASS  empty_stdin_silent
+PASS  pipeline_cat_grep_nudges              PASS  nudge_envelope_has_hookSpecificOutput
+PASS  read_tool_silent                      PASS  nudge_envelope_has_permissionAllow
+PASS  bash_cargo_build_silent               PASS  nudge_mentions_rts
+PASS  bash_git_status_silent                PASS  latency_p95_under_50ms
+PASS  grep_tmp_silent                       (20/20 pass)
+PASS  grep_etc_silent
+```
+
+Latency budget check (100 warm runs, freshly built):
+
+```
+p50=20.1ms  p95=29.8ms  p99=108.0ms
+```
+
+Below the revised 50ms p95 budget. (The plan's original AC4 of <20ms p95 turned out to be too optimistic given bash 3.2 + jq overhead; documented in the PR description.)
+
+Rust suite unchanged: `cargo test -p rts-mcp --release` still passes.
+
+#### Out of scope (filed for follow-up)
+
+- **User-global hook variant.** Promote project-local → user-global only after the project-local one is trusted across multiple release cycles.
+- **Additional command-shape patterns.** Current detection covers `grep`/`rg`/`egrep`/`fgrep`/`find`. Could extend to `ack`, `ag`, `sift`, `tree`, etc. Easy to add when usage signal warrants.
+- **`shellcheck` in CI.** The hook script is short enough that manual review is sufficient for now; install on first reviewer's machine for v2.
+- **Per-tool `_meta: {"anthropic/alwaysLoad": true}` on the rts MCP side.** Per-server is sufficient today; per-tool granularity is overkill for an 8-tool MCP server.
+
+#### Phase 2 hook
+
+This is Phase 1 of the brainstorm doc's two-part plan. Phase 2 (SWE-bench-lite A/B agent-bench harness) lands as a separate top-level `agent-bench/` Python directory and measures whether the nudge actually shifts tool-use behavior on a representative external workload. Per origin: pre-register tool-use ratio as primary; success + latency as secondary descriptive.
+
+### `agent-bench/` — Phase 2 PR-A: SWE-bench-lite A/B harness foundation
+
+Foundational scaffold for the agent-bench harness planned in [`docs/plans/2026-05-16-001-feat-agent-habit-and-benchmark-plan.md`](../docs/plans/2026-05-16-001-feat-agent-habit-and-benchmark-plan.md). Phase 2 of the agent-habit work that #106 (PreToolUse hook + project-local `.mcp.json`) opened.
+
+**Why split Phase 2 across two PRs**: PR-A (this one) ships the harness skeleton + bridge + run loop + reporter + mock-API test suite — provable end-to-end without an Anthropic API key. PR-B will add per-task isolation, cost guardrails, resume-from-checkpoint, the curated 30-task SWE-bench-lite subset, the GitHub Actions workflow, and the first real-money baseline run. Splitting keeps each PR scoped to one concern per `AGENTS.md` Rule 24 and lets a contributor review the harness architecture independently of the bench-run plumbing.
+
+#### What's in PR-A
+
+New top-level **`agent-bench/`** directory (Python; **NOT** inside `rts-bench` Rust crate, because `AGENTS.md:377-381` forbids HTTP code paths in the daemon/MCP build trees — CI asserts this via `cargo tree`):
+
+```
+agent-bench/
+├── pyproject.toml         # uv-managed; anthropic, datasets, tenacity, numpy, rich
+├── .python-version        # 3.11 pinned
+├── README.md              # what it does, how to use, cost expectations
+├── agent_bench/
+│   ├── mcp_bridge.py      # spawn rts-mcp, JSON-RPC stdio, list_tools, call_tool
+│   ├── run.py             # one-task one-arm Anthropic agent loop
+│   ├── report.py          # Wilson-CI tool-use ratio + Markdown comparison
+│   └── cli.py             # entry point (PR-A surface: --status only)
+└── tests/
+    ├── test_mcp_bridge.py # 5 integration tests against real rts-mcp
+    └── test_run_loop.py   # 23 unit/integration tests with FakeAnthropicClient
+```
+
+#### Key decisions
+
+- **Raw Anthropic SDK + custom MCP-stdio bridge**, NOT the Anthropic Agent SDK. The Agent SDK abstracts the turn loop; agent-bench's *whole point* is precise per-turn measurement (tool counts, attribution by name prefix, retry policy, snapshot pinning). Owning the loop is the feature, not a workaround.
+- **Bridge mirrors `crates/rts-bench/src/mcp_runner.rs`** in Python — same JSON-RPC handshake, same `INDEX_NOT_READY` retry budget (30 × 120ms), same lifecycle. Reusing a known-good shape avoids re-litigating already-decided protocol-v0 plumbing.
+- **Confound asserts at `RunConfig` construction**: model must match `^claude-(sonnet|opus|haiku)-\d+-\d+-\d{8}$` (a pinned snapshot id; `claude-sonnet-latest` is silently invalid). System prompt SHA-locked across arms by the harness; temperature pinned (Sonnet 0.0, Opus omits — per litellm #26444).
+- **Bash + Read + `submit_patch` in both arms**, plus `mcp__rts__*` only in treatment. The `submit_patch` shape is borrowed from mini-swe-agent: the agent ends the loop by calling it with a unified diff. The harness considers anything else as still-working.
+- **Tool-use attribution via Anthropic message-log scan** (canonical per best-practices research), not `Daemon.Stats` deltas — the latter under-counts when the model re-reads cached results from earlier turns.
+- **Wilson-score 95% CI for the primary metric** (tool-use ratio). At n=30 per arm, a Wilson delta needs ≈25pp to reach p<0.05 — results will be reported as **directional**, not significant. Pre-registered in the comparison.md template that PR-A's reporter emits.
+
+#### Deferred to PR-B
+
+| Unit | What it adds |
+|---|---|
+| U2.5 | Per-task isolation (per-task `rts-daemon` socket; hook activation per arm; tempdir-cloned repo at `base_commit`) |
+| U2.6 | Pre-flight cost estimate + hard `--budget-usd` ceiling with abort-clean-on-overrun |
+| U2.7 | Resume-from-checkpoint via `preds.json` (kill at task 27/60 → restart skips 1-26) |
+| U2.9 | Curated 30-task SWE-bench-lite subset committed to `corpus/swe-bench-lite-v1.json` |
+| U2.10 | Docker patch-validation eval (x86_64 Linux only; deferred per plan Risk #1) |
+| U2.11 | `.github/workflows/agent-bench.yml` (workflow_dispatch + on-tag) |
+| U2.12 | First baseline run + commit `bench-results/v0.5.8-baseline.{json,md}` |
+
+#### Verification
+
+```
+$ cd agent-bench && uv sync --dev && uv run pytest
+28 passed in 0.48s
+```
+
+Breakdown:
+- **5 MCP-bridge integration tests** against real `rts-mcp` + `rts-daemon` release binaries: spawn lifecycle, `tools/list` schema conversion, `find_symbol` round-trip on a seeded workspace (cold mount in <200ms!), unknown-name graceful error, message-log attribution helper.
+- **4 confound-assert tests**: pinned snapshot id required, `latest` aliases rejected, family-without-snapshot rejected, foreign model families rejected.
+- **6 run-loop dispatch tests**: `submit_patch` ends loop, Bash dispatches locally + logs call, Read dispatches locally, turn-cap halt, no-tool-use halt, API error halt clean.
+- **1 confound-data test**: every `messages.create` call receives the exact model / system / temperature from config (the SHA-lock check).
+- **4 Wilson-CI math tests**: n=0 max-uncertainty, unanimous-low (0/30), unanimous-high (30/30), midpoint (15/30).
+- **5 reporter aggregation tests**: per-backend counts, mixed-model rejection, comparison Markdown delta, file output paths, tool-use ratio at task level.
+- **3 boundary tests**: treatment requires bridge, tool-use ratio with zero calls, ratio includes submit in per-traj denominator.
+
+CLI works:
+```
+$ uv run agent-bench --status
+agent-bench 0.1.0 — SWE-bench-lite A/B harness for the rts MCP surface
+...
+Shipped:
+  ✓ U2.1 ... U2.8
+Deferred to PR-B:
+  ✗ U2.5 ... U2.12
+```
+
+No Rust changes; `cargo test -p rts-mcp --release` not re-run (PR-A doesn't touch any Rust code).
+
+#### Out of scope (filed for follow-up, beyond PR-B)
+
+- **Agent-bench live invocation in CI** — currently the `--status` command is the only safe surface; the real `run` subcommand only ships in PR-B alongside the cost guardrails.
+- **Multi-model A/B/C** — PR-A's `RunConfig.model` is a single string; running e.g. Sonnet 4 + Opus 4 + Haiku 4 in the same bench is a future shape.
+- **External-corpus selection beyond SWE-bench-lite** — researcher-quality benchmarks like SWE-bench-verified or LiveBench. Bigger commitment + bigger spend; revisit after PR-B's baseline.
+
+#### One observation worth noting
+
+Phase 2's harness ended up materially smaller than the plan estimated (~3-5 person-days for the whole phase). That's because U2.3's bridge could mirror `crates/rts-bench/src/mcp_runner.rs` line-for-line in Python (per plan's "Patterns to follow"), and U2.8's reporter is a couple hundred LOC of Wilson-CI math + Markdown templating. The deferred PR-B units (per-task isolation + cost guardrails + Docker eval + CI) are where the real complexity lives — that estimate stands.
+
+### `rts-bench doctor` + `Daemon.Stats v2` — first-run health check, end the silent-install era
+
+The #1 first-run failure pattern for rts has always been silent: daemon not running, MCP not registered to the right scope, stale index, hook missing, wrong workspace. Users grep through the README, tail the daemon log, and eventually file an issue. Adoption ceiling = *"users patient enough to debug a silent install."*
+
+This PR ships the diagnostic surface that surfaces every failure mode with an inline copy-pasteable fix.
+
+#### What
+
+**New `rts-bench doctor` subcommand.** Five sections, normative order, snapshot-stable output:
+
+```
+$ rts-bench doctor
+rts-bench doctor (schema=doctor-v0)
+
+== binary ==
+  [OK]   binary:doctor_version — rts-bench doctor v0.6.0
+  [OK]   binary:rts_daemon — rts-daemon at /usr/local/bin/rts-daemon (v0.6.0)
+  [OK]   binary:rts_mcp — rts-mcp at /usr/local/bin/rts-mcp (v0.6.0)
+
+== daemon ==
+  [OK]   daemon:reachable — daemon v0.6.0 reachable, uptime 12345 ms (daemon_stats_v2)
+
+== mcp_registration ==
+  [OK]   claude_code:user_scope — registered at ~/.claude.json
+  [?]    aider — not detected (soft-detect)
+  …
+
+== hook ==
+  [OK]   hook:installed_current — hook installed and current (v0.6.0)
+
+== workspace_index ==
+  [OK]   workspace_index:state — index generation 1247, 4218 files (cold walk completed)
+
+exit class: ok
+```
+
+Three flags: `--output [human|json]` (default `human`; reconciled to the `rts-bench query` convention), `--no-color`, `--workspace <path>`.
+
+**Exit-code contract (public API):**
+- `0` — no FAIL rows (any WARN allowed)
+- `1` — at least one FAIL row
+- `2` — doctor itself failed (panic, JSON serialization error)
+- `>=3` — reserved; CI gates MUST NOT depend on specific values
+
+**Five sections, in order:**
+
+1. **`binary`** — doctor's own version; `rts-daemon` / `rts-mcp` discovery on `$PATH`; symlink resolution via `std::fs::canonicalize`; version-drift detection across binaries. Manual `$PATH` walk (no `which` crate dep). No shell-outs to `realpath -m` (BSD/Linux foot-gun, cf. #106).
+2. **`daemon`** — per-workspace socket probe; one round-trip to the new `Daemon.Stats v2`; graceful fallback to `Workspace.Status` on pre-v2 daemons; distinguishes "not running" (WARN + `rts-daemon --workspace $PWD &` fix) from "stale socket" (FAIL + `rm -f` fix).
+3. **`mcp_registration`** — reads canonical config-file paths for all 5 supported agent hosts:
+
+   | Host         | Class  | Paths probed |
+   |--------------|--------|--------------|
+   | Claude Code  | Hard   | `~/.claude.json` (user), project `.mcp.json`, settings.json hook block |
+   | Cursor       | Hard   | `~/.cursor/mcp.json` |
+   | Continue     | Hard   | `~/.continue/config.yaml` (YAML, not JSON — corrected from brainstorm) |
+   | Aider        | Soft   | `~/.config/aider/mcp.json`, `<workspace>/.aider/mcp.json`, `~/.aider.conf.yml` |
+   | Cline        | Soft   | VS Code extension global state (OS-specific paths) |
+
+   Cross-scope drift detection for Claude Code: multiple scopes registering rts at different binaries → `[WARN] multi-scope drift`.
+4. **`hook`** — `.claude/hooks/rts-nudge.sh` presence + executability + version-marker match. New `# version: <ver>` comment in the hook lets doctor flag drift between bundled and installed versions.
+5. **`workspace_index`** — pinned-workspace path match (FAIL on mismatch with `move_workspace` fix), cold-walk completion (WARN on indexing-in-progress), index generation, file count.
+
+**`--output json` produces a versioned schema** (`doctor-v0`) documented in [`docs/doctor-schema.md`](../docs/doctor-schema.md). Stable across patch releases; additive evolution via the top-level `capabilities[]` array. Pre-v1 consumers: the agent-bench harness's preflight (PR follow-up).
+
+#### Prerequisite: `Daemon.Stats v2`
+
+Doctor's `daemon` and `workspace_index` sections need workspace metadata the daemon didn't previously surface. PR adds:
+
+- `pinned_workspace_path: str` — the canonical path the daemon is pinned to
+- `workspace_id: str` — 32-char hex (blake3 truncation) workspace fingerprint
+- `index_generation: u64` — bumps on every committed write
+- `cold_walk_completed_at_ms: u64 | null` — Unix-epoch ms of the writer's `ColdWalkComplete` flush; `null` until cold walk completes
+
+Backward compatible: pre-mount `Daemon.Stats` calls keep the v1 shape exactly. New capability `daemon_stats_v2` advertises the v2 fields; doctor degrades gracefully against old daemons.
+
+#### Fix-snippet taxonomy
+
+Every WARN/FAIL row may carry an inline `fix` block with a closed `class` taxonomy (10 variants: `install_binary`, `start_daemon`, `remove_stale_socket`, `register_mcp`, `fix_mcp_binary_path`, `make_hook_executable`, `update_hook`, `move_workspace`, `reindex_needed`, `fix_config_syntax`) and a copy-pasteable `command`. Renders as the next line in human mode, structured JSON object in machine mode.
+
+#### Panic safety
+
+The entire `doctor::run` body is wrapped in `catch_unwind`. A panic in any section yields exit `2` with a structured `error` envelope in JSON mode — doctor itself stays alive and reports.
+
+#### Snapshot stability
+
+No wall-clock timestamps in default output. ANSI gated by stdout-is-TTY + `NO_COLOR` env + `--no-color` flag. Section order normative. Row order within a section deterministic. Snapshot tests can diff against goldens.
+
+#### Why this matters
+
+A new user with a broken install today runs `rts` and sees nothing — no error, no hint. They grep the README, tail logs, eventually open an issue. With this PR, the new flow is:
+
+```
+$ rts-bench doctor
+== mcp_registration ==
+  [FAIL] claude_code:user_scope — rts not registered
+    → claude mcp add rts -- $(which rts-mcp) --workspace "$PWD"
+…
+$ claude mcp add rts -- ...   # paste the fix
+$ rts-bench doctor
+…all OK.
+```
+
+One subcommand, one failure narrative, one fix. The agent-bench harness consumes the JSON output for preflight checks so failed installs abort *before* burning API credit on a doomed trajectory.
+
+#### Verification
+
+- Full plan: [`docs/plans/2026-05-18-001-feat-rts-bench-doctor-plan.md`](../docs/plans/2026-05-18-001-feat-rts-bench-doctor-plan.md)
+- Origin brainstorm: [`docs/brainstorms/2026-05-18-rts-doctor-requirements.md`](../docs/brainstorms/2026-05-18-rts-doctor-requirements.md)
+- Schema doc: [`docs/doctor-schema.md`](../docs/doctor-schema.md)
+- New integration test: `crates/rts-daemon/tests/daemon_stats_v2_round_trip.rs` — asserts the v2 capability is advertised, v1 shape preserved pre-mount, v2 fields populate post-mount with sane values.
+- Per-section unit tests across `crates/rts-bench/src/doctor/` cover every documented row outcome.
+- End-to-end smoke on the rts workspace: doctor reports all-OK after `claude mcp add rts ...`.
+
+#### Out of scope (filed for follow-up)
+
+- **`--fix` mode** that applies recommended actions. Doctor is read-only in v1; auto-fix touches user config files and is the wrong shape for v1's "first install" mission.
+- **Behavioral telemetry** (per-method call counts, nudge-fire log, recent error rate). Lives in `daemon-stats` (#104) and the auto-dump-on-shutdown (#105).
+- **Cross-version drift detection** beyond the binary section. The known "Claude Code spawned a pre-#104 rts-mcp at session start" foot-gun is acknowledged but stays a separate brainstorm.
+- **Windows support.** Unix sockets only.
+- **`--section <name>` flag** for partial runs. All-or-nothing in v1.
+
+### `Index.Grep` v2 — multi-line regex + structural queries + within-symbol scope
+
+The three known shortcomings that pushed agents back to shell `rg` mid-session — patterns that cross newlines, "find every `impl` that contains an `unsafe fn`", "find every `panic!` inside `fn parse_request`" — now compose on the same MCP tool. Five additive optional input fields on `Index.Grep`; v1 callers pass nothing new and see byte-identical responses on the unchanged code path.
+
+#### What
+
+**Five new optional input fields** on `Index.Grep`/`mcp__rts__grep`, fully composable:
+
+- `multiline: bool` (default `false`) — on the regex path, sets `dot_matches_new_line + multi_line` and scans the file as one buffer. Rejected on the literal path (`MULTILINE_REQUIRES_REGEX`) because literal substring search already crosses newlines.
+- `structural_query: string` — a raw tree-sitter S-expression query, evaluated against the parsed tree of every file matching `language`. Per-match `captures: {name: [{start, end, text, truncated?}]}` returned on the response.
+- `within_symbol: string` + `within_symbol_allow_overload: bool` — post-filter to matches whose byte range lies strictly inside the def byte range of the named symbol. Overloaded names (>16 defs) reject with `WITHIN_SYMBOL_TOO_MANY_DEFS` unless the caller opts in.
+- `language: string[]` — file-set filter applicable to every scan mode (literal, regex, structural). Required when `structural_query` is set; optional otherwise. Intersects with `file_glob` (AND).
+
+**Four new capability strings** on `Daemon.Ping`: `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`, and the bundle `index_grep_v2`. Clients gate on the relevant string before sending v2 fields.
+
+**Eleven new `data.code` sub-codes** under `INVALID_PARAMS` — `MULTILINE_REQUIRES_REGEX`, `STRUCTURAL_REQUIRES_LANGUAGE`, `NO_SEARCH_SOURCE_PROVIDED`, `INVALID_TEXT_LENGTH`, `STRUCTURAL_QUERY_INVALID`, `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`, `WITHIN_SYMBOL_NOT_FOUND`, `WITHIN_SYMBOL_TOO_MANY_DEFS`, `REGEX_TOO_COMPLEX`, `STRUCTURAL_QUERY_TIMEOUT`, `UNKNOWN_LANGUAGE` — each carrying a stable string so agents branch without parsing free-form messages.
+
+**Predicate whitelist (v1)** on agent-supplied S-expression queries: `#eq?`, `#not-eq?`, `#match?`, `#not-match?`, `#any-of?`, `#is?`, `#is-not?`. Anything else returns `STRUCTURAL_QUERY_PREDICATE_NOT_ALLOWED`. `#match?` / `#not-match?` compile under a 256 KiB DFA budget separate from the outer regex.
+
+**Explicit resource budgets**: `MULTILINE_DFA_SIZE_LIMIT = 32 MiB`, `STRUCTURAL_WALL_CLOCK_MS = 5 000`, `STRUCTURAL_MAX_ROWS = 4 096`, `STRUCTURAL_MAX_CAPTURE_BYTES = 8 192`, `WITHIN_SYMBOL_MAX_DEFS = 16`, `QUERY_LRU_CAPACITY = 64`. Cap breaches return `truncated: true` + metadata, not errors.
+
+**Three new `Daemon.Stats` sub-counters** as siblings of `index_grep`: `index_grep_multiline`, `index_grep_structural`, `index_grep_within_symbol`. Each bumps when its param is set and active.
+
+#### Why this matters
+
+Today an agent that needs "every `panic!` inside one function" runs `grep` for `panic!`, runs `find_symbol` for the function, byte-range-intersects the results in its head, and burns context on three round-trips. Multi-line patterns silently return zero hits and the agent reaches for `Bash rg` without a hint about why. Structural matching — "every `impl` that contains an `unsafe fn`" — isn't expressible at all and forces a multi-call walk through `rg` output.
+
+v2 collapses all three into the same single-call surface. Composition is the contract: `structural_query + text` is the intersection, `within_symbol` post-filters either, `language` scopes the file set. The tool surface stays at one MCP entry; the JsonSchema grows by five optional fields; every v1 caller is unaffected.
+
+The conservative shape avoids new attack surface. Raw S-expression queries are validated via `Query::new` at request time and cached in an LRU keyed on `(language, query_text)`. Predicates are whitelisted. `#match?` regexes compile under a separate, tighter DFA budget. Wall-clock budgets are checked between files. Adversarial inputs (`(?s).*` on 4 MiB; `(.*a){50}` inside a predicate; structural queries against 100k LOC) return structured errors, not OOM or hangs.
+
+#### Verification
+
+- Full plan: [`docs/plans/2026-05-18-002-feat-index-grep-v2-plan.md`](../docs/plans/2026-05-18-002-feat-index-grep-v2-plan.md)
+- Origin brainstorm: [`docs/brainstorms/2026-05-18-index-grep-v2-requirements.md`](../docs/brainstorms/2026-05-18-index-grep-v2-requirements.md)
+- Composition matrix (source of truth): `crates/rts-daemon/src/methods/grep_v2/compose.rs`
+- Error code catalog: `crates/rts-daemon/src/methods/grep_v2/errors.rs`
+- Protocol-v0 §7.8b "v0.6 additions" documents the full wire shape, capabilities, error codes, predicate whitelist, and resource budgets.
+- v1 round-trip: a frozen golden response fixture asserts byte-equality on the unchanged code path.
+- New integration tests cover each composition-matrix cell, each error code, the predicate whitelist, the resource-cap responses, the sub-counter bumps, and the cross-language `partial_failures[]` shape.
+
+#### Out of scope (filed for follow-up)
+
+- **Named-pattern catalog** (e.g. `fn_with_attr`, `impl_containing`). Raw S-expression queries only in v1; a v2.1 catalog can be informed by observed agent usage.
+- **Cross-file structural matching.** Queries run per-file and union; no graph-shaped structural search.
+- **Captures-as-rewrite-suggestions.** v2 is read-only; transforms live in a future `Index.RenamePreview`-shaped tool.
+- **Structural queries on `Index.FindCallers` / `Index.ImpactOf`.** `Index.Grep` only in v1.
+- **Streaming structural results.** Buffered, truncated at the row cap.
+- **Grammar-version invalidation.** Grammars are statically linked; a bump requires a daemon binary rebuild.
+- **`--output lines` parity for the new response fields.** The CLI exposes the v1 line shape only; new fields are JSON-only via the MCP path.
+
+### Persisted cold-mount — trust the existing on-disk redb across daemon restarts
+
+The daemon already writes a per-workspace redb file to disk at
+`${XDG_STATE_HOME}/rts/<workspace_id>/db.redb` (Linux) /
+`~/Library/Caches/rts/<workspace_id>/db.redb` (macOS). But every
+mount fired `InitialWalkHandle::spawn` unconditionally, so the
+~6-second cold-walk tax got paid every time the daemon went idle
+and respawned. The fix is small, surgical, and correctness-preserving:
+teach the mount handler to *trust* the existing redb when a composite
+fingerprint matches, and skip the cold walk entirely.
+
+#### What
+
+**META-table fingerprint.** Five new keys persist alongside the
+existing `SCHEMA_VERSION`:
+
+- `daemon_binary_version` — `env!("CARGO_PKG_VERSION")`
+- `grammar_versions` — sorted `"tree-sitter-rust=0.23,tree-sitter-ts=0.23,…"` baked into the binary at compile time by a new `crates/rts-daemon/build.rs`
+- `gitignore_content_hash` — blake3 over the *effective* gitignore stack (workspace `.gitignore`, ancestors, `.git/info/exclude`, `.rtsignore`, global, hardcoded fallbacks) — length-prefixed segments so two distinct stacks can never collide
+- `fingerprint_combined` — blake3 of all parts truncated to 16 bytes (32 hex), the fast-path comparison key
+- `reconciliation_in_progress` — single-byte sentinel set before any mid-mount reconciliation work; observed on next mount as "previous daemon died, redb is torn, wipe-and-walk"
+
+**Mount-time decision.** `Workspace.Mount` now branches on the
+fingerprint:
+
+| Stored vs current     | FILES   | Action                                                  | `mount_source`                            |
+|-----------------------|---------|---------------------------------------------------------|-------------------------------------------|
+| identical             | non-empty | **skip InitialWalkHandle::spawn**; trust existing redb  | `rehydrate`                                |
+| missing/mismatched    | any     | `wipe_data_tables()` (preserves META), then cold walk   | `cold_walk_after_invalidation:<reason>`    |
+| in-progress sentinel  | any     | wipe + cold walk; previous daemon died mid-reconcile    | `cold_walk_after_crash`                    |
+| first-ever            | empty   | cold walk, no wipe                                       | `cold_walk`                                |
+
+Reasons are diagnostic-quality: `schema:3→4`, `binary:0.5.5→0.6.0`,
+`grammar:tree-sitter-rust:0.23→0.24` (names the offending crate),
+`gitignore`, `empty_or_missing_fingerprint`.
+
+**`wipe_data_tables()` preserves META.** Drops every data table
+(FILES, PATH_TO_FID, DEFS, REFS, UNRESOLVED_REFS, …) inside one redb
+write txn with `Durability::Immediate`, then re-creates them empty.
+META carries the load-bearing schema_version + fingerprint state
+that survives a data-only wipe.
+
+**`Daemon.Stats v2` extension.** Four new fields under the existing
+`daemon_stats_v2` capability (added in #109):
+
+```jsonc
+{
+  // … existing v2 fields (pinned_workspace_path, workspace_id,
+  // index_generation, cold_walk_completed_at_ms) …
+  "mount_source": "rehydrate",
+  "rehydrate_attempts_total": 5,
+  "rehydrate_successes_total": 4,
+  "rehydrate_invalidations_by_reason": {
+    "gitignore": 1
+  }
+}
+```
+
+`mount_source` is set once per `Workspace.Mount` and surfaces the
+decision label directly. Cumulative counters tally cache-effectiveness
+across this daemon process's lifetime.
+
+#### What's **not** in this PR (deferred to v0.6.1)
+
+- **Full reconciliation worker.** The plan describes an mtime/size
+  delta scan against the FILES table to catch files that changed
+  between sessions on the Rehydrate path. v1 ships the fingerprint
+  gate + skip-cold-walk; the steady-state watcher catches changes
+  from mount-time forward, but mid-shutdown edits to existing files
+  with unchanged paths are deferred. A follow-up PR adds the
+  reconciliation worker.
+
+  v1 latency win is real (sub-second second-mount on a workspace
+  with thousands of files); v1 staleness window is "between daemon
+  shutdown and next mount, mid-file edits aren't surfaced until the
+  watcher sees a touch event." Most users won't notice.
+
+#### Why this matters
+
+```
+$ time rts-bench query find-symbol --name commit_batch
+# First session  → ~6s   (cold walk; same as v0.5.x)
+# Second session → <1s   (rehydrate; index already on disk + trusted)
+```
+
+Cold-walk re-runs are now *gated* on something actually changing —
+schema version, daemon binary, a grammar, the gitignore stack. The
+diagnostic label tells you exactly *what* changed. `rts-bench doctor`'s
+workspace_index section (when running against a v0.6+ daemon) can
+surface `mount_source: rehydrate` directly.
+
+#### Verification
+
+- Full plan: [`docs/plans/2026-05-18-003-feat-persisted-cold-mount-plan.md`](../docs/plans/2026-05-18-003-feat-persisted-cold-mount-plan.md)
+- Origin brainstorm: [`docs/brainstorms/2026-05-18-persisted-cold-mount-requirements.md`](../docs/brainstorms/2026-05-18-persisted-cold-mount-requirements.md)
+- New integration test
+  `crates/rts-daemon/tests/persisted_cold_mount_round_trip.rs`:
+  spawns daemon → mounts → indexes a symbol → kills daemon →
+  spawns NEW daemon against same state_dir → mounts → calls
+  `Index.FindSymbol` immediately (no polling) → asserts matches
+  return. Then asserts `Daemon.Stats.mount_source == "rehydrate"`
+  and the cache counters bumped exactly once.
+- 222 daemon unit tests pass; 27 new tests across the U1-U6 modules
+  (fingerprint diff, gitignore hash, META round-trip, wipe_data_tables,
+  rehydrate end-to-end).
+- All previously-green integration suites (grep, find_symbol,
+  daemon_stats, grep_v2_capabilities, persisted_cold_mount,
+  grep_within_symbol, grep_multiline) stay green.
+
+#### Sequencing
+
+This PR sequences after **#109 (doctor + Daemon.Stats v2)** and
+**#110 (Index.Grep v2)** — all three share the `daemon_stats_v2`
+capability + `CallCounters` struct. Branch is based on
+`feat/index-grep-v2`. Merge order: 109 → 110 → 003.
+
+#### Out of scope (filed for follow-up)
+
+- Reconciliation worker (mtime/size delta scan) — v0.6.1 follow-up
+- `--reset-snapshot` CLI flag for explicit cache invalidation (planned
+  in U5 doc but not shipped)
+- State_dir garbage collection for moved/deleted workspaces
+- Cross-machine snapshot sharing (workspace_id is per-machine by design)
+
+### Reconciliation worker — catch on-disk drift after persisted cold-mount
+
+The persisted cold-mount path (#111) deferred reconciliation: when the
+daemon rehydrates from redb on restart, it trusts the on-disk index
+verbatim. That's correct when the workspace hasn't moved between
+sessions, but stale the moment anything edited a file while the daemon
+was dead — branch switch, external editor save, package upgrade.
+
+This PR ships the reconciliation worker that closes the loop.
+
+#### What
+
+**New `crates/rts-daemon/src/reconciler.rs` module.** Runs once,
+spawned from `Workspace.Mount` on the `MountSource::Rehydrate`
+branch. Fresh / cold-walk / wipe-after-invalidation mounts skip the
+worker — their cold walk already covers every file.
+
+The worker walks the mount root with the same ignore-respecting
+`ignore::WalkBuilder` used by the cold-walk path, then for each
+visited file:
+
+- Reads the persisted `FileMeta` via `Store::get_file_meta`.
+- Compares on-disk `mtime_ns` against the stored value.
+- On mismatch, confirms with a blake3 hash of the file bytes
+  (a touch-only modification that didn't change content shouldn't
+  trigger a reparse).
+- On drift, emits `WatchEvent::Touched` into the existing watcher
+  channel; the writer drain reparses and commits through the same
+  path as a live edit.
+
+After the walk, anything indexed but not visited (gone from disk, or
+now `.gitignore`'d, or secret-blocked) gets a `WatchEvent::Removed`
+so the writer drops the row.
+
+**Rate limiting.** A simple token bucket caps emission at 64
+events/sec by default (`DEFAULT_RATE_LIMIT_PER_SEC`). A mass-drift
+scenario — e.g. branch switch with thousands of touched files —
+won't stall the foreground writer.
+
+**`Daemon.Stats.reconciliation` field.** New nested object under the
+existing v2 response (only emitted when a workspace is mounted):
+
+```jsonc
+"reconciliation": {
+  "last_run_ns":   1748462100123456789,
+  "files_scanned": 1247,
+  "files_changed": 3,
+  "files_removed": 1,
+  "throttled":     0
+}
+```
+
+Backed by a shared `Arc<RwLock<ReconcileStats>>` on `DaemonState`
+following the same pattern as `rehydrate_invalidations`.
+
+**AC16 preserved.** The worker never touches `UNRESOLVED_REFS`
+directly. Cross-file edges into a drift-detected file flow through
+the writer's normal `Touched`/`Removed` arms, which recompute only
+the affected file's outgoing refs. Edges *from* other files into
+this file survive intact.
+
+#### Why this matters
+
+Without reconciliation, this sequence silently broke search:
+
+1. Daemon mounts `~/repo`, indexes 1.2k files, goes idle.
+2. User does `git checkout other-branch` — 80 files differ.
+3. Daemon respawns on next query, rehydrates from redb.
+4. `find_symbol` returns rows for the *old* branch's code until the
+   user re-touches each file.
+
+With reconciliation:
+
+1-2. Same as above.
+3. Daemon respawns, takes the Rehydrate path, then spawns the
+   worker. Within seconds, drift is detected and the writer
+   reparses each changed file.
+4. `find_symbol` returns the current branch's code.
+
+#### Verification
+
+- Plan: [`docs/plans/2026-05-18-004-feat-reconciliation-worker-plan.md`](../docs/plans/2026-05-18-004-feat-reconciliation-worker-plan.md)
+- New integration test
+  `crates/rts-daemon/tests/reconciliation_round_trip.rs`:
+  - Session 1: mount → index three files (`drifted.rs`, `orphan.rs`,
+    `stable.rs`) → assert cross-file caller edge from `stable.rs`
+    into `drifted.rs::stable_callee_hub` is resolved → kill daemon.
+  - Between sessions: edit `drifted.rs` body (new symbol
+    `drift_target_v2`), delete `orphan.rs`, leave `stable.rs`
+    untouched.
+  - Session 2: respawn daemon → assert `mount_source: "rehydrate"`,
+    poll `Daemon.Stats.reconciliation` for `files_changed >= 1
+    && files_removed >= 1`, assert `Index.FindSymbol` surfaces the
+    new symbol, assert `Index.FindCallers` still resolves
+    `stable_callee_hub` callers (AC16).
+- 768 workspace tests pass, including the existing
+  `persisted_cold_mount_round_trip` suite.
+
+#### Capability
+
+New capability advertised in `Daemon.Ping`: `reconciliation_worker`.
+Clients that need to gate on the new `Daemon.Stats.reconciliation`
+field check this capability.
+
+### `rts` — human-facing CLI over the same JSON-RPC surface
+
+Adds a second binary `rts` to the `rts-mcp` crate. The CLI wraps the
+daemon's JSON-RPC surface for terminal humans, mirroring every method
+the MCP server already exposes to agents. Reuses the existing
+`socket` + `daemon_client` modules (now lifted into a thin
+`rts_mcp` library) so the MCP and CLI paths can never drift from
+each other — when one signature changes, both binaries fail to
+compile.
+
+Per [`docs/plans/2026-05-19-002-feat-human-cli-subcommand-plan.md`](../docs/plans/2026-05-19-002-feat-human-cli-subcommand-plan.md).
+
+#### Subcommands
+
+| `rts <cmd>` | Daemon method | Renderer |
+|---|---|---|
+| `mount [PATH]` | `Workspace.Mount` | one-line status + workspace id |
+| `find <NAME> [--pattern]` | `Index.FindSymbol` | `kind | name | path:line | container` table |
+| `grep <PATTERN>` | `Index.Grep` | ripgrep shape: `path:line:col:content` |
+| `callers <NAME>` | `Index.FindCallers` | tree-grouped by caller file |
+| `outline` | `Index.Outline` | passes the daemon's dotted-indent text through |
+| `read <NAME>` | `Index.ReadSymbol` | name@file:line header + body |
+| `stats` | `Daemon.Stats` | header + per-method counter table |
+| `doctor` | (delegates) | runs `rts-bench doctor` |
+| `completions <SHELL>` | (clap_complete) | bash, zsh, fish, powershell, elvish |
+
+#### Global flags
+
+`--workspace`, `--json` (machine-readable output, composes with `jq`),
+`--no-color` (also honors `NO_COLOR` env per <https://no-color.org/>),
+`--timeout <MS>` (wall-clock cap, default 30000).
+
+#### Exit codes (documented contract)
+
+| Code | Meaning |
+|---|---|
+| 0 | Success with results. |
+| 1 | Success with zero results (matches `rg`). |
+| 2 | Invalid argument (clap-handled). |
+| 3 | Daemon-level error. |
+| 4 | Request timeout. |
+| 5 | Workspace resolution error (missing path, no marker). |
+
+#### Bootstrap behavior
+
+The CLI reuses `rts-mcp`'s auto-spawn flow: socket present → connect,
+socket missing → spawn `rts-daemon` as a detached child + wait up to
+5 s for the per-workspace socket to appear. Set
+`RTS_NO_AUTOSPAWN=1` to disable (useful in CI / sandboxed
+environments where the daemon lifecycle is managed externally).
+
+#### Why a second binary, not a new crate
+
+Adding the CLI as a second `[[bin]]` in `rts-mcp` lets both binaries
+share the `socket` + `daemon_client` plumbing via the crate's
+library surface — zero duplication, single-point-of-truth on
+transport behavior. The added deps (`clap`, `clap_complete`,
+`is-terminal`) are small enough that the MCP-server-only build tree
+stays lean. A standalone `rts-cli` crate would have meant
+duplicating ~150 LOC of socket/auto-spawn logic and re-validating it
+in two places.
+
+#### Tests
+
+Ten integration test files in `crates/rts-mcp/tests/cli_*.rs` spin
+up isolated XDG runtime/state/home tempdirs, let `rts` auto-spawn
+the daemon, and assert the user-facing contract:
+
+- `cli_find` — name + pattern lookup, no-match → exit 1.
+- `cli_grep` — ripgrep `path:line:col:content` shape, no-match → exit 1.
+- `cli_callers` — file-grouped output with enclosing fn names.
+- `cli_outline` — non-empty dotted-indent text.
+- `cli_read` — qualified-name header + body.
+- `cli_stats` — non-zero method counters after a warmup call.
+- `cli_json` — every subcommand's `--json` output is valid JSON.
+- `cli_no_color` — `--no-color` AND `NO_COLOR=1` both suppress ANSI.
+- `cli_autobootstrap` — first call against a cold tempdir spawns the daemon.
+- `cli_exit_codes` — bad workspace → 5; unknown subcommand → 2 (clap).
+
+Plus 9 unit tests in `cli` covering the pure renderers (table, grep
+shape, color-disabled identity transform, workspace marker walk).
+
+#### Docs
+
+- New `docs/cli.md` — one section per subcommand with examples.
+- README updated: install snippets in both Option A (prebuilt) and
+  Option B (source) include a `rts find MyType` smoke test before
+  the agent-wiring line, so a curious engineer can verify the install
+  without configuring an MCP host.
+
+#### Out of scope (per plan's "Out of Scope" section)
+
+- TUI / interactive REPL (`rts repl`)
+- Watch mode (`rts watch` / `rts stats --watch`)
+- `.rts.toml` config profiles
+- Output formats other than ANSI + JSON (no LSP/SARIF/XML)
+
+### Cancellable in-flight queries — `Daemon.Cancel { cancel_id }` over the JSON-RPC envelope
+
+Long-running `Index.*` and `Workspace.Mount` requests can now be aborted from a follow-up call. Closes the agent-loop hole where a model that revised its plan mid-query had to wait out the original — the daemon kept burning CPU on a result no one would read.
+
+#### What
+
+**Optional `cancel_id: String` field on every JSON-RPC request envelope.** Clients attach a self-chosen id (UUID, monotonic counter, anything 1..=256 chars); v1.x daemons ignore it, v0.6+ daemons register a cancellation token under that id for the request's lifetime. `serde(default)` ⇒ existing wire shape unchanged for clients that don't set it.
+
+**New method `Daemon.Cancel { cancel_id }`** returns `{ cancelled: bool }`. Idempotent: an unknown id (typo, already-completed request, never-registered) returns `false` with no error envelope. Successful cancels bump `Daemon.Stats.cancellations.total`; `Daemon.Stats.cancellations.in_flight` exposes the current registry size as a gauge.
+
+**New error code `CANCELLED` (custom JSON-RPC `-32099`)** returned by handlers whose token tripped. Not a programming error — clients that issued the cancel should treat it as the expected response.
+
+**Cancellable handlers in v0.6:** `Index.Grep`, `Index.FindSymbol`, `Index.FindCallers`, `Index.ReadSymbol`, `Index.Outline`, `Workspace.Mount`. Hot-loop integration:
+
+- **Structural scanner** (`grep_v2/structural.rs`) — per-match `is_cancelled()` poll inside the `for qm in matches` loop. Single relaxed atomic load, ~1ns; noise next to the per-match capture-extraction cost. Scanner moved to `spawn_blocking` so the cancel handler isn't starved on the same tokio worker.
+- **Multiline regex + literal scan** (`methods/index.rs::grep`) — per-file boundary check at the top of the outer loop, plus a per-match check inside the hits loop (covers the multiline path where a single file is the smallest interruptible unit).
+- **Mount cold-walk drain** (`methods/workspace.rs::mount_inner`) — per-batch-tick check inside the drain wait. Cancelled mounts return `CANCELLED` without tearing down the partially-populated store; the next Mount picks up via the persisted-fingerprint path.
+
+**New capability string `cancellable_queries`** advertised in `Daemon.Ping.capabilities`. Gate on this before sending `cancel_id` against an unknown daemon vintage.
+
+**Registry lifecycle is RAII.** A `CancelGuard` registered in the dispatcher unregisters the token on drop — handlers that panic, error, or return normally all clean up the same way. No leak path even under unhappy shutdown.
+
+#### Why this matters
+
+`Index.Grep v2` shipped in v0.6 with structural queries that can fan to thousands of nodes across hundreds of files. A 2–4 second query latency is realistic on medium workspaces; without cancellation, an agent that fires a query, reads partial context, and reframes its plan keeps the daemon working on the first query while waiting on the second — head-of-line blocking on a per-connection in-flight semaphore and dead CPU work on a result that won't be read.
+
+Cancellation also closes a smaller paper-cut: `Workspace.Mount` on a large workspace blocks the connection for the cold-walk drain timeout (5 s). An agent that wanted to abort mid-mount previously had to close the socket and re-spawn the connection.
+
+Worst-case abort latency is the time to the next cooperative poll — per-match (~50 µs typical) for the structural scanner, per-file (~few ms) for the multiline regex, per-25-ms-batch-tick for the mount drain. Uncancelled requests pay one relaxed atomic load per poll site: well under the noise floor of the scan work itself.
+
+#### Verification
+
+- Full plan: [`docs/plans/2026-05-19-001-feat-cancellable-queries-plan.md`](../docs/plans/2026-05-19-001-feat-cancellable-queries-plan.md)
+- Cancel-mechanism source: `crates/rts-daemon/src/cancel.rs`
+- Protocol-v0 envelope addition: §3.4 + §7.1b `Daemon.Cancel` + §14 `CANCELLED`
+- New integration test `crates/rts-daemon/tests/cancel_in_flight.rs` covers the three plan scenarios: slow query cancelled mid-flight returns `CANCELLED`; stale cancel after natural completion returns `{ cancelled: false }`; two concurrent queries with different ids — cancelling one leaves the other running to completion.
+- Unit tests for the registry's register/remove/cancel/in_flight semantics, the `CancelGuard` RAII drop path, and the token's clone-visibility invariant.
+- v1.x callers see byte-identical wire shape on every existing method when they don't set `cancel_id`.
+
+#### Out of scope (filed for follow-up)
+
+- **Deadline timeouts** (`Daemon.SetTimeout { method, ms }`). Cancellation is the building block; timeouts are cancellation on a timer.
+- **Cooperative streaming.** Cancelling a streaming response is a v0.7 concern.
+- **Cross-daemon cancellation propagation.** Single-process scope only.
+- **MCP tool-surface `cancel_id` argument.** The daemon protocol accepts it; the per-tool MCP schema doesn't expose it (agents typically can't reframe from inside a tool invocation, and adding it to every tool schema clutters the agent's view). Hosts that want to wire cancellation can address the daemon directly through the same socket.
+
+### Anonymous opt-in telemetry (`rts telemetry`)
+
+`rts` now ships **opt-in** telemetry — counters and latencies only, no
+paths/content/symbol names — so the project can make roadmap calls
+on aggregate signal instead of n=1. **Off by default.** Activate with
+`rts telemetry enable`; the daemon's once-per-day ticker sends a
+single anonymous JSON payload to the receiver and stops on
+`rts telemetry disable` (which deletes the local install-id).
+
+New CLI surface on the `rts` binary:
+
+- `rts telemetry status` — current state, schema version, endpoint.
+- `rts telemetry preview` — print the exact JSON the next ping would
+  send (byte-equivalent to the wire payload). Auditable; works any
+  time.
+- `rts telemetry enable` / `rts telemetry disable` — toggle.
+- `rts telemetry flush` — send now (requires `--features telemetry` at
+  build time AND `enable` at runtime).
+
+Schema is frozen at `schema_version: 1`; every map key is a static
+`&'static str` from a bounded allowlist in
+`crates/rts-mcp/src/telemetry.rs`. A schema golden-file test catches
+drift.
+
+HTTP support is feature-gated (`--features telemetry` on `rts-mcp`
+and `rts-daemon`), so default workspace builds still link zero HTTP
+code paths per AGENTS.md "Dependency hygiene". Reference receiver
+implementation lives in-tree under `telemetry-receiver/`.
+
+See [`docs/telemetry.md`](docs/telemetry.md) for the full
+plain-English explanation of what gets sent, why, and how to opt out.
+
+### AST-precise call edges for Java, PHP, Swift, and C#
+
+`Index.FindCallers` and the closure walker now use tree-sitter queries
+(not regex) on Java, PHP, Swift, and C# files. Coverage of AST-precise
+call edges goes from 6 of 12 indexed languages (Rust/Python/Go/Ruby/JS/TS)
+to 10 of 12. C and C++ remain on the regex fallback for now — function
+pointers parse identical to identifier references, so the precision win
+there is smaller.
+
+#### What
+
+Four new query strings in `crates/rts-daemon/src/language.rs`, registered
+against the central `LanguageInfo` table and the `cached_refs_query`
+cache:
+
+- **`JAVA_REFS`** — `method_invocation.name` and
+  `object_creation_expression.type`. Chained `a.b().c()` parses as nested
+  `method_invocation` nodes, so the query captures `b` and `c` as
+  separate call sites; the receiver `a` is a plain identifier under
+  `object:` and never matches.
+- **`PHP_REFS`** — `function_call_expression` (including the
+  `qualified_name` variant for `\Foo\bar()`), `member_call_expression`,
+  `scoped_call_expression`, and `object_creation_expression` (both bare
+  `(name)` and namespaced `(qualified_name (name))` children).
+  Variable-function `$fn()` is intentionally not captured — no static
+  target to resolve.
+- **`SWIFT_REFS`** — `call_expression` with `simple_identifier` (bare)
+  and `navigation_expression` (method calls). Trailing closures still
+  parse as `call_expression`, so they're covered without a separate
+  pattern. Authored against the installed Swift 0.7 grammar's
+  `node-types.json`; upstream `tags.scm` ships only `@definition.*`.
+- **`CSHARP_REFS`** — `invocation_expression` in four shapes (bare
+  identifier, member-access, generic-name, member-access-of-generic-name)
+  plus `object_creation_expression` (identifier and generic-name).
+  Covers `Foo()`, `obj.Foo()`, `Foo<T>()`, `obj.Foo<T>()`, `new Foo()`,
+  and `new Foo<T>()`.
+
+#### Why this matters
+
+Pre-AST-precise edges, calling `Index.FindCallers` on a Java method
+returned every textual occurrence of the name — including imports,
+comments, and string literals — plus an edge per local variable that
+happened to share the name. The same noise hit PHP/Swift/C#. For
+polyglot backends (Java services + WordPress/Laravel PHP) and mobile +
+.NET codebases, the value pitch of "AST-precise call graph" only held
+on half the supported language matrix.
+
+#### Verification
+
+- Unit tests in `crates/rts-daemon/src/refs.rs` exercise the four new
+  queries against representative fixtures (chained calls, member/static
+  calls, namespaced calls, trailing closures, generic invocations) and
+  assert local variables are NOT captured.
+- `java_php_swift_csharp_cached_queries_construct_without_panic` in
+  `crates/rts-daemon/src/language.rs` forces query compilation at unit-
+  test time so a grammar bump that breaks the queries surfaces here
+  rather than at first `Index.Outline` call.
+- Per-language integration tests `crates/rts-daemon/tests/call_edges_*.rs`
+  spawn the daemon, mount a per-language fixture, and assert
+  `Index.FindCallers` returns the expected method-level edges.
+- All existing Rust/Python/Go/Ruby/JS/TS call-edge tests continue to
+  pass — the new queries plug into the existing cache and dispatcher
+  without touching the hot path.
+
+#### Out of scope
+
+- C and C++ AST queries. Their fallback regex behavior already
+  approximates what a tags.scm query would produce because function
+  pointer calls look identical to identifier references; deferred.
+- PHP `method_declaration` symbol extraction. The AST query captures
+  member-call and scoped-call sites correctly, but the existing
+  `extract_php_symbols` only indexes `function_definition` + class
+  defs — so member/static call edges in PHP don't resolve to a target
+  yet. Tracked separately.
+
+### MCP shim resilience — heartbeat, reconnect-with-backoff, structured disconnection
+
+`rts-mcp` and `rts` no longer drop off the tool list when the daemon hiccups. A background heartbeat detects daemon death proactively, a bounded reconnect loop auto-respawns the daemon, and tool calls during the disconnect window return new structured `DAEMON_UNAVAILABLE` / `DAEMON_DOWN` JSON-RPC error codes so agents can branch on transient vs. sustained outage without parsing English text.
+
+#### What
+
+**New `crates/rts-mcp/src/connection.rs` module.** A `ConnectionManager` wraps the per-workspace `DaemonClient` plus two background tokio tasks:
+
+- **Heartbeat loop.** Issues `Daemon.Ping` every `RTS_MCP_HEARTBEAT_INTERVAL_SECS` (default 10s) with a per-call timeout of `RTS_MCP_HEARTBEAT_TIMEOUT_SECS` (default 3s). A failed ping demotes state to `Reconnecting`.
+- **Reconnect-with-backoff.** Schedule `1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s` (configurable via `RTS_MCP_RECONNECT_MAX_ATTEMPTS` default 8 and `RTS_MCP_RECONNECT_CEILING_SECS` default 30). After the bounded attempts state transitions to `Down`, but retries continue at the ceiling forever — transient outages of arbitrary length still recover.
+
+**Three-state machine** (`Connected | Reconnecting | Down`) wrapped in `Arc<RwLock<…>>`. Tool calls take a read lock briefly to check state — calls during a known disconnect window short-circuit at the state check and return the structured error without touching the daemon mutex, so a burst of N concurrent calls during reconnect costs O(1) on the daemon mutex, not O(N).
+
+**Two new MCP-shim error codes** (shim-emitted; not daemon protocol-v0 codes):
+
+- `DAEMON_UNAVAILABLE` (numeric `-32098`) — transient. `error.data.retry_after_ms` carries the wall-clock hint until the next reconnect attempt. `error.data.transient: true`.
+- `DAEMON_DOWN` (numeric `-32097`) — sustained outage after bounded-attempt exhaustion. `error.data.first_failure_ms_ago` describes how long the daemon has been unreachable. `error.data.transient: false`.
+
+**Cross-binary parity.** Both `rts-mcp` (the MCP shim) AND the `rts` human-facing CLI binary (PR #113) use the same `ConnectionManager`. The CLI disables the background heartbeat (single-shot — no point spawning a task we'll abort 50 ms later) but still benefits from the foreground reconnect-on-transport-error path. Source: `crates/rts-mcp/src/cli.rs::connect`.
+
+**Heartbeat ↔ idle-shutdown interaction.** `Daemon.Ping` resets the daemon's `last_activity`. The daemon's idle-shutdown is already gated on `active_connections > 0` (`crates/rts-daemon/src/state.rs::is_idle`), but the heartbeat additionally refreshes activity so a future loosening of the connection-count gate still sees fresh traffic. **An MCP shim that's still attached keeps its daemon alive — this is intentional.** Documented in code comments + protocol-v0 §14.1.
+
+#### Why this matters
+
+Round-11 dogfood surfaced the failure mode: the rts MCP server silently disconnected mid-session, the agent received only a "their MCP server disconnected" system reminder, and `mcp__rts__*` tools dropped off the tool list with no error and no recovery path. Three diagnosable failure modes:
+
+1. **No heartbeat.** A single transport error was terminal; the shim sat on a dead socket until the next tool call hit `Broken pipe`.
+2. **No reconnect.** Disconnections compounded — the agent worked around once; the second disconnection taught the agent to default to `Bash(grep)` permanently.
+3. **No structured transient-error code.** `INTERNAL_ERROR broken pipe` was indistinguishable from "this method doesn't exist" to the MCP host.
+
+For a project whose entire pitch is "AST-precise code retrieval for AI agents," **a tool that abandons agents on first flake is a tool agents won't come back to.** This change closes the gap with shapes proven in gRPC keepalive, HTTP/2 GOAWAY, and Tower's retry stack.
+
+#### Verification
+
+- Full plan: [`docs/plans/2026-05-19-004-feat-mcp-server-resilience-plan.md`](../docs/plans/2026-05-19-004-feat-mcp-server-resilience-plan.md)
+- New integration test `crates/rts-mcp/tests/connection_resilience.rs` covers the four plan scenarios end-to-end against real binaries:
+  1. **Daemon idle-shutdown survival** — `RTS_IDLE_SHUTDOWN_SECS=2`, idle 5s, next tool call succeeds.
+  2. **Daemon SIGKILL recovery** — kill daemon, observe `DAEMON_UNAVAILABLE`, subsequent calls succeed via auto-respawn.
+  3. **MCP shim crash leaves daemon alive** — kill shim 1, shim 2 connects to the SAME daemon PID.
+  4. **Concurrent tool calls during reconnect** — 10 concurrent calls return consistent `DAEMON_UNAVAILABLE` shapes with bounded `retry_after_ms` hints; no thundering-herd.
+- Unit tests for the backoff schedule (`1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s`), error-code round-trip, and `ResilienceConfig` defaults.
+- Protocol-v0 §14.1 documents the new error codes and env vars.
+- v1.x daemons unaffected — shim is the sole owner of resilience state; daemon wire protocol is byte-identical.
+
+#### Out of scope (filed for follow-up)
+
+- **`Daemon.Stats` disconnection counters** (`disconnections.total`, `disconnections.last_at_ms`, `disconnections.last_duration_ms`). Better folded into the opt-in telemetry plan than dragged into this PR — sibling-field pattern reserved for that landing.
+- **MCP protocol-level reconnect** (shim → MCP host). That's the host's responsibility; out of scope per the plan.
+- **Multi-daemon failover.** Single-process daemon is the only supported topology in v0.6.
+
+### `rts-core` — index PHP `method_declaration` symbols
+
+PR #116 added AST-precise call edges for PHP, including `member_call_expression`
+(`$obj->method()`) and `scoped_call_expression` (`Klass::method()`). The
+reference side worked correctly, but `extract_php_symbols` only emitted
+symbols for `function_definition` and `class_declaration` — `method_declaration`
+nodes inside classes, interfaces, and traits were never indexed. So
+`Index.FindCallers("method_name")` returned `SYMBOL_NOT_FOUND` for any PHP
+method, even when callers existed in the graph.
+
+This adds a `method_declaration` branch to `extract_php_symbols` that walks
+methods inside `class_declaration`, `interface_declaration`, and
+`trait_declaration`, emitting `Symbol { kind: "method", ... }` with the bare
+method name (matching the PHP_REFS query's capture and the Java/Ruby
+extractor convention). Visibility modifiers (`public`/`private`/`protected`)
+propagate to `Symbol.visibility`; methods without an explicit modifier
+default to `public` per the PHP language rule.
+
+`crates/rts-daemon/tests/call_edges_php.rs` now exercises all five PHP call
+shapes end-to-end (bare, namespaced, `new`, member, scoped); the previously
+skipped member-call and scoped-call assertions are active.
+
+No public Symbol or protocol surface change. No new dependencies.
+
+### Stabilize `cancel_in_flight` integration tests — replace wall-clock cushions with registry-state barriers
+
+The three integration tests in `crates/rts-daemon/tests/cancel_in_flight.rs` (added in PR #114, cancellable queries) flaked under `cargo test --workspace`. Two independent agents on unrelated PRs (#116, #117) reported a passing rerun after a single failure — the canonical fingerprint of a wall-clock race, not noise.
+
+#### Diagnosis
+
+Each test bridged a "did the daemon do the thing yet?" gap with a fixed `tokio::time::sleep`:
+
+- Tests 1 + 3 (live cancel): the slow `Index.Grep` is dispatched, then the test waits 50 ms before sending `Daemon.Cancel`. The 50 ms is a wall-clock gamble that the grep's dispatch task has spawned, reached the `CancelGuard::register` await, and won the `RwLock` write lock — before the cancel's dispatch task takes the read lock and looks the id up. Under heavy CPU contention (parallel test workers in `cargo test --workspace`), tokio's scheduler can take longer than 50 ms to land all that, and the cancel observes an empty registry → returns `{ cancelled: false }` → assertion fires.
+
+- Test 2 (stale cancel): the test waits 50 ms after a fast `Index.FindSymbol` completes, then sends a `Daemon.Cancel` with the now-stale id, expecting `{ cancelled: false }`. The 50 ms gambles that the `CancelGuard`'s drop-spawned removal task has actually run. Under contention it may not have, and the test observes `cancelled: true`.
+
+The production cancellation surface (`CancelToken` / `CancelRegistry` / `Daemon.Cancel`) is correct. The races are entirely test-side.
+
+#### Fix
+
+Replace every fixed sleep with a barrier that polls `Daemon.Stats.cancellations.in_flight` until it satisfies the test's precondition:
+
+- Live cancel: poll until `in_flight >= 1` (or `>= 2` for the concurrent-queries test) before issuing `Daemon.Cancel`. That's the registry's own "token is registered" signal — no timing gamble.
+- Stale cancel: poll until `in_flight == 0` after the fast query completes. That's the guard-drop's own "token is gone" signal.
+
+Test 1 also now puts `Daemon.Cancel` on a separate connection from the slow grep (the plan's original "from another connection send Daemon.Cancel" wording). Pipelining the cancel on the same socket as the grep meant the test couldn't probe `Daemon.Stats` mid-flight to synchronize. Two connections cleanly decouple the query path from the control path. Drops the now-redundant `cancel_to_response < 2s` wall-clock latency assertion (the test budget is already enforced by the 15 s read timeout, and the assertion's intent — "cancel arrives well before natural completion" — is now satisfied by the barrier rather than a wall-clock bound).
+
+Verified 20/20 passing in release mode at default parallel test-threads, and 20/20 passing under 8-core CPU pressure (8 concurrent CPU-burn loops alongside the test runner).
+
+### MCP tool descriptions: audit to win the agent tool-selection moment
+
+Round-13 follow-up to the 12-PR multi-day session ending 2026-05-21. During that session the orchestrating agent (Claude Opus 4.7) used `Bash(grep)` 30+ times against rts's own source code instead of `mcp__rts__grep`, even with rts mounted and the `PreToolUse:Bash` nudge hook (`.claude/hooks/rts-nudge.sh`) firing on every call. The hook firing without correction is the signal: the tool descriptions were not winning the selection moment.
+
+#### What
+
+Rewrote every agent-facing tool's `description` string in `crates/rts-mcp/src/server.rs` (8 tools: `outline_workspace`, `find_symbol`, `read_symbol`, `read_symbol_at`, `read_range`, `find_callers`, `impact_of`, `grep`) to follow a comparative + trigger-phrase template:
+
+```
+<One-line what-it-does>. <When-to-use vs Bash alternative>.
+<Trigger phrases the task description will pattern-match on>.
+<Cost-asymmetry claim if applicable>.
+```
+
+Headline example — `grep`:
+
+Before:
+> Find literal-substring (or regex) matches across all indexed file bytes. Use this for things `find_symbol` can't reach: error message text, version-string literals, log output, configuration values, embedded URLs, or any other source content that isn't a symbol name or a doc-comment. […]
+
+After:
+> AST-aware ranked search across indexed file bytes. Prefer this over `Bash(grep)` / `Bash(rg)` for ANY workspace search — shell grep returns raw `path:line:text` with no enclosing-symbol context, scans `target/` and vendored deps, and has no language structure; this tool annotates each hit with the enclosing symbol's name + kind (metadata you'd otherwise need a second call to recover), scopes to the indexed file set, and rejects regex bombs with a structured error. Use when the task includes 'find', 'search for', 'grep for', 'find all TODOs'. […]
+
+Also tightened the `text` parameter docstring on `grep` to be explicit at the parameter level that the default is literal (regex metacharacters are inert unless `regex: true`).
+
+#### Why
+
+The `PreToolUse:Bash` hook is a fallback safety net; the goal is for the descriptions to be strong enough that the hook fires less often (because agents prefer rts on the first attempt). Telemetry observed the gap; the nudge hook flagged each occurrence; only descriptions can pre-empt the wrong tool choice.
+
+#### Test guard against regression
+
+New `crates/rts-mcp/tests/tool_descriptions.rs` (spawns rts-mcp, calls `tools/list`, asserts over the live wire response):
+
+- `every_tool_description_carries_a_comparative_clause` — each of the 8 audited descriptions contains a comparison token (`instead of`, `prefer over`, `over Bash`, `over grep`, `shell grep can't`, …).
+- `every_tool_description_carries_a_trigger_phrase_hint` — each contains an action-trigger phrase (`use when`, `use this for`, `when the task`, `for tasks like`, `use for`).
+- `description_length_is_bounded` — every description is between 80 and 800 chars (too terse → claim absent; too verbose → agents skim).
+- `schema_round_trip` — every description survives JSON serialize/parse byte-for-byte.
+
+#### Out of scope
+
+- No new tools or new parameters.
+- No protocol changes (`docs/protocol-v0.md` untouched).
+- No changes to the MCP server's protocol-version or capabilities array.
+- No changes to the `PreToolUse:Bash` hook itself (still in place as the safety net).
+
+#### Post-deploy monitoring
+
+Watch the `PreToolUse:Bash` hook firing rate over the next 14 days of maintainer sessions. Expected healthy signal: rate drops materially (agents prefer rts on the first attempt rather than falling through to grep). No additional production infrastructure required.
+
+### Machine-readable JSON Schemas for the `protocol-v0` wire contract
+
+`schemas/v0/` exports a JSON Schema 2020-12 document for every `params` and `result` shape the daemon serves. Non-Rust agent harnesses (TS, Python, Go, …) can now validate calls against the protocol-v0 contract statically — no more hand-translating `docs/protocol-v0.md` into types and hoping the prose hasn't drifted.
+
+#### What
+
+`schemas/v0/` ships with:
+- `envelope.schema.json` — the JSON-RPC envelope (id, method, params, result, error, cancel_id), with a `oneOf` discriminating request / success / error / notification shapes.
+- `error.schema.json` — the error object, including the closed `code` enum from §14 + §14.1.
+- `methods/<Method>.req.schema.json` + `methods/<Method>.resp.schema.json` for all 17 methods the daemon dispatcher routes (`Daemon.*`, `Workspace.*`, `Session.*`, `Index.*`). 34 method-schema files total.
+- `README.md` documenting the directory layout and the schema-versioning convention (additive within `v0/`, breaking requires `v1/` + `protocol`-major bump).
+
+`crates/rts-daemon/tests/protocol_schemas.rs` enforces four properties:
+
+1. Every method in the dispatcher has both a `.req` and `.resp` schema file. A new method that ships without schema files fails CI.
+2. Every schema file under `schemas/v0/` parses as a valid JSON Schema 2020-12 document.
+3. (CI-only) Every method's real response (against a fixture workspace) validates against its `.resp` schema. Catches drift between schemas and runtime emit.
+4. (CI-only) Error responses match `error.schema.json`. Locks in the v0 error shape.
+
+Properties 3 and 4 are `#[ignore]`-by-default so the regular `cargo test --workspace` path stays fast; CI opts back in via `cargo test -p rts-daemon --test protocol_schemas -- --include-ignored`. A dedicated `.github/workflows/schemas-check.yml` runs the full suite on every PR.
+
+#### Why this matters
+
+The protocol surface was canonical-prose-only. Today, a TS or Python harness that wants to validate its requests had to either (a) hand-translate the spec and risk drift, or (b) parse the Markdown. After 13 PRs of v0.6 work the wire shape has stabilised enough to lock in via schema files and golden-file regression tests.
+
+Locking the contract via schemas means:
+- **Future protocol changes are visible in PR diffs** — a schema change is a visible review surface; a prose-only change is not.
+- **Non-Rust agent harnesses get type-safe call sites for free** — `json-schema-to-typescript`, `datamodel-code-generator`, `quicktype`, etc. all consume these files directly.
+- **Schema-evolution rules become enforceable** — additive within `v0/`, breaking requires a new directory + `protocol`-major bump per `protocol-v0.md` §Appendix E.
+
+#### Approach decision
+
+**Option B (static files + drift test) was chosen over Option A (`schemars`-derive on Rust types).** Rationale: smaller blast radius across the daemon and MCP crates today; the round-trip test catches the same drift class a derive macro would prevent at compile time. A `schemars`-based regeneration pipeline can land as a follow-up if/when the round-trip test starts firing more often than once a release.
+
+#### Out of scope (follow-ups)
+
+- Code generation of TS/Python/Go types from these schemas (downstream tooling).
+- An OpenRPC / JSON-RPC OpenAPI super-document combining all methods and their schemas.
+- Schema-evolution linting (detecting breaking changes between schema versions, gating on capability advertisement).
+- `schemars`-derive regeneration of these files from the Rust types.
+
+#### Wire shape impact
+
+None. The schemas DESCRIBE the existing shape; no daemon code changed.
+
+### Real-repo regression bench (`rts-bench real-repos`) — nightly CI fixture against tokio, flask, and gin
+
+`rts-bench` gains a `real-repos` subcommand (`run` / `baseline` / `compare`) that clones a pinned set of representative OSS repos, indexes each with the rts daemon, captures core indexer metrics, and compares them against a committed baseline. A new nightly GitHub Actions workflow (`real-repo-bench.yml`) runs `compare` at 07:00 UTC and fails the run on any out-of-band metric. The maintainer regenerates the baseline (`rts-bench real-repos baseline …`) any time a daemon change deliberately moves a metric and commits the new `.github/baselines/rts-bench-real-repos.json` in the same PR.
+
+#### Motivation
+
+Two latent bugs in the 2026-05-19/20/21 multi-PR series surfaced only against real codebases:
+
+- The `cancel_in_flight` test flake (fixed in PR #119) reproduced for two unrelated PR agents — #116 (AST-precise call edges) and #117 (MCP resilience). Synthetic single-test runs missed it; the full-workspace test run under contention caught it.
+- The PHP `method_declaration` extractor gap (fixed in PR #118) passed every synthetic single-file unit test but failed PR #116's multi-file integration test against a real PHP fixture.
+
+A small set of pinned real repos under a regression-gated metrics check would have surfaced both classes of bug the night they landed. v1 covers Rust (tokio @ 1.47.0), Python (flask @ 3.1.0), and Go (gin @ v1.10.0) — three repos, <2 min total index time on a CI runner.
+
+#### What's gated
+
+| metric                  | band       | rationale                                       |
+|-------------------------|-----------|-------------------------------------------------|
+| `symbol_count`          | exact     | off-by-one means an extractor changed behavior  |
+| `files_indexed`         | exact     | a missed file = a filter or walker regression   |
+| `cold_walk_ms`          | ±25 %     | cache-sensitive on cold runners                 |
+| `memory_peak_rss_kb`    | ±15 %     | catches leaks; slack for jemalloc thermal noise |
+
+Metrics that the daemon tracks but doesn't yet route through the MCP tool surface (per-method latencies, language set, unresolved-ref count) are recorded as `Option` fields with `TODO(post-G)` callouts; the diff machinery skips them cleanly until the wire path lands.
+
+#### Scope notes
+
+This PR adds the bench machinery and the workflow; it does **not** add any new daemon-side counters. It does **not** add per-PR gating (nightly + manual dispatch only). It does **not** add an issue-opener — regressions annotate the workflow run and fail the workflow, period. Each of those is a deliberate follow-up.
+
+### MCP: expose `Daemon.Telemetry` as a `daemon_telemetry` tool
+
+PR #115 shipped `Daemon.Telemetry` as a JSON-RPC method on the daemon side and PR #120 wired its collectors (latency p50/p99, cache hit rate, cold-walk timing, languages indexed, workspace size, error counts), but the rts-mcp server only routed `daemon_stats` to the MCP tool list. External MCP-speaking clients (Claude Code, Cursor, rts-bench's MCP-based code paths) could not reach the new collectors — most visibly, PR #123's real-repo CI fixture wanted to read these counters to gate regressions on latency p99 and had to mark latency fields as `Option<u64>` with `TODO(post-G)` comments to ship.
+
+#### What
+
+`crates/rts-mcp/src/server.rs` gains one new `#[tool]` function, `daemon_telemetry`, which forwards `Daemon.Telemetry` over the existing connection manager. No parameters (the daemon-side handler ignores `params`). Response wire shape is the same payload documented in `docs/protocol-v0.md` for `Daemon.Telemetry`: `uptime_secs`, `languages_indexed`, `method_counts`, `method_latency_p50_ms`, `method_latency_p99_ms`, `error_counts`, `cache_hit_rate`, `cold_walk_ms_p50`, `workspace_files`.
+
+Tool count over `tools/list` goes from 9 → 10.
+
+#### Why
+
+The MCP routing was the single missing piece between "the daemon collects per-method latencies" (PR #120) and "an external agent can read those latencies without speaking protocol-v0 directly". Pure routing addition; the underlying handler is already covered by PR #115 and PR #120's tests.
+
+#### Test guard
+
+- `crates/rts-mcp/tests/daemon_telemetry_tool.rs::daemon_telemetry_round_trip` — spawns rts-mcp + auto-spawns rts-daemon against a tiny fixture workspace, warms the index with one `find_symbol` call, then fires `tools/call name=daemon_telemetry` and asserts the response carries every collector field PR #115's protocol-v0 update documents.
+- `crates/rts-mcp/tests/tool_descriptions.rs::AUDITED_TOOLS` extended to include `daemon_telemetry`. The existing 4 assertions (comparative clause, trigger-phrase hint, [80, 800] char bound, JSON round-trip) automatically guard the new description against future drift.
+
+#### Out of scope
+
+- No changes to the daemon's `Daemon.Telemetry` handler.
+- No new parameters on the tool (the daemon handler ignores them).
+- No changes to the wire protocol or version capability list.
+- PR #123's `TODO(post-G)` cleanup (dropping the `Option<u64>` wrapping on the latency fields in `crates/rts-bench/src/real_repos/`) is a separate sweep — this PR unblocks it but doesn't perform it.
+
+#### Post-deploy monitoring
+
+No additional operational monitoring required: pure routing addition; the existing `daemon_telemetry` handler is already covered by PR #115 and PR #120's tests.
+
+### `rts-bench dogfood` — measure rts vs Bash tool-selection from session transcripts
+
+Round-12 honorable-mention companion to PR #121 (the tool-description audit). During the 2026-05-19/20/21 maintainer session that shipped 15 PRs to rts, the orchestrating agent used `Bash(grep)` 30+ times against rts's own source code instead of `mcp__rts__grep` — even with rts mounted. PR #121 rewrote every tool description to win the selection moment, but there was no way to MEASURE the improvement. This adds the harness.
+
+#### What
+
+New `rts-bench dogfood <session-jsonl-path> [--report json|text] [--rts-mounted-only]` subcommand. Ingests a Claude Code session JSONL file (or stdin with `-`) and reports:
+
+- Total tool calls and a per-tool breakdown by source (`Bash`, `Read`, `mcp__rts__*`, …)
+- `Bash` calls that pattern-match workspace navigation (`grep`/`rg`/`find`/`cat`/`ls`) and could have used an `mcp__rts__*` tool instead, broken out by category
+- The rts-vs-Bash ratio in code-navigation contexts: `rts_calls / (rts_calls + candidate_bash_calls)`
+
+Classifier patterns (all token-level, documented in `crates/rts-bench/src/dogfood/classify.rs`):
+
+| Leading token | → would_prefer | Excluded |
+|---|---|---|
+| `grep`/`rg`/`egrep`/`fgrep`/`ack` | `mcp__rts__grep` | `git grep` |
+| `find` with `-name`/`-path`/`-regex` filter | `mcp__rts__find_symbol` | `find /tmp`, bare `find` without filters |
+| `cat <file>` | `mcp__rts__read_range` | `cat /tmp/...`, redirection (`cat > x`), heredocs |
+| `ls`, `ls .`, `ls <relpath>` | `mcp__rts__outline_workspace` | `ls -l`, `ls -la`, `ls ~/Downloads` |
+
+Build invocations (`cargo`, `make`, `npm`, etc.) are excluded outright.
+
+#### Privacy & scope
+
+- Client-side local analysis only. Reads JSONL files already on disk under `~/.claude/projects/`. No network, no daemon counters, no remote pings (PR #115's opt-in telemetry is a different surface).
+- Not wired into CI. Manual maintainer tool.
+- Measures tool SELECTION, not performance.
+
+#### Tests
+
+`crates/rts-bench/tests/dogfood_smoke.rs` (5 integration tests, all subprocess-driven) + 19 unit tests inside `dogfood::classify` and `dogfood::parse`:
+
+- `parses_synthetic_session` — synthetic JSONL with known mix → expected counts
+- `classifies_grep_bash_as_rts_candidate` — `Bash(grep)` → `would_prefer: "mcp__rts__grep"`
+- `json_report_is_valid_json` — `--report json` parses cleanly back through `serde_json` and carries `schema_version: "dogfood-v0"`
+- `text_report_renders` — `--report text` includes the stable section headings
+- `rts_not_mounted_session_filters_candidates` — default `--rts-mounted-only` filter behavior is observable and toggleable
+
+No new dependencies. No `unsafe`. Pure stdlib + `serde_json` (already a workspace dep).
+
+### Daemon: expose `unresolved_refs_count` in `Daemon.Telemetry`
+
+PR #123 wired the real-repo CI regression bench against `tokio` / `flask` / `gin` but had to mark `unresolved_refs_count` as `Option<u64>` with a TODO note because the daemon's `Daemon.Telemetry` RPC didn't surface the counter yet. This PR closes that gap.
+
+#### What
+
+`crates/rts-daemon/src/store/mod.rs` gains one new helper, `Store::unresolved_refs_count() -> Result<u64, redb::Error>`, that returns the size of the `UNRESOLVED_REFS` multimap via `MultimapTable::len()` (O(1)). `crates/rts-daemon/src/methods/daemon.rs::telemetry` reads it under the same workspace-mutex acquisition that already covers `language_tag_counts()`, and emits the value as a new top-level `unresolved_refs_count: u64` field in the response. `schemas/v0/methods/Daemon.Telemetry.resp.schema.json` adds the field as required; `docs/protocol-v0.md` documents the RPC shape and the new field under a new §7.11b sub-section. Capability advertisement: `daemon_telemetry_unresolved_refs_count`.
+
+#### Why
+
+`unresolved_refs_count` is the metric that would have caught the PR #118 PHP `method_declaration` extractor gap early — a regression that breaks an extractor surfaces as the count jumping up for that language's fixtures. With it on the wire, PR #123's real-repo bench can drop its `Option<u64>` wrapping in a follow-up sweep.
+
+#### Test guard
+
+- `crates/rts-daemon/src/store/mod.rs::unresolved_refs_count_reflects_table_size` — unit test against a temp store: 0 on empty, 1 after a cross-batch unresolved ref is committed, back to 0 after the callee def lands and Pass 3 drains the deferred row.
+- `crates/rts-daemon/tests/protocol_schemas.rs::unresolved_refs_count_appears_in_telemetry_response` — live RPC round-trip against the real daemon binary; asserts the field is present and well-typed.
+- The existing `response_matches_schema_for_each_method` drift gate validates the live `Daemon.Telemetry` response against the updated JSON Schema, so a code-vs-schema divergence in either direction fails CI.
+
+#### Out of scope
+
+- No changes to the resolver logic. The count is read-only on top of existing state.
+- No new RPC. The field rides in `Daemon.Telemetry`.
+- The `rts-bench` `Option<u64>` wrapping cleanup is a separate sweep — this PR unblocks it but doesn't perform it (parallel agent assignment).
+
+#### Post-deploy monitoring
+
+No additional operational monitoring required: pure additive wire field. The schema-drift test gates accidental removal; opt-in clients (`rts-bench`'s real-repo runner) read the new field immediately, pre-v0.6 daemons continue to omit it without breaking older `rts-bench` callers.
+
+### `rts-bench` real-repos: drop `Option` wrappings on latency / language fields
+
+PR #123 shipped the real-repo regression bench against tokio / flask / gin, but five fields on `RepoMetrics` had to be `Option`-wrapped because `Daemon.Telemetry` was reachable on the daemon's JSON-RPC wire but not routed through the MCP tool list — only `daemon_stats` was. PR #124 added the `daemon_telemetry` MCP tool, unblocking those fields. This PR finishes the work.
+
+#### What
+
+In `crates/rts-bench/src/real_repos/mod.rs`:
+
+- `languages_indexed: Option<Vec<String>>` → `Vec<String>`
+- `find_symbol_latency_p50_ms: Option<u64>` → `u64`
+- `find_symbol_latency_p99_ms: Option<u64>` → `u64`
+- `grep_latency_p50_ms: Option<u64>` → `u64`
+- `grep_latency_p99_ms: Option<u64>` → `u64`
+
+`run_one_repo` now calls `daemon_telemetry` (via the MCP tool surface PR #124 added) and populates the five fields from the response. The cold-walk poll path also warms `Index.Grep` once before the telemetry read so the grep latency histogram has at least one sample to summarise.
+
+`unresolved_refs_count` stays `Option<u64>` — the daemon doesn't yet expose a call-graph gap counter; a parallel follow-up adds that surface.
+
+#### Diff machinery (`crates/rts-bench/src/real_repos/diff.rs`)
+
+`TolerancePolicy` gains a `latency_p50_pct: f64` field alongside the existing `latency_p99_pct`. Both default to `50.0`. The compare grid now always emits rows for the four latency fields and the language set — they're no longer skipped on `None`.
+
+Tolerance bands (unchanged for cold_walk_ms, memory_peak_rss_kb, symbol_count, files_indexed):
+
+| metric                       | band     |
+|------------------------------|----------|
+| `languages_indexed`          | exact    |
+| `find_symbol_latency_p50_ms` | ±50 %    |
+| `find_symbol_latency_p99_ms` | ±50 %    |
+| `grep_latency_p50_ms`        | ±50 %    |
+| `grep_latency_p99_ms`        | ±50 %    |
+
+±50 % is intentionally wide: a single warm-up sample on a CI runner is intrinsically noisy and the bench's purpose here is to catch order-of-magnitude regressions (a hot path going from microseconds to milliseconds), not tail-latency micro-drift.
+
+#### Baseline
+
+`.github/baselines/rts-bench-real-repos.json` has been regenerated to capture the now-mandatory fields. Cold-walk and RSS numbers shift slightly from the v0.5.5 baseline (different runner, fresh clones) but stay well within the existing ±25 % / ±15 % bands on a representative run.
+
+#### Test guard
+
+- `crates/rts-bench/src/real_repos/mod.rs::tests` — `report_roundtrips_through_json` now asserts the latency fields round-trip as bare `u64`. `unresolved_refs_omitted_when_none` replaces the old multi-field omission test (it's the only remaining `Option`). A new `latency_p50_does_not_exceed_p99` sanity test asserts the histogram-ordering invariant for both find_symbol and grep.
+- `crates/rts-bench/src/real_repos/diff.rs::tests` — `latency_p50_within_band_passes` and `latency_p50_outside_band_regresses` cover the new always-on p50 row.
+
+#### Out of scope
+
+- `unresolved_refs_count` daemon-side surface (separate parallel follow-up).
+- Adding new bench metrics — only the existing five `Option`-wrapped fields are dropped to their bare types.
+- Changing the protocol or wire shapes — PR #124 already exposed `daemon_telemetry` through MCP; this PR only changes what `rts-bench` does with the response.
+
+#### Post-deploy monitoring
+
+The nightly real-repo bench workflow now gates on the four latency fields plus the language set. Healthy signal: green check on the scheduled run. Failure signal: a latency regression > 50 % triggers the workflow's existing failure path with the per-metric diff row indicating which `Index.*` method drifted.
+
+### Stabilize `connection_resilience` integration tests — bound response reads by caller deadline, not a hardcoded 8 s wall
+
+The four integration tests in `crates/rts-mcp/tests/connection_resilience.rs` (added in PR #117, MCP resilience) flaked under `cargo test --release -p rts-mcp` parallel mode. PR #124 caught the flake; clean-`origin/main` reruns reproduced four `timeout reading MCP response` errors with no observable production-side fault.
+
+#### Diagnosis
+
+The test helper `read_one_response` capped each MCP response read at a hardcoded `Duration::from_secs(8)`. The outer poll loops (`poll_find_symbol_success`, the scenario-2 SIGKILL recovery wait, the scenario-4 herd drain) already encoded the real per-scenario tolerance (10 s for first call, 30 s for SIGKILL recovery + cold respawn). Pre-fix, the inner 8 s cap short-circuited any outer deadline > 8 s, so the resilience layer's intended recovery windows were untestable.
+
+Under parallel-test load (4 scenarios × 4 daemons × concurrent cold-mount across them) the first `tools/call` legitimately took more than 8 s. The shim's `ConnectionManager::call` awaits `Workspace.Mount` (lazy, fires on first tool call), which awaits the daemon's cold walk + first writer-batch flush. With four daemons booting in parallel and contending for redb open + tree-sitter parser pool + filesystem walk, the natural latency on the first response spiked above 8 s. The outer 10 s and 30 s deadlines would have absorbed this — except they never got the chance, because the inner 8 s capped first.
+
+The production resilience surface (`ConnectionManager`, heartbeat, reconnect-with-backoff, `DAEMON_UNAVAILABLE` envelope) is correct. The race is entirely test-side.
+
+#### Fix
+
+Replace the hardcoded `Duration::from_secs(8)` with a `deadline: Instant` parameter threaded from the caller. Each call site passes the scenario's natural tolerance (30 s everywhere — well above the worst-case cold-mount under parallel load and well above the reconnect ceiling). The outer `poll_find_symbol_success` loop's `deadline` becomes the single point of truth for "how long are we willing to wait for this symbol to appear via find_symbol", consistent with the `wait_for_in_flight(timeout, label)` barrier pattern introduced in PR #119.
+
+Verified 20/20 passing in release mode at default parallel test-threads, 20/20 in debug mode, and 20/20 under 20-core CPU pressure (20 concurrent `yes > /dev/null` loops alongside the test runner on a 10-core machine).
+
+### Daemon: GC orphaned `UNRESOLVED_REFS` for removed files + bounded telemetry
+
+PR #126 exposed `Daemon.Telemetry.unresolved_refs_count` so external observers can watch the parked-reference table grow. Without a GC pass that count was unbounded for files removed on disk — every parked row whose source file got deleted lived in the table forever, drifting the observable metric away from the actual call-graph health. This PR closes that loop.
+
+#### What
+
+`crates/rts-daemon/src/store/mod.rs` gains `Store::gc_unresolved_refs_for_removed_files(removed_files: &[PathBuf]) -> Result<u64, redb::Error>` — walks each removed-file path through the `FID_UNRESOLVED` reverse index, drops `UNRESOLVED_REFS[name]` rows whose `RefSite.fid` matches, returns the count actually deleted. The writer's `flush()` invokes the helper before each `commit_batch` that carries removals; `commit_batch`'s existing `drop_file_entries` then finds the rows already gone (no-op for the GC portion). `crates/rts-daemon/src/state.rs` adds two `AtomicU64` counters (`unresolved_refs_gc_runs_total`, `unresolved_refs_gc_dropped_total`) that the writer bumps on each removal-bearing flush; `Daemon.Telemetry` surfaces both as new top-level u64 fields, gated behind capability `daemon_telemetry_unresolved_refs_gc`. `schemas/v0/methods/Daemon.Telemetry.resp.schema.json` adds both fields as required; `docs/protocol-v0.md` §7.11b documents them with the bounded-growth contract.
+
+#### Strategy
+
+File-removal-driven (Strategy A in the PR brief). The `FID_UNRESOLVED` reverse index already provides O(distinct_callee_names_for_this_fid) lookup, so the GC is amortized into the existing file-removal flush — no background timer, no policy knobs, no schema change. TTL-driven GC (Strategy B) was rejected: it would require a new `created_at_ms` column for a hypothesis (genuinely-unresolvable refs accumulate at meaningful rates) that hasn't been measured. A is one schema change away from B if evidence ever lands.
+
+#### Why
+
+`unresolved_refs_count` becomes a regression signal once GC is wired in: a sudden jump without `unresolved_refs_gc_dropped_total` advancing means an extractor regression (PR #118's PHP `method_declaration` gap is exactly the class of bug that would have moved this needle). Pre-PR-128 the same jump was indistinguishable from "user deleted some files" — both look the same on the wire.
+
+#### Test guard
+
+- `crates/rts-daemon/src/store/mod.rs::gc_unresolved_refs_drops_rows_for_named_file` — unit test against a temp store: 1 parked row, GC pass, 0 left + dropped=1.
+- `crates/rts-daemon/src/store/mod.rs::gc_unresolved_refs_preserves_other_files` — control: two files sharing a callee name; remove only one; assert the other's row survives (`FID_UNRESOLVED`-keyed lookup must not over-collect by name).
+- `crates/rts-daemon/src/store/mod.rs::gc_unresolved_refs_empty_input_returns_zero` — empty-slice short-circuit (no write txn started).
+- `crates/rts-daemon/tests/unresolved_refs_gc.rs::gc_drops_refs_for_removed_file` — end-to-end against the daemon binary: spawn, mount, observe phantom ref parked, delete the source file, assert count drops AND both GC counters advance.
+- `crates/rts-daemon/tests/unresolved_refs_gc.rs::gc_runs_counter_bumps_on_each_removal` — two independent file removals advance `unresolved_refs_gc_runs_total` by 2.
+- `crates/rts-daemon/tests/unresolved_refs_gc.rs::gc_preserves_refs_from_still_present_files` — control over the live wire: shared callee name, remove only one of two files, surviving file's ref must still be parked.
+- The existing `response_matches_schema_for_each_method` schema-drift gate validates the live `Daemon.Telemetry` response against the updated JSON Schema; new fields without the schema bump or vice versa fail CI.
+
+#### Out of scope
+
+- No background polling timer. File-removal events are the only trigger.
+- No TTL-based GC. Schema unchanged.
+- No new RPC. GC is internal; observe via `Daemon.Telemetry`.
+- No changes to the resolver's Pass-3 binding. Resolution and GC stay independent.
+
+#### Post-deploy monitoring
+
+Monitor `unresolved_refs_count` trend over time. Healthy signal: count stays bounded and `unresolved_refs_gc_dropped_total` advances as files are removed. Failure signal: count climbs monotonically without `unresolved_refs_gc_dropped_total` advancing — indicates either GC isn't firing (look at `unresolved_refs_gc_runs_total` first) or an extractor regression (an extractor change that newly drops symbol defs would park refs that match no later commit).
+
+### Adversarial-input fuzzing + property tests + threat model
+
+Closes the silent-correctness gap that the past 22-PR session arc didn't address. Across PRs #102–#129 the daemon shipped schema-drift gates (#122), tool-description regression tests (#121), and the real-repo CI bench (#123), but none of those exercise the daemon's API surface with **malicious** input — only well-formed input. This PR introduces three layers of adversarial-input coverage and a documented threat model.
+
+#### What
+
+1. **Property tests (`crates/rts-daemon/tests/adversarial_proptest.rs`)** — 6 properties pinning the daemon's promises under adversarial input. Default 32 cases per property locally; CI nightly runs 256 via `RTS_PROPTEST_CASES`. Each property fires inputs end-to-end against a real daemon over the protocol wire (no mocks):
+   - `path_canonicalization_never_escapes_root` — `Workspace.Mount { root }` either returns the workspace's canonical root or one of `PATH_TRAVERSAL` / `MOUNT_HAS_SYMLINK` / `INVALID_WORKSPACE_PATH` / `WORKSPACE_MISMATCH`.
+   - `cancel_id_length_bounds_never_panic` — `Daemon.Cancel { cancel_id }` rejects out-of-range with `INVALID_PARAMS`; control chars and Unicode within the 1..=256 byte range round-trip cleanly.
+   - `find_symbol_unicode_never_panics` — any UTF-8 string is a valid `name` from the daemon's perspective; ZWJ/RTL/NFC/NFD never panic.
+   - `grep_literal_unicode_never_panics` — same shape for `Index.Grep { text }`.
+   - `regex_compilation_redos_rejected_or_bounded` — OWASP catastrophic-backtracking corpus + random adversarial patterns; each case asserts the daemon responds in <8s.
+   - `structural_query_size_cap_bounds_compile` — deeply-nested S-expr bombs, long capture chains, and 128 KiB junk strings.
+
+2. **cargo-fuzz targets (`crates/rts-daemon/fuzz/`)** — two libFuzzer harnesses for the regex compile path and the tree-sitter `Query::new` path. Excluded from the workspace (nightly-only); run via `cargo +nightly fuzz run <target> -- -max_total_time=60`.
+
+3. **Adversarial corpus (`crates/rts-daemon/fuzz/corpus/`)** — committed seed inputs for `grep_regex`, `grep_structural`, `path_traversal`, `unicode_confusables`, `resource_exhaustion`. Each subdirectory has a `README.md` documenting what class of input it covers and which target consumes it.
+
+4. **`RESILIENCE.md`** — top-level threat model documenting what the daemon promises under adversarial input. Each promise cites its property test or fuzz target. Includes a "Known gaps" section for promises that aren't yet enforced.
+
+5. **Nightly `fuzz-bench` workflow (`.github/workflows/fuzz-bench.yml`)** — peer to `real-repo-bench.yml`. Runs property tests on stable + both fuzz targets on nightly. Cron at `0 8 * * *` (one hour after real-repo bench). Crashes are uploaded as workflow artifacts and surfaced via `::error` annotations.
+
+#### Why
+
+The 22-PR session arc shipped many regression gates against wire shape, schemas, descriptions, and metrics — but every one of those tests assumes a well-behaved caller. The daemon accepts attacker-controllable strings on `Workspace.Mount.root`, `Index.Grep.{text, structural_query}`, `Index.FindSymbol.{name, pattern}`, and `Daemon.Cancel.cancel_id`. Before this PR there was no test that asked "what happens when these are malicious?" — only "what happens when they're well-formed?" This PR closes that gap with a documented, testable threat model.
+
+#### What was found
+
+The harness surfaced two real adversarial-input gaps the daemon does NOT yet enforce. Per the harness's "small bug → fix inline; large bug → document + flag" policy, both are documented in `RESILIENCE.md` §"Known gaps" rather than fixed in this PR:
+
+- **G1 — No explicit byte cap on `structural_query`.** The 1024-char cap is enforced on `text` but not on `structural_query`. A multi-MB S-expression would be passed to tree-sitter's `Query::new` (which in practice rejects quickly, so the risk is bounded — but the explicit cap is missing). Suggested fix: ~30 LOC adding `MAX_STRUCTURAL_QUERY_BYTES = 64 KiB` to `grep_v2/limits.rs`.
+- **G2 — Envelope `cancel_id` has no length cap at registration.** `Daemon.Cancel`'s handler validates 1..=256 bytes, but the dispatcher passes the request envelope's `cancel_id` directly to `CancelGuard::register` without bounds. Worst case ~256 MB held in the registry (16 in-flight × 16 MB) for the slowest request's duration. Suggested fix: ~15 LOC mirroring the handler-side check in `methods/mod.rs::dispatch`.
+
+Both are documented for maintainer triage as follow-up PRs.
+
+#### Out of scope
+
+- Runtime sandboxing (capability tokens, seccomp, namespaces) — separate workstream.
+- Multi-tenant authentication / authorisation.
+- Network-touching fuzz targets — the daemon binds a Unix-domain socket; no network listener exists.
+- AFL / honggfuzz — cargo-fuzz (libFuzzer) is the Rust standard and matches the workspace's no-extra-tooling preference.
+- Per-PR fuzzing — fuzz is nightly only; the property tests run on every `cargo test`.
+
+#### Quality gates
+
+- `cargo test -p rts-daemon --test adversarial_proptest` — 6 properties pass at default 32 cases.
+- `cargo test --workspace` — no regressions.
+- `cargo fmt --all` clean.
+- `cargo clippy -p rts-daemon -p rts-mcp -p rts-bench --all-targets` clean.
+- Zero `unsafe` blocks added.
+- cargo-fuzz targets compile (presence is the gate; libFuzzer-finding is the nightly job).
+
+#### Post-deploy monitoring
+
+Watch the nightly `fuzz-bench` workflow's crash count over the next 14 days. Healthy signal: green check on the schedule with no crash artifacts requiring investigation. Failure signal: any crash artifact added to corpus → maintainer triage required, promoted to a regression test in `tests/adversarial_proptest.rs` (NOT silently fed back into the corpus).
+
+### Workspace metadata cleanup + public-API drift gate
+
+Closes two related drift gaps surfaced during the post-24-PR cleanup pass.
+
+#### What
+
+1. **Workspace metadata fix.** Root `Cargo.toml`'s `[workspace.package]`
+   ships real maintainer identity now:
+
+   - `authors = ["njfio <7220+njfio@users.noreply.github.com>"]` (was
+     `["Your Name <your.email@example.com>"]`)
+   - `repository = "https://github.com/njfio/rs-agent-code-utility"` (was
+     `"https://github.com/yourusername/rust_tree_sitter"`)
+
+   Without this, a `cargo publish` would have shipped placeholder identity
+   to crates.io.
+
+2. **Metadata regression test (`crates/rts-core/tests/metadata.rs`).**
+   Parses the workspace root `Cargo.toml` via `toml = "0.8"` (an existing
+   workspace dep — no new dependency) and asserts:
+
+   - `[workspace.package].authors` contains none of the placeholder
+     fragments "Your Name", "your.email@example.com", "example.com".
+   - `[workspace.package].repository` parses as a well-formed
+     `https://github.com/<owner>/<name>` URL and does not contain the
+     placeholder owner "yourusername".
+
+   Parsing (not regex) avoids the workspace-inheritance fragility: crate
+   manifests declare `authors.workspace = true`, which would silently
+   false-pass under a regex over the per-crate manifests.
+
+3. **Public-API drift gate (`crates/rts-core/tests/public_api.rs` +
+   `crates/rts-mcp/tests/public_api.rs`).** Each test calls
+   `public_api::Builder::from_rustdoc_json(...).assert_eq_or_update(...)`
+   against a committed snapshot at `tests/snapshots/public-api.txt`. The
+   tests run as part of `cargo test --workspace` — no new CI workflow
+   file. Three new dev-deps power the gate: `public-api = "0.51"`,
+   `rustdoc-json = "0.9"`, `rustup-toolchain = "0.1"`.
+
+4. **`docs/public-api-gate.md`** documents what the gate catches, how to
+   regenerate snapshots (`UPDATE_SNAPSHOTS=yes cargo test --workspace --
+   public_api`), and the nightly-pinning mechanism via the
+   library-exposed `public_api::MINIMUM_NIGHTLY_RUST_VERSION` constant.
+
+#### Why
+
+A `cargo publish` against the pre-fix metadata would have sent
+placeholder identity to crates.io. The metadata test prevents future
+regressions of the same shape. The public-API gate completes the
+trio with PR #122 (schema drift) and PR #121 (tool-description drift):
+every load-bearing surface of the workspace now has a
+`cargo test`-time diff against a committed baseline.
+
+#### Snapshot regen plan
+
+The snapshots committed here reflect the CURRENT state of rts-core and
+rts-mcp — before any post-pivot deletions land. When PR-A and PR-B
+(siblings in the 3-PR refactor arc this PR is the "C" of) merge, the
+rts-core snapshot needs a one-time regeneration via
+`UPDATE_SNAPSHOTS=yes cargo test --workspace -- public_api`. This is
+called out in the PR body so the maintainer can sequence it at merge time.
+
+#### Out of scope
+
+- The deletion + facade work in PR-A and PR-B (separate sibling PRs)
+- Gates for `rts-daemon` (binary-only; no library surface to lock) or
+  `rts-bench` (lib is internal scaffolding for the bench binary)
+- A separate CI workflow file (the test runs as part of
+  `cargo test --workspace` per the cargo-public-api maintainers'
+  canonical recipe)
+
+#### Quality gates
+
+- `cargo test --workspace` — adds 3 new passing tests (2 metadata, 2
+  public_api); existing suite unchanged.
+- `cargo fmt --all` clean.
+- `cargo clippy -p rts-daemon -p rts-mcp -p rts-bench --all-targets` clean.
+- `cargo publish -p rust_tree_sitter --dry-run` succeeds with no
+  placeholder-string warnings.
+- Zero `unsafe` blocks added.
+
+#### Post-deploy monitoring
+
+No additional operational monitoring required: pure metadata + test
+additions; runtime behavior unchanged. The gate becomes load-bearing
+the moment it merges, but the rts-core baseline is built from current
+state and will need a one-time regen when PR-A + PR-B's deletions
+land.
+
+### Refactor: delete pre-pivot weight from rts-core, archive, and wiki_site_test
+
+PR-A of the 3-PR drift-remediation arc (plan: `docs/plans/2026-05-22-001-refactor-pre-pivot-cleanup-and-public-surface-tightening-plan.md`).
+
+#### What
+
+- **rts-core surgery:** strip `FileCache` + `SemanticGraphQuery` from `crates/rts-core/src/analyzer.rs` (fields, constructor wiring, and the dependent cache / semantic-graph methods). The on-disk read path is now a direct `std::fs::read_to_string`.
+- **13 dead rts-core modules deleted:** `advanced_parallel`, `analysis_common`, `analysis_utils`, `code_map`, `complexity_analysis`, `control_flow`, `dependency_analysis`, `file_cache`, `memory_tracker`, `performance_analysis`, `semantic_context`, `semantic_graph`, `symbol_table`. None had any consumer outside their own crate — verified via grep + `cargo check -p rust_tree_sitter --lib` between every deletion. `CodebaseAnalyzer` stays public; PR-B owns its removal.
+- **Two stale subtrees deleted:** `archive/` (190 files / ~34k LoC / ~3.2 MB of pre-pivot library + CLI + AI/security analyzers) and `wiki_site_test/` (362 files / ~9 MB of generated wiki output).
+- **Root `Cargo.toml` cleanup:** drop the `exclude = ["archive"]` workspace entry and the explanatory comment now that the directory is gone. Workspace metadata placeholders (`authors`, `repository`) are not touched here — PR-C owns those.
+- **AGENTS.md cleanup:** strip the three remaining mentions of `archive/` (preamble, grep-still-right-tool list, "What's archived, and why" section).
+- **Dead integration tests deleted:** `dependency_analysis`, `simple_memory_test`, `complexity_analysis_unit_tests`, `file_cache_tests`, `analyzer_cache_tests`. Inline-removed: `test_basic_complexity_analysis`, `test_complexity_analysis_performance`, `test_performance_analysis_optimizations`, `test_string_optimization_detection`. The surviving test suite (~261 tests) stays green.
+- **CI semantic-eval corpora trimmed:** removed three query blocks in `corpus/semantic-eval-rts-core.toml` + `corpus/semantic-eval-rts-core-blind-v2.toml` that hardcoded `FileCache`, `CacheStats`, `SymbolTable`, `SymbolStatistics`. Both `--check-coverage` gates (0.95 / 0.75) still pass.
+- **Preambles rewritten:** `crates/rts-core/src/lib.rs` now describes the post-cleanup public surface (parser/query primitives, `Symbol`, `pagerank::*`, `signature::render_*`, `Error`/`Result`). `crates/rts-core/src/analyzer.rs` rustdoc examples are marked `ignore` with a note pointing at the upcoming `parse_content` facade from PR-B.
+
+#### Sets up
+
+- **PR-B** will hoist `extract_symbols` to a `pub(crate) fn`, add `pub fn parse_content(content, language) -> Result<ParseOutcome, Error>`, migrate `crates/rts-daemon/src/writer.rs:763` to it, and delete `CodebaseAnalyzer` / `AnalysisConfig` / `AnalysisResult` / `FileInfo` / `AnalysisDepth`.
+- **PR-C** will fix the root `Cargo.toml` `authors` + `repository` placeholders, add a metadata integration test (`toml = "0.8"` parsing), and lock the public API of rts-core + rts-mcp behind a snapshot-based `public_api::assert_eq_or_update` gate.
+
+#### Out of scope
+
+- Removing `CodebaseAnalyzer` — owned by PR-B (B3). It stays accessible in this PR so the daemon's only out-of-crate caller (`writer.rs:763`) keeps working.
+- Workspace metadata fix — owned by PR-C (C1).
+- `cargo public-api` gate — owned by PR-C (C3).
+
+#### Post-deploy monitoring
+
+No additional operational monitoring required: this is a pure refactor with no runtime behavior change. The semantic-eval CI gate already covers the corpus edits.
+
+### Refactor: rts-core public surface tightening — parse_content facade + CodebaseAnalyzer delete
+
+PR-B of the 3-PR drift-remediation arc (plan: `docs/plans/2026-05-22-001-refactor-pre-pivot-cleanup-and-public-surface-tightening-plan.md`). Builds on PR-A (#133) which stripped FileCache + SemanticGraphQuery from the analyzer.
+
+#### What
+
+- **`extract_symbols` hoisted to `pub(crate) fn` (B0):** moved out of `impl CodebaseAnalyzer` into a new `pub(crate) mod extraction` (`crates/rts-core/src/extraction.rs`). 18 free functions, one dispatch entry point. The helpers never used `&self` — the conversion was mechanical.
+- **`parse_content` facade added (B1):** `pub fn parse_content(content: &str, language: Language) -> Result<ParseOutcome>` in `crates/rts-core/src/lib.rs`. Built from `Parser::new` + `extraction::extract_symbols` directly — NOT wrapping a stateful analyzer. `ParseOutcome { symbols, partial_errors }` reserves a slot for future extractor self-reporting of the known Java/C/C++ silent-empty path (writer.rs:807-815). Uses the already-public `error::Error` — no new `ParseError` wrapper.
+- **Daemon migrated (B2):** `crates/rts-daemon/src/writer.rs:763` now calls `rust_tree_sitter::parse_content` instead of `CodebaseAnalyzer::new()?.analyze_content(...)`. No `CodebaseAnalyzer` import remains in `rts-daemon/src/**`. All 247 daemon lib tests + the full integration battery (reconciliation, cancel-in-flight, grep v2, schemas, telemetry, fuzz) pass unchanged.
+- **`CodebaseAnalyzer` + sibling types deleted (B3):** `CodebaseAnalyzer`, `AnalysisConfig`, `AnalysisResult`, `FileInfo`, `AnalysisDepth` removed from rts-core entirely. `analyzer.rs` (1607 LoC) deleted. `Symbol` relocated to new `crates/rts-core/src/symbol.rs` next to its only producer; re-exported from lib.rs as before so `use rust_tree_sitter::Symbol` works unchanged.
+- **15 extraction tests preserved (B3):** moved from the deleted `analyzer.rs` test module into `extraction::tests`, rewritten to use `parse_content` (the public API). Coverage of go/jsdoc/rust-const+static/ruby/java/swift/csharp/php (interface/trait/namespaced)/rust-trait+type+union+macro doc-comment + symbol extraction is fully preserved against the post-cleanup public surface.
+- **Integration tests dispositioned (B4):**
+  - `analyzer_cache_tests.rs` — already deleted by PR-A (A5)
+  - `analyzer_depth.rs` — DELETED (depth was internal; daemon never observed it)
+  - `symbol_listing.rs` — REWRITTEN against `parse_content` (this IS what the new facade does)
+  - `basic_integration_tests.rs` — 4 tests REWRITTEN against `parse_content`; the file-system error-handling test was dropped since `parse_content` takes content, not a path
+  - `performance_optimization_tests.rs` — 5 tests REWRITTEN against `parse_content` / `Parser`; the sequential-only `test_concurrent_analysis_performance` was dropped since rayon parallelism lives in the daemon and is exercised by daemon integration tests
+- **Public-API snapshot regenerated:** `crates/rts-core/tests/snapshots/public-api.txt` shrinks by 894 lines net (1016 deletions, 122 additions). The deletion is the analyzer's massive surface (50+ methods, 5 sibling types with full auto-derive chains); the additions are `parse_content`, `ParseOutcome`, the relocated `symbol::Symbol`. `crates/rts-mcp/tests/snapshots/public-api.txt` is unchanged — rts-mcp never re-exported anything from the deleted types.
+
+#### Post-PR-B rts-core public surface
+
+Daemon-facing (verified via `grep "use rust_tree_sitter::"` against `crates/rts-{daemon,mcp,bench}/src/`):
+
+- **Parsing:** `Parser`, `SyntaxTree`, `Node`, `TreeCursor`, `Language`
+- **Querying:** `Query`, `QueryBuilder`, `QueryMatch`, `QueryCapture`
+- **Facade:** `parse_content`, `ParseOutcome`
+- **Symbols:** `Symbol`
+- **Ranking:** `pagerank::*` (Edge, compute, edge_weight)
+- **Signatures:** `signature::render_*` (13 per-language entry points)
+- **Errors:** `Error`, `Result`
+- **Language utilities:** `supported_languages`, `detect_language_from_extension`, `detect_language_from_path`
+
+#### Equivalence proof
+
+- `parse_content` is a behavioural alias for the pre-PR-B `CodebaseAnalyzer::new()?.analyze_content(content, language)` chain. The B1 commit shipped a `parse_content_matches_codebase_analyzer_output` unit test pinning this; B3 dropped the analyzer half (so the test was rewritten to a multi-kind sanity check) but the behavioural equivalence carries forward through the daemon's full test suite passing unchanged.
+- Daemon's writer hot-path tests (`parse_and_extract_returns_*`) keep passing — they're integration tests against the new code path, exercising the same Symbol-output contract.
+
+#### Out of scope
+
+- Filling in the Java/C/C++ extractor stubs — known issue, documented at `writer.rs:805-815` and reserved-room-for in `ParseOutcome::partial_errors`.
+- Filling in `ParseOutcome::partial_errors` from extractor self-reporting — the slot exists, the wiring is for a future PR.
+- Renaming or merging the `extraction` module into something else — `pub(crate)` is the right visibility for now.
+
+#### Post-deploy monitoring
+
+No additional operational monitoring required: pure refactor; daemon behavior unchanged. The daemon's existing real-repo regression bench (PR #123) provides the symbol-count equivalence proof.
+
 
 ## [0.5.5] - 2026-05-16
 

@@ -411,6 +411,16 @@ and clear the fragments dir. The release commit then bundles the
 CHANGELOG update, the fragment deletions, and the `Cargo.toml`
 version bump together.
 
+### Experimental surface gate (v0.6+)
+
+New MCP tools and `rts` CLI subcommands land behind
+`#[cfg(feature = "experimental")]` (the `experimental` Cargo feature, off by
+default) until they're promoted to the stable, frozen surface in a release —
+no promotion ladder, no `experimental_*` prefix, no per-feature paperwork.
+Daemon-side or core-side experimental code declares its own `experimental`
+feature in that crate, since Cargo features don't cross the
+rts-mcp↔rts-daemon socket boundary.
+
 ## Security & configuration
 
 - **Never** commit secrets. The `.gitignore` excludes `.env`,

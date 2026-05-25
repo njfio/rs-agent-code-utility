@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "install_id": "11111111-1111-4111-8111-111111111111",
-  "rts_version": "0.5.5",
+  "rts_version": "0.6.0",
   "os": "OS_PLACEHOLDER",
   "arch": "ARCH_PLACEHOLDER",
   "uptime_hours": 2,
