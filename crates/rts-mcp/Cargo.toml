@@ -57,7 +57,6 @@ serde_json = "1"
 
 # Errors
 anyhow = "1"
-thiserror = "1"
 
 # Logging — stderr-only per stdio MCP discipline.
 tracing = "0.1"
@@ -65,17 +64,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # Workspace fingerprint → socket path discovery.
 blake3 = "1"
-hex = "0.4"
 
 # XDG / runtime-dir lookup mirrors rts-daemon's `socket::socket_path_for_default`.
 dirs = "5"
-
-# Path canonicalisation parity with rts-daemon's `workspace.rs`.
-unicode-normalization = "0.1"
-
-# Unix peer-cred / metadata probes parity with the daemon.
-nix = { version = "0.29", features = ["user", "fs"] }
-libc = "0.2"
 
 # v0.6 anonymous opt-in telemetry: TOML for the local opt-in flag.
 # Pure-Rust, already in the workspace via rts-bench/rts-core; no new
