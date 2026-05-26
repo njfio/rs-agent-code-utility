@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: ["**"]
 
+env:
+  # Opt all JavaScript actions (checkout, cache) into the Node.js 24 runtime
+  # ahead of the 2026-06-02 forced migration off Node 20. Reversible; drop
+  # once these actions ship Node-24 manifests by default. Matches release.yml.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   rust:
     name: Rust CI (fmt, clippy, tests)
