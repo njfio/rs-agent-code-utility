@@ -472,8 +472,8 @@ pub fn compute_symbol_ranks(store: &Store, generation: u64) -> anyhow::Result<Sy
     // Excluded sids still exist in NAME_TO_SID + DEFS — `find_symbol`
     // still finds them; they just get rank_score = 0.0 from the
     // default and sink to the bottom of rank-sorted responses.
-    let all_sids = collect_workspace_sids_with_kind(store)
-        .context("collect_workspace_sids_with_kind")?;
+    let all_sids =
+        collect_workspace_sids_with_kind(store).context("collect_workspace_sids_with_kind")?;
     // sid_info_full carries kind for the post-rank heading multiplier;
     // sid_info (without kind) is what build_edges already consumes.
     let sid_info_full: Vec<(u32, String, u32, SymbolKind)> = all_sids
@@ -858,8 +858,7 @@ mod tests {
         // sid 100 is a heading; sid 200 is a code symbol.
         let idx_to_sid = vec![100u32, 200u32];
         let raw = vec![0.5f64, 0.5f64];
-        let heading_sids: std::collections::HashSet<u32> =
-            [100u32].into_iter().collect();
+        let heading_sids: std::collections::HashSet<u32> = [100u32].into_iter().collect();
         let out = apply_heading_dampener(&idx_to_sid, &raw, &heading_sids);
         assert!((out[&100] - 0.05).abs() < 1e-9, "heading scaled to 0.05");
         assert!((out[&200] - 0.5).abs() < 1e-9, "code symbol unchanged");
@@ -878,11 +877,7 @@ mod tests {
         // With no heading sids present, the multiplier is a no-op.
         let idx_to_sid = vec![1u32, 2u32, 3u32];
         let raw = vec![0.2f64, 0.3f64, 0.5f64];
-        let out = apply_heading_dampener(
-            &idx_to_sid,
-            &raw,
-            &std::collections::HashSet::new(),
-        );
+        let out = apply_heading_dampener(&idx_to_sid, &raw, &std::collections::HashSet::new());
         for (i, sid) in idx_to_sid.iter().enumerate() {
             assert!((out[sid] - raw[i]).abs() < 1e-9);
         }

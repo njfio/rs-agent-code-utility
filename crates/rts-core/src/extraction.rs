@@ -1378,8 +1378,7 @@ mod markdown {
                     // single `\n\n` separator; when absent we still
                     // emit the path so `find_symbol --doc-contains`
                     // over the ancestor names works.
-                    let path: Vec<String> =
-                        stack.iter().map(|(_, n)| n.clone()).collect();
+                    let path: Vec<String> = stack.iter().map(|(_, n)| n.clone()).collect();
                     let body = match kind {
                         // ATX headings: body is the first paragraph
                         // child of the enclosing `section`.
@@ -1394,9 +1393,7 @@ mod markdown {
                         _ => None,
                     };
                     let documentation = match body {
-                        Some(b) if path.len() > 1 => {
-                            Some(format!("{}\n\n{b}", path.join(" > ")))
-                        }
+                        Some(b) if path.len() > 1 => Some(format!("{}\n\n{b}", path.join(" > "))),
                         Some(b) => Some(b),
                         None if path.len() > 1 => Some(path.join(" > ")),
                         None => None,
@@ -1430,10 +1427,7 @@ mod markdown {
 
     /// Extract `(level, text)` from an `atx_heading` node.
     /// Markers are `atx_h1_marker` .. `atx_h6_marker`.
-    fn atx_heading_info(
-        node: &crate::Node<'_>,
-        bytes: &[u8],
-    ) -> Option<(u8, String)> {
+    fn atx_heading_info(node: &crate::Node<'_>, bytes: &[u8]) -> Option<(u8, String)> {
         let mut level: Option<u8> = None;
         let mut text: Option<String> = None;
         for child in node.children() {
@@ -1455,10 +1449,7 @@ mod markdown {
 
     /// Extract `(level, text)` from a `setext_heading` node.
     /// Underline `setext_h1_underline` = level 1, `setext_h2_underline` = 2.
-    fn setext_heading_info(
-        node: &crate::Node<'_>,
-        bytes: &[u8],
-    ) -> Option<(u8, String)> {
+    fn setext_heading_info(node: &crate::Node<'_>, bytes: &[u8]) -> Option<(u8, String)> {
         let mut level: Option<u8> = None;
         let mut text: Option<String> = None;
         for child in node.children() {
@@ -1564,11 +1555,7 @@ mod markdown {
             }
         }
         // Take exactly DOC_CHAR_CAP chars (character-aligned, not byte).
-        let s: String = buf
-            .trim_end()
-            .chars()
-            .take(DOC_CHAR_CAP)
-            .collect();
+        let s: String = buf.trim_end().chars().take(DOC_CHAR_CAP).collect();
         s
     }
 }
@@ -2020,7 +2007,10 @@ macro_rules! log_at {
         let syms = markdown_symbols(src);
         assert_eq!(syms.len(), 6, "expected 6 headings, got {syms:?}");
         for sym in &syms {
-            assert_eq!(sym.kind, "heading", "every heading symbol gets kind=heading");
+            assert_eq!(
+                sym.kind, "heading",
+                "every heading symbol gets kind=heading"
+            );
             assert_eq!(sym.visibility, "public", "headings are public by default");
         }
         // `Symbol.name` stores the LEAF only so `find_symbol(name="X")`
@@ -2035,7 +2025,10 @@ macro_rules! log_at {
         // The hierarchy lives in the `documentation` prefix (no body
         // paragraph in this fixture → docs are just the path).
         assert_eq!(syms[1].documentation.as_deref(), Some("One > Two"));
-        assert_eq!(syms[5].documentation.as_deref(), Some("One > Two > Three > Four > Five > Six"));
+        assert_eq!(
+            syms[5].documentation.as_deref(),
+            Some("One > Two > Three > Four > Five > Six")
+        );
         // The H1 has nothing to nest under and no body, so docs stay
         // empty.
         assert!(syms[0].documentation.is_none());
@@ -2083,8 +2076,7 @@ macro_rules! log_at {
         // After going H1 → H2 → H3, a new H1 should reset the path —
         // subsequent H2 nests under the *new* H1, not the old one.
         // Verify via the `documentation` prefix.
-        let src =
-            "# Alpha\n\n## A1\n\n### A1a\n\n# Beta\n\n## B1\n";
+        let src = "# Alpha\n\n## A1\n\n### A1a\n\n# Beta\n\n## B1\n";
         let syms = markdown_symbols(src);
         let names: Vec<&str> = syms.iter().map(|s| s.name.as_str()).collect();
         assert_eq!(names, vec!["Alpha", "A1", "A1a", "Beta", "B1"]);

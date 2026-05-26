@@ -348,13 +348,7 @@ async fn markdown_round_trip_via_mcp_and_cli() -> anyhow::Result<()> {
     );
 
     // ---- Scenario 2: outline_workspace includes the .md files ----
-    let resp = round_trip(
-        &mut stream,
-        "15",
-        "Index.Outline",
-        json!({}),
-    )
-    .await?;
+    let resp = round_trip(&mut stream, "15", "Index.Outline", json!({})).await?;
     assert!(resp["error"].is_null(), "outline failed: {resp:?}");
     // The outline payload format is text (per the MCP `outline_workspace`
     // tool contract); it should mention README.md and the heading text.
@@ -385,9 +379,7 @@ async fn markdown_round_trip_via_mcp_and_cli() -> anyhow::Result<()> {
         !hits.is_empty(),
         "grep should find 'releases page' in README.md: {resp:?}",
     );
-    let any_in_readme = hits
-        .iter()
-        .any(|h| h["file"].as_str() == Some("README.md"));
+    let any_in_readme = hits.iter().any(|h| h["file"].as_str() == Some("README.md"));
     assert!(any_in_readme, "grep should match README.md file: {hits:?}");
 
     // ---- Scenario 6: CLI parity ----
@@ -422,13 +414,9 @@ async fn markdown_round_trip_via_mcp_and_cli() -> anyhow::Result<()> {
             String::from_utf8_lossy(&cli_out.stderr),
         );
         let cli_stdout = String::from_utf8_lossy(&cli_out.stdout).to_string();
-        let cli_json: Value = serde_json::from_str(&cli_stdout).map_err(|e| {
-            anyhow::anyhow!("rts find JSON parse: {e}; stdout={cli_stdout}")
-        })?;
-        let cli_matches = cli_json["matches"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default();
+        let cli_json: Value = serde_json::from_str(&cli_stdout)
+            .map_err(|e| anyhow::anyhow!("rts find JSON parse: {e}; stdout={cli_stdout}"))?;
+        let cli_matches = cli_json["matches"].as_array().cloned().unwrap_or_default();
         assert!(
             !cli_matches.is_empty(),
             "rts find should return at least one match; got {cli_json:?}",
@@ -484,7 +472,10 @@ async fn markdown_round_trip_via_mcp_and_cli() -> anyhow::Result<()> {
 
     // Daemon should still respond to pings — no panic on oversize.
     let resp = round_trip(&mut stream, "17", "Daemon.Ping", json!({})).await?;
-    assert!(resp["error"].is_null(), "Daemon.Ping after oversize: {resp:?}");
+    assert!(
+        resp["error"].is_null(),
+        "Daemon.Ping after oversize: {resp:?}"
+    );
 
     // The "Oversize Heading" symbol must NOT appear (oversize files
     // skip extraction).

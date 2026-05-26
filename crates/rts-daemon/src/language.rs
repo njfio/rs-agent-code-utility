@@ -627,7 +627,10 @@ mod tests {
             let info = info_for_path(ext).expect("{ext} should be supported");
             assert_eq!(info.language, Language::Markdown);
             assert!(info.signature_renderer.is_some(), "{ext} needs a renderer");
-            assert!(info.refs_query.is_none(), "{ext} should have no refs query in v1");
+            assert!(
+                info.refs_query.is_none(),
+                "{ext} should have no refs query in v1"
+            );
             assert!(
                 cached_refs_query(&info).is_none(),
                 "{ext} cached_refs_query must short-circuit"
@@ -706,20 +709,16 @@ mod tests {
                 )
             });
             assert_eq!(
-                info.language,
-                lang,
+                info.language, lang,
                 "info_for_path({path:?}) language mismatch — got {:?} want {:?}",
-                info.language,
-                lang,
+                info.language, lang,
             );
 
             // b) rts-core side: extract_symbols accepts the snippet
             //    and produces at least one symbol — proves the
             //    dispatch arm is wired, not no-op'd.
             let outcome = rust_tree_sitter::parse_content(snippet(lang), lang)
-                .unwrap_or_else(|e| {
-                    panic!("parse_content failed for {}: {e}", lang.name())
-                });
+                .unwrap_or_else(|e| panic!("parse_content failed for {}: {e}", lang.name()));
             assert!(
                 !outcome.symbols.is_empty(),
                 "extract_symbols for {} produced 0 symbols — missing or no-op arm",
