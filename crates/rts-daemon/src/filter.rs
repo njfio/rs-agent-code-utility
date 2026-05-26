@@ -110,8 +110,15 @@ pub const BODY_ALLOWED_EXTENSIONS: &[&str] = &[
     // Code
     "rs", "py", "ts", "tsx", "js", "jsx", "go", "java", "c", "h", "cpp", "hpp", "cc", "cs", "php",
     "rb", "swift", "kt", // Code-adjacent (config, prose)
-    "md", "toml", "yaml", "yml", "json", "xml",
+    "md", "markdown", "toml", "yaml", "yml", "json", "xml",
 ];
+
+// v0.7.0: per-file 4 MB byte cap on markdown is already provided by the
+// existing global `OVERSIZE_THRESHOLD_BYTES` in `writer.rs` (4 MiB).
+// Files exceeding the threshold are tagged `oversize=true` and skip
+// symbol extraction entirely — that's the parser-DoS guard the plan
+// calls out (`set_timeout_micros` is a no-op in tree-sitter ≥ 0.26).
+// No separate markdown-specific constant needed.
 
 /// Extensions we *index* (structure / symbols) but never return body for.
 /// Empty for v0 — anything outside the body-allowlist is skipped entirely. A
@@ -354,6 +361,26 @@ mod tests {
             classify(&p, &g),
             FilterDecision::Skip(SkipReason::Gitignore)
         );
+    }
+
+    #[test]
+    fn markdown_extensions_are_index_full() {
+        // v0.7.0 — `.md` was already in `BODY_ALLOWED_EXTENSIONS` (the
+        // filter said "index this") but `info_for_path` returned None
+        // (no language dispatch), so the writer dropped the bytes
+        // silently. This pins the *filter*-side contract: both
+        // extensions reach `IndexFull` here. The dispatch side is
+        // verified in the `language::tests` module + the
+        // `language_dispatch_invariant` integration test.
+        let g = empty_gitignore();
+        for ext in ["README.md", "docs/notes.markdown"] {
+            let p = g.root.join(ext);
+            assert_eq!(
+                classify(&p, &g),
+                FilterDecision::IndexFull,
+                "{ext} should reach IndexFull"
+            );
+        }
     }
 
     #[test]

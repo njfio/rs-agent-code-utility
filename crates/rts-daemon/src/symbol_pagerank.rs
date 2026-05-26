@@ -61,6 +61,18 @@ use std::sync::Mutex;
 use anyhow::Context;
 use rust_tree_sitter::pagerank::{Edge, compute as pagerank_compute, edge_weight};
 
+use crate::store::SymbolKind;
+
+/// v0.7.0 — heading-PageRank dampener. Mirrors the leading-underscore
+/// × 0.1 rule in `edge_weight`. Markdown headings have no outbound
+/// references (no refs query), making them dangling nodes — PageRank
+/// redistributes their mass via the teleport vector each iteration,
+/// landing them near the uniform baseline. Without a counter,
+/// thousands of dangling heading SIDs would crowd out weakly-connected
+/// code symbols. We apply the multiplier to *final* rank scores rather
+/// than `edge_weight` because headings have no outgoing edges to weight.
+const HEADING_RANK_MULTIPLIER: f64 = 0.1;
+
 use crate::store::Store;
 
 /// Cached PageRank scores for a single `index_generation`.
@@ -460,19 +472,26 @@ pub fn compute_symbol_ranks(store: &Store, generation: u64) -> anyhow::Result<Sy
     // Excluded sids still exist in NAME_TO_SID + DEFS — `find_symbol`
     // still finds them; they just get rank_score = 0.0 from the
     // default and sink to the bottom of rank-sorted responses.
-    let all_sids = collect_workspace_sids(store).context("collect_workspace_sids")?;
-    let sid_info: Vec<(u32, String, u32)> = all_sids
+    let all_sids = collect_workspace_sids_with_kind(store)
+        .context("collect_workspace_sids_with_kind")?;
+    // sid_info_full carries kind for the post-rank heading multiplier;
+    // sid_info (without kind) is what build_edges already consumes.
+    let sid_info_full: Vec<(u32, String, u32, SymbolKind)> = all_sids
         .into_iter()
-        .filter(|(_sid, name, def_count)| {
+        .filter(|(_sid, name, def_count, _kind)| {
             !is_always_filtered(name) && !(*def_count == 0 && is_prelude_noise_name(name))
         })
         .collect();
-    if sid_info.is_empty() {
+    if sid_info_full.is_empty() {
         return Ok(SymbolRanks {
             generation,
             sid_to_rank: HashMap::new(),
         });
     }
+    let sid_info: Vec<(u32, String, u32)> = sid_info_full
+        .iter()
+        .map(|(sid, name, def_count, _kind)| (*sid, name.clone(), *def_count))
+        .collect();
 
     // Assign dense indices [0..n) to sids — pagerank::compute uses
     // u32 node ids in that space.
@@ -494,11 +513,23 @@ pub fn compute_symbol_ranks(store: &Store, generation: u64) -> anyhow::Result<Sy
     let n = idx_to_sid.len();
     let raw = pagerank_compute(n, &edges, None);
 
-    // Translate dense ranks back to sid-keyed scores.
-    let mut sid_to_rank: HashMap<u32, f64> = HashMap::with_capacity(n);
-    for (i, r) in raw.iter().enumerate() {
-        sid_to_rank.insert(idx_to_sid[i], *r);
-    }
+    // v0.7.0 — heading dampener. For each sid whose representative
+    // kind is `Heading`, multiply the final rank by 0.1. Headings have
+    // no outbound refs in v1, so the teleport-vector redistribution
+    // would otherwise lift dangling heading nodes near the uniform
+    // baseline and crowd weakly-connected code symbols.
+    let heading_sids: std::collections::HashSet<u32> = sid_info_full
+        .iter()
+        .filter_map(|(sid, _name, _def_count, kind)| {
+            if *kind == SymbolKind::Heading {
+                Some(*sid)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let sid_to_rank = apply_heading_dampener(&idx_to_sid, &raw, &heading_sids);
 
     Ok(SymbolRanks {
         generation,
@@ -506,14 +537,38 @@ pub fn compute_symbol_ranks(store: &Store, generation: u64) -> anyhow::Result<Sy
     })
 }
 
-/// Collect every workspace-defined sid plus its `(name, def_count)`.
-/// `def_count` is the number of DEFS rows for this sid (= how many
-/// files define the symbol). Used by `build_edges` to compute the
-/// "ubiquitous" multiplier per Aider's recipe.
-fn collect_workspace_sids(store: &Store) -> anyhow::Result<Vec<(u32, String, u32)>> {
+/// v0.7.0 — apply the heading × 0.1 multiplier and translate dense
+/// ranks back to sid-keyed scores. Factored out from `compute_symbol_ranks`
+/// to make the multiplier verifiable without a full Store fixture.
+fn apply_heading_dampener(
+    idx_to_sid: &[u32],
+    raw: &[f64],
+    heading_sids: &std::collections::HashSet<u32>,
+) -> HashMap<u32, f64> {
+    let mut sid_to_rank: HashMap<u32, f64> = HashMap::with_capacity(idx_to_sid.len());
+    for (i, r) in raw.iter().enumerate() {
+        let sid = idx_to_sid[i];
+        let adjusted = if heading_sids.contains(&sid) {
+            r * HEADING_RANK_MULTIPLIER
+        } else {
+            *r
+        };
+        sid_to_rank.insert(sid, adjusted);
+    }
+    sid_to_rank
+}
+
+/// v0.7.0 — kind-aware enumeration of workspace-defined sids. Returns
+/// `(sid, name, def_count, representative_kind)` tuples; the kind is
+/// the first def's kind (sids rarely have heterogeneous kinds in
+/// practice, and the heading-dampener pass only needs a coarse
+/// `is_heading?` check).
+fn collect_workspace_sids_with_kind(
+    store: &Store,
+) -> anyhow::Result<Vec<(u32, String, u32, SymbolKind)>> {
     let out = store
-        .iter_workspace_sids()
-        .context("iter_workspace_sids storage error")?;
+        .iter_workspace_sids_with_kind()
+        .context("iter_workspace_sids_with_kind storage error")?;
     Ok(out)
 }
 
@@ -787,5 +842,49 @@ mod tests {
         assert!(cache.get(7).is_none(), "gen=7 should now miss");
         let hit = cache.get(8).expect("hit at gen=8");
         assert!((hit.rank_for(3) - 1.0).abs() < 1e-9);
+    }
+
+    // v0.7.0 — heading dampener verification. The plan calls out a
+    // synthetic fixture: one heading + one code symbol with no in-edges
+    // (both dangling), assert the code symbol outranks the heading.
+    //
+    // Without the multiplier, dangling-mass redistribution lands both
+    // nodes near the uniform 1/n baseline. With × 0.1 on the heading,
+    // the code symbol wins.
+
+    #[test]
+    fn heading_dampener_drops_heading_rank_to_one_tenth() {
+        // Two nodes, both at the uniform baseline (post-PageRank).
+        // sid 100 is a heading; sid 200 is a code symbol.
+        let idx_to_sid = vec![100u32, 200u32];
+        let raw = vec![0.5f64, 0.5f64];
+        let heading_sids: std::collections::HashSet<u32> =
+            [100u32].into_iter().collect();
+        let out = apply_heading_dampener(&idx_to_sid, &raw, &heading_sids);
+        assert!((out[&100] - 0.05).abs() < 1e-9, "heading scaled to 0.05");
+        assert!((out[&200] - 0.5).abs() < 1e-9, "code symbol unchanged");
+        // And the code symbol now ranks ABOVE the heading.
+        assert!(out[&200] > out[&100], "code symbol should outrank heading");
+    }
+
+    #[test]
+    fn heading_dampener_constant_is_one_tenth() {
+        // Mirror of the leading-underscore × 0.1 rule in pagerank::edge_weight.
+        assert_eq!(HEADING_RANK_MULTIPLIER, 0.1);
+    }
+
+    #[test]
+    fn heading_dampener_no_heading_is_identity() {
+        // With no heading sids present, the multiplier is a no-op.
+        let idx_to_sid = vec![1u32, 2u32, 3u32];
+        let raw = vec![0.2f64, 0.3f64, 0.5f64];
+        let out = apply_heading_dampener(
+            &idx_to_sid,
+            &raw,
+            &std::collections::HashSet::new(),
+        );
+        for (i, sid) in idx_to_sid.iter().enumerate() {
+            assert!((out[sid] - raw[i]).abs() < 1e-9);
+        }
     }
 }

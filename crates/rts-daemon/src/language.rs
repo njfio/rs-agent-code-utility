@@ -388,6 +388,19 @@ pub fn info_for_path(rel_path: &str) -> Option<LanguageInfo> {
             signature_renderer: Some(rust_tree_sitter::signature::render_csharp),
             refs_query: Some(CSHARP_REFS),
         }),
+        // v0.7.0 — markdown indexing. Block grammar only; no refs query
+        // (markdown links land as a reference graph in v2). The
+        // signature renderer normalises ATX + Setext headings to ATX
+        // form for agent-facing output consistency.
+        //
+        // No `MARKDOWN_QUERY: OnceLock<Option<Query>>` cell needed —
+        // C/C++ have no cache entry either, and `refs_query: None`
+        // alone is enough for `cached_refs_query` to short-circuit.
+        "md" | "markdown" => Some(LanguageInfo {
+            language: Language::Markdown,
+            signature_renderer: Some(rust_tree_sitter::signature::render_markdown),
+            refs_query: None,
+        }),
         _ => None,
     }
 }
@@ -602,5 +615,39 @@ mod tests {
         let body = b"pub fn foo(x: u32) -> u32 { x + 1 }";
         let sig = render(body).expect("renderer should produce a signature");
         assert!(sig.contains("pub fn foo"), "got {sig:?}");
+    }
+
+    #[test]
+    fn markdown_dispatch_carries_renderer_and_no_refs() {
+        // v0.7.0 — both .md and .markdown route to Language::Markdown
+        // with the signature renderer wired and no refs query (markdown
+        // links land as a reference graph in v2). `cached_refs_query`
+        // short-circuits via the `_ => return None` arm.
+        for ext in ["README.md", "docs/notes.markdown"] {
+            let info = info_for_path(ext).expect("{ext} should be supported");
+            assert_eq!(info.language, Language::Markdown);
+            assert!(info.signature_renderer.is_some(), "{ext} needs a renderer");
+            assert!(info.refs_query.is_none(), "{ext} should have no refs query in v1");
+            assert!(
+                cached_refs_query(&info).is_none(),
+                "{ext} cached_refs_query must short-circuit"
+            );
+        }
+    }
+
+    #[test]
+    fn markdown_signature_renderer_normalises_to_atx() {
+        // Pin the U3 contract through the daemon registry — both ATX
+        // and Setext sources end up as `# Heading` style at the wire.
+        let info = info_for_path("README.md").unwrap();
+        let render = info.signature_renderer.unwrap();
+        assert_eq!(
+            render(b"# Heading text\n").as_deref(),
+            Some("# Heading text"),
+        );
+        assert_eq!(
+            render(b"Setext Title\n=========\n").as_deref(),
+            Some("# Setext Title"),
+        );
     }
 }

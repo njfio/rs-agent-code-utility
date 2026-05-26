@@ -224,6 +224,11 @@ pub enum SymbolKind {
     Const = 8,
     Static = 9,
     Module = 10,
+    /// v0.7.0 — Markdown heading (H1–H6). Depth conveyed by the rendered
+    /// signature (`# Foo` / `## Bar`) and the hierarchical
+    /// `qualified_name`; the enum stays flat to mirror the single-word
+    /// lowercase convention all other variants follow.
+    Heading = 11,
     Other = 255,
 }
 
@@ -243,6 +248,7 @@ impl SymbolKind {
             "const" | "constant" => SymbolKind::Const,
             "static" => SymbolKind::Static,
             "module" | "namespace" => SymbolKind::Module,
+            "heading" => SymbolKind::Heading,
             _ => SymbolKind::Other,
         }
     }
@@ -259,6 +265,7 @@ impl SymbolKind {
             SymbolKind::Const => "const",
             SymbolKind::Static => "static",
             SymbolKind::Module => "module",
+            SymbolKind::Heading => "heading",
             SymbolKind::Other => "other",
         }
     }
