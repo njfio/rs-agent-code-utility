@@ -53,6 +53,9 @@ pub(crate) fn extract_symbols(
         Language::CSharp => {
             extract_csharp_symbols(tree, content, &mut symbols)?;
         }
+        Language::Markdown => {
+            extract_markdown_symbols(tree, content, &mut symbols)?;
+        }
     }
 
     Ok(symbols)
@@ -1063,6 +1066,34 @@ pub(crate) fn extract_csharp_symbols(
     Ok(())
 }
 
+/// Extract Markdown headings as `Symbol` records.
+///
+/// v1 captures only `atx_heading` and `setext_heading` nodes — paragraphs,
+/// list items, and code blocks are not symbols (industry consensus from
+/// ctags / Marksman / VSCode / JetBrains). Headings inside fenced code
+/// blocks are skipped (the tree-sitter-md block grammar emits them as
+/// `fenced_code_block.code_fence_content` children, opaque to ATX/Setext
+/// queries — so they're naturally excluded).
+///
+/// - `kind="heading"` for all H1–H6 (flat encoding; depth carried by
+///   `signature` and `name`/qualified path).
+/// - `name` = hierarchical qualified path joined by `" > "`
+///   (`"README.md > Title > Installation"`). The leading file-stem is
+///   added by the caller in the daemon writer where the path is known;
+///   here we emit `"Title > Installation"`.
+/// - `signature` is not stored on `Symbol`; it's rendered on demand by
+///   `signature::render_markdown` from the heading line in the source.
+/// - `documentation` captures the first paragraph immediately following
+///   the heading (single-line collapsed, ~512 char cap), enabling
+///   `find_symbol --doc-contains` over prose.
+pub(crate) fn extract_markdown_symbols(
+    tree: &SyntaxTree,
+    content: &str,
+    symbols: &mut Vec<Symbol>,
+) -> Result<()> {
+    markdown::extract(tree, content, symbols)
+}
+
 /// Extract doc comments preceding a Rust item start line
 pub(crate) fn extract_rust_doc_comments(content: &str, start_row: usize) -> Option<String> {
     let lines: Vec<&str> = content.lines().collect();
@@ -1279,6 +1310,214 @@ pub(crate) fn extract_c_doc_comments(content: &str, start_row: usize) -> Option<
     } else {
         docs.reverse();
         Some(docs.join("\n"))
+    }
+}
+
+/// Markdown extraction helpers — heading-as-symbol walker, hierarchical
+/// qualified-name builder, and first-paragraph body capture for the
+/// `documentation` field.
+///
+/// Kept in this module rather than a `languages/markdown.rs` sub-module
+/// to mirror C/C++/C# (which have no language sub-module either — there
+/// are no markdown-specific helpers to expose).
+mod markdown {
+    use super::*;
+
+    /// First-paragraph cap for the `documentation` field — long enough
+    /// for `find_symbol --doc-contains` to find shape-shaped phrases,
+    /// short enough that it doesn't blow up the docs multimap.
+    const DOC_CHAR_CAP: usize = 512;
+
+    /// Walk the tree-sitter-md section tree and emit one `Symbol` per
+    /// heading. Section nesting in the grammar already encodes heading
+    /// hierarchy — H2 under H1 produces `section[H1] > section[H2]`,
+    /// no manual depth stack needed.
+    pub(super) fn extract(
+        tree: &SyntaxTree,
+        content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        let bytes = content.as_bytes();
+        let root = tree.root_node();
+        // Path accumulator: heading texts from outermost section to current.
+        let mut path: Vec<String> = Vec::new();
+        walk_node(&root, bytes, &mut path, symbols);
+        Ok(())
+    }
+
+    fn walk_node(
+        node: &crate::Node<'_>,
+        bytes: &[u8],
+        path: &mut Vec<String>,
+        symbols: &mut Vec<Symbol>,
+    ) {
+        let kind = node.kind();
+        if kind == "section" {
+            // Find the leading heading (atx_heading or setext_heading) and
+            // walk its body for nested sections.
+            let mut heading_text: Option<String> = None;
+            let mut heading_level: Option<u8> = None;
+            let mut heading_node: Option<crate::Node<'_>> = None;
+            for child in node.named_children() {
+                match child.kind() {
+                    "atx_heading" => {
+                        if let Some((lvl, text)) = atx_heading_info(&child, bytes) {
+                            heading_level = Some(lvl);
+                            heading_text = Some(text);
+                            heading_node = Some(child);
+                        }
+                        break;
+                    }
+                    "setext_heading" => {
+                        if let Some((lvl, text)) = setext_heading_info(&child, bytes) {
+                            heading_level = Some(lvl);
+                            heading_text = Some(text);
+                            heading_node = Some(child);
+                        }
+                        break;
+                    }
+                    _ => continue,
+                }
+            }
+
+            if let (Some(text), Some(_lvl), Some(hnode)) =
+                (heading_text, heading_level, heading_node)
+            {
+                path.push(text.clone());
+                // Build hierarchical qualified name: "Outer > Inner > Self"
+                let qualified = path.join(" > ");
+                // documentation: first paragraph following the heading in
+                // this section (skip nested sections / code blocks).
+                let documentation = first_paragraph_in_section(node, bytes);
+                symbols.push(Symbol {
+                    name: qualified,
+                    kind: "heading".to_string(),
+                    start_line: hnode.start_position().row + 1,
+                    end_line: hnode.end_position().row + 1,
+                    start_column: hnode.start_position().column,
+                    end_column: hnode.end_position().column,
+                    visibility: "public".to_string(),
+                    documentation,
+                });
+
+                // Recurse into the rest of the section body, looking for
+                // nested sections.
+                for child in node.named_children() {
+                    if child.kind() == "section" {
+                        walk_node(&child, bytes, path, symbols);
+                    }
+                }
+                path.pop();
+                return;
+            }
+            // No heading found inside the section (shouldn't happen for
+            // valid markdown). Recurse into children defensively.
+        }
+
+        // For non-section nodes (document root, etc.), recurse into
+        // children looking for sections.
+        for child in node.named_children() {
+            walk_node(&child, bytes, path, symbols);
+        }
+    }
+
+    /// Extract `(level, text)` from an `atx_heading` node.
+    /// Markers are `atx_h1_marker` .. `atx_h6_marker`.
+    fn atx_heading_info(
+        node: &crate::Node<'_>,
+        bytes: &[u8],
+    ) -> Option<(u8, String)> {
+        let mut level: Option<u8> = None;
+        let mut text: Option<String> = None;
+        for child in node.children() {
+            match child.kind() {
+                "atx_h1_marker" => level = Some(1),
+                "atx_h2_marker" => level = Some(2),
+                "atx_h3_marker" => level = Some(3),
+                "atx_h4_marker" => level = Some(4),
+                "atx_h5_marker" => level = Some(5),
+                "atx_h6_marker" => level = Some(6),
+                _ => {}
+            }
+        }
+        if let Some(content_node) = node.child_by_field_name("heading_content") {
+            text = Some(clean_heading_text(content_node.utf8_text(bytes).ok()?));
+        }
+        Some((level?, text.unwrap_or_default()))
+    }
+
+    /// Extract `(level, text)` from a `setext_heading` node.
+    /// Underline `setext_h1_underline` = level 1, `setext_h2_underline` = 2.
+    fn setext_heading_info(
+        node: &crate::Node<'_>,
+        bytes: &[u8],
+    ) -> Option<(u8, String)> {
+        let mut level: Option<u8> = None;
+        let mut text: Option<String> = None;
+        for child in node.children() {
+            match child.kind() {
+                "setext_h1_underline" => level = Some(1),
+                "setext_h2_underline" => level = Some(2),
+                _ => {}
+            }
+        }
+        if let Some(content_node) = node.child_by_field_name("heading_content") {
+            text = Some(clean_heading_text(content_node.utf8_text(bytes).ok()?));
+        }
+        Some((level?, text.unwrap_or_default()))
+    }
+
+    /// Trim leading/trailing whitespace and CommonMark closing `#`s.
+    /// (`## Foo ##` → `Foo`.)
+    fn clean_heading_text(s: &str) -> String {
+        let trimmed = s.trim();
+        // Strip a trailing run of `#` chars (CommonMark closing-hash).
+        let stripped = trimmed.trim_end_matches('#').trim_end();
+        stripped.to_string()
+    }
+
+    /// Find the first `paragraph` body block in this section (not nested
+    /// in a sub-section); flatten to a single line and clip to
+    /// `DOC_CHAR_CAP` chars.
+    fn first_paragraph_in_section(section: &crate::Node<'_>, bytes: &[u8]) -> Option<String> {
+        for child in section.named_children() {
+            match child.kind() {
+                "paragraph" => {
+                    let raw = child.utf8_text(bytes).ok()?;
+                    return Some(collapse_paragraph(raw));
+                }
+                "section" => break,
+                _ => continue,
+            }
+        }
+        None
+    }
+
+    /// Collapse a paragraph's whitespace to single spaces and clip.
+    fn collapse_paragraph(raw: &str) -> String {
+        let mut buf = String::new();
+        let mut prev_ws = false;
+        for ch in raw.chars() {
+            if ch.is_whitespace() {
+                if !prev_ws && !buf.is_empty() {
+                    buf.push(' ');
+                }
+                prev_ws = true;
+            } else {
+                buf.push(ch);
+                prev_ws = false;
+            }
+            if buf.chars().count() >= DOC_CHAR_CAP {
+                break;
+            }
+        }
+        // Take exactly DOC_CHAR_CAP chars (character-aligned, not byte).
+        let s: String = buf
+            .trim_end()
+            .chars()
+            .take(DOC_CHAR_CAP)
+            .collect();
+        s
     }
 }
 

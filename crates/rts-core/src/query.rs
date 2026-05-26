@@ -163,6 +163,16 @@ impl Query {
             Language::Ruby => "(method name: (identifier) @name) @function",
             Language::Swift => "(function_declaration name: (simple_identifier) @name) @function",
             Language::CSharp => "(method_declaration name: (identifier) @name) @function",
+            // Markdown has no functions — prose grammar. Surface as an
+            // explicit error so callers reaching for this helper on a
+            // markdown file know to use `extract_symbols` directly.
+            Language::Markdown => {
+                return Err(crate::error::Error::invalid_input_error(
+                    "language",
+                    "Markdown",
+                    "language with function definitions (prose has none)",
+                ));
+            }
         };
 
         Self::new(language, pattern)
@@ -185,6 +195,14 @@ impl Query {
             Language::Ruby => "(class name: (constant) @name) @class",
             Language::Swift => "(class_declaration name: (simple_identifier) @name) @class",
             Language::CSharp => "(class_declaration name: (identifier) @name) @class",
+            // Markdown has no classes — prose grammar.
+            Language::Markdown => {
+                return Err(crate::error::Error::invalid_input_error(
+                    "language",
+                    "Markdown",
+                    "language with class definitions (prose has none)",
+                ));
+            }
         };
 
         Self::new(language, pattern)

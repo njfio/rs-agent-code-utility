@@ -201,6 +201,11 @@ pub fn supported_languages() -> Vec<LanguageInfo> {
             version: "0.23",
             file_extensions: &["cs", "csx"],
         },
+        LanguageInfo {
+            name: "Markdown",
+            version: "0.5",
+            file_extensions: &["md", "markdown"],
+        },
     ]
 }
 
@@ -219,6 +224,7 @@ pub fn detect_language_from_extension(extension: &str) -> Option<Language> {
         "rb" | "rake" => Some(Language::Ruby),
         "swift" => Some(Language::Swift),
         "cs" | "csx" => Some(Language::CSharp),
+        "md" | "markdown" => Some(Language::Markdown),
         _ => None,
     }
 }

@@ -29,6 +29,10 @@ tree-sitter-php = "0.23"
 tree-sitter-ruby = "0.23"
 tree-sitter-swift = "0.7"
 tree-sitter-c-sharp = "0.23"
+# Markdown indexing (v0.7.0). Block grammar only; the `parser` feature pulls in
+# a two-pass `MarkdownParser` (inline + block) which v1 doesn't use — inline
+# enters in v2 when markdown links land as a reference graph.
+tree-sitter-md = "0.5.3"
 
 # Error handling
 thiserror = "1.0"
