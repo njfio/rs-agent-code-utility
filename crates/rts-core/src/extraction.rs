@@ -1370,24 +1370,40 @@ mod markdown {
                         stack.pop();
                     }
                     stack.push((level, text.clone()));
-                    let qualified: Vec<String> =
+                    // Hierarchical heading path captured in
+                    // `documentation` as a prefix so it survives the
+                    // wire path (the `Symbol.name` field stores ONLY
+                    // the leaf so `find_symbol --name "Installation"`
+                    // matches). When body text exists we join with a
+                    // single `\n\n` separator; when absent we still
+                    // emit the path so `find_symbol --doc-contains`
+                    // over the ancestor names works.
+                    let path: Vec<String> =
                         stack.iter().map(|(_, n)| n.clone()).collect();
-                    let documentation = match kind {
-                        // For ATX headings tree-sitter-md nests the body
-                        // inside the enclosing `section` — find it via
-                        // the parent.
+                    let body = match kind {
+                        // ATX headings: body is the first paragraph
+                        // child of the enclosing `section`.
                         "atx_heading" => node
                             .parent()
                             .and_then(|p| first_paragraph_in_section(&p, bytes)),
-                        // For setext headings the surrounding section
-                        // also contains the body paragraph as a sibling.
+                        // Setext headings: surrounding section
+                        // contains the body paragraph as a sibling.
                         "setext_heading" => node
                             .parent()
                             .and_then(|p| first_paragraph_after_setext(&p, node, bytes)),
                         _ => None,
                     };
+                    let documentation = match body {
+                        Some(b) if path.len() > 1 => {
+                            Some(format!("{}\n\n{b}", path.join(" > ")))
+                        }
+                        Some(b) => Some(b),
+                        None if path.len() > 1 => Some(path.join(" > ")),
+                        None => None,
+                    };
                     symbols.push(Symbol {
-                        name: qualified.join(" > "),
+                        // Leaf only — searchable by exact name match.
+                        name: text,
                         kind: "heading".to_string(),
                         start_line: node.start_position().row + 1,
                         end_line: node.end_position().row + 1,
@@ -2007,12 +2023,22 @@ macro_rules! log_at {
             assert_eq!(sym.kind, "heading", "every heading symbol gets kind=heading");
             assert_eq!(sym.visibility, "public", "headings are public by default");
         }
-        // Each subsequent heading nests under the previous (H1 → H2 → ...);
-        // so qualified names form a chain.
+        // `Symbol.name` stores the LEAF only so `find_symbol(name="X")`
+        // exact-match works. Hierarchy is exposed via the
+        // `documentation` field prefix (so `--doc-contains` over the
+        // ancestor names works) and via `signature::render_markdown`
+        // (which displays the marker count).
         assert_eq!(syms[0].name, "One");
-        assert_eq!(syms[1].name, "One > Two");
-        assert_eq!(syms[2].name, "One > Two > Three");
-        assert_eq!(syms[5].name, "One > Two > Three > Four > Five > Six");
+        assert_eq!(syms[1].name, "Two");
+        assert_eq!(syms[2].name, "Three");
+        assert_eq!(syms[5].name, "Six");
+        // The hierarchy lives in the `documentation` prefix (no body
+        // paragraph in this fixture → docs are just the path).
+        assert_eq!(syms[1].documentation.as_deref(), Some("One > Two"));
+        assert_eq!(syms[5].documentation.as_deref(), Some("One > Two > Three > Four > Five > Six"));
+        // The H1 has nothing to nest under and no body, so docs stay
+        // empty.
+        assert!(syms[0].documentation.is_none());
     }
 
     #[test]
@@ -2024,7 +2050,12 @@ macro_rules! log_at {
         assert_eq!(syms.len(), 2, "expected 2 setext headings, got {syms:?}");
         assert_eq!(syms[0].kind, "heading");
         assert_eq!(syms[0].name, "Top Title");
-        assert_eq!(syms[1].name, "Top Title > Subsection");
+        assert_eq!(syms[1].name, "Subsection");
+        // Setext H2 inherits the H1 as its parent.
+        assert_eq!(
+            syms[1].documentation.as_deref(),
+            Some("Top Title > Subsection"),
+        );
     }
 
     #[test]
@@ -2040,7 +2071,7 @@ macro_rules! log_at {
     #[test]
     fn extract_markdown_multiple_h1_siblings() {
         // Two H1s are siblings — neither nests under the other; their
-        // qualified names are flat (no shared parent).
+        // names are independent leaf strings.
         let src = "# First Topic\n\nA paragraph.\n\n# Second Topic\n\nAnother paragraph.\n";
         let syms = markdown_symbols(src);
         let names: Vec<&str> = syms.iter().map(|s| s.name.as_str()).collect();
@@ -2051,31 +2082,39 @@ macro_rules! log_at {
     fn extract_markdown_hierarchy_resets_on_higher_heading() {
         // After going H1 → H2 → H3, a new H1 should reset the path —
         // subsequent H2 nests under the *new* H1, not the old one.
+        // Verify via the `documentation` prefix.
         let src =
             "# Alpha\n\n## A1\n\n### A1a\n\n# Beta\n\n## B1\n";
         let syms = markdown_symbols(src);
         let names: Vec<&str> = syms.iter().map(|s| s.name.as_str()).collect();
-        assert_eq!(
-            names,
-            vec!["Alpha", "Alpha > A1", "Alpha > A1 > A1a", "Beta", "Beta > B1"],
-        );
+        assert_eq!(names, vec!["Alpha", "A1", "A1a", "Beta", "B1"]);
+        // The B1 documentation should carry `Beta > B1`, NOT `Alpha > B1`.
+        let b1 = syms.iter().find(|s| s.name == "B1").unwrap();
+        assert_eq!(b1.documentation.as_deref(), Some("Beta > B1"));
+        // A1a documentation has the full triple-deep path.
+        let a1a = syms.iter().find(|s| s.name == "A1a").unwrap();
+        assert_eq!(a1a.documentation.as_deref(), Some("Alpha > A1 > A1a"));
     }
 
     #[test]
     fn extract_markdown_documentation_from_first_paragraph() {
         // The first paragraph after a heading populates `documentation`
-        // so `find_symbol --doc-contains` can match prose. Cap is ~512
-        // chars, single-line collapsed.
-        let src = "## Installation\n\nDownload the prebuilt binary from\nthe releases page,\nthen run `cargo install`.\n\n### Notes\n";
+        // so `find_symbol --doc-contains` can match prose. The path
+        // prefix is prepended when the heading has ancestors.
+        let src = "# Project\n\n## Installation\n\nDownload the prebuilt binary from\nthe releases page,\nthen run `cargo install`.\n\n### Notes\n";
         let syms = markdown_symbols(src);
         let install = syms.iter().find(|s| s.name == "Installation").unwrap();
         let docs = install
             .documentation
             .as_ref()
-            .expect("Installation heading should have docs from its body paragraph");
-        // Newlines collapsed to single spaces.
+            .expect("Installation heading should have docs");
+        // Path prefix: H2 → "Project > Installation".
+        assert!(
+            docs.starts_with("Project > Installation"),
+            "expected path prefix; got {docs:?}",
+        );
+        // Body: "releases page" comma form survives the collapse.
         assert!(docs.contains("releases page,"), "got docs={docs:?}");
-        assert!(!docs.contains('\n'), "multi-line paragraph collapsed to one line");
         // The next heading's body should NOT bleed in.
         assert!(!docs.contains("Notes"), "got docs={docs:?}");
     }
@@ -2083,18 +2122,21 @@ macro_rules! log_at {
     #[test]
     fn extract_markdown_no_documentation_when_immediate_subheading() {
         // A heading immediately followed by a subheading (no body)
-        // should leave `documentation` as None.
+        // gets the path prefix only — no body. An H1 with no body and
+        // no parents stays None.
         let src = "## Outer\n### Inner\n\nInner body.\n";
         let syms = markdown_symbols(src);
         let outer = syms.iter().find(|s| s.name == "Outer").unwrap();
         assert!(
             outer.documentation.is_none(),
-            "Outer should have no docs: got {:?}",
+            "Outer (no parents, no body) should have None docs: got {:?}",
             outer.documentation
         );
-        // The inner heading's docs do get populated.
-        let inner = syms.iter().find(|s| s.name == "Outer > Inner").unwrap();
-        assert!(inner.documentation.is_some());
+        // Inner gets the full path + body.
+        let inner = syms.iter().find(|s| s.name == "Inner").unwrap();
+        let docs = inner.documentation.as_deref().unwrap();
+        assert!(docs.starts_with("Outer > Inner"), "got {docs:?}");
+        assert!(docs.contains("Inner body."), "got {docs:?}");
     }
 
     #[test]
