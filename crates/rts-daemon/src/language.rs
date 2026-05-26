@@ -650,4 +650,107 @@ mod tests {
             Some("# Setext Title"),
         );
     }
+
+    /// v0.7.0 dispatch-agreement invariant: for every supported
+    /// `Language`, both the daemon-side `info_for_path` and the
+    /// rts-core `extract_symbols` dispatch must agree.
+    ///
+    /// Catches the C# omission class of bug — a new language gets a
+    /// `Language::Foo` variant + an `extraction.rs` arm but the
+    /// daemon's `info_for_path` table is forgotten, silently dropping
+    /// every file of that language at index time.
+    ///
+    /// Lives here (not in `tests/`) because rts-daemon is a bin-only
+    /// crate without a [lib] section — integration tests can't import
+    /// `info_for_path` directly.
+    #[test]
+    fn info_for_path_and_extract_symbols_agree_for_every_language() {
+        // Minimal source snippet per language that the extractor can
+        // produce at least one symbol from. Smoke-only — per-language
+        // tests cover correctness in depth.
+        fn snippet(lang: Language) -> &'static str {
+            match lang {
+                Language::Rust => "fn foo() {}",
+                Language::JavaScript => "function foo() {}",
+                Language::TypeScript => "function foo() {}",
+                Language::Python => "def foo():\n    pass\n",
+                Language::C => "void foo(void) {}",
+                Language::Cpp => "void foo() {}",
+                Language::Go => "package main\nfunc Foo() {}\n",
+                Language::Java => "class C { void foo() {} }",
+                Language::Php => "<?php function foo() {} ?>",
+                Language::Ruby => "def foo\nend\n",
+                Language::Swift => "func foo() {}",
+                Language::CSharp => "class C { void Foo() {} }",
+                Language::Markdown => "# Foo\n",
+            }
+        }
+
+        for lang in Language::all() {
+            // a) Daemon-side: info_for_path returns Some for the
+            //    first declared file extension and carries the
+            //    matching language.
+            let exts = lang.file_extensions();
+            assert!(
+                !exts.is_empty(),
+                "Language::{} has no file_extensions",
+                lang.name(),
+            );
+            let ext = exts[0];
+            let path = format!("synthetic.{ext}");
+            let info = info_for_path(&path).unwrap_or_else(|| {
+                panic!(
+                    "info_for_path({path:?}) returned None for Language::{} \
+                     — missing arm in info_for_path",
+                    lang.name(),
+                )
+            });
+            assert_eq!(
+                info.language,
+                lang,
+                "info_for_path({path:?}) language mismatch — got {:?} want {:?}",
+                info.language,
+                lang,
+            );
+
+            // b) rts-core side: extract_symbols accepts the snippet
+            //    and produces at least one symbol — proves the
+            //    dispatch arm is wired, not no-op'd.
+            let outcome = rust_tree_sitter::parse_content(snippet(lang), lang)
+                .unwrap_or_else(|e| {
+                    panic!("parse_content failed for {}: {e}", lang.name())
+                });
+            assert!(
+                !outcome.symbols.is_empty(),
+                "extract_symbols for {} produced 0 symbols — missing or no-op arm",
+                lang.name(),
+            );
+        }
+    }
+
+    /// Companion: every Language must have at least one file extension
+    /// that routes BACK through `info_for_path` to the same Language.
+    /// Detects silent extension-table drift.
+    #[test]
+    fn every_language_has_at_least_one_extension_routable_back() {
+        for lang in Language::all() {
+            let exts = lang.file_extensions();
+            let mut routed = false;
+            for ext in exts {
+                let path = format!("synthetic.{ext}");
+                if let Some(info) = info_for_path(&path) {
+                    if info.language == lang {
+                        routed = true;
+                        break;
+                    }
+                }
+            }
+            assert!(
+                routed,
+                "Language::{}: at least one of {:?} must route back via info_for_path",
+                lang.name(),
+                exts,
+            );
+        }
+    }
 }

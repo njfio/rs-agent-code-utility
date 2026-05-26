@@ -1395,6 +1395,7 @@ pub rust_tree_sitter::languages::Language::Cpp
 pub rust_tree_sitter::languages::Language::Go
 pub rust_tree_sitter::languages::Language::Java
 pub rust_tree_sitter::languages::Language::JavaScript
+pub rust_tree_sitter::languages::Language::Markdown
 pub rust_tree_sitter::languages::Language::Php
 pub rust_tree_sitter::languages::Language::Python
 pub rust_tree_sitter::languages::Language::Ruby
@@ -1728,6 +1729,7 @@ pub fn rust_tree_sitter::signature::render_csharp(bytes: &[u8]) -> core::option:
 pub fn rust_tree_sitter::signature::render_go(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_java(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_javascript(bytes: &[u8]) -> core::option::Option<alloc::string::String>
+pub fn rust_tree_sitter::signature::render_markdown(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_php(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_python(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_ruby(bytes: &[u8]) -> core::option::Option<alloc::string::String>
@@ -2074,6 +2076,7 @@ pub rust_tree_sitter::Language::Cpp
 pub rust_tree_sitter::Language::Go
 pub rust_tree_sitter::Language::Java
 pub rust_tree_sitter::Language::JavaScript
+pub rust_tree_sitter::Language::Markdown
 pub rust_tree_sitter::Language::Php
 pub rust_tree_sitter::Language::Python
 pub rust_tree_sitter::Language::Ruby
