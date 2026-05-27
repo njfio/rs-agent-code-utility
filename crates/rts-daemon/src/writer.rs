@@ -701,6 +701,7 @@ fn lang_tag(language: Language) -> u8 {
         Language::Ruby => 10,
         Language::Swift => 11,
         Language::CSharp => 12,
+        Language::Markdown => 13,
     }
 }
 
@@ -725,6 +726,7 @@ pub fn lang_tag_to_name(tag: u8) -> Option<&'static str> {
         10 => "ruby",
         11 => "swift",
         12 => "csharp",
+        13 => "markdown",
         _ => return None,
     })
 }

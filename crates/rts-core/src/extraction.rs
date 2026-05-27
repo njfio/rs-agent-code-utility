@@ -53,6 +53,9 @@ pub(crate) fn extract_symbols(
         Language::CSharp => {
             extract_csharp_symbols(tree, content, &mut symbols)?;
         }
+        Language::Markdown => {
+            extract_markdown_symbols(tree, content, &mut symbols)?;
+        }
     }
 
     Ok(symbols)
@@ -1063,6 +1066,34 @@ pub(crate) fn extract_csharp_symbols(
     Ok(())
 }
 
+/// Extract Markdown headings as `Symbol` records.
+///
+/// v1 captures only `atx_heading` and `setext_heading` nodes — paragraphs,
+/// list items, and code blocks are not symbols (industry consensus from
+/// ctags / Marksman / VSCode / JetBrains). Headings inside fenced code
+/// blocks are skipped (the tree-sitter-md block grammar emits them as
+/// `fenced_code_block.code_fence_content` children, opaque to ATX/Setext
+/// queries — so they're naturally excluded).
+///
+/// - `kind="heading"` for all H1–H6 (flat encoding; depth carried by
+///   `signature` and `name`/qualified path).
+/// - `name` = hierarchical qualified path joined by `" > "`
+///   (`"README.md > Title > Installation"`). The leading file-stem is
+///   added by the caller in the daemon writer where the path is known;
+///   here we emit `"Title > Installation"`.
+/// - `signature` is not stored on `Symbol`; it's rendered on demand by
+///   `signature::render_markdown` from the heading line in the source.
+/// - `documentation` captures the first paragraph immediately following
+///   the heading (single-line collapsed, ~512 char cap), enabling
+///   `find_symbol --doc-contains` over prose.
+pub(crate) fn extract_markdown_symbols(
+    tree: &SyntaxTree,
+    content: &str,
+    symbols: &mut Vec<Symbol>,
+) -> Result<()> {
+    markdown::extract(tree, content, symbols)
+}
+
 /// Extract doc comments preceding a Rust item start line
 pub(crate) fn extract_rust_doc_comments(content: &str, start_row: usize) -> Option<String> {
     let lines: Vec<&str> = content.lines().collect();
@@ -1279,6 +1310,253 @@ pub(crate) fn extract_c_doc_comments(content: &str, start_row: usize) -> Option<
     } else {
         docs.reverse();
         Some(docs.join("\n"))
+    }
+}
+
+/// Markdown extraction helpers — heading-as-symbol walker, hierarchical
+/// qualified-name builder, and first-paragraph body capture for the
+/// `documentation` field.
+///
+/// Kept in this module rather than a `languages/markdown.rs` sub-module
+/// to mirror C/C++/C# (which have no language sub-module either — there
+/// are no markdown-specific helpers to expose).
+mod markdown {
+    use super::*;
+
+    /// First-paragraph cap for the `documentation` field — long enough
+    /// for `find_symbol --doc-contains` to find shape-shaped phrases,
+    /// short enough that it doesn't blow up the docs multimap.
+    const DOC_CHAR_CAP: usize = 512;
+
+    /// Walk the tree-sitter-md section tree and emit one `Symbol` per
+    /// heading. Section nesting in the grammar already encodes heading
+    /// hierarchy — H2 under H1 produces `section[H1] > section[H2]`,
+    /// no manual depth stack needed.
+    pub(super) fn extract(
+        tree: &SyntaxTree,
+        content: &str,
+        symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
+        let bytes = content.as_bytes();
+        let root = tree.root_node();
+        // Stack of (level, name) pairs from outermost to current. Both
+        // section-nested ATX headings and flat setext-heading siblings
+        // funnel through the same stack — we pop entries whose level is
+        // ≥ the new heading's level before pushing.
+        let mut stack: Vec<(u8, String)> = Vec::new();
+        walk_node(&root, bytes, &mut stack, symbols);
+        Ok(())
+    }
+
+    fn walk_node(
+        node: &crate::Node<'_>,
+        bytes: &[u8],
+        stack: &mut Vec<(u8, String)>,
+        symbols: &mut Vec<Symbol>,
+    ) {
+        let kind = node.kind();
+        match kind {
+            "atx_heading" | "setext_heading" => {
+                let info = if kind == "atx_heading" {
+                    atx_heading_info(node, bytes)
+                } else {
+                    setext_heading_info(node, bytes)
+                };
+                if let Some((level, text)) = info {
+                    // Pop any entries at this level or deeper — a new
+                    // heading of level N closes every open heading of
+                    // level ≥ N.
+                    while stack.last().is_some_and(|(l, _)| *l >= level) {
+                        stack.pop();
+                    }
+                    stack.push((level, text.clone()));
+                    // Hierarchical heading path captured in
+                    // `documentation` as a prefix so it survives the
+                    // wire path (the `Symbol.name` field stores ONLY
+                    // the leaf so `find_symbol --name "Installation"`
+                    // matches). When body text exists we join with a
+                    // single `\n\n` separator; when absent we still
+                    // emit the path so `find_symbol --doc-contains`
+                    // over the ancestor names works.
+                    let path: Vec<String> = stack.iter().map(|(_, n)| n.clone()).collect();
+                    let body = match kind {
+                        // ATX headings: body is the first paragraph
+                        // child of the enclosing `section`.
+                        "atx_heading" => node
+                            .parent()
+                            .and_then(|p| first_paragraph_in_section(&p, bytes)),
+                        // Setext headings: surrounding section
+                        // contains the body paragraph as a sibling.
+                        "setext_heading" => node
+                            .parent()
+                            .and_then(|p| first_paragraph_after_setext(&p, node, bytes)),
+                        _ => None,
+                    };
+                    let documentation = match body {
+                        Some(b) if path.len() > 1 => Some(format!("{}\n\n{b}", path.join(" > "))),
+                        Some(b) => Some(b),
+                        None if path.len() > 1 => Some(path.join(" > ")),
+                        None => None,
+                    };
+                    symbols.push(Symbol {
+                        // Leaf only — searchable by exact name match.
+                        name: text,
+                        kind: "heading".to_string(),
+                        start_line: node.start_position().row + 1,
+                        end_line: node.end_position().row + 1,
+                        start_column: node.start_position().column,
+                        end_column: node.end_position().column,
+                        visibility: "public".to_string(),
+                        documentation,
+                    });
+                }
+                return;
+            }
+            // Fenced code blocks are opaque — never recurse in. Belt &
+            // suspenders; the block grammar already keeps headings inside
+            // a fence from existing in the named-children walk, but
+            // future grammar tweaks shouldn't silently change behavior.
+            "fenced_code_block" | "indented_code_block" => return,
+            _ => {}
+        }
+
+        for child in node.named_children() {
+            walk_node(&child, bytes, stack, symbols);
+        }
+    }
+
+    /// Extract `(level, text)` from an `atx_heading` node.
+    /// Markers are `atx_h1_marker` .. `atx_h6_marker`.
+    fn atx_heading_info(node: &crate::Node<'_>, bytes: &[u8]) -> Option<(u8, String)> {
+        let mut level: Option<u8> = None;
+        let mut text: Option<String> = None;
+        for child in node.children() {
+            match child.kind() {
+                "atx_h1_marker" => level = Some(1),
+                "atx_h2_marker" => level = Some(2),
+                "atx_h3_marker" => level = Some(3),
+                "atx_h4_marker" => level = Some(4),
+                "atx_h5_marker" => level = Some(5),
+                "atx_h6_marker" => level = Some(6),
+                _ => {}
+            }
+        }
+        if let Some(content_node) = node.child_by_field_name("heading_content") {
+            text = Some(clean_heading_text(content_node.utf8_text(bytes).ok()?));
+        }
+        Some((level?, text.unwrap_or_default()))
+    }
+
+    /// Extract `(level, text)` from a `setext_heading` node.
+    /// Underline `setext_h1_underline` = level 1, `setext_h2_underline` = 2.
+    fn setext_heading_info(node: &crate::Node<'_>, bytes: &[u8]) -> Option<(u8, String)> {
+        let mut level: Option<u8> = None;
+        let mut text: Option<String> = None;
+        for child in node.children() {
+            match child.kind() {
+                "setext_h1_underline" => level = Some(1),
+                "setext_h2_underline" => level = Some(2),
+                _ => {}
+            }
+        }
+        if let Some(content_node) = node.child_by_field_name("heading_content") {
+            text = Some(clean_heading_text(content_node.utf8_text(bytes).ok()?));
+        }
+        Some((level?, text.unwrap_or_default()))
+    }
+
+    /// Trim leading/trailing whitespace and CommonMark closing `#`s.
+    /// (`## Foo ##` → `Foo`.)
+    fn clean_heading_text(s: &str) -> String {
+        let trimmed = s.trim();
+        // Strip a trailing run of `#` chars (CommonMark closing-hash).
+        let stripped = trimmed.trim_end_matches('#').trim_end();
+        stripped.to_string()
+    }
+
+    /// Find the first `paragraph` body block in this section (not nested
+    /// in a sub-section); flatten to a single line and clip to
+    /// `DOC_CHAR_CAP` chars.
+    fn first_paragraph_in_section(section: &crate::Node<'_>, bytes: &[u8]) -> Option<String> {
+        // For ATX-style hierarchies the section contains the heading as
+        // the first named child, then the body paragraph(s) and nested
+        // sections. Iterate past the leading heading; stop at the first
+        // nested section / heading sibling.
+        let mut past_heading = false;
+        for child in section.named_children() {
+            match child.kind() {
+                "atx_heading" | "setext_heading" => {
+                    if !past_heading {
+                        past_heading = true;
+                        continue;
+                    }
+                    // Hit a sibling heading without finding a paragraph —
+                    // no docs.
+                    return None;
+                }
+                "paragraph" => {
+                    let raw = child.utf8_text(bytes).ok()?;
+                    return Some(collapse_paragraph(raw));
+                }
+                "section" => return None,
+                _ => continue,
+            }
+        }
+        None
+    }
+
+    /// Find the first paragraph appearing *after* `heading` inside the
+    /// enclosing section. tree-sitter-md emits setext headings as flat
+    /// siblings inside one section (unlike ATX, which builds nested
+    /// sections), so the body paragraph is a later named child of the
+    /// same section.
+    fn first_paragraph_after_setext(
+        section: &crate::Node<'_>,
+        heading: &crate::Node<'_>,
+        bytes: &[u8],
+    ) -> Option<String> {
+        let heading_start = heading.start_byte();
+        for child in section.named_children() {
+            // Only consider children that start strictly after the
+            // heading we're looking at.
+            if child.start_byte() <= heading_start {
+                continue;
+            }
+            match child.kind() {
+                "paragraph" => {
+                    let raw = child.utf8_text(bytes).ok()?;
+                    return Some(collapse_paragraph(raw));
+                }
+                // Another heading interrupts — no doc paragraph for the
+                // current heading.
+                "atx_heading" | "setext_heading" => return None,
+                _ => continue,
+            }
+        }
+        None
+    }
+
+    /// Collapse a paragraph's whitespace to single spaces and clip.
+    fn collapse_paragraph(raw: &str) -> String {
+        let mut buf = String::new();
+        let mut prev_ws = false;
+        for ch in raw.chars() {
+            if ch.is_whitespace() {
+                if !prev_ws && !buf.is_empty() {
+                    buf.push(' ');
+                }
+                prev_ws = true;
+            } else {
+                buf.push(ch);
+                prev_ws = false;
+            }
+            if buf.chars().count() >= DOC_CHAR_CAP {
+                break;
+            }
+        }
+        // Take exactly DOC_CHAR_CAP chars (character-aligned, not byte).
+        let s: String = buf.trim_end().chars().take(DOC_CHAR_CAP).collect();
+        s
     }
 }
 
@@ -1703,5 +1981,183 @@ macro_rules! log_at {
             log.documentation.as_deref(),
             Some("A trait encapsulating logging.")
         );
+    }
+
+    // ---- Markdown heading extraction (v0.7.0) ----
+    //
+    // The block-grammar tree-sitter-md indexer emits headings as
+    // `kind="heading"` symbols. Depth is encoded in:
+    //   - `name` — hierarchical path joined by " > " (no file stem
+    //     prefix; that's the daemon writer's job at index time once
+    //     the file path is known).
+    //   - `signature` — rendered on demand by
+    //     `signature::render_markdown` from the heading line in source
+    //     (re-derives the leading-`#` count without storing it on
+    //     `Symbol`, preserving the public API shape).
+
+    fn markdown_symbols(src: &str) -> Vec<crate::Symbol> {
+        parse_content(src, Language::Markdown).unwrap().symbols
+    }
+
+    #[test]
+    fn extract_markdown_atx_h1_to_h6() {
+        // Each level should produce one heading with kind="heading"
+        // and the correct start_line.
+        let src = "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n###### Six\n";
+        let syms = markdown_symbols(src);
+        assert_eq!(syms.len(), 6, "expected 6 headings, got {syms:?}");
+        for sym in &syms {
+            assert_eq!(
+                sym.kind, "heading",
+                "every heading symbol gets kind=heading"
+            );
+            assert_eq!(sym.visibility, "public", "headings are public by default");
+        }
+        // `Symbol.name` stores the LEAF only so `find_symbol(name="X")`
+        // exact-match works. Hierarchy is exposed via the
+        // `documentation` field prefix (so `--doc-contains` over the
+        // ancestor names works) and via `signature::render_markdown`
+        // (which displays the marker count).
+        assert_eq!(syms[0].name, "One");
+        assert_eq!(syms[1].name, "Two");
+        assert_eq!(syms[2].name, "Three");
+        assert_eq!(syms[5].name, "Six");
+        // The hierarchy lives in the `documentation` prefix (no body
+        // paragraph in this fixture → docs are just the path).
+        assert_eq!(syms[1].documentation.as_deref(), Some("One > Two"));
+        assert_eq!(
+            syms[5].documentation.as_deref(),
+            Some("One > Two > Three > Four > Five > Six")
+        );
+        // The H1 has nothing to nest under and no body, so docs stay
+        // empty.
+        assert!(syms[0].documentation.is_none());
+    }
+
+    #[test]
+    fn extract_markdown_setext_h1_h2() {
+        // Setext (underline-style) H1 and H2 should be captured the
+        // same way ATX H1/H2 are.
+        let src = "Top Title\n=========\n\nSubsection\n----------\n";
+        let syms = markdown_symbols(src);
+        assert_eq!(syms.len(), 2, "expected 2 setext headings, got {syms:?}");
+        assert_eq!(syms[0].kind, "heading");
+        assert_eq!(syms[0].name, "Top Title");
+        assert_eq!(syms[1].name, "Subsection");
+        // Setext H2 inherits the H1 as its parent.
+        assert_eq!(
+            syms[1].documentation.as_deref(),
+            Some("Top Title > Subsection"),
+        );
+    }
+
+    #[test]
+    fn extract_markdown_strips_closing_hashes_and_trims() {
+        // CommonMark allows `## Foo ##` — trailing hashes are decorative
+        // and must be stripped from the symbol name.
+        let src = "## Trimmed Title  ##\n\nBody.\n";
+        let syms = markdown_symbols(src);
+        assert_eq!(syms.len(), 1);
+        assert_eq!(syms[0].name, "Trimmed Title");
+    }
+
+    #[test]
+    fn extract_markdown_multiple_h1_siblings() {
+        // Two H1s are siblings — neither nests under the other; their
+        // names are independent leaf strings.
+        let src = "# First Topic\n\nA paragraph.\n\n# Second Topic\n\nAnother paragraph.\n";
+        let syms = markdown_symbols(src);
+        let names: Vec<&str> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["First Topic", "Second Topic"]);
+    }
+
+    #[test]
+    fn extract_markdown_hierarchy_resets_on_higher_heading() {
+        // After going H1 → H2 → H3, a new H1 should reset the path —
+        // subsequent H2 nests under the *new* H1, not the old one.
+        // Verify via the `documentation` prefix.
+        let src = "# Alpha\n\n## A1\n\n### A1a\n\n# Beta\n\n## B1\n";
+        let syms = markdown_symbols(src);
+        let names: Vec<&str> = syms.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["Alpha", "A1", "A1a", "Beta", "B1"]);
+        // The B1 documentation should carry `Beta > B1`, NOT `Alpha > B1`.
+        let b1 = syms.iter().find(|s| s.name == "B1").unwrap();
+        assert_eq!(b1.documentation.as_deref(), Some("Beta > B1"));
+        // A1a documentation has the full triple-deep path.
+        let a1a = syms.iter().find(|s| s.name == "A1a").unwrap();
+        assert_eq!(a1a.documentation.as_deref(), Some("Alpha > A1 > A1a"));
+    }
+
+    #[test]
+    fn extract_markdown_documentation_from_first_paragraph() {
+        // The first paragraph after a heading populates `documentation`
+        // so `find_symbol --doc-contains` can match prose. The path
+        // prefix is prepended when the heading has ancestors.
+        let src = "# Project\n\n## Installation\n\nDownload the prebuilt binary from\nthe releases page,\nthen run `cargo install`.\n\n### Notes\n";
+        let syms = markdown_symbols(src);
+        let install = syms.iter().find(|s| s.name == "Installation").unwrap();
+        let docs = install
+            .documentation
+            .as_ref()
+            .expect("Installation heading should have docs");
+        // Path prefix: H2 → "Project > Installation".
+        assert!(
+            docs.starts_with("Project > Installation"),
+            "expected path prefix; got {docs:?}",
+        );
+        // Body: "releases page" comma form survives the collapse.
+        assert!(docs.contains("releases page,"), "got docs={docs:?}");
+        // The next heading's body should NOT bleed in.
+        assert!(!docs.contains("Notes"), "got docs={docs:?}");
+    }
+
+    #[test]
+    fn extract_markdown_no_documentation_when_immediate_subheading() {
+        // A heading immediately followed by a subheading (no body)
+        // gets the path prefix only — no body. An H1 with no body and
+        // no parents stays None.
+        let src = "## Outer\n### Inner\n\nInner body.\n";
+        let syms = markdown_symbols(src);
+        let outer = syms.iter().find(|s| s.name == "Outer").unwrap();
+        assert!(
+            outer.documentation.is_none(),
+            "Outer (no parents, no body) should have None docs: got {:?}",
+            outer.documentation
+        );
+        // Inner gets the full path + body.
+        let inner = syms.iter().find(|s| s.name == "Inner").unwrap();
+        let docs = inner.documentation.as_deref().unwrap();
+        assert!(docs.starts_with("Outer > Inner"), "got {docs:?}");
+        assert!(docs.contains("Inner body."), "got {docs:?}");
+    }
+
+    #[test]
+    fn extract_markdown_skips_headings_inside_fenced_code_blocks() {
+        // A `#` inside a fenced code block is code, not a heading. The
+        // tree-sitter-md block grammar emits the fence as
+        // `fenced_code_block.code_fence_content` — opaque to the
+        // ATX/Setext queries, so headings nested in a fence never reach
+        // our extractor.
+        let src = "# Real Heading\n\n```\n# Not a heading\n## Also not\n```\n\nMore body.\n";
+        let syms = markdown_symbols(src);
+        // Only the real heading should be captured.
+        assert_eq!(syms.len(), 1, "expected 1 heading, got {syms:?}");
+        assert_eq!(syms[0].name, "Real Heading");
+    }
+
+    #[test]
+    fn extract_markdown_start_line_is_one_based() {
+        // start_line is 1-based (matches all other extractors). Verify
+        // on a non-trivial offset — heading sits on line 4.
+        let src = "Intro paragraph.\n\nMore intro.\n\n# Heading on line five\n";
+        let syms = markdown_symbols(src);
+        assert_eq!(syms.len(), 1);
+        assert_eq!(syms[0].start_line, 5);
+    }
+
+    #[test]
+    fn extract_markdown_empty_file() {
+        let syms = markdown_symbols("");
+        assert!(syms.is_empty());
     }
 }

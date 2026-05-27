@@ -961,6 +961,61 @@ pub fn render_swift(bytes: &[u8]) -> Option<String> {
     }
 }
 
+/// Render the canonical display string for a Markdown heading.
+///
+/// Markdown headings have no body to strip — the "signature" *is* the
+/// heading line. v1 always emits ATX form (`#`, `##`, ..., `######`)
+/// even for Setext-source headings, for output consistency across the
+/// agent-facing tools (`outline_workspace`, `find_symbol`, etc.).
+///
+/// `bytes` are the heading-node's source bytes — what the daemon stores
+/// in the def site's byte range. For ATX headings this is the literal
+/// `### Heading text\n`; for setext, it's the text line + underline
+/// (e.g. `Title\n=====\n`). The renderer detects the shape and produces
+/// the ATX-form string `<#×level> <trimmed-text>`.
+///
+/// Returns `None` for input that doesn't parse as a single heading.
+pub fn render_markdown(bytes: &[u8]) -> Option<String> {
+    let text = std::str::from_utf8(bytes).ok()?;
+    let mut lines = text.lines();
+    let first = lines.next()?.trim_end();
+    if first.is_empty() {
+        return None;
+    }
+
+    // ATX form: leading run of `#` (1..=6), then a space.
+    if first.starts_with('#') {
+        let hash_count = first.chars().take_while(|c| *c == '#').count();
+        if !(1..=6).contains(&hash_count) {
+            return None;
+        }
+        let rest = &first[hash_count..];
+        // ATX requires a space (or end-of-line) after the marker.
+        if !rest.is_empty() && !rest.starts_with(' ') && !rest.starts_with('\t') {
+            return None;
+        }
+        let body = rest.trim();
+        // Strip CommonMark closing `#`s.
+        let body = body.trim_end_matches('#').trim_end();
+        return Some(format!("{} {}", "#".repeat(hash_count), body));
+    }
+
+    // Setext form: title line + `===` (H1) or `---` (H2) underline.
+    let second = lines.next()?.trim_end();
+    let level = if !second.is_empty() && second.chars().all(|c| c == '=') {
+        1
+    } else if !second.is_empty() && second.chars().all(|c| c == '-') {
+        2
+    } else {
+        return None;
+    };
+    let body = first.trim();
+    if body.is_empty() {
+        return None;
+    }
+    Some(format!("{} {}", "#".repeat(level), body))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1629,5 +1684,65 @@ mod tests {
     #[test]
     fn sw_empty_input_returns_none() {
         assert!(render_swift(b"").is_none());
+    }
+
+    // ---------- Markdown ----------
+    //
+    // The renderer normalises every heading to ATX form regardless of
+    // grammar shape — agents reading `find_symbol` results get one
+    // canonical signature style for prose.
+
+    fn md(input: &str) -> String {
+        render_markdown(input.as_bytes())
+            .unwrap_or_else(|| panic!("expected a markdown signature for `{input}`"))
+    }
+
+    #[test]
+    fn md_atx_h1_to_h6() {
+        for level in 1..=6u8 {
+            let hashes = "#".repeat(level as usize);
+            let src = format!("{hashes} Heading text\n");
+            assert_eq!(md(&src), format!("{hashes} Heading text"));
+        }
+    }
+
+    #[test]
+    fn md_atx_strips_trailing_hashes() {
+        assert_eq!(md("## Section ##\n"), "## Section");
+        assert_eq!(md("### Inner ### \n"), "### Inner");
+    }
+
+    #[test]
+    fn md_atx_h7_rejects() {
+        // ATX only goes up to H6 in CommonMark.
+        assert!(render_markdown(b"####### Too deep\n").is_none());
+    }
+
+    #[test]
+    fn md_setext_emits_atx_form() {
+        // Underline = ⇒ H1
+        assert_eq!(md("Top Title\n=========\n"), "# Top Title");
+        // Underline - ⇒ H2
+        assert_eq!(md("Subsection\n----------\n"), "## Subsection");
+    }
+
+    #[test]
+    fn md_setext_rejects_garbage_underline() {
+        // First line that doesn't begin with `#` and isn't followed by
+        // an `=`/`-` line is not a heading.
+        assert!(render_markdown(b"Just a paragraph\nwith more text\n").is_none());
+    }
+
+    #[test]
+    fn md_empty_returns_none() {
+        assert!(render_markdown(b"").is_none());
+        assert!(render_markdown(b"\n").is_none());
+    }
+
+    #[test]
+    fn md_atx_no_space_after_marker_rejects() {
+        // `##Foo` is not a valid ATX heading (CommonMark requires a
+        // space).
+        assert!(render_markdown(b"##Foo\n").is_none());
     }
 }

@@ -482,6 +482,7 @@ pub fn map_wire_language(s: &str) -> Option<Language> {
         "ruby" | "rb" => Language::Ruby,
         "swift" => Language::Swift,
         "csharp" | "c#" | "cs" => Language::CSharp,
+        "markdown" | "md" => Language::Markdown,
         _ => return None,
     })
 }
@@ -502,6 +503,7 @@ fn language_wire_name(l: Language) -> &'static str {
         Language::Ruby => "ruby",
         Language::Swift => "swift",
         Language::CSharp => "csharp",
+        Language::Markdown => "markdown",
     }
 }
 

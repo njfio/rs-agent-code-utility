@@ -58,7 +58,9 @@ pub struct FindSymbolArgs {
     #[serde(default)]
     pub pattern: Option<String>,
     /// Optional `kind` filter: `fn`, `struct`, `enum`, `type`, `trait`,
-    /// `const`, `static`, `impl`, `method`, `class`, `interface`, `module`.
+    /// `const`, `static`, `impl`, `method`, `class`, `interface`, `module`,
+    /// `heading` (v0.7.0 — markdown H1–H6; depth is in the rendered
+    /// signature and the hierarchical `qualified_name`).
     #[serde(default)]
     pub kind: Option<String>,
     /// Optional `file` filter (workspace-relative path) to disambiguate

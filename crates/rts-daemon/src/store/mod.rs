@@ -800,31 +800,58 @@ impl Store {
     ///
     /// Returns `(sid, name, def_count)` tuples in arbitrary order;
     /// the caller assigns dense indices for PageRank input.
+    ///
+    /// v0.7.0 left this method as a thin wrapper around the kind-aware
+    /// variant — every caller now needs kind for the markdown heading
+    /// dampener, but third-party consumers depending on the legacy
+    /// shape (none in-tree) still get a stable signature.
+    #[allow(dead_code)]
     pub fn iter_workspace_sids(&self) -> anyhow::Result<Vec<(u32, String, u32)>> {
+        Ok(self
+            .iter_workspace_sids_with_kind()?
+            .into_iter()
+            .map(|(sid, name, def_count, _kind)| (sid, name, def_count))
+            .collect())
+    }
+
+    /// v0.7.0 — like `iter_workspace_sids` but also returns the kind of
+    /// the *first* def for each sid (an arbitrary representative — sids
+    /// rarely have heterogeneous kinds; PageRank only needs a coarse
+    /// `is_heading?` check). Used by `symbol_pagerank` to apply the
+    /// × 0.1 dampening on heading nodes' final rank scores.
+    ///
+    /// One extra DEFS read per sid — cheap since the multimap is already
+    /// open in the same transaction.
+    pub fn iter_workspace_sids_with_kind(
+        &self,
+    ) -> anyhow::Result<Vec<(u32, String, u32, SymbolKind)>> {
         let txn = self.db.begin_read().context("begin_read")?;
         let sid_to_name = txn.open_table(SID_TO_NAME)?;
         let defs = txn.open_multimap_table(DEFS)?;
 
-        let mut out: Vec<(u32, String, u32)> = Vec::new();
+        let mut out: Vec<(u32, String, u32, SymbolKind)> = Vec::new();
         let iter = sid_to_name.iter()?;
         for row in iter {
             let row = row?;
             let sid = row.0.value();
             let name = row.1.value().to_string();
 
-            // Skip sids with no DEFS entry — they're external symbols
-            // that got interned for ref tracking but aren't actually
-            // workspace-defined. (Shouldn't happen given §F1, but
-            // defensive.)
             let mut def_count: u32 = 0;
+            let mut kind = SymbolKind::Other;
             let it = defs.get(&sid)?;
-            for _ in it {
+            for entry in it {
+                let entry = entry?;
+                if def_count == 0 {
+                    if let Ok(d) = from_bytes::<DefSite>(entry.value()) {
+                        kind = d.kind;
+                    }
+                }
                 def_count = def_count.saturating_add(1);
             }
             if def_count == 0 {
                 continue;
             }
-            out.push((sid, name, def_count));
+            out.push((sid, name, def_count, kind));
         }
         Ok(out)
     }

@@ -154,6 +154,15 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // without matching GC activity points at an extractor regression
     // (e.g. PR #118's PHP `method_declaration` gap class).
     "daemon_telemetry_unresolved_refs_gc",
+    // v0.7.0 — Markdown indexing as a 13th language. Headings (ATX +
+    // Setext H1–H6) emit as `kind="heading"` symbols with hierarchical
+    // `name` ("README.md > Title > Installation") and `documentation`
+    // populated from the first body paragraph (≤512 chars, single-line
+    // collapsed). All tracked `.md`/`.markdown` files are indexed
+    // gitignore-aware; depth conveyed by signature + qualified path
+    // (kind stays flat). Old clients ignore both the capability and
+    // the new `heading` rows; new clients can gate on the flag.
+    "index_markdown",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

@@ -41,6 +41,12 @@ pub enum Language {
     Swift,
     /// C# programming language
     CSharp,
+    /// Markdown documentation (prose; first-class headings as symbols).
+    ///
+    /// v1 uses the block grammar only (`tree_sitter_md::LANGUAGE`). The inline
+    /// grammar (`INLINE_LANGUAGE`) and the two-pass `parser` feature are
+    /// deferred to v2 when markdown links land as a reference graph.
+    Markdown,
 }
 
 impl Language {
@@ -63,6 +69,7 @@ impl Language {
             Language::Ruby => Ok(tree_sitter_ruby::LANGUAGE.into()),
             Language::Swift => Ok(tree_sitter_swift::LANGUAGE.into()),
             Language::CSharp => Ok(tree_sitter_c_sharp::LANGUAGE.into()),
+            Language::Markdown => Ok(tree_sitter_md::LANGUAGE.into()),
         }
     }
 
@@ -81,6 +88,7 @@ impl Language {
             Language::Ruby => "Ruby",
             Language::Swift => "Swift",
             Language::CSharp => "C#",
+            Language::Markdown => "Markdown",
         }
     }
 
@@ -99,6 +107,7 @@ impl Language {
             Language::Ruby => &["rb"],
             Language::Swift => &["swift"],
             Language::CSharp => &["cs", "csx"],
+            Language::Markdown => &["md", "markdown"],
         }
     }
 
@@ -117,6 +126,7 @@ impl Language {
             Language::Ruby => "0.21.0",
             Language::Swift => "0.21.0",
             Language::CSharp => "0.23.0",
+            Language::Markdown => "0.5",
         }
     }
 
@@ -135,6 +145,7 @@ impl Language {
             Language::Ruby => true,
             Language::Swift => true,
             Language::CSharp => true,
+            Language::Markdown => false,
         }
     }
 
@@ -156,6 +167,11 @@ impl Language {
             Language::Ruby => Some(tree_sitter_ruby::HIGHLIGHTS_QUERY),
             Language::Swift => Some(tree_sitter_swift::HIGHLIGHTS_QUERY),
             Language::CSharp => Some(tree_sitter_c_sharp::HIGHLIGHTS_QUERY),
+            // tree-sitter-md ships HIGHLIGHT_QUERY_BLOCK at the crate root,
+            // but v1 markdown indexing doesn't run highlighting (headings-as-
+            // symbols suffices); leave the query unwired until a real
+            // consumer needs it.
+            Language::Markdown => None,
         }
     }
 
@@ -174,6 +190,7 @@ impl Language {
             Language::Ruby => None,       // Ruby doesn't have injections query
             Language::Swift => None,      // Swift doesn't have injections query
             Language::CSharp => None,     // C# doesn't have injections query
+            Language::Markdown => None,   // Markdown injections (fenced code) deferred to v2
         }
     }
 
@@ -192,6 +209,7 @@ impl Language {
             Language::Ruby => None,       // Ruby doesn't have locals query
             Language::Swift => None,      // Swift doesn't have locals query
             Language::CSharp => None,     // C# doesn't have locals query
+            Language::Markdown => None,   // Markdown has no notion of locals
         }
     }
 
@@ -210,6 +228,7 @@ impl Language {
             Language::Ruby,
             Language::Swift,
             Language::CSharp,
+            Language::Markdown,
         ]
     }
 }
@@ -247,10 +266,11 @@ impl std::str::FromStr for Language {
             "ruby" | "rb" => Ok(Language::Ruby),
             "swift" => Ok(Language::Swift),
             "csharp" | "c#" | "cs" => Ok(Language::CSharp),
+            "markdown" | "md" => Ok(Language::Markdown),
             _ => Err(Error::invalid_input_error(
                 "language",
                 s,
-                "supported language (rust, javascript, typescript, python, c, cpp, go, java, php, ruby, swift)",
+                "supported language (rust, javascript, typescript, python, c, cpp, go, java, php, ruby, swift, csharp, markdown)",
             )),
         }
     }
@@ -325,6 +345,7 @@ mod tests {
             (Language::Ruby, "x = 1"),
             (Language::Swift, "let x = 1"),
             (Language::CSharp, "class C {}"),
+            (Language::Markdown, "# Heading\n"),
         ];
 
         // Sanity: every variant of `Language::all()` is exercised here.
