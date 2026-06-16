@@ -84,7 +84,8 @@ Each connection is full-duplex. Multiple in-flight requests on a single connecti
   "id":        "<u64 monotonic per connection>", // required
   "method":    "Index.LookupSymbol",              // required
   "params":    { ... },                           // required (may be {} for verbs that take no args)
-  "cancel_id": "<opaque client-chosen string>"    // optional; v0.6+ (capability `cancellable_queries`)
+  "cancel_id": "<opaque client-chosen string>",   // optional; v0.6+ (capability `cancellable_queries`)
+  "deadline_ms": 30000                            // optional; v0.7+ (capability `request_deadlines`)
 }
 ```
 
@@ -98,6 +99,15 @@ handlers (v0.6+: `Index.Grep`, `Index.FindSymbol`, `Index.FindCallers`,
 poll the token at hot-loop boundaries and return `CANCELLED` (§14)
 when tripped. Pre-v0.6 daemons ignore the field; clients that don't
 set it see byte-identical behavior to v0.5.x.
+
+The optional `deadline_ms` field bounds a single request's latency: an
+integer count of milliseconds, range `1..=600000`. Absent means no
+deadline; an out-of-range value (`0` or `> 600000`) is rejected with
+`INVALID_PARAMS`. Like `cancel_id`, it lives in the request envelope
+(not `params`). On expiry the daemon trips the request's cooperative
+`CancelToken` and returns `DEADLINE_EXCEEDED` (§14, §10), distinct from
+the `CANCELLED` an explicit `Daemon.Cancel` produces. Pre-v0.7 daemons
+ignore the field; clients that omit it see unchanged behavior.
 
 ```jsonc
 // Response (success)
@@ -200,7 +210,8 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "index_grep_structural",        // v0.6 alpha+
                      "index_grep_within_symbol",     // v0.6 alpha+
                      "index_grep_v2",                // v0.6 alpha+ (bundle)
-                     "cancellable_queries"],         // v0.6+
+                     "cancellable_queries",          // v0.6+
+                     "request_deadlines"],           // v0.7+
     "uptime_ms":    123456
   }
 }
@@ -359,6 +370,15 @@ Cooperative cancellation — handlers poll the token at hot-loop
 boundaries and return `CANCELLED` (§14). The pre-v0.6 behavior (close
 the socket to abandon a request, or wait for the 30 s soft deadline)
 still works and is the right choice for non-cancellable handlers.
+
+Per-request deadlines ship in **v0.7** under the `request_deadlines`
+capability. Any request may carry an optional top-level `deadline_ms`
+(§3.4); when the budget elapses the daemon trips the request's
+`CancelToken` and returns `DEADLINE_EXCEEDED` (distinct from
+`CANCELLED`, so a timeout is tellable from an explicit `Daemon.Cancel`).
+rts-mcp stamps a default (`RTS_DEADLINE_MS`, 30 s) on agent queries;
+`Workspace.Mount` is exempt from that default. Pure additive — clients
+that omit `deadline_ms` are unaffected. See §10 and §14.
 
 `Session.MarkDeduped` was struck from v0 per architecture review (leaky abstraction). When R6 ships in v1.1, dedup is decided by the daemon, signalled in-band as `{ body_omitted: true, see_earlier_id: ... }` in slice responses; clients don't need to mark.
 
@@ -1097,6 +1117,20 @@ v0 has no explicit `Daemon.Cancel` wire method. Cancellation works by:
 - **Soft deadline**: each request runs under a `tokio::select!` against a 30 s wall clock. On timeout the daemon returns `DEADLINE_EXCEEDED`. (S1 budgets are far under 30 s; this is the safety belt.)
 - **Mid-closure cancellation**: not in v0. Tree-shake walkers check a budget after each expansion but do not poll a cancellation token between layers. v2 may introduce `Daemon.Cancel(request_id)` if profiling justifies it.
 
+### Deadlines (v0.7+, capability `request_deadlines`)
+
+A per-request deadline is a timer-fired internal cancel. When a request
+carries a top-level `deadline_ms` (§3.4), the daemon arms a timer for
+that budget against the request's cooperative `CancelToken`; on expiry
+the handler's next cooperative poll trips and the daemon returns
+`DEADLINE_EXCEEDED` (§14) — distinct from the `CANCELLED` an explicit
+`Daemon.Cancel` produces. rts-mcp stamps a default deadline from
+`RTS_DEADLINE_MS` (default 30 s; `0` disables) on its agent queries so
+latency is bounded out-of-the-box; `Workspace.Mount` is exempt from the
+default (a cold walk on a large repo can legitimately take minutes) but
+honors an explicit `deadline_ms`. The cumulative count of deadline trips
+is exposed as `deadlines.total` via `Daemon.Stats`.
+
 ---
 
 ## 11. Token counting
@@ -1213,7 +1247,7 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 | `BUSY` | in-flight cap of 16 hit on this connection | Yes (backoff + retry) |
 | `STORAGE_FULL` | redb / segment store ran out of disk | No (operator action) |
 | `SCHEMA_VERSION_NEWER` | on-disk redb is newer than daemon binary | No (upgrade binary) |
-| `DEADLINE_EXCEEDED` | 30 s soft deadline tripped | Yes (likely indicates a pathological request) |
+| `DEADLINE_EXCEEDED` | per-request deadline (`deadline_ms`) elapsed; v0.7+, capability `request_deadlines`; custom numeric `-32096`. Not a programming error — client narrows the query or raises the budget | Yes (larger `deadline_ms` or narrower query) |
 | `CANCELLED` | cooperative cancellation tripped via `Daemon.Cancel { cancel_id }` (v0.6+, capability `cancellable_queries`); custom numeric `-32099`. Not a programming error — clients that issued the cancel should treat this as the expected response | No (rephrase or retry with a fresh `cancel_id`) |
 | `INCOMPATIBLE_VERSION` | protocol major mismatch (currently unreachable — v0 is the only major) | No |
 | `INTERNAL_ERROR` | bug in the daemon; should be reported | Yes (rarely fixes itself) |

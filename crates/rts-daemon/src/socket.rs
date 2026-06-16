@@ -320,7 +320,14 @@ async fn dispatch(
     req: Request,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
-    methods::dispatch(&req.method, req.params, state, req.cancel_id, req.deadline_ms).await
+    methods::dispatch(
+        &req.method,
+        req.params,
+        state,
+        req.cancel_id,
+        req.deadline_ms,
+    )
+    .await
 }
 
 async fn write_response(

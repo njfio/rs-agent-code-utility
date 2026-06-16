@@ -757,7 +757,9 @@ async fn deadline_interrupts_impact_of() -> anyhow::Result<()> {
     let code = resp["error"]["code"].as_str();
     match code {
         Some("DEADLINE_EXCEEDED") => {}
-        Some(other) => panic!("unexpected error code from impact_of under deadline: {other}; {resp:?}"),
+        Some(other) => {
+            panic!("unexpected error code from impact_of under deadline: {other}; {resp:?}")
+        }
         None => assert!(
             resp["result"]["impact"].is_array(),
             "impact_of without a deadline trip must return a normal result; got: {resp:?}"
