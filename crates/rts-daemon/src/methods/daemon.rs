@@ -128,6 +128,14 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // behavior; this is a pure additive capability. See
     // `docs/protocol-v0.md` and `crate::cancel`.
     "cancellable_queries",
+    // v0.7+ — per-request deadlines. Any request may carry an optional
+    // top-level `deadline_ms`; when the budget elapses the daemon trips
+    // the request's CancelToken and returns DEADLINE_EXCEEDED (distinct
+    // from CANCELLED). rts-mcp stamps a default (RTS_DEADLINE_MS, 30s)
+    // on agent queries; Mount is exempt from that default. Pure additive
+    // — clients that omit `deadline_ms` are unaffected. See
+    // `docs/protocol-v0.md` §3.4/§14 and `crate::cancel`.
+    "request_deadlines",
     // v0.6+ — `Daemon.Telemetry` RPC returns the **raw** collector
     // inputs that feed `rts telemetry preview` and the (separately
     // feature-gated) 24h ticker. The bounded-enum filter still runs
@@ -275,12 +283,17 @@ pub async fn stats(
         "in_flight": state.cancel_registry.in_flight().await,
     });
 
+    let deadlines = serde_json::json!({
+        "total": state.deadlines_total.load(Relaxed),
+    });
+
     let mut body = serde_json::json!({
         "uptime_ms":     uptime_ms,
         "version":       env!("CARGO_PKG_VERSION"),
         "total_calls":   state.call_counters.total(),
         "calls":         state.call_counters.snapshot(),
         "cancellations": cancellations,
+        "deadlines":     deadlines,
     });
 
     // v2 fields are added only when a workspace is mounted; pre-mount

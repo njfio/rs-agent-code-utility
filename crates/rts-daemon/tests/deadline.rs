@@ -444,6 +444,48 @@ async fn explicit_cancel_still_returns_cancelled_not_deadline() -> anyhow::Resul
     Ok(())
 }
 
+/// Capability + stats surface: `Daemon.Ping` advertises the
+/// `request_deadlines` capability and `Daemon.Stats` exposes a
+/// `deadlines.total` counter (a non-negative integer). No workspace
+/// mount is needed — both RPCs answer pre-mount.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn capability_and_stats_advertise_deadlines() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+
+    let sock = socket_path(home_dir.path(), runtime_dir.path());
+    let mut child = spawn_daemon(runtime_dir.path(), state_dir.path(), home_dir.path())?;
+    let _kill = KillOnDrop(&mut child);
+    wait_for_socket(&sock, Duration::from_secs(5)).await?;
+
+    let mut stream = UnixStream::connect(&sock).await?;
+
+    let ping = round_trip(&mut stream, "1", "Daemon.Ping", json!({}), None).await?;
+    assert!(ping["error"].is_null(), "ping failed: {ping:?}");
+    let caps = ping["result"]["capabilities"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        caps.iter().any(|c| c.as_str() == Some("request_deadlines")),
+        "Daemon.Ping must advertise the request_deadlines capability; got: {ping:?}"
+    );
+
+    let stats = round_trip(&mut stream, "2", "Daemon.Stats", json!({}), None).await?;
+    assert!(stats["error"].is_null(), "stats failed: {stats:?}");
+    let total = stats["result"]["deadlines"]["total"].as_u64();
+    assert!(
+        total.is_some(),
+        "Daemon.Stats must expose deadlines.total as an integer; got: {stats:?}"
+    );
+    assert!(
+        total.unwrap() < u64::MAX,
+        "deadlines.total must be a sane non-negative integer; got: {stats:?}"
+    );
+    Ok(())
+}
+
 /// Test 4: an out-of-range `deadline_ms` is rejected with
 /// `INVALID_PARAMS` before any work runs. Covers both the lower bound
 /// (0) and just past the upper bound (600001).
