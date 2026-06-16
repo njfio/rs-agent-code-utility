@@ -99,7 +99,21 @@ pub(super) async fn mount_inner(
     // wedges (issue #150). Holding this across check → open → set makes
     // mounts mutually exclusive: the first opens the store; any concurrent
     // mount waits here, then falls into the idempotent path below.
-    let _mount_guard = state.mount_serialize.lock().await;
+    //
+    // Cancel-aware acquisition: `Workspace.Mount` is a documented
+    // cancellable handler and a mount can queue behind a long cold mount
+    // or prewarm. `CancelToken` is a bare `AtomicBool` with no async wait
+    // primitive, so poll for the guard and honor `Daemon.Cancel` between
+    // ticks instead of hanging for the full mount (#150 review).
+    let _mount_guard = loop {
+        if cancel.is_cancelled() {
+            return Err(ProtocolError::new(ErrorCode::Cancelled, "cancelled"));
+        }
+        match state.mount_serialize.try_lock() {
+            Ok(g) => break g,
+            Err(_) => tokio::time::sleep(std::time::Duration::from_millis(25)).await,
+        }
+    };
 
     // Idempotent within a connection: a second Mount for the same canonical
     // path returns current status. Held in its own scope so the lock is
@@ -115,6 +129,12 @@ pub(super) async fn mount_inner(
                 Ok(canonical) if canonical.path == existing.canonical.path => {
                     workspace::verify_unchanged(existing)?;
                     let store_snapshot = state.store.lock().ok().and_then(|g| g.clone());
+                    // Count this joiner. A concurrent/idempotent mount of the
+                    // same workspace is a successful mount and must hold a ref;
+                    // otherwise the first `Workspace.Unmount` drops the store
+                    // out from under the other mounted clients (#150 review).
+                    // Mirrors the `fetch_add` on the full-mount path below.
+                    state.mount_refcount.fetch_add(1, Ordering::Relaxed);
                     return Ok(status_payload(existing, state, store_snapshot.as_deref()));
                 }
                 Ok(_other) => {
