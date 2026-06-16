@@ -126,11 +126,24 @@ pub(crate) fn references_for_path(rel_path: &str, content: &str) -> Vec<String> 
             if let Some(refs) = extract_references(info.language, query, content) {
                 return refs;
             }
+        } else if is_prose(info.language) {
+            // Prose has no code references — see `references_with_ranges`.
+            return Vec::new();
         }
     }
     crate::outline::extract_identifiers(content)
         .map(|s| s.to_string())
         .collect()
+}
+
+/// Prose languages carry no code-call semantics, so they must not feed
+/// the reference graph. Markdown is indexed for headings + full-text
+/// search, but a function name appearing in prose is a *mention*, not a
+/// call site — running the regex identifier fallback on it would inject
+/// phantom callers into `find_callers`/`impact_of`. Code languages
+/// without a tags.scm query (C, C++) still use the fallback.
+fn is_prose(language: Language) -> bool {
+    matches!(language, Language::Markdown)
 }
 
 /// Range-carrying variant of [`references_for_path`]. Used by the
@@ -150,11 +163,17 @@ pub(crate) fn references_with_ranges(rel_path: &str, content: &str) -> Vec<RefHi
             if let Some(refs) = extract_references_with_ranges(info.language, query, content) {
                 return refs;
             }
+        } else if is_prose(info.language) {
+            // Prose (e.g. Markdown) has no refs query AND must not use the
+            // regex identifier fallback below: that would mine prose words
+            // as zero-range call sites, surfacing doc mentions as callers
+            // in find_callers/impact_of. Markdown contributes no refs.
+            return Vec::new();
         }
     }
     // Regex fallback: identifier-shaped tokens with no precise range.
     // The store can still answer "who calls X" but the RefSite range
-    // will be 0..0 / line 1..1.
+    // will be 0..0 / line 1..1. Code languages only (C, C++).
     crate::outline::extract_identifiers(content)
         .map(|s| RefHit {
             name: s.to_string(),
@@ -339,6 +358,47 @@ function caller(): JSX.Element {
         assert!(
             !refs.iter().any(|n| n == "local_var"),
             "rust path should use tags.scm; got {refs:?}"
+        );
+    }
+
+    #[test]
+    fn references_for_path_skips_prose_markdown() {
+        // Markdown has no refs query; before the fix it fell through to
+        // the regex identifier tokenizer and mined prose words as fake
+        // call sites (showing up as callers in find_callers). Prose
+        // mentions are not references → no refs.
+        let src = "# Notes\n\nThe `target_fn` helper mentions extract_references.\n";
+        let refs = references_for_path("CHANGELOG.md", src);
+        assert!(
+            refs.is_empty(),
+            "markdown prose must not contribute references; got {refs:?}"
+        );
+    }
+
+    #[test]
+    fn references_with_ranges_skips_prose_markdown() {
+        let src = "# Notes\n\nMentions target_fn and extract_references in prose.\n";
+        let hits = references_with_ranges("docs/plan.md", src);
+        assert!(
+            hits.is_empty(),
+            "markdown prose must not contribute ref sites; got {hits:?}"
+        );
+    }
+
+    #[test]
+    fn references_keep_regex_fallback_for_code_without_query() {
+        // C has no tags.scm refs query but IS code — the regex fallback
+        // must still populate the ref graph. Only prose is excluded.
+        let src = "int main() { return target_fn(1); }";
+        let names = references_for_path("a.c", src);
+        assert!(
+            names.iter().any(|s| s == "target_fn"),
+            "C must keep the regex fallback; got {names:?}"
+        );
+        let hits = references_with_ranges("a.c", src);
+        assert!(
+            hits.iter().any(|h| h.name == "target_fn"),
+            "C ranges must keep the regex fallback; got {hits:?}"
         );
     }
 
