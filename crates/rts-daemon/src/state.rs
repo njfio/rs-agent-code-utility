@@ -191,6 +191,16 @@ pub struct DaemonState {
     /// path; nothing waits on `prewarm_done`.
     pub prewarm_in_flight: std::sync::atomic::AtomicBool,
     pub prewarm_done: tokio::sync::Notify,
+    /// Serializes the mount critical section (`workspace::mount_inner`).
+    /// The idempotency check drops the `workspace` lock before
+    /// `Store::open`'s `.await` (the guard is `!Send`), so without this
+    /// the startup prewarm and an explicit `Workspace.Mount` RPC can both
+    /// pass the check and both open the same redb file — redb then refuses
+    /// the second open with "Database already open", wedging the daemon
+    /// (issue #150). Held across the whole check-open-set sequence so
+    /// exactly one mount opens the store; the loser observes `workspace`
+    /// already set and returns the idempotent status.
+    pub mount_serialize: tokio::sync::Mutex<()>,
     /// v0.5.7+ per-session call counters. Bumped in `methods::dispatch`
     /// before each handler fires (so even errored calls count — they
     /// still represent agent intent). Surfaced via `Daemon.Stats`.
@@ -658,6 +668,7 @@ impl DaemonState {
             content_version_cache: ContentVersionCache::new(),
             prewarm_in_flight: std::sync::atomic::AtomicBool::new(false),
             prewarm_done: tokio::sync::Notify::new(),
+            mount_serialize: tokio::sync::Mutex::new(()),
             call_counters: CallCounters::default(),
             query_cache: crate::methods::grep_v2::query_cache::QueryCache::new(),
             mount_source: Mutex::new(None),
