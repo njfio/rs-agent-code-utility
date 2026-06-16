@@ -83,6 +83,20 @@ fn sym_start(sym: &Symbol, line_starts: &[usize]) -> usize {
 fn container_kinds(language: Language) -> &'static [&'static str] {
     match language {
         Language::Rust => &["impl_item", "trait_item", "mod_item"],
+        Language::Python => &["class_definition"],
+        Language::JavaScript | Language::TypeScript => &["class_declaration"],
+        Language::Java => &[
+            "class_declaration",
+            "interface_declaration",
+            "enum_declaration",
+            "record_declaration",
+        ],
+        Language::CSharp => &[
+            "class_declaration",
+            "interface_declaration",
+            "struct_declaration",
+            "record_declaration",
+        ],
         _ => &[], // other languages added by later tasks
     }
 }
@@ -138,5 +152,37 @@ mod tests {
     fn rust_trait_impl_parent_is_type_not_trait() {
         let src = "struct Foo; trait T { fn go(&self); } impl T for Foo { fn go(&self) {} }";
         assert_eq!(parent_of(src, Language::Rust, "go").as_deref(), Some("Foo"));
+    }
+
+    #[test]
+    fn python_method_parent_is_class() {
+        let src = "class Parser:\n    def parse(self):\n        pass\n\ndef free():\n    pass\n";
+        assert_eq!(parent_of(src, Language::Python, "parse").as_deref(), Some("Parser"));
+        assert_eq!(parent_of(src, Language::Python, "free"), None);
+    }
+
+    #[test]
+    fn js_method_parent_is_class() {
+        let src = "class Parser { parse() {} }\nfunction free() {}";
+        assert_eq!(parent_of(src, Language::JavaScript, "parse").as_deref(), Some("Parser"));
+        assert_eq!(parent_of(src, Language::JavaScript, "free"), None);
+    }
+
+    #[test]
+    fn ts_method_parent_is_class() {
+        let src = "class Parser { parse(): void {} }";
+        assert_eq!(parent_of(src, Language::TypeScript, "parse").as_deref(), Some("Parser"));
+    }
+
+    #[test]
+    fn java_method_parent_is_class() {
+        let src = "class Parser { void parse() {} }";
+        assert_eq!(parent_of(src, Language::Java, "parse").as_deref(), Some("Parser"));
+    }
+
+    #[test]
+    fn csharp_method_parent_is_class() {
+        let src = "class Parser { void Parse() {} }";
+        assert_eq!(parent_of(src, Language::CSharp, "Parse").as_deref(), Some("Parser"));
     }
 }
