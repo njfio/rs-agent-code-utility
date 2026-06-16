@@ -58,6 +58,7 @@ pub(crate) fn extract_symbols(
         }
     }
 
+    crate::parent_scope::assign_parents(tree, content, language, &mut symbols);
     Ok(symbols)
 }
 
