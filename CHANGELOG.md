@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+_Nothing yet._
+
 ## [0.7.0] - 2026-06-16
 
 The headline of v0.7.0 is **Markdown / prose indexing** — a 13th
@@ -154,9 +157,6 @@ despite only ~380 files being indexed). The debouncer now uses `NoCache`:
 the indexer doesn't need precise rename tracking (a rename surfaces as
 remove+create, already handled), so the scan is pure overhead. Cold mount
 on this repo dropped from ~104 s to ~5 s.
-
-
-_Nothing yet._
 
 ## [0.6.1] - 2026-05-25
 
