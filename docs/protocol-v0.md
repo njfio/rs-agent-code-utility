@@ -1114,7 +1114,7 @@ When implemented:
 
 v0 has no explicit `Daemon.Cancel` wire method. Cancellation works by:
 - **Connection drop**: dropping the socket cancels every in-flight request from that client. Reader tasks observe via a `tokio::sync::CancellationToken` derived from the connection's task tree.
-- **Soft deadline**: each request runs under a `tokio::select!` against a 30 s wall clock. On timeout the daemon returns `DEADLINE_EXCEEDED`. (S1 budgets are far under 30 s; this is the safety belt.)
+- **Per-request deadline**: a client may set `deadline_ms` on a request; on expiry the daemon trips the request's cancel token and returns `DEADLINE_EXCEEDED`. The daemon enforces no intrinsic timer — it acts only when `deadline_ms` is present. rts-mcp stamps a 30 s default (`RTS_DEADLINE_MS`); see the Deadlines subsection below.
 - **Mid-closure cancellation**: not in v0. Tree-shake walkers check a budget after each expansion but do not poll a cancellation token between layers. v2 may introduce `Daemon.Cancel(request_id)` if profiling justifies it.
 
 ### Deadlines (v0.7+, capability `request_deadlines`)
@@ -1355,7 +1355,7 @@ No PID-file fancy handshake required — `redb::Database::create`'s flock is the
 | Per-connection in-flight requests | 16 | hard-coded |
 | Per-request `token_budget` ceiling | 200 000 | hard-coded |
 | Writer mpsc depth | 256 | hard-coded |
-| Soft deadline per request | 30 s | hard-coded |
+| Default request deadline (rts-mcp-stamped) | 30 s | `RTS_DEADLINE_MS` env (`0` disables; `Workspace.Mount` exempt) |
 | Idle shutdown after last unmount | 10 min | `RTS_IDLE_SHUTDOWN_SECS` env |
 | Hot-tree LRU capacity | ~5000 entries | `RTS_TREE_LRU_SIZE` env |
 | Per-session dedup cache (v1.1) | ~10 MiB, 15 min TTL | hard-coded |

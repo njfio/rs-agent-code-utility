@@ -128,7 +128,9 @@ Out of scope (separate workstreams):
 
 - **Promise:** The per-connection in-flight cap is 16; further
   in-flight requests on the same connection return `BUSY`. The
-  per-request soft deadline is 30 s (`DEADLINE_EXCEEDED`). The
+  per-request deadline is client-supplied (`deadline_ms`); rts-mcp
+  stamps a 30 s default (`RTS_DEADLINE_MS`) and on expiry the daemon
+  returns `DEADLINE_EXCEEDED`. The
   cancellation registry uses a single `RwLock<HashMap>` keyed on
   the client-supplied `cancel_id` — bounded by the in-flight cap
   and unregistered automatically via `CancelGuard` on handler

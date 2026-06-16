@@ -17,9 +17,12 @@ use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 
 /// Per protocol-v0 §3.3 — the daemon hangs up on frames larger than this.
 pub const MAX_FRAME_BYTES: usize = 16 * 1024 * 1024;
-/// Per-call timeout. Matches the daemon's 30 s soft deadline (§10) plus a
-/// modest grace so a tripped deadline surfaces as a protocol error
-/// (`DEADLINE_EXCEEDED`) rather than a client-side I/O timeout.
+/// Per-call timeout. Matches rts-mcp's default stamped request deadline
+/// (`RTS_DEADLINE_MS`, 30 s) plus a modest grace so a tripped deadline
+/// surfaces as a protocol error (`DEADLINE_EXCEEDED`) rather than a
+/// client-side I/O timeout. (A custom `RTS_DEADLINE_MS` above this
+/// window would surface as an I/O timeout instead — acceptable for the
+/// default; revisit if the per-call timeout needs to track the env value.)
 const CALL_TIMEOUT: Duration = Duration::from_secs(35);
 
 pub struct DaemonClient {
