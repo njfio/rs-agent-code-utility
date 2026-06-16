@@ -340,7 +340,7 @@ pub fn render_grep_lines<W: Write>(
     for m in &matches {
         let file = m.get("file").and_then(|v| v.as_str()).unwrap_or("?");
         let range = m.get("range");
-        let line = range
+        let mut line = range
             .and_then(|r| r.get("start_line"))
             .and_then(|n| n.as_u64())
             .unwrap_or(0);
@@ -355,11 +355,16 @@ pub fn render_grep_lines<W: Write>(
             .unwrap_or("")
             .trim_end_matches('\n');
         // Structural-query matches carry no `line_text`; they expose the
-        // captured node(s) under `captures`. Fall back to the first
-        // capture's text/column so the output stays informative.
+        // captured node(s) under `captures`. Render the first capture and
+        // take its line *and* column so the emitted `path:line:col`
+        // coordinate points at the content we display — the displayed
+        // capture may start on a different line than the match range.
         let (col, content) = if line_text.is_empty() {
             match structural_capture(m) {
-                Some((text, cap_col)) => (cap_col, highlight_match(&text, pattern, style)),
+                Some((cap_line, cap_col, text)) => {
+                    line = cap_line;
+                    (cap_col, highlight_match(&text, pattern, style))
+                }
                 None => (compute_col(line_text, pattern), String::new()),
             }
         } else {
@@ -380,19 +385,28 @@ pub fn render_grep_lines<W: Write>(
     Ok(matches.len())
 }
 
-/// Compute the 1-indexed column (byte offset) of the first
-/// case-insensitive substring match of `pattern` inside `line`. Falls
-/// back to 1 when not found.
-/// Extract a display string + 1-indexed column from a structural-query
-/// match's first capture. Structural matches expose captured nodes under
-/// `captures.<name>[]` (each with `text` and a 0-indexed `start.col`)
-/// instead of the `line_text` that literal/regex matches carry. We show
-/// the first line of the first capture's text.
-fn structural_capture(m: &Value) -> Option<(String, usize)> {
+/// Extract a structural-query match's first capture as a
+/// `(line, 1-indexed col, first-line-of-text)` triple. Structural
+/// matches expose captured nodes under `captures.<name>[]` (each with
+/// `text` and a 0-indexed `start.{line,col}`) instead of the `line_text`
+/// that literal/regex matches carry. Returning the capture's own line
+/// (not the enclosing match `range`) keeps the emitted `path:line:col`
+/// pointing at the rendered content.
+fn structural_capture(m: &Value) -> Option<(u64, usize, String)> {
     let caps = m.get("captures")?.as_object()?;
     let first = caps
         .values()
         .find_map(|arr| arr.as_array().and_then(|a| a.first()))?;
+    let start = first.get("start");
+    let line = start
+        .and_then(|s| s.get("line"))
+        .and_then(|n| n.as_u64())
+        .unwrap_or(0);
+    let col = start
+        .and_then(|s| s.get("col"))
+        .and_then(|c| c.as_u64())
+        .map(|c| c as usize + 1)
+        .unwrap_or(1);
     let text = first
         .get("text")
         .and_then(|v| v.as_str())
@@ -401,15 +415,12 @@ fn structural_capture(m: &Value) -> Option<(String, usize)> {
         .next()
         .unwrap_or("")
         .to_string();
-    let col = first
-        .get("start")
-        .and_then(|s| s.get("col"))
-        .and_then(|c| c.as_u64())
-        .map(|c| c as usize + 1)
-        .unwrap_or(1);
-    Some((text, col))
+    Some((line, col, text))
 }
 
+/// Compute the 1-indexed column (byte offset) of the first
+/// case-insensitive substring match of `pattern` inside `line`. Falls
+/// back to 1 when not found.
 fn compute_col(line: &str, pattern: &str) -> usize {
     if pattern.is_empty() {
         return 1;

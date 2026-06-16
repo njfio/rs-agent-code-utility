@@ -85,7 +85,29 @@ async fn grep_structural_string_literal_with_text_filter() {
             p[3].contains("w#"),
             "content should be the matched string literal; got {p:?}"
         );
+        assert_content_on_reported_line(env.workspace_path(), &p);
     }
+}
+
+/// Verify the ripgrep contract for structural matches: the reported
+/// `path:line:col` actually points at the displayed content. Guards the
+/// multi-capture coordinate bug where the rendered capture could start on
+/// a different line than the enclosing match range.
+fn assert_content_on_reported_line(workspace: &std::path::Path, parts: &[&str]) {
+    let (path, line_no, content) = (parts[0], parts[1], parts[3]);
+    let src = std::fs::read_to_string(workspace.join(path))
+        .unwrap_or_else(|e| panic!("read {path}: {e}"));
+    let n: usize = line_no.parse().unwrap();
+    let actual = src.lines().nth(n - 1).unwrap_or_else(|| {
+        panic!(
+            "reported line {n} out of range for {path} ({} lines)",
+            src.lines().count()
+        )
+    });
+    assert!(
+        actual.contains(content.trim()),
+        "reported {path}:{n} must contain shown content {content:?}; line is {actual:?}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -123,6 +145,7 @@ async fn grep_structural_identifier_usages() {
             p[3].contains("make_widget"),
             "content should be the identifier; got {p:?}"
         );
+        assert_content_on_reported_line(env.workspace_path(), &p);
     }
 }
 
