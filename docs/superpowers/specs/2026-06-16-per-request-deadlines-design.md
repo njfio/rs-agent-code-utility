@@ -95,11 +95,19 @@ distinction is advisory.
 
 ### 4. Error code + observability
 
-New error code `DEADLINE_EXCEEDED`, custom numeric `-32098` (beside
-`CANCELLED`'s `-32099`), added to `error.rs::ErrorCode` and the
-protocol-v0 §14 error table. Marked non-retryable-as-is (client narrows
-the query or raises the budget). `Daemon.Stats` gains a `deadlines`
-section with a `total` counter, mirroring `cancellations.total`.
+Error code `DEADLINE_EXCEEDED` **already exists** in
+`error.rs::ErrorCode` (wire string `"DEADLINE_EXCEEDED"`, with a test)
+— it was reserved for exactly this and is simply not emitted yet. The
+work is to *emit* it (translate the handler's `CANCELLED` when the
+deadline fired) and document it in the protocol-v0 §14 table. The
+documented numeric is **`-32096`** — `-32099` is `CANCELLED`, and
+`-32098`/`-32097` are already taken by rts-mcp's transport-layer
+`DAEMON_UNAVAILABLE`/`DAEMON_DOWN` codes, so `-32096` is the next free
+slot in the JSON-RPC implementation-defined range. (Like `CANCELLED`,
+the daemon emits the string on the wire; the numeric is a §14
+documentation/reservation convention.) Marked non-retryable-as-is.
+`Daemon.Stats` gains a `deadlines` section with a `total` counter,
+mirroring `cancellations.total`.
 
 ### 5. Handler cooperative-poll coverage
 
