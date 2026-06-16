@@ -39,7 +39,12 @@ use schema::{
 ///   FUTURE batch was permanently filtered as "external". Wiping
 ///   any v2 store on bump forces a re-walk that materialises every
 ///   previously-dropped edge through the new deferred path.
-pub const SCHEMA_VERSION: u32 = 3;
+/// * `4` — v0.7+: `DefSite` gains a `parent: Option<String>` (nearest
+///   enclosing container name) threaded to the
+///   `find_symbol`/`read_symbol` wire. The bump forces a one-time
+///   reindex so existing stores re-encode their def values with the
+///   new (postcard-optional) field.
+pub const SCHEMA_VERSION: u32 = 4;
 
 const META_SCHEMA_VERSION: &str = "schema_version";
 const META_NEXT_FID: &str = "next_fid";
@@ -709,6 +714,7 @@ impl Store {
                             start_line: d.start_line,
                             end_line: d.end_line,
                             visibility: d.visibility,
+                            parent: d.parent,
                         });
                     }
                 }
@@ -1101,6 +1107,7 @@ impl Store {
                 start_line: def.start_line,
                 end_line: def.end_line,
                 visibility: def.visibility,
+                parent: def.parent,
             });
         }
         Ok(out)
@@ -1186,6 +1193,7 @@ impl Store {
                     start_line: def.start_line,
                     end_line: def.end_line,
                     visibility: def.visibility,
+                    parent: def.parent,
                 });
             }
         }
@@ -1601,6 +1609,12 @@ pub struct FoundSymbol {
     pub start_line: u32,
     pub end_line: u32,
     pub visibility: schema::Visibility,
+    /// v0.7+: name of the nearest enclosing container def
+    /// (`DefSite::parent`), or `None` for a top-level symbol / when
+    /// extraction hasn't assigned a parent yet. Threaded to the
+    /// `find_symbol`/`read_symbol` wire (`qualified_name` rendering +
+    /// `parent` field + `parent` filter).
+    pub parent: Option<String>,
 }
 
 /// Surface struct for v0.3 U2'+. Resolved info for a caller's *own*
@@ -2002,6 +2016,7 @@ mod tests {
                     end_line: 1,
                     visibility: Visibility::Public,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -2076,6 +2091,7 @@ mod tests {
                         end_line: 15,
                         visibility: Visibility::Public,
                         kind: SymbolKind::Function,
+                        parent: None,
                     },
                     SymbolKind::Function,
                 ),
@@ -2089,6 +2105,7 @@ mod tests {
                         end_line: 3,
                         visibility: Visibility::Public,
                         kind: SymbolKind::Struct,
+                        parent: None,
                     },
                     SymbolKind::Struct,
                 ),
@@ -2132,6 +2149,7 @@ mod tests {
                         end_line: 15,
                         visibility: Visibility::Public,
                         kind: SymbolKind::Function,
+                        parent: None,
                     },
                     SymbolKind::Function,
                 ),
@@ -2145,6 +2163,7 @@ mod tests {
                         end_line: 3,
                         visibility: Visibility::Public,
                         kind: SymbolKind::Struct,
+                        parent: None,
                     },
                     SymbolKind::Struct,
                 ),
@@ -2218,6 +2237,7 @@ mod tests {
                     end_line: 3,
                     visibility: Visibility::Public,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -2262,6 +2282,7 @@ mod tests {
                     end_line: 1,
                     visibility: Visibility::Private,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -2286,6 +2307,7 @@ mod tests {
                     end_line: 1,
                     visibility: Visibility::Public,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -2318,6 +2340,7 @@ mod tests {
                     end_line: 1,
                     visibility: Visibility::Private,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -2352,6 +2375,7 @@ mod tests {
             end_line,
             visibility: Visibility::Public,
             kind: SymbolKind::Function,
+            parent: None,
         }
     }
 
@@ -3251,6 +3275,7 @@ mod tests {
                     end_line: 3,
                     visibility: Visibility::Public,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -3295,6 +3320,7 @@ mod tests {
                     end_line: 1,
                     visibility: Visibility::Private,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -3328,6 +3354,7 @@ mod tests {
                     end_line: 1,
                     visibility: Visibility::Public,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],
@@ -3355,6 +3382,7 @@ mod tests {
                     end_line: 1,
                     visibility: Visibility::Public,
                     kind: SymbolKind::Function,
+                    parent: None,
                 },
                 SymbolKind::Function,
             )],

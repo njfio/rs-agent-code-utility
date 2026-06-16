@@ -53,6 +53,15 @@ struct FindSymbolParams {
     kind: Option<String>,
     #[serde(default)]
     file: Option<String>,
+    /// v0.7+ (cap: `parent_scope`) — exact-match filter on a def's
+    /// nearest enclosing container name (`DefSite::parent`). Drops
+    /// candidates whose `parent` is not exactly this value. Lets agents
+    /// disambiguate same-named methods across types
+    /// (`parent: "Foo"` keeps only `Foo::new`). Currently all defs
+    /// carry `parent: None` (extraction unpopulated), so a `Some(_)`
+    /// filter matches nothing until the extractor assigns parents.
+    #[serde(default)]
+    parent: Option<String>,
     /// v0.3 U4 (alpha.34+, cap: `pagerank_symbolwise`) — sort order
     /// for the `matches` array. Accepted values:
     /// - `"rank"` (default when the capability is advertised) —
@@ -275,6 +284,15 @@ struct ReadSymbolParams {
     file: Option<String>,
     #[serde(default)]
     kind: Option<String>,
+    /// v0.7+ (cap: `parent_scope`) — exact-match filter on the def's
+    /// nearest enclosing container name (`DefSite::parent`). Drops
+    /// candidates whose `parent` is not exactly this value before the
+    /// "first match is the pin" selection, so `read_symbol name="new"
+    /// parent="Foo"` resolves `Foo::new` past the ambiguity. All defs
+    /// currently carry `parent: None`, so a `Some(_)` filter matches
+    /// nothing until extraction populates parents.
+    #[serde(default)]
+    parent: Option<String>,
     #[serde(default)]
     shape: Option<String>,
     #[serde(default)]
@@ -638,6 +656,15 @@ fn symbol_ranks_lazy(
 ///   Defaults to 256 (back-compat); range 1..=4096. The 4096 ceiling
 ///   exists for the `rts-bench semantic` eval; agents shouldn't go
 ///   above the default.
+/// Uniform `::` join for code symbols. Markdown defs carry their own
+/// hierarchical name and a `None` parent, so they are unaffected.
+fn render_qualified_name(name: &str, parent: Option<&str>) -> String {
+    match parent {
+        Some(p) if !p.is_empty() => format!("{p}::{name}"),
+        _ => name.to_string(),
+    }
+}
+
 pub async fn find_symbol(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
@@ -799,8 +826,11 @@ pub async fn find_symbol(
     // filter. Track the pre-filter count for emission only when at
     // least one filter is active (back-compat: unfiltered responses
     // keep the pre-v0.5.2 wire shape with no `pre_filter_count` field).
-    let any_local_filter =
-        kind_filter.is_some() || file_filter.is_some() || p.doc_contains.is_some();
+    let parent_filter = p.parent.as_deref();
+    let any_local_filter = kind_filter.is_some()
+        || file_filter.is_some()
+        || p.doc_contains.is_some()
+        || parent_filter.is_some();
     let mut typed_all: Vec<(crate::store::FoundSymbol, f64)> =
         Vec::with_capacity(names.len().min(limit));
     let mut batched = store_arc
@@ -834,6 +864,11 @@ pub async fn find_symbol(
         .into_iter()
         .filter(|(h, _)| kind_filter.map(|k| h.kind == k).unwrap_or(true))
         .filter(|(h, _)| file_filter.map(|f| h.file == f).unwrap_or(true))
+        // v0.7+ (cap: `parent_scope`): exact-match parent filter.
+        // A candidate with `parent: None` never matches a `Some(_)`
+        // filter, so an unpopulated index yields `matches: []` (the
+        // `pre_filter_count` field disambiguates "filtered to empty").
+        .filter(|(h, _)| parent_filter.map(|pp| h.parent.as_deref() == Some(pp)).unwrap_or(true))
         .collect();
 
     // Apply sort. Default = descending rank when ranks are available;
@@ -1024,7 +1059,10 @@ pub async fn find_symbol(
                 serde_json::Value::Null
             };
             serde_json::json!({
-                "qualified_name": h.name,
+                "qualified_name": render_qualified_name(&h.name, h.parent.as_deref()),
+                // v0.7+ (cap: `parent_scope`): nearest enclosing
+                // container name, or null for top-level / unpopulated.
+                "parent":         h.parent,
                 "kind":           h.kind.as_wire_str(),
                 "file":           h.file,
                 "range": {
@@ -2456,6 +2494,7 @@ pub async fn read_symbol(
 
     let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
     let file_filter = p.file.as_deref();
+    let parent_filter = p.parent.as_deref();
 
     let mut filtered: Vec<FoundSymbol> = hits
         .into_iter()
@@ -2465,6 +2504,14 @@ pub async fn read_symbol(
         })
         .filter(|h| match file_filter {
             Some(f) => h.file == f,
+            None => true,
+        })
+        // v0.7+ (cap: `parent_scope`): exact-match parent filter. A
+        // candidate with `parent: None` never matches a `Some(_)`
+        // filter, so an unpopulated index resolves to SymbolNotFound
+        // when a parent is requested.
+        .filter(|h| match parent_filter {
+            Some(pp) => h.parent.as_deref() == Some(pp),
             None => true,
         })
         .collect();
@@ -2757,7 +2804,10 @@ async fn read_symbol_body(
     truncated_symbols.extend(deps_truncated_names);
 
     Ok(serde_json::json!({
-        "qualified_name": chosen.name,
+        "qualified_name": render_qualified_name(&chosen.name, chosen.parent.as_deref()),
+        // v0.7+ (cap: `parent_scope`): nearest enclosing container
+        // name, or null for top-level / unpopulated.
+        "parent":         chosen.parent,
         "kind":           chosen.kind.as_wire_str(),
         "file":           chosen.file,
         "range": {
@@ -3152,6 +3202,7 @@ mod tests {
             start_line: sl,
             end_line: el,
             visibility: Visibility::Public,
+            parent: None,
         }
     }
 

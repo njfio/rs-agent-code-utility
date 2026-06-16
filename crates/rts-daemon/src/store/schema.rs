@@ -156,7 +156,19 @@ pub struct FileMeta {
 }
 
 /// A single definition site: which file, byte/line range, kind, visibility.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+///
+/// `parent` is the name of the nearest enclosing container definition
+/// (impl / class / struct / trait / enum / …) threaded from
+/// `rts_core::Symbol::parent`, or `None` for a top-level symbol. It lets
+/// `find_symbol`/`read_symbol` render `qualified_name` as `parent::name`
+/// and accept a `parent` exact-match disambiguation filter. Postcard
+/// encodes the `Option<String>` as a 1-byte tag (+ the bytes when
+/// `Some`), so the on-disk footprint is one extra byte per def while
+/// `parent` is unpopulated.
+///
+/// (No `Copy`: the `Option<String>` field makes the struct non-`Copy`;
+/// the few construction/encode sites move or borrow it.)
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefSite {
     pub fid: u32,
     pub start: u32,
@@ -165,6 +177,8 @@ pub struct DefSite {
     pub end_line: u32,
     pub visibility: Visibility,
     pub kind: SymbolKind,
+    #[serde(default)]
+    pub parent: Option<String>,
 }
 
 /// A doc-comment blob attached to a symbol definition. Value type for

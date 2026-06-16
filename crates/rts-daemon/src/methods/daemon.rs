@@ -171,6 +171,13 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // (kind stays flat). Old clients ignore both the capability and
     // the new `heading` rows; new clients can gate on the flag.
     "index_markdown",
+    // v0.7+ — definitions carry a `parent` (nearest enclosing container:
+    // impl/class/struct/…). `find_symbol`/`read_symbol` render
+    // `qualified_name` as `parent::name` and accept a `parent` exact-match
+    // filter, so same-named defs across types are distinguishable. Additive;
+    // `find_callers`/the reference graph are unchanged. See
+    // `docs/protocol-v0.md`.
+    "parent_scope",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
