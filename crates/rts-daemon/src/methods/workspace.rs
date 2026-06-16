@@ -90,6 +90,17 @@ pub(super) async fn mount_inner(
     state: &Arc<DaemonState>,
     cancel: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
+    // Serialize the whole mount critical section. The idempotency check
+    // below drops the `workspace` lock before `Store::open`'s `.await`
+    // (the `MutexGuard` is `!Send`), so without this guard the startup
+    // prewarm task and an explicit `Workspace.Mount` RPC can both pass the
+    // check and both call `Store::open` on the same redb file — redb
+    // refuses the second open with "Database already open" and the daemon
+    // wedges (issue #150). Holding this across check → open → set makes
+    // mounts mutually exclusive: the first opens the store; any concurrent
+    // mount waits here, then falls into the idempotent path below.
+    let _mount_guard = state.mount_serialize.lock().await;
+
     // Idempotent within a connection: a second Mount for the same canonical
     // path returns current status. Held in its own scope so the lock is
     // released before we await the initial walk further down (the
@@ -119,6 +130,19 @@ pub(super) async fn mount_inner(
             }
         }
         // No existing mount; fall through. `current` drops here.
+    }
+
+    // Test-only seam (issue #150 regression). Widens the window between
+    // the idempotency check and `Store::open` so the concurrency test can
+    // deterministically provoke the Mount-vs-Mount / prewarm-vs-Mount
+    // race. No-op unless `RTS_TEST_MOUNT_OPEN_DELAY_MS` is set; never read
+    // in production. With the `mount_serialize` guard held above, only one
+    // mount sits in this window at a time, so the race cannot occur —
+    // which is exactly what the test asserts.
+    if let Ok(ms) = std::env::var("RTS_TEST_MOUNT_OPEN_DELAY_MS") {
+        if let Ok(ms) = ms.parse::<u64>() {
+            tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+        }
     }
 
     let mounted = workspace::mount(&user_path)?;
