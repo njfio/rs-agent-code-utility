@@ -69,6 +69,49 @@ use super::limits::{
 /// this are skipped (counted toward `files_scanned`, no matches).
 const MAX_FILE_BYTES: usize = 4 * 1024 * 1024;
 
+/// Intersection filter applied **inline** during the structural scan so
+/// the row cap counts only matches that satisfy BOTH the structural query
+/// and the literal/regex filter (issue #152). Built by the caller from
+/// the validated `combine` (regex compiled up-front so a bad pattern
+/// fails before the scan).
+pub enum CombineFilter {
+    /// Literal substring over the match's bytes (ASCII case-fold when
+    /// `case_insensitive`). Mirrors v1 grep literal semantics.
+    Literal {
+        needle: Vec<u8>,
+        case_insensitive: bool,
+    },
+    /// Pre-compiled byte regex.
+    Regex(regex::bytes::Regex),
+}
+
+impl CombineFilter {
+    /// Does the match's byte slice satisfy the filter?
+    fn matches(&self, slice: &[u8]) -> bool {
+        match self {
+            CombineFilter::Literal {
+                needle,
+                case_insensitive,
+            } => {
+                if needle.is_empty() {
+                    return true;
+                }
+                if needle.len() > slice.len() {
+                    return false;
+                }
+                if *case_insensitive {
+                    slice
+                        .windows(needle.len())
+                        .any(|w| w.eq_ignore_ascii_case(needle))
+                } else {
+                    slice.windows(needle.len()).any(|w| w == needle.as_slice())
+                }
+            }
+            CombineFilter::Regex(re) => re.is_match(slice),
+        }
+    }
+}
+
 /// One capture in a structural match.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapturePayload {
@@ -168,6 +211,7 @@ pub fn run(
     languages: &[String],
     glob: Option<&GlobMatcher>,
     row_limit: usize,
+    combine: Option<&CombineFilter>,
     cancel: &CancelToken,
 ) -> Result<StructuralResult, StructuralError> {
     // Resolve language whitelist + compile queries per language.
@@ -319,13 +363,17 @@ pub fn run(
                 return Err(StructuralError::Cancelled);
             }
             result.rows_seen += 1;
-            if result.matches.len() >= cap {
-                row_truncated = true;
-                // Skip the rest of this file's matches but keep
-                // counting rows_seen so the caller sees the real
-                // candidate count. To stay under wall-clock budget,
-                // break out entirely.
-                break 'files;
+
+            // Per-match wall-clock check (#152 review). With an inline
+            // `combine` filter, filtered-out candidates `continue` before
+            // the row cap, so a single huge file with many non-matching
+            // nodes (e.g. `(identifier) @i` + a rare text) could otherwise
+            // monopolize the blocking thread well past the budget — the
+            // between-files check below never fires mid-file. Sample the
+            // clock every 1024 candidates to keep `Instant::now()` off the
+            // hottest path while still bounding it.
+            if result.rows_seen % 1024 == 0 && started.elapsed() > budget {
+                return Err(StructuralError::Timeout);
             }
 
             // Find the "primary" capture: the one with the widest
@@ -349,6 +397,29 @@ pub fn run(
                 .fold((u32::MAX, 0u32), |(s, e), (cs, ce)| {
                     (s.min(cs as u32), e.max(ce as u32))
                 });
+
+            // Intersection (`combine`) filter, applied INLINE so the row
+            // cap counts only matches that satisfy both the structural
+            // query and the literal/regex filter (issue #152). Without
+            // this, a large scope hits the cap on raw structural nodes
+            // before the post-pass filter runs, silently dropping real
+            // matches. `source` is already in hand — no extra file read.
+            if let Some(filter) = combine {
+                let (lo, hi) = (start_byte as usize, end_byte as usize);
+                let bytes = source.as_bytes();
+                if hi > bytes.len() || lo > hi || !filter.matches(&bytes[lo..hi]) {
+                    continue;
+                }
+            }
+
+            if result.matches.len() >= cap {
+                row_truncated = true;
+                // Skip the rest of this file's matches but keep
+                // counting rows_seen so the caller sees the real
+                // candidate count. To stay under wall-clock budget,
+                // break out entirely.
+                break 'files;
+            }
             // Re-fetch start position from the *primary* (widest)
             // capture for line/col.
             let primary = captures_vec
