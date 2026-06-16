@@ -107,21 +107,32 @@ if [[ -n "$DRY_RUN" ]]; then
     exit 0
 fi
 
-# Insert the new section right after the `## [Unreleased]` line.
+# Insert the new section *after* the [Unreleased] section — i.e. just
+# before the first versioned `## [x.y.z]` header that follows it. This
+# keeps the `_Nothing yet._` placeholder (and any other notes) under
+# [Unreleased] instead of stranding it below the new section.
 # awk is more robust than sed for multi-line insertion.
 TMP_OUT=$(mktemp)
 awk -v inject_file="$TMP_HEADER" '
-    /^## \[Unreleased\]/ {
-        print
-        # Print the inject content immediately after [Unreleased].
+    /^## \[Unreleased\]/ { seen = 1; print; next }
+    seen && !done && /^## \[/ {
         while ((getline line < inject_file) > 0) {
             print line
         }
         close(inject_file)
-        # Also print an empty separator if not already present.
-        next
+        done = 1
     }
     { print }
+    END {
+        # No versioned header after [Unreleased] (e.g. the first ever
+        # release): append the new section at the end of the file.
+        if (!done) {
+            while ((getline line < inject_file) > 0) {
+                print line
+            }
+            close(inject_file)
+        }
+    }
 ' CHANGELOG.md > "$TMP_OUT"
 mv "$TMP_OUT" CHANGELOG.md
 

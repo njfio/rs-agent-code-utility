@@ -40,6 +40,9 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
+      - name: Release tooling — changelog rollup regression test
+        run: bash scripts/build-changelog.test.sh
+
       # Clippy runs in advisory mode for the v0.2 alpha cycle. `-D warnings`
       # will be reintroduced once the pre-pivot `rts-core` legacy lints are
       # cleaned up incrementally per crate. See the `0.2.0-alpha.13` CHANGELOG
