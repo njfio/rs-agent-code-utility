@@ -354,15 +354,27 @@ pub fn render_grep_lines<W: Write>(
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .trim_end_matches('\n');
-        let col = compute_col(line_text, pattern);
-        let highlighted = highlight_match(line_text, pattern, style);
+        // Structural-query matches carry no `line_text`; they expose the
+        // captured node(s) under `captures`. Fall back to the first
+        // capture's text/column so the output stays informative.
+        let (col, content) = if line_text.is_empty() {
+            match structural_capture(m) {
+                Some((text, cap_col)) => (cap_col, highlight_match(&text, pattern, style)),
+                None => (compute_col(line_text, pattern), String::new()),
+            }
+        } else {
+            (
+                compute_col(line_text, pattern),
+                highlight_match(line_text, pattern, style),
+            )
+        };
         writeln!(
             w,
             "{}:{}:{}:{}",
             style.magenta(file),
             style.green(&line.to_string()),
             col,
-            highlighted
+            content
         )?;
     }
     Ok(matches.len())
@@ -371,6 +383,33 @@ pub fn render_grep_lines<W: Write>(
 /// Compute the 1-indexed column (byte offset) of the first
 /// case-insensitive substring match of `pattern` inside `line`. Falls
 /// back to 1 when not found.
+/// Extract a display string + 1-indexed column from a structural-query
+/// match's first capture. Structural matches expose captured nodes under
+/// `captures.<name>[]` (each with `text` and a 0-indexed `start.col`)
+/// instead of the `line_text` that literal/regex matches carry. We show
+/// the first line of the first capture's text.
+fn structural_capture(m: &Value) -> Option<(String, usize)> {
+    let caps = m.get("captures")?.as_object()?;
+    let first = caps
+        .values()
+        .find_map(|arr| arr.as_array().and_then(|a| a.first()))?;
+    let text = first
+        .get("text")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .lines()
+        .next()
+        .unwrap_or("")
+        .to_string();
+    let col = first
+        .get("start")
+        .and_then(|s| s.get("col"))
+        .and_then(|c| c.as_u64())
+        .map(|c| c as usize + 1)
+        .unwrap_or(1);
+    Some((text, col))
+}
+
 fn compute_col(line: &str, pattern: &str) -> usize {
     if pattern.is_empty() {
         return 1;

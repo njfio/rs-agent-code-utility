@@ -50,6 +50,111 @@ async fn grep_emits_ripgrep_shaped_lines() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn grep_structural_string_literal_with_text_filter() {
+    let env = TestEnv::new();
+    seed_minimal_rust_workspace(env.workspace_path());
+
+    // The fixture's `format!("w#{w}")` contains a string literal. Scope
+    // to `string_literal` nodes and filter to those containing `w#` —
+    // the thing plain grep cannot do (it would also match comments/code).
+    let out = env
+        .run(&[
+            "--no-color",
+            "grep",
+            "w#",
+            "--structural-query",
+            "(string_literal) @s",
+            "--language",
+            "rust",
+        ])
+        .await;
+    let (stdout, stderr, code) = parts(&out);
+    assert_eq!(
+        code, 0,
+        "string-literal match expected; stdout={stdout:?} stderr={stderr:?}"
+    );
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert!(!lines.is_empty(), "expected a string-literal match");
+    for line in &lines {
+        let p: Vec<&str> = line.splitn(4, ':').collect();
+        assert_eq!(p.len(), 4, "ripgrep shape required; got {line:?}");
+        assert!(p[1].parse::<u32>().is_ok(), "line numeric; got {p:?}");
+        assert!(p[2].parse::<u32>().is_ok(), "col numeric; got {p:?}");
+        // Content is the captured node text — a string literal with `w#`.
+        assert!(
+            p[3].contains("w#"),
+            "content should be the matched string literal; got {p:?}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn grep_structural_identifier_usages() {
+    let env = TestEnv::new();
+    seed_minimal_rust_workspace(env.workspace_path());
+
+    // `make_widget` appears as a definition (hub.rs) and call sites
+    // (callers.rs). `(identifier) @i` + text filter finds the usages.
+    let out = env
+        .run(&[
+            "--no-color",
+            "grep",
+            "make_widget",
+            "--structural-query",
+            "(identifier) @i",
+            "--language",
+            "rust",
+        ])
+        .await;
+    let (stdout, stderr, code) = parts(&out);
+    assert_eq!(
+        code, 0,
+        "make_widget usages expected; stdout={stdout:?} stderr={stderr:?}"
+    );
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert!(
+        lines.len() >= 2,
+        "expected multiple make_widget identifier usages; got {lines:?}"
+    );
+    for line in &lines {
+        let p: Vec<&str> = line.splitn(4, ':').collect();
+        assert_eq!(p.len(), 4, "ripgrep shape required; got {line:?}");
+        assert!(
+            p[3].contains("make_widget"),
+            "content should be the identifier; got {p:?}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn grep_structural_without_language_errors() {
+    let env = TestEnv::new();
+    seed_minimal_rust_workspace(env.workspace_path());
+
+    // `--structural-query` requires `--language`; the daemon rejects the
+    // call and the CLI surfaces a non-zero exit with a clear message.
+    let out = env
+        .run(&[
+            "--no-color",
+            "grep",
+            "make_widget",
+            "--structural-query",
+            "(identifier) @i",
+        ])
+        .await;
+    let (stdout, stderr, code) = parts(&out);
+    assert_ne!(
+        code, 0,
+        "structural query without --language must fail; stdout={stdout:?}"
+    );
+    let combined = format!("{stdout}{stderr}");
+    assert!(
+        combined.contains("language"),
+        "error should mention the language requirement; got {combined:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn grep_no_match_exits_one_with_no_output() {
     let env = TestEnv::new();
     seed_minimal_rust_workspace(env.workspace_path());
