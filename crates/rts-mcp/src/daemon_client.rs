@@ -62,15 +62,26 @@ fn stamped_deadline(default_ms: Option<u64>, method: &str) -> Option<u64> {
 }
 
 /// Parse the `RTS_DEADLINE_MS` value: `None` (unset) → Some(30_000)
-/// default; "0" → None (disabled); a valid u64 → Some(v); unparseable →
-/// Some(30_000) (fail safe to the default rather than panicking).
+/// default; "0" → None (disabled); a valid u64 → Some(v) clamped to the
+/// daemon's accepted range; unparseable → Some(30_000) (fail safe to the
+/// default rather than panicking).
+///
+/// The clamp matters: the daemon rejects an envelope `deadline_ms` above
+/// its `MAX_DEADLINE_MS` (600_000) with `INVALID_PARAMS` *before* running
+/// the handler. Without clamping, a user setting `RTS_DEADLINE_MS` above
+/// that would have rts-mcp stamp an invalid deadline on every non-Mount
+/// request, bricking all Index/Daemon queries until the env var is fixed.
+/// We clamp to the max so "allow longer queries" degrades to "the longest
+/// the daemon allows" instead of failing every call.
 fn parse_deadline_env(raw: Option<&str>) -> Option<u64> {
     const DEFAULT_DEADLINE_MS: u64 = 30_000;
+    /// Mirror of the daemon's `MAX_DEADLINE_MS` (protocol-v0 §3.4).
+    const DAEMON_MAX_DEADLINE_MS: u64 = 600_000;
     match raw {
         None => Some(DEFAULT_DEADLINE_MS),
         Some(s) => match s.trim().parse::<u64>() {
             Ok(0) => None,
-            Ok(v) => Some(v),
+            Ok(v) => Some(v.min(DAEMON_MAX_DEADLINE_MS)),
             Err(_) => Some(DEFAULT_DEADLINE_MS),
         },
     }
@@ -281,5 +292,9 @@ mod tests {
         assert_eq!(parse_deadline_env(Some("0")), None);
         assert_eq!(parse_deadline_env(Some("5000")), Some(5_000));
         assert_eq!(parse_deadline_env(Some("garbage")), Some(30_000));
+        // Above the daemon max → clamped to 600_000 (not stamped invalid,
+        // which the daemon would reject with INVALID_PARAMS on every call).
+        assert_eq!(parse_deadline_env(Some("900000")), Some(600_000));
+        assert_eq!(parse_deadline_env(Some("600000")), Some(600_000));
     }
 }
