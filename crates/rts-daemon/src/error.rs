@@ -66,7 +66,8 @@ pub enum ErrorCode {
     StorageFull,
     /// On-disk schema is newer than this daemon binary supports.
     SchemaVersionNewer,
-    /// Per-request 30s soft deadline tripped.
+    /// Per-request `deadline_ms` budget elapsed (rts-mcp stamps a
+    /// default from `RTS_DEADLINE_MS`, 30 s). Wire `DEADLINE_EXCEEDED`.
     DeadlineExceeded,
     /// Cooperative cancellation tripped via `Daemon.Cancel { cancel_id }`.
     /// Custom code `-32099` on the JSON-RPC numeric axis, surfaced on

@@ -2100,7 +2100,11 @@ pub async fn find_callers(
 pub async fn impact_of(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
+    token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
     let p: ImpactOfParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -2144,8 +2148,19 @@ pub async fn impact_of(
     // alpha.22 closure walker's posture.
     let store_clone = store_arc.clone();
     let ranks_clone = ranks.clone();
+    // Move a clone of the token into the blocking BFS so it can poll
+    // at each frontier dequeue — a per-request deadline (or explicit
+    // Daemon.Cancel) interrupts the walk mid-flight instead of waiting
+    // out the 50ms wall-clock budget.
+    let token_clone = token.clone();
     let walk = tokio::task::spawn_blocking(move || {
-        crate::impact::compute(&store_clone, anchor_sid, bounds, ranks_clone.as_deref())
+        crate::impact::compute(
+            &store_clone,
+            anchor_sid,
+            bounds,
+            ranks_clone.as_deref(),
+            &token_clone,
+        )
     })
     .await
     .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("impact join error: {e}")))?
@@ -2155,6 +2170,12 @@ pub async fn impact_of(
             format!("impact compute error: {e:#}"),
         )
     })?;
+    // The BFS polls the token at its frontier loop head and breaks on
+    // cancel. Surface that as CANCELLED so dispatch can rewrite it to
+    // DEADLINE_EXCEEDED when a deadline fired.
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
 
     let impact_value = crate::impact::to_wire_value(&walk.impact);
 
@@ -2471,6 +2492,7 @@ pub async fn read_symbol(
         budget,
         include_deps,
         include_callers,
+        &token,
     )
     .await
 }
@@ -2491,6 +2513,7 @@ async fn read_symbol_body(
     budget: u64,
     include_deps: bool,
     include_callers: bool,
+    token: &CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
     // Timing harness (RTS_PROFILE_READ_SYMBOL=1) — prints µs per
     // section to stderr. Useful for chasing the v0.3 deps-mode
@@ -2623,8 +2646,17 @@ async fn read_symbol_body(
             &chosen,
             remaining_budget,
             &state.signature_cache,
+            token,
         );
         mark!(t_section, "closure_walk");
+        // The walker polls the token at the head of its per-dep render
+        // loop and `break`s on cancel. Surface that as CANCELLED so a
+        // per-request deadline (or explicit Daemon.Cancel) interrupts
+        // a large dependency-closure read instead of returning a
+        // partial result that looks complete.
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
         let value = crate::closure::to_wire_value(&walk.dependencies);
         (
             value,
@@ -2819,6 +2851,11 @@ pub async fn read_symbol_at(
     // `read_symbol_at` is single-resolution by construction (no
     // name-based ambiguity), so `extra` is empty and `ambiguous` is
     // false. The closure-walk + truncation_symbols path still fires.
+    //
+    // `Index.ReadSymbolAt` isn't in the dispatcher's cancellable set
+    // (it resolves a single def, no large fan-out), so hand the shared
+    // body builder a fresh, never-tripped token — the closure poll
+    // becomes a no-op for this caller.
     read_symbol_body(
         state,
         &root,
@@ -2830,6 +2867,7 @@ pub async fn read_symbol_at(
         budget,
         p.include_dependencies,
         p.include_callers,
+        &CancelToken::new(),
     )
     .await
 }
@@ -2908,23 +2946,37 @@ pub async fn outline(
         let glob_owned = p.glob.clone();
         let mentioned_files = p.mentioned_files.clone();
         let mentioned_idents = p.mentioned_idents.clone();
+        // Move a clone of the token into the blocking compute so its
+        // per-file ref-graph walk can poll it and break mid-flight — a
+        // per-request deadline (or explicit Daemon.Cancel) interrupts
+        // the heavy walk instead of running it to completion. Matches
+        // the impact/closure walkers' posture.
+        let token_clone = token.clone();
         // PageRank + content reads can be heavy on large workspaces;
         // delegate to a blocking task so we don't hog the daemon's
         // single-threaded async runtime.
-        let computed = tokio::task::spawn_blocking(move || {
+        let compute_result = tokio::task::spawn_blocking(move || {
             let outline_params = crate::outline::OutlineParams {
                 glob: glob_owned.as_deref(),
                 token_budget: budget,
                 mentioned_files: &mentioned_files,
                 mentioned_idents: &mentioned_idents,
             };
-            crate::outline::compute(&root, &store, &outline_params)
+            crate::outline::compute(&root, &store, &outline_params, &token_clone)
         })
         .await
         .map_err(|e| {
             ProtocolError::new(ErrorCode::InternalError, format!("outline join error: {e}"))
-        })?
-        .map_err(|e| {
+        })?;
+        // The walk polls the token at its per-file loop head and bails
+        // with a cancellation-shaped error on cancel. Check the token
+        // BEFORE mapping a compute error so a deadline/Daemon.Cancel
+        // surfaces as CANCELLED (rewritten to DEADLINE_EXCEEDED by
+        // dispatch when a deadline fired) — NOT InternalError.
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
+        let computed = compute_result.map_err(|e| {
             ProtocolError::new(
                 ErrorCode::InternalError,
                 format!("outline compute error: {e:#}"),

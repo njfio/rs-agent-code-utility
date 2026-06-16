@@ -75,6 +75,7 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
+use crate::cancel::CancelToken;
 use crate::store::{CallerDefInfo, RefSite, Store, SymbolKind};
 use crate::symbol_pagerank::SymbolRanks;
 
@@ -243,6 +244,7 @@ pub fn compute(
     anchor_sid: u32,
     bounds: ImpactBounds,
     ranks: Option<&SymbolRanks>,
+    token: &CancelToken,
 ) -> anyhow::Result<ImpactResult> {
     let bounds = bounds.clamp();
     let started = Instant::now();
@@ -272,6 +274,15 @@ pub fn compute(
     let budget_bytes: u64 = bounds.token_budget.saturating_mul(3);
 
     while let Some((sid, depth)) = queue.pop_front() {
+        // Cooperative cancellation: poll at every frontier dequeue so a
+        // per-request deadline (or explicit Daemon.Cancel) interrupts
+        // the BFS mid-walk. We `break` with whatever we've gathered;
+        // the handler checks `token.is_cancelled()` after `compute`
+        // returns and surfaces CANCELLED (rewritten to
+        // DEADLINE_EXCEEDED by dispatch when a deadline fired).
+        if token.is_cancelled() {
+            break;
+        }
         // Wall-clock check on every dequeue — keeps the worst-case
         // bounded at "constant work per node + wall-clock check".
         if started.elapsed() >= WALL_CLOCK_BUDGET {
@@ -546,9 +557,36 @@ mod tests {
         let store = Store::open(&path).unwrap();
         // Anchor sid that doesn't exist — BFS from an unvisited
         // sid degenerates to "no callers found."
-        let r = compute(&store, 999, ImpactBounds::default(), None).unwrap();
+        let r = compute(
+            &store,
+            999,
+            ImpactBounds::default(),
+            None,
+            &CancelToken::new(),
+        )
+        .unwrap();
         assert!(r.impact.is_empty());
         assert!(!r.closure_truncated);
         assert!(!r.wall_clock_truncated);
+    }
+
+    /// A BFS handed an already-tripped token returns immediately with
+    /// an empty result — the cooperative poll at the frontier loop head
+    /// breaks before any caller is enqueued. This is the unit-level
+    /// guarantee behind `Index.ImpactOf`'s deadline interruptibility
+    /// (the e2e path is gated by the 50ms wall-clock budget, which
+    /// makes a reliably-slow fixture impractical).
+    #[test]
+    fn impact_bfs_breaks_on_pretripped_token() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("db.redb");
+        let store = Store::open(&path).unwrap();
+        let token = CancelToken::new();
+        token.cancel();
+        let r = compute(&store, 0, ImpactBounds::default(), None, &token).unwrap();
+        assert!(
+            r.impact.is_empty(),
+            "a pre-cancelled token must short-circuit the BFS before emitting entries"
+        );
     }
 }

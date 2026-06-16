@@ -29,6 +29,13 @@ pub struct Request {
     pub params: serde_json::Value,
     #[serde(default)]
     pub cancel_id: Option<String>,
+    /// Optional per-request deadline in milliseconds (protocol-v0 §3.4,
+    /// capability `request_deadlines`). When set and the request runs
+    /// longer, the daemon trips the request's `CancelToken` and returns
+    /// `DEADLINE_EXCEEDED`. Range-validated in `methods::dispatch`.
+    /// Absent (`None`) = no deadline; existing clients are unaffected.
+    #[serde(default)]
+    pub deadline_ms: Option<u64>,
 }
 
 fn empty_object() -> serde_json::Value {
@@ -189,6 +196,21 @@ mod tests {
         let req = parse_request_line(br#"{"id":"7","method":"Daemon.Ping"}"#).unwrap();
         assert!(req.params.is_object());
         assert_eq!(req.params.as_object().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn parse_request_with_deadline_ms() {
+        let req = parse_request_line(
+            br#"{"id":"1","method":"Index.Grep","params":{},"deadline_ms":5000}"#,
+        )
+        .unwrap();
+        assert_eq!(req.deadline_ms, Some(5000));
+    }
+
+    #[test]
+    fn parse_request_without_deadline_ms_defaults_none() {
+        let req = parse_request_line(br#"{"id":"1","method":"Daemon.Ping","params":{}}"#).unwrap();
+        assert_eq!(req.deadline_ms, None);
     }
 
     #[test]
