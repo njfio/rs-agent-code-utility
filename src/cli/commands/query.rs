@@ -1,4 +1,5 @@
 //! Query command implementation
+#![allow(clippy::too_many_arguments)]
 
 use crate::cli::error::{validate_language, validate_path, CliResult};
 use crate::cli::utils::create_progress_bar;
@@ -13,10 +14,32 @@ struct QueryResult {
     context_lines: Vec<String>,
 }
 
+/// Returns true if `name` appears in `haystack` as a whole identifier token,
+/// i.e. not surrounded by other identifier characters. This distinguishes a
+/// usage of `foo` from an unrelated `foobar` or `do_foo`.
+fn matches_name(haystack: &str, name: &str) -> bool {
+    if name.is_empty() {
+        return true;
+    }
+    let is_ident = |b: u8| b == b'_' || b.is_ascii_alphanumeric();
+    let bytes = haystack.as_bytes();
+    for (start, m) in haystack.match_indices(name) {
+        let end = start + m.len();
+        let before_ok = start == 0 || !is_ident(bytes[start - 1]);
+        let after_ok = end >= bytes.len() || !is_ident(bytes[end]);
+        if before_ok && after_ok {
+            return true;
+        }
+    }
+    false
+}
+
 pub fn execute(
     path: &PathBuf,
     pattern: &str,
     language: &str,
+    name: Option<&String>,
+    text: Option<&String>,
     prefilter: Option<&String>,
     context: usize,
     format: &str,
@@ -52,7 +75,9 @@ pub fn execute(
     let mut results = Vec::new();
 
     for file in &analysis_result.files {
-        if file.language != language {
+        // FileInfo.language is the canonical name (e.g. "Rust"); the CLI value
+        // is whatever the user typed (e.g. "rust"). Compare case-insensitively.
+        if !file.language.eq_ignore_ascii_case(language) {
             continue;
         }
 
@@ -71,32 +96,53 @@ pub fn execute(
         // Parse the file
         let tree = parser.parse(&content, None)?;
 
-        // Find nodes matching the pattern
-        let matches = tree.find_nodes_by_kind(pattern);
+        // The pattern may be a comma-separated list of node kinds, e.g.
+        // "identifier,field_identifier,scoped_identifier" to catch a symbol in
+        // every syntactic role at once. Collect across all kinds, then dedup by
+        // byte span so overlapping kinds don't double-count.
+        let mut matches = Vec::new();
+        for kind in pattern.split(',').map(str::trim).filter(|k| !k.is_empty()) {
+            matches.extend(tree.find_nodes_by_kind(kind));
+        }
+        matches.sort_by_key(|n| (n.start_byte(), n.end_byte()));
+        matches.dedup_by_key(|n| (n.start_byte(), n.end_byte()));
 
-        if !matches.is_empty() {
-            for node in &matches {
-                let start_line = node.start_position().row + 1;
-                let end_line = node.end_position().row + 1;
-                let node_text = &content[node.start_byte()..node.end_byte()];
+        for node in &matches {
+            let node_text = &content[node.start_byte()..node.end_byte()];
 
-                // Extract context lines
-                let lines: Vec<&str> = content.lines().collect();
-                let context_start = start_line.saturating_sub(context + 1);
-                let context_end = (end_line + context).min(lines.len());
-
-                results.push(QueryResult {
-                    file_path: file.path.clone(),
-                    start_line,
-                    end_line,
-                    match_text: node_text.to_string(),
-                    context_lines: lines[context_start..context_end]
-                        .iter()
-                        .map(|s| s.to_string())
-                        .collect(),
-                });
+            // Apply optional name/text predicates. The kind pattern selects the
+            // shape (call_expression, identifier, string_literal, ...); these
+            // narrow it to a specific symbol or phrase.
+            if let Some(name) = name {
+                if !matches_name(node_text, name) {
+                    continue;
+                }
             }
-            total_matches += matches.len();
+            if let Some(text) = text {
+                if !node_text.to_lowercase().contains(&text.to_lowercase()) {
+                    continue;
+                }
+            }
+
+            let start_line = node.start_position().row + 1;
+            let end_line = node.end_position().row + 1;
+
+            // Extract context lines
+            let lines: Vec<&str> = content.lines().collect();
+            let context_start = start_line.saturating_sub(context + 1);
+            let context_end = (end_line + context).min(lines.len());
+
+            results.push(QueryResult {
+                file_path: file.path.clone(),
+                start_line,
+                end_line,
+                match_text: node_text.to_string(),
+                context_lines: lines[context_start..context_end]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            });
+            total_matches += 1;
         }
     }
 
@@ -111,6 +157,12 @@ pub fn execute(
 
     println!("\n🔍 Query Summary:");
     println!("   Pattern: '{}'", pattern);
+    if let Some(name) = name {
+        println!("   Name filter: '{}'", name);
+    }
+    if let Some(text) = text {
+        println!("   Text filter: '{}'", text);
+    }
     println!("   Language: {}", language);
     println!("   Files searched: {}", analysis_result.files.len());
     println!("   Total matches: {}", total_matches);
@@ -185,5 +237,37 @@ fn output_default(results: &[QueryResult], context: usize) {
                 result.match_text.lines().next().unwrap_or("").trim()
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_name;
+
+    #[test]
+    fn whole_word_identifier_matches() {
+        assert!(matches_name("foo", "foo"));
+        assert!(matches_name("foo(bar)", "foo")); // call site
+        assert!(matches_name("let x = foo + 1;", "foo")); // usage
+        assert!(matches_name("self.foo()", "foo")); // method-ish
+    }
+
+    #[test]
+    fn substring_of_larger_identifier_does_not_match() {
+        assert!(!matches_name("foobar", "foo"));
+        assert!(!matches_name("do_foo", "foo"));
+        assert!(!matches_name("foo_bar", "foo"));
+    }
+
+    #[test]
+    fn empty_name_matches_anything() {
+        assert!(matches_name("anything", ""));
+    }
+
+    #[test]
+    fn handles_non_ascii_boundaries() {
+        // A multibyte char adjacent to the token must not panic and counts as a boundary.
+        assert!(matches_name("café foo", "foo"));
+        assert!(matches_name("foo→bar", "foo"));
     }
 }

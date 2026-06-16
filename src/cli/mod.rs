@@ -105,13 +105,25 @@ pub enum Commands {
         #[arg(value_name = "PATH")]
         path: PathBuf,
 
-        /// Tree-sitter query pattern
+        /// Tree-sitter node kind(s) to match, comma-separated (e.g.
+        /// call_expression, string_literal, or
+        /// "identifier,field_identifier,scoped_identifier" for all usages of a symbol)
         #[arg(short, long)]
         pattern: String,
 
         /// Language to query (rust, javascript, python, c, cpp)
         #[arg(short, long)]
         language: String,
+
+        /// Keep only matches whose text contains this identifier as a whole word
+        /// (e.g. usages of a symbol, call sites of a function)
+        #[arg(short, long)]
+        name: Option<String>,
+
+        /// Keep only matches whose text contains this substring
+        /// (e.g. string literals containing a phrase); case-insensitive
+        #[arg(short, long)]
+        text: Option<String>,
 
         /// Prefilter files by substring before parsing
         #[arg(long)]
