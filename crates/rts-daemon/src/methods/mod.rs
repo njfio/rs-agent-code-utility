@@ -65,7 +65,8 @@ pub async fn prewarm_mount(
 /// [`CancelToken`] is registered under that id for the duration of
 /// the call and handed to the matching long-running handlers
 /// (`Index.Grep`, `Index.FindSymbol`, `Index.FindCallers`,
-/// `Index.ReadSymbol`, `Index.Outline`, `Workspace.Mount`). The token
+/// `Index.ImpactOf`, `Index.ReadSymbol`, `Index.Outline`,
+/// `Workspace.Mount`). The token
 /// is removed automatically via the RAII guard once the handler
 /// returns (or panics).
 pub async fn dispatch(
@@ -172,7 +173,7 @@ pub async fn dispatch(
         }
         "Index.ImpactOf" => {
             counters.index_impact_of.fetch_add(1, Relaxed);
-            index::impact_of(params, state).await
+            index::impact_of(params, state, token).await
         }
         "Index.ReadRange" => {
             counters.index_read_range.fetch_add(1, Relaxed);
@@ -247,6 +248,7 @@ fn is_cancellable_method(method: &str) -> bool {
         "Index.Grep"
             | "Index.FindSymbol"
             | "Index.FindCallers"
+            | "Index.ImpactOf"
             | "Index.ReadSymbol"
             | "Index.Outline"
             | "Workspace.Mount"

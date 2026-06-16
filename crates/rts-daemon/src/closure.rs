@@ -50,6 +50,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::cancel::CancelToken;
 use crate::store::{FoundSymbol, Store};
 
 /// One dep entry, ready for the wire shape. Fields mirror
@@ -119,6 +120,7 @@ pub fn compute(
     anchor: &FoundSymbol,
     remaining_budget_tokens: u64,
     signature_cache: &crate::state::SignatureCache,
+    token: &CancelToken,
 ) -> ClosureResult {
     // Fine-grained timing — same env-var gate as the outer
     // `RTS_PROFILE_READ_SYMBOL`. Lets us see WHICH sub-section of
@@ -244,6 +246,16 @@ pub fn compute(
         std::collections::HashMap::with_capacity(resolved.len().min(8));
     let mut rendered: Vec<DependencyEntry> = Vec::with_capacity(resolved.len());
     for (_name, def) in &resolved {
+        // Cooperative cancellation: this is the closure walk's hot
+        // loop — each iteration may read a dep file from disk and run
+        // a tree-sitter signature render. Poll the token at the head
+        // so a per-request deadline (or an explicit Daemon.Cancel)
+        // interrupts a large dep set mid-walk. We `break` rather than
+        // return a sentinel; the caller checks `token.is_cancelled()`
+        // after `compute` returns and surfaces CANCELLED.
+        if token.is_cancelled() {
+            break;
+        }
         let abs = match crate::path::resolve_workspace_path(workspace_root, &def.file) {
             Ok((abs, _rel)) => abs,
             Err(_) => {

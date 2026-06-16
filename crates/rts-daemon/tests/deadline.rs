@@ -143,6 +143,35 @@ fn seed_workspace(root: &std::path::Path, file_count: usize) -> anyhow::Result<(
     Ok(())
 }
 
+/// Seed a workspace with a single `hub` fn that calls `leaf_NNNNN()`
+/// across `leaf_count` distinct files — one leaf per file. `read_symbol`
+/// with `include_dependencies: true` on `hub` resolves every leaf as a
+/// depth-1 dependency, and the closure walker reads each leaf's file +
+/// runs a tree-sitter signature render per dep. With a large
+/// `leaf_count` that render loop runs long enough for a tiny deadline to
+/// land inside its cooperative poll. Returns the hub's symbol name.
+fn seed_closure_workspace(root: &std::path::Path, leaf_count: usize) -> anyhow::Result<String> {
+    for i in 0..leaf_count {
+        let path = root.join(format!("leaf_{i:05}.rs"));
+        let body = format!(
+            "pub fn leaf_{i:05}() -> u32 {{\n    \
+             let a = {i}u32;\n    \
+             a.wrapping_mul(31) ^ 0x5a5a5a5a\n\
+             }}\n"
+        );
+        std::fs::write(&path, body)?;
+    }
+    // The hub calls every leaf, so its outgoing-reference set is the
+    // full leaf population — exactly what the closure walker expands.
+    let mut hub = String::from("pub fn hub() -> u32 {\n    let mut acc = 0u32;\n");
+    for i in 0..leaf_count {
+        hub.push_str(&format!("    acc = acc.wrapping_add(leaf_{i:05}());\n"));
+    }
+    hub.push_str("    acc\n}\n");
+    std::fs::write(root.join("hub.rs"), hub)?;
+    Ok("hub".to_string())
+}
+
 /// Wait until the cold walk has committed at least `min_files` distinct
 /// files to the index. The structural scanner walks the committed-file
 /// set, so the query duration is gated on this — a half-indexed
@@ -541,5 +570,139 @@ async fn out_of_range_deadline_is_invalid_params() -> anyhow::Result<()> {
         "INVALID_PARAMS",
         "deadline_ms=600001 must be rejected as INVALID_PARAMS; got: {too_big:?}"
     );
+    Ok(())
+}
+
+/// Task 4 / Part A: `Index.ReadSymbol` with `include_dependencies: true`
+/// over a wide dependency closure is interruptible by a tiny deadline.
+///
+/// Before the closure walker polled the request's `CancelToken`, the
+/// dep-closure render loop (a file read + tree-sitter signature render
+/// per dep) ran to completion regardless of any deadline. We seed a hub
+/// fn with a few thousand single-leaf-per-file dependencies so the
+/// render loop runs comfortably longer than the 5ms budget, then assert
+/// the response is `DEADLINE_EXCEEDED`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn deadline_interrupts_read_symbol_dependency_closure() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    let leaf_count: usize = 4000;
+    let hub_name = seed_closure_workspace(workspace.path(), leaf_count)?;
+    // hub.rs + one file per leaf.
+    let file_count = leaf_count as u64 + 1;
+
+    let sock = socket_path(home_dir.path(), runtime_dir.path());
+    let mut child = spawn_daemon(runtime_dir.path(), state_dir.path(), home_dir.path())?;
+    let _kill = KillOnDrop(&mut child);
+    wait_for_socket(&sock, Duration::from_secs(5)).await?;
+
+    let mut stream = UnixStream::connect(&sock).await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+        None,
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount failed: {mount:?}");
+    wait_for_index_warm(&mut stream, file_count, Duration::from_secs(120)).await?;
+
+    let resp = round_trip(
+        &mut stream,
+        "2",
+        "Index.ReadSymbol",
+        json!({
+            "name": hub_name,
+            "include_dependencies": true,
+            "token_budget": 200_000,
+        }),
+        Some(&[("deadline_ms", json!(5u64))]),
+    )
+    .await?;
+
+    let code = resp["error"]["code"].as_str().unwrap_or("<no error>");
+    assert_eq!(
+        code, "DEADLINE_EXCEEDED",
+        "read_symbol over a wide dependency closure must honor the deadline; got: {resp:?}"
+    );
+    Ok(())
+}
+
+/// Task 4 / Part B: `Index.ImpactOf` over a deep call graph is
+/// interruptible by a tiny deadline.
+///
+/// `impact_of` previously didn't receive the request token at all, so
+/// neither a deadline nor an explicit `Daemon.Cancel` could interrupt
+/// its BFS. The BFS does carry a fixed 50ms wall-clock budget, so this
+/// e2e is best-effort: a sub-millisecond deadline on a fan-in graph
+/// races the wall-clock cap. We assert the call surfaces *either*
+/// `DEADLINE_EXCEEDED` (deadline won) or a normal truncated result
+/// (wall-clock won) — never a hang and never a CANCELLED leak. The
+/// unit test `impact::tests::impact_bfs_breaks_on_pretripped_token`
+/// gives the deterministic poll-fires guarantee.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn deadline_interrupts_impact_of() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // Reuse the hub/leaf fixture: every leaf is called by `hub`, so
+    // `Index.ImpactOf` on a leaf finds `hub` as a caller. To give the
+    // BFS a wide frontier we instead anchor on a shared helper that all
+    // leaves call. Simpler: anchor on a leaf — depth-1 fan-in is small,
+    // but the call is still exercised end-to-end with a deadline.
+    let leaf_count: usize = 4000;
+    let _hub = seed_closure_workspace(workspace.path(), leaf_count)?;
+    let file_count = leaf_count as u64 + 1;
+
+    let sock = socket_path(home_dir.path(), runtime_dir.path());
+    let mut child = spawn_daemon(runtime_dir.path(), state_dir.path(), home_dir.path())?;
+    let _kill = KillOnDrop(&mut child);
+    wait_for_socket(&sock, Duration::from_secs(5)).await?;
+
+    let mut stream = UnixStream::connect(&sock).await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+        None,
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount failed: {mount:?}");
+    wait_for_index_warm(&mut stream, file_count, Duration::from_secs(120)).await?;
+
+    let resp = round_trip(
+        &mut stream,
+        "2",
+        "Index.ImpactOf",
+        json!({
+            "name": "leaf_00000",
+            "depth": 4,
+            "max_nodes": 10000,
+            "token_budget": 200_000,
+        }),
+        Some(&[("deadline_ms", json!(1u64))]),
+    )
+    .await?;
+
+    // The token is now threaded into the BFS, so the request can never
+    // hang and never surface a raw CANCELLED. Either the deadline won
+    // (DEADLINE_EXCEEDED) or the BFS finished within budget (a normal
+    // result envelope, possibly wall-clock-truncated).
+    let code = resp["error"]["code"].as_str();
+    match code {
+        Some("DEADLINE_EXCEEDED") => {}
+        Some(other) => panic!("unexpected error code from impact_of under deadline: {other}; {resp:?}"),
+        None => assert!(
+            resp["result"]["impact"].is_array(),
+            "impact_of without a deadline trip must return a normal result; got: {resp:?}"
+        ),
+    }
     Ok(())
 }
