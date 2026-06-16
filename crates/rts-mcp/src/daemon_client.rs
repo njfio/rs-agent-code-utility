@@ -40,6 +40,42 @@ pub struct DaemonClient {
     /// so the respawned daemon's per-workspace socket path matches the
     /// original (per `socket_path_for_workspace` from v0.5.4).
     workspace: PathBuf,
+    /// Default deadline (ms) stamped on non-Mount requests. From
+    /// `RTS_DEADLINE_MS` at construction: unset → Some(30_000); "0" →
+    /// None (disabled); else parsed. See `stamped_deadline`.
+    default_deadline_ms: Option<u64>,
+}
+
+/// The deadline rts-mcp stamps on a daemon request: the configured
+/// default for every method EXCEPT `Workspace.Mount` (a cold-walk on a
+/// big repo can legitimately run for minutes). `None` default = never
+/// stamp. An explicit per-request deadline is not modeled here — the
+/// CLI/other clients set `deadline_ms` directly on the wire.
+fn stamped_deadline(default_ms: Option<u64>, method: &str) -> Option<u64> {
+    match default_ms {
+        Some(ms) if method != "Workspace.Mount" => Some(ms),
+        _ => None,
+    }
+}
+
+/// Parse the `RTS_DEADLINE_MS` value: `None` (unset) → Some(30_000)
+/// default; "0" → None (disabled); a valid u64 → Some(v); unparseable →
+/// Some(30_000) (fail safe to the default rather than panicking).
+fn parse_deadline_env(raw: Option<&str>) -> Option<u64> {
+    const DEFAULT_DEADLINE_MS: u64 = 30_000;
+    match raw {
+        None => Some(DEFAULT_DEADLINE_MS),
+        Some(s) => match s.trim().parse::<u64>() {
+            Ok(0) => None,
+            Ok(v) => Some(v),
+            Err(_) => Some(DEFAULT_DEADLINE_MS),
+        },
+    }
+}
+
+/// Read `RTS_DEADLINE_MS` from the environment via `parse_deadline_env`.
+fn default_deadline_from_env() -> Option<u64> {
+    parse_deadline_env(std::env::var("RTS_DEADLINE_MS").ok().as_deref())
 }
 
 impl DaemonClient {
@@ -51,6 +87,7 @@ impl DaemonClient {
             next_id: AtomicU64::new(1),
             daemon_bin,
             workspace,
+            default_deadline_ms: default_deadline_from_env(),
         }
     }
 
@@ -94,7 +131,10 @@ impl DaemonClient {
     /// so the caller can map daemon error codes to `CallToolResult::error`.
     pub async fn call(&mut self, method: &str, params: Value) -> Result<Value, DaemonError> {
         let id = self.alloc_id();
-        let req = json!({ "id": id, "method": method, "params": params });
+        let mut req = json!({ "id": id, "method": method, "params": params });
+        if let Some(ms) = stamped_deadline(self.default_deadline_ms, method) {
+            req["deadline_ms"] = json!(ms);
+        }
         let mut bytes = serde_json::to_vec(&req)
             .map_err(|e| DaemonError::transport(format!("encode request: {e}")))?;
         if bytes.len() + 1 > MAX_FRAME_BYTES {
@@ -212,5 +252,31 @@ impl std::error::Error for DaemonError {}
 impl From<anyhow::Error> for DaemonError {
     fn from(e: anyhow::Error) -> Self {
         DaemonError::transport(format!("{e:#}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stamps_default_on_queries_exempts_mount() {
+        assert_eq!(stamped_deadline(Some(30_000), "Index.Grep"), Some(30_000));
+        assert_eq!(
+            stamped_deadline(Some(30_000), "Index.FindSymbol"),
+            Some(30_000)
+        );
+        // Mount cold-walk can legitimately exceed any default → exempt.
+        assert_eq!(stamped_deadline(Some(30_000), "Workspace.Mount"), None);
+        // No configured default → never stamp.
+        assert_eq!(stamped_deadline(None, "Index.Grep"), None);
+    }
+
+    #[test]
+    fn parse_deadline_env_handles_unset_zero_value_garbage() {
+        assert_eq!(parse_deadline_env(None), Some(30_000));
+        assert_eq!(parse_deadline_env(Some("0")), None);
+        assert_eq!(parse_deadline_env(Some("5000")), Some(5_000));
+        assert_eq!(parse_deadline_env(Some("garbage")), Some(30_000));
     }
 }
