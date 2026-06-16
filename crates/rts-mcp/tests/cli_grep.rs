@@ -150,6 +150,76 @@ async fn grep_structural_identifier_usages() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn grep_structural_limit_does_not_truncate_before_filter() {
+    // Regression for #147. `format_widget` is the *last* fn def in
+    // hub.rs, so it is never among the first identifier node scanned.
+    // With `--limit 1` the old code capped the raw structural scan at 1
+    // node (`make_widget`), then applied the text filter → 0 matches.
+    // The limit must bound RETURNED matches, so the scan has to continue
+    // past the filtered-out nodes and still find `format_widget`.
+    let env = TestEnv::new();
+    seed_minimal_rust_workspace(env.workspace_path());
+
+    let out = env
+        .run(&[
+            "--no-color",
+            "grep",
+            "format_widget",
+            "--structural-query",
+            "(identifier) @i",
+            "--language",
+            "rust",
+            "--glob",
+            "**/hub.rs",
+            "--limit",
+            "1",
+        ])
+        .await;
+    let (stdout, stderr, code) = parts(&out);
+    assert_eq!(
+        code, 0,
+        "limit=1 must still find format_widget (not truncate before the \
+         text filter); stdout={stdout:?} stderr={stderr:?}"
+    );
+    assert!(
+        stdout.lines().any(|l| l.contains("format_widget")),
+        "expected format_widget match; got {stdout:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn grep_structural_limit_caps_returned_matches() {
+    // The limit must still be enforced on the returned set. `make_widget`
+    // occurs 4× (def + use + 2 call sites); `--limit 2` returns exactly 2.
+    let env = TestEnv::new();
+    seed_minimal_rust_workspace(env.workspace_path());
+
+    let out = env
+        .run(&[
+            "--no-color",
+            "grep",
+            "make_widget",
+            "--structural-query",
+            "(identifier) @i",
+            "--language",
+            "rust",
+            "--limit",
+            "2",
+        ])
+        .await;
+    let (stdout, stderr, code) = parts(&out);
+    assert_eq!(
+        code, 0,
+        "expected matches; stdout={stdout:?} stderr={stderr:?}"
+    );
+    assert_eq!(
+        stdout.lines().count(),
+        2,
+        "limit=2 must cap returned matches to 2; got {stdout:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn grep_structural_without_language_errors() {
     let env = TestEnv::new();
     seed_minimal_rust_workspace(env.workspace_path());
