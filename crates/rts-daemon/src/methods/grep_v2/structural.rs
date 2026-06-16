@@ -364,6 +364,18 @@ pub fn run(
             }
             result.rows_seen += 1;
 
+            // Per-match wall-clock check (#152 review). With an inline
+            // `combine` filter, filtered-out candidates `continue` before
+            // the row cap, so a single huge file with many non-matching
+            // nodes (e.g. `(identifier) @i` + a rare text) could otherwise
+            // monopolize the blocking thread well past the budget — the
+            // between-files check below never fires mid-file. Sample the
+            // clock every 1024 candidates to keep `Instant::now()` off the
+            // hottest path while still bounding it.
+            if result.rows_seen % 1024 == 0 && started.elapsed() > budget {
+                return Err(StructuralError::Timeout);
+            }
+
             // Find the "primary" capture: the one with the widest
             // byte range (typically the `@whole` capture per
             // tree-sitter convention). If the match has no captures
