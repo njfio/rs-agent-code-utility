@@ -248,6 +248,61 @@ async fn grep_structural_without_language_errors() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn grep_structural_combine_scans_past_the_row_cap() {
+    // Regression for #152. With more than STRUCTURAL_MAX_ROWS (4096)
+    // structural nodes before the match, the combine (text) filter must
+    // still find it: the filter runs INLINE so the cap counts post-filter
+    // matches, not raw nodes. The old post-pass capped 4096 raw
+    // identifiers first (none matching), then filtered → empty.
+    let env = TestEnv::new();
+    std::fs::write(
+        env.workspace_path().join("Cargo.toml"),
+        "[package]\nname = \"fixture\"\nversion = \"0.0.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    // 5000 padding fn-name identifiers, then the unique target LAST — so
+    // it sits past the 4096 cap in document scan order.
+    let mut src = String::with_capacity(120_000);
+    for i in 0..5000 {
+        src.push_str(&format!("pub fn pad_{i}() {{}}\n"));
+    }
+    src.push_str("pub fn zzz_unique_target() {}\n");
+    std::fs::write(env.workspace_path().join("big.rs"), src).unwrap();
+
+    // Structural grep scans the committed file set; on a debug daemon
+    // indexing 5k fns can lag the first call. Poll until ready (or the
+    // deadline) so the test asserts the cap behavior, not a cold-index
+    // race. The target is past the 4096-node cap, so finding it at all is
+    // the regression signal.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    let mut last = String::new();
+    loop {
+        let out = env
+            .run(&[
+                "--no-color",
+                "grep",
+                "zzz_unique_target",
+                "--structural-query",
+                "(identifier) @i",
+                "--language",
+                "rust",
+            ])
+            .await;
+        let (stdout, _stderr, _code) = parts(&out);
+        if stdout.lines().any(|l| l.contains("zzz_unique_target")) {
+            return; // found past the cap → fix works
+        }
+        last = stdout;
+        assert!(
+            std::time::Instant::now() < deadline,
+            "target identifier past the 4096-node cap was never found \
+             (issue #152); last stdout={last:?}"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn grep_no_match_exits_one_with_no_output() {
     let env = TestEnv::new();
     seed_minimal_rust_workspace(env.workspace_path());
