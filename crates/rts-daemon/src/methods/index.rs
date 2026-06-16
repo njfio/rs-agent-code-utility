@@ -1316,6 +1316,25 @@ pub async fn grep(
             // their CPU-bound compute) — see the v0.3.x comments
             // around `read_symbol_body`'s closure walk for the
             // rationale.
+            // The user's `limit` bounds RETURNED matches. When a
+            // post-scan filter follows (combine literal/regex, or
+            // within_symbol), the scanner must NOT stop at `limit` raw
+            // structural matches — otherwise filtering can shrink the
+            // result below `limit` (often to zero) while matching nodes
+            // remain unscanned (issue #147: `(identifier) @i` + text was
+            // returning empty under a small limit). In that case scan up
+            // to the hard cap and truncate the filtered set to `limit`
+            // below; bounded by STRUCTURAL_MAX_ROWS + the wall-clock
+            // budget. Structural-only queries keep capping at `limit`.
+            let has_post_filter =
+                !matches!(combine, super::grep_v2::compose::StructuralCombine::None)
+                    || shared_filters.within_symbol.is_some();
+            let scan_limit = if has_post_filter {
+                super::grep_v2::limits::STRUCTURAL_MAX_ROWS
+            } else {
+                limit
+            };
+
             let state_clone = state.clone();
             let root_owned = root.clone();
             let query_owned = query.clone();
@@ -1331,7 +1350,7 @@ pub async fn grep(
                     &query_owned,
                     &languages_owned,
                     glob_owned.as_ref(),
-                    limit,
+                    scan_limit,
                     &token_owned,
                 )
             })
@@ -1416,7 +1435,7 @@ pub async fn grep(
 
             // Apply within_symbol filter post-scan if requested.
             // Mirrors the literal/regex path's filter ordering.
-            let final_matches: Vec<_> = if let Some(name) = &shared_filters.within_symbol {
+            let mut final_matches: Vec<_> = if let Some(name) = &shared_filters.within_symbol {
                 let defs = match store_arc.find_symbol(name) {
                     Ok(v) => v,
                     Err(e) => {
@@ -1461,6 +1480,25 @@ pub async fn grep(
                     .collect()
             } else {
                 combine_filtered
+            };
+
+            // Now that all post-scan filters have run, enforce the
+            // user's `limit` on the RETURNED set (issue #147). When a
+            // filter was applied the scan ran up to STRUCTURAL_MAX_ROWS,
+            // so the filtered set may exceed `limit`; truncate here and
+            // flag it. files_with_matches is recomputed from the final
+            // set so it reflects what the caller actually receives.
+            let post_filter_truncated = final_matches.len() > limit;
+            if post_filter_truncated {
+                final_matches.truncate(limit);
+            }
+            let truncated = result.truncated || post_filter_truncated;
+            let files_with_matches = {
+                let mut seen = std::collections::HashSet::new();
+                final_matches
+                    .iter()
+                    .filter(|m| seen.insert(m.file.as_str()))
+                    .count()
             };
 
             // Serialize structural matches to JSON.
@@ -1525,11 +1563,11 @@ pub async fn grep(
 
             return Ok(serde_json::json!({
                 "matches": match_records,
-                "truncated": result.truncated,
+                "truncated": truncated,
                 "rows_seen": result.rows_seen,
                 "rows_returned": final_matches.len(),
                 "files_scanned": result.files_scanned,
-                "files_with_matches": result.files_with_matches,
+                "files_with_matches": files_with_matches,
                 "partial_failures": pfs_json,
             }));
         }
