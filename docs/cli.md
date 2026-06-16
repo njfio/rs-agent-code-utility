@@ -56,7 +56,7 @@ rts find 'make_*' --pattern
 
 Flags: `--pattern`, `--kind <fn|struct|…>`, `--file <REL>`, `--limit <N>`.
 
-### `rts grep <PATTERN>`
+### `rts grep [PATTERN]`
 
 Literal-substring search across indexed file bytes. Output is
 ripgrep-shaped (`path:line:col:content`), so it composes:
@@ -66,7 +66,25 @@ rts grep TODO | awk -F: '{print $1}' | sort -u
 rts grep --regex '\bunsafe\b' --glob 'crates/**/*.rs'
 ```
 
-Flags: `--regex`, `--case-sensitive`, `--glob <PATTERN>`, `--limit <N>`.
+`--structural-query` scopes matches to tree-sitter node kinds (requires
+`--language`), and combines with `PATTERN`/`--regex` to filter to the text
+inside the captured nodes — searches plain text can't express:
+
+```sh
+# string literals containing a phrase (not comments or code)
+rts grep "connection refused" --structural-query '(string_literal) @s' --language rust
+# usages of a symbol as an identifier node
+rts grep make_widget --structural-query '(identifier) @i' --language rust
+# every call expression in a file (no text filter)
+rts grep --structural-query '(call_expression) @c' --language rust --glob 'src/lib.rs'
+```
+
+`PATTERN` is optional when `--structural-query` provides the search source.
+
+Flags: `--regex`, `--case-sensitive`, `--glob <PATTERN>`, `--limit <N>`,
+`--multiline` (with `--regex`), `--structural-query <QUERY>`,
+`--language <LANG>` (repeatable), `--within-symbol <NAME>`,
+`--within-symbol-allow-overload`.
 
 ### `rts callers <NAME>`
 

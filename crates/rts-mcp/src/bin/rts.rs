@@ -84,8 +84,9 @@ enum Cmd {
     Grep {
         /// Pattern to search for. Default: literal substring,
         /// case-insensitive. Pass `--regex` for the `regex` crate
-        /// syntax, `--case-sensitive` for exact case.
-        pattern: String,
+        /// syntax, `--case-sensitive` for exact case. Optional when
+        /// `--structural-query` provides the search source.
+        pattern: Option<String>,
         /// Treat PATTERN as a regex.
         #[arg(long)]
         regex: bool,
@@ -98,6 +99,29 @@ enum Cmd {
         /// Maximum number of matches.
         #[arg(long)]
         limit: Option<u32>,
+        /// Multi-line regex mode: `.` matches newlines and `^`/`$`
+        /// match line boundaries. Only valid together with `--regex`.
+        #[arg(long)]
+        multiline: bool,
+        /// Tree-sitter S-expression structural query, e.g.
+        /// `(string_literal) @s` or `(call_expression) @c`. Requires
+        /// `--language`. When combined with PATTERN (or `--regex`),
+        /// matches are filtered to text inside the captured nodes —
+        /// e.g. string literals containing a phrase.
+        #[arg(long)]
+        structural_query: Option<String>,
+        /// Restrict matches to the byte range of the named symbol.
+        #[arg(long)]
+        within_symbol: Option<String>,
+        /// Allow `--within-symbol` to resolve to multiple overloaded
+        /// definitions instead of erroring on ambiguity.
+        #[arg(long)]
+        within_symbol_allow_overload: bool,
+        /// Language for `--structural-query` (repeatable), e.g.
+        /// `--language rust`. Required whenever `--structural-query`
+        /// is set.
+        #[arg(long)]
+        language: Vec<String>,
     },
     /// Show direct callers of a symbol.
     Callers {
@@ -385,9 +409,19 @@ async fn run_command(
             case_sensitive,
             glob,
             limit,
+            multiline,
+            structural_query,
+            within_symbol,
+            within_symbol_allow_overload,
+            language,
         } => {
             let mut params = serde_json::Map::new();
-            params.insert("text".into(), Value::String(pattern.clone()));
+            // `text` is optional when `--structural-query` is the search
+            // source; pass it through only when present so the daemon's
+            // validator sees the same shape the caller emitted.
+            if let Some(p) = pattern {
+                params.insert("text".into(), Value::String(p.clone()));
+            }
             if *regex {
                 params.insert("regex".into(), Value::Bool(true));
             }
@@ -399,6 +433,24 @@ async fn run_command(
             }
             if let Some(n) = limit {
                 params.insert("limit".into(), Value::Number((*n).into()));
+            }
+            if *multiline {
+                params.insert("multiline".into(), Value::Bool(true));
+            }
+            if let Some(q) = structural_query {
+                params.insert("structural_query".into(), Value::String(q.clone()));
+            }
+            if let Some(s) = within_symbol {
+                params.insert("within_symbol".into(), Value::String(s.clone()));
+            }
+            if *within_symbol_allow_overload {
+                params.insert("within_symbol_allow_overload".into(), Value::Bool(true));
+            }
+            if !language.is_empty() {
+                params.insert(
+                    "language".into(),
+                    Value::Array(language.iter().cloned().map(Value::String).collect()),
+                );
             }
             let body =
                 match cli::call_method(&client, workspace, "Index.Grep", Value::Object(params))
@@ -421,7 +473,8 @@ async fn run_command(
             }
             let mut stdout = std::io::stdout().lock();
             let n =
-                cli::render_grep_lines(&body, pattern, &mut stdout, style).map_err(io_to_anyhow)?;
+                cli::render_grep_lines(&body, pattern.as_deref().unwrap_or(""), &mut stdout, style)
+                    .map_err(io_to_anyhow)?;
             stdout.flush().map_err(io_to_anyhow)?;
             Ok(if n == 0 { exit::NO_RESULTS } else { exit::OK })
         }
