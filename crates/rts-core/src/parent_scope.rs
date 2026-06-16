@@ -97,6 +97,11 @@ fn container_kinds(language: Language) -> &'static [&'static str] {
             "struct_declaration",
             "record_declaration",
         ],
+        Language::C => &["struct_specifier"],
+        Language::Cpp => &["class_specifier", "struct_specifier", "namespace_definition"],
+        Language::Php => &["class_declaration", "interface_declaration", "trait_declaration"],
+        Language::Ruby => &["class", "module"],
+        Language::Swift => &["class_declaration", "protocol_declaration"],
         _ => &[], // other languages added by later tasks
     }
 }
@@ -184,5 +189,31 @@ mod tests {
     fn csharp_method_parent_is_class() {
         let src = "class Parser { void Parse() {} }";
         assert_eq!(parent_of(src, Language::CSharp, "Parse").as_deref(), Some("Parser"));
+    }
+
+    #[test]
+    fn cpp_method_parent_is_class() {
+        // Use a defined (bodied) method: the C++ extractor only emits a symbol
+        // for a method definition, not a bare declaration (`void parse();`).
+        let src = "class Parser { void parse() {} };";
+        assert_eq!(parent_of(src, Language::Cpp, "parse").as_deref(), Some("Parser"));
+    }
+
+    #[test]
+    fn php_method_parent_is_class() {
+        let src = "<?php class Parser { function parse() {} }";
+        assert_eq!(parent_of(src, Language::Php, "parse").as_deref(), Some("Parser"));
+    }
+
+    #[test]
+    fn ruby_method_parent_is_class() {
+        let src = "class Parser\n  def parse\n  end\nend\n";
+        assert_eq!(parent_of(src, Language::Ruby, "parse").as_deref(), Some("Parser"));
+    }
+
+    #[test]
+    fn swift_method_parent_is_class() {
+        let src = "class Parser { func parse() {} }";
+        assert_eq!(parent_of(src, Language::Swift, "parse").as_deref(), Some("Parser"));
     }
 }
