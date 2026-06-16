@@ -62,7 +62,7 @@ The headline number: on the rts-core crate itself, getting one function's body c
 
 ```sh
 # Prebuilt binaries (macOS arm64, Linux x86_64, Linux arm64):
-VERSION=0.6.0 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
+VERSION=0.6.1 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
 curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz" | tar -xz
 # Verify: SHA256SUMS (integrity) + `gh attestation verify` (authenticity, v0.6.1+).
 # Browser-downloaded macOS tarballs need `xattr -dr com.apple.quarantine "rts-${VERSION}-${TARGET}/"`.
@@ -121,7 +121,13 @@ The MCP server also exposes two observability tools — `daemon_stats` (per-meth
 
 ## Status
 
-**v0.6 — stable for daily use.** Latest tag: `v0.6.0`. Used daily by the author on the rts codebase itself; looking for outside users — file an issue or a discussion.
+**v0.6 — stable for daily use.** Latest release: `v0.6.1`. Used daily by the author on the rts codebase itself; looking for outside users — file an issue or a discussion.
+
+**Landing on `main` (→ v0.7), build from source to try today:**
+
+- **Markdown / prose indexing** — a 13th language. Headings become first-class symbols, so `find_symbol` and `outline_workspace` see your docs the way they see code.
+- **Structural grep** — `rts grep --structural-query '(string_literal) @s' --language rust <text>` filters matches to tree-sitter node kinds, so you can ask for *string literals containing X* or *identifier usages of Y* — searches plain `grep` can't express. (`--within-symbol`, `--multiline` too.)
+- **Reliability hardening** — cold mount on a real dev workspace is **~20× faster** (the watcher no longer scans `target/`/`node_modules`); a cold-start mount race that could wedge the daemon is fixed; `find_callers`/`impact_of` no longer surface prose mentions as call sites.
 
 Pre-1.0 means the **wire protocol (protocol-v0)** may change additively and the **on-disk redb index** may change between minor versions (the daemon auto-rebuilds on upgrade; a *downgrade* across a schema bump needs a one-time state-dir wipe). The **user-facing surface will not break without a version bump.**
 
