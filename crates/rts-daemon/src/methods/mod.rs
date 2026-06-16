@@ -59,7 +59,9 @@ pub async fn dispatch(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
     cancel_id: Option<String>,
+    deadline_ms: Option<u64>,
 ) -> Result<serde_json::Value, ProtocolError> {
+    let _ = deadline_ms;
     use std::sync::atomic::Ordering::Relaxed;
     let counters = &state.call_counters;
 
