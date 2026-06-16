@@ -1,7 +1,7 @@
 # rts — AST-precise code search for AI coding agents
 
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
-[![Languages](https://img.shields.io/badge/languages-12-brightgreen)](#languages)
+[![Languages](https://img.shields.io/badge/languages-13-brightgreen)](#languages)
 [![Token reduction](https://img.shields.io/badge/token%20reduction-99.9%25-brightgreen)](#why)
 
 `rts` is a local code-retrieval daemon plus an [MCP](https://modelcontextprotocol.io/) bridge that gives AI coding agents — Claude Code, Cursor, Continue, Aider, Cline — **AST-precise, ranked, sub-millisecond** access to your codebase. It replaces the "agent runs `rg` and reads whole files" pattern with structured tool calls that return *exactly the bytes the agent needs* — typically **99.9% less context** for the same answer.
@@ -62,7 +62,7 @@ The headline number: on the rts-core crate itself, getting one function's body c
 
 ```sh
 # Prebuilt binaries (macOS arm64, Linux x86_64, Linux arm64):
-VERSION=0.6.1 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
+VERSION=0.7.0 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
 curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz" | tar -xz
 # Verify: SHA256SUMS (integrity) + `gh attestation verify` (authenticity, v0.6.1+).
 # Browser-downloaded macOS tarballs need `xattr -dr com.apple.quarantine "rts-${VERSION}-${TARGET}/"`.
@@ -94,7 +94,7 @@ Ten tools, all read-only. Eight are AST-precise query tools (below); two are obs
 | `read_symbol_at` | "What's at `src/foo.rs:42`?" Line-anchored, for compiler-error follow-up. |
 | `read_range` | Explicit line range. Stack-trace frames, diff hunks. |
 | `outline_workspace` | "I'm new to this repo — where do I start?" Token-budgeted structural map; Aider-style PageRank file ranking. |
-| `grep` | Literal substring or regex over indexed bytes. Returns matches with `enclosing_qualified_name` — the only `grep` you've used that says *which function the match is in*. |
+| `grep` | Literal, regex, or **structural** (tree-sitter node-kind) search over indexed bytes. Returns matches with `enclosing_qualified_name` — the only `grep` you've used that says *which function the match is in*. |
 
 The MCP server also exposes two observability tools — `daemon_stats` (per-method call counts) and `daemon_telemetry` (latency percentiles + cache-hit snapshot) — so you (and your agent) can see actual usage rather than guess.
 
@@ -117,15 +117,15 @@ The MCP server also exposes two observability tools — `daemon_stats` (per-meth
    · enclosing        poll fallback)
 ```
 
-**Single-uid**. Refuses to run as root. Sets `umask(0077)`, disables core dumps. **Zero outbound HTTP code paths** in the daemon and MCP build trees (asserted via `cargo tree` in CI). 12 languages indexed via tree-sitter — Rust, JS, TS, Python, C, C++, Go, Java, PHP, Ruby, Swift, C# — with AST-precise call edges on 10 of the 12 (added Java, PHP, Swift, C#) and regex fallback on C and C++.
+**Single-uid**. Refuses to run as root. Sets `umask(0077)`, disables core dumps. **Zero outbound HTTP code paths** in the daemon and MCP build trees (asserted via `cargo tree` in CI). 13 languages indexed via tree-sitter — Rust, JS, TS, Python, C, C++, Go, Java, PHP, Ruby, Swift, C#, and Markdown — with AST-precise call edges on 10 of the 12 code grammars (added Java, PHP, Swift, C#), regex fallback on C and C++, and heading-level symbols for Markdown (prose; no call edges).
 
 ## Status
 
-**v0.6 — stable for daily use.** Latest release: `v0.6.1`. Used daily by the author on the rts codebase itself; looking for outside users — file an issue or a discussion.
+**v0.7 — stable for daily use.** Latest release: `v0.7.0`. Used daily by the author on the rts codebase itself; looking for outside users — file an issue or a discussion.
 
-**Landing on `main` (→ v0.7), build from source to try today:**
+**New in v0.7.0:**
 
-- **Markdown / prose indexing** — a 13th language. Headings become first-class symbols, so `find_symbol` and `outline_workspace` see your docs the way they see code.
+- **Markdown / prose indexing** — a 13th language. Headings become first-class symbols, so `find_symbol` and `outline_workspace` see your docs the way they see code. (`.md`/`.markdown` are indexed by default.)
 - **Structural grep** — `rts grep --structural-query '(string_literal) @s' --language rust <text>` filters matches to tree-sitter node kinds, so you can ask for *string literals containing X* or *identifier usages of Y* — searches plain `grep` can't express. (`--within-symbol`, `--multiline` too.)
 - **Reliability hardening** — cold mount on a real dev workspace is **~20× faster** (the watcher no longer scans `target/`/`node_modules`); a cold-start mount race that could wedge the daemon is fixed; `find_callers`/`impact_of` no longer surface prose mentions as call sites.
 
