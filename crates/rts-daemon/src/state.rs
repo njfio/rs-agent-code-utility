@@ -254,6 +254,11 @@ pub struct DaemonState {
     /// registered token. Surfaced as `Daemon.Stats.cancellations.total`.
     /// Stale-cancel hits (unknown id, idempotent) do not bump this.
     pub cancellations_total: AtomicU64,
+    /// Cumulative count of requests aborted by a per-request deadline
+    /// (`deadline_ms` elapsed → token tripped → `DEADLINE_EXCEEDED`).
+    /// Surfaced via `Daemon.Stats.deadlines.total`. Distinct from
+    /// `cancellations_total` (explicit `Daemon.Cancel`).
+    pub deadlines_total: AtomicU64,
     /// v0.6+ telemetry collector: per-method latency histograms.
     /// Populated by the dispatcher around every handler call;
     /// surfaced by `Daemon.Telemetry` (which `rts telemetry preview`
@@ -678,6 +683,7 @@ impl DaemonState {
             reconcile_stats: Arc::new(RwLock::new(crate::reconciler::ReconcileStats::default())),
             cancel_registry: Arc::new(CancelRegistry::new()),
             cancellations_total: AtomicU64::new(0),
+            deadlines_total: AtomicU64::new(0),
             method_latency: MethodLatencyHistograms::default(),
             error_counts: Mutex::new(std::collections::BTreeMap::new()),
             cache_counters: CacheCounters::default(),

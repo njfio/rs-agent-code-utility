@@ -13,6 +13,20 @@ mod index;
 mod session;
 mod workspace;
 
+/// Aborts its wrapped task on drop. Used to cancel the deadline timer
+/// the instant the handler returns, so a fast request leaves no timer
+/// running. Drop runs on every dispatch exit (normal, error, panic).
+struct AbortOnDrop(tokio::task::JoinHandle<()>);
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+/// Maximum accepted `deadline_ms` (10 minutes). Mirrors the envelope's
+/// documented range in protocol-v0 §3.4.
+const MAX_DEADLINE_MS: u64 = 600_000;
+
 /// v0.4 prewarm: mount eagerly during daemon startup so the initial
 /// walk overlaps with the MCP handshake. Called from `main.rs` when
 /// the daemon is spawned with `--workspace <path>`.
@@ -61,7 +75,6 @@ pub async fn dispatch(
     cancel_id: Option<String>,
     deadline_ms: Option<u64>,
 ) -> Result<serde_json::Value, ProtocolError> {
-    let _ = deadline_ms;
     use std::sync::atomic::Ordering::Relaxed;
     let counters = &state.call_counters;
 
@@ -75,6 +88,31 @@ pub async fn dispatch(
             Some(CancelGuard::register(state.cancel_registry.clone(), id, token.clone()).await)
         }
         _ => None,
+    };
+
+    use std::sync::atomic::AtomicBool;
+    // Per-request deadline: validate, then arm a timer that trips this
+    // request's CancelToken when the budget elapses. The handler's
+    // existing cooperative poll catches it; we translate its CANCELLED
+    // into DEADLINE_EXCEEDED below. Works regardless of `cancel_id`.
+    let deadline_fired = Arc::new(AtomicBool::new(false));
+    let _deadline_timer = match deadline_ms {
+        Some(ms) => {
+            if ms == 0 || ms > MAX_DEADLINE_MS {
+                return Err(ProtocolError::new(
+                    ErrorCode::InvalidParams,
+                    format!("`deadline_ms` must be 1..={MAX_DEADLINE_MS}"),
+                ));
+            }
+            let token = token.clone();
+            let fired = deadline_fired.clone();
+            Some(AbortOnDrop(tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+                fired.store(true, Relaxed);
+                token.cancel();
+            })))
+        }
+        None => None,
     };
 
     // v0.6+ telemetry collector: time every dispatch so the
@@ -165,6 +203,23 @@ pub async fn dispatch(
             ))
         }
     };
+
+    // A deadline that fired surfaces as the handler's CANCELLED; rewrite
+    // it so clients can tell a timeout from an explicit Daemon.Cancel.
+    let result = match result {
+        Err(e) if e.code == ErrorCode::Cancelled && deadline_fired.load(Relaxed) => {
+            state.deadlines_total.fetch_add(1, Relaxed);
+            Err(ProtocolError::new(
+                ErrorCode::DeadlineExceeded,
+                format!(
+                    "request exceeded deadline of {} ms",
+                    deadline_ms.unwrap_or_default()
+                ),
+            ))
+        }
+        other => other,
+    };
+
     let elapsed_micros = started.elapsed().as_micros().min(u128::from(u64::MAX)) as u64;
     state.method_latency.record(method, elapsed_micros);
 
