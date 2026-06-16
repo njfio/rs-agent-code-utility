@@ -6,6 +6,155 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.7.0] - 2026-06-16
+
+The headline of v0.7.0 is **Markdown / prose indexing** — a 13th
+indexed language, on by default, so `.md` and `.markdown` files now
+contribute `find_symbol`/`outline_workspace` results where they
+previously did not. **Upgrade note:** the index now covers your docs;
+the daemon auto-rebuilds on first run after upgrade. The release also
+adds structural-query grep and four reliability fixes (cold-mount
+speed, mount-race, caller-prose, structural `--limit`).
+
+### CI workflow: opt JavaScript actions into Node.js 24
+
+`ci.yml` now sets `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"` at the workflow
+level (matching `release.yml` from v0.6.1), opting `actions/checkout@v4` and
+`actions/cache@v4` into the Node.js 24 runtime ahead of the 2026-06-02 forced
+migration off Node 20. Silences the deprecation annotation on every CI run.
+Reversible — drop once these actions ship Node-24 manifests by default.
+
+### Feature: markdown indexing — first-class prose retrieval
+
+rts now indexes Markdown alongside the 12 code grammars. `.md` and
+`.markdown` files contribute first-class symbols with `kind="heading"`
+for every ATX (`#`–`######`) and Setext (`===` / `---`) heading. The
+same `find_symbol`, `outline_workspace`, and `grep` tools that retrieve
+code now retrieve prose — closing the v0.6 gap where
+`rts grep "retrieval stack"` returned 0 hits because the term lived
+only in `README.md` / `CHANGELOG.md`.
+
+Highlights:
+
+- **`kind="heading"` (flat)** — H1–H6 all share one wire kind. Depth
+  is conveyed by the rendered `signature` (`## Installation`) and a
+  hierarchical path prefix stored in the heading's `documentation`
+  field (`"Project Title > Installation\n\nBody…"`), which makes
+  `find_symbol --doc-contains "Project Title"` work over ancestor
+  names.
+- **Body-paragraph capture** — the first paragraph immediately after
+  each heading populates `documentation` (single-line collapsed, ≤512
+  chars), enabling `find_symbol --doc-contains` to search prose
+  content the same way it searches doc comments today.
+- **Gitignore-aware** — markdown files under `target/`, `node_modules/`,
+  or anything matched by `.gitignore` / `.rtsignore` are skipped, same
+  rule as code.
+- **PageRank dampener** — heading SIDs are multiplied × 0.1 in the
+  final rank pass. Headings have no outbound references in v1, so
+  PageRank's dangling-mass redistribution would otherwise lift them
+  near the uniform baseline and crowd weakly-connected code symbols;
+  the dampener mirrors the leading-underscore × 0.1 rule already in
+  `edge_weight`.
+- **Per-file 4 MiB byte cap** is satisfied by the existing global
+  `OVERSIZE_THRESHOLD_BYTES` — adversarial input never reaches the
+  parser. (`Parser::set_timeout_micros` is a documented no-op in
+  tree-sitter ≥ 0.26.)
+- **Capability flag** `index_markdown` advertised on `Daemon.Ping`.
+- **CLI parity** — `rts find Installation --kind heading --json`
+  returns equivalent rows to the MCP `Index.FindSymbol` call.
+
+**Behavior change on upgrade:** workspaces with tracked
+`.md` / `.markdown` files will index them automatically on first
+mount post-upgrade. On doc-heavy monorepos (3–10 k `.md` files in a
+`docs/` tree) the first reconciliation pass can take 5–30 seconds —
+plan accordingly, or use `.gitignore` to opt specific paths out.
+The change is purely additive — existing code queries return
+identical results (top-32 ordering verified unchanged for canonical
+queries; `semantic-eval-rts-core` corpus coverage holds at 1.000
+post-change; `semantic-eval-rts-core-blind-v2` at 0.857).
+
+**Public-API additions** (additive only, no breaking change):
+
+- `pub enum rust_tree_sitter::Language::Markdown` variant.
+- `pub fn rust_tree_sitter::signature::render_markdown(bytes: &[u8])
+  -> Option<String>` — ATX/Setext heading signature renderer
+  (always emits ATX form for output consistency).
+
+Internal additions (no public surface):
+
+- `SymbolKind::Heading = 11` (rts-daemon store schema).
+- `Store::iter_workspace_sids_with_kind()` (rts-daemon).
+
+The `Language` enum is not `#[non_exhaustive]`; adding the
+`Markdown` variant is technically breaking for downstream exhaustive
+matchers under semver, but accepted under 0.x — matches the precedent
+of v0.5+ adding `Swift` and `CSharp` the same way.
+
+### Feature: `rts grep --structural-query` — tree-sitter structural filtering
+
+`rts grep` now accepts `--structural-query '<s-expr>'` with a required
+`--language <lang>`, filtering matches to tree-sitter node kinds. This
+expresses searches plain grep cannot: *string literals containing X*
+(`--structural-query '(string_literal) @s' <text>`) or *identifier
+usages of Y* (`(identifier) @i`). Companion flags: `--within-symbol`
+(scope matches to one symbol's byte range),
+`--within-symbol-allow-overload`, and `--multiline` (regex across line
+boundaries). Output keeps the ripgrep-shaped `path:line:col:content`
+contract; the captured node text is the content field.
+
+### Fix: `find_callers` / `impact_of` no longer surface prose mentions
+
+The reference graph's identifier-regex fallback treated Markdown like
+code, so a function name written in prose (``See `commit_batch` for…``)
+became a fake call site. Markdown is now excluded from that regex
+fallback, so `find_callers` and `impact_of` report only real,
+AST-derived call edges. Markdown headings remain first-class
+`find_symbol` targets — only the spurious *caller* edges are removed.
+
+### Fix: structural grep `--limit` bounds returned matches, not the raw scan
+
+`rts grep --structural-query … --limit N` previously capped the raw
+tree-sitter node scan at N *before* applying the text filter, so a match
+sitting past the first N nodes was never found (e.g. `--limit 1` on a
+file whose target identifier is the last node returned nothing). The
+limit now bounds the *returned* match set: the scan continues past
+filtered-out nodes until N real matches are collected or the file ends.
+
+### Fix: cold-start mount race that wedged the daemon
+
+`Workspace.Mount` now serializes its open-the-store critical section. The
+idempotency check dropped its lock before `Store::open`'s `.await`, so the
+startup prewarm and an explicit `Mount` RPC (or two concurrent RPCs) could
+both open the same redb file — redb refused the second open with "Database
+already open" and the daemon wedged, returning `STORAGE_FULL` on every
+later request until killed. A new `mount_serialize` guard makes mounts
+mutually exclusive: the first opens the store; the rest take the idempotent
+path (and now correctly hold a mount ref). The guarded wait is
+cancel-aware, so a `Daemon.Cancel` no longer hangs a queued mount.
+
+### Fix: structural grep + text/regex no longer truncates on large scopes
+
+`rts grep --structural-query … <text>` applied the literal/regex
+intersection filter *after* the structural scan was capped at
+`STRUCTURAL_MAX_ROWS` (4096), so on a large scope the cap consumed raw
+structural nodes before the filter ran and real matches past the first
+4096 nodes were silently dropped. The filter now runs **inline** during
+the scan, so the cap counts only matches that satisfy both the structural
+query and the text/regex filter. Regex compile errors fail fast before the
+scan; the per-file post-pass (and its extra file reads) is gone.
+
+### Fix: cold mount no longer scans gitignored dirs (target/, node_modules)
+
+The file watcher's debouncer used `RecommendedCache` (a file-ID map),
+which scans the **entire watched tree** on startup to seed rename
+detection. `notify` watches the whole workspace recursively and is not
+gitignore-aware, so that scan walked `target/`, `node_modules`, etc. —
+dominating cold mount (≈100 s on a workspace with a multi-GB `target/`,
+despite only ~380 files being indexed). The debouncer now uses `NoCache`:
+the indexer doesn't need precise rename tracking (a rename surfaces as
+remove+create, already handled), so the scan is pure overhead. Cold mount
+on this repo dropped from ~104 s to ~5 s.
+
 
 _Nothing yet._
 
