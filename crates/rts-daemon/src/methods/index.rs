@@ -868,7 +868,11 @@ pub async fn find_symbol(
         // A candidate with `parent: None` never matches a `Some(_)`
         // filter, so an unpopulated index yields `matches: []` (the
         // `pre_filter_count` field disambiguates "filtered to empty").
-        .filter(|(h, _)| parent_filter.map(|pp| h.parent.as_deref() == Some(pp)).unwrap_or(true))
+        .filter(|(h, _)| {
+            parent_filter
+                .map(|pp| h.parent.as_deref() == Some(pp))
+                .unwrap_or(true)
+        })
         .collect();
 
     // Apply sort. Default = descending rank when ranks are available;

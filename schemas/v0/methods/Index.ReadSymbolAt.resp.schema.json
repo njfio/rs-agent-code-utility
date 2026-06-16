@@ -6,6 +6,10 @@
   "type": "object",
   "properties": {
     "qualified_name": { "type": "string" },
+    "parent": {
+      "description": "v0.7+, capability `parent_scope`. Nearest enclosing container name (impl/class/struct/trait/…), or null for top-level defs.",
+      "type": ["string", "null"]
+    },
     "kind":           { "type": "string" },
     "file":           { "type": "string" },
     "range": {
@@ -32,5 +36,5 @@
     "truncated":         { "type": "boolean" },
     "truncated_symbols": { "type": "array", "items": { "type": "string" } }
   },
-  "required": ["qualified_name", "kind", "file", "range", "shape", "text", "content_version", "tokens_returned", "token_counter", "truncated", "truncated_symbols"]
+  "required": ["qualified_name", "parent", "kind", "file", "range", "shape", "text", "content_version", "tokens_returned", "token_counter", "truncated", "truncated_symbols"]
 }

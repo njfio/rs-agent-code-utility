@@ -159,8 +159,16 @@ fn container_kinds(language: Language) -> &'static [&'static str] {
             "record_declaration",
         ],
         Language::C => &["struct_specifier"],
-        Language::Cpp => &["class_specifier", "struct_specifier", "namespace_definition"],
-        Language::Php => &["class_declaration", "interface_declaration", "trait_declaration"],
+        Language::Cpp => &[
+            "class_specifier",
+            "struct_specifier",
+            "namespace_definition",
+        ],
+        Language::Php => &[
+            "class_declaration",
+            "interface_declaration",
+            "trait_declaration",
+        ],
         Language::Ruby => &["class", "module"],
         Language::Swift => &["class_declaration", "protocol_declaration"],
         _ => &[], // other languages added by later tasks
@@ -206,7 +214,8 @@ mod tests {
 
     #[test]
     fn rust_method_parent_is_impl_type() {
-        let src = "struct QueryBuilder; impl QueryBuilder { fn new() -> Self { Self } }\nfn free() {}";
+        let src =
+            "struct QueryBuilder; impl QueryBuilder { fn new() -> Self { Self } }\nfn free() {}";
         assert_eq!(
             parent_of(src, Language::Rust, "new").as_deref(),
             Some("QueryBuilder")
@@ -223,33 +232,48 @@ mod tests {
     #[test]
     fn python_method_parent_is_class() {
         let src = "class Parser:\n    def parse(self):\n        pass\n\ndef free():\n    pass\n";
-        assert_eq!(parent_of(src, Language::Python, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::Python, "parse").as_deref(),
+            Some("Parser")
+        );
         assert_eq!(parent_of(src, Language::Python, "free"), None);
     }
 
     #[test]
     fn js_method_parent_is_class() {
         let src = "class Parser { parse() {} }\nfunction free() {}";
-        assert_eq!(parent_of(src, Language::JavaScript, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::JavaScript, "parse").as_deref(),
+            Some("Parser")
+        );
         assert_eq!(parent_of(src, Language::JavaScript, "free"), None);
     }
 
     #[test]
     fn ts_method_parent_is_class() {
         let src = "class Parser { parse(): void {} }";
-        assert_eq!(parent_of(src, Language::TypeScript, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::TypeScript, "parse").as_deref(),
+            Some("Parser")
+        );
     }
 
     #[test]
     fn java_method_parent_is_class() {
         let src = "class Parser { void parse() {} }";
-        assert_eq!(parent_of(src, Language::Java, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::Java, "parse").as_deref(),
+            Some("Parser")
+        );
     }
 
     #[test]
     fn csharp_method_parent_is_class() {
         let src = "class Parser { void Parse() {} }";
-        assert_eq!(parent_of(src, Language::CSharp, "Parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::CSharp, "Parse").as_deref(),
+            Some("Parser")
+        );
     }
 
     #[test]
@@ -257,31 +281,46 @@ mod tests {
         // Use a defined (bodied) method: the C++ extractor only emits a symbol
         // for a method definition, not a bare declaration (`void parse();`).
         let src = "class Parser { void parse() {} };";
-        assert_eq!(parent_of(src, Language::Cpp, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::Cpp, "parse").as_deref(),
+            Some("Parser")
+        );
     }
 
     #[test]
     fn php_method_parent_is_class() {
         let src = "<?php class Parser { function parse() {} }";
-        assert_eq!(parent_of(src, Language::Php, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::Php, "parse").as_deref(),
+            Some("Parser")
+        );
     }
 
     #[test]
     fn ruby_method_parent_is_class() {
         let src = "class Parser\n  def parse\n  end\nend\n";
-        assert_eq!(parent_of(src, Language::Ruby, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::Ruby, "parse").as_deref(),
+            Some("Parser")
+        );
     }
 
     #[test]
     fn swift_method_parent_is_class() {
         let src = "class Parser { func parse() {} }";
-        assert_eq!(parent_of(src, Language::Swift, "parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::Swift, "parse").as_deref(),
+            Some("Parser")
+        );
     }
 
     #[test]
     fn go_method_parent_is_receiver_type() {
         let src = "package p\ntype Parser struct{}\nfunc (r *Parser) Parse() {}\nfunc Free() {}\n";
-        assert_eq!(parent_of(src, Language::Go, "Parse").as_deref(), Some("Parser"));
+        assert_eq!(
+            parent_of(src, Language::Go, "Parse").as_deref(),
+            Some("Parser")
+        );
         assert_eq!(parent_of(src, Language::Go, "Free"), None);
     }
 }

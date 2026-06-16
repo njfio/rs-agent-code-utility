@@ -357,6 +357,93 @@ async fn response_matches_schema_for_each_method() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// **Property 6 (capabilities).** `Daemon.Ping` advertises every
+/// capability string the protocol expects. The `capabilities` array is
+/// additive (new strings appear, old ones never vanish without a
+/// protocol-major bump), so the live response must be a *superset* of
+/// this expected set. A capability dropped from `DAEMON_CAPABILITIES`
+/// fails this test, which is the drift signal for the wire contract.
+///
+/// When a feature adds a capability, add its string here too. Most
+/// recent: `parent_scope` (v0.7 — overload disambiguation via the
+/// nearest enclosing container; `find_symbol`/`read_symbol` render
+/// `parent::name` and accept a `parent` filter).
+const EXPECTED_CAPABILITIES: &[&str] = &[
+    "find_symbol",
+    "read_symbol",
+    "read_symbol_at",
+    "find_callers",
+    "impact_of",
+    "index_grep",
+    "index_grep_v2",
+    "index_markdown",
+    "request_deadlines",
+    "parent_scope",
+];
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "spawns the daemon binary; opt-in via --include-ignored"]
+async fn ping_advertises_expected_capabilities() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill_on_drop = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+
+    let ping = round_trip(&mut stream, "1", "Daemon.Ping", json!({})).await?;
+    assert!(ping["error"].is_null(), "ping failed: {ping:?}");
+
+    // Validate against the shared Daemon.Ping schema first.
+    let root = schemas_root();
+    let validator = compile_schema(&root.join("methods").join("Daemon.Ping.resp.schema.json"));
+    assert_valid(&validator, "Daemon.Ping", &ping["result"]);
+
+    let caps: Vec<String> = ping["result"]["capabilities"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|c| c.as_str().map(|s| s.to_string()))
+        .collect();
+    let missing: Vec<&str> = EXPECTED_CAPABILITIES
+        .iter()
+        .copied()
+        .filter(|want| !caps.iter().any(|have| have == want))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "Daemon.Ping is missing expected capabilities {missing:?}; advertised: {caps:?}"
+    );
+    Ok(())
+}
+
 fn assert_valid(validator: &jsonschema::Validator, method: &str, payload: &Value) {
     if let Err(err) = validator.validate(payload) {
         panic!(
