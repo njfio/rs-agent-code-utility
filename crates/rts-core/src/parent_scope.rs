@@ -14,6 +14,14 @@ pub(crate) fn assign_parents(
     language: Language,
     symbols: &mut [Symbol],
 ) {
+    // Go is special: a method's owning type lives in the method's *receiver*
+    // (`func (r *Parser) Parse() {}`), not in an enclosing container node, so
+    // the generic containment loop below can't find it. Handle it directly and
+    // return — Go has no other single-level nesting we model.
+    if language == Language::Go {
+        assign_go_method_parents(tree, content, symbols);
+        return;
+    }
     let kinds = container_kinds(language);
     if kinds.is_empty() {
         return;
@@ -78,6 +86,59 @@ fn sym_start(sym: &Symbol, line_starts: &[usize]) -> usize {
     let line_idx = sym.start_line.saturating_sub(1);
     let base = line_starts.get(line_idx).copied().unwrap_or(0);
     base + sym.start_column
+}
+
+/// Go method receivers carry the owning type. For each `method_declaration`,
+/// resolve the receiver's type name (stripping a leading `*` pointer) and set
+/// it as the `parent` of the symbol that shares the method's name and whose
+/// start position falls within the method node's byte range. Free functions
+/// (`function_declaration`) are untouched, so their `parent` stays `None`.
+fn assign_go_method_parents(tree: &SyntaxTree, content: &str, symbols: &mut [Symbol]) {
+    let line_starts = line_start_offsets(content);
+    for m in tree.find_nodes_by_kind("method_declaration") {
+        let recv = match m.child_by_field_name("receiver") {
+            Some(r) => r,
+            None => continue,
+        };
+        let ty = match first_type_identifier(&recv) {
+            Some(t) => t,
+            None => continue,
+        };
+        let name_node = match m.child_by_field_name("name") {
+            Some(n) => n,
+            None => continue,
+        };
+        let mname = match name_node.text() {
+            Ok(s) => s.to_string(),
+            Err(_) => continue,
+        };
+        let (ms, me) = (m.start_byte(), m.end_byte());
+        for sym in symbols.iter_mut() {
+            if sym.name == mname {
+                let pos = sym_start(sym, &line_starts);
+                if ms <= pos && pos < me {
+                    sym.parent = Some(ty.clone());
+                    break;
+                }
+            }
+        }
+    }
+}
+
+/// First `type_identifier` text anywhere under `node` (the receiver subtree),
+/// e.g. `(r *Parser)` or `(r Parser)` -> "Parser". The recursion handles the
+/// `pointer_type` wrapper transparently (the `*` is its own token, never a
+/// `type_identifier`), so a leading pointer is effectively stripped.
+fn first_type_identifier(node: &Node) -> Option<String> {
+    if node.kind() == "type_identifier" {
+        return node.text().ok().map(|s| s.to_string());
+    }
+    for child in node.children() {
+        if let Some(found) = first_type_identifier(&child) {
+            return Some(found);
+        }
+    }
+    None
 }
 
 fn container_kinds(language: Language) -> &'static [&'static str] {
@@ -215,5 +276,12 @@ mod tests {
     fn swift_method_parent_is_class() {
         let src = "class Parser { func parse() {} }";
         assert_eq!(parent_of(src, Language::Swift, "parse").as_deref(), Some("Parser"));
+    }
+
+    #[test]
+    fn go_method_parent_is_receiver_type() {
+        let src = "package p\ntype Parser struct{}\nfunc (r *Parser) Parse() {}\nfunc Free() {}\n";
+        assert_eq!(parent_of(src, Language::Go, "Parse").as_deref(), Some("Parser"));
+        assert_eq!(parent_of(src, Language::Go, "Free"), None);
     }
 }
