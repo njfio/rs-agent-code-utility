@@ -33,9 +33,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use notify::{Config as NotifyConfig, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode};
-use notify_debouncer_full::{
-    DebounceEventResult, Debouncer, RecommendedCache, new_debouncer, new_debouncer_opt,
-};
+use notify_debouncer_full::{DebounceEventResult, Debouncer, NoCache, new_debouncer_opt};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
@@ -109,8 +107,8 @@ pub enum WatchEvent {
 /// lifecycle.
 #[allow(dead_code)]
 enum DebouncerHandle {
-    Recommended(Debouncer<RecommendedWatcher, RecommendedCache>),
-    Polling(Debouncer<PollWatcher, RecommendedCache>),
+    Recommended(Debouncer<RecommendedWatcher, NoCache>),
+    Polling(Debouncer<PollWatcher, NoCache>),
 }
 
 /// Running watcher handle. Drop it to stop watching.
@@ -223,7 +221,7 @@ impl Watcher {
                 DEBOUNCE_WINDOW,
                 None,
                 event_handler,
-                RecommendedCache::new(),
+                NoCache::new(),
                 NotifyConfig::default().with_poll_interval(POLL_INTERVAL),
             )
             .map_err(|e| std::io::Error::other(format!("new_debouncer_opt(poll): {e}")))?;
@@ -231,8 +229,22 @@ impl Watcher {
                 .map_err(|e| std::io::Error::other(format!("debouncer.watch(poll): {e}")))?;
             DebouncerHandle::Polling(deb)
         } else {
-            let mut deb = new_debouncer(DEBOUNCE_WINDOW, None, event_handler)
-                .map_err(|e| std::io::Error::other(format!("new_debouncer: {e}")))?;
+            // Use `NoCache` (not the default `RecommendedCache`): the
+            // recommended `FileIdMap` cache scans the entire watched tree
+            // on `watch()` to seed file-IDs for rename detection — and the
+            // watch is whole-tree (notify is not gitignore-aware), so it
+            // walks `target/`, `node_modules`, etc. and dominates cold
+            // mount (issue #153). The indexer doesn't need precise rename
+            // tracking — a rename surfaces as remove+create, which the
+            // writer already handles — so the cache scan is pure overhead.
+            let mut deb = new_debouncer_opt::<_, RecommendedWatcher, _>(
+                DEBOUNCE_WINDOW,
+                None,
+                event_handler,
+                NoCache::new(),
+                NotifyConfig::default(),
+            )
+            .map_err(|e| std::io::Error::other(format!("new_debouncer_opt: {e}")))?;
             deb.watch(root, RecursiveMode::Recursive)
                 .map_err(|e| std::io::Error::other(format!("debouncer.watch: {e}")))?;
             // Only flip to Ok on the recommended path — the polling path
