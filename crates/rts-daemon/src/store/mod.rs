@@ -588,6 +588,27 @@ impl Store {
     /// `Index.Outline` to build the file-level reference graph for
     /// PageRank ranking. Returns paths in arbitrary order.
     pub fn list_files_with_defs(&self) -> anyhow::Result<Vec<FileWithDefs>> {
+        self.list_files_with_defs_cancellable(None)
+    }
+
+    /// Cancellable variant of [`list_files_with_defs`]. The per-file
+    /// walk here is the dominant cost of `Index.Outline` on large
+    /// workspaces — each file fans out into a `FID_DEFS` multimap scan
+    /// plus a `DEFS` deserialize per symbol, so on a 5000-file tree the
+    /// full enumeration runs into the tens-of-seconds range. Polling the
+    /// supplied token at the head of the per-file loop lets a
+    /// per-request deadline (or an explicit `Daemon.Cancel`) interrupt
+    /// the enumeration mid-walk instead of blocking the handler until it
+    /// completes. On cancellation we surface a plain `anyhow` error whose
+    /// message starts with `cancelled`; the outline handler maps that to
+    /// `ErrorCode::Cancelled` (rewritten to `DEADLINE_EXCEEDED` by
+    /// dispatch when a deadline fired). Pass `None` to opt out of
+    /// cancellation (the non-interruptible callers: reconciler / writer
+    /// rescan).
+    pub fn list_files_with_defs_cancellable(
+        &self,
+        token: Option<&crate::cancel::CancelToken>,
+    ) -> anyhow::Result<Vec<FileWithDefs>> {
         let txn = self.db.begin_read().context("begin_read")?;
         let fid_to_path = txn.open_table(FID_TO_PATH)?;
         let fid_defs = txn.open_multimap_table(FID_DEFS)?;
@@ -597,6 +618,15 @@ impl Store {
         let mut out: Vec<FileWithDefs> = Vec::new();
         let iter = fid_to_path.iter()?;
         for row in iter {
+            // Cooperative cancellation: poll once per file. This is the
+            // outline walk's hot loop (see method doc); breaking out with
+            // a cancellation-shaped error lets the handler return promptly
+            // under a tiny deadline rather than enumerating every file.
+            if let Some(t) = token {
+                if t.is_cancelled() {
+                    anyhow::bail!("cancelled: list_files_with_defs interrupted");
+                }
+            }
             let row = row?;
             let fid = row.0.value();
             let path = row.1.value().to_string();

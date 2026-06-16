@@ -170,9 +170,10 @@ pub fn compute(
     _workspace_root: &Path,
     store: &Store,
     params: &OutlineParams<'_>,
+    token: &crate::cancel::CancelToken,
 ) -> anyhow::Result<OutlineResult> {
     let all_files = store
-        .list_files_with_defs()
+        .list_files_with_defs_cancellable(Some(token))
         .context("list files with defs")?;
     let files = match params.glob {
         Some(g) => filter_by_glob(all_files, g),
@@ -213,6 +214,20 @@ pub fn compute(
     let mut edges: Vec<Edge> = Vec::new();
     let mut ref_counts: HashMap<(usize, usize, String), u32> = HashMap::new();
     for (src_idx, f) in files.iter().enumerate() {
+        // Cooperative cancellation: this per-file loop reads the
+        // persistent ref graph for every in-scope file (one redb read
+        // each). The bulk of the outline walk's cost is the upstream
+        // `list_files_with_defs_cancellable` enumeration (which polls
+        // the same token at its own per-file head), but a large
+        // post-glob `files` set can still make this loop run long, so
+        // poll here too. We `break` rather than return a sentinel; the
+        // handler checks `token.is_cancelled()` after `compute` returns
+        // and surfaces CANCELLED (rewritten to DEADLINE_EXCEEDED by
+        // dispatch when a deadline fired). Matches the impact/closure
+        // walkers' posture.
+        if token.is_cancelled() {
+            break;
+        }
         let fid = match store.get_file_meta(&f.path)? {
             Some((FileId(v), _)) => v,
             None => continue, // file isn't indexed yet (mount-time race)

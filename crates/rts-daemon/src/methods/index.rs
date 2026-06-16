@@ -2946,23 +2946,37 @@ pub async fn outline(
         let glob_owned = p.glob.clone();
         let mentioned_files = p.mentioned_files.clone();
         let mentioned_idents = p.mentioned_idents.clone();
+        // Move a clone of the token into the blocking compute so its
+        // per-file ref-graph walk can poll it and break mid-flight — a
+        // per-request deadline (or explicit Daemon.Cancel) interrupts
+        // the heavy walk instead of running it to completion. Matches
+        // the impact/closure walkers' posture.
+        let token_clone = token.clone();
         // PageRank + content reads can be heavy on large workspaces;
         // delegate to a blocking task so we don't hog the daemon's
         // single-threaded async runtime.
-        let computed = tokio::task::spawn_blocking(move || {
+        let compute_result = tokio::task::spawn_blocking(move || {
             let outline_params = crate::outline::OutlineParams {
                 glob: glob_owned.as_deref(),
                 token_budget: budget,
                 mentioned_files: &mentioned_files,
                 mentioned_idents: &mentioned_idents,
             };
-            crate::outline::compute(&root, &store, &outline_params)
+            crate::outline::compute(&root, &store, &outline_params, &token_clone)
         })
         .await
         .map_err(|e| {
             ProtocolError::new(ErrorCode::InternalError, format!("outline join error: {e}"))
-        })?
-        .map_err(|e| {
+        })?;
+        // The walk polls the token at its per-file loop head and bails
+        // with a cancellation-shaped error on cancel. Check the token
+        // BEFORE mapping a compute error so a deadline/Daemon.Cancel
+        // surfaces as CANCELLED (rewritten to DEADLINE_EXCEEDED by
+        // dispatch when a deadline fired) — NOT InternalError.
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
+        let computed = compute_result.map_err(|e| {
             ProtocolError::new(
                 ErrorCode::InternalError,
                 format!("outline compute error: {e:#}"),

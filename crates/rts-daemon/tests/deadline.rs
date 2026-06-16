@@ -515,6 +515,65 @@ async fn capability_and_stats_advertise_deadlines() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Task 4 / Part C: `Index.Outline` over a large workspace is
+/// interruptible by a tiny deadline.
+///
+/// Before `outline::compute` polled the request token, its per-file
+/// reference-graph walk (one redb read per in-scope file, plus the
+/// PageRank build) ran to completion regardless of any deadline — the
+/// handler only checked the token at its head. We mount the same large
+/// 5000-file fixture the slow-query test uses so the walk runs
+/// comfortably longer than the 5ms budget, then assert the response is
+/// `DEADLINE_EXCEEDED`.
+///
+/// The outline result is cached keyed on `(index_generation, params,
+/// ...)`. This call is the first `Index.Outline` against a fresh
+/// workspace + generation, so it's a guaranteed cache MISS — the heavy
+/// walk actually runs and the deadline can land inside it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn deadline_interrupts_outline() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    let file_count: u64 = 5000;
+    seed_workspace(workspace.path(), file_count as usize)?;
+
+    let sock = socket_path(home_dir.path(), runtime_dir.path());
+    let mut child = spawn_daemon(runtime_dir.path(), state_dir.path(), home_dir.path())?;
+    let _kill = KillOnDrop(&mut child);
+    wait_for_socket(&sock, Duration::from_secs(5)).await?;
+
+    let mut stream = UnixStream::connect(&sock).await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+        None,
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount failed: {mount:?}");
+    wait_for_index_warm(&mut stream, file_count, Duration::from_secs(120)).await?;
+
+    let resp = round_trip(
+        &mut stream,
+        "2",
+        "Index.Outline",
+        json!({ "token_budget": 200_000 }),
+        Some(&[("deadline_ms", json!(5u64))]),
+    )
+    .await?;
+
+    let code = resp["error"]["code"].as_str().unwrap_or("<no error>");
+    assert_eq!(
+        code, "DEADLINE_EXCEEDED",
+        "outline over a large workspace must honor the deadline; got: {resp:?}"
+    );
+    Ok(())
+}
+
 /// Test 4: an out-of-range `deadline_ms` is rejected with
 /// `INVALID_PARAMS` before any work runs. Covers both the lower bound
 /// (0) and just past the upper bound (600001).
