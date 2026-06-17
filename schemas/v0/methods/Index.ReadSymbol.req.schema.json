@@ -11,6 +11,7 @@
       "type": "string",
       "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module"]
     },
+    "parent":               { "type": ["string", "null"] },
     "shape":                { "type": "string", "enum": ["signature", "body", "both"] },
     "token_budget":         { "type": "integer", "minimum": 50, "maximum": 200000 },
     "include_dependencies": { "type": "boolean" },

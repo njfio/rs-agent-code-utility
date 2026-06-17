@@ -170,7 +170,12 @@ fn container_kinds(language: Language) -> &'static [&'static str] {
             "trait_declaration",
         ],
         Language::Ruby => &["class", "module"],
-        Language::Swift => &["class_declaration", "protocol_declaration"],
+        Language::Swift => &[
+            "class_declaration",
+            "protocol_declaration",
+            "struct_declaration",
+            "enum_declaration",
+        ],
         _ => &[], // other languages added by later tasks
     }
 }
@@ -190,10 +195,16 @@ fn container_name(node: &Node, kind: &str) -> Option<String> {
     }
 }
 
-/// `Vec<T>` -> `Vec`, `module::Foo` -> `Foo`, `&Foo` -> `Foo`.
+/// `Vec<T>` -> `Vec`, `module::Foo` -> `Foo`, `&Foo` -> `Foo`,
+/// `&'a Foo` -> `Foo`, `&mut Foo` -> `Foo`, `dyn Trait` -> `Trait`.
 fn type_head(t: &str) -> String {
-    let t = t.trim_start_matches(['&', '*', ' ']);
-    let head = t.split(['<', ' ']).next().unwrap_or(t);
+    // Drop leading ref/qualifier tokens: &, *, mut, dyn, lifetimes ('a).
+    let cleaned = t.replace('&', " ").replace('*', " ");
+    let head = cleaned
+        .split_whitespace()
+        .find(|tok| !matches!(*tok, "mut" | "dyn") && !tok.starts_with('\''))
+        .unwrap_or("");
+    let head = head.split('<').next().unwrap_or(head);
     head.rsplit("::").next().unwrap_or(head).to_string()
 }
 
@@ -303,6 +314,36 @@ mod tests {
             parent_of(src, Language::Ruby, "parse").as_deref(),
             Some("Parser")
         );
+    }
+
+    #[test]
+    fn swift_struct_method_parent_is_struct() {
+        let src = "struct Parser { func parse() {} }";
+        assert_eq!(
+            parent_of(src, Language::Swift, "parse").as_deref(),
+            Some("Parser")
+        );
+    }
+
+    #[test]
+    fn swift_enum_method_parent_is_enum() {
+        let src = "enum Parser { func parse() {} }";
+        assert_eq!(
+            parent_of(src, Language::Swift, "parse").as_deref(),
+            Some("Parser")
+        );
+    }
+
+    #[test]
+    fn rust_impl_for_ref_with_lifetime_strips_to_type() {
+        let src = "struct Foo; trait T { fn f(&self); } impl<'a> T for &'a Foo { fn f(&self) {} }";
+        assert_eq!(parent_of(src, Language::Rust, "f").as_deref(), Some("Foo"));
+    }
+
+    #[test]
+    fn rust_impl_for_mut_ref_strips_to_type() {
+        let src = "struct Foo; trait T { fn f(&self); } impl T for &mut Foo { fn f(&self) {} }";
+        assert_eq!(parent_of(src, Language::Rust, "f").as_deref(), Some("Foo"));
     }
 
     #[test]

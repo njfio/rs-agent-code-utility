@@ -9,4 +9,6 @@ across types are finally distinguishable (`QueryBuilder::new` vs
 headings keep their hierarchical names. New capability `parent_scope`.
 The reference graph and `find_callers` are unchanged (still name-level).
 The on-disk index schema bumped; the daemon rebuilds automatically on
-first run after upgrade.
+first run after upgrade. The `parent` filter is also exposed on the
+`find_symbol`/`read_symbol` MCP tools so agent clients can disambiguate
+overloads directly.
