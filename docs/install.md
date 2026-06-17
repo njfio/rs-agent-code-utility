@@ -47,7 +47,7 @@ when you want to pin a different version than the sibling of
 macOS arm64 and Linux x86_64/arm64:
 
 ```sh
-VERSION=0.7.0 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
+VERSION=0.8.0 TARGET=aarch64-apple-darwin   # or x86_64-unknown-linux-gnu / aarch64-unknown-linux-gnu
 curl -fsSL "https://github.com/njfio/rs-agent-code-utility/releases/download/v${VERSION}/rts-${VERSION}-${TARGET}.tar.gz" | tar -xz
 sudo install "rts-${VERSION}-${TARGET}"/{rts-daemon,rts-mcp,rts-bench,rts} /usr/local/bin/
 ```

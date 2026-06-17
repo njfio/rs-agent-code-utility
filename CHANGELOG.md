@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.8.0] - 2026-06-16
+
+Two agent-facing capabilities: **per-request deadlines** (bound query
+latency — a `deadline_ms` budget trips the cooperative cancel and
+returns `DEADLINE_EXCEEDED`; rts-mcp stamps a 30 s default) and
+**overload disambiguation** (definitions now carry a `parent`, so
+`find_symbol`/`read_symbol` distinguish `QueryBuilder::new` from
+`Parser::new` and accept a `parent` filter). **Upgrade notes:** parent
+scope changes the `qualified_name` *value* for code symbols
+(`new` → `QueryBuilder::new`; read the `name` field for the bare name),
+and the on-disk index schema bumped — the daemon auto-rebuilds on first
+run after upgrade. New capabilities `request_deadlines`, `parent_scope`.
+
+### Fix: `build-changelog.sh` keeps `_Nothing yet._` under `[Unreleased]`
+
+The release rollup injected the new `## [x.y.z]` header immediately
+after the `## [Unreleased]` line, which stranded the `_Nothing yet._`
+placeholder at the foot of the new section and left `[Unreleased]`
+empty. It now inserts the new section *after* the `[Unreleased]` block
+(just before the previous version header), preserving the placeholder.
+Covered by a new regression test (`scripts/build-changelog.test.sh`,
+run in CI).
+
+### Feature: per-request deadlines (`deadline_ms`) — bounded query latency
+
+Any daemon request may now carry an optional top-level `deadline_ms`
+(1..=600000). When the budget elapses the daemon trips the request's
+cooperative `CancelToken` and returns the new `DEADLINE_EXCEEDED` error
+(distinct from `CANCELLED`, so a timeout is tellable from an explicit
+`Daemon.Cancel`). rts-mcp stamps a default from `RTS_DEADLINE_MS`
+(default `30000`; `0` disables) on agent queries so latency is bounded
+out-of-the-box; `Workspace.Mount` is exempt from the default (cold-walk
+on a large repo can legitimately take minutes) but honors an explicit
+`deadline_ms`. New capability `request_deadlines`; `Daemon.Stats` gains
+`deadlines.total`. Additive — clients that omit `deadline_ms` are
+unaffected.
+
+### Feature: overload disambiguation via parent scope
+
+Definitions now carry a `parent` — the nearest enclosing container
+(`impl`/`class`/`struct`/`trait`/…). `find_symbol`/`read_symbol` render
+`qualified_name` as `parent::name` (uniform `::`), expose a `parent`
+field, and accept a `parent` exact-match filter, so same-named defs
+across types are finally distinguishable (`QueryBuilder::new` vs
+`Parser::new`). All 12 code languages (Go via method receiver); markdown
+headings keep their hierarchical names. New capability `parent_scope`.
+The reference graph and `find_callers` are unchanged (still name-level).
+The on-disk index schema bumped; the daemon rebuilds automatically on
+first run after upgrade. The `parent` filter is also exposed on the
+`find_symbol`/`read_symbol` MCP tools so agent clients can disambiguate
+overloads directly.
+
 ## [0.7.0] - 2026-06-16
 
 The headline of v0.7.0 is **Markdown / prose indexing** — a 13th
