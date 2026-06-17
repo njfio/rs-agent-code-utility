@@ -596,37 +596,93 @@ impl Store {
         self.list_files_with_defs_cancellable(None)
     }
 
-    /// Cancellable variant of [`list_files_with_defs`]. The per-file
-    /// walk here is the dominant cost of `Index.Outline` on large
-    /// workspaces — each file fans out into a `FID_DEFS` multimap scan
-    /// plus a `DEFS` deserialize per symbol, so on a 5000-file tree the
-    /// full enumeration runs into the tens-of-seconds range. Polling the
-    /// supplied token at the head of the per-file loop lets a
-    /// per-request deadline (or an explicit `Daemon.Cancel`) interrupt
-    /// the enumeration mid-walk instead of blocking the handler until it
-    /// completes. On cancellation we surface a plain `anyhow` error whose
-    /// message starts with `cancelled`; the outline handler maps that to
-    /// `ErrorCode::Cancelled` (rewritten to `DEADLINE_EXCEEDED` by
-    /// dispatch when a deadline fired). Pass `None` to opt out of
-    /// cancellation (the non-interruptible callers: reconciler / writer
-    /// rescan).
+    /// Cancellable variant of [`list_files_with_defs`]. This is the
+    /// dominant cost of `Index.Outline` on large workspaces, so it makes
+    /// a SINGLE pass over the `DEFS` multimap, bucketing each `DefSite`
+    /// into its owning file by `DefSite.fid` — O(total defs).
+    ///
+    /// The old shape was O(files × defs-per-name): for every `(file,
+    /// symbol)` it re-scanned the *entire* `DEFS` list for that name's
+    /// `sid` to find the one def whose `fid` matched the current file.
+    /// Because a `sid` is per-NAME (shared across files), a common name
+    /// like `new` was re-walked once per file that defines it; on a
+    /// 5000-file tree this ran ~121 s.
+    ///
+    /// Polling the supplied token inside the (now much shorter) DEFS pass
+    /// lets a per-request deadline (or an explicit `Daemon.Cancel`)
+    /// interrupt the enumeration mid-walk. On cancellation we surface a
+    /// plain `anyhow` error whose message starts with `cancelled`; the
+    /// outline handler maps that to `ErrorCode::Cancelled` (rewritten to
+    /// `DEADLINE_EXCEEDED` by dispatch when a deadline fired). Pass
+    /// `None` to opt out of cancellation (the non-interruptible callers:
+    /// reconciler / writer rescan).
     pub fn list_files_with_defs_cancellable(
         &self,
         token: Option<&crate::cancel::CancelToken>,
     ) -> anyhow::Result<Vec<FileWithDefs>> {
         let txn = self.db.begin_read().context("begin_read")?;
         let fid_to_path = txn.open_table(FID_TO_PATH)?;
-        let fid_defs = txn.open_multimap_table(FID_DEFS)?;
         let sid_to_name = txn.open_table(SID_TO_NAME)?;
         let defs = txn.open_multimap_table(DEFS)?;
 
+        // Single pass over DEFS: bucket the FIRST DefSite per (fid, sid)
+        // into its owning file by `fid`.
+        let mut by_fid: HashMap<u32, Vec<DefinedSymbol>> = HashMap::new();
+        let mut seen: HashSet<(u32, u32)> = HashSet::new(); // (fid, sid) dedup
+        let mut name_cache: HashMap<u32, Option<String>> = HashMap::new();
+
+        let mut polled = 0usize;
+        for entry in defs.iter()? {
+            let (sid_guard, vals) = entry?;
+            let sid = sid_guard.value();
+            // Poll cancellation periodically. This is now the hot loop
+            // the outline deadline relies on; keep the cadence tight so a
+            // small deadline still trips before the pass finishes.
+            polled += 1;
+            if polled % 64 == 0 {
+                if let Some(t) = token {
+                    if t.is_cancelled() {
+                        anyhow::bail!("cancelled: list_files_with_defs interrupted");
+                    }
+                }
+            }
+            let name = name_cache
+                .entry(sid)
+                .or_insert_with(|| {
+                    sid_to_name
+                        .get(&sid)
+                        .ok()
+                        .flatten()
+                        .map(|v| v.value().to_string())
+                })
+                .clone();
+            let Some(name) = name else { continue };
+            for v in vals {
+                let bytes = v?.value().to_vec();
+                let Ok(d) = from_bytes::<DefSite>(&bytes) else {
+                    continue;
+                };
+                // Keep only the first def per (fid, sid) — preserves the
+                // old code's `break` (one entry per name per file).
+                if !seen.insert((d.fid, sid)) {
+                    continue;
+                }
+                by_fid.entry(d.fid).or_default().push(DefinedSymbol {
+                    name: name.clone(),
+                    kind: d.kind,
+                    visibility: d.visibility,
+                    start_line: d.start_line,
+                    end_line: d.end_line,
+                    start_byte: d.start,
+                    end_byte: d.end,
+                });
+            }
+        }
+
+        // Emit ALL files (including def-less ones) from FID_TO_PATH,
+        // attaching their bucketed defs. Output order is arbitrary.
         let mut out: Vec<FileWithDefs> = Vec::new();
-        let iter = fid_to_path.iter()?;
-        for row in iter {
-            // Cooperative cancellation: poll once per file. This is the
-            // outline walk's hot loop (see method doc); breaking out with
-            // a cancellation-shaped error lets the handler return promptly
-            // under a tiny deadline rather than enumerating every file.
+        for row in fid_to_path.iter()? {
             if let Some(t) = token {
                 if t.is_cancelled() {
                     anyhow::bail!("cancelled: list_files_with_defs interrupted");
@@ -635,35 +691,7 @@ impl Store {
             let row = row?;
             let fid = row.0.value();
             let path = row.1.value().to_string();
-            let mut defined_symbols: Vec<DefinedSymbol> = Vec::new();
-            let mut sid_it = fid_defs.get(&fid)?;
-            while let Some(sid_row) = sid_it.next() {
-                let sid = sid_row?.value();
-                let name = match sid_to_name.get(&sid)? {
-                    Some(v) => v.value().to_string(),
-                    None => continue,
-                };
-                // Walk the DEFS multimap for this SID and pick the def
-                // whose FID matches the current file.
-                let mut defs_it = defs.get(&sid)?;
-                while let Some(def_row) = defs_it.next() {
-                    let bytes = def_row?.value().to_vec();
-                    if let Ok(d) = from_bytes::<DefSite>(&bytes) {
-                        if d.fid == fid {
-                            defined_symbols.push(DefinedSymbol {
-                                name: name.clone(),
-                                kind: d.kind,
-                                visibility: d.visibility,
-                                start_line: d.start_line,
-                                end_line: d.end_line,
-                                start_byte: d.start,
-                                end_byte: d.end,
-                            });
-                            break;
-                        }
-                    }
-                }
-            }
+            let defined_symbols = by_fid.remove(&fid).unwrap_or_default();
             out.push(FileWithDefs {
                 path,
                 defined_symbols,
@@ -2126,6 +2154,125 @@ mod tests {
 
         let no_hits = store.find_symbol("does_not_exist").unwrap();
         assert!(no_hits.is_empty());
+    }
+
+    #[test]
+    fn list_files_with_defs_buckets_by_fid_and_keeps_shared_names() {
+        // Regression for the O(files x defs-per-name) walk: the single
+        // pass must bucket each DefSite into its OWNING file by `fid`,
+        // keep one entry per (fid, sid) (the first), list ALL files
+        // including def-less ones, and surface a shared name (`foo`)
+        // under BOTH files that define it.
+        let (_tmp, store) = temp_store();
+
+        let def = |start: u32| schema::DefSite {
+            fid: 0, // commit_batch rewrites fid
+            start,
+            end: start + 10,
+            start_line: 1,
+            end_line: 1,
+            visibility: Visibility::Public,
+            kind: SymbolKind::Function,
+            parent: None,
+        };
+
+        // File A: defines `foo` + `bar`.
+        let a = FileBatchEntry {
+            path: std::path::PathBuf::from("src/a.rs"),
+            meta: rust_meta(blake3::hash(b"a").into()),
+            defs: vec![
+                ("foo".to_string(), def(0), SymbolKind::Function),
+                ("bar".to_string(), def(100), SymbolKind::Function),
+            ],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        // File B: defines `foo` (shared name across files).
+        let b = FileBatchEntry {
+            path: std::path::PathBuf::from("src/b.rs"),
+            meta: rust_meta(blake3::hash(b"b").into()),
+            defs: vec![("foo".to_string(), def(0), SymbolKind::Function)],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        // File C: no defs (only present in FID_TO_PATH).
+        let c = FileBatchEntry {
+            path: std::path::PathBuf::from("src/c.rs"),
+            meta: rust_meta(blake3::hash(b"c").into()),
+            defs: Vec::new(),
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![a, b, c], vec![], Durability::Immediate)
+            .unwrap();
+
+        let files = store.list_files_with_defs().unwrap();
+        let by_path: HashMap<String, Vec<String>> = files
+            .iter()
+            .map(|f| {
+                let mut names: Vec<String> =
+                    f.defined_symbols.iter().map(|d| d.name.clone()).collect();
+                names.sort();
+                (f.path.clone(), names)
+            })
+            .collect();
+
+        // ALL three files appear, including the def-less one.
+        assert_eq!(by_path.len(), 3, "all files must be listed");
+        assert_eq!(
+            by_path.get("src/a.rs").map(|v| v.as_slice()),
+            Some(["bar".to_string(), "foo".to_string()].as_slice()),
+            "A has {{foo, bar}}"
+        );
+        assert_eq!(
+            by_path.get("src/b.rs").map(|v| v.as_slice()),
+            Some(["foo".to_string()].as_slice()),
+            "B has {{foo}} — shared name attributed to its own file"
+        );
+        assert_eq!(
+            by_path.get("src/c.rs").map(|v| v.as_slice()),
+            Some([].as_slice()),
+            "C is def-less but still listed with empty defs"
+        );
+    }
+
+    #[test]
+    fn list_files_with_defs_one_entry_per_name_per_file() {
+        // A name defined twice in ONE file must yield exactly one
+        // DefinedSymbol (the first), matching the old code's `break`.
+        let (_tmp, store) = temp_store();
+        let def = |start: u32| schema::DefSite {
+            fid: 0,
+            start,
+            end: start + 10,
+            start_line: 1,
+            end_line: 1,
+            visibility: Visibility::Public,
+            kind: SymbolKind::Function,
+            parent: None,
+        };
+        let entry = FileBatchEntry {
+            path: std::path::PathBuf::from("src/dup.rs"),
+            meta: rust_meta(blake3::hash(b"dup").into()),
+            defs: vec![
+                ("dup".to_string(), def(0), SymbolKind::Function),
+                ("dup".to_string(), def(100), SymbolKind::Function),
+            ],
+            refs: Vec::new(),
+            docs: Vec::new(),
+        };
+        store
+            .commit_batch(vec![entry], vec![], Durability::Immediate)
+            .unwrap();
+
+        let files = store.list_files_with_defs().unwrap();
+        let f = files
+            .iter()
+            .find(|f| f.path == "src/dup.rs")
+            .expect("file present");
+        let dup_count = f.defined_symbols.iter().filter(|d| d.name == "dup").count();
+        assert_eq!(dup_count, 1, "one entry per (fid, sid) — first wins");
     }
 
     #[test]
