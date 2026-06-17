@@ -211,7 +211,8 @@ This is the **v2 safe-edit hook** (architecture-review high-leverage edit). When
                      "index_grep_within_symbol",     // v0.6 alpha+
                      "index_grep_v2",                // v0.6 alpha+ (bundle)
                      "cancellable_queries",          // v0.6+
-                     "request_deadlines"],           // v0.7+
+                     "request_deadlines",            // v0.7+
+                     "parent_scope"],                // v0.7+
     "uptime_ms":    123456
   }
 }
@@ -531,6 +532,7 @@ AST-precise definition + references + signature for a named or pattern-matched s
   "pattern": "build_*",              // optional; glob: `*` (any run, including empty) and `?` (single char). Mutually exclusive with name. Capability: `fuzzy_match` (alpha.24+).
   "kind":    "fn",                   // optional; one of: fn, struct, enum, type, trait, const, static, impl, method, class, interface, module
   "file":    "src/index/mod.rs",     // optional; filter
+  "parent":  "QueryBuilder",         // optional; exact-match on the def's nearest enclosing container. Capability: `parent_scope` (v0.7+).
   "sort":    "rank",                 // optional; "rank" (default; descending rank_score) | "lexical" (alphabetical-by-file). Capability: `pagerank_symbolwise` (alpha.34+).
   "limit":   256,                    // optional; max matches in `result.matches[]`. Range 1..=4096; default 256. Capability: `find_symbol_limit_param` (v0.4.1+).
   "doc_contains":       "evict",     // optional; case-insensitive substring filter against doc text. Capability: `find_symbol_doc_filter` (v0.5.2+).
@@ -552,6 +554,8 @@ The glob matcher has **no character classes** and **no escapes** — `*` and `?`
 
 **Signature field (v0.5.3+, capability `find_symbol_signature_field`):** `params.include_signature: bool` — when true, each match's `signature` field is populated via the per-language `SignatureRenderer` (the same code path `Index.ReadSymbol shape=signature` uses). Renders are cached on the daemon per `(path, byte_range, mtime)`, so repeated pattern queries on the same workspace amortize the parse cost.
 
+**Parent scope (v0.7+, capability `parent_scope`):** every match carries a `parent` field — the name of its nearest enclosing container (`impl` / `class` / `struct` / `trait` / …), or `null` for top-level defs. The match's `qualified_name` is rendered as `parent::name` (uniform `::` separator across all 12 code languages; Go uses the method receiver), falling back to the bare `name` when `parent` is `null`. The optional `params.parent` filter is an **exact-match** on this container name and composes with `file` / `kind` (all active filters intersect). This is the overload-disambiguation surface: `find_symbol("new")` lists every `Container::new` row with its `parent`, and `find_symbol("new", parent="QueryBuilder")` narrows to the one you mean — distinguishing `QueryBuilder::new` from `Parser::new`. Markdown headings keep their hierarchical ` > ` qualified names (`README.md > Title > Installation`); `parent_scope` does not rewrite them. The reference graph and `Index.FindCallers` are unchanged — they remain name-level.
+
 **Default-on heuristic (v0.5.3+):** when `include_signature` is omitted, the daemon auto-enables it for *small-result* queries — the cases where the agent's most likely next step is `read_symbol` on the top hit, and an extra round trip is pure waste. Specifically:
 
 | Query shape | Auto-default |
@@ -569,6 +573,7 @@ Pre-v0.5.3 clients reading `signature: null` see strictly more populated fields 
   "matches": [
     {
       "qualified_name": "rts_core::index::build_index",
+      "parent":         null,                 // v0.7+; nearest enclosing container, or null for top-level defs
       "kind":           "fn",
       "file":           "src/index/mod.rs",
       "range":          { "start_line": 42, "end_line": 58, "start_byte": 1024, "end_byte": 1456 },
@@ -595,6 +600,7 @@ Read source for a named symbol. Optionally walks the tree-shaken closure of type
   "name":                 "build_index",            // required
   "file":                 "src/index/mod.rs",       // optional disambiguator
   "kind":                 "fn",                     // optional disambiguator
+  "parent":               "QueryBuilder",           // optional disambiguator; exact-match on the nearest enclosing container. Capability: `parent_scope` (v0.7+).
   "shape":                "body",                   // "signature" | "body" | "both"  (default "body")
   "token_budget":         4096,                     // optional; default 4096
   "include_dependencies": false,                    // tree-shake closure walk?
@@ -605,10 +611,13 @@ Read source for a named symbol. Optionally walks the tree-shaken closure of type
 
 When `include_callers: true`, the response carries a `callers: [...]` array with the same entry shape as §7.7c `Index.FindCallers.callers[]`, plus a `callers_truncated: bool` flag (separate from `closure_truncated` to preserve v0.2 wire semantics). Token-budget priority: body fills first, then `dependencies` (when requested), then `callers`. Capability: `read_symbol.include_callers`.
 
+**Parent scope (v0.7+, capability `parent_scope`):** the pinned def's `result.parent` reports its nearest enclosing container (or `null` for top-level defs), and `result.qualified_name` is rendered as `parent::name`. The optional `params.parent` filter is an **exact-match** disambiguator that composes with `file` / `kind` — `read_symbol("new", parent="QueryBuilder")` pins `QueryBuilder::new` without needing to know the file. Use the `find_symbol` → `read_symbol parent=…` flow when a name is overloaded across types: `find_symbol` lists every candidate **with its `parent`**, then `read_symbol parent=…` selects one. (The `truncated_symbols[]` list on an ambiguous `read_symbol` carries file paths only, so two same-name defs in the *same file* with different parents aren't distinguishable from that list alone — `find_symbol` is the canonical candidate enumerator that surfaces parents.)
+
 **`result`** (full body):
 ```jsonc
 {
   "qualified_name": "rts_core::index::build_index",
+  "parent":         null,                       // v0.7+; nearest enclosing container, or null for top-level defs
   "kind":           "fn",
   "file":           "src/index/mod.rs",
   "range":          { "start_line": 42, "end_line": 58, "start_byte": 1024, "end_byte": 1456 },
@@ -661,7 +670,7 @@ Read source for the symbol whose def-range covers `(file, line)`. The **compiler
 }
 ```
 
-**`result`**: same wire shape as §7.7 `Index.ReadSymbol` (body or session-deduped variant). `qualified_name` is the innermost enclosing def whose def-range covers the line; range tie-breakers prefer smaller ranges (innermost wins). When no def covers the line — e.g. a blank gap, a comment-only region, a top-level statement outside any function — returns `SYMBOL_NOT_FOUND` with `data: { "file", "line" }`.
+**`result`**: same wire shape as §7.7 `Index.ReadSymbol` (body or session-deduped variant), including the v0.7+ `parent` field (capability `parent_scope`) and the `parent::name` `qualified_name` rendering. `qualified_name` is the innermost enclosing def whose def-range covers the line; range tie-breakers prefer smaller ranges (innermost wins). `Index.ReadSymbolAt` resolves by location rather than name, so it takes no `parent` request filter. When no def covers the line — e.g. a blank gap, a comment-only region, a top-level statement outside any function — returns `SYMBOL_NOT_FOUND` with `data: { "file", "line" }`.
 
 Errors: `INDEX_NOT_READY`, `SYMBOL_NOT_FOUND` (no def covers the line), `OUT_OF_ROOT`, `FILE_NOT_INDEXED`, `RANGE_OUT_OF_BOUNDS` (line > file LOC), `INVALID_PARAMS` (line < 1).
 

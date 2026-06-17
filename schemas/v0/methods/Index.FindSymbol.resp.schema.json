@@ -11,6 +11,10 @@
         "type": "object",
         "properties": {
           "qualified_name": { "type": "string" },
+          "parent": {
+            "description": "v0.7+, capability `parent_scope`. Nearest enclosing container name (impl/class/struct/trait/…), or null for top-level defs.",
+            "type": ["string", "null"]
+          },
           "kind": {
             "type": "string",
             "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module", "unknown"]
@@ -31,7 +35,7 @@
           "visibility": { "type": "string" },
           "rank_score": { "type": "number" }
         },
-        "required": ["qualified_name", "kind", "file", "range", "signature", "doc", "visibility", "rank_score"]
+        "required": ["qualified_name", "parent", "kind", "file", "range", "signature", "doc", "visibility", "rank_score"]
       }
     },
     "truncated":        { "type": "boolean" },

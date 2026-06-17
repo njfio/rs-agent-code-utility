@@ -67,6 +67,11 @@ pub struct FindSymbolArgs {
     /// when the same name lives in multiple files.
     #[serde(default)]
     pub file: Option<String>,
+    /// Optional: only return defs whose nearest enclosing container
+    /// (impl/class/struct/…) name equals this. Disambiguates overloads
+    /// across types — e.g. `parent: "QueryBuilder"` for `QueryBuilder::new`.
+    #[serde(default)]
+    pub parent: Option<String>,
     /// Maximum number of results. Defaults to 256 — leave at default
     /// for normal agent use (LLM contexts can't usefully digest more).
     /// Range: 1..=4096. The 4096 ceiling exists for offline evaluation
@@ -104,6 +109,11 @@ pub struct ReadSymbolArgs {
     /// Optional `kind` filter to disambiguate.
     #[serde(default)]
     pub kind: Option<String>,
+    /// Optional: only resolve a def whose nearest enclosing container
+    /// (impl/class/struct/…) name equals this. Disambiguates overloads
+    /// across types — e.g. `parent: "QueryBuilder"` for `QueryBuilder::new`.
+    #[serde(default)]
+    pub parent: Option<String>,
     /// `signature` returns just the declaration; `body` (default) returns
     /// the full implementation; `both` returns both.
     #[serde(default)]
@@ -420,6 +430,9 @@ impl RtsServer {
         if let Some(f) = args.file {
             params.insert("file".into(), Value::String(f));
         }
+        if let Some(p) = args.parent {
+            params.insert("parent".into(), Value::String(p));
+        }
         if let Some(n) = args.limit {
             params.insert("limit".into(), Value::Number(n.into()));
         }
@@ -540,6 +553,9 @@ impl RtsServer {
         }
         if let Some(k) = args.kind {
             params.insert("kind".into(), Value::String(k));
+        }
+        if let Some(p) = args.parent {
+            params.insert("parent".into(), Value::String(p));
         }
         if let Some(s) = args.shape {
             params.insert("shape".into(), Value::String(s));

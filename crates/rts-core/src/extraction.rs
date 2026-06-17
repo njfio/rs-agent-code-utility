@@ -58,6 +58,7 @@ pub(crate) fn extract_symbols(
         }
     }
 
+    crate::parent_scope::assign_parents(tree, content, language, &mut symbols);
     Ok(symbols)
 }
 
@@ -93,6 +94,7 @@ pub(crate) fn extract_rust_symbols(
                     end_column: func.end_position().column,
                     visibility: visibility.to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -122,6 +124,7 @@ pub(crate) fn extract_rust_symbols(
                     end_column: struct_node.end_position().column,
                     visibility: visibility.to_string(),
                     documentation: None,
+                    parent: None,
                 });
             }
         }
@@ -151,6 +154,7 @@ pub(crate) fn extract_rust_symbols(
                     end_column: enum_node.end_position().column,
                     visibility: visibility.to_string(),
                     documentation: None,
+                    parent: None,
                 });
             }
         }
@@ -178,6 +182,7 @@ pub(crate) fn extract_rust_symbols(
                     end_column: impl_node.end_position().column,
                     visibility: "public".to_string(),
                     documentation: None,
+                    parent: None,
                 });
             }
         }
@@ -218,6 +223,7 @@ pub(crate) fn extract_rust_symbols(
             end_column: let_node.end_position().column,
             visibility: "private".to_string(),
             documentation: None,
+            parent: None,
         });
     }
 
@@ -261,6 +267,7 @@ pub(crate) fn extract_rust_symbols(
                         end_column: item.end_position().column,
                         visibility: visibility.to_string(),
                         documentation: docs,
+                        parent: None,
                     });
                 }
             }
@@ -312,6 +319,7 @@ pub(crate) fn extract_rust_symbols(
                         end_column: item.end_position().column,
                         visibility: visibility.to_string(),
                         documentation: docs,
+                        parent: None,
                     });
                 }
             }
@@ -342,6 +350,7 @@ pub(crate) fn extract_javascript_symbols(
                     end_column: func.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -367,6 +376,7 @@ pub(crate) fn extract_javascript_symbols(
                                     end_column: var_decl.end_position().column,
                                     visibility: "public".to_string(),
                                     documentation: docs,
+                                    parent: None,
                                 });
                             }
                         }
@@ -391,6 +401,7 @@ pub(crate) fn extract_javascript_symbols(
                     end_column: class.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -411,6 +422,7 @@ pub(crate) fn extract_javascript_symbols(
                     end_column: method.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -446,6 +458,7 @@ pub(crate) fn extract_python_symbols(
                     end_column: func.end_position().column,
                     visibility: visibility.to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -472,6 +485,7 @@ pub(crate) fn extract_python_symbols(
                     end_column: class.end_position().column,
                     visibility: visibility.to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -502,6 +516,7 @@ pub(crate) fn extract_python_symbols(
                             end_column: assignment.end_position().column,
                             visibility: visibility.to_string(),
                             documentation: None,
+                            parent: None,
                         });
                     }
                 }
@@ -562,6 +577,7 @@ pub(crate) fn extract_c_symbols(
                 end_column: func.end_position().column,
                 visibility: "public".to_string(),
                 documentation: docs,
+                parent: None,
             });
         }
     }
@@ -581,6 +597,7 @@ pub(crate) fn extract_c_symbols(
                     end_column: struct_node.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -601,6 +618,7 @@ pub(crate) fn extract_c_symbols(
                     end_column: enum_node.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -621,6 +639,7 @@ pub(crate) fn extract_c_symbols(
                     end_column: typedef_node.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -655,6 +674,7 @@ pub(crate) fn extract_go_symbols(
                     end_column: func.end_position().column,
                     visibility: visibility.to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -680,6 +700,7 @@ pub(crate) fn extract_go_symbols(
                     end_column: method.end_position().column,
                     visibility: visibility.to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -717,6 +738,7 @@ pub(crate) fn extract_go_symbols(
                             end_column: type_decl.end_position().column,
                             visibility: visibility.to_string(),
                             documentation: docs,
+                            parent: None,
                         });
                     }
                 }
@@ -748,6 +770,7 @@ pub(crate) fn extract_java_symbols(
                     end_column: class.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -767,6 +790,7 @@ pub(crate) fn extract_java_symbols(
                     end_column: method.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -795,6 +819,7 @@ pub(crate) fn extract_ruby_symbols(
                     end_column: class.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -814,6 +839,7 @@ pub(crate) fn extract_ruby_symbols(
                     end_column: method.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -844,6 +870,7 @@ pub(crate) fn extract_swift_symbols(
                     end_column: class.end_position().column,
                     visibility: "internal".to_string(), // Default for Swift
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -863,6 +890,7 @@ pub(crate) fn extract_swift_symbols(
                     end_column: struct_node.end_position().column,
                     visibility: "internal".to_string(), // Default for Swift
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -882,6 +910,7 @@ pub(crate) fn extract_swift_symbols(
                     end_column: func.end_position().column,
                     visibility: "internal".to_string(), // Default for Swift
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -1037,6 +1066,7 @@ pub(crate) fn extract_csharp_symbols(
                         // set by Java/PHP/Swift extractors.
                         visibility: "public".to_string(),
                         documentation: docs,
+                        parent: None,
                     });
                 }
             }
@@ -1058,6 +1088,7 @@ pub(crate) fn extract_csharp_symbols(
                     end_column: method.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -1145,6 +1176,7 @@ pub(crate) fn extract_php_symbols(
                     end_column: class.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -1164,6 +1196,7 @@ pub(crate) fn extract_php_symbols(
                     end_column: func.end_position().column,
                     visibility: "public".to_string(),
                     documentation: docs,
+                    parent: None,
                 });
             }
         }
@@ -1202,6 +1235,7 @@ pub(crate) fn extract_php_symbols(
             end_column: method.end_position().column,
             visibility,
             documentation: docs,
+            parent: None,
         });
     }
 
@@ -1408,6 +1442,7 @@ mod markdown {
                         end_column: node.end_position().column,
                         visibility: "public".to_string(),
                         documentation,
+                        parent: None,
                     });
                 }
                 return;

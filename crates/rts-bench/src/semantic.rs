@@ -1070,9 +1070,20 @@ async fn fetch_pass(
         .and_then(|m| m.as_array())
         .ok_or_else(|| anyhow::anyhow!("find_symbol response missing matches array"))?;
     for m in matches.iter() {
-        let Some(name) = m.get("qualified_name").and_then(|n| n.as_str()) else {
+        let Some(qualified) = m.get("qualified_name").and_then(|n| n.as_str()) else {
             continue;
         };
+        // Match/score on the BARE name (final `::` segment). v0.7's
+        // parent-scope feature enriched `qualified_name` to `Parent::name`;
+        // the corpus `expected_top_k` lists bare names and the lexical
+        // scorer keys on the bare name, so strip the parent here. Names
+        // without `::` (free functions, markdown headings) are unchanged.
+        let name = qualified.rsplit("::").next().unwrap_or(qualified);
+        // Dedup on the BARE name (the scorer's matching key) so the
+        // candidate pool — and thus the lexical IDF/ranking baseline —
+        // matches the pre-parent-scope behavior, where `qualified_name`
+        // was already the bare name. (Same-bare-name symbols collapse to
+        // one candidate; that's sufficient for top-K membership checks.)
         if !seen.insert(name.to_string()) {
             continue;
         }

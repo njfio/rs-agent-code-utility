@@ -12,6 +12,7 @@
       "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module"]
     },
     "file":              { "type": "string" },
+    "parent":            { "type": ["string", "null"] },
     "sort":              { "type": "string", "enum": ["rank", "lexical"] },
     "limit":             { "type": "integer", "minimum": 1, "maximum": 4096 },
     "doc_contains":      { "type": "string" },

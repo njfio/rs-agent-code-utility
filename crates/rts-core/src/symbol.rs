@@ -30,4 +30,11 @@ pub struct Symbol {
     pub visibility: String,
     /// Symbol documentation if available
     pub documentation: Option<String>,
+    /// Name of the nearest enclosing container definition (impl / class /
+    /// struct / trait / enum / …), or `None` for a top-level symbol.
+    /// Populated by `crate::parent_scope::assign_parents`. Used to render
+    /// `qualified_name` as `parent::name` and to disambiguate overloaded
+    /// names across types.
+    #[serde(default)]
+    pub parent: Option<String>,
 }

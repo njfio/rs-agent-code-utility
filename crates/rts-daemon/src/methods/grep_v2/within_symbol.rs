@@ -161,6 +161,7 @@ mod tests {
             start_line: 1,
             end_line: 1,
             visibility: Visibility::Public,
+            parent: None,
         }
     }
 

@@ -38,6 +38,8 @@ pub(crate) mod extraction;
 pub mod languages;
 /// Personalised PageRank for `Index.Outline` symbol ranking.
 pub mod pagerank;
+/// Containment-based parent-scope assignment for [`Symbol::parent`].
+pub(crate) mod parent_scope;
 /// Tree-sitter parser wrapper.
 pub mod parser;
 /// Tree-sitter query API.

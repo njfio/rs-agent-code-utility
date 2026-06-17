@@ -655,6 +655,10 @@ fn symbol_to_def(sym: &Symbol, content: &str) -> Option<(String, DefSite, Symbol
             end_line: sym.end_line as u32,
             visibility: crate::store::schema::Visibility::from_str_loose(&sym.visibility),
             kind,
+            // Threaded from rts-core extraction. Currently always `None`
+            // (a later task populates `Symbol::parent` from the tree);
+            // wiring it here keeps the storage path complete.
+            parent: sym.parent.clone(),
         },
         kind,
     ))
@@ -911,6 +915,7 @@ mod tests {
             end_column: 3,
             visibility: "public".into(),
             documentation: None,
+            parent: None,
         };
         let (start, end) = line_col_to_byte_range(content, &sym);
         // Line 2 starts at byte 4; col 1 → byte 5.
