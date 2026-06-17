@@ -2557,6 +2557,7 @@ pub rust_tree_sitter::Symbol::end_column: usize
 pub rust_tree_sitter::Symbol::end_line: usize
 pub rust_tree_sitter::Symbol::kind: alloc::string::String
 pub rust_tree_sitter::Symbol::name: alloc::string::String
+pub rust_tree_sitter::Symbol::parent: core::option::Option<alloc::string::String>
 pub rust_tree_sitter::Symbol::start_column: usize
 pub rust_tree_sitter::Symbol::start_line: usize
 pub rust_tree_sitter::Symbol::visibility: alloc::string::String
