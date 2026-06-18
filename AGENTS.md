@@ -204,7 +204,9 @@ self-correct in the same turn), `verify_signature` catches a wrong-arity call,
 `verify_import` catches a hallucinated path. Each result carries a `resolution`
 of `exact` / `not_found` / `indeterminate` — treat `indeterminate` as "unknown,"
 never as confirmation. This is cheaper than writing code against a symbol that
-doesn't exist and discovering it at compile time.
+doesn't exist and discovering it at compile time. Note: only `verify_symbol`
+echoes a `content_version` (it resolves to a concrete file); the other verify
+tools omit it.
 
 ### `grep` v2 — multi-line, structural, within-symbol (v0.6 alpha)
 

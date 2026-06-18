@@ -114,6 +114,7 @@ mod tests {
             IndeterminateReason::UnresolvedRef,
             IndeterminateReason::Reflection,
             IndeterminateReason::AmbiguousOverload,
+            IndeterminateReason::UndecidableSignature,
         ] {
             let wire = json(variant);
             let back: IndeterminateReason = serde_json::from_str(&wire).expect("deserialize");
