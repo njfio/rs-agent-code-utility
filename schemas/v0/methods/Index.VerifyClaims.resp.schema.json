@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifyClaims.resp.schema.json",
+  "title": "Index.VerifyClaims result",
+  "description": "verify-v0 P1.U4. Per-claim `results[]` (each carries `ok` plus the inner verifier's fields), and a grounding summary. DECIDABILITY RULE: indeterminate results are excluded from BOTH `grounded` and `total`. `grounding_rate` = grounded/total, and is null (not NaN) when total==0.",
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "description": "true = decidable and grounded; false = decidable and failed; null = indeterminate (excluded from the rate).",
+            "type": ["boolean", "null"]
+          },
+          "resolution": {
+            "type": "string",
+            "enum": ["exact", "not_found", "indeterminate"]
+          }
+        },
+        "required": ["ok"]
+      }
+    },
+    "grounded": { "type": "integer", "minimum": 0 },
+    "total":    { "type": "integer", "minimum": 0 },
+    "grounding_rate": {
+      "description": "grounded/total, or null when total==0.",
+      "type": ["number", "null"]
+    }
+  },
+  "required": ["results", "grounded", "total", "grounding_rate"]
+}
