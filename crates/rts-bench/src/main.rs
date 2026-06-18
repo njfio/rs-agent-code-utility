@@ -30,6 +30,7 @@ mod report;
 mod semantic;
 mod tasks;
 mod token;
+mod verify_metrics;
 
 use mcp_runner::resolve_bin;
 use report::BenchReport;
@@ -219,6 +220,31 @@ enum Cmd {
         /// Default: no check, exits 0 regardless of metrics.
         #[arg(long)]
         check_coverage: Option<f64>,
+    },
+    /// Hallucination-metric harness (verify-v0 P1.U5). Parses a corpus of
+    /// agent-emitted code snippets with rts's own tree-sitter extractor
+    /// (F3), checks every referenced symbol / import / call-arity against
+    /// the live index via the verify tools, and reports SHR / IHR / SMR
+    /// with honest denominators (indeterminate references excluded from
+    /// every rate, counted separately). No LLM in the loop — the metric is
+    /// fully deterministic.
+    ///
+    /// Corpus format: see `corpus/verify-eval-rts-core.toml`. Each
+    /// `[[snippet]]` carries `lang` + `code`.
+    Verify {
+        /// Path to a TOML verify-eval corpus file.
+        #[arg(long)]
+        corpus: PathBuf,
+        /// Workspace to check references against. Mounted + indexed via
+        /// the same rts-mcp + daemon path the other benches use.
+        #[arg(long)]
+        workspace: PathBuf,
+        /// Where to write the JSON `HallucinationReport`.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Skip writing the report to disk (it's still printed to stdout).
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Self-dogfood telemetry harness. Ingests a Claude Code session
     /// JSONL transcript and reports how often the agent reached for
@@ -651,6 +677,12 @@ async fn main() -> Result<()> {
             dry_run,
             check_coverage,
         } => run_semantic(corpus, workspace, top_k, out, dry_run, check_coverage).await,
+        Cmd::Verify {
+            corpus,
+            workspace,
+            out,
+            dry_run,
+        } => run_verify(corpus, workspace, out, dry_run).await,
         Cmd::RealRepos { sub } => run_real_repos(sub).await,
         Cmd::Dogfood {
             session,
@@ -826,6 +858,87 @@ async fn run_semantic(
                 report.answerable_coverage, min
             );
         }
+    }
+    Ok(())
+}
+
+/// `rts-bench verify` — hallucination-metric harness (verify-v0 P1.U5).
+///
+/// Mounts the workspace via the same rts-mcp + daemon path the other
+/// benches use, parses each corpus snippet with rts's tree-sitter
+/// extractor, checks every reference against the live index via the
+/// verify tools, and prints the JSON `HallucinationReport`.
+async fn run_verify(
+    corpus_path: PathBuf,
+    workspace: PathBuf,
+    out: Option<PathBuf>,
+    dry_run: bool,
+) -> Result<()> {
+    let workspace = workspace
+        .canonicalize()
+        .with_context(|| format!("canonicalize {}", workspace.display()))?;
+    let corpus = verify_metrics::load_corpus(&corpus_path)
+        .with_context(|| format!("load corpus {}", corpus_path.display()))?;
+    println!(
+        "verify: workspace={} corpus={} snippets={}",
+        workspace.display(),
+        corpus_path.display(),
+        corpus.snippets.len(),
+    );
+
+    let rts_mcp_bin = resolve_bin("rts-mcp")?;
+    let rts_daemon_bin = resolve_bin("rts-daemon")?;
+    let mut session =
+        mcp_runner::McpSession::spawn(&rts_mcp_bin, &rts_daemon_bin, &workspace, &[]).await?;
+
+    // Warm the index before we start verifying so cold-mount
+    // INDEX_NOT_READY churn doesn't masquerade as `indeterminate`.
+    let _ = session
+        .tools_call("find_symbol", json!({ "pattern": "*" }), 30)
+        .await?;
+
+    let acc = {
+        let mut oracle = verify_metrics::SessionOracle::new(&mut session);
+        verify_metrics::run_corpus(&mut oracle, &corpus).await?
+    };
+    session.close().await?;
+
+    let report = verify_metrics::report_from_resolutions(
+        env!("CARGO_PKG_VERSION"),
+        &workspace.display().to_string(),
+        &corpus_path.display().to_string(),
+        corpus.snippets.len(),
+        acc,
+    );
+
+    // One-line human summary; the full report is the JSON below.
+    let fmt_rate = |m: &verify_metrics::Metric| match m.rate {
+        Some(r) => format!("{:.3} ({}/{}", r, m.numerator, m.denominator),
+        None => "null (0/0".to_string(),
+    };
+    println!(
+        "verify: SHR={}; ind={}) IHR={}; ind={}) SMR={}; ind={}) unsupported_refs={}",
+        fmt_rate(&report.shr),
+        report.shr.indeterminate_excluded,
+        fmt_rate(&report.ihr),
+        report.ihr.indeterminate_excluded,
+        fmt_rate(&report.smr),
+        report.smr.indeterminate_excluded,
+        report.unsupported_language_refs,
+    );
+
+    let json = serde_json::to_string_pretty(&report).context("encode hallucination report")?;
+    println!("{json}");
+
+    if !dry_run {
+        let out_path = out.unwrap_or_else(|| {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(format!("bench-verify-{}.json", git_short_sha()))
+        });
+        std::fs::write(&out_path, &json)
+            .with_context(|| format!("write {}", out_path.display()))?;
+        println!("wrote {}", out_path.display());
     }
     Ok(())
 }

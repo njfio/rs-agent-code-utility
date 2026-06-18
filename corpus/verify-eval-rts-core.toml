@@ -1,0 +1,85 @@
+# Hallucination-metric corpus for `crates/rts-core`
+# (`rts-bench verify`, verify-v0 P1.U5).
+#
+# Each `[[snippet]]` is an agent-emitted code fragment. The harness parses
+# it with rts's own tree-sitter extractor (F3) to recover the symbols /
+# imports / call-arities it USES, then checks each against the live index
+# via the verify tools and aggregates:
+#
+#   SHR = Symbol Hallucination Rate  = not_found symbols / decidable symbols
+#   IHR = Import Hallucination Rate  = unresolved imports / decidable imports
+#   SMR = Signature Mismatch Rate    = mismatched calls  / decidable calls
+#
+# `indeterminate` references (ambiguous overloads, macro/dynamic dispatch,
+# unsupported signatures, undecidable multi-segment imports) are EXCLUDED
+# from every denominator and reported separately, so a rate is never
+# cherry-picked.
+#
+# Run: `rts-bench verify --corpus corpus/verify-eval-rts-core.toml \
+#                        --workspace crates/rts-core`
+#
+# Grading methodology:
+# - "Real" names below are public rts-core symbols confirmed present in
+#   the index (extract_references, supports_references, rank_candidates,
+#   signature_shape, detect_language_from_path, Reference, RefKind,
+#   Resolution, Language).
+# - "Invented" names are deliberately fabricated so the metric has a
+#   non-zero SHR/IHR to detect (a metric that can only ever report 0 is
+#   untrustworthy). They are clearly bogus (`*_definitely_invented`,
+#   `frobnicate_*`) so a future refactor doesn't accidentally make one
+#   real.
+# - The exact SHR/IHR values are NOT pinned here (real PageRank /
+#   ambiguity can shift); the SELF-VALIDATION fixture
+#   (`corpus/verify-eval-selftest.toml`) carries the pinned expected
+#   value the integration test asserts on.
+
+version = 1
+
+# --- a grounded snippet: every symbol + import should resolve ---
+[[snippet]]
+name = "grounded: real extractor API"
+lang = "rust"
+code = """
+use rust_tree_sitter::Language;
+use rust_tree_sitter::RefKind;
+fn drive(src: &[u8]) {
+    if supports_references(Language::Rust) {
+        let _refs = extract_references(src, Language::Rust);
+    }
+}
+"""
+
+# --- a hallucinated snippet: invented symbols + a bad import ---
+[[snippet]]
+name = "hallucinated: invented symbols and import"
+lang = "rust"
+code = """
+use rust_tree_sitter::FrobnicatorEngine;
+fn drive(src: &[u8]) {
+    let _ = frobnicate_references(src);
+    let _ = extract_references_definitely_invented(src);
+    let _ = extract_references(src, rust_tree_sitter::Language::Rust);
+}
+"""
+
+# --- a Python snippet (F3-supported, distinct language coverage) ---
+[[snippet]]
+name = "python: invented helpers (cross-language coverage)"
+lang = "python"
+code = """
+def drive(src):
+    a = totally_invented_helper(src)
+    b = another_made_up_thing(a)
+    return b
+"""
+
+# --- an unsupported-language snippet: contributes to no rate ---
+[[snippet]]
+name = "unsupported: Go (no F3 extractor) → unsupported_language_refs"
+lang = "go"
+code = """
+package main
+func drive() {
+    invented()
+}
+"""
