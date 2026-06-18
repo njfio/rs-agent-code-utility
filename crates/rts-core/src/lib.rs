@@ -62,7 +62,10 @@ pub use parser::{ParseOptions, Parser, create_edit};
 pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use symbol::Symbol;
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
-pub use verify::{Candidate, IndeterminateReason, Resolution, rank_candidates};
+pub use verify::{
+    Candidate, IndeterminateReason, RefKind, Reference, Resolution, extract_references,
+    rank_candidates, supports_references,
+};
 
 // ---------- parse_content facade ----------
 
