@@ -189,6 +189,22 @@ enclosing-symbol metadata, and survives across editor sessions.
 | Refactor blast radius (transitive callers) | `mcp__rts__impact_of` or `rts-bench query impact-of` | manual BFS of `rg` results |
 | Orient in an unfamiliar repo | `mcp__rts__outline_workspace` or `rts-bench query outline` | `find . -name '*.rs'` |
 | Read a symbol's body | `mcp__rts__read_symbol` or `rts-bench query read-symbol` | `cat`, `Read` whole file |
+| Confirm a symbol/type/method exists before referencing it | `mcp__rts__verify_symbol` | assuming it exists, or guessing the name |
+| Confirm a call matches the definition's signature | `mcp__rts__verify_signature` | guessing arity/params |
+| Confirm an import path resolves | `mcp__rts__verify_import` | writing the `use`/`import` and hoping |
+| Ground-check a batch of plan claims at once | `mcp__rts__verify_claims` | asserting them unverified |
+
+### Verify before you claim
+
+When you are about to assert that a symbol exists, call a function, or add an
+import — and you are not certain it is real — **verify first**. The `verify_*`
+tools answer deterministically from the index: `verify_symbol` catches an
+invented function/type/method (and returns ranked near-misses so you can
+self-correct in the same turn), `verify_signature` catches a wrong-arity call,
+`verify_import` catches a hallucinated path. Each result carries a `resolution`
+of `exact` / `not_found` / `indeterminate` — treat `indeterminate` as "unknown,"
+never as confirmation. This is cheaper than writing code against a symbol that
+doesn't exist and discovering it at compile time.
 
 ### `grep` v2 — multi-line, structural, within-symbol (v0.6 alpha)
 
