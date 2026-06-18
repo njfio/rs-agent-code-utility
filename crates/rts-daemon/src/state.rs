@@ -372,6 +372,8 @@ pub struct CallCounters {
     pub session_close: AtomicU64,
     pub index_find_symbol: AtomicU64,
     pub index_find_callers: AtomicU64,
+    /// verify-v0 P1.U1: `Index.VerifySymbol` calls.
+    pub index_verify_symbol: AtomicU64,
     pub index_impact_of: AtomicU64,
     pub index_read_range: AtomicU64,
     pub index_read_symbol: AtomicU64,
@@ -417,6 +419,7 @@ impl CallCounters {
             "Session.Close":       self.session_close.load(Relaxed),
             "Index.FindSymbol":    self.index_find_symbol.load(Relaxed),
             "Index.FindCallers":   self.index_find_callers.load(Relaxed),
+            "Index.VerifySymbol":  self.index_verify_symbol.load(Relaxed),
             "Index.ImpactOf":      self.index_impact_of.load(Relaxed),
             "Index.ReadRange":     self.index_read_range.load(Relaxed),
             "Index.ReadSymbol":    self.index_read_symbol.load(Relaxed),
@@ -448,6 +451,7 @@ impl CallCounters {
             + self.session_close.load(Relaxed)
             + self.index_find_symbol.load(Relaxed)
             + self.index_find_callers.load(Relaxed)
+            + self.index_verify_symbol.load(Relaxed)
             + self.index_impact_of.load(Relaxed)
             + self.index_read_range.load(Relaxed)
             + self.index_read_symbol.load(Relaxed)

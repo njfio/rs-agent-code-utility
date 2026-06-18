@@ -43,6 +43,7 @@ const PROTOCOL_METHODS: &[&str] = &[
     "Session.Close",
     "Index.FindSymbol",
     "Index.FindCallers",
+    "Index.VerifySymbol",
     "Index.ImpactOf",
     "Index.ReadRange",
     "Index.ReadSymbol",
@@ -289,6 +290,7 @@ async fn response_matches_schema_for_each_method() -> anyhow::Result<()> {
         ("Session.Open", json!({"client_name": "schema-test"})),
         ("Index.FindSymbol", json!({"name": "answer"})),
         ("Index.FindCallers", json!({"name": "answer"})),
+        ("Index.VerifySymbol", json!({"name": "answer"})),
         ("Index.ImpactOf", json!({"name": "answer"})),
         ("Index.Outline", json!({"token_budget": 4096})),
         ("Index.Grep", json!({"text": "answer"})),
@@ -379,6 +381,7 @@ const EXPECTED_CAPABILITIES: &[&str] = &[
     "index_markdown",
     "request_deadlines",
     "parent_scope",
+    "verify_symbol",
 ];
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

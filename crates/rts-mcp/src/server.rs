@@ -153,6 +153,30 @@ pub struct FindCallersArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifySymbolArgs {
+    /// The symbol name to verify — bare (`commit_batch`) or qualified
+    /// (`Store::commit_batch`). 1..=256 chars.
+    pub name: String,
+    /// Optional `kind` filter (`fn`, `method`, `struct`, `enum`,
+    /// `trait`, `const`, `module`, …). Same loose-string form as
+    /// `find_symbol.kind`. Disambiguates same-named defs of different
+    /// kinds.
+    #[serde(default)]
+    pub kind: Option<String>,
+    /// Optional language filter (`rust`, `python`, …). Advisory in v0.
+    #[serde(default)]
+    pub lang: Option<String>,
+    /// Optional `file` filter (workspace-relative path). Scopes the
+    /// existence check (and the ambiguity decision) to one file.
+    #[serde(default)]
+    pub file: Option<String>,
+    /// Optional content-version echo. Returned verbatim in the
+    /// response; does not affect the result in v0.
+    #[serde(default)]
+    pub content_version: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ImpactOfArgs {
     /// Exact name of the symbol whose transitive callers we want.
     pub name: String,
@@ -468,6 +492,36 @@ impl RtsServer {
         }
         match self
             .call_daemon("Index.FindCallers", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Check whether a symbol (function, type, method, …) actually exists in this workspace, AST-precise. Prefer this over `Bash(grep 'fn name')` / `Bash(rg name)` before you call or import a symbol you're unsure about — shell grep matches comments, strings, and unrelated text and can't tell you you've invented a name; this returns `exists` + `resolution` (exact | not_found | indeterminate) and, on a miss, a ranked `candidates[]` did-you-mean shortlist so you self-correct. Use when the task includes 'does X exist', 'is there a function called X', 'verify', or you're about to reference a symbol from memory. Disambiguate overloaded names with `file` or `kind` (multiple defs → `indeterminate`). A miss is a result, not an error."
+    )]
+    async fn verify_symbol(
+        &self,
+        Parameters(args): Parameters<VerifySymbolArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("name".into(), Value::String(args.name));
+        if let Some(k) = args.kind {
+            params.insert("kind".into(), Value::String(k));
+        }
+        if let Some(l) = args.lang {
+            params.insert("lang".into(), Value::String(l));
+        }
+        if let Some(f) = args.file {
+            params.insert("file".into(), Value::String(f));
+        }
+        if let Some(cv) = args.content_version {
+            params.insert("content_version".into(), Value::String(cv));
+        }
+        match self
+            .call_daemon("Index.VerifySymbol", Value::Object(params))
             .await
         {
             Ok(v) => Ok(success_json(&v)),

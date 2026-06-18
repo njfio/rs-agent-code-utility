@@ -60,6 +60,7 @@ const AUDITED_TOOLS: &[&str] = &[
     "read_symbol_at",
     "read_range",
     "find_callers",
+    "verify_symbol",
     "impact_of",
     "grep",
     "daemon_telemetry",

@@ -178,6 +178,14 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // `find_callers`/the reference graph are unchanged. See
     // `docs/protocol-v0.md`.
     "parent_scope",
+    // verify-v0 P1.U1 — `Index.VerifySymbol` method: "does this symbol
+    // exist?". Returns `exists` + `resolution` (exact|not_found|
+    // indeterminate); on a miss, a ranked `candidates[]` near-miss
+    // shortlist (Damerau-Levenshtein over the indexed name pool, tie-
+    // broken by PageRank) so an agent self-corrects an invented name.
+    // A miss is a result, not an error. First of the verify-family
+    // tools (signature/import/claims siblings to follow). Additive.
+    "verify_symbol",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
