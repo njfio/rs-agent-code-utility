@@ -1736,6 +1736,49 @@ pub fn rust_tree_sitter::signature::render_ruby(bytes: &[u8]) -> core::option::O
 pub fn rust_tree_sitter::signature::render_rust(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_swift(bytes: &[u8]) -> core::option::Option<alloc::string::String>
 pub fn rust_tree_sitter::signature::render_typescript(bytes: &[u8]) -> core::option::Option<alloc::string::String>
+pub mod rust_tree_sitter::signature_shape
+pub struct rust_tree_sitter::signature_shape::SignatureShape
+pub rust_tree_sitter::signature_shape::SignatureShape::arity: u32
+pub rust_tree_sitter::signature_shape::SignatureShape::params: alloc::vec::Vec<alloc::string::String>
+pub rust_tree_sitter::signature_shape::SignatureShape::returns: core::option::Option<alloc::string::String>
+impl core::clone::Clone for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone(&self) -> rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::cmp::PartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::eq(&self, other: &rust_tree_sitter::verify::signature_shape::SignatureShape) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Send for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Sync for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Unpin for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Owned = T
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::signature_shape::SignatureShape where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::from(t: T) -> T
+pub fn rust_tree_sitter::signature_shape::signature_shape(def_node: tree_sitter::Node<'_>, src: &[u8], lang: rust_tree_sitter::languages::Language) -> core::option::Option<rust_tree_sitter::verify::signature_shape::SignatureShape>
 pub mod rust_tree_sitter::symbol
 pub struct rust_tree_sitter::symbol::Symbol
 pub rust_tree_sitter::symbol::Symbol::documentation: core::option::Option<alloc::string::String>
@@ -1918,6 +1961,547 @@ pub fn rust_tree_sitter::tree::TreeCursor<'a>::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::tree::TreeCursor<'a>
 pub fn rust_tree_sitter::tree::TreeCursor<'a>::from(t: T) -> T
 pub type rust_tree_sitter::tree::TreeEdit = tree_sitter::InputEdit
+pub mod rust_tree_sitter::verify
+pub mod rust_tree_sitter::verify::candidates
+pub struct rust_tree_sitter::verify::candidates::Candidate
+pub rust_tree_sitter::verify::candidates::Candidate::edit_distance: u32
+pub rust_tree_sitter::verify::candidates::Candidate::pagerank: f64
+pub rust_tree_sitter::verify::candidates::Candidate::qualified_name: alloc::string::String
+impl core::clone::Clone for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::clone(&self) -> rust_tree_sitter::verify::candidates::Candidate
+impl core::fmt::Debug for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Send for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Sync for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Unpin for rust_tree_sitter::verify::candidates::Candidate
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::candidates::Candidate
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::candidates::Candidate
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::candidates::Candidate::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::candidates::Candidate::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::candidates::Candidate::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::candidates::Candidate::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::candidates::Candidate::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::candidates::Candidate where T: core::clone::Clone
+pub type rust_tree_sitter::verify::candidates::Candidate::Owned = T
+pub fn rust_tree_sitter::verify::candidates::Candidate::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::candidates::Candidate::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::candidates::Candidate where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::candidates::Candidate where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::candidates::Candidate where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::candidates::Candidate where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::candidates::Candidate::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::from(t: T) -> T
+pub fn rust_tree_sitter::verify::candidates::rank_candidates(target: &str, pool: impl core::iter::traits::iterator::Iterator<Item = (alloc::string::String, f64)>, limit: usize) -> alloc::vec::Vec<rust_tree_sitter::verify::candidates::Candidate>
+pub mod rust_tree_sitter::verify::references
+pub enum rust_tree_sitter::verify::references::RefKind
+pub rust_tree_sitter::verify::references::RefKind::Call
+pub rust_tree_sitter::verify::references::RefKind::Import
+pub rust_tree_sitter::verify::references::RefKind::Path
+pub rust_tree_sitter::verify::references::RefKind::Type
+impl core::clone::Clone for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::clone(&self) -> rust_tree_sitter::verify::references::RefKind
+impl core::cmp::PartialEq for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::eq(&self, other: &rust_tree_sitter::verify::references::RefKind) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::references::RefKind
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Send for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Sync for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Unpin for rust_tree_sitter::verify::references::RefKind
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::references::RefKind
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::references::RefKind
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::references::RefKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::references::RefKind::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::references::RefKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::references::RefKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::references::RefKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::references::RefKind where T: core::clone::Clone
+pub type rust_tree_sitter::verify::references::RefKind::Owned = T
+pub fn rust_tree_sitter::verify::references::RefKind::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::references::RefKind::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::references::RefKind where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::references::RefKind where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::references::RefKind where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::references::RefKind where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::references::RefKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::from(t: T) -> T
+pub struct rust_tree_sitter::verify::references::Reference
+pub rust_tree_sitter::verify::references::Reference::call_arity: core::option::Option<u32>
+pub rust_tree_sitter::verify::references::Reference::column: usize
+pub rust_tree_sitter::verify::references::Reference::kind: rust_tree_sitter::verify::references::RefKind
+pub rust_tree_sitter::verify::references::Reference::line: usize
+pub rust_tree_sitter::verify::references::Reference::name: alloc::string::String
+pub rust_tree_sitter::verify::references::Reference::qualified: core::option::Option<alloc::string::String>
+impl core::clone::Clone for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::clone(&self) -> rust_tree_sitter::verify::references::Reference
+impl core::cmp::PartialEq for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::eq(&self, other: &rust_tree_sitter::verify::references::Reference) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::references::Reference
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::references::Reference
+impl core::marker::Send for rust_tree_sitter::verify::references::Reference
+impl core::marker::Sync for rust_tree_sitter::verify::references::Reference
+impl core::marker::Unpin for rust_tree_sitter::verify::references::Reference
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::references::Reference
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::references::Reference
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::references::Reference::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::references::Reference::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::references::Reference::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::references::Reference::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::references::Reference::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::references::Reference where T: core::clone::Clone
+pub type rust_tree_sitter::verify::references::Reference::Owned = T
+pub fn rust_tree_sitter::verify::references::Reference::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::references::Reference::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::references::Reference where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::references::Reference where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::references::Reference where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::references::Reference where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::references::Reference::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::from(t: T) -> T
+pub fn rust_tree_sitter::verify::references::extract_references(content: &[u8], language: rust_tree_sitter::languages::Language) -> alloc::vec::Vec<rust_tree_sitter::verify::references::Reference>
+pub fn rust_tree_sitter::verify::references::supports_references(lang: rust_tree_sitter::languages::Language) -> bool
+pub mod rust_tree_sitter::verify::resolution
+pub enum rust_tree_sitter::verify::resolution::IndeterminateReason
+pub rust_tree_sitter::verify::resolution::IndeterminateReason::AmbiguousOverload
+pub rust_tree_sitter::verify::resolution::IndeterminateReason::DynamicDispatch
+pub rust_tree_sitter::verify::resolution::IndeterminateReason::Ffi
+pub rust_tree_sitter::verify::resolution::IndeterminateReason::MacroGenerated
+pub rust_tree_sitter::verify::resolution::IndeterminateReason::Reflection
+pub rust_tree_sitter::verify::resolution::IndeterminateReason::UnresolvedRef
+impl core::clone::Clone for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone(&self) -> rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::cmp::Eq for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::cmp::PartialEq for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::eq(&self, other: &rust_tree_sitter::verify::resolution::IndeterminateReason) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Send for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Sync for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Unpin for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::verify::resolution::IndeterminateReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::resolution::IndeterminateReason where T: core::clone::Clone
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Owned = T
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::resolution::IndeterminateReason where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::resolution::IndeterminateReason where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::resolution::IndeterminateReason where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::resolution::IndeterminateReason where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::verify::resolution::IndeterminateReason where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum rust_tree_sitter::verify::resolution::Resolution
+pub rust_tree_sitter::verify::resolution::Resolution::Exact
+pub rust_tree_sitter::verify::resolution::Resolution::Indeterminate
+pub rust_tree_sitter::verify::resolution::Resolution::NotFound
+impl core::clone::Clone for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::clone(&self) -> rust_tree_sitter::verify::resolution::Resolution
+impl core::cmp::Eq for rust_tree_sitter::verify::resolution::Resolution
+impl core::cmp::PartialEq for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::eq(&self, other: &rust_tree_sitter::verify::resolution::Resolution) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::resolution::Resolution
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Send for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Sync for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Unpin for rust_tree_sitter::verify::resolution::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::resolution::Resolution
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::resolution::Resolution
+impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::verify::resolution::Resolution where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::resolution::Resolution::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::resolution::Resolution::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::resolution::Resolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::resolution::Resolution::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::resolution::Resolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::resolution::Resolution where T: core::clone::Clone
+pub type rust_tree_sitter::verify::resolution::Resolution::Owned = T
+pub fn rust_tree_sitter::verify::resolution::Resolution::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::resolution::Resolution::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::resolution::Resolution where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::resolution::Resolution where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::resolution::Resolution where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::resolution::Resolution where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::resolution::Resolution::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::verify::resolution::Resolution where T: for<'de> serde_core::de::Deserialize<'de>
+pub mod rust_tree_sitter::verify::signature_shape
+pub struct rust_tree_sitter::verify::signature_shape::SignatureShape
+pub rust_tree_sitter::verify::signature_shape::SignatureShape::arity: u32
+pub rust_tree_sitter::verify::signature_shape::SignatureShape::params: alloc::vec::Vec<alloc::string::String>
+pub rust_tree_sitter::verify::signature_shape::SignatureShape::returns: core::option::Option<alloc::string::String>
+impl core::clone::Clone for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone(&self) -> rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::cmp::PartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::eq(&self, other: &rust_tree_sitter::verify::signature_shape::SignatureShape) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Send for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Sync for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Unpin for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Owned = T
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::signature_shape::SignatureShape where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::from(t: T) -> T
+pub fn rust_tree_sitter::verify::signature_shape::signature_shape(def_node: tree_sitter::Node<'_>, src: &[u8], lang: rust_tree_sitter::languages::Language) -> core::option::Option<rust_tree_sitter::verify::signature_shape::SignatureShape>
+pub enum rust_tree_sitter::verify::IndeterminateReason
+pub rust_tree_sitter::verify::IndeterminateReason::AmbiguousOverload
+pub rust_tree_sitter::verify::IndeterminateReason::DynamicDispatch
+pub rust_tree_sitter::verify::IndeterminateReason::Ffi
+pub rust_tree_sitter::verify::IndeterminateReason::MacroGenerated
+pub rust_tree_sitter::verify::IndeterminateReason::Reflection
+pub rust_tree_sitter::verify::IndeterminateReason::UnresolvedRef
+impl core::clone::Clone for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone(&self) -> rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::cmp::Eq for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::cmp::PartialEq for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::eq(&self, other: &rust_tree_sitter::verify::resolution::IndeterminateReason) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Send for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Sync for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Unpin for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::verify::resolution::IndeterminateReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::resolution::IndeterminateReason where T: core::clone::Clone
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Owned = T
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::resolution::IndeterminateReason where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::resolution::IndeterminateReason where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::resolution::IndeterminateReason where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::resolution::IndeterminateReason where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::verify::resolution::IndeterminateReason where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum rust_tree_sitter::verify::RefKind
+pub rust_tree_sitter::verify::RefKind::Call
+pub rust_tree_sitter::verify::RefKind::Import
+pub rust_tree_sitter::verify::RefKind::Path
+pub rust_tree_sitter::verify::RefKind::Type
+impl core::clone::Clone for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::clone(&self) -> rust_tree_sitter::verify::references::RefKind
+impl core::cmp::PartialEq for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::eq(&self, other: &rust_tree_sitter::verify::references::RefKind) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::references::RefKind
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Send for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Sync for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Unpin for rust_tree_sitter::verify::references::RefKind
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::references::RefKind
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::references::RefKind
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::references::RefKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::references::RefKind::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::references::RefKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::references::RefKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::references::RefKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::references::RefKind where T: core::clone::Clone
+pub type rust_tree_sitter::verify::references::RefKind::Owned = T
+pub fn rust_tree_sitter::verify::references::RefKind::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::references::RefKind::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::references::RefKind where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::references::RefKind where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::references::RefKind where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::references::RefKind where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::references::RefKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::from(t: T) -> T
+pub enum rust_tree_sitter::verify::Resolution
+pub rust_tree_sitter::verify::Resolution::Exact
+pub rust_tree_sitter::verify::Resolution::Indeterminate
+pub rust_tree_sitter::verify::Resolution::NotFound
+impl core::clone::Clone for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::clone(&self) -> rust_tree_sitter::verify::resolution::Resolution
+impl core::cmp::Eq for rust_tree_sitter::verify::resolution::Resolution
+impl core::cmp::PartialEq for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::eq(&self, other: &rust_tree_sitter::verify::resolution::Resolution) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::resolution::Resolution
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Send for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Sync for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Unpin for rust_tree_sitter::verify::resolution::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::resolution::Resolution
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::resolution::Resolution
+impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::verify::resolution::Resolution where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::resolution::Resolution::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::resolution::Resolution::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::resolution::Resolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::resolution::Resolution::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::resolution::Resolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::resolution::Resolution where T: core::clone::Clone
+pub type rust_tree_sitter::verify::resolution::Resolution::Owned = T
+pub fn rust_tree_sitter::verify::resolution::Resolution::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::resolution::Resolution::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::resolution::Resolution where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::resolution::Resolution where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::resolution::Resolution where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::resolution::Resolution where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::resolution::Resolution::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::verify::resolution::Resolution where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct rust_tree_sitter::verify::Candidate
+pub rust_tree_sitter::verify::Candidate::edit_distance: u32
+pub rust_tree_sitter::verify::Candidate::pagerank: f64
+pub rust_tree_sitter::verify::Candidate::qualified_name: alloc::string::String
+impl core::clone::Clone for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::clone(&self) -> rust_tree_sitter::verify::candidates::Candidate
+impl core::fmt::Debug for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Send for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Sync for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Unpin for rust_tree_sitter::verify::candidates::Candidate
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::candidates::Candidate
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::candidates::Candidate
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::candidates::Candidate::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::candidates::Candidate::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::candidates::Candidate::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::candidates::Candidate::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::candidates::Candidate::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::candidates::Candidate where T: core::clone::Clone
+pub type rust_tree_sitter::verify::candidates::Candidate::Owned = T
+pub fn rust_tree_sitter::verify::candidates::Candidate::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::candidates::Candidate::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::candidates::Candidate where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::candidates::Candidate where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::candidates::Candidate where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::candidates::Candidate where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::candidates::Candidate::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::from(t: T) -> T
+pub struct rust_tree_sitter::verify::Reference
+pub rust_tree_sitter::verify::Reference::call_arity: core::option::Option<u32>
+pub rust_tree_sitter::verify::Reference::column: usize
+pub rust_tree_sitter::verify::Reference::kind: rust_tree_sitter::verify::references::RefKind
+pub rust_tree_sitter::verify::Reference::line: usize
+pub rust_tree_sitter::verify::Reference::name: alloc::string::String
+pub rust_tree_sitter::verify::Reference::qualified: core::option::Option<alloc::string::String>
+impl core::clone::Clone for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::clone(&self) -> rust_tree_sitter::verify::references::Reference
+impl core::cmp::PartialEq for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::eq(&self, other: &rust_tree_sitter::verify::references::Reference) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::references::Reference
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::references::Reference
+impl core::marker::Send for rust_tree_sitter::verify::references::Reference
+impl core::marker::Sync for rust_tree_sitter::verify::references::Reference
+impl core::marker::Unpin for rust_tree_sitter::verify::references::Reference
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::references::Reference
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::references::Reference
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::references::Reference::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::references::Reference::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::references::Reference::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::references::Reference::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::references::Reference::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::references::Reference where T: core::clone::Clone
+pub type rust_tree_sitter::verify::references::Reference::Owned = T
+pub fn rust_tree_sitter::verify::references::Reference::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::references::Reference::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::references::Reference where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::references::Reference where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::references::Reference where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::references::Reference where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::references::Reference::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::from(t: T) -> T
+pub struct rust_tree_sitter::verify::SignatureShape
+pub rust_tree_sitter::verify::SignatureShape::arity: u32
+pub rust_tree_sitter::verify::SignatureShape::params: alloc::vec::Vec<alloc::string::String>
+pub rust_tree_sitter::verify::SignatureShape::returns: core::option::Option<alloc::string::String>
+impl core::clone::Clone for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone(&self) -> rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::cmp::PartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::eq(&self, other: &rust_tree_sitter::verify::signature_shape::SignatureShape) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Send for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Sync for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Unpin for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Owned = T
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::signature_shape::SignatureShape where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::from(t: T) -> T
+pub fn rust_tree_sitter::verify::extract_references(content: &[u8], language: rust_tree_sitter::languages::Language) -> alloc::vec::Vec<rust_tree_sitter::verify::references::Reference>
+pub fn rust_tree_sitter::verify::rank_candidates(target: &str, pool: impl core::iter::traits::iterator::Iterator<Item = (alloc::string::String, f64)>, limit: usize) -> alloc::vec::Vec<rust_tree_sitter::verify::candidates::Candidate>
+pub fn rust_tree_sitter::verify::signature_shape(def_node: tree_sitter::Node<'_>, src: &[u8], lang: rust_tree_sitter::languages::Language) -> core::option::Option<rust_tree_sitter::verify::signature_shape::SignatureShape>
+pub fn rust_tree_sitter::verify::supports_references(lang: rust_tree_sitter::languages::Language) -> bool
 pub enum rust_tree_sitter::Error
 pub rust_tree_sitter::Error::AnalysisError
 pub rust_tree_sitter::Error::AnalysisError::component: alloc::string::String
@@ -2070,6 +2654,57 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::error::Error where T: ?
 pub fn rust_tree_sitter::error::Error::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::error::Error
 pub fn rust_tree_sitter::error::Error::from(t: T) -> T
+pub enum rust_tree_sitter::IndeterminateReason
+pub rust_tree_sitter::IndeterminateReason::AmbiguousOverload
+pub rust_tree_sitter::IndeterminateReason::DynamicDispatch
+pub rust_tree_sitter::IndeterminateReason::Ffi
+pub rust_tree_sitter::IndeterminateReason::MacroGenerated
+pub rust_tree_sitter::IndeterminateReason::Reflection
+pub rust_tree_sitter::IndeterminateReason::UnresolvedRef
+impl core::clone::Clone for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone(&self) -> rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::cmp::Eq for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::cmp::PartialEq for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::eq(&self, other: &rust_tree_sitter::verify::resolution::IndeterminateReason) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Send for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Sync for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::marker::Unpin for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::resolution::IndeterminateReason
+impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::verify::resolution::IndeterminateReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::resolution::IndeterminateReason where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::resolution::IndeterminateReason where T: core::clone::Clone
+pub type rust_tree_sitter::verify::resolution::IndeterminateReason::Owned = T
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::resolution::IndeterminateReason where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::resolution::IndeterminateReason where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::resolution::IndeterminateReason where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::resolution::IndeterminateReason where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::resolution::IndeterminateReason
+pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::verify::resolution::IndeterminateReason where T: for<'de> serde_core::de::Deserialize<'de>
 pub enum rust_tree_sitter::Language
 pub rust_tree_sitter::Language::C
 pub rust_tree_sitter::Language::CSharp
@@ -2142,6 +2777,96 @@ impl<T> core::clone::CloneToUninit for rust_tree_sitter::languages::Language whe
 pub unsafe fn rust_tree_sitter::languages::Language::clone_to_uninit(&self, dest: *mut u8)
 impl<T> core::convert::From<T> for rust_tree_sitter::languages::Language
 pub fn rust_tree_sitter::languages::Language::from(t: T) -> T
+pub enum rust_tree_sitter::RefKind
+pub rust_tree_sitter::RefKind::Call
+pub rust_tree_sitter::RefKind::Import
+pub rust_tree_sitter::RefKind::Path
+pub rust_tree_sitter::RefKind::Type
+impl core::clone::Clone for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::clone(&self) -> rust_tree_sitter::verify::references::RefKind
+impl core::cmp::PartialEq for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::eq(&self, other: &rust_tree_sitter::verify::references::RefKind) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::references::RefKind
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Send for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Sync for rust_tree_sitter::verify::references::RefKind
+impl core::marker::Unpin for rust_tree_sitter::verify::references::RefKind
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::references::RefKind
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::references::RefKind
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::references::RefKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::references::RefKind::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::references::RefKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::references::RefKind where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::references::RefKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::references::RefKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::references::RefKind where T: core::clone::Clone
+pub type rust_tree_sitter::verify::references::RefKind::Owned = T
+pub fn rust_tree_sitter::verify::references::RefKind::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::references::RefKind::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::references::RefKind where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::references::RefKind where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::references::RefKind where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::RefKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::references::RefKind where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::references::RefKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::references::RefKind
+pub fn rust_tree_sitter::verify::references::RefKind::from(t: T) -> T
+pub enum rust_tree_sitter::Resolution
+pub rust_tree_sitter::Resolution::Exact
+pub rust_tree_sitter::Resolution::Indeterminate
+pub rust_tree_sitter::Resolution::NotFound
+impl core::clone::Clone for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::clone(&self) -> rust_tree_sitter::verify::resolution::Resolution
+impl core::cmp::Eq for rust_tree_sitter::verify::resolution::Resolution
+impl core::cmp::PartialEq for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::eq(&self, other: &rust_tree_sitter::verify::resolution::Resolution) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::resolution::Resolution
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Send for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Sync for rust_tree_sitter::verify::resolution::Resolution
+impl core::marker::Unpin for rust_tree_sitter::verify::resolution::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::resolution::Resolution
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::resolution::Resolution
+impl<Q, K> equivalent::Equivalent<K> for rust_tree_sitter::verify::resolution::Resolution where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::resolution::Resolution::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::resolution::Resolution::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::resolution::Resolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::resolution::Resolution where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::resolution::Resolution::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::resolution::Resolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::resolution::Resolution where T: core::clone::Clone
+pub type rust_tree_sitter::verify::resolution::Resolution::Owned = T
+pub fn rust_tree_sitter::verify::resolution::Resolution::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::resolution::Resolution::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::resolution::Resolution where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::resolution::Resolution where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::resolution::Resolution where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::resolution::Resolution::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::resolution::Resolution where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::resolution::Resolution::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::resolution::Resolution
+pub fn rust_tree_sitter::verify::resolution::Resolution::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::verify::resolution::Resolution where T: for<'de> serde_core::de::Deserialize<'de>
 pub enum rust_tree_sitter::RiskLevel
 pub rust_tree_sitter::RiskLevel::Critical
 pub rust_tree_sitter::RiskLevel::High
@@ -2203,6 +2928,44 @@ pub unsafe fn rust_tree_sitter::constants::common::RiskLevel::clone_to_uninit(&s
 impl<T> core::convert::From<T> for rust_tree_sitter::constants::common::RiskLevel
 pub fn rust_tree_sitter::constants::common::RiskLevel::from(t: T) -> T
 impl<T> serde_core::de::DeserializeOwned for rust_tree_sitter::constants::common::RiskLevel where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct rust_tree_sitter::Candidate
+pub rust_tree_sitter::Candidate::edit_distance: u32
+pub rust_tree_sitter::Candidate::pagerank: f64
+pub rust_tree_sitter::Candidate::qualified_name: alloc::string::String
+impl core::clone::Clone for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::clone(&self) -> rust_tree_sitter::verify::candidates::Candidate
+impl core::fmt::Debug for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Send for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Sync for rust_tree_sitter::verify::candidates::Candidate
+impl core::marker::Unpin for rust_tree_sitter::verify::candidates::Candidate
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::candidates::Candidate
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::candidates::Candidate
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::candidates::Candidate::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::candidates::Candidate::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::candidates::Candidate::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::candidates::Candidate where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::candidates::Candidate::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::candidates::Candidate::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::candidates::Candidate where T: core::clone::Clone
+pub type rust_tree_sitter::verify::candidates::Candidate::Owned = T
+pub fn rust_tree_sitter::verify::candidates::Candidate::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::candidates::Candidate::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::candidates::Candidate where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::candidates::Candidate where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::candidates::Candidate where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::candidates::Candidate::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::candidates::Candidate where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::candidates::Candidate::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::candidates::Candidate
+pub fn rust_tree_sitter::verify::candidates::Candidate::from(t: T) -> T
 pub struct rust_tree_sitter::LanguageInfo
 pub rust_tree_sitter::LanguageInfo::file_extensions: &'static [&'static str]
 pub rust_tree_sitter::LanguageInfo::name: &'static str
@@ -2551,6 +3314,91 @@ impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::query::QueryMatch<'a> w
 pub fn rust_tree_sitter::query::QueryMatch<'a>::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for rust_tree_sitter::query::QueryMatch<'a>
 pub fn rust_tree_sitter::query::QueryMatch<'a>::from(t: T) -> T
+pub struct rust_tree_sitter::Reference
+pub rust_tree_sitter::Reference::call_arity: core::option::Option<u32>
+pub rust_tree_sitter::Reference::column: usize
+pub rust_tree_sitter::Reference::kind: rust_tree_sitter::verify::references::RefKind
+pub rust_tree_sitter::Reference::line: usize
+pub rust_tree_sitter::Reference::name: alloc::string::String
+pub rust_tree_sitter::Reference::qualified: core::option::Option<alloc::string::String>
+impl core::clone::Clone for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::clone(&self) -> rust_tree_sitter::verify::references::Reference
+impl core::cmp::PartialEq for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::eq(&self, other: &rust_tree_sitter::verify::references::Reference) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::references::Reference
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::references::Reference
+impl core::marker::Send for rust_tree_sitter::verify::references::Reference
+impl core::marker::Sync for rust_tree_sitter::verify::references::Reference
+impl core::marker::Unpin for rust_tree_sitter::verify::references::Reference
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::references::Reference
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::references::Reference
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::references::Reference::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::references::Reference::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::references::Reference::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::references::Reference where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::references::Reference::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::references::Reference::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::references::Reference where T: core::clone::Clone
+pub type rust_tree_sitter::verify::references::Reference::Owned = T
+pub fn rust_tree_sitter::verify::references::Reference::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::references::Reference::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::references::Reference where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::references::Reference where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::references::Reference where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::references::Reference::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::references::Reference where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::references::Reference::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::references::Reference
+pub fn rust_tree_sitter::verify::references::Reference::from(t: T) -> T
+pub struct rust_tree_sitter::SignatureShape
+pub rust_tree_sitter::SignatureShape::arity: u32
+pub rust_tree_sitter::SignatureShape::params: alloc::vec::Vec<alloc::string::String>
+pub rust_tree_sitter::SignatureShape::returns: core::option::Option<alloc::string::String>
+impl core::clone::Clone for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone(&self) -> rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::cmp::PartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::eq(&self, other: &rust_tree_sitter::verify::signature_shape::SignatureShape) -> bool
+impl core::fmt::Debug for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl serde_core::ser::Serialize for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Send for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Sync for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::marker::Unpin for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::RefUnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl core::panic::unwind_safe::UnwindSafe for rust_tree_sitter::verify::signature_shape::SignatureShape
+impl<T, U> core::convert::Into<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::From<T>
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::Into<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = core::convert::Infallible
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rust_tree_sitter::verify::signature_shape::SignatureShape where U: core::convert::TryFrom<T>
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub type rust_tree_sitter::verify::signature_shape::SignatureShape::Owned = T
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_into(&self, target: &mut T)
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::to_owned(&self) -> T
+impl<T> core::any::Any for rust_tree_sitter::verify::signature_shape::SignatureShape where T: 'static + ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rust_tree_sitter::verify::signature_shape::SignatureShape where T: ?core::marker::Sized
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rust_tree_sitter::verify::signature_shape::SignatureShape where T: core::clone::Clone
+pub unsafe fn rust_tree_sitter::verify::signature_shape::SignatureShape::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rust_tree_sitter::verify::signature_shape::SignatureShape
+pub fn rust_tree_sitter::verify::signature_shape::SignatureShape::from(t: T) -> T
 pub struct rust_tree_sitter::Symbol
 pub rust_tree_sitter::Symbol::documentation: core::option::Option<alloc::string::String>
 pub rust_tree_sitter::Symbol::end_column: usize
@@ -2674,7 +3522,11 @@ pub const rust_tree_sitter::VERSION: &str
 pub fn rust_tree_sitter::create_edit(start_byte: usize, old_end_byte: usize, new_end_byte: usize, start_row: usize, start_column: usize, old_end_row: usize, old_end_column: usize, new_end_row: usize, new_end_column: usize) -> tree_sitter::InputEdit
 pub fn rust_tree_sitter::detect_language_from_extension(extension: &str) -> core::option::Option<rust_tree_sitter::languages::Language>
 pub fn rust_tree_sitter::detect_language_from_path(path: &str) -> core::option::Option<rust_tree_sitter::languages::Language>
+pub fn rust_tree_sitter::extract_references(content: &[u8], language: rust_tree_sitter::languages::Language) -> alloc::vec::Vec<rust_tree_sitter::verify::references::Reference>
 pub fn rust_tree_sitter::parse_content(content: &str, language: rust_tree_sitter::languages::Language) -> rust_tree_sitter::error::Result<rust_tree_sitter::ParseOutcome>
+pub fn rust_tree_sitter::rank_candidates(target: &str, pool: impl core::iter::traits::iterator::Iterator<Item = (alloc::string::String, f64)>, limit: usize) -> alloc::vec::Vec<rust_tree_sitter::verify::candidates::Candidate>
+pub fn rust_tree_sitter::signature_shape(def_node: tree_sitter::Node<'_>, src: &[u8], lang: rust_tree_sitter::languages::Language) -> core::option::Option<rust_tree_sitter::verify::signature_shape::SignatureShape>
 pub fn rust_tree_sitter::supported_languages() -> alloc::vec::Vec<rust_tree_sitter::LanguageInfo>
+pub fn rust_tree_sitter::supports_references(lang: rust_tree_sitter::languages::Language) -> bool
 pub type rust_tree_sitter::Result<T> = core::result::Result<T, rust_tree_sitter::error::Error>
 pub type rust_tree_sitter::TreeEdit = tree_sitter::InputEdit
