@@ -323,4 +323,17 @@ mod tests {
         let node = first_node_of_kind(&tree, "function_declaration").expect("fn");
         assert_eq!(signature_shape(node, b"func F(a int) {}", Language::Go), None);
     }
+
+    #[test]
+    fn malformed_input_never_panics() {
+        // Truncated/garbage function definitions are arbitrary agent output —
+        // shape extraction must return without panicking (None or partial).
+        for lang in [Language::Rust, Language::TypeScript, Language::Python] {
+            for code in ["fn f(", "def f(", "function (", "@#$%", ""] {
+                let tree = parse(code, lang);
+                // Pass the root node; the walkers must not panic on a partial tree.
+                let _ = signature_shape(tree.root_node(), code.as_bytes(), lang);
+            }
+        }
+    }
 }

@@ -696,4 +696,23 @@ mod tests {
             assert!(!supports_references(lang), "{lang:?} should be unsupported");
         }
     }
+
+    #[test]
+    fn malformed_input_never_panics() {
+        // Snippets are arbitrary agent output — extraction must degrade to a
+        // partial/empty result on truncated or garbage input, never panic.
+        for lang in [Language::Rust, Language::TypeScript, Language::Python] {
+            for src in [
+                &b""[..],
+                b"fn f( commit_batch(",
+                b"def (",
+                b"@#$%^&*((((",
+                b"use ::::;",
+                b"\xff\xfe not utf8 \x00 friendly",
+            ] {
+                // Must return without panicking; result may be empty or partial.
+                let _ = extract_references(src, lang);
+            }
+        }
+    }
 }

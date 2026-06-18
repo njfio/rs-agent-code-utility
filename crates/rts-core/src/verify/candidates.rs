@@ -138,6 +138,14 @@ mod tests {
     }
 
     #[test]
+    fn damerau_counts_unicode_scalars_not_bytes() {
+        // "café" vs "cafe" differs by one scalar (é -> e), even though é is
+        // multiple UTF-8 bytes — the algorithm must operate on chars.
+        assert_eq!(damerau_levenshtein("café", "cafe"), 1);
+        assert_eq!(damerau_levenshtein("café", "café"), 0);
+    }
+
+    #[test]
     fn ranks_closer_match_first_and_drops_far() {
         let pool = vec![
             ("store::Store::commit_batches".to_string(), 0.01),
