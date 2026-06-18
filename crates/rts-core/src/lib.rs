@@ -50,6 +50,9 @@ pub mod signature;
 pub mod symbol;
 /// Syntax-tree traversal helpers.
 pub mod tree;
+/// Shared primitives for the verification layer (resolution model, fuzzy
+/// candidate ranking, use-site reference extraction, signature shapes).
+pub mod verify;
 
 // ---------- Re-exports ----------
 
@@ -59,6 +62,7 @@ pub use parser::{ParseOptions, Parser, create_edit};
 pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use symbol::Symbol;
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
+pub use verify::{IndeterminateReason, Resolution};
 
 // ---------- parse_content facade ----------
 
