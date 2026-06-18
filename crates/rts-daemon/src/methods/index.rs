@@ -2780,7 +2780,7 @@ fn verify_signature_inner(
         None => {
             return Ok(serde_json::json!({
                 "resolution": rust_tree_sitter::Resolution::Indeterminate,
-                "reason":     rust_tree_sitter::IndeterminateReason::UnresolvedRef,
+                "reason":     rust_tree_sitter::IndeterminateReason::UndecidableSignature,
             }));
         }
     };

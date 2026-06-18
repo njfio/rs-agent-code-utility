@@ -2,6 +2,7 @@ pub mod rust_tree_sitter
 pub use rust_tree_sitter::InputEdit
 pub use rust_tree_sitter::Point
 pub use rust_tree_sitter::Range
+pub use rust_tree_sitter::tree_sitter
 pub mod rust_tree_sitter::constants
 pub mod rust_tree_sitter::constants::code_evolution
 pub const rust_tree_sitter::constants::code_evolution::DEFAULT_PATTERN_CONFIDENCE_THRESHOLD: f64
@@ -2098,6 +2099,7 @@ pub rust_tree_sitter::verify::resolution::IndeterminateReason::DynamicDispatch
 pub rust_tree_sitter::verify::resolution::IndeterminateReason::Ffi
 pub rust_tree_sitter::verify::resolution::IndeterminateReason::MacroGenerated
 pub rust_tree_sitter::verify::resolution::IndeterminateReason::Reflection
+pub rust_tree_sitter::verify::resolution::IndeterminateReason::UndecidableSignature
 pub rust_tree_sitter::verify::resolution::IndeterminateReason::UnresolvedRef
 impl core::clone::Clone for rust_tree_sitter::verify::resolution::IndeterminateReason
 pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone(&self) -> rust_tree_sitter::verify::resolution::IndeterminateReason
@@ -2240,6 +2242,7 @@ pub rust_tree_sitter::verify::IndeterminateReason::DynamicDispatch
 pub rust_tree_sitter::verify::IndeterminateReason::Ffi
 pub rust_tree_sitter::verify::IndeterminateReason::MacroGenerated
 pub rust_tree_sitter::verify::IndeterminateReason::Reflection
+pub rust_tree_sitter::verify::IndeterminateReason::UndecidableSignature
 pub rust_tree_sitter::verify::IndeterminateReason::UnresolvedRef
 impl core::clone::Clone for rust_tree_sitter::verify::resolution::IndeterminateReason
 pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone(&self) -> rust_tree_sitter::verify::resolution::IndeterminateReason
@@ -2660,6 +2663,7 @@ pub rust_tree_sitter::IndeterminateReason::DynamicDispatch
 pub rust_tree_sitter::IndeterminateReason::Ffi
 pub rust_tree_sitter::IndeterminateReason::MacroGenerated
 pub rust_tree_sitter::IndeterminateReason::Reflection
+pub rust_tree_sitter::IndeterminateReason::UndecidableSignature
 pub rust_tree_sitter::IndeterminateReason::UnresolvedRef
 impl core::clone::Clone for rust_tree_sitter::verify::resolution::IndeterminateReason
 pub fn rust_tree_sitter::verify::resolution::IndeterminateReason::clone(&self) -> rust_tree_sitter::verify::resolution::IndeterminateReason

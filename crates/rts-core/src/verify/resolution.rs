@@ -38,7 +38,8 @@ pub enum Resolution {
 /// Why a [`Resolution::Indeterminate`] outcome could not be decided.
 ///
 /// Wire strings (frozen): `"dynamic_dispatch"`, `"macro_generated"`,
-/// `"ffi"`, `"unresolved_ref"`, `"reflection"`, `"ambiguous_overload"`.
+/// `"ffi"`, `"unresolved_ref"`, `"reflection"`, `"ambiguous_overload"`,
+/// `"undecidable_signature"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IndeterminateReason {
@@ -58,6 +59,11 @@ pub enum IndeterminateReason {
     Reflection,
     /// Multiple definitions match and we cannot pick one statically.
     AmbiguousOverload,
+    /// The definition's signature shape can't be decided statically —
+    /// variadics (`...`, `*args`, `**kwargs`, `...rest`) or a language
+    /// whose signature extraction isn't yet supported. Distinct from
+    /// [`Ffi`](Self::Ffi), which is specifically a foreign boundary.
+    UndecidableSignature,
 }
 
 #[cfg(test)]
@@ -96,6 +102,7 @@ mod tests {
         assert_eq!(json(IndeterminateReason::UnresolvedRef), "\"unresolved_ref\"");
         assert_eq!(json(IndeterminateReason::Reflection), "\"reflection\"");
         assert_eq!(json(IndeterminateReason::AmbiguousOverload), "\"ambiguous_overload\"");
+        assert_eq!(json(IndeterminateReason::UndecidableSignature), "\"undecidable_signature\"");
     }
 
     #[test]

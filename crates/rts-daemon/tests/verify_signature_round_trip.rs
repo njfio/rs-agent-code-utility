@@ -92,7 +92,8 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     std::fs::write(
         workspace.path().join("sig.rs"),
         "pub fn flush(entries: Vec<u32>) -> u32 { entries.len() as u32 }\n\
-         pub unsafe extern \"C\" fn vararg(x: u32, ...) -> u32 { x }\n",
+         pub unsafe extern \"C\" fn vararg(x: u32, ...) -> u32 { x }\n\
+         pub fn pair(a: u32, b: u32) -> u32 { a + b }\n",
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
@@ -185,10 +186,34 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     .await?;
     let vr = &variadic["result"];
     assert_eq!(vr["resolution"], "indeterminate", "variadic should be indeterminate; got {vr:?}");
-    assert!(vr["reason"].is_string(), "indeterminate must carry a reason; got {vr:?}");
+    assert_eq!(
+        vr["reason"], "undecidable_signature",
+        "variadic shape is undecidable, not an FFI/unresolved reason; got {vr:?}"
+    );
     assert!(vr["match"].is_null(), "indeterminate must OMIT match; got {vr:?}");
 
-    // 5. Missing symbol → not_found + candidates.
+    // 5. Same param set, wrong order → match:false + {issue:"param_order"}.
+    let reordered = round_trip(
+        &mut stream,
+        "15",
+        "Index.VerifySignature",
+        json!({ "name": "pair", "claimed": { "arity": 2, "params": ["b", "a"] } }),
+    )
+    .await?;
+    let rr = &reordered["result"];
+    assert_eq!(rr["match"], false, "reordered params should be match:false; got {rr:?}");
+    let rdiff = rr["diff"].as_array().cloned().unwrap_or_default();
+    assert!(
+        rdiff.iter().any(|d| d["issue"] == "param_order"),
+        "expected a param_order diff; got {rdiff:?}"
+    );
+    // Same set, different order ⇒ NOT reported as unknown_param.
+    assert!(
+        !rdiff.iter().any(|d| d["issue"] == "unknown_param"),
+        "same-set reorder must not report unknown_param; got {rdiff:?}"
+    );
+
+    // 6. Missing symbol → not_found + candidates.
     let miss = round_trip(
         &mut stream,
         "14",

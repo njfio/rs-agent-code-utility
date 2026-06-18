@@ -13,7 +13,7 @@
     "reason": {
       "description": "IndeterminateReason wire string. Present only when resolution is `indeterminate`.",
       "type": "string",
-      "enum": ["dynamic_dispatch", "macro_generated", "ffi", "unresolved_ref", "reflection", "ambiguous_overload"]
+      "enum": ["dynamic_dispatch", "macro_generated", "ffi", "unresolved_ref", "reflection", "ambiguous_overload", "undecidable_signature"]
     },
     "matches": {
       "type": "array",
