@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifySignature.resp.schema.json",
+  "title": "Index.VerifySignature result",
+  "description": "verify-v0 P1.U2. On a decidable hit: `match` + `actual` shape + structured `diff[]` + resolution `exact`. On an undecidable case (variadics / unsupported language / ambiguous def): resolution `indeterminate` + `reason`, with `match` OMITTED. On a miss: resolution `not_found`, `exists:false`, ranked `candidates[]`.",
+  "type": "object",
+  "properties": {
+    "match": { "type": "boolean" },
+    "exists": { "type": "boolean" },
+    "resolution": {
+      "type": "string",
+      "enum": ["exact", "not_found", "indeterminate"]
+    },
+    "reason": {
+      "description": "IndeterminateReason wire string. Present only when resolution is `indeterminate`.",
+      "type": "string",
+      "enum": ["dynamic_dispatch", "macro_generated", "ffi", "unresolved_ref", "reflection", "ambiguous_overload"]
+    },
+    "actual": {
+      "type": "object",
+      "properties": {
+        "arity":   { "type": "integer", "minimum": 0 },
+        "params":  { "type": "array", "items": { "type": "string" } },
+        "returns": { "type": ["string", "null"] }
+      },
+      "required": ["arity", "params", "returns"]
+    },
+    "diff": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "issue": {
+            "type": "string",
+            "enum": ["arity", "unknown_param", "param_order", "return_shape"]
+          }
+        },
+        "required": ["issue"]
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qualified_name": { "type": "string" },
+          "edit_distance":  { "type": "integer", "minimum": 0 },
+          "pagerank":       { "type": "number" }
+        },
+        "required": ["qualified_name", "edit_distance", "pagerank"]
+      }
+    }
+  },
+  "required": ["resolution"]
+}

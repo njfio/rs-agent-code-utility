@@ -44,6 +44,9 @@ const PROTOCOL_METHODS: &[&str] = &[
     "Index.FindSymbol",
     "Index.FindCallers",
     "Index.VerifySymbol",
+    "Index.VerifySignature",
+    "Index.VerifyImport",
+    "Index.VerifyClaims",
     "Index.ImpactOf",
     "Index.ReadRange",
     "Index.ReadSymbol",
@@ -291,6 +294,20 @@ async fn response_matches_schema_for_each_method() -> anyhow::Result<()> {
         ("Index.FindSymbol", json!({"name": "answer"})),
         ("Index.FindCallers", json!({"name": "answer"})),
         ("Index.VerifySymbol", json!({"name": "answer"})),
+        (
+            "Index.VerifySignature",
+            json!({"name": "answer", "claimed": {"arity": 0, "params": [], "returns": "u32"}}),
+        ),
+        ("Index.VerifyImport", json!({"path": "answer"})),
+        (
+            "Index.VerifyClaims",
+            json!({"claims": [
+                {"type": "symbol", "name": "answer"},
+                {"type": "signature", "name": "answer", "claimed": {"arity": 0}},
+                {"type": "import", "path": "answer"},
+                {"type": "location", "symbol": "answer", "file": "src/lib.rs", "line": 2}
+            ]}),
+        ),
         ("Index.ImpactOf", json!({"name": "answer"})),
         ("Index.Outline", json!({"token_budget": 4096})),
         ("Index.Grep", json!({"text": "answer"})),
@@ -382,6 +399,9 @@ const EXPECTED_CAPABILITIES: &[&str] = &[
     "request_deadlines",
     "parent_scope",
     "verify_symbol",
+    "verify_signature",
+    "verify_import",
+    "verify_claims",
 ];
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

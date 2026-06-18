@@ -131,6 +131,11 @@ pub use constants::common::RiskLevel;
 
 // Tree-sitter type passthroughs
 pub use tree_sitter::{InputEdit, Point, Range};
+// Full crate passthrough so downstream crates (e.g. the daemon) can name
+// raw tree-sitter types (`Node`, `Tree`) for APIs like `signature_shape`
+// that take a `tree_sitter::Node`, without depending on tree-sitter
+// directly (which would risk a version skew against this crate's).
+pub use tree_sitter;
 
 // ---------- Crate-level helpers ----------
 

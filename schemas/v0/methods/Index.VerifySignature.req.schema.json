@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifySignature.req.schema.json",
+  "title": "Index.VerifySignature request params",
+  "description": "verify-v0 P1.U2, capability `verify_signature`. Does a call match the definition? Resolves the indexed def (same lookup as Index.VerifySymbol) and compares the caller's `claimed` shape against the def's actual signature shape.",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "kind": {
+      "type": "string",
+      "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module", "heading"]
+    },
+    "lang": { "type": "string" },
+    "file": { "type": "string" },
+    "claimed": {
+      "type": "object",
+      "properties": {
+        "arity":   { "type": "integer", "minimum": 0 },
+        "params":  { "type": "array", "items": { "type": "string" } },
+        "returns": { "type": "string" }
+      },
+      "required": ["arity"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["name", "claimed"],
+  "additionalProperties": false
+}

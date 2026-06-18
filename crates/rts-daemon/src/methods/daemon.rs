@@ -186,6 +186,21 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // A miss is a result, not an error. First of the verify-family
     // tools (signature/import/claims siblings to follow). Additive.
     "verify_symbol",
+    // verify-v0 P1.U2 — `Index.VerifySignature`: does a call match the
+    // definition? Returns `match` + `actual` shape + a structured
+    // `diff[]` (arity / unknown_param / param_order / return_shape).
+    // `indeterminate` when `signature_shape` can't decide (variadics /
+    // unsupported language). Additive.
+    "verify_signature",
+    // verify-v0 P1.U3 — `Index.VerifyImport`: does the final segment of
+    // an import path resolve against the index? Thin: full cross-module
+    // path resolution is deferred. Additive.
+    "verify_import",
+    // verify-v0 P1.U4 — `Index.VerifyClaims`: batch verification of a
+    // mixed claim list (symbol/signature/import/location) with a
+    // grounding-rate summary that excludes indeterminate claims from
+    // the denominator. Additive.
+    "verify_claims",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
